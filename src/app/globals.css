@@ -1,0 +1,349 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------- */
+/* 1. MODERN MINIMAL DESIGN SYSTEM               */
+/* ---------------------------------------------- */
+
+:root {
+  /* Primary Background - Clean white/light theme */
+  --background-main: #ffffff;
+  --background-secondary: #fafafa;
+  --background-tertiary: #f5f5f5;
+  
+  /* Sophisticated Grays */
+  --gray-50: #fafafa;
+  --gray-100: #f5f5f5;
+  --gray-200: #e5e5e5;
+  --gray-300: #d4d4d4;
+  --gray-400: #a3a3a3;
+  --gray-500: #737373;
+  --gray-600: #525252;
+  --gray-700: #404040;
+  --gray-800: #262626;
+  --gray-900: #171717;
+  
+  /* Text Colors */
+  --foreground-primary: #171717;
+  --foreground-secondary: #525252;
+  --foreground-tertiary: #737373;
+  
+  /* Accent Colors - Modern Blue */
+  --accent-primary: #2563eb;
+  --accent-primary-hover: #1d4ed8;
+  --accent-primary-light: #dbeafe;
+  
+  /* Semantic Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  
+  /* Borders */
+  --border-color: #e5e5e5;
+  --border-color-strong: #d4d4d4;
+  
+  /* Shadows - Subtle and refined */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-main: #0a0a0a;
+    --background-secondary: #171717;
+    --background-tertiary: #262626;
+    --foreground-primary: #fafafa;
+    --foreground-secondary: #d4d4d4;
+    --foreground-tertiary: #a3a3a3;
+    --border-color: #262626;
+    --border-color-strong: #404040;
+    --accent-primary: #3b82f6;
+    --accent-primary-hover: #2563eb;
+    --accent-primary-light: #1e293b;
+  }
+}
+
+/* ---------------------------------------------- */
+/* 2. BASE STYLES                                */
+/* ---------------------------------------------- */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: var(--foreground-primary);
+  background: var(--background-main);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography scale */
+h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+h4 { font-size: 1.125rem; font-weight: 500; }
+
+/* Focus states */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Scrollbar - Minimal and modern */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--background-secondary); }
+::-webkit-scrollbar-thumb { 
+  background: var(--gray-300); 
+  border-radius: 5px;
+  border: 2px solid var(--background-secondary);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+
+/* ---------------------------------------------- */
+/* 3. CALENDAR SPECIFIC STYLES                   */
+/* ---------------------------------------------- */
+
+/* Calendar container */
+.fc {
+  font-family: inherit;
+}
+
+/* Remove all borders for minimal look */
+.fc-theme-standard .fc-scrollgrid,
+.fc-theme-standard td, 
+.fc-theme-standard th,
+.fc .fc-scrollgrid-section > td {
+  border: none;
+}
+
+/* Calendar header toolbar */
+.fc .fc-toolbar.fc-header-toolbar {
+  margin-bottom: 2rem;
+  padding: 0;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--foreground-primary);
+  letter-spacing: -0.01em;
+}
+
+/* Navigation buttons */
+.fc .fc-button-group {
+  gap: 0.5rem;
+}
+
+.fc .fc-button {
+  background: var(--background-main);
+  border: 1px solid var(--border-color);
+  color: var(--foreground-primary);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+  box-shadow: none;
+  text-transform: none;
+  font-size: 0.875rem;
+}
+
+.fc .fc-button:hover:not(:disabled) {
+  background: var(--background-secondary);
+  border-color: var(--border-color-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.fc .fc-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Day headers */
+.fc .fc-col-header {
+  background: var(--background-secondary);
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.fc .fc-col-header-cell {
+  padding: 1rem 0;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--foreground-tertiary);
+}
+
+/* Calendar grid */
+.fc .fc-daygrid-body {
+  background: var(--background-main);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Day cells */
+.fc .fc-daygrid-day {
+  border: 1px solid var(--border-color);
+  transition: background-color 0.15s ease;
+}
+
+.fc .fc-daygrid-day:hover {
+  background: var(--background-secondary);
+}
+
+/* Day numbers */
+.fc .fc-daygrid-day-number {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground-secondary);
+}
+
+/* Today highlight */
+.fc .fc-day-today {
+  background: var(--accent-primary-light);
+}
+
+.fc .fc-day-today .fc-daygrid-day-number {
+  background: var(--accent-primary);
+  color: white;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-weight: 600;
+}
+
+/* Other months */
+.fc .fc-day-other .fc-daygrid-day-number {
+  color: var(--foreground-tertiary);
+  opacity: 0.5;
+}
+
+/* ---------------------------------------------- */
+/* 4. EVENT STYLING                              */
+/* ---------------------------------------------- */
+
+.fc-event {
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin: 0.125rem 0.25rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-xs);
+}
+
+.fc-event:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.fc-event-title {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Event colors - Use opacity for softer look */
+.fc-event {
+  opacity: 0.9;
+}
+
+.fc-event:hover {
+  opacity: 1;
+}
+
+/* ---------------------------------------------- */
+/* 5. CUSTOM COMPONENT STYLES                    */
+/* ---------------------------------------------- */
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Buttons and interactive elements */
+button, a {
+  transition: all 0.15s ease;
+}
+
+/* Input fields */
+input, textarea, select {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Cards and surfaces */
+.surface-card {
+  background: var(--background-main);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------------------------------------------- */
+/* 7. TAILWIND V4 CUSTOM UTILITIES               */
+/* ---------------------------------------------- */
+
+@layer utilities {
+  /* Background utilities */
+  .bg-background-main { background-color: var(--background-main); }
+  .bg-background-secondary { background-color: var(--background-secondary); }
+  .bg-background-tertiary { background-color: var(--background-tertiary); }
+  
+  /* Text color utilities */
+  .text-foreground-primary { color: var(--foreground-primary); }
+  .text-foreground-secondary { color: var(--foreground-secondary); }
+  .text-foreground-tertiary { color: var(--foreground-tertiary); }
+  
+  /* Accent color utilities */
+  .bg-accent-primary { background-color: var(--accent-primary); }
+  .bg-accent-primary-hover { background-color: var(--accent-primary-hover); }
+  .bg-accent-primary-light { background-color: var(--accent-primary-light); }
+  .text-accent-primary { color: var(--accent-primary); }
+  .text-accent-primary-hover { color: var(--accent-primary-hover); }
+  .border-accent-primary { border-color: var(--accent-primary); }
+  
+  /* Semantic color utilities */
+  .bg-success { background-color: var(--success); }
+  .bg-warning { background-color: var(--warning); }
+  .bg-error { background-color: var(--error); }
+  .text-success { color: var(--success); }
+  .text-warning { color: var(--warning); }
+  .text-error { color: var(--error); }
+  
+  /* Border utilities */
+  .border-border-color { border-color: var(--border-color); }
+  .border-border-color-strong { border-color: var(--border-color-strong); }
+  
+  /* Shadow utilities */
+  .shadow-xs { box-shadow: var(--shadow-xs); }
+  .shadow-sm { box-shadow: var(--shadow-sm); }
+  .shadow-md { box-shadow: var(--shadow-md); }
+  .shadow-lg { box-shadow: var(--shadow-lg); }
+  .shadow-xl { box-shadow: var(--shadow-xl); }
+}

@@ -1,0 +1,7 @@
+// src/app/page.tsx
+
+import LandingPage from '@/components/LandingPage';
+
+export default function HomePage() {
+  return <LandingPage />;
+}
