@@ -1,103 +1,86 @@
-'use client';
+// src/components/SearchBar.tsx
 
-import { useRef, useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 
-type Suggestion = { 
-  id: string; 
-  title: string; 
-  start_time: string; 
-  organizer: string; 
+type Suggestion = {
+  id: string;
+  title: string;
+  organizer: string;
+  start_time: string;
 };
 
-interface SearchBarProps { 
-  searchTerm: string; 
-  onSearchChange: (term: string) => void; 
-  suggestions: Suggestion[]; 
-  onSuggestionClick: (suggestion: Suggestion) => void; 
+interface SearchBarProps {
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  isFocused: boolean;
+  onFocus: () => void;
+  suggestions: Suggestion[];
+  onSuggestionClick: (suggestion: Suggestion) => void;
 }
 
-export default function SearchBar({ 
-  searchTerm, 
-  onSearchChange, 
-  suggestions, 
-  onSuggestionClick 
+export default function SearchBar({
+  searchTerm, onSearchChange, isFocused, onFocus, suggestions, onSuggestionClick
 }: SearchBarProps) {
-  const [isFocused, setIsFocused] = useState(false);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
-        setIsFocused(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
+  
   const showSuggestions = isFocused && searchTerm.length > 0 && suggestions.length > 0;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
   return (
-    <div className="relative" ref={searchContainerRef}>
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-        </div>
-        <input
-          type="text"
-          placeholder="Search events, organizers..."
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          className="w-full bg-background-main border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-foreground-primary placeholder-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
-        />
-        {searchTerm && (
-          <button
-            onClick={() => onSearchChange('')}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-          >
-            <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
+    <div className="relative">
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+        <Search className="w-5 h-5 text-gray-400" />
       </div>
+      <input
+        type="text"
+        placeholder="Search Events..."
+        value={searchTerm}
+        onChange={(e) => onSearchChange(e.target.value)}
+        onFocus={onFocus}
 
+        className="
+          w-full 
+          pl-12 pr-4 py-2.5 /* Padding */
+
+          /* Light Mode Styles (Default) */
+          bg-white 
+          border border-gray-300 
+          text-gray-900 
+          placeholder:text-gray-500
+
+          /* Dark Mode Styles (Overrides) */
+          dark:bg-gray-800 
+          dark:border-gray-700 
+          dark:text-white 
+          dark:placeholder:text-gray-400
+
+          /* Shared Styles */
+          text-base
+          rounded-full 
+          focus:outline-none 
+          focus:ring-2 
+          focus:ring-blue-500 
+          focus:border-transparent
+          transition-all duration-200
+        "
+      />
+      
+      {/* Suggestions Dropdown */}
       {showSuggestions && (
-        <div className="absolute z-50 w-full mt-2 bg-background-main border border-border-color rounded-lg shadow-lg overflow-hidden">
-          <div className="py-2">
+        <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+          <ul className="py-1">
             {suggestions.map((suggestion) => (
-              <button
-                key={suggestion.id}
-                onClick={() => onSuggestionClick(suggestion)}
-                className="w-full px-4 py-3 text-left hover:bg-background-secondary transition-colors flex items-start space-x-3"
-              >
-                <div className="flex-shrink-0 w-10 h-10 bg-accent-primary-light rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground-primary truncate">
-                    {suggestion.title}
+              <li key={suggestion.id}>
+                <button
+                  onClick={() => onSuggestionClick(suggestion)}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex flex-col"
+                >
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{suggestion.title}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {suggestion.organizer} • {new Date(suggestion.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </p>
-                  <p className="text-xs text-foreground-tertiary mt-0.5">
-                    {suggestion.organizer} • {formatDate(suggestion.start_time)}
-                  </p>
-                </div>
-              </button>
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
     </div>

@@ -1,10 +1,9 @@
 // src/components/MainNavbar.tsx
 
 import { User } from 'lucide-react';
-
 export default function MainNavbar() {
   return (
-    <nav className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-50 shadow-sm">
+    <nav className="h-16 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-50 shadow-sm">
       <div className="flex items-center gap-8">
         <div className="text-xl font-bold text-blue-600">TechCalendar</div>
         <div className="hidden lg:flex items-center gap-6">

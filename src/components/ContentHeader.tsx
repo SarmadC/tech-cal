@@ -1,10 +1,20 @@
-import { Menu } from 'lucide-react';
-import SearchBar from './SearchBar'; // Assuming SearchBar exists and is relatively dumb
+// src/components/ContentHeader.tsx
 
+import { Menu } from 'lucide-react';
+import SearchBar from './SearchBar';
+import { RefObject } from 'react';
+
+// Define the types for props
+type Suggestion = { id: string; title: string; organizer: string; start_time: string; };
 interface ContentHeaderProps {
   onToggleSidebar: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  isSearchFocused: boolean;
+  onSearchFocus: () => void;
+  searchContainerRef: RefObject<HTMLDivElement>;
+  suggestions: Suggestion[];
+  onSuggestionClick: (suggestion: Suggestion) => void;
   totalEvents: number;
   upcomingEvents: number;
 }
@@ -13,6 +23,11 @@ export default function ContentHeader({
   onToggleSidebar,
   searchTerm,
   onSearchChange,
+  isSearchFocused,
+  onSearchFocus,
+  searchContainerRef,
+  suggestions,
+  onSuggestionClick,
   totalEvents,
   upcomingEvents,
 }: ContentHeaderProps) {
@@ -22,9 +37,15 @@ export default function ContentHeader({
         <Menu className="w-5 h-5 text-gray-600" />
       </button>
       
-      {/* We would pass suggestions down to SearchBar if it needed them */}
-      <div className="flex-1 max-w-md">
-        <SearchBar searchTerm={searchTerm} onSearchChange={onSearchChange} suggestions={[]} onSuggestionClick={() => {}} />
+      <div className="flex-1 max-w-md" ref={searchContainerRef}>
+        <SearchBar
+          searchTerm={searchTerm}
+          onSearchChange={onSearchChange}
+          isFocused={isSearchFocused}
+          onFocus={onSearchFocus}
+          suggestions={suggestions}
+          onSuggestionClick={onSuggestionClick}
+        />
       </div>
 
       <div className="hidden lg:flex items-center gap-6 ml-8">
