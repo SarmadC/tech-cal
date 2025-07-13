@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children} {/* <-- Render children directly */}
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

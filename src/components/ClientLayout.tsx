@@ -12,11 +12,17 @@ export default function ClientLayout({
   const pathname = usePathname();
   const isCalendarPage = pathname === '/calendar';
 
+  // For calendar page, render children directly without navbar/footer
+  if (isCalendarPage) {
+    return <>{children}</>;
+  }
+
+  // For all other pages, include navbar and footer
   return (
     <>
       <Navbar />
       {children}
-      {!isCalendarPage && <Footer />}
+      <Footer />
     </>
   );
 }
