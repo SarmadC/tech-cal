@@ -1,0 +1,13 @@
+<svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified Icon -->
+  <g>
+    <!-- Main Body -->
+    <rect x="0" y="10" width="64" height="54" rx="12" fill="#3B82F6"/>
+    <!-- Header -->
+    <rect x="0" y="0" width="64" height="24" rx="12" fill="#1E3A8A"/>
+    <rect x="0" y="12" width="64" height="12" fill="#1E3A8A"/>
+    <!-- Simplified Rings -->
+    <circle cx="22" cy="4" r="3" fill="white"/>
+    <circle cx="42" cy="4" r="3" fill="white"/>
+  </g>
+</svg>
