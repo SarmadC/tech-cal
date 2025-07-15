@@ -27,7 +27,7 @@ const TechCalendar = forwardRef<FullCalendar, TechCalendarProps>(
       id: event.id,
       title: event.title,
       start: event.start_time,
-      end: event.end_time,
+      end: event.end_time || undefined, // Corrected line
       backgroundColor: event.color,
       borderColor: event.color,
       textColor: '#ffffff',
@@ -66,7 +66,6 @@ const TechCalendar = forwardRef<FullCalendar, TechCalendarProps>(
             info.el.style.transform = 'translateY(0)';
             info.el.style.boxShadow = '';
           }}
-          // The problematic line has been removed.
           slotLabelFormat={{
             hour: 'numeric',
             minute: '2-digit',
