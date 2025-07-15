@@ -19,7 +19,6 @@ type EnrichedEvent = {
   source_url: string;
   livestream_url: string | null;
   color: string;
-  [key: string]: any;
 };
 
 type Category = {
