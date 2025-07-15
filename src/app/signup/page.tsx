@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -12,10 +13,12 @@ export default function SignupPage() {
     password: '',
     acceptTerms: false
   });
+  const router = useRouter();
 
   const handleSubmit = () => {
     console.log('Signup attempt:', formData);
     // Handle signup logic here
+    router.push('/dashboard');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -54,10 +54,16 @@ export default function Navbar() {
               </Link>
             ))}
             <Link
-              href="/calendar"
+              href="/login"
+              className="text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors"
+            >
+              Log In
+            </Link>
+            <Link
+              href="/signup"
               className="bg-accent-primary hover:bg-accent-primary-hover text-white font-medium py-2 px-4 rounded-lg transition-all text-sm"
             >
-              Launch App
+              Sign Up
             </Link>
           </div>
 
@@ -92,11 +98,18 @@ export default function Navbar() {
               </Link>
             ))}
             <Link
-              href="/calendar"
+              href="/login"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors"
+            >
+              Log In
+            </Link>
+            <Link
+              href="/signup"
               onClick={() => setIsMobileMenuOpen(false)}
               className="block w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-medium py-2 px-4 rounded-lg transition-all text-sm text-center"
             >
-              Launch App
+              Sign Up
             </Link>
           </div>
         </div>

@@ -112,13 +112,21 @@ export default function LandingPage() {
             <Link href="/api-docs" className="text-sm text-gray-600 hover:text-blue-600">API</Link>
           </div>
 
-          {/* CTA Button */}
-          <Link
-            href="/calendar"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all text-sm"
-          >
-            Launch App
-          </Link>
+          {/* CTA Buttons */}
+          <div className="flex items-center space-x-4">
+            <Link
+              href="/login"
+              className="text-sm font-medium text-gray-600 hover:text-blue-600"
+            >
+              Log In
+            </Link>
+            <Link
+              href="/signup"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all text-sm"
+            >
+              Sign Up
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -298,62 +306,6 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-50 border-t border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {/* Brand Column */}
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <span className="text-lg font-semibold text-gray-900">TechCalendar</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                Your comprehensive tech event calendar.
-              </p>
-            </div>
-
-            {/* Links Columns */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Product</h3>
-              <div className="space-y-2">
-                <Link href="/features" className="block text-sm text-gray-600 hover:text-blue-600">Features</Link>
-                <Link href="/pricing" className="block text-sm text-gray-600 hover:text-blue-600">Pricing</Link>
-                <Link href="/api-docs" className="block text-sm text-gray-600 hover:text-blue-600">API</Link>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Resources</h3>
-              <div className="space-y-2">
-                <Link href="/blog" className="block text-sm text-gray-600 hover:text-blue-600">Blog</Link>
-                <Link href="/contact" className="block text-sm text-gray-600 hover:text-blue-600">Support</Link>
-                <Link href="#" className="block text-sm text-gray-600 hover:text-blue-600">Docs</Link>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Company</h3>
-              <div className="space-y-2">
-                <Link href="/about" className="block text-sm text-gray-600 hover:text-blue-600">About</Link>
-                <Link href="/contact" className="block text-sm text-gray-600 hover:text-blue-600">Contact</Link>
-                <Link href="#" className="block text-sm text-gray-600 hover:text-blue-600">Privacy</Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-200 pt-8 mt-8 text-center">
-            <p className="text-sm text-gray-500">
-              © 2024 TechCalendar. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
