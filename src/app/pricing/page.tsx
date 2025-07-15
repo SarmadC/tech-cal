@@ -81,8 +81,8 @@ export default function PricingPage() {
                 key={index}
                 className={`
                   relative rounded-2xl p-8 transition-all
-                  ${plan.highlighted 
-                    ? 'bg-accent-primary text-white shadow-2xl scale-105' 
+                  ${plan.highlighted
+                    ? 'bg-accent-primary text-white shadow-2xl scale-105'
                     : 'bg-background-secondary border border-border-color hover:border-accent-primary/30'
                   }
                 `}
@@ -123,12 +123,12 @@ export default function PricingPage() {
                 <ul className="space-y-4 mb-8">
                   {plan.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-start">
-                      <svg 
+                      <svg
                         className={`w-5 h-5 mr-3 flex-shrink-0 mt-0.5 ${
                           plan.highlighted ? 'text-white' : 'text-accent-primary'
-                        }`} 
-                        fill="none" 
-                        stroke="currentColor" 
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -166,15 +166,15 @@ export default function PricingPage() {
           <h2 className="text-3xl font-bold text-center text-foreground-primary mb-12">
             Frequently Asked Questions
           </h2>
-          
+
           <div className="space-y-6">
             <div className="bg-background-main rounded-xl p-6 border border-border-color">
               <h3 className="text-lg font-semibold text-foreground-primary mb-2">
                 Can I change plans anytime?
               </h3>
               <p className="text-foreground-secondary">
-                Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, 
-                and we'll prorate any payments.
+                Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately,
+                and we&apos;ll prorate any payments.
               </p>
             </div>
 
@@ -183,7 +183,7 @@ export default function PricingPage() {
                 What payment methods do you accept?
               </h3>
               <p className="text-foreground-secondary">
-                We accept all major credit cards (Visa, MasterCard, American Express), 
+                We accept all major credit cards (Visa, MasterCard, American Express),
                 as well as PayPal and ACH transfers for Team plans.
               </p>
             </div>
@@ -202,7 +202,7 @@ export default function PricingPage() {
                 Do you offer discounts for students or non-profits?
               </h3>
               <p className="text-foreground-secondary">
-                We offer 50% off Pro plans for students and verified non-profit organizations. 
+                We offer 50% off Pro plans for students and verified non-profit organizations.
                 Contact support with proof of eligibility.
               </p>
             </div>

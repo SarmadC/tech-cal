@@ -18,7 +18,7 @@ export default function LoginPage() {
   const handleSubmit = async () => {
     setLoading(true);
     setError('');
-    
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
@@ -47,7 +47,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
@@ -82,7 +82,7 @@ export default function LoginPage() {
             Welcome back
           </h2>
           <p className="mt-2 text-sm text-foreground-secondary">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" className="font-medium text-accent-primary hover:text-accent-primary-hover">
               Sign up free
             </Link>

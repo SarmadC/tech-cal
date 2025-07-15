@@ -15,25 +15,25 @@ import EventModal from '@/components/EventModal';
 
 // Type definitions (updated to match your actual database schema)
 type EnrichedEvent = {
-  id: string; 
-  event_type_id: string; 
-  title: string; 
+  id: string;
+  event_type_id: string;
+  title: string;
   description: string;
-  start_time: string; 
-  end_time: string | null; 
+  start_time: string;
+  end_time: string | null;
   organizer: string;
-  location: string; 
-  status: string; 
+  location: string;
+  status: string;
   source_url: string;
-  livestream_url: string | null; 
-  color: string; 
+  livestream_url: string | null;
+  color: string;
   [key: string]: any;
 };
 
-type Category = { 
-  id: string; 
-  name: string; 
-  color: string; 
+type Category = {
+  id: string;
+  name: string;
+  color: string;
 };
 
 export default function CalendarPage() {
@@ -43,7 +43,7 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<EnrichedEvent | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<EnrichedEvent[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -62,14 +62,14 @@ export default function CalendarPage() {
         const { data: eventTypesData, error: eventTypesError } = await supabase
           .from('event_type')
           .select('*');
-        
+
         if (eventTypesError) {
           console.error('Error fetching event types:', eventTypesError);
           setError('Failed to load event categories');
           return;
         }
 
-        const eventTypes = eventTypesData || [];
+        const eventTypes: Category[] = eventTypesData || [];
         setCategories(eventTypes);
         setSelectedCategories(new Set(eventTypes.map(c => c.id)));
 
@@ -77,7 +77,7 @@ export default function CalendarPage() {
         const { data: eventsData, error: eventsError } = await supabase
           .from('events')
           .select('*');
-        
+
         if (eventsError) {
           console.error('Error fetching events:', eventsError);
           setError('Failed to load events');
@@ -85,7 +85,7 @@ export default function CalendarPage() {
         }
 
         setEvents(eventsData || []);
-        
+
       } catch (err) {
         console.error('Unexpected error:', err);
         setError('An unexpected error occurred');
@@ -93,7 +93,7 @@ export default function CalendarPage() {
         setLoading(false);
       }
     }
-    
+
     fetchData();
   }, []);
 
@@ -113,18 +113,18 @@ export default function CalendarPage() {
 
   const enrichedEvents = useMemo(() => {
     const categoryColorMap = new Map(categories.map(c => [c.id, c.color]));
-    return events.map(event => ({ 
-      ...event, 
-      color: categoryColorMap.get(event.event_type_id) || '#737373' 
+    return events.map(event => ({
+      ...event,
+      color: categoryColorMap.get(event.event_type_id) || '#737373'
     }));
   }, [events, categories]);
-  
+
   const searchSuggestions = useMemo(() => {
     if (!searchTerm) return [];
     const lowercasedSearchTerm = searchTerm.toLowerCase();
     const uniqueSuggestions = new Map<string, EnrichedEvent>();
     enrichedEvents.forEach(event => {
-      if (event.title.toLowerCase().includes(lowercasedSearchTerm) || 
+      if (event.title.toLowerCase().includes(lowercasedSearchTerm) ||
           event.organizer.toLowerCase().includes(lowercasedSearchTerm)) {
         if (!uniqueSuggestions.has(event.id)) uniqueSuggestions.set(event.id, event);
       }
@@ -137,7 +137,7 @@ export default function CalendarPage() {
     return enrichedEvents.filter((event) => {
       if (!selectedCategories.has(event.event_type_id)) return false;
       if (searchTerm) {
-        return event.title.toLowerCase().includes(lowercasedSearchTerm) || 
+        return event.title.toLowerCase().includes(lowercasedSearchTerm) ||
                event.organizer.toLowerCase().includes(lowercasedSearchTerm);
       }
       return true;
@@ -145,23 +145,23 @@ export default function CalendarPage() {
   }, [enrichedEvents, selectedCategories, searchTerm]);
 
   const daysInMonth = useMemo(() => {
-    const year = currentDate.getFullYear(); 
+    const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay(); 
+    const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
     const days = [];
-    
-    for (let i = firstDay - 1; i >= 0; i--) { 
-      days.push({ date: daysInPrevMonth - i, isCurrentMonth: false }); 
+
+    for (let i = firstDay - 1; i >= 0; i--) {
+      days.push({ date: daysInPrevMonth - i, isCurrentMonth: false });
     }
-    for (let i = 1; i <= daysInMonth; i++) { 
-      days.push({ date: i, isCurrentMonth: true }); 
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({ date: i, isCurrentMonth: true });
     }
     const totalDays = days.length > 35 ? 42 : 35;
     const remainingDays = totalDays - days.length;
-    for (let i = 1; i <= remainingDays; i++) { 
-      days.push({ date: i, isCurrentMonth: false }); 
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({ date: i, isCurrentMonth: false });
     }
     return days;
   }, [currentDate]);
@@ -180,9 +180,9 @@ export default function CalendarPage() {
 
   const isToday = (day: number, isCurrentMonth: boolean) => {
     const today = new Date();
-    return isCurrentMonth && 
-           day === today.getDate() && 
-           currentDate.getMonth() === today.getMonth() && 
+    return isCurrentMonth &&
+           day === today.getDate() &&
+           currentDate.getMonth() === today.getMonth() &&
            currentDate.getFullYear() === today.getFullYear();
   };
 
@@ -214,7 +214,7 @@ export default function CalendarPage() {
             </div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Error Loading Calendar</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
@@ -232,15 +232,15 @@ export default function CalendarPage() {
       <MainNavbar />
 
       <div className="flex flex-1 mt-16">
-        <div 
+        <div
           className={`
-            ${sidebarOpen ? 'w-72' : 'w-0'} 
-            bg-gray-50 dark:bg-gray-950 
-            border-r border-gray-200 dark:border-gray-800 
+            ${sidebarOpen ? 'w-72' : 'w-0'}
+            bg-gray-50 dark:bg-gray-950
+            border-r border-gray-200 dark:border-gray-800
             overflow-hidden transition-all duration-300 flex-shrink-0
           `}
         >
-          <FilterSidebar 
+          <FilterSidebar
             categories={categories}
             selectedCategories={selectedCategories}
             onToggleCategory={(catId) => setSelectedCategories(prev => {
@@ -253,7 +253,7 @@ export default function CalendarPage() {
         </div>
 
         <main className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-900">
-          <ContentHeader 
+          <ContentHeader
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}

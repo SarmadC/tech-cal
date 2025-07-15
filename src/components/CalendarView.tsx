@@ -1,34 +1,36 @@
+// src/components/CalendarView.tsx
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Search, Menu, User, Plus, Filter } from 'lucide-react';
 import EventModal from '@/components/EventModal';
 
-type EnrichedEvent = { 
-  id: string; 
-  category_id: string; 
-  title: string; 
-  description: string; 
-  start_time: string; 
-  end_time: string | null; 
-  organizer: string; 
-  location: string; 
-  status: string; 
-  source_url: string; 
-  livestream_url: string | null; 
-  color: string; 
-  [key: string]: any; 
+type EnrichedEvent = {
+  id: string;
+  category_id: string;
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string | null;
+  organizer: string;
+  location: string;
+  status: string;
+  source_url: string;
+  livestream_url: string | null;
+  color: string;
+  [key: string]: any;
 };
 
-type Category = { 
-  id: string; 
-  name: string; 
-  color: string; 
+type Category = {
+  id: string;
+  name: string;
+  color: string;
 };
 
-interface CalendarViewProps { 
-  initialEvents: any[]; 
-  categories: Category[]; 
+interface CalendarViewProps {
+  initialEvents: EnrichedEvent[];
+  categories: Category[];
 }
 
 export default function CalendarView({ initialEvents, categories }: CalendarViewProps) {
@@ -39,15 +41,15 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                       'July', 'August', 'September', 'October', 'November', 'December'];
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const enrichedEvents = useMemo(() => {
     const categoryColorMap = new Map(categories.map(c => [c.id, c.color]));
-    return initialEvents.map(event => ({ 
-      ...event, 
-      color: categoryColorMap.get(event.category_id) || '#737373' 
+    return initialEvents.map(event => ({
+      ...event,
+      color: categoryColorMap.get(event.category_id) || '#737373'
     }));
   }, [initialEvents, categories]);
 
@@ -69,9 +71,9 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
-    
+
     const days = [];
-    
+
     // Previous month days
     for (let i = firstDay - 1; i >= 0; i--) {
       days.push({
@@ -80,7 +82,7 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
         isPrevMonth: true
       });
     }
-    
+
     // Current month days
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({
@@ -89,7 +91,7 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
         isPrevMonth: false
       });
     }
-    
+
     // Next month days
     const remainingDays = 35 - days.length;
     for (let i = 1; i <= remainingDays; i++) {
@@ -99,7 +101,7 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
         isPrevMonth: false
       });
     }
-    
+
     return days;
   };
 
@@ -113,7 +115,7 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
       const isCategoryMatch = selectedCategories.has(event.category_id);
       if (!isCategoryMatch) return false;
       if (searchTerm) {
-        return event.title.toLowerCase().includes(lowercasedSearchTerm) || 
+        return event.title.toLowerCase().includes(lowercasedSearchTerm) ||
                event.organizer.toLowerCase().includes(lowercasedSearchTerm);
       }
       return true;
@@ -122,10 +124,10 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
 
   const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
     if (!isCurrentMonth) return [];
-    
+
     return filteredEvents.filter(event => {
       const eventDate = new Date(event.start_time);
-      return eventDate.getDate() === day && 
+      return eventDate.getDate() === day &&
              eventDate.getMonth() === currentDate.getMonth() &&
              eventDate.getFullYear() === currentDate.getFullYear();
     });
@@ -139,9 +141,9 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
 
   const isToday = (day: number, isCurrentMonth: boolean) => {
     const today = new Date();
-    return isCurrentMonth && 
-           day === today.getDate() && 
-           currentDate.getMonth() === today.getMonth() && 
+    return isCurrentMonth &&
+           day === today.getDate() &&
+           currentDate.getMonth() === today.getMonth() &&
            currentDate.getFullYear() === today.getFullYear();
   };
 
@@ -171,11 +173,11 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
         <aside className={`${sidebarOpen ? 'w-72' : 'w-0'} bg-gray-50 border-r border-gray-200 overflow-hidden transition-all duration-300 flex-shrink-0`}>
           <div className="p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-6">Event Categories</h2>
-            
+
             <div className="space-y-3 mb-6">
               {categories.map(category => (
                 <label key={category.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer">
-                  <div 
+                  <div
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: category.color }}
                   ></div>
@@ -207,13 +209,13 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
         <main className="flex-1 flex flex-col bg-gray-100">
           {/* Top Bar */}
           <div className="h-20 bg-white border-b border-gray-200 px-8 flex items-center justify-between">
-            <button 
+            <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Menu className="w-5 h-5 text-gray-600" />
             </button>
-            
+
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -243,19 +245,19 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
               {/* Calendar Header */}
               <div className="h-16 px-6 flex items-center justify-between border-b border-gray-200">
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     onClick={() => navigateMonth(-1)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     <ChevronLeft className="w-5 h-5 text-gray-600" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => setCurrentDate(new Date())}
                     className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     Today
                   </button>
-                  <button 
+                  <button
                     onClick={() => navigateMonth(1)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                   >
@@ -268,7 +270,7 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
                 </h2>
 
                 <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-                  <button 
+                  <button
                     onClick={() => setView('month')}
                     className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
                       view === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
@@ -276,7 +278,7 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
                   >
                     Month
                   </button>
-                  <button 
+                  <button
                     onClick={() => setView('week')}
                     className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
                       view === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
@@ -284,7 +286,7 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
                   >
                     Week
                   </button>
-                  <button 
+                  <button
                     onClick={() => setView('day')}
                     className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
                       view === 'day' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
@@ -313,7 +315,7 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
                     const todayClass = isToday(day.date, day.isCurrentMonth);
 
                     return (
-                      <div 
+                      <div
                         key={index}
                         className={`border-r border-b border-gray-200 p-2 min-h-[120px] last:border-r-0 ${
                           day.isCurrentMonth ? 'bg-white' : 'bg-gray-50'
@@ -326,7 +328,7 @@ export default function CalendarView({ initialEvents, categories }: CalendarView
                         </div>
                         <div className="space-y-1">
                           {dayEvents.slice(0, 3).map(event => (
-                            <div 
+                            <div
                               key={event.id}
                               onClick={() => setSelectedEvent(event)}
                               className="text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-90 transition-opacity"

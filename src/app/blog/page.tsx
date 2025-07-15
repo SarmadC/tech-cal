@@ -98,8 +98,8 @@ export default function BlogPage() {
             TechCalendar Blog
           </h1>
           <p className="text-xl text-foreground-secondary max-w-3xl">
-            Stay informed with insights, tutorials, and news from the tech world. 
-            Learn from industry experts and discover what's shaping the future of technology.
+            Stay informed with insights, tutorials, and news from the tech world.
+            Learn from industry experts and discover what&apos;s shaping the future of technology.
           </p>
         </div>
       </section>
@@ -216,7 +216,7 @@ export default function BlogPage() {
                         <p className="text-xs text-foreground-tertiary">{post.date}</p>
                       </div>
                     </div>
-                    
+
                     <Link
                       href={`/blog/${post.id}`}
                       className="text-accent-primary hover:text-accent-primary-hover transition-colors"

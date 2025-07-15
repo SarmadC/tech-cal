@@ -36,8 +36,8 @@ export default function ContactPage() {
             Get in Touch
           </h1>
           <p className="text-xl text-foreground-secondary max-w-3xl">
-            Have questions about TechCalendar? Want to discuss enterprise plans? 
-            We're here to help.
+            Have questions about TechCalendar? Want to discuss enterprise plans?
+            We&apos;re here to help.
           </p>
         </div>
       </section>
@@ -47,11 +47,11 @@ export default function ContactPage() {
           {/* Contact Information */}
           <div>
             <h2 className="text-2xl font-bold text-foreground-primary mb-6">
-              Let's Build Something Together
+              Let&apos;s Build Something Together
             </h2>
             <p className="text-foreground-secondary mb-8">
-              Whether you're a developer with feedback, a company looking for custom solutions, 
-              or an investor interested in our vision, we'd love to hear from you.
+              Whether you&apos;re a developer with feedback, a company looking for custom solutions,
+              or an investor interested in our vision, we&apos;d love to hear from you.
             </p>
 
             <div className="space-y-6">

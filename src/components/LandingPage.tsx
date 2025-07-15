@@ -1,7 +1,9 @@
+// src/components/LandingPage.tsx
+
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+// import { useState, useEffect } from 'react';
 
 const features = [
   {
@@ -140,11 +142,11 @@ export default function LandingPage() {
               <br />Again
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-12">
-              The world of tech moves fast. TechCalendar brings together conferences, keynotes, 
-              product launches, and developer events from across the industry into one beautiful, 
+              The world of tech moves fast. TechCalendar brings together conferences, keynotes,
+              product launches, and developer events from across the industry into one beautiful,
               intuitive calendar.
             </p>
-            
+
             {/* Hero Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <Link
@@ -216,13 +218,13 @@ export default function LandingPage() {
                 <br />For Tech Enthusiasts
               </h2>
               <p className="text-lg text-gray-600 mb-6">
-                We understand the struggle of keeping up with the fast-paced tech world. 
-                That's why we built TechCalendar – to create a single source of truth for 
+                We understand the struggle of keeping up with the fast-paced tech world.
+                That&apos;s why we built TechCalendar – to create a single source of truth for
                 all tech events globally.
               </p>
               <p className="text-lg text-gray-600 mb-8">
-                Our team continuously curates and verifies events from hundreds of sources, 
-                ensuring you have access to accurate, up-to-date information about conferences, 
+                Our team continuously curates and verifies events from hundreds of sources,
+                ensuring you have access to accurate, up-to-date information about conferences,
                 product launches, hackathons, and developer meetups.
               </p>
               <div className="flex items-center space-x-8">
@@ -240,7 +242,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Image/Visual */}
             <div className="relative">
               <div className="aspect-square bg-gradient-to-br from-blue-100 to-blue-50 rounded-3xl flex items-center justify-center">
@@ -273,7 +275,7 @@ export default function LandingPage() {
                 key={index}
                 className="bg-white p-8 rounded-2xl border border-gray-200"
               >
-                <p className="text-gray-600 mb-6 italic">"{testimonial.quote}"</p>
+                <p className="text-gray-600 mb-6 italic">&quot;{testimonial.quote}&quot;</p>
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-semibold">
                     {testimonial.avatar}
