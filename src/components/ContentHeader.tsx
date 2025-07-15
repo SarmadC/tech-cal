@@ -36,7 +36,7 @@ export default function ContentHeader({
       <button onClick={onToggleSidebar} className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors">
         <Menu className="w-5 h-5 text-gray-600" />
       </button>
-      
+
       <div className="flex-1 max-w-md" ref={searchContainerRef}>
         <SearchBar
           searchTerm={searchTerm}
