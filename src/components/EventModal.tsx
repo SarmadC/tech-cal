@@ -179,11 +179,10 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                 </a>
               )}
 
-              {/* NEW: Copy Link */}
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    `${window.location.origin}/calendar?event=${event.id}`
+                    `${window.location.origin}/event/${event.id}`
                   );
                   alert('Link copied!');
                 }}
