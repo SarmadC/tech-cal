@@ -1,3 +1,4 @@
+// src/app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -14,14 +15,51 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TechCalendar - Stay Updated with Tech Events",
-  description: "A modern calendar for tech conferences, keynotes, software releases, and updates. Never miss important tech events again.",
+  title: "KureCal - Antidote to Information Overload",
+  description:
+    "A modern calendar for tech conferences, keynotes, software releases, and updates. Never miss important tech events again.",
+
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  manifest: "/site.webmanifest",
+
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://kurecal.com",
+    siteName: "KureCal",
+    title: "KureCal - Antidote to Information Overload",
+    description:
+      "All major tech conferences, product launches and developer events in one beautiful calendar.",
+    images: [
+      { url: "/web-app-manifest-512x512.png", width: 512, height: 512, alt: "TechCalendar preview" },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "KureCal - Antidote to Information Overload",
+    description:
+      "Unified calendar for Apple, Google, Microsoft and startup events.",
+    images: ["/web-app-manifest-512x512.png"],
+  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
