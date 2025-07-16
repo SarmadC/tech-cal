@@ -106,6 +106,39 @@ export default function CalendarPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Keyboard shortcuts for calendar navigation
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      if (e.target && (e.target as HTMLElement).tagName === 'INPUT') return;
+      
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+      }
+      if (e.key === "t" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCurrentDate(new Date());
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [currentDate]);
+
   // 3. LOGIC & DERIVED STATE
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
