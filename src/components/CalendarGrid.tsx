@@ -72,7 +72,9 @@ export default function CalendarGrid({
                 ))}
                 {dayEvents.length > 3 && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 px-2">
-                    +{dayEvents.length - 3} more
+                    <span title={`${dayEvents.length - 3} additional events`}>
+                      +{dayEvents.length - 3} more
+                    </span>
                   </div>
                 )}
               </div>
