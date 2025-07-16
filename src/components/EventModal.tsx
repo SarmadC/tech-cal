@@ -153,10 +153,10 @@ export default function EventModal({ event, onClose }: EventModalProps) {
           <div className="space-y-4">
             {/* Primary Actions */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <a 
-                href={event.source_url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href={event.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex-1 bg-accent-primary hover:bg-accent-primary-hover text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
               >
                 <span>View Event Details</span>
@@ -164,12 +164,12 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
-              
+
               {event.livestream_url && (
-                <a 
-                  href={event.livestream_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                <a
+                  href={event.livestream_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex-1 bg-error hover:bg-red-600 text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +178,24 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                   <span>Watch Livestream</span>
                 </a>
               )}
+
+              {/* NEW: Copy Link */}
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `${window.location.origin}/calendar?event=${event.id}`
+                  );
+                  alert('Link copied!');
+                }}
+                className="flex-1 bg-background-secondary hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span>Copy Link</span>
+              </button>
             </div>
+
 
             {/* Add to Calendar */}
             <div className="border-t border-border-color pt-4">
