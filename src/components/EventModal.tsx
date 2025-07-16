@@ -20,6 +20,21 @@ interface EventModalProps {
   onClose: () => void;
 }
 
+// Helper function to create appealing event slugs
+const createEventSlug = (title: string, id: string) => {
+  // Convert title to URL-friendly slug
+  const slug = title
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-')     // Replace spaces with hyphens
+    .replace(/-+/g, '-')      // Replace multiple hyphens with single
+    .replace(/(^-|-$)/g, ''); // Remove leading/trailing hyphens
+  
+  // Add short ID for uniqueness (first 8 characters)
+  const shortId = id.slice(0, 8);
+  return `${slug}-${shortId}`;
+};
+
 export default function EventModal({ event, onClose }: EventModalProps) {
   // Format dates
   const eventDate = new Date(event.start_time).toLocaleDateString(undefined, {
@@ -181,8 +196,9 @@ export default function EventModal({ event, onClose }: EventModalProps) {
 
               <button
                 onClick={() => {
+                  const eventSlug = createEventSlug(event.title, event.id);
                   navigator.clipboard.writeText(
-                    `${window.location.origin}/event/${event.id}`
+                    `${window.location.origin}/event/${eventSlug}`
                   );
                   alert('Link copied!');
                 }}
@@ -194,7 +210,6 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                 <span>Copy Link</span>
               </button>
             </div>
-
 
             {/* Add to Calendar */}
             <div className="border-t border-border-color pt-4">
