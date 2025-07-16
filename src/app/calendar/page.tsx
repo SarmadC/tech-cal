@@ -106,25 +106,6 @@ export default function CalendarPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input/textarea
-      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '')) return;
-
-      if (e.key === 'ArrowLeft') {
-        setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-      } else if (e.key === 'ArrowRight') {
-        setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 't') {
-        e.preventDefault(); // stop browser new-tab
-        setCurrentDate(new Date());
-      }
-    };
-
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, []);
-
   // 3. LOGIC & DERIVED STATE
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
