@@ -1,14 +1,13 @@
-// src/components/CalendarGrid.tsx (Updated with Countdown Timers)
-
 import { CompactCountdown } from './CountdownTimer';
+import { CompactHappeningNow, hasHappeningNowStatus } from './HappeningNowIndicator';
 
-// Type definitions for the props this component receives
 type Event = { 
   id: string; 
   title: string; 
   color: string; 
   start_time: string;
   end_time: string | null;
+  event_type_id?: string;
 };
 type Day = { date: number; isCurrentMonth: boolean; };
 
@@ -44,7 +43,7 @@ export default function CalendarGrid({
     return hoursDiff >= 0 && hoursDiff <= 24;
   };
 
-  // Helper to check if event is live
+  // Helper to check if event is live (for countdown timer)
   const isEventLive = (startTime: string, endTime: string | null) => {
     const now = new Date();
     const start = new Date(startTime);
@@ -76,7 +75,7 @@ export default function CalendarGrid({
             <div
               key={index}
               className={`
-                border-r border-b border-gray-200 dark:border-gray-800 p-2 min-h-[120px] 
+                border-r border-b border-gray-200 dark:border-gray-800 p-2 min-h-[140px] 
                 ${day.isCurrentMonth ? 'bg-white dark:bg-gray-950' : 'bg-gray-50 dark:bg-gray-900'} 
                 ${isTodayClass ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
                 ${(index + 1) % 7 === 0 ? 'border-r-0' : ''} 
@@ -84,7 +83,7 @@ export default function CalendarGrid({
             >
               <div
                 className={`
-                  text-sm font-medium mb-1 
+                  text-sm font-medium mb-2 
                   ${day.isCurrentMonth ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-600'} 
                   ${isTodayClass ? 'text-blue-600 dark:text-blue-400' : ''}
                 `}
@@ -97,9 +96,10 @@ export default function CalendarGrid({
                   const isLive = isEventLive(event.start_time, event.end_time);
                   const isSoon = isHappeningSoon(event.start_time);
                   const isUpcoming = isUpcomingEvent(event.start_time);
+                  const hasHappeningNow = hasHappeningNowStatus(event.start_time, event.end_time, event.title);
 
                   return (
-                    <div key={event.id} className="relative">
+                    <div key={event.id} className="space-y-1">
                       {/* Event Badge */}
                       <div
                         onClick={() => onEventClick(event)}
@@ -110,26 +110,27 @@ export default function CalendarGrid({
                         `}
                         style={{ backgroundColor: event.color }}
                       >
-                        {/* Live indicator */}
-                        {isLive && (
-                          <div className="absolute top-0 right-0 w-2 h-2">
-                            <div className="absolute inset-0 bg-red-500 rounded-full animate-ping"></div>
-                            <div className="absolute inset-0 bg-red-500 rounded-full"></div>
-                          </div>
-                        )}
-                        
                         {/* Event title */}
                         <div className="flex items-center justify-between">
                           <span className="truncate flex-1">{event.title}</span>
-                          {isLive && (
-                            <span className="text-xs font-bold ml-1 bg-red-500 px-1 rounded">LIVE</span>
-                          )}
                         </div>
                       </div>
 
-                      {/* Countdown for upcoming events */}
-                      {!isLive && (isUpcoming || isSoon) && (
-                        <div className="mt-1">
+                      {/* Happening Now Indicator (takes priority) */}
+                      {hasHappeningNow && (
+                        <div className="flex justify-center">
+                          <CompactHappeningNow 
+                            startTime={event.start_time} 
+                            endTime={event.end_time}
+                            title={event.title}
+                            eventType={event.event_type_id}
+                          />
+                        </div>
+                      )}
+
+                      {/* Countdown for upcoming events (only if no happening now status) */}
+                      {!hasHappeningNow && !isLive && (isUpcoming || isSoon) && (
+                        <div className="flex justify-center">
                           <CompactCountdown 
                             startTime={event.start_time} 
                             endTime={event.end_time}
@@ -141,8 +142,11 @@ export default function CalendarGrid({
                 })}
                 
                 {dayEvents.length > 3 && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 px-2">
-                    <span title={`${dayEvents.length - 3} additional events`}>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 px-2 text-center mt-2">
+                    <span 
+                      title={`${dayEvents.length - 3} additional events`}
+                      className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    >
                       +{dayEvents.length - 3} more
                     </span>
                   </div>

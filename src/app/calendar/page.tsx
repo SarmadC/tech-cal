@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import MainNavbar from '@/components/MainNavbar';
 import FilterSidebar from '@/components/FilterSidebar';
+
 import ContentHeader from '@/components/ContentHeader';
 import CalendarHeader from '@/components/CalendarHeader';
 import EventModal from '@/components/EventModal';

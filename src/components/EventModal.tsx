@@ -1,9 +1,10 @@
-// src/components/EventModal.tsx (Updated with Countdown Timer)
+// src/components/EventModal.tsx (Updated with Happening Now Indicators)
 
 'use client';
 
 import { formatToUTC } from '@/lib/calendarUtils';
 import { ModalCountdown } from './CountdownTimer';
+import { ModalHappeningNow, hasHappeningNowStatus } from './HappeningNowIndicator';
 
 type Event = {
   id: string;
@@ -16,6 +17,7 @@ type Event = {
   status: string;
   source_url: string;
   livestream_url: string | null;
+  event_type_id?: string;
 };
 
 interface EventModalProps {
@@ -65,6 +67,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
   const isLive = isEventLive(event.start_time, event.end_time);
   const isSoon = isHappeningSoon(event.start_time);
   const hasEnded = new Date() > new Date(event.end_time || event.start_time);
+  const hasHappeningNow = hasHappeningNowStatus(event.start_time, event.end_time, event.title);
 
   // Calendar Links
   const utcStartTime = formatToUTC(event.start_time);
@@ -105,10 +108,10 @@ export default function EventModal({ event, onClose }: EventModalProps) {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'confirmed': return 'text-success';
-      case 'pending': return 'text-warning';
-      case 'cancelled': return 'text-error';
-      default: return 'text-foreground-tertiary';
+      case 'confirmed': return 'text-green-600';
+      case 'pending': return 'text-yellow-600';
+      case 'cancelled': return 'text-red-600';
+      default: return 'text-gray-500';
     }
   };
 
@@ -118,13 +121,13 @@ export default function EventModal({ event, onClose }: EventModalProps) {
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-background-main rounded-2xl shadow-2xl" 
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl" 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button 
           onClick={onClose} 
-          className="absolute top-6 right-6 z-10 w-10 h-10 bg-background-secondary hover:bg-background-tertiary rounded-lg flex items-center justify-center text-foreground-tertiary hover:text-foreground-primary transition-all"
+          className="absolute top-6 right-6 z-10 w-10 h-10 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -134,46 +137,50 @@ export default function EventModal({ event, onClose }: EventModalProps) {
         <div className="p-8">
           {/* Header */}
           <div className="mb-6">
-            <div className="flex items-center space-x-3 mb-2">
-              <h1 className="text-2xl font-bold text-foreground-primary">
+            <div className="flex items-start justify-between mb-4">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 pr-12">
                 {event.title}
               </h1>
-              {/* Live indicator */}
-              {isLive && (
-                <div className="flex items-center space-x-2">
-                  <div className="relative">
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                    <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-                  </div>
-                  <span className="text-sm font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full">
-                    LIVE NOW
-                  </span>
-                </div>
-              )}
             </div>
-            <div className="flex items-center space-x-4">
+            
+            <div className="flex items-center space-x-4 mb-4">
               <span className={`text-sm font-medium ${getStatusColor(event.status)}`}>
                 {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
               </span>
-              <span className="text-sm text-foreground-tertiary">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 Organized by {event.organizer}
               </span>
             </div>
+
+            {/* Happening Now Indicator */}
+            {hasHappeningNow && (
+              <div className="mb-4">
+                <ModalHappeningNow 
+                  startTime={event.start_time}
+                  endTime={event.end_time}
+                  title={event.title}
+                  eventType={event.event_type_id}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Countdown Timer - Show for upcoming events */}
-          {!hasEnded && !isLive && isSoon && (
+          {/* Countdown Timer - Show for upcoming events without happening now status */}
+          {!hasEnded && !hasHappeningNow && isSoon && (
             <div className="mb-6">
               <ModalCountdown startTime={event.start_time} endTime={event.end_time} />
             </div>
           )}
 
-          {/* Live Event Banner */}
+          {/* Special banners based on happening now status */}
           {isLive && (
             <div className="mb-6 bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-4 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold">🔴 Event is happening now!</h3>
+                  <h3 className="font-semibold flex items-center space-x-2">
+                    <span className="animate-pulse">🔴</span>
+                    <span>Event is happening now!</span>
+                  </h3>
                   <p className="text-red-100 text-sm">Don&apos;t miss out on the live coverage</p>
                 </div>
                 {event.livestream_url && (
@@ -190,41 +197,72 @@ export default function EventModal({ event, onClose }: EventModalProps) {
             </div>
           )}
 
+          {/* Registration/Deadline Banner */}
+          {hasHappeningNow && (event.title.toLowerCase().includes('registration') || 
+                              event.title.toLowerCase().includes('deadline') ||
+                              event.title.toLowerCase().includes('submit') ||
+                              event.title.toLowerCase().includes('ticket')) && (
+            <div className="mb-6 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold flex items-center space-x-2">
+                    <span>⏰</span>
+                    <span>Time-sensitive action required!</span>
+                  </h3>
+                  <p className="text-purple-100 text-sm">
+                    {event.title.toLowerCase().includes('registration') && 'Registration window is active'}
+                    {event.title.toLowerCase().includes('ticket') && 'Tickets are available now'}
+                    {event.title.toLowerCase().includes('deadline') && 'Important deadline approaching'}
+                    {event.title.toLowerCase().includes('submit') && 'Submission period is open'}
+                  </p>
+                </div>
+                <a
+                  href={event.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white text-purple-600 hover:bg-purple-50 font-medium py-2 px-4 rounded-lg transition-all"
+                >
+                  Take Action
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Event Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Date & Time */}
-            <div className="bg-background-secondary rounded-xl p-5">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="w-10 h-10 bg-accent-primary-light rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h3 className="text-sm font-semibold text-foreground-primary">Date & Time</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Date & Time</h3>
               </div>
-              <p className="text-sm font-medium text-foreground-primary">{eventDate}</p>
-              <p className="text-sm text-foreground-secondary mt-1">{eventTime}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{eventDate}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{eventTime}</p>
             </div>
 
             {/* Location */}
-            <div className="bg-background-secondary rounded-xl p-5">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="w-10 h-10 bg-accent-primary-light rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                <h3 className="text-sm font-semibold text-foreground-primary">Location</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Location</h3>
               </div>
-              <p className="text-sm font-medium text-foreground-primary">{event.location}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{event.location}</p>
             </div>
           </div>
 
           {/* Description */}
           <div className="mb-8">
-            <h3 className="text-sm font-semibold text-foreground-primary mb-3">About this event</h3>
-            <p className="text-sm text-foreground-secondary leading-relaxed">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">About this event</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
               {event.description}
             </p>
           </div>
@@ -237,7 +275,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                 href={event.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 bg-accent-primary hover:bg-accent-primary-hover text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
               >
                 <span>View Event Details</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,7 +292,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                     flex-1 font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-sm hover:shadow-md
                     ${isLive 
                       ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
-                      : 'bg-error hover:bg-red-600 text-white'
+                      : 'bg-red-500 hover:bg-red-600 text-white'
                     }
                   `}
                 >
@@ -273,7 +311,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                   );
                   alert('Link copied!');
                 }}
-                className="flex-1 bg-background-secondary hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2"
+                className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -283,14 +321,14 @@ export default function EventModal({ event, onClose }: EventModalProps) {
             </div>
 
             {/* Add to Calendar */}
-            <div className="border-t border-border-color pt-4">
-              <p className="text-xs font-medium text-foreground-tertiary mb-3 uppercase tracking-wider">Add to Calendar</p>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">Add to Calendar</p>
               <div className="flex flex-wrap gap-2">
                 <a 
                   href={googleCalendarLink.href} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="inline-flex items-center space-x-2 bg-background-secondary hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-2 px-4 rounded-lg transition-all text-sm"
+                  className="inline-flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 font-medium py-2 px-4 rounded-lg transition-all text-sm"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -303,7 +341,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                 
                 <button 
                   onClick={handleIcsDownload} 
-                  className="inline-flex items-center space-x-2 bg-background-secondary hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-2 px-4 rounded-lg transition-all text-sm"
+                  className="inline-flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 font-medium py-2 px-4 rounded-lg transition-all text-sm"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
