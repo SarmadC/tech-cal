@@ -310,7 +310,7 @@ export default function CalendarPage() {
             searchContainerRef={searchContainerRef}
             suggestions={searchSuggestions}
             onSuggestionClick={(suggestion) => {
-              setSearchTerm(suggestion.title);
+              setSearchTerm(suggestion.title || 'Untitled Event');  // ← Add this null check
               setIsSearchFocused(false);
             }}
             totalEvents={filteredEvents.length}
