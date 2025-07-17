@@ -1,21 +1,7 @@
-// src/components/CalendarGrid.tsx (SAFER VERSION - Debug Step by Step)
+// src/components/CalendarGrid.tsx (Updated with Status Dots)
 
 import { CompactCountdown } from './CountdownTimer';
-import { hasHappeningNowStatus } from './HappeningNowIndicator';
-
-// SIMPLE DEBUG DOTS - Always visible for testing
-const DebugDots = ({ count }: { count: number }) => {
-  if (count === 0) return null;
-  
-  return (
-    <div className="absolute top-1 right-1 flex gap-1">
-      {/* Always show a red dot if there are any events */}
-      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" title={`${count} events`} />
-      {count > 1 && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-      {count > 2 && <div className="w-2 h-2 bg-green-500 rounded-full" />}
-    </div>
-  );
-};
+import { hasHappeningNowStatus, CalendarDayDots } from './HappeningNowIndicator';
 
 // Type definitions
 type Event = { 
@@ -94,6 +80,14 @@ export default function CalendarGrid({
             return !hasStatus && (isUpcoming || isSoon);
           });
 
+          // Convert events to format expected by CalendarDayDots
+          const eventsForStatusDots = dayEvents.map(event => ({
+            startTime: event.start_time,
+            endTime: event.end_time,
+            title: event.title,
+            eventType: event.event_type_id
+          }));
+
           return (
             <div
               key={index}
@@ -115,9 +109,9 @@ export default function CalendarGrid({
                 {day.date}
               </div>
 
-              {/* DEBUG DOTS - Always show if there are events */}
+              {/* STATUS DOTS - Minimal corner indicators */}
               {dayEvents.length > 0 && (
-                <DebugDots count={dayEvents.length} />
+                <CalendarDayDots events={eventsForStatusDots} />
               )}
               
               {/* Event badges */}
