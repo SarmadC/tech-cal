@@ -1,9 +1,9 @@
-// src/app/dashboard/growth/page.tsx
+// src/app/dashboard/growth/page.tsx (Corrected)
 
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { supabase } from '@/lib/supabaseClient';
 
 // --- Type Definitions ---
@@ -11,6 +11,22 @@ interface UserEvent {
   attendedAt: string;
   category: string;
 }
+
+interface ChartData {
+  month: string;
+  [key: string]: string | number;
+}
+
+// Correctly typed to match the actual Supabase response structure
+interface SupabaseUserEvent {
+  created_at: string;
+  events: {
+    event_type: {
+      name: string;
+    } | null;
+  }[] | null; // <-- This correctly types 'events' as an array
+}
+
 
 // --- Helper Functions ---
 
@@ -27,19 +43,19 @@ const fetchUserEvents = async (userId: string): Promise<UserEvent[]> => {
       )
     `)
     .eq('user_id', userId)
-    .eq('status', 'attended'); // Assuming 'attended' is a status in your user_events table
+    .eq('status', 'attended');
 
   if (error) {
     console.error('Error fetching user events:', error);
     return [];
   }
 
-  return data.map((event: any) => ({
-    attendedAt: event.created_at,
-    category: event.events.event_type.name || 'Unknown',
+  // Safely map the data with the corrected type
+  return (data as SupabaseUserEvent[]).map((userEvent) => ({
+    attendedAt: userEvent.created_at,
+    category: userEvent.events?.[0]?.event_type?.name || 'Unknown',
   }));
 };
-
 
 // Get events attended this year
 const getEventsThisYear = (events: UserEvent[]) => {
@@ -61,7 +77,7 @@ const calculateYearlyStats = (events: UserEvent[]) => {
 };
 
 // Prepare data for the progression chart
-const prepareChartData = (events: UserEvent[]) => {
+const prepareChartData = (events: UserEvent[]): ChartData[] => {
   const monthlyData = events.reduce((acc, event) => {
     const month = new Date(event.attendedAt).toLocaleString('default', { month: 'short', year: 'numeric' });
     if (!acc[month]) {
@@ -83,8 +99,8 @@ const calculateStreak = (events: UserEvent[]) => {
 
   const sortedEvents = events.map(e => new Date(e.attendedAt)).sort((a, b) => b.getTime() - a.getTime());
   let streak = 0;
-  let currentMonth = new Date().getMonth();
-  let currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
 
   const attendedThisMonth = sortedEvents.some(
     date => date.getMonth() === currentMonth && date.getFullYear() === currentYear
@@ -129,7 +145,7 @@ export default function GrowthDashboardPage() {
   useEffect(() => {
     const loadData = async () => {
       // NOTE: Replace with actual user ID from your auth session
-      const userId = '...'; 
+      const userId = '...';
       try {
         const events = await fetchUserEvents(userId);
         setUserEvents(events);
@@ -195,11 +211,12 @@ export default function GrowthDashboardPage() {
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>
               <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="AI/ML" stackId="a" fill="#8884d8" />
+                <Bar dataKey="AI & ML" stackId="a" fill="#8884d8" />
                 <Bar dataKey="Web Dev" stackId="a" fill="#82ca9d" />
                 <Bar dataKey="Cloud" stackId="a" fill="#ffc658" />
                 <Bar dataKey="Security" stackId="a" fill="#ff8042" />
