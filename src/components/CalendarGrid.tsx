@@ -1,6 +1,8 @@
-import { CompactCountdown } from './CountdownTimer';
-import { CompactHappeningNow, hasHappeningNowStatus } from './HappeningNowIndicator';
 
+import { CompactCountdown } from './CountdownTimer';
+import { CalendarDayDots, hasHappeningNowStatus } from './HappeningNowIndicator';
+
+// Type definitions for the props this component receives
 type Event = { 
   id: string; 
   title: string; 
@@ -27,7 +29,7 @@ export default function CalendarGrid({
   onEventClick,
 }: CalendarGridProps) {
   
-  // Helper to check if event is upcoming (within next 7 days)
+  // Helper to check if event is upcoming (within next 7 days) for countdown
   const isUpcomingEvent = (startTime: string) => {
     const now = new Date();
     const eventStart = new Date(startTime);
@@ -35,20 +37,12 @@ export default function CalendarGrid({
     return daysDiff >= 0 && daysDiff <= 7;
   };
 
-  // Helper to check if event is happening soon (within 24 hours)
+  // Helper to check if event is happening soon (within 24 hours) for countdown
   const isHappeningSoon = (startTime: string) => {
     const now = new Date();
     const eventStart = new Date(startTime);
     const hoursDiff = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
     return hoursDiff >= 0 && hoursDiff <= 24;
-  };
-
-  // Helper to check if event is live (for countdown timer)
-  const isEventLive = (startTime: string, endTime: string | null) => {
-    const now = new Date();
-    const start = new Date(startTime);
-    const end = endTime ? new Date(endTime) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
-    return now >= start && now <= end;
   };
 
   return (
@@ -71,16 +65,38 @@ export default function CalendarGrid({
           const dayEvents = getEventsForDay(day.date, day.isCurrentMonth);
           const isTodayClass = isToday(day.date, day.isCurrentMonth);
 
+          // Prepare events for happening now dots
+          const eventsForDots = dayEvents.map(event => ({
+            startTime: event.start_time,
+            endTime: event.end_time,
+            title: event.title,
+            eventType: event.event_type_id
+          }));
+
+          // Check if any events have happening now status
+          const hasHappeningNowEvents = dayEvents.some(event => 
+            hasHappeningNowStatus(event.start_time, event.end_time, event.title)
+          );
+
+          // Find the most urgent event for countdown (if no happening now status)
+          const mostUrgentEvent = dayEvents.find(event => {
+            const isUpcoming = isUpcomingEvent(event.start_time);
+            const isSoon = isHappeningSoon(event.start_time);
+            const hasStatus = hasHappeningNowStatus(event.start_time, event.end_time, event.title);
+            return !hasStatus && (isUpcoming || isSoon);
+          });
+
           return (
             <div
               key={index}
               className={`
-                border-r border-b border-gray-200 dark:border-gray-800 p-2 min-h-[140px] 
+                border-r border-b border-gray-200 dark:border-gray-800 p-2 min-h-[120px] relative
                 ${day.isCurrentMonth ? 'bg-white dark:bg-gray-950' : 'bg-gray-50 dark:bg-gray-900'} 
                 ${isTodayClass ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
                 ${(index + 1) % 7 === 0 ? 'border-r-0' : ''} 
               `}
             >
+              {/* Day number */}
               <div
                 className={`
                   text-sm font-medium mb-2 
@@ -90,68 +106,43 @@ export default function CalendarGrid({
               >
                 {day.date}
               </div>
+
+              {/* Minimal happening now dots (top-right corner) */}
+              {hasHappeningNowEvents && (
+                <CalendarDayDots events={eventsForDots} />
+              )}
               
+              {/* Event badges */}
               <div className="space-y-1">
-                {dayEvents.slice(0, 3).map(event => {
-                  const isLive = isEventLive(event.start_time, event.end_time);
-                  const isSoon = isHappeningSoon(event.start_time);
-                  const isUpcoming = isUpcomingEvent(event.start_time);
-                  const hasHappeningNow = hasHappeningNowStatus(event.start_time, event.end_time, event.title);
-
-                  return (
-                    <div key={event.id} className="space-y-1">
-                      {/* Event Badge */}
-                      <div
-                        onClick={() => onEventClick(event)}
-                        className={`
-                          text-xs px-2 py-1 rounded text-white truncate cursor-pointer 
-                          hover:opacity-90 transition-all relative overflow-hidden
-                          ${isLive ? 'animate-pulse' : ''}
-                        `}
-                        style={{ backgroundColor: event.color }}
-                      >
-                        {/* Event title */}
-                        <div className="flex items-center justify-between">
-                          <span className="truncate flex-1">{event.title}</span>
-                        </div>
-                      </div>
-
-                      {/* Happening Now Indicator (takes priority) */}
-                      {hasHappeningNow && (
-                        <div className="flex justify-center">
-                          <CompactHappeningNow 
-                            startTime={event.start_time} 
-                            endTime={event.end_time}
-                            title={event.title}
-                            eventType={event.event_type_id}
-                          />
-                        </div>
-                      )}
-
-                      {/* Countdown for upcoming events (only if no happening now status) */}
-                      {!hasHappeningNow && !isLive && (isUpcoming || isSoon) && (
-                        <div className="flex justify-center">
-                          <CompactCountdown 
-                            startTime={event.start_time} 
-                            endTime={event.end_time}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {dayEvents.slice(0, 3).map(event => (
+                  <div
+                    key={event.id}
+                    onClick={() => onEventClick(event)}
+                    className="text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-90 transition-all"
+                    style={{ backgroundColor: event.color }}
+                  >
+                    {event.title}
+                  </div>
+                ))}
                 
                 {dayEvents.length > 3 && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 px-2 text-center mt-2">
-                    <span 
-                      title={`${dayEvents.length - 3} additional events`}
-                      className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                    >
+                  <div className="text-xs text-gray-500 dark:text-gray-400 px-2">
+                    <span title={`${dayEvents.length - 3} additional events`}>
                       +{dayEvents.length - 3} more
                     </span>
                   </div>
                 )}
               </div>
+
+              {/* Countdown timer for upcoming events (only if no happening now status) */}
+              {!hasHappeningNowEvents && mostUrgentEvent && (
+                <div className="mt-2 flex justify-center">
+                  <CompactCountdown 
+                    startTime={mostUrgentEvent.start_time} 
+                    endTime={mostUrgentEvent.end_time}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
