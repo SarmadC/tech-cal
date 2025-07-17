@@ -4,15 +4,21 @@ import { Menu } from 'lucide-react';
 import SearchBar from './SearchBar';
 import { RefObject } from 'react';
 
-// Define the types for props
-type Suggestion = { id: string; title: string; organizer: string; start_time: string; };
+// Define the types for props - Updated to match SearchBar types
+type Suggestion = { 
+  id: string; 
+  title: string | null; 
+  organizer: string | null; 
+  start_time: string; 
+};
+
 interface ContentHeaderProps {
   onToggleSidebar: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   isSearchFocused: boolean;
   onSearchFocus: () => void;
-  searchContainerRef: RefObject<HTMLDivElement | null>; // This line is corrected
+  searchContainerRef: RefObject<HTMLDivElement | null>;
   suggestions: Suggestion[];
   onSuggestionClick: (suggestion: Suggestion) => void;
   totalEvents: number;
