@@ -5,6 +5,15 @@
 import { useState } from 'react';
 import { ChevronDown, Star, TrendingUp, Building2, Cpu, Users, Sparkles } from 'lucide-react';
 
+// Event type for filtering
+interface EventForFiltering {
+  id: string;
+  title?: string;
+  description?: string;
+  organizer?: string;
+  event_type_id?: string;
+}
+
 // Collection definitions
 export const CURATED_COLLECTIONS = {
   all: {
@@ -23,7 +32,7 @@ export const CURATED_COLLECTIONS = {
     icon: Building2,
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
-    filter: (event: any) => {
+    filter: (event: EventForFiltering) => {
       const organizer = event.organizer?.toLowerCase() || '';
       const bigTechCompanies = [
         'apple', 'google', 'alphabet', 'microsoft', 'meta', 'facebook', 
@@ -40,7 +49,7 @@ export const CURATED_COLLECTIONS = {
     icon: Cpu,
     color: 'text-purple-600',
     bgColor: 'bg-purple-100',
-    filter: (event: any) => {
+    filter: (event: EventForFiltering) => {
       const title = event.title?.toLowerCase() || '';
       const description = event.description?.toLowerCase() || '';
       const organizer = event.organizer?.toLowerCase() || '';
@@ -69,7 +78,7 @@ export const CURATED_COLLECTIONS = {
     icon: TrendingUp,
     color: 'text-green-600',
     bgColor: 'bg-green-100',
-    filter: (event: any) => {
+    filter: (event: EventForFiltering) => {
       const title = event.title?.toLowerCase() || '';
       const description = event.description?.toLowerCase() || '';
       const organizer = event.organizer?.toLowerCase() || '';
@@ -100,7 +109,7 @@ export const CURATED_COLLECTIONS = {
     icon: Star,
     color: 'text-amber-600',
     bgColor: 'bg-amber-100',
-    filter: (event: any) => {
+    filter: (event: EventForFiltering) => {
       // Featured events criteria: major companies + high-impact keywords
       const organizer = event.organizer?.toLowerCase() || '';
       const title = event.title?.toLowerCase() || '';
@@ -118,8 +127,6 @@ export const CURATED_COLLECTIONS = {
     }
   }
 };
-
-type Collection = typeof CURATED_COLLECTIONS[keyof typeof CURATED_COLLECTIONS];
 
 interface CuratedCollectionsProps {
   selectedCollection: string;
@@ -229,7 +236,7 @@ export default function CuratedCollections({
 }
 
 // Hook to filter events by collection
-export function useFilteredEventsByCollection(events: any[], collectionId: string) {
+export function useFilteredEventsByCollection(events: EventForFiltering[], collectionId: string) {
   const collection = CURATED_COLLECTIONS[collectionId as keyof typeof CURATED_COLLECTIONS];
   
   if (!collection) return events;
@@ -238,7 +245,7 @@ export function useFilteredEventsByCollection(events: any[], collectionId: strin
 }
 
 // Hook to get event counts for all collections
-export function useCollectionEventCounts(events: any[]) {
+export function useCollectionEventCounts(events: EventForFiltering[]) {
   const counts: Record<string, number> = {};
   
   Object.values(CURATED_COLLECTIONS).forEach(collection => {
