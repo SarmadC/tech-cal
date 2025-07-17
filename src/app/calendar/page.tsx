@@ -185,9 +185,6 @@ export default function CalendarPage() {
     return days;
   }, [currentDate]);
 
-// Key changes needed in your calendar page getEventsForDay function
-
-// REPLACE your existing getEventsForDay function with this fixed version:
 
 const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
   if (!isCurrentMonth) return [];
@@ -230,7 +227,6 @@ const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
     return true;
   });
 };
-// ALSO UPDATE: Add this debug helper to see what's happening
 const debugEventFiltering = (events: any[], day: number) => {
   console.log(`Day ${day} events:`, events.map(e => ({
     title: e.title,
