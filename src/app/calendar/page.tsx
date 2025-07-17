@@ -1,19 +1,15 @@
-// src/app/calendar/page.tsx
-
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-
-// Import our clean components
 import MainNavbar from '@/components/MainNavbar';
 import FilterSidebar from '@/components/FilterSidebar';
 import ContentHeader from '@/components/ContentHeader';
 import CalendarHeader from '@/components/CalendarHeader';
-import CalendarGrid from '@/components/CalendarGrid';
 import EventModal from '@/components/EventModal';
+import CalendarGrid from '@/components/CalendarGrid';
 
-// Type definitions (updated to match your actual database schema)
+// Type definitions
 type EnrichedEvent = {
   id: string;
   event_type_id: string;
@@ -94,16 +90,6 @@ export default function CalendarPage() {
     }
 
     fetchData();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
-        setIsSearchFocused(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {

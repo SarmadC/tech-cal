@@ -1,6 +1,9 @@
+// src/components/EventModal.tsx (Updated with Countdown Timer)
+
 'use client';
 
 import { formatToUTC } from '@/lib/calendarUtils';
+import { ModalCountdown } from './CountdownTimer';
 
 type Event = {
   id: string;
@@ -22,17 +25,31 @@ interface EventModalProps {
 
 // Helper function to create appealing event slugs
 const createEventSlug = (title: string, id: string) => {
-  // Convert title to URL-friendly slug
   const slug = title
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '') // Remove special characters
-    .replace(/\s+/g, '-')     // Replace spaces with hyphens
-    .replace(/-+/g, '-')      // Replace multiple hyphens with single
-    .replace(/(^-|-$)/g, ''); // Remove leading/trailing hyphens
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/(^-|-$)/g, '');
   
-  // Add short ID for uniqueness (first 8 characters)
   const shortId = id.slice(0, 8);
   return `${slug}-${shortId}`;
+};
+
+// Helper function to check if event is happening soon (within 48 hours)
+const isHappeningSoon = (startTime: string) => {
+  const now = new Date();
+  const eventStart = new Date(startTime);
+  const hoursDiff = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+  return hoursDiff >= 0 && hoursDiff <= 48;
+};
+
+// Helper function to check if event is live
+const isEventLive = (startTime: string, endTime: string | null) => {
+  const now = new Date();
+  const start = new Date(startTime);
+  const end = endTime ? new Date(endTime) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  return now >= start && now <= end;
 };
 
 export default function EventModal({ event, onClose }: EventModalProps) {
@@ -43,6 +60,11 @@ export default function EventModal({ event, onClose }: EventModalProps) {
   const eventTime = new Date(event.start_time).toLocaleTimeString(undefined, {
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
   });
+
+  // Check event status
+  const isLive = isEventLive(event.start_time, event.end_time);
+  const isSoon = isHappeningSoon(event.start_time);
+  const hasEnded = new Date() > new Date(event.end_time || event.start_time);
 
   // Calendar Links
   const utcStartTime = formatToUTC(event.start_time);
@@ -112,9 +134,23 @@ export default function EventModal({ event, onClose }: EventModalProps) {
         <div className="p-8">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground-primary mb-2">
-              {event.title}
-            </h1>
+            <div className="flex items-center space-x-3 mb-2">
+              <h1 className="text-2xl font-bold text-foreground-primary">
+                {event.title}
+              </h1>
+              {/* Live indicator */}
+              {isLive && (
+                <div className="flex items-center space-x-2">
+                  <div className="relative">
+                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                    <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+                  </div>
+                  <span className="text-sm font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                    LIVE NOW
+                  </span>
+                </div>
+              )}
+            </div>
             <div className="flex items-center space-x-4">
               <span className={`text-sm font-medium ${getStatusColor(event.status)}`}>
                 {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
@@ -124,6 +160,35 @@ export default function EventModal({ event, onClose }: EventModalProps) {
               </span>
             </div>
           </div>
+
+          {/* Countdown Timer - Show for upcoming events */}
+          {!hasEnded && !isLive && isSoon && (
+            <div className="mb-6">
+              <ModalCountdown startTime={event.start_time} endTime={event.end_time} />
+            </div>
+          )}
+
+          {/* Live Event Banner */}
+          {isLive && (
+            <div className="mb-6 bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">🔴 Event is happening now!</h3>
+                  <p className="text-red-100 text-sm">Don't miss out on the live coverage</p>
+                </div>
+                {event.livestream_url && (
+                  <a
+                    href={event.livestream_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-white text-red-600 hover:bg-red-50 font-medium py-2 px-4 rounded-lg transition-all"
+                  >
+                    Watch Live
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Event Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -185,12 +250,18 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                   href={event.livestream_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 bg-error hover:bg-red-600 text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
+                  className={`
+                    flex-1 font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-sm hover:shadow-md
+                    ${isLive 
+                      ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+                      : 'bg-error hover:bg-red-600 text-white'
+                    }
+                  `}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                  <span>Watch Livestream</span>
+                  <span>{isLive ? 'Watch Live Now' : 'Watch Livestream'}</span>
                 </a>
               )}
 
