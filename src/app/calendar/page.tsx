@@ -230,7 +230,6 @@ const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
     return true;
   });
 };
-
 // ALSO UPDATE: Add this debug helper to see what's happening
 const debugEventFiltering = (events: any[], day: number) => {
   console.log(`Day ${day} events:`, events.map(e => ({
