@@ -1,9 +1,10 @@
-// src/app/dashboard/page.tsx
+// src/app/dashboard/page.tsx (Updated)
 
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
+import GrowthDashboardPage from './growth/page'; // Import the new component
 
 const mockUserData = {
   name: 'Sarah Chen',
@@ -94,7 +95,7 @@ export default function DashboardPage() {
         {/* Tabs */}
         <div className="border-b border-border-color mb-6">
           <nav className="flex space-x-8">
-            {['overview', 'settings', 'api-keys', 'billing'].map((tab) => (
+            {['overview', 'growth', 'settings', 'api-keys', 'billing'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -122,8 +123,8 @@ export default function DashboardPage() {
                 {recentEvents.map((event) => (
                   <div key={event.id} className="flex items-center justify-between p-3 bg-background-main rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
+                      <div
+                        className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: event.color }}
                       />
                       <div>
@@ -184,6 +185,10 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'growth' && (
+          <GrowthDashboardPage />
         )}
 
         {activeTab === 'settings' && (
