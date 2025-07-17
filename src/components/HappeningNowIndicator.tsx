@@ -1,3 +1,5 @@
+// src/components/HappeningNowIndicator.tsx
+
 'use client';
 
 import { useMemo } from 'react';
@@ -24,7 +26,7 @@ export default function HappeningNowIndicator({
   startTime, 
   endTime, 
   title,
-  eventType = '',
+  eventType = '', // eslint-disable-line @typescript-eslint/no-unused-vars
   className = '',
   size = 'md' 
 }: HappeningNowIndicatorProps) {
