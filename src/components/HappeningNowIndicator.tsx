@@ -1,4 +1,4 @@
-// src/components/HappeningNowIndicator.tsx
+// src/components/HappeningNowIndicator.tsx (Modern Gradient Version)
 
 'use client';
 
@@ -16,11 +16,53 @@ interface HappeningNowIndicatorProps {
 interface HappeningNowStatus {
   type: 'none' | 'live' | 'multi_day' | 'ending_soon' | 'starting_soon' | 'deadline_today' | 'registration_open' | 'on_sale';
   label: string;
-  icon: string;
-  bgColor: string;
-  textColor: string;
+  variant: 'live' | 'progress' | 'deadline' | 'starting' | 'registration' | 'ticket' | 'ending';
   pulse?: boolean;
 }
+
+// Modern SVG Icon Components
+const LiveIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 12 12" fill="none">
+    <circle cx="6" cy="6" r="6" fill="currentColor"/>
+    <circle cx="6" cy="6" r="3" fill="white" fillOpacity="0.3"/>
+  </svg>
+);
+
+const ProgressIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 12 12" fill="none">
+    <path d="M2 6h8M6 2v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="6" cy="6" r="1" fill="currentColor"/>
+  </svg>
+);
+
+const ClockIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 12 12" fill="none">
+    <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+    <path d="M6 3v3l2 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+  </svg>
+);
+
+const RocketIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 12 12" fill="none">
+    <path d="M8 2l1.5 1.5-3 3L5 5l3-3z" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
+    <path d="M5 6.5L2 10l3.5-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+  </svg>
+);
+
+const DocumentIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 12 12" fill="none">
+    <path d="M3 2h6v8H3V2z" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.1"/>
+    <path d="M5 4h2M5 6h2M5 8h1" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+  </svg>
+);
+
+const TicketIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 12 12" fill="none">
+    <path d="M2 3h8v2.5c-.5 0-1 .5-1 1s.5 1 1 1V10H2V7.5c.5 0 1-.5 1-1s-.5-1-1-1V3z" 
+          stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.1"/>
+    <path d="M4 5h4M4 7h4" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round"/>
+  </svg>
+);
 
 export default function HappeningNowIndicator({ 
   startTime, 
@@ -53,9 +95,7 @@ export default function HappeningNowIndicator({
         return {
           type: 'live',
           label: 'LIVE NOW',
-          icon: '🔴',
-          bgColor: 'bg-red-500',
-          textColor: 'text-white',
+          variant: 'live',
           pulse: true
         };
       }
@@ -67,9 +107,7 @@ export default function HappeningNowIndicator({
         return {
           type: 'multi_day',
           label: `DAY ${daysPassed} OF ${totalDays}`,
-          icon: '🔥',
-          bgColor: 'bg-orange-500',
-          textColor: 'text-white'
+          variant: 'progress'
         };
       }
       
@@ -78,9 +116,7 @@ export default function HappeningNowIndicator({
         return {
           type: 'ending_soon',
           label: 'ENDING SOON',
-          icon: '⏰',
-          bgColor: 'bg-amber-500',
-          textColor: 'text-white'
+          variant: 'ending'
         };
       }
       
@@ -88,9 +124,7 @@ export default function HappeningNowIndicator({
       return {
         type: 'multi_day',
         label: 'IN PROGRESS',
-        icon: '▶️',
-        bgColor: 'bg-blue-500',
-        textColor: 'text-white'
+        variant: 'progress'
       };
     }
     
@@ -99,9 +133,7 @@ export default function HappeningNowIndicator({
       return {
         type: 'starting_soon',
         label: 'STARTS TODAY',
-        icon: '🚀',
-        bgColor: 'bg-green-500',
-        textColor: 'text-white'
+        variant: 'starting'
       };
     }
     
@@ -114,9 +146,7 @@ export default function HappeningNowIndicator({
         return {
           type: 'deadline_today',
           label: 'DEADLINE TODAY',
-          icon: '📝',
-          bgColor: 'bg-red-600',
-          textColor: 'text-white',
+          variant: 'deadline',
           pulse: true
         };
       }
@@ -125,9 +155,7 @@ export default function HappeningNowIndicator({
         return {
           type: 'registration_open',
           label: 'OPEN NOW',
-          icon: '📝',
-          bgColor: 'bg-emerald-500',
-          textColor: 'text-white'
+          variant: 'registration'
         };
       }
     }
@@ -138,9 +166,7 @@ export default function HappeningNowIndicator({
         return {
           type: 'deadline_today',
           label: 'SALE ENDS TODAY',
-          icon: '🎫',
-          bgColor: 'bg-purple-600',
-          textColor: 'text-white',
+          variant: 'deadline',
           pulse: true
         };
       }
@@ -149,9 +175,7 @@ export default function HappeningNowIndicator({
         return {
           type: 'on_sale',
           label: 'ON SALE NOW',
-          icon: '🎫',
-          bgColor: 'bg-purple-500',
-          textColor: 'text-white'
+          variant: 'ticket'
         };
       }
     }
@@ -159,34 +183,102 @@ export default function HappeningNowIndicator({
     return {
       type: 'none',
       label: '',
-      icon: '',
-      bgColor: '',
-      textColor: ''
+      variant: 'live'
     };
   }, [startTime, endTime, title]);
 
   // Don't render if no status
   if (status.type === 'none') return null;
 
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return 'text-xs px-2 py-1';
-      case 'lg':
-        return 'text-sm px-4 py-2';
-      default:
-        return 'text-xs px-3 py-1.5';
+  // Variant configurations with modern gradients
+  const variants = {
+    live: {
+      bg: 'bg-gradient-to-r from-red-500 to-red-600',
+      text: 'text-white',
+      border: 'border-red-500/20',
+      shadow: 'shadow-lg shadow-red-500/25',
+      icon: LiveIcon
+    },
+    progress: {
+      bg: 'bg-gradient-to-r from-orange-500 to-amber-500',
+      text: 'text-white',
+      border: 'border-orange-500/20',
+      shadow: 'shadow-lg shadow-orange-500/25',
+      icon: ProgressIcon
+    },
+    deadline: {
+      bg: 'bg-gradient-to-r from-red-600 to-pink-600',
+      text: 'text-white',
+      border: 'border-red-600/20',
+      shadow: 'shadow-lg shadow-red-600/25',
+      icon: ClockIcon
+    },
+    starting: {
+      bg: 'bg-gradient-to-r from-emerald-500 to-green-500',
+      text: 'text-white',
+      border: 'border-emerald-500/20',
+      shadow: 'shadow-lg shadow-emerald-500/25',
+      icon: RocketIcon
+    },
+    registration: {
+      bg: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+      text: 'text-white',
+      border: 'border-blue-500/20',
+      shadow: 'shadow-lg shadow-blue-500/25',
+      icon: DocumentIcon
+    },
+    ticket: {
+      bg: 'bg-gradient-to-r from-purple-500 to-violet-500',
+      text: 'text-white',
+      border: 'border-purple-500/20',
+      shadow: 'shadow-lg shadow-purple-500/25',
+      icon: TicketIcon
+    },
+    ending: {
+      bg: 'bg-gradient-to-r from-amber-500 to-orange-500',
+      text: 'text-white',
+      border: 'border-amber-500/20',
+      shadow: 'shadow-lg shadow-amber-500/25',
+      icon: ClockIcon
     }
   };
 
+  const config = variants[status.variant];
+  const Icon = config.icon;
+
+  const getSizeClasses = () => {
+    switch (size) {
+      case 'sm':
+        return {
+          container: 'px-2 py-1 text-xs gap-1',
+          icon: 'w-3 h-3'
+        };
+      case 'lg':
+        return {
+          container: 'px-4 py-2 text-sm gap-2',
+          icon: 'w-4 h-4'
+        };
+      default: // md
+        return {
+          container: 'px-3 py-1.5 text-xs gap-1.5',
+          icon: 'w-3 h-3'
+        };
+    }
+  };
+
+  const sizeClasses = getSizeClasses();
+
   return (
     <div className={`
-      inline-flex items-center space-x-1 rounded-full font-bold tracking-wider
-      ${status.bgColor} ${status.textColor} ${getSizeClasses()}
+      inline-flex items-center font-semibold tracking-wide
+      rounded-full border backdrop-blur-sm
+      ${config.bg} ${config.text} ${config.border} ${config.shadow}
+      ${sizeClasses.container}
       ${status.pulse ? 'animate-pulse' : ''}
+      transition-all duration-200 hover:scale-105
       ${className}
     `}>
-      <span className="text-xs">{status.icon}</span>
+      <Icon className={sizeClasses.icon} />
       <span>{status.label}</span>
     </div>
   );
@@ -211,7 +303,6 @@ export function CompactHappeningNow({
       title={title}
       eventType={eventType}
       size="sm"
-      className="shadow-sm"
     />
   );
 }
@@ -235,7 +326,6 @@ export function ModalHappeningNow({
       title={title}
       eventType={eventType}
       size="lg"
-      className="shadow-md"
     />
   );
 }
