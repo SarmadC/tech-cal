@@ -185,7 +185,6 @@ export default function CalendarPage() {
     return days;
   }, [currentDate]);
 
-
 const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
   if (!isCurrentMonth) return [];
   
@@ -195,38 +194,25 @@ const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
     const eventStart = new Date(event.start_time);
     const eventEnd = event.end_time ? new Date(event.end_time) : eventStart;
     
-    // Convert to UTC dates for comparison
     const eventStartDate = new Date(Date.UTC(eventStart.getUTCFullYear(), eventStart.getUTCMonth(), eventStart.getUTCDate()));
     const eventEndDate = new Date(Date.UTC(eventEnd.getUTCFullYear(), eventEnd.getUTCMonth(), eventEnd.getUTCDate()));
     
-    // Check if this specific day falls within the event range
-    const isEventDay = dayDate >= eventStartDate && dayDate <= eventEndDate;
-    
-    if (!isEventDay) return false;
-    
-    // MULTI-DAY EVENT LOGIC: Only show on first day for conferences
-    const durationHours = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60 * 60);
-    const titleLower = event.title.toLowerCase();
-    
-    // If it's a multi-day event (> 24 hours)
-    if (durationHours > 24) {
-      const isConference = titleLower.includes('conference') || 
-                          titleLower.includes('summit') || 
-                          titleLower.includes('convention') ||
-                          titleLower.includes('expo') ||
-                          titleLower.includes('symposium');
-      
-      // For conferences, only show on first day
-      if (isConference) {
-        const isFirstDay = dayDate.getTime() === eventStartDate.getTime();
-        return isFirstDay;
-      }
-    }
-    
-    // For all other events, show on all relevant days
-    return true;
+    // Basic check: does this day fall within the event range?
+    return dayDate >= eventStartDate && dayDate <= eventEndDate;
   });
 };
+
+// ALSO ADD: Debug function to check your data structure
+const debugEventData = () => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Total filtered events:', filteredEvents.length);
+    console.log('Sample event structure:', filteredEvents[0]);
+    console.log('Current date:', currentDate);
+  }
+};
+
+// Call this in your useEffect or component to debug
+  debugEventData();
 
   const isToday = (day: number, isCurrentMonth: boolean) => {
     const today = new Date();
