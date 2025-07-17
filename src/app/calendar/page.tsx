@@ -227,14 +227,6 @@ const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
     return true;
   });
 };
-const debugEventFiltering = (events: any[], day: number) => {
-  console.log(`Day ${day} events:`, events.map(e => ({
-    title: e.title,
-    start: e.start_time,
-    end: e.end_time,
-    duration: e.end_time ? ((new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / (1000 * 60 * 60)) + ' hours' : 'No end time'
-  })));
-};
 
   const isToday = (day: number, isCurrentMonth: boolean) => {
     const today = new Date();
