@@ -185,33 +185,45 @@ export default function CalendarPage() {
     return days;
   }, [currentDate]);
 
-const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
-  if (!isCurrentMonth) return [];
-  
-  const dayDate = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), day));
-  
-  return filteredEvents.filter(event => {
-    const eventStart = new Date(event.start_time);
-    const eventEnd = event.end_time ? new Date(event.end_time) : eventStart;
+  // UPDATED: Show events only on their start date
+  const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
+    if (!isCurrentMonth) return [];
     
-    const eventStartDate = new Date(Date.UTC(eventStart.getUTCFullYear(), eventStart.getUTCMonth(), eventStart.getUTCDate()));
-    const eventEndDate = new Date(Date.UTC(eventEnd.getUTCFullYear(), eventEnd.getUTCMonth(), eventEnd.getUTCDate()));
+    const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     
-    // Basic check: does this day fall within the event range?
-    return dayDate >= eventStartDate && dayDate <= eventEndDate;
-  });
-};
+    return filteredEvents.filter(event => {
+      const eventStart = new Date(event.start_time);
+      
+      // Convert both dates to YYYY-MM-DD format for comparison
+      const dayDateString = dayDate.toISOString().split('T')[0];
+      const eventStartString = eventStart.toISOString().split('T')[0];
+      
+      // Only show event on its start date
+      return dayDateString === eventStartString;
+    });
+  };
 
-// ALSO ADD: Debug function to check your data structure
-const debugEventData = () => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Total filtered events:', filteredEvents.length);
-    console.log('Sample event structure:', filteredEvents[0]);
-    console.log('Current date:', currentDate);
-  }
-};
+  // Debug function to check your data structure
+  const debugEventData = () => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Total filtered events:', filteredEvents.length);
+      console.log('Sample event structure:', filteredEvents[0]);
+      console.log('Current date:', currentDate);
+      
+      // Log events for the next few days to verify the logic
+      const today = new Date();
+      for (let i = 0; i < 7; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() + i);
+        const eventsForDay = getEventsForDay(checkDate.getDate(), true);
+        if (eventsForDay.length > 0) {
+          console.log(`Events for ${checkDate.toDateString()}:`, eventsForDay.length);
+        }
+      }
+    }
+  };
 
-// Call this in your useEffect or component to debug
+  // Call this in your useEffect or component to debug
   debugEventData();
 
   const isToday = (day: number, isCurrentMonth: boolean) => {
