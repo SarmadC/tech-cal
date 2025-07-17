@@ -174,7 +174,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold">🔴 Event is happening now!</h3>
-                  <p className="text-red-100 text-sm">Don't miss out on the live coverage</p>
+                  <p className="text-red-100 text-sm">Don&apos;t miss out on the live coverage</p>
                 </div>
                 {event.livestream_url && (
                   <a
