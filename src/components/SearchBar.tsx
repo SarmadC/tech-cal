@@ -4,8 +4,8 @@ import { Search } from 'lucide-react';
 
 type Suggestion = {
   id: string;
-  title: string;
-  organizer: string;
+  title: string | null;
+  organizer: string | null;
   start_time: string;
 };
 
@@ -73,9 +73,11 @@ export default function SearchBar({
                   onClick={() => onSuggestionClick(suggestion)}
                   className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex flex-col"
                 >
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{suggestion.title}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                    {suggestion.title || 'Untitled Event'}
+                  </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {suggestion.organizer} • {new Date(suggestion.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {suggestion.organizer || 'Unknown Organizer'} • {new Date(suggestion.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </p>
                 </button>
               </li>

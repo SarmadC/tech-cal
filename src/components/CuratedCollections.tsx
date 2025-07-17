@@ -5,13 +5,16 @@
 import { useState } from 'react';
 import { ChevronDown, Star, TrendingUp, Building2, Cpu, Users, Sparkles } from 'lucide-react';
 
-// Event type for filtering - Updated to match database schema
+// Event type for filtering - Updated to match database schema and include all required fields
 interface EventForFiltering {
   id: string;
   title?: string | null;
   description?: string | null;
   organizer?: string | null;
   event_type_id?: string | null;
+  start_time: string;
+  end_time: string | null;
+  color: string; // Added for enriched events
 }
 
 // Collection definitions

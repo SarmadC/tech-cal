@@ -1,4 +1,4 @@
-// src/components/EventModal.tsx (Updated with Happening Now Indicators)
+// src/components/EventModal.tsx (Updated with Nullable Types)
 
 'use client';
 
@@ -8,16 +8,17 @@ import { ModalHappeningNow, hasHappeningNowStatus } from './HappeningNowIndicato
 
 type Event = {
   id: string;
-  title: string;
-  description: string;
+  title: string | null;
+  description: string | null;
   start_time: string;
   end_time: string | null;
-  organizer: string;
-  location: string;
-  status: string;
-  source_url: string;
+  organizer: string | null;
+  location: string | null;
+  status: string | null;
+  source_url: string | null;
   livestream_url: string | null;
-  event_type_id?: string;
+  event_type_id?: string | null;
+  color?: string; // Added for enriched events
 };
 
 interface EventModalProps {
@@ -55,6 +56,14 @@ const isEventLive = (startTime: string, endTime: string | null) => {
 };
 
 export default function EventModal({ event, onClose }: EventModalProps) {
+  // Safe title and fallbacks for nullable fields
+  const eventTitle = event.title || 'Untitled Event';
+  const eventDescription = event.description || 'No description available.';
+  const eventOrganizer = event.organizer || 'Unknown Organizer';
+  const eventLocation = event.location || 'Location TBD';
+  const eventStatus = event.status || 'unknown';
+  const eventSourceUrl = event.source_url || '#';
+
   // Format dates
   const eventDate = new Date(event.start_time).toLocaleDateString(undefined, {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -67,7 +76,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
   const isLive = isEventLive(event.start_time, event.end_time);
   const isSoon = isHappeningSoon(event.start_time);
   const hasEnded = new Date() > new Date(event.end_time || event.start_time);
-  const hasHappeningNow = hasHappeningNowStatus(event.start_time, event.end_time, event.title);
+  const hasHappeningNow = hasHappeningNowStatus(event.start_time, event.end_time, eventTitle);
 
   // Calendar Links
   const utcStartTime = formatToUTC(event.start_time);
@@ -75,10 +84,10 @@ export default function EventModal({ event, onClose }: EventModalProps) {
 
   const googleCalendarLink = new URL('https://www.google.com/calendar/render');
   googleCalendarLink.searchParams.append('action', 'TEMPLATE');
-  googleCalendarLink.searchParams.append('text', event.title);
+  googleCalendarLink.searchParams.append('text', eventTitle);
   googleCalendarLink.searchParams.append('dates', `${utcStartTime}/${utcEndTime}`);
-  googleCalendarLink.searchParams.append('details', event.description);
-  googleCalendarLink.searchParams.append('location', event.location);
+  googleCalendarLink.searchParams.append('details', eventDescription);
+  googleCalendarLink.searchParams.append('location', eventLocation);
 
   const handleIcsDownload = () => {
     const icsContent = [
@@ -90,9 +99,9 @@ export default function EventModal({ event, onClose }: EventModalProps) {
       `DTSTAMP:${formatToUTC(new Date())}`,
       `DTSTART:${utcStartTime}`,
       `DTEND:${utcEndTime}`,
-      `SUMMARY:${event.title}`,
-      `DESCRIPTION:${event.description}`,
-      `LOCATION:${event.location}`,
+      `SUMMARY:${eventTitle}`,
+      `DESCRIPTION:${eventDescription}`,
+      `LOCATION:${eventLocation}`,
       'END:VEVENT',
       'END:VCALENDAR',
     ].join('\r\n');
@@ -100,7 +109,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `${event.title}.ics`);
+    link.setAttribute('download', `${eventTitle}.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -139,16 +148,16 @@ export default function EventModal({ event, onClose }: EventModalProps) {
           <div className="mb-6">
             <div className="flex items-start justify-between mb-4">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 pr-12">
-                {event.title}
+                {eventTitle}
               </h1>
             </div>
             
             <div className="flex items-center space-x-4 mb-4">
-              <span className={`text-sm font-medium ${getStatusColor(event.status)}`}>
-                {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+              <span className={`text-sm font-medium ${getStatusColor(eventStatus)}`}>
+                {eventStatus.charAt(0).toUpperCase() + eventStatus.slice(1)}
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Organized by {event.organizer}
+                Organized by {eventOrganizer}
               </span>
             </div>
 
@@ -158,8 +167,8 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                 <ModalHappeningNow 
                   startTime={event.start_time}
                   endTime={event.end_time}
-                  title={event.title}
-                  eventType={event.event_type_id}
+                  title={eventTitle}
+                  eventType={event.event_type_id || undefined}
                 />
               </div>
             )}
@@ -198,10 +207,10 @@ export default function EventModal({ event, onClose }: EventModalProps) {
           )}
 
           {/* Registration/Deadline Banner */}
-          {hasHappeningNow && (event.title.toLowerCase().includes('registration') || 
-                              event.title.toLowerCase().includes('deadline') ||
-                              event.title.toLowerCase().includes('submit') ||
-                              event.title.toLowerCase().includes('ticket')) && (
+          {hasHappeningNow && (eventTitle.toLowerCase().includes('registration') || 
+                              eventTitle.toLowerCase().includes('deadline') ||
+                              eventTitle.toLowerCase().includes('submit') ||
+                              eventTitle.toLowerCase().includes('ticket')) && (
             <div className="mb-6 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 text-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -210,14 +219,14 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                     <span>Time-sensitive action required!</span>
                   </h3>
                   <p className="text-purple-100 text-sm">
-                    {event.title.toLowerCase().includes('registration') && 'Registration window is active'}
-                    {event.title.toLowerCase().includes('ticket') && 'Tickets are available now'}
-                    {event.title.toLowerCase().includes('deadline') && 'Important deadline approaching'}
-                    {event.title.toLowerCase().includes('submit') && 'Submission period is open'}
+                    {eventTitle.toLowerCase().includes('registration') && 'Registration window is active'}
+                    {eventTitle.toLowerCase().includes('ticket') && 'Tickets are available now'}
+                    {eventTitle.toLowerCase().includes('deadline') && 'Important deadline approaching'}
+                    {eventTitle.toLowerCase().includes('submit') && 'Submission period is open'}
                   </p>
                 </div>
                 <a
-                  href={event.source_url}
+                  href={eventSourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-white text-purple-600 hover:bg-purple-50 font-medium py-2 px-4 rounded-lg transition-all"
@@ -255,7 +264,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                 </div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Location</h3>
               </div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{event.location}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{eventLocation}</p>
             </div>
           </div>
 
@@ -263,7 +272,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
           <div className="mb-8">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">About this event</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              {event.description}
+              {eventDescription}
             </p>
           </div>
 
@@ -272,7 +281,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
             {/* Primary Actions */}
             <div className="flex flex-col sm:flex-row gap-3">
               <a
-                href={event.source_url}
+                href={eventSourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
@@ -305,7 +314,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
 
               <button
                 onClick={() => {
-                  const eventSlug = createEventSlug(event.title, event.id);
+                  const eventSlug = createEventSlug(eventTitle, event.id);
                   navigator.clipboard.writeText(
                     `${window.location.origin}/event/${eventSlug}`
                   );

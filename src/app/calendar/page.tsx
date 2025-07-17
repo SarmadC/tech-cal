@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import MainNavbar from '@/components/MainNavbar';
 import FilterSidebar from '@/components/FilterSidebar';
-import CuratedCollections, { useFilteredEventsByCollection, useCollectionEventCounts } from '@/components/CuratedCollections';
+
 import ContentHeader from '@/components/ContentHeader';
 import CalendarHeader from '@/components/CalendarHeader';
 import EventModal from '@/components/EventModal';
@@ -42,7 +42,6 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<EnrichedEvent[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [selectedCollection, setSelectedCollection] = useState('all'); // NEW: Collection state
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +54,7 @@ export default function CalendarPage() {
         setLoading(true);
         setError(null);
 
-        // Fetch event types
+        // Fetch event types (your actual table name)
         const { data: eventTypesData, error: eventTypesError } = await supabase
           .from('event_type')
           .select('*');
@@ -107,6 +106,7 @@ export default function CalendarPage() {
   // Keyboard shortcuts for calendar navigation
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
       if (e.target && (e.target as HTMLElement).tagName === 'INPUT') return;
       
       if (e.key === "ArrowLeft") {
@@ -138,32 +138,22 @@ export default function CalendarPage() {
     }));
   }, [events, categories]);
 
-  // NEW: Filter events by curated collection first
-  const collectionFilteredEvents = useFilteredEventsByCollection(enrichedEvents, selectedCollection);
-  
-  // NEW: Get event counts for all collections
-  const collectionEventCounts = useCollectionEventCounts(enrichedEvents);
-
   const searchSuggestions = useMemo(() => {
     if (!searchTerm) return [];
     const lowercasedSearchTerm = searchTerm.toLowerCase();
     const uniqueSuggestions = new Map<string, EnrichedEvent>();
-    
-    // Search within collection-filtered events
-    collectionFilteredEvents.forEach(event => {
+    enrichedEvents.forEach(event => {
       if (event.title.toLowerCase().includes(lowercasedSearchTerm) ||
           event.organizer.toLowerCase().includes(lowercasedSearchTerm)) {
         if (!uniqueSuggestions.has(event.id)) uniqueSuggestions.set(event.id, event);
       }
     });
     return Array.from(uniqueSuggestions.values()).slice(0, 5);
-  }, [searchTerm, collectionFilteredEvents]);
+  }, [searchTerm, enrichedEvents]);
 
   const filteredEvents = useMemo(() => {
     const lowercasedSearchTerm = searchTerm.toLowerCase();
-    
-    // Apply category filtering to collection-filtered events
-    return collectionFilteredEvents.filter((event) => {
+    return enrichedEvents.filter((event) => {
       if (!selectedCategories.has(event.event_type_id)) return false;
       if (searchTerm) {
         return event.title.toLowerCase().includes(lowercasedSearchTerm) ||
@@ -171,7 +161,7 @@ export default function CalendarPage() {
       }
       return true;
     });
-  }, [collectionFilteredEvents, selectedCategories, searchTerm]);
+  }, [enrichedEvents, selectedCategories, searchTerm]);
 
   const daysInMonth = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -195,7 +185,7 @@ export default function CalendarPage() {
     return days;
   }, [currentDate]);
 
-  // Show events only on their start date
+  // UPDATED: Show events only on their start date
   const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
     if (!isCurrentMonth) return [];
     
@@ -203,11 +193,38 @@ export default function CalendarPage() {
     
     return filteredEvents.filter(event => {
       const eventStart = new Date(event.start_time);
+      
+      // Convert both dates to YYYY-MM-DD format for comparison
       const dayDateString = dayDate.toISOString().split('T')[0];
       const eventStartString = eventStart.toISOString().split('T')[0];
+      
+      // Only show event on its start date
       return dayDateString === eventStartString;
     });
   };
+
+  // Debug function to check your data structure
+  const debugEventData = () => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Total filtered events:', filteredEvents.length);
+      console.log('Sample event structure:', filteredEvents[0]);
+      console.log('Current date:', currentDate);
+      
+      // Log events for the next few days to verify the logic
+      const today = new Date();
+      for (let i = 0; i < 7; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() + i);
+        const eventsForDay = getEventsForDay(checkDate.getDate(), true);
+        if (eventsForDay.length > 0) {
+          console.log(`Events for ${checkDate.toDateString()}:`, eventsForDay.length);
+        }
+      }
+    }
+  };
+
+  // Call this in your useEffect or component to debug
+  debugEventData();
 
   const isToday = (day: number, isCurrentMonth: boolean) => {
     const today = new Date();
@@ -271,33 +288,16 @@ export default function CalendarPage() {
             overflow-hidden transition-all duration-300 flex-shrink-0
           `}
         >
-          <div className="p-6 h-full flex flex-col">
-            {/* NEW: Curated Collections */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Collections
-              </h3>
-              <CuratedCollections
-                selectedCollection={selectedCollection}
-                onCollectionChange={setSelectedCollection}
-                eventCounts={collectionEventCounts}
-              />
-            </div>
-
-            {/* Existing Filter Sidebar */}
-            <div className="flex-1">
-              <FilterSidebar
-                categories={categories}
-                selectedCategories={selectedCategories}
-                onToggleCategory={(catId) => setSelectedCategories(prev => {
-                  const newSet = new Set(prev);
-                  if (newSet.has(catId)) newSet.delete(catId);
-                  else newSet.add(catId);
-                  return newSet;
-                })}
-              />
-            </div>
-          </div>
+          <FilterSidebar
+            categories={categories}
+            selectedCategories={selectedCategories}
+            onToggleCategory={(catId) => setSelectedCategories(prev => {
+              const newSet = new Set(prev);
+              if (newSet.has(catId)) newSet.delete(catId);
+              else newSet.add(catId);
+              return newSet;
+            })}
+          />
         </div>
 
         <main className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-900">
