@@ -23,7 +23,7 @@ export default function HappeningNowIndicator({
   startTime, 
   endTime, 
   title,
-  eventType = '',
+  eventType = '', // eslint-disable-line @typescript-eslint/no-unused-vars
   className = '',
   size = 'md' 
 }: HappeningNowIndicatorProps) {
@@ -328,7 +328,7 @@ export function ModalHappeningNow({
   startTime, 
   endTime, 
   title, 
-  eventType 
+  eventType = '' // eslint-disable-line @typescript-eslint/no-unused-vars
 }: { 
   startTime: string; 
   endTime?: string | null; 
