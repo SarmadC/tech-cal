@@ -185,17 +185,61 @@ export default function CalendarPage() {
     return days;
   }, [currentDate]);
 
-  const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
-    if (!isCurrentMonth) return [];
-    const dayDate = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), day));
-    return filteredEvents.filter(event => {
-      const eventStart = new Date(event.start_time);
-      const eventEnd = event.end_time ? new Date(event.end_time) : eventStart;
-      const eventStartDate = new Date(Date.UTC(eventStart.getUTCFullYear(), eventStart.getUTCMonth(), eventStart.getUTCDate()));
-      const eventEndDate = new Date(Date.UTC(eventEnd.getUTCFullYear(), eventEnd.getUTCMonth(), eventEnd.getUTCDate()));
-      return dayDate >= eventStartDate && dayDate <= eventEndDate;
-    });
-  };
+// Key changes needed in your calendar page getEventsForDay function
+
+// REPLACE your existing getEventsForDay function with this fixed version:
+
+const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
+  if (!isCurrentMonth) return [];
+  
+  const dayDate = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), day));
+  
+  return filteredEvents.filter(event => {
+    const eventStart = new Date(event.start_time);
+    const eventEnd = event.end_time ? new Date(event.end_time) : eventStart;
+    
+    // Convert to UTC dates for comparison
+    const eventStartDate = new Date(Date.UTC(eventStart.getUTCFullYear(), eventStart.getUTCMonth(), eventStart.getUTCDate()));
+    const eventEndDate = new Date(Date.UTC(eventEnd.getUTCFullYear(), eventEnd.getUTCMonth(), eventEnd.getUTCDate()));
+    
+    // Check if this specific day falls within the event range
+    const isEventDay = dayDate >= eventStartDate && dayDate <= eventEndDate;
+    
+    if (!isEventDay) return false;
+    
+    // MULTI-DAY EVENT LOGIC: Only show on first day for conferences
+    const durationHours = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60 * 60);
+    const titleLower = event.title.toLowerCase();
+    
+    // If it's a multi-day event (> 24 hours)
+    if (durationHours > 24) {
+      const isConference = titleLower.includes('conference') || 
+                          titleLower.includes('summit') || 
+                          titleLower.includes('convention') ||
+                          titleLower.includes('expo') ||
+                          titleLower.includes('symposium');
+      
+      // For conferences, only show on first day
+      if (isConference) {
+        const isFirstDay = dayDate.getTime() === eventStartDate.getTime();
+        return isFirstDay;
+      }
+    }
+    
+    // For all other events, show on all relevant days
+    return true;
+  });
+};
+
+// ALSO UPDATE: Add this debug helper to see what's happening
+const debugEventFiltering = (events: any[], day: number) => {
+  console.log(`Day ${day} events:`, events.map(e => ({
+    title: e.title,
+    start: e.start_time,
+    end: e.end_time,
+    duration: e.end_time ? ((new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / (1000 * 60 * 60)) + ' hours' : 'No end time'
+  })));
+};
 
   const isToday = (day: number, isCurrentMonth: boolean) => {
     const today = new Date();
