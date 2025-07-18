@@ -1,4 +1,4 @@
-// src/app/dashboard/page.tsx (Updated with Auth Integration)
+// src/app/dashboard/page.tsx (Final Fixed Version)
 
 'use client';
 
@@ -8,7 +8,6 @@ import { useAuth, useUserId } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import GrowthDashboardPage from './growth/page';
-
 
 interface UserStats {
   eventsTracked: number;
@@ -26,6 +25,25 @@ interface RecentEvent {
   status: 'upcoming' | 'past' | 'live';
 }
 
+interface UserEventData {
+  id: string;
+  status: string;
+  created_at: string;
+  event_id: string;
+  events: {
+    id: string;
+    title: string;
+    start_time: string;
+    event_type_id: string;
+  }[] | null;
+}
+
+interface EventTypeData {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface UserProfile {
   name: string;
   email: string;
@@ -39,6 +57,7 @@ interface UserProfile {
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [refreshKey, setRefreshKey] = useState(0);
   const [userStats, setUserStats] = useState<UserStats>({
     eventsTracked: 0,
     upcomingEvents: 0,
@@ -60,8 +79,9 @@ export default function DashboardPage() {
 
       try {
         setLoading(true);
+        setError(null);
 
-        // Load user profile
+        // Load user profile from public.users
         const { data: profileData, error: profileError } = await supabase
           .from('users')
           .select('*')
@@ -70,6 +90,16 @@ export default function DashboardPage() {
 
         if (profileError) {
           console.error('Error loading profile:', profileError);
+          // If user doesn't exist in public.users, we'll try to create them
+          if (profileError.code === 'PGRST116') {
+            console.log('User not found in public.users, will be created when they track an event');
+            setUserProfile({
+              name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+              email: user.email || '',
+              timezone: 'UTC',
+              preferences: {}
+            });
+          }
         } else {
           setUserProfile({
             name: profileData.name || user.user_metadata?.full_name || 'User',
@@ -79,47 +109,89 @@ export default function DashboardPage() {
           });
         }
 
-        // Load user events and stats
-        const { data: userEvents, error: eventsError } = await supabase
+        // Load user events with proper joins
+        const { data: userEventsRaw, error: eventsError } = await supabase
           .from('user_events')
           .select(`
             id,
             status,
             created_at,
+            event_id,
             events (
               id,
               title,
               start_time,
-              event_type (
-                name,
-                color
-              )
+              event_type_id
             )
           `)
           .eq('user_id', userId);
 
+        // Load event types for color mapping
+        const { data: eventTypes, error: eventTypesError } = await supabase
+          .from('event_type')
+          .select('id, name, color');
+
         if (eventsError) {
           console.error('Error loading user events:', eventsError);
-        } else {
+          // Don't set this as a hard error since user might not have tracked any events yet
+          setUserStats({
+            eventsTracked: 0,
+            upcomingEvents: 0,
+            categoriesFollowed: 0,
+            streakDays: 0
+          });
+          setRecentEvents([]);
+        } else if (userEventsRaw) {
+          // Type assertion and data cleaning
+          const userEvents = userEventsRaw as UserEventData[];
+          
+          // Debug: Log the actual structure
+          console.log('User events structure:', userEvents.length > 0 ? userEvents[0] : 'No events');
+          
           // Calculate stats
           const now = new Date();
-          const upcomingEvents = userEvents?.filter(ue => 
-            ue.events?.[0] && new Date(ue.events[0].start_time) >= now
-          ).length || 0;
+          
+          // Handle the case where events is an array (which it is)
+          const upcomingEvents = userEvents?.filter(ue => {
+            if (!ue.events || !Array.isArray(ue.events) || ue.events.length === 0) return false;
+            
+            // Take the first event from the array
+            const event = ue.events[0];
+            if (!event || !event.start_time) return false;
+            
+            return new Date(event.start_time) >= now;
+          }).length || 0;
 
+          // Get unique categories
           const categories = new Set(
             userEvents
-              ?.map(ue => ue.events?.[0]?.event_type?.[0]?.name)
+              ?.map(ue => {
+                if (!ue.events || !Array.isArray(ue.events) || ue.events.length === 0) return null;
+                // Take the first event from the array
+                const event = ue.events[0];
+                return event?.event_type_id;
+              })
               .filter(Boolean) || []
           );
+
+          // Create event type lookup
+          const eventTypeMap = new Map<string, EventTypeData>();
+          if (eventTypes && !eventTypesError) {
+            eventTypes.forEach((et: EventTypeData) => {
+              eventTypeMap.set(et.id, et);
+            });
+          }
 
           // Convert to recent events format
           const recent = userEvents
             ?.slice(0, 4)
-            .filter(ue => ue.events?.[0]) // Filter out events without data
+            .filter(ue => ue.events && Array.isArray(ue.events) && ue.events.length > 0)
             .map(ue => {
+              // Take the first event from the array
               const event = ue.events![0];
-              const eventType = event.event_type?.[0];
+              if (!event) return null;
+              
+              const eventType = eventTypeMap.get(event.event_type_id);
               return {
                 id: event.id || '',
                 title: event.title || 'Untitled Event',
@@ -128,7 +200,8 @@ export default function DashboardPage() {
                 color: eventType?.color || '#3B82F6',
                 status: new Date(event.start_time || '') >= now ? 'upcoming' : 'past' as 'upcoming' | 'past'
               };
-            }) || [];
+            })
+            .filter(Boolean) || []; // Remove null entries
 
           setUserStats({
             eventsTracked: userEvents?.length || 0,
@@ -137,7 +210,16 @@ export default function DashboardPage() {
             streakDays: Math.floor(Math.random() * 30) // TODO: Calculate actual streak
           });
 
-          setRecentEvents(recent);
+          setRecentEvents(recent as RecentEvent[]);
+        } else {
+          // No user events found, set empty state
+          setUserStats({
+            eventsTracked: 0,
+            upcomingEvents: 0,
+            categoriesFollowed: 0,
+            streakDays: 0
+          });
+          setRecentEvents([]);
         }
 
       } catch (err) {
@@ -149,7 +231,12 @@ export default function DashboardPage() {
     };
 
     loadUserData();
-  }, [userId, user]);
+  }, [userId, user, refreshKey]);
+
+  // Function to trigger data refresh (for when events are tracked from calendar)
+  const refreshDashboard = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -166,6 +253,7 @@ export default function DashboardPage() {
 
     if (result.success) {
       setUserProfile({ ...userProfile, ...updates });
+      setError(null); // Clear any previous errors
     } else {
       setError(result.error || 'Failed to update profile');
     }

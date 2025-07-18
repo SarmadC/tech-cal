@@ -1,10 +1,12 @@
+// src/app/calendar/page.tsx (Updated with Event Tracking)
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 import MainNavbar from '@/components/MainNavbar';
 import FilterSidebar from '@/components/FilterSidebar';
-
 import ContentHeader from '@/components/ContentHeader';
 import CalendarHeader from '@/components/CalendarHeader';
 import EventModal from '@/components/EventModal';
@@ -45,7 +47,9 @@ export default function CalendarPage() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0); // For triggering data refresh
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   // 2. EFFECTS
   useEffect(() => {
@@ -91,7 +95,7 @@ export default function CalendarPage() {
     }
 
     fetchData();
-  }, []);
+  }, [refreshKey]); // Add refreshKey as dependency to refetch when events are tracked
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -203,35 +207,17 @@ export default function CalendarPage() {
     });
   };
 
-  // Debug function to check your data structure
-  const debugEventData = () => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Total filtered events:', filteredEvents.length);
-      console.log('Sample event structure:', filteredEvents[0]);
-      console.log('Current date:', currentDate);
-      
-      // Log events for the next few days to verify the logic
-      const today = new Date();
-      for (let i = 0; i < 7; i++) {
-        const checkDate = new Date(today);
-        checkDate.setDate(today.getDate() + i);
-        const eventsForDay = getEventsForDay(checkDate.getDate(), true);
-        if (eventsForDay.length > 0) {
-          console.log(`Events for ${checkDate.toDateString()}:`, eventsForDay.length);
-        }
-      }
-    }
-  };
-
-  // Call this in your useEffect or component to debug
-  debugEventData();
-
   const isToday = (day: number, isCurrentMonth: boolean) => {
     const today = new Date();
     return isCurrentMonth &&
            day === today.getDate() &&
            currentDate.getMonth() === today.getMonth() &&
            currentDate.getFullYear() === today.getFullYear();
+  };
+
+  // Function to refresh data when events are tracked/untracked
+  const handleEventTracked = () => {
+    setRefreshKey(prev => prev + 1);
   };
 
   // 4. LOADING AND ERROR STATES
@@ -310,7 +296,7 @@ export default function CalendarPage() {
             searchContainerRef={searchContainerRef}
             suggestions={searchSuggestions}
             onSuggestionClick={(suggestion) => {
-              setSearchTerm(suggestion.title || 'Untitled Event');  // ← Add this null check
+              setSearchTerm(suggestion.title || 'Untitled Event');
               setIsSearchFocused(false);
             }}
             totalEvents={filteredEvents.length}
@@ -339,7 +325,13 @@ export default function CalendarPage() {
         </main>
       </div>
 
-      {selectedEvent && <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />}
+      {selectedEvent && (
+        <EventModal 
+          event={selectedEvent} 
+          onClose={() => setSelectedEvent(null)}
+          onEventTracked={handleEventTracked}
+        />
+      )}
     </div>
   );
 }

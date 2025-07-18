@@ -1,10 +1,13 @@
-// src/components/EventModal.tsx (Updated with Nullable Types)
+// src/components/EventModal.tsx (Corrected)
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { formatToUTC } from '@/lib/calendarUtils';
 import { ModalCountdown } from './CountdownTimer';
 import { ModalHappeningNow, hasHappeningNowStatus } from './HappeningNowIndicator';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 
 type Event = {
   id: string;
@@ -18,12 +21,13 @@ type Event = {
   source_url: string | null;
   livestream_url: string | null;
   event_type_id?: string | null;
-  color?: string; // Added for enriched events
+  color?: string;
 };
 
 interface EventModalProps {
   event: Event;
   onClose: () => void;
+  onEventTracked?: () => void; // Callback to refresh dashboard
 }
 
 // Helper function to create appealing event slugs
@@ -55,7 +59,12 @@ const isEventLive = (startTime: string, endTime: string | null) => {
   return now >= start && now <= end;
 };
 
-export default function EventModal({ event, onClose }: EventModalProps) {
+export default function EventModal({ event, onClose, onEventTracked }: EventModalProps) {
+  const { user } = useAuth();
+  const [isTracking, setIsTracking] = useState(false);
+  const [trackingStatus, setTrackingStatus] = useState<'idle' | 'tracking' | 'tracked' | 'error'>('idle');
+  const [isTracked, setIsTracked] = useState(false);
+
   // Safe title and fallbacks for nullable fields
   const eventTitle = event.title || 'Untitled Event';
   const eventDescription = event.description || 'No description available.';
@@ -63,6 +72,12 @@ export default function EventModal({ event, onClose }: EventModalProps) {
   const eventLocation = event.location || 'Location TBD';
   const eventStatus = event.status || 'unknown';
   const eventSourceUrl = event.source_url || '#';
+
+  // Check event status
+  const isLive = isEventLive(event.start_time, event.end_time);
+  const isSoon = isHappeningSoon(event.start_time);
+  const hasEnded = new Date() > new Date(event.end_time || event.start_time);
+  const hasHappeningNow = hasHappeningNowStatus(event.start_time, event.end_time, eventTitle);
 
   // Format dates
   const eventDate = new Date(event.start_time).toLocaleDateString(undefined, {
@@ -72,11 +87,127 @@ export default function EventModal({ event, onClose }: EventModalProps) {
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
   });
 
-  // Check event status
-  const isLive = isEventLive(event.start_time, event.end_time);
-  const isSoon = isHappeningSoon(event.start_time);
-  const hasEnded = new Date() > new Date(event.end_time || event.start_time);
-  const hasHappeningNow = hasHappeningNowStatus(event.start_time, event.end_time, eventTitle);
+  // Check if user has already tracked this event
+  useEffect(() => {
+    const checkIfTracked = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_events')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('event_id', event.id)
+          .single();
+
+        if (!error && data) {
+          setIsTracked(true);
+          setTrackingStatus('tracked');
+        }
+      } catch (err) {
+        console.error('Error checking if event is tracked:', err);
+      }
+    };
+
+    checkIfTracked();
+  }, [user, event.id]);
+
+  // Track event function - updated for your schema
+  const handleTrackEvent = async () => {
+    if (!user || isTracked) return;
+
+    setIsTracking(true);
+    setTrackingStatus('tracking');
+
+    try {
+      // First, ensure user exists in public.users table
+      const { error: userError } = await supabase
+        .from('users')
+        .upsert([
+          {
+            id: user.id,
+            email: user.email!,
+            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+            preferences: {
+              notifications: true,
+              theme: 'system',
+              categories: []
+            }
+          }
+        ], { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+
+      if (userError) {
+        console.error('Error upserting user:', userError);
+      }
+
+      // Track the event
+      const { error } = await supabase
+        .from('user_events')
+        .insert([
+          {
+            user_id: user.id,
+            event_id: event.id,
+            status: hasEnded ? 'attended' : 'bookmarked', // Use 'bookmarked' as per your schema
+            created_at: new Date().toISOString()
+          }
+        ]);
+
+      if (error) {
+        console.error('Error tracking event:', error);
+        setTrackingStatus('error');
+      } else {
+        setTrackingStatus('tracked');
+        setIsTracked(true);
+        
+        // Call the callback to refresh dashboard data
+        if (onEventTracked) {
+          onEventTracked();
+        }
+      }
+    } catch (err) {
+      console.error('Unexpected error tracking event:', err);
+      setTrackingStatus('error');
+    } finally {
+      setIsTracking(false);
+    }
+  };
+
+  // Untrack event function
+  const handleUntrackEvent = async () => {
+    if (!user || !isTracked) return;
+
+    setIsTracking(true);
+
+    try {
+      const { error } = await supabase
+        .from('user_events')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('event_id', event.id);
+
+      if (error) {
+        console.error('Error untracking event:', error);
+        setTrackingStatus('error');
+      } else {
+        setTrackingStatus('idle');
+        setIsTracked(false);
+        
+        // Call the callback to refresh dashboard data
+        if (onEventTracked) {
+          onEventTracked();
+        }
+      }
+    } catch (err) {
+      console.error('Unexpected error untracking event:', err);
+      setTrackingStatus('error');
+    } finally {
+      setIsTracking(false);
+    }
+  };
 
   // Calendar Links
   const utcStartTime = formatToUTC(event.start_time);
@@ -181,6 +312,52 @@ export default function EventModal({ event, onClose }: EventModalProps) {
             </div>
           )}
 
+          {/* Track Event Button */}
+          {user && (
+            <div className="mb-6">
+              {!isTracked ? (
+                <button
+                  onClick={handleTrackEvent}
+                  disabled={isTracking}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2"
+                >
+                  {isTracking ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Tracking...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span>Track Event</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-green-800 font-medium">Event tracked!</span>
+                  </div>
+                  <button
+                    onClick={handleUntrackEvent}
+                    disabled={isTracking}
+                    className="text-red-600 hover:text-red-700 transition-colors text-sm font-medium"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Special banners based on happening now status */}
           {isLive && (
             <div className="mb-6 bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-4 text-white">
@@ -202,37 +379,6 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                     Watch Live
                   </a>
                 )}
-              </div>
-            </div>
-          )}
-
-          {/* Registration/Deadline Banner */}
-          {hasHappeningNow && (eventTitle.toLowerCase().includes('registration') || 
-                              eventTitle.toLowerCase().includes('deadline') ||
-                              eventTitle.toLowerCase().includes('submit') ||
-                              eventTitle.toLowerCase().includes('ticket')) && (
-            <div className="mb-6 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold flex items-center space-x-2">
-                    <span>⏰</span>
-                    <span>Time-sensitive action required!</span>
-                  </h3>
-                  <p className="text-purple-100 text-sm">
-                    {eventTitle.toLowerCase().includes('registration') && 'Registration window is active'}
-                    {eventTitle.toLowerCase().includes('ticket') && 'Tickets are available now'}
-                    {eventTitle.toLowerCase().includes('deadline') && 'Important deadline approaching'}
-                    {eventTitle.toLowerCase().includes('submit') && 'Submission period is open'}
-                  </p>
-                </div>
-                <a
-                  href={eventSourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-white text-purple-600 hover:bg-purple-50 font-medium py-2 px-4 rounded-lg transition-all"
-                >
-                  Take Action
-                </a>
               </div>
             </div>
           )}
@@ -354,7 +500,7 @@ export default function EventModal({ event, onClose }: EventModalProps) {
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                </svg>
                   <span>Download .ics</span>
                 </button>
               </div>

@@ -1,3 +1,5 @@
+// src/contexts/AuthContext.tsx (Improved version)
+
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -95,18 +97,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [router]);
 
-  // Ensure user profile exists in database
+  // Ensure user profile exists in public.users table
   const ensureUserProfile = async (user: User) => {
     try {
-      // Check if user profile exists
-      const { error: fetchError } = await supabase
+      // Check if user profile exists in public.users
+      const { data: existingUser, error: fetchError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, updated_at')
         .eq('id', user.id)
         .single();
 
       if (fetchError && fetchError.code === 'PGRST116') {
-        // User doesn't exist, create profile
+        // User doesn't exist, create profile in public.users
+        console.log('Creating new user profile for:', user.email);
         const { error: insertError } = await supabase
           .from('users')
           .insert([
@@ -119,7 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 notifications: true,
                 theme: 'system',
                 categories: []
-              }
+              },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             }
           ]);
 
@@ -130,6 +135,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else if (fetchError) {
         console.error('Error checking user profile:', fetchError);
+      } else if (existingUser) {
+        // User exists, optionally sync any updated auth metadata
+        console.log('User profile exists:', existingUser.id);
+        
+        // Check if we need to update the name from auth metadata
+        const authName = user.user_metadata?.full_name;
+        if (authName) {
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ 
+              name: authName,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+            
+          if (updateError) {
+            console.error('Error syncing user name:', updateError);
+          }
+        }
       }
     } catch (error) {
       console.error('Error in ensureUserProfile:', error);
@@ -249,7 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Update user profile
+  // Update user profile - works with public.users table
   const updateProfile = async (data: ProfileUpdateData): Promise<AuthResponse> => {
     try {
       if (!user) {
@@ -258,10 +282,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setLoading(true);
 
-      // Update auth metadata if needed
-      if (data.full_name) {
+      // Update auth metadata if needed (for full_name and avatar_url)
+      const authUpdates: Record<string, unknown> = {};
+      if (data.full_name) authUpdates.full_name = data.full_name;
+      if (data.avatar_url) authUpdates.avatar_url = data.avatar_url;
+
+      if (Object.keys(authUpdates).length > 0) {
         const { error } = await supabase.auth.updateUser({
-          data: { full_name: data.full_name }
+          data: authUpdates
         });
 
         if (error) {
@@ -269,7 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Update user profile in database
+      // Update user profile in public.users table
       const updateData: Record<string, unknown> = {};
       if (data.full_name) updateData.name = data.full_name;
       if (data.timezone) updateData.timezone = data.timezone;
