@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { success: true, message: 'Successfully signed in!' };
-    } catch (error) {
+    } catch (err) {
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setLoading(false);
@@ -185,7 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { success: true, message: 'Account created successfully!' };
-    } catch (error) {
+    } catch (err) {
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setLoading(false);
@@ -208,7 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { success: true, message: `Redirecting to ${provider}...` };
-    } catch (error) {
+    } catch (err) {
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setLoading(false);
@@ -224,8 +224,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('Error signing out:', error);
       }
-    } catch (error) {
-      console.error('Unexpected error signing out:', error);
+    } catch (err) {
+      console.error('Unexpected error signing out:', err);
     } finally {
       setLoading(false);
     }
@@ -246,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         success: true, 
         message: 'Password reset email sent! Check your inbox.' 
       };
-    } catch (error) {
+    } catch (err) {
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
@@ -291,7 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { success: true, message: 'Profile updated successfully!' };
-    } catch (error) {
+    } catch (err) {
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setLoading(false);
