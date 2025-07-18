@@ -196,15 +196,15 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
   const signInWithOAuth = async (provider: 'google' | 'github'): Promise<AuthResponse> => {
     try {
       setLoading(true);
-      const { error: _error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`
         }
       });
 
-      if (_error) {
-        return { success: false, error: _error.message };
+      if (error) {
+        return { success: false, error: error.message };
       }
 
       return { success: true, message: `Redirecting to ${provider}...` };
@@ -219,11 +219,7 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
   const signOut = async (): Promise<void> => {
     try {
       setLoading(true);
-      const { error: _error } = await supabase.auth.signOut();
-
-      if (_error) {
-        console.error('Error signing out:', _error);
-      }
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Unexpected error signing out:', error);
     } finally {
@@ -234,12 +230,12 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
   // Reset password
   const resetPassword = async (email: string): Promise<AuthResponse> => {
     try {
-      const { error: _error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });
 
-      if (_error) {
-        return { success: false, error: _error.message };
+      if (error) {
+        return { success: false, error: error.message };
       }
 
       return { 
@@ -262,12 +258,12 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
 
       // Update auth metadata if needed
       if (data.full_name) {
-        const { error: _authError } = await supabase.auth.updateUser({
+        const { error } = await supabase.auth.updateUser({
           data: { full_name: data.full_name }
         });
 
-        if (_authError) {
-          return { success: false, error: _authError.message };
+        if (error) {
+          return { success: false, error: error.message };
         }
       }
 
@@ -280,13 +276,13 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
       if (Object.keys(updateData).length > 0) {
         updateData.updated_at = new Date().toISOString();
 
-        const { error: _dbError } = await supabase
+        const { error } = await supabase
           .from('users')
           .update(updateData)
           .eq('id', user.id);
 
-        if (_dbError) {
-          return { success: false, error: _dbError.message };
+        if (error) {
+          return { success: false, error: error.message };
         }
       }
 
