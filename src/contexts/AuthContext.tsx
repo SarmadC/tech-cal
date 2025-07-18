@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const ensureUserProfile = async (user: User) => {
     try {
       // Check if user profile exists
-      const { data: _existingProfile, error: fetchError } = await supabase
+      const { error: fetchError } = await supabase
         .from('users')
         .select('id')
         .eq('id', user.id)
@@ -196,15 +196,15 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
   const signInWithOAuth = async (provider: 'google' | 'github'): Promise<AuthResponse> => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error: _error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`
         }
       });
 
-      if (error) {
-        return { success: false, error: error.message };
+      if (_error) {
+        return { success: false, error: _error.message };
       }
 
       return { success: true, message: `Redirecting to ${provider}...` };
@@ -219,10 +219,10 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
   const signOut = async (): Promise<void> => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signOut();
+      const { error: _error } = await supabase.auth.signOut();
 
-      if (error) {
-        console.error('Error signing out:', error);
+      if (_error) {
+        console.error('Error signing out:', _error);
       }
     } catch (error) {
       console.error('Unexpected error signing out:', error);
@@ -234,12 +234,12 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
   // Reset password
   const resetPassword = async (email: string): Promise<AuthResponse> => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error: _error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });
 
-      if (error) {
-        return { success: false, error: error.message };
+      if (_error) {
+        return { success: false, error: _error.message };
       }
 
       return { 
@@ -262,12 +262,12 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
 
       // Update auth metadata if needed
       if (data.full_name) {
-        const { error: authError } = await supabase.auth.updateUser({
+        const { error: _authError } = await supabase.auth.updateUser({
           data: { full_name: data.full_name }
         });
 
-        if (authError) {
-          return { success: false, error: authError.message };
+        if (_authError) {
+          return { success: false, error: _authError.message };
         }
       }
 
@@ -280,13 +280,13 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
       if (Object.keys(updateData).length > 0) {
         updateData.updated_at = new Date().toISOString();
 
-        const { error: dbError } = await supabase
+        const { error: _dbError } = await supabase
           .from('users')
           .update(updateData)
           .eq('id', user.id);
 
-        if (dbError) {
-          return { success: false, error: dbError.message };
+        if (_dbError) {
+          return { success: false, error: _dbError.message };
         }
       }
 
