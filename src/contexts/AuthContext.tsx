@@ -1,5 +1,3 @@
-// src/contexts/AuthContext.tsx
-
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -152,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { success: true, message: 'Successfully signed in!' };
-    } catch (err) {
+    } catch (_err) {
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setLoading(false);
@@ -185,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { success: true, message: 'Account created successfully!' };
-    } catch (err) {
+    } catch (_err) {
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setLoading(false);
@@ -208,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { success: true, message: `Redirecting to ${provider}...` };
-    } catch (err) {
+    } catch (_err) {
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setLoading(false);
@@ -246,7 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         success: true, 
         message: 'Password reset email sent! Check your inbox.' 
       };
-    } catch (err) {
+    } catch (_err) {
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
@@ -291,7 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { success: true, message: 'Profile updated successfully!' };
-    } catch (err) {
+    } catch (_err) {
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setLoading(false);
