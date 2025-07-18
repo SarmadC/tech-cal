@@ -5,6 +5,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { supabase } from '@/lib/supabaseClient';
+import { useUserId } from '@/contexts/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 // --- Type Definitions ---
 interface UserEvent {
@@ -143,12 +145,15 @@ export default function GrowthDashboardPage() {
   const [userEvents, setUserEvents] = useState<UserEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const userId = useUserId(); // Get user ID from auth context
 
   useEffect(() => {
-    const loadData = async () => {
-      // TODO: Replace with actual user ID from your auth session
-      // You can get this from useUser() hook or similar auth method
-      const userId = 'replace-with-actual-user-id';
+    const loadData = async () => {      
+      if (!userId) {
+        setError('Please sign in to view your growth data.');
+        setLoading(false);
+        return;
+      }
       
       try {
         setLoading(true);
@@ -164,7 +169,7 @@ export default function GrowthDashboardPage() {
     };
     
     loadData();
-  }, []);
+  }, [userId]); // Add userId as dependency
 
   const yearlyStats = useMemo(() => calculateYearlyStats(userEvents), [userEvents]);
   const chartData = useMemo(() => prepareChartData(userEvents), [userEvents]);
@@ -210,7 +215,8 @@ export default function GrowthDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background-main pt-20">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background-main pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -290,6 +296,6 @@ export default function GrowthDashboardPage() {
           </div>
         )}
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

@@ -1,13 +1,18 @@
+// src/components/Navbar.tsx (Updated with Auth Integration)
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import UserMenu from '@/components/UserMenu';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +28,14 @@ export default function Navbar() {
     { href: '/blog', label: 'Blog' },
     { href: '/api-docs', label: 'API' },
   ];
+
+  // Add authenticated-only links
+  const authenticatedLinks = user ? [
+    { href: '/calendar', label: 'Calendar' },
+    { href: '/dashboard', label: 'Dashboard' },
+  ] : [];
+
+  const allNavLinks = [...navLinks, ...authenticatedLinks];
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -42,7 +55,7 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
+            {allNavLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -53,18 +66,11 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="/login"
-              className="text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors"
-            >
-              Log In
-            </Link>
-            <Link
-              href="/signup"
-              className="bg-accent-primary hover:bg-accent-primary-hover text-white font-medium py-2 px-4 rounded-lg transition-all text-sm"
-            >
-              Sign Up
-            </Link>
+          </div>
+
+          {/* Desktop User Menu / Auth Buttons */}
+          <div className="hidden md:block">
+            <UserMenu />
           </div>
 
           {/* Mobile Menu Button */}
@@ -85,32 +91,89 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200">
+        <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
           <div className="px-4 py-4 space-y-3">
-            {navLinks.map((link) => (
+            {/* Navigation Links */}
+            {allNavLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors"
+                className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors py-2"
               >
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="/login"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors"
-            >
-              Log In
-            </Link>
-            <Link
-              href="/signup"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-medium py-2 px-4 rounded-lg transition-all text-sm text-center"
-            >
-              Sign Up
-            </Link>
+
+            {/* Divider */}
+            <div className="border-t border-gray-200 pt-4">
+              {!loading && (
+                <>
+                  {user ? (
+                    /* Authenticated User Mobile Menu */
+                    <div className="space-y-3">
+                      {/* User Info */}
+                      <div className="flex items-center space-x-3 p-3 bg-background-secondary rounded-lg">
+                        <div className="w-10 h-10 bg-accent-primary rounded-full flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">
+                            {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground-primary truncate">
+                            {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                          </p>
+                          <p className="text-xs text-foreground-tertiary truncate">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Mobile User Links */}
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors py-2"
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors py-2"
+                      >
+                        Profile
+                      </Link>
+                      <Link
+                        href="/settings"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors py-2"
+                      >
+                        Settings
+                      </Link>
+                    </div>
+                  ) : (
+                    /* Unauthenticated Mobile Menu */
+                    <div className="space-y-3">
+                      <Link
+                        href="/login"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="block text-sm font-medium text-foreground-secondary hover:text-accent-primary transition-colors py-2"
+                      >
+                        Sign In
+                      </Link>
+                      <Link
+                        href="/signup"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="block w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-medium py-2 px-4 rounded-lg transition-all text-sm text-center"
+                      >
+                        Sign Up
+                      </Link>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
