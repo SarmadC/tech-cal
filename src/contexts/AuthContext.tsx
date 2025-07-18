@@ -196,16 +196,16 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
   const signInWithOAuth = async (provider: 'google' | 'github'): Promise<AuthResponse> => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }
-      });
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`
+          }
+        });
 
-      if (error) {
-        return { success: false, error: error.message };
-      }
+        if (error) {
+          return { success: false, error: error.message };
+        }
 
       return { success: true, message: `Redirecting to ${provider}...` };
     } catch (error) {
@@ -219,7 +219,8 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
   const signOut = async (): Promise<void> => {
     try {
       setLoading(true);
-      await supabase.auth.signOut();
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { error } = await supabase.auth.signOut();
     } catch (error) {
       console.error('Unexpected error signing out:', error);
     } finally {
@@ -230,6 +231,7 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
   // Reset password
   const resetPassword = async (email: string): Promise<AuthResponse> => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });
@@ -258,6 +260,7 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
 
       // Update auth metadata if needed
       if (data.full_name) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { error } = await supabase.auth.updateUser({
           data: { full_name: data.full_name }
         });
@@ -276,6 +279,7 @@ const signIn = async (email: string, password: string): Promise<AuthResponse> =>
       if (Object.keys(updateData).length > 0) {
         updateData.updated_at = new Date().toISOString();
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { error } = await supabase
           .from('users')
           .update(updateData)
