@@ -10,6 +10,21 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import GrowthDashboardPage from './growth/page';
 
 // Types
+interface SupabaseUserEvent {
+  id: string;
+  status: string;
+  created_at: string;
+  events: {
+    id: string;
+    title: string;
+    start_time: string;
+    event_type: {
+      name: string;
+      color: string;
+    }[];
+  }[] | null;
+}
+
 interface UserStats {
   eventsTracked: number;
   upcomingEvents: number;
@@ -104,26 +119,31 @@ export default function DashboardPage() {
           // Calculate stats
           const now = new Date();
           const upcomingEvents = userEvents?.filter(ue => 
-            ue.events && new Date(ue.events.start_time) >= now
+            ue.events?.[0] && new Date(ue.events[0].start_time) >= now
           ).length || 0;
 
           const categories = new Set(
             userEvents
-              ?.map(ue => ue.events?.event_type?.name)
+              ?.map(ue => ue.events?.[0]?.event_type?.[0]?.name)
               .filter(Boolean) || []
           );
 
           // Convert to recent events format
           const recent = userEvents
             ?.slice(0, 4)
-            .map(ue => ({
-              id: ue.events?.id || '',
-              title: ue.events?.title || 'Untitled Event',
-              date: new Date(ue.events?.start_time || '').toLocaleDateString(),
-              category: ue.events?.event_type?.name || 'Uncategorized',
-              color: ue.events?.event_type?.color || '#3B82F6',
-              status: new Date(ue.events?.start_time || '') >= now ? 'upcoming' : 'past'
-            })) || [];
+            .filter(ue => ue.events?.[0]) // Filter out events without data
+            .map(ue => {
+              const event = ue.events![0];
+              const eventType = event.event_type?.[0];
+              return {
+                id: event.id || '',
+                title: event.title || 'Untitled Event',
+                date: new Date(event.start_time || '').toLocaleDateString(),
+                category: eventType?.name || 'Uncategorized',
+                color: eventType?.color || '#3B82F6',
+                status: new Date(event.start_time || '') >= now ? 'upcoming' : 'past' as 'upcoming' | 'past'
+              };
+            }) || [];
 
           setUserStats({
             eventsTracked: userEvents?.length || 0,

@@ -57,7 +57,7 @@ export default function UserMenu() {
   };
 
   const userDisplayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-  const userInitials = userDisplayName.split(' ').map(n => n[0]).join('').toUpperCase();
+  const userInitials = userDisplayName.split(' ').map((n: string) => n[0]).join('').toUpperCase();
 
   return (
     <div className="relative" ref={menuRef}>
