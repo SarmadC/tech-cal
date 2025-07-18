@@ -15,13 +15,9 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { signIn, signInWithOAuth, loading } = useAuth();
-  const router = useRouter();
   const searchParams = useSearchParams();
-  
-  // Get redirect URL and any error from URL params
-  const redirectTo = searchParams.get('redirect') || '/dashboard';
   const urlError = searchParams.get('error');
 
   useEffect(() => {

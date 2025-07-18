@@ -4,6 +4,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Settings, LogOut, Calendar, BarChart3, ChevronDown } from 'lucide-react';
 
@@ -69,9 +70,11 @@ export default function UserMenu() {
         {/* Avatar */}
         <div className="relative">
           {user.user_metadata?.avatar_url ? (
-            <img
+            <Image
               src={user.user_metadata.avatar_url}
               alt="Profile"
+              width={32}
+              height={32}
               className="w-8 h-8 rounded-full object-cover"
             />
           ) : (
@@ -111,9 +114,11 @@ export default function UserMenu() {
           <div className="px-4 py-3 border-b border-border-color bg-background-secondary">
             <div className="flex items-center space-x-3">
               {user.user_metadata?.avatar_url ? (
-                <img
+                <Image
                   src={user.user_metadata.avatar_url}
                   alt="Profile"
+                  width={40}
+                  height={40}
                   className="w-10 h-10 rounded-full object-cover"
                 />
               ) : (

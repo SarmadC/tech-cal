@@ -3,7 +3,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session, AuthError } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
@@ -30,7 +30,7 @@ interface ProfileUpdateData {
   full_name?: string;
   avatar_url?: string;
   timezone?: string;
-  preferences?: Record<string, any>;
+  preferences?: Record<string, unknown>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const ensureUserProfile = async (user: User) => {
     try {
       // Check if user profile exists
-      const { data: existingProfile, error: fetchError } = await supabase
+      const { data: _existingProfile, error: fetchError } = await supabase
         .from('users')
         .select('id')
         .eq('id', user.id)
@@ -139,25 +139,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Sign in with email and password
-  const signIn = async (email: string, password: string): Promise<AuthResponse> => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+const signIn = async (email: string, password: string): Promise<AuthResponse> => {
+  try {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, message: 'Successfully signed in!' };
-    } catch (error) {
-      return { success: false, error: 'An unexpected error occurred' };
-    } finally {
-      setLoading(false);
+    if (error) {
+      return { success: false, error: error.message };
     }
-  };
+
+    return { success: true, message: 'Successfully signed in!' };
+  } catch (error) {
+    return { success: false, error: 'An unexpected error occurred' };
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Sign up with email and password
   const signUp = async (email: string, password: string, fullName: string): Promise<AuthResponse> => {
@@ -196,7 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithOAuth = async (provider: 'google' | 'github'): Promise<AuthResponse> => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`
@@ -220,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) {
         console.error('Error signing out:', error);
       }
@@ -272,7 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Update user profile in database
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (data.full_name) updateData.name = data.full_name;
       if (data.timezone) updateData.timezone = data.timezone;
       if (data.preferences) updateData.preferences = data.preferences;

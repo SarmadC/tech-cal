@@ -9,21 +9,6 @@ import { supabase } from '@/lib/supabaseClient';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import GrowthDashboardPage from './growth/page';
 
-// Types
-interface SupabaseUserEvent {
-  id: string;
-  status: string;
-  created_at: string;
-  events: {
-    id: string;
-    title: string;
-    start_time: string;
-    event_type: {
-      name: string;
-      color: string;
-    }[];
-  }[] | null;
-}
 
 interface UserStats {
   eventsTracked: number;
