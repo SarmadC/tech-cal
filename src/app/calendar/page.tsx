@@ -54,9 +54,16 @@ export default function CalendarPage() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const { user: _user } = useAuth();
   
-  const {
-    selectedEvents, toggleEvent, selectAll, clearSelection, 
-    isSelected, selectedCount, selectMultiple, deselectMultiple, toggleMultiple
+ const {
+    selectedEvents,
+    toggleEvent,
+    selectAll,
+    clearSelection,
+    isSelected,
+    selectedCount,
+    selectMultiple: _selectMultiple,
+    deselectMultiple: _deselectMultiple,
+    toggleMultiple
   } = useBulkSelection();
 
   // 2. DATA FETCHING (unchanged)

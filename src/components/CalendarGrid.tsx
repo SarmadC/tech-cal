@@ -38,9 +38,10 @@ export default function CalendarGrid({
   getEventsForDay,
   isToday,
   onEventClick,
-  isSelected,       // New prop
-  selectedCount,    // New prop
+  isSelected,
+  selectedCount: _selectedCount,
 }: CalendarGridProps) {
+
   
   return (
     <div className="flex-1 flex flex-col">

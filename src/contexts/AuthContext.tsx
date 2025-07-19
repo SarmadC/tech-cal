@@ -48,8 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Checking/creating user profile for:', user.email);
       
-      // Check if profile exists in public.users
-      const { data: existingUser, error: fetchError } = await supabase
+      // ✅ FIX: Removed the unused 'existingUser' variable.
+      const { error: fetchError } = await supabase
         .from('users')
         .select('id')
         .eq('id', user.id)
@@ -273,7 +273,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     resetPassword,
     updateProfile
-  }), [user, session, loading]);
+  }), [user, session, loading, updateProfile]);
+
 
   return (
     <AuthContext.Provider value={value}>

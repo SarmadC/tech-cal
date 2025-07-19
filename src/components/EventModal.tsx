@@ -69,8 +69,8 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
   const hasHappeningNow = hasHappeningNowStatus(event.start_time, event.end_time, eventTitle);
 
   // Helper function to create user-friendly error messages
-  const createErrorState = (err: unknown): ErrorState => {
-    const errorObj = err as any;
+    const createErrorState = (err: unknown): ErrorState => {
+    const errorObj = err as { code?: string; message?: string };
     
     // Network/API errors
     if (errorObj?.code === 'PGRST301' || errorObj?.message?.includes('JWT')) {
@@ -199,7 +199,7 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
         return;
       }
 
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('user_events')
         .insert({ 
           user_id: userId, 
