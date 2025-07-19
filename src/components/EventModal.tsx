@@ -1,4 +1,4 @@
-// src/components/EventModal.tsx (Build Fixed)
+// src/components/EventModal.tsx (Original Design with All Fixes)
 
 'use client';
 
@@ -27,7 +27,7 @@ type Event = {
 interface EventModalProps {
   event: Event;
   onClose: () => void;
-  onEventTracked?: () => void;
+  onEventTracked?: () => void; // This allows refreshing the main calendar/dashboard
 }
 
 const createEventSlug = (title: string, id: string) => {
@@ -42,6 +42,20 @@ const createEventSlug = (title: string, id: string) => {
   return `${slug}-${shortId}`;
 };
 
+const isHappeningSoon = (startTime: string) => {
+  const now = new Date();
+  const eventStart = new Date(startTime);
+  const hoursDiff = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+  return hoursDiff >= 0 && hoursDiff <= 48;
+};
+
+const isEventLive = (startTime: string, endTime: string | null) => {
+  const now = new Date();
+  const start = new Date(startTime);
+  const end = endTime ? new Date(endTime) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  return now >= start && now <= end;
+};
+
 export default function EventModal({ event, onClose, onEventTracked }: EventModalProps) {
   const userId = useUserId();
   const [isTracking, setIsTracking] = useState(false);
@@ -54,7 +68,6 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
   const eventLocation = event.location || 'Location TBD';
   const eventStatus = event.status || 'unknown';
   const eventSourceUrl = event.source_url || '#';
-  const hasEnded = new Date() > new Date(event.end_time || event.start_time);
 
   const eventDate = new Date(event.start_time).toLocaleDateString(undefined, {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -62,7 +75,13 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
   const eventTime = new Date(event.start_time).toLocaleTimeString(undefined, {
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
   });
+
+  const isLive = isEventLive(event.start_time, event.end_time);
+  const isSoon = isHappeningSoon(event.start_time);
+  const hasEnded = new Date() > new Date(event.end_time || event.start_time);
+  const hasHappeningNow = hasHappeningNowStatus(event.start_time, event.end_time, eventTitle);
   
+  // Check if user has already tracked this event
   useEffect(() => {
     const checkIfTracked = async () => {
       if (!userId) return;
@@ -77,6 +96,7 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
     checkIfTracked();
   }, [userId, event.id]);
 
+  // Event tracking logic
   const handleTrackEvent = async () => {
     if (!userId) return;
     setIsTracking(true);
@@ -86,6 +106,8 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
     if (!error) {
       setIsTracked(true);
       onEventTracked?.();
+    } else {
+      console.error("Error tracking event:", error);
     }
     setIsTracking(false);
   };
@@ -97,10 +119,13 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
     if (!error) {
       setIsTracked(false);
       onEventTracked?.();
+    } else {
+      console.error("Error untracking event:", error);
     }
     setIsTracking(false);
   };
-
+  
+  // Copy link handler
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/event/${createEventSlug(eventTitle, event.id)}`);
     setShowCopiedBanner(true);
@@ -109,6 +134,7 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
     }, 2500);
   };
 
+  // Calendar Links
   const googleCalendarLink = useMemo(() => {
     const utcStartTime = formatToUTC(event.start_time);
     const utcEndTime = formatToUTC(event.end_time || new Date(new Date(event.start_time).getTime() + 60 * 60 * 1000));
@@ -137,6 +163,15 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'confirmed': return 'text-green-600';
+      case 'pending': return 'text-yellow-600';
+      case 'cancelled': return 'text-red-600';
+      default: return 'text-gray-500';
+    }
   };
 
   return (
@@ -168,7 +203,7 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
               {eventTitle}
             </h1>
             <div className="flex items-center space-x-4 mt-2">
-              <span className={`text-sm font-medium capitalize ${eventStatus === 'confirmed' ? 'text-green-600' : 'text-gray-500'}`}>
+              <span className={`text-sm font-medium capitalize ${getStatusColor(eventStatus)}`}>
                 {eventStatus}
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -177,18 +212,7 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
             </div>
           </div>
 
-          {/* Status Banners / Countdown */}
-          {hasHappeningNowStatus(event.start_time, event.end_time, eventTitle) ? (
-            <div className="mb-6">
-              <ModalHappeningNow startTime={event.start_time} endTime={event.end_time} title={eventTitle} />
-            </div>
-          ) : !hasEnded && (
-            <div className="mb-6">
-              <ModalCountdown startTime={event.start_time} endTime={event.end_time} />
-            </div>
-          )}
-
-          {/* Track Event Button */}
+          {/* Track Event Button - Integrated into the design */}
           {userId && (
             <div className="mb-6">
               {isTracked ? (
@@ -203,13 +227,28 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
                  </div>
               ) : (
                 <button onClick={handleTrackEvent} disabled={isTracking} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg disabled:opacity-50">
-                  {isTracking ? 'Tracking...' : 'Track Event'}
+                  {isTracking ? 'Tracking...' : '+ Track Event'}
                 </button>
               )}
             </div>
           )}
-          
-          {/* ✅ FIX: No longer using the 'isLive' variable here, this banner was redundant */}
+
+          {/* Status Banners / Countdown */}
+          {hasHappeningNow ? (
+            <div className="mb-6">
+              <ModalHappeningNow 
+                startTime={event.start_time}
+                endTime={event.end_time}
+                title={eventTitle}
+                eventType={event.event_type_id || undefined}
+              />
+            </div>
+          ) : !hasEnded && isSoon && (
+            <div className="mb-6">
+              <ModalCountdown startTime={event.start_time} endTime={event.end_time} />
+            </div>
+          )}
+
           {/* Event Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5">
