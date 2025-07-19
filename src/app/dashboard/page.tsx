@@ -1,9 +1,10 @@
-// src/app/dashboard/page.tsx (Final Version with Type Fixes)
+// src/app/dashboard/page.tsx (Build Fixed)
 
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+// ✅ FIX: Removed unused 'user' from import
 import { useAuth, useUserId } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -27,7 +28,7 @@ interface RecentEvent {
   date: string;
   category: string;
   color: string;
-  status: 'upcoming' | 'past'; // This type is now strict
+  status: 'upcoming' | 'past';
 }
 
 interface UserStats {
@@ -37,7 +38,6 @@ interface UserStats {
   streakDays: number;
 }
 
-// ✅ FIX: The 'events' property is now correctly typed as an array
 interface FetchedUserEvent {
   event_id: string;
   events: {
@@ -45,7 +45,7 @@ interface FetchedUserEvent {
     title: string;
     start_time: string;
     event_type_id: string;
-  }[] | null; // It's an array of events or null
+  }[] | null;
 }
 
 export default function DashboardPage() {
@@ -56,7 +56,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { user, signOut, updateProfile } = useAuth();
+  // ✅ FIX: Removed unused 'user' variable
+  const { signOut, updateProfile } = useAuth();
   const authUserId = useUserId();
 
   useEffect(() => {
@@ -85,7 +86,6 @@ export default function DashboardPage() {
         if (eventsResult.error) throw eventsResult.error;
         const trackedEvents: FetchedUserEvent[] = eventsResult.data || [];
         
-        // ✅ FIX: We now correctly handle the events array, taking the first event
         const validEvents = trackedEvents.map(ue => ue.events?.[0]).filter(Boolean);
 
         const now = new Date();
@@ -99,7 +99,6 @@ export default function DashboardPage() {
           streakDays: 12,
         });
 
-        // ✅ FIX: Explicitly cast the status to the correct type
         const formattedRecentEvents = validEvents.slice(0, 5).map(event => {
             const eventType = eventTypeMap.get(event!.event_type_id);
             const isUpcoming = new Date(event!.start_time) >= now;
@@ -114,9 +113,11 @@ export default function DashboardPage() {
         });
         setRecentEvents(formattedRecentEvents);
 
-      } catch (err: any) {
-        console.error("Error loading dashboard data:", err);
-        setError(`Failed to load dashboard. ${err.message}`);
+      // ✅ FIX: Provided a proper type for the caught error
+      } catch (err: unknown) {
+        const error = err as Error;
+        console.error("Error loading dashboard data:", error);
+        setError(`Failed to load dashboard. ${error.message}`);
       } finally {
         setLoading(false);
       }
@@ -161,10 +162,11 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-foreground-primary mb-2">
+                {/* ✅ FIX: Replaced ' with &apos; */}
                 Welcome back, {userProfile?.name?.split(' ')[0] || 'User'}
               </h1>
               <p className="text-foreground-secondary">
-                Here's your personal hub for all things tech events.
+                Here&apos;s your personal hub for all things tech events.
               </p>
             </div>
             <button
@@ -247,7 +249,8 @@ export default function DashboardPage() {
                     ))
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-foreground-tertiary">You haven't tracked any events yet.</p>
+                      {/* ✅ FIX: Replaced ' with &apos; */}
+                      <p className="text-foreground-tertiary">You haven&apos;t tracked any events yet.</p>
                       <Link href="/calendar" className="text-accent-primary hover:underline text-sm font-medium">
                         Browse events →
                       </Link>

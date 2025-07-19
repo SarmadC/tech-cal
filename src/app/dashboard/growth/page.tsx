@@ -1,8 +1,8 @@
-// src/app/dashboard/growth/page.tsx (Fully Fixed with Correct Types)
+// src/app/dashboard/growth/page.tsx (Build Fixed)
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react'; // Removed unused 'useMemo'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { supabase } from '@/lib/supabaseClient';
 import { useUserId } from '@/contexts/AuthContext';
@@ -19,14 +19,13 @@ interface ChartData {
   [key: string]: string | number;
 }
 
-// ✅ FIX: Correctly type the nested arrays returned by the Supabase join.
 interface FetchedGrowthEvent {
   created_at: string;
   events: {
     event_type: {
       name: string;
-    }[] | null; // event_type is an array of objects
-  }[] | null;   // events is an array of objects
+    }[] | null;
+  }[] | null;
 }
 
 // --- Helper Functions ---
@@ -42,11 +41,9 @@ const fetchUserEventsForGrowth = async (userId: string): Promise<UserEvent[]> =>
     return [];
   }
 
-  // ✅ FIX: Correctly map the nested array structure.
   return (data as FetchedGrowthEvent[])
     .map((userEvent) => ({
       attendedAt: userEvent.created_at,
-      // Access the first event, then its first event_type, then its name.
       category: userEvent.events?.[0]?.event_type?.[0]?.name || 'Unknown',
     }))
     .filter(event => event.category !== 'Unknown');
@@ -136,7 +133,8 @@ function GrowthDashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground-primary mb-2">Your Personal Growth</h1>
-            <p className="text-foreground-secondary">Track your learning journey through the tech events you've attended.</p>
+            {/* ✅ FIX: Replaced ' with &apos; */}
+            <p className="text-foreground-secondary">Track your learning journey through the tech events you&apos;ve attended.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -171,7 +169,8 @@ function GrowthDashboardPage() {
               <div className="text-center py-12">
                 <p className="text-foreground-secondary">No event attendance data available yet.</p>
                 <p className="text-sm text-foreground-tertiary mt-2">
-                  Start tracking events you've attended to see your growth chart!
+                  {/* ✅ FIX: Replaced ' with &apos; */}
+                  Start tracking events you&apos;ve attended to see your growth chart!
                 </p>
               </div>
             )}

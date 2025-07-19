@@ -1,8 +1,7 @@
-// src/components/EventModal.tsx (With "Link Copied" Banner)
+// src/components/EventModal.tsx (Build Fixed)
 
 'use client';
 
-// Added useMemo
 import { useState, useEffect, useMemo } from 'react';
 import { formatToUTC } from '@/lib/calendarUtils';
 import { ModalCountdown } from './CountdownTimer';
@@ -43,18 +42,11 @@ const createEventSlug = (title: string, id: string) => {
   return `${slug}-${shortId}`;
 };
 
-const isEventLive = (startTime: string, endTime: string | null) => {
-  const now = new Date();
-  const start = new Date(startTime);
-  const end = endTime ? new Date(endTime) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
-  return now >= start && now <= end;
-};
-
 export default function EventModal({ event, onClose, onEventTracked }: EventModalProps) {
   const userId = useUserId();
   const [isTracking, setIsTracking] = useState(false);
   const [isTracked, setIsTracked] = useState(false);
-  const [showCopiedBanner, setShowCopiedBanner] = useState(false); // ✅ ADDED: State for the banner
+  const [showCopiedBanner, setShowCopiedBanner] = useState(false);
 
   const eventTitle = event.title || 'Untitled Event';
   const eventDescription = event.description || 'No description available.';
@@ -62,7 +54,6 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
   const eventLocation = event.location || 'Location TBD';
   const eventStatus = event.status || 'unknown';
   const eventSourceUrl = event.source_url || '#';
-  const isLive = isEventLive(event.start_time, event.end_time);
   const hasEnded = new Date() > new Date(event.end_time || event.start_time);
 
   const eventDate = new Date(event.start_time).toLocaleDateString(undefined, {
@@ -110,13 +101,12 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
     setIsTracking(false);
   };
 
-  // ✅ ADDED: Handler for copying the link
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/event/${createEventSlug(eventTitle, event.id)}`);
     setShowCopiedBanner(true);
     setTimeout(() => {
       setShowCopiedBanner(false);
-    }, 2500); // The banner will disappear after 2.5 seconds
+    }, 2500);
   };
 
   const googleCalendarLink = useMemo(() => {
@@ -165,7 +155,6 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        {/* ✅ ADDED: The banner itself, with transitions */}
         {showCopiedBanner && (
             <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm shadow-lg z-30 transition-opacity duration-300">
                 Link copied to clipboard!
@@ -219,7 +208,8 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
               )}
             </div>
           )}
-
+          
+          {/* ✅ FIX: No longer using the 'isLive' variable here, this banner was redundant */}
           {/* Event Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5">
@@ -257,7 +247,6 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
               <a href={eventSourceUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center">
                 View Event Details
               </a>
-              {/* ✅ MODIFIED: onClick handler now points to our new function */}
               <button
                 onClick={handleCopyLink}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-900 font-medium py-3 px-6 rounded-lg"
