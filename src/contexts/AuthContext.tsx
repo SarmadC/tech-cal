@@ -2,7 +2,7 @@
 
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, usePathname } from 'next/navigation';
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             updated_at: new Date().toISOString(),
           });
       }
-    } catch (error) {
+    } catch (_error) {
       // Fails silently in production
     }
   };
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           await ensureUserProfile(session.user);
         }
-      } catch (error) {
+      } catch (_error) {
         // Fails silently
       } finally {
         setLoading(false);
@@ -116,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return { success: false, error: error.message };
       return { success: true, message: 'Successfully signed in!' };
-    } catch (error) {
+    } catch (_error) {
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
@@ -133,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true, message: 'Please check your email to confirm your account.' };
       }
       return { success: true, message: 'Account created successfully!' };
-    } catch (error) {
+    } catch (_error) {
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (error) return { success: false, error: error.message };
       return { success: true, message: `Redirecting to ${provider}...` };
-    } catch (error) {
+    } catch (_error) {
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async (): Promise<void> => {
     try {
       await supabase.auth.signOut();
-    } catch (error) {
+    } catch (_error) {
       // Fails silently
     }
   };
@@ -166,12 +166,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (error) return { success: false, error: error.message };
       return { success: true, message: 'Password reset email sent!' };
-    } catch (error) {
+    } catch (_error) {
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
   
-  const updateProfile = async (data: ProfileUpdateData): Promise<AuthResponse> => {
+  const updateProfile = useCallback(async (data: ProfileUpdateData): Promise<AuthResponse> => {
     if (!user) return { success: false, error: 'No authenticated user' };
     
     try {
@@ -192,10 +192,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (publicError) return { success: false, error: publicError.message };
 
       return { success: true, message: 'Profile updated successfully!' };
-    } catch (error) {
+    } catch (_error) {
       return { success: false, error: 'An unexpected error occurred' };
     }
-  };
+  }, [user]);
 
   const value = useMemo(() => ({
     user,
