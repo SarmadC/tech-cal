@@ -5,8 +5,8 @@
 import { useState, useEffect } from 'react';
 
 interface CountdownTimerProps {
-  startTime: string;
-  endTime?: string | null;
+  start_time: string;
+  end_time?: string | null;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -21,8 +21,8 @@ interface TimeRemaining {
 }
 
 export default function CountdownTimer({ 
-  startTime, 
-  endTime, 
+  start_time, 
+  end_time, 
   className = '',
   size = 'md' 
 }: CountdownTimerProps) {
@@ -38,8 +38,8 @@ export default function CountdownTimer({
   useEffect(() => {
     const calculateTimeRemaining = () => {
       const now = new Date().getTime();
-      const start = new Date(startTime).getTime();
-      const end = endTime ? new Date(endTime).getTime() : start + (2 * 60 * 60 * 1000); // Default 2 hours if no end time
+      const start = new Date(start_time).getTime();
+      const end = end_time ? new Date(end_time).getTime() : start + (2 * 60 * 60 * 1000); // Default 2 hours if no end time
 
       // Check if event is currently live
       if (now >= start && now <= end) {
@@ -94,7 +94,7 @@ export default function CountdownTimer({
     const interval = setInterval(calculateTimeRemaining, 1000);
 
     return () => clearInterval(interval);
-  }, [startTime, endTime]);
+  }, [start_time, end_time]);
 
   const getSizeClasses = () => {
     switch (size) {
@@ -221,11 +221,11 @@ export default function CountdownTimer({
 }
 
 // Utility component for compact countdown in calendar grid
-export function CompactCountdown({ startTime, endTime }: { startTime: string; endTime?: string | null }) {
+export function CompactCountdown({ start_time, end_time }: { start_time: string; end_time?: string | null }) {
   return (
     <CountdownTimer 
-      startTime={startTime} 
-      endTime={endTime} 
+      start_time={start_time} 
+      end_time={end_time} 
       size="sm"
       className="bg-background-secondary/80 backdrop-blur-sm px-2 py-1 rounded-full"
     />
@@ -233,14 +233,14 @@ export function CompactCountdown({ startTime, endTime }: { startTime: string; en
 }
 
 // Utility component for event modal countdown
-export function ModalCountdown({ startTime, endTime }: { startTime: string; endTime?: string | null }) {
+export function ModalCountdown({ start_time, end_time }: { start_time: string; end_time?: string | null }) {
   return (
     <div className="bg-accent-primary/10 border border-accent-primary/20 rounded-xl p-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-foreground-primary">Event starts in:</span>
         <CountdownTimer 
-          startTime={startTime} 
-          endTime={endTime} 
+          start_time={start_time} 
+          end_time={end_time} 
           size="lg"
         />
       </div>

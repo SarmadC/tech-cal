@@ -1,25 +1,35 @@
-// src/components/CalendarGrid.tsx (Updated with Status Dots)
+// src/components/CalendarGrid.tsx (Corrected Version)
 
-import { CompactCountdown } from './CountdownTimer';
-import { hasHappeningNowStatus, CalendarDayDots } from './HappeningNowIndicator';
+import { CalendarDayDots } from './HappeningNowIndicator';
 
-// Type definitions
-type Event = { 
-  id: string; 
-  title: string; 
-  color: string; 
+// --- Type Definitions ---
+// 1. UPDATED: Event type now matches EnrichedEvent from page.tsx
+type Event = {
+  id: string;
+  event_type_id: string;
+  title: string;
+  description: string;
   start_time: string;
   end_time: string | null;
-  event_type_id?: string;
+  organizer: string;
+  location: string;
+  status: string;
+  source_url: string;
+  livestream_url: string | null;
+  color: string;
 };
+
 type Day = { date: number; isCurrentMonth: boolean; };
 
+// 2. UPDATED: Props interface now includes selection handlers and state
 interface CalendarGridProps {
   days: Day[];
   weekDays: string[];
   getEventsForDay: (day: number, isCurrentMonth: boolean) => Event[];
   isToday: (day: number, isCurrentMonth: boolean) => boolean;
-  onEventClick: (event: Event) => void;
+  onEventClick: (event: Event, ctrlKey: boolean, shiftKey: boolean) => void; // Signature now matches handleEventClick
+  isSelected: (eventId: string) => boolean;
+  selectedCount: number;
 }
 
 export default function CalendarGrid({
@@ -28,24 +38,10 @@ export default function CalendarGrid({
   getEventsForDay,
   isToday,
   onEventClick,
+  isSelected,       // New prop
+  selectedCount,    // New prop
 }: CalendarGridProps) {
   
-  // Helper to check if event is upcoming (within next 7 days) for countdown
-  const isUpcomingEvent = (startTime: string) => {
-    const now = new Date();
-    const eventStart = new Date(startTime);
-    const daysDiff = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    return daysDiff >= 0 && daysDiff <= 7;
-  };
-
-  // Helper to check if event is happening soon (within 24 hours) for countdown
-  const isHappeningSoon = (startTime: string) => {
-    const now = new Date();
-    const eventStart = new Date(startTime);
-    const hoursDiff = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
-    return hoursDiff >= 0 && hoursDiff <= 24;
-  };
-
   return (
     <div className="flex-1 flex flex-col">
       {/* Weekday Header */}
@@ -63,30 +59,8 @@ export default function CalendarGrid({
       {/* Days Grid */}
       <div className="flex-1 grid grid-cols-7" style={{ gridTemplateRows: `repeat(${days.length / 7}, minmax(0, 1fr))` }}>
         {days.map((day, index) => {
-          // Get events for this day using your existing function
           const dayEvents = getEventsForDay(day.date, day.isCurrentMonth);
           const isTodayClass = isToday(day.date, day.isCurrentMonth);
-
-          // Check if any events have happening now status
-          const hasHappeningNowEvents = dayEvents.some(event => 
-            hasHappeningNowStatus(event.start_time, event.end_time, event.title)
-          );
-
-          // Find the most urgent event for countdown (if no happening now status)
-          const mostUrgentEvent = dayEvents.find(event => {
-            const isUpcoming = isUpcomingEvent(event.start_time);
-            const isSoon = isHappeningSoon(event.start_time);
-            const hasStatus = hasHappeningNowStatus(event.start_time, event.end_time, event.title);
-            return !hasStatus && (isUpcoming || isSoon);
-          });
-
-          // Convert events to format expected by CalendarDayDots
-          const eventsForStatusDots = dayEvents.map(event => ({
-            startTime: event.start_time,
-            endTime: event.end_time,
-            title: event.title,
-            eventType: event.event_type_id
-          }));
 
           return (
             <div
@@ -98,7 +72,6 @@ export default function CalendarGrid({
                 ${(index + 1) % 7 === 0 ? 'border-r-0' : ''} 
               `}
             >
-              {/* Day number */}
               <div
                 className={`
                   text-sm font-medium mb-2 
@@ -109,49 +82,34 @@ export default function CalendarGrid({
                 {day.date}
               </div>
 
-              {/* STATUS DOTS - Minimal corner indicators */}
-              {dayEvents.length > 0 && (
-                <CalendarDayDots events={eventsForStatusDots} />
-              )}
+              <CalendarDayDots events={dayEvents} />
               
-              {/* Event badges */}
               <div className="space-y-1">
-                {dayEvents.slice(0, 3).map(event => (
-                  <div
-                    key={event.id}
-                    onClick={() => onEventClick(event)}
-                    className="text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-90 transition-all"
-                    style={{ backgroundColor: event.color }}
-                  >
-                    {event.title}
-                  </div>
-                ))}
+                {dayEvents.slice(0, 3).map(event => {
+                  const selected = isSelected(event.id);
+                  return (
+                    <div
+                      key={event.id}
+                      // 3. UPDATED: onClick now passes the MouseEvent to the handler
+                      onClick={(e: React.MouseEvent) => onEventClick(event, e.ctrlKey || e.metaKey, e.shiftKey)}
+                      className={`
+                        text-xs px-2 py-1 rounded text-white truncate cursor-pointer transition-all
+                        ${selected ? 'ring-2 ring-offset-1 ring-blue-500 transform scale-105 shadow-md' : ''}
+                      `}
+                      style={{ backgroundColor: event.color }}
+                      title={event.title}
+                    >
+                      {event.title}
+                    </div>
+                  );
+                })}
                 
                 {dayEvents.length > 3 && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 px-2">
-                    <span title={`${dayEvents.length - 3} additional events`}>
-                      +{dayEvents.length - 3} more
-                    </span>
+                    +{dayEvents.length - 3} more
                   </div>
                 )}
               </div>
-
-              {/* Countdown timer for upcoming events (only if no happening now status) */}
-              {!hasHappeningNowEvents && mostUrgentEvent && (
-                <div className="mt-2 flex justify-center">
-                  <CompactCountdown 
-                    startTime={mostUrgentEvent.start_time} 
-                    endTime={mostUrgentEvent.end_time}
-                  />
-                </div>
-              )}
-
-              {/* DEBUG INFO - Show in dev */}
-              {process.env.NODE_ENV === 'development' && dayEvents.length > 0 && (
-                <div className="absolute bottom-1 left-1 text-xs text-gray-400">
-                  {dayEvents.length}
-                </div>
-              )}
             </div>
           );
         })}

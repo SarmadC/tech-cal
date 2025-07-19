@@ -1,8 +1,8 @@
-// src/app/calendar/page.tsx (Fixed unused variable)
+// src/app/calendar/page.tsx (Updated with SmartLoader)
 
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import MainNavbar from '@/components/MainNavbar';
@@ -11,8 +11,11 @@ import ContentHeader from '@/components/ContentHeader';
 import CalendarHeader from '@/components/CalendarHeader';
 import EventModal from '@/components/EventModal';
 import CalendarGrid from '@/components/CalendarGrid';
+import BulkActions, { useBulkSelection, useBulkKeyboardShortcuts } from '@/components/BulkActions';
+// --- NEW IMPORTS ---
+import { SmartLoader, CalendarSkeleton, SidebarSkeleton } from '@/components/Loading';
 
-// Type definitions
+// Type definitions (unchanged)
 type EnrichedEvent = {
   id: string;
   event_type_id: string;
@@ -35,7 +38,7 @@ type Category = {
 };
 
 export default function CalendarPage() {
-  // 1. STATE MANAGEMENT
+  // 1. STATE MANAGEMENT (unchanged)
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState('month');
   const [selectedEvent, setSelectedEvent] = useState<EnrichedEvent | null>(null);
@@ -47,56 +50,56 @@ export default function CalendarPage() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0); // For triggering data refresh
+  const [refreshKey, setRefreshKey] = useState(0);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const { user: _user } = useAuth(); // Prefix with underscore to indicate intentionally unused
+  const { user: _user } = useAuth();
+  
+  const {
+    selectedEvents, toggleEvent, selectAll, clearSelection, 
+    isSelected, selectedCount, selectMultiple, deselectMultiple, toggleMultiple
+  } = useBulkSelection();
 
-  // 2. EFFECTS
+  // 2. DATA FETCHING (unchanged)
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
-        // Fetch event types (your actual table name)
         const { data: eventTypesData, error: eventTypesError } = await supabase
           .from('event_type')
           .select('*');
 
-        if (eventTypesError) {
-          console.error('Error fetching event types:', eventTypesError);
-          setError('Failed to load event categories');
-          return;
-        }
-
+        if (eventTypesError) throw new Error('Failed to load event categories.');
+        
         const eventTypes: Category[] = eventTypesData || [];
         setCategories(eventTypes);
         setSelectedCategories(new Set(eventTypes.map(c => c.id)));
 
-        // Fetch events
         const { data: eventsData, error: eventsError } = await supabase
           .from('events')
           .select('*');
 
-        if (eventsError) {
-          console.error('Error fetching events:', eventsError);
-          setError('Failed to load events');
-          return;
-        }
+        if (eventsError) throw new Error('Failed to load events.');
 
         setEvents(eventsData || []);
 
       } catch (err) {
-        console.error('Unexpected error:', err);
-        setError('An unexpected error occurred');
+        setError((err as Error).message);
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
-  }, [refreshKey]); // Add refreshKey as dependency to refetch when events are tracked
+  }, [refreshKey]);
 
+  // --- NEW: HANDLER FOR RETRY BUTTON ---
+  const handleRetry = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
+  // 3. OTHER EFFECTS & LOGIC (unchanged)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -107,32 +110,19 @@ export default function CalendarPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Keyboard shortcuts for calendar navigation
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input field
       if (e.target && (e.target as HTMLElement).tagName === 'INPUT') return;
-      
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-      }
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-      }
-      if (e.key === "t" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setCurrentDate(new Date());
-      }
+      if (e.key === "ArrowLeft") { e.preventDefault(); setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)); }
+      if (e.key === "ArrowRight") { e.preventDefault(); setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)); }
+      if (e.key === "t" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setCurrentDate(new Date()); }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [currentDate]);
 
-  // 3. LOGIC & DERIVED STATE
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = useMemo(() => ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'], []);
+  const weekDays = useMemo(() => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], []);
 
   const enrichedEvents = useMemo(() => {
     const categoryColorMap = new Map(categories.map(c => [c.id, c.color]));
@@ -142,6 +132,19 @@ export default function CalendarPage() {
     }));
   }, [events, categories]);
 
+  const filteredEvents = useMemo(() => {
+    const lowercasedSearchTerm = searchTerm.toLowerCase();
+    return enrichedEvents.filter((event) => {
+      if (!selectedCategories.has(event.event_type_id)) return false;
+      if (searchTerm) {
+        return event.title.toLowerCase().includes(lowercasedSearchTerm) ||
+               event.organizer.toLowerCase().includes(lowercasedSearchTerm);
+      }
+      return true;
+    });
+  }, [enrichedEvents, selectedCategories, searchTerm]);
+  
+  // ... other useMemo hooks and handlers remain the same ...
   const searchSuggestions = useMemo(() => {
     if (!searchTerm) return [];
     const lowercasedSearchTerm = searchTerm.toLowerCase();
@@ -155,18 +158,6 @@ export default function CalendarPage() {
     return Array.from(uniqueSuggestions.values()).slice(0, 5);
   }, [searchTerm, enrichedEvents]);
 
-  const filteredEvents = useMemo(() => {
-    const lowercasedSearchTerm = searchTerm.toLowerCase();
-    return enrichedEvents.filter((event) => {
-      if (!selectedCategories.has(event.event_type_id)) return false;
-      if (searchTerm) {
-        return event.title.toLowerCase().includes(lowercasedSearchTerm) ||
-               event.organizer.toLowerCase().includes(lowercasedSearchTerm);
-      }
-      return true;
-    });
-  }, [enrichedEvents, selectedCategories, searchTerm]);
-
   const daysInMonth = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -175,163 +166,154 @@ export default function CalendarPage() {
     const daysInPrevMonth = new Date(year, month, 0).getDate();
     const days = [];
 
-    for (let i = firstDay - 1; i >= 0; i--) {
-      days.push({ date: daysInPrevMonth - i, isCurrentMonth: false });
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push({ date: i, isCurrentMonth: true });
-    }
+    for (let i = firstDay - 1; i >= 0; i--) { days.push({ date: daysInPrevMonth - i, isCurrentMonth: false }); }
+    for (let i = 1; i <= daysInMonth; i++) { days.push({ date: i, isCurrentMonth: true }); }
     const totalDays = days.length > 35 ? 42 : 35;
     const remainingDays = totalDays - days.length;
-    for (let i = 1; i <= remainingDays; i++) {
-      days.push({ date: i, isCurrentMonth: false });
-    }
+    for (let i = 1; i <= remainingDays; i++) { days.push({ date: i, isCurrentMonth: false }); }
     return days;
   }, [currentDate]);
 
-  // UPDATED: Show events only on their start date
-  const getEventsForDay = (day: number, isCurrentMonth: boolean) => {
+  const visibleEventIds = useMemo(() => filteredEvents.map(event => event.id), [filteredEvents]);
+
+  const getEventsForDay = useCallback((day: number, isCurrentMonth: boolean) => {
     if (!isCurrentMonth) return [];
-    
     const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    
-    return filteredEvents.filter(event => {
-      const eventStart = new Date(event.start_time);
-      
-      // Convert both dates to YYYY-MM-DD format for comparison
-      const dayDateString = dayDate.toISOString().split('T')[0];
-      const eventStartString = eventStart.toISOString().split('T')[0];
-      
-      // Only show event on its start date
-      return dayDateString === eventStartString;
-    });
-  };
-
-  const isToday = (day: number, isCurrentMonth: boolean) => {
+    return filteredEvents.filter(event => new Date(event.start_time).toISOString().split('T')[0] === dayDate.toISOString().split('T')[0]);
+  }, [currentDate, filteredEvents]);
+  
+  const isToday = useCallback((day: number, isCurrentMonth: boolean) => {
     const today = new Date();
-    return isCurrentMonth &&
-           day === today.getDate() &&
-           currentDate.getMonth() === today.getMonth() &&
-           currentDate.getFullYear() === today.getFullYear();
+    return isCurrentMonth && day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
+  }, [currentDate]);
+
+  const handleBulkTrack = async () => { if (selectedCount > 0) console.log(`Bulk tracking ${selectedCount} events`); };
+  const handleBulkComplete = () => { setRefreshKey(prev => prev + 1); clearSelection(); };
+
+  const handleEventClick = (event: EnrichedEvent, ctrlKey = false, shiftKey = false) => {
+    if (ctrlKey) { toggleEvent(event.id); } 
+    else if (shiftKey && selectedCount > 0) {
+      const dayEvents = getEventsForDay(new Date(event.start_time).getDate(), true);
+      toggleMultiple(dayEvents.map(e => e.id));
+    } else if (selectedCount > 0) { clearSelection(); setSelectedEvent(event); } 
+    else { setSelectedEvent(event); }
   };
 
-  // Function to refresh data when events are tracked/untracked
-  const handleEventTracked = () => {
-    setRefreshKey(prev => prev + 1);
-  };
+  const handleEventTracked = () => { setRefreshKey(prev => prev + 1); };
 
-  // 4. LOADING AND ERROR STATES
-  if (loading) {
-    return (
-      <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
-        <MainNavbar />
-        <div className="flex-1 flex items-center justify-center mt-16">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading calendar...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
-        <MainNavbar />
-        <div className="flex-1 flex items-center justify-center mt-16">
-          <div className="text-center">
-            <div className="text-red-500 mb-4">
-              <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Error Loading Calendar</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 5. RENDER
+  useBulkKeyboardShortcuts(selectedEvents, visibleEventIds, { onSelectAll: selectAll, onClearSelection: clearSelection, onBulkTrack: handleBulkTrack });
+  
+  // 4. RENDER LOGIC
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <MainNavbar />
+      <SmartLoader
+        loading={loading}
+        error={error}
+        onRetry={handleRetry}
+        skeleton={
+          // The skeleton prop now defines the entire loading UI for the main content area
+          <div className="flex flex-1 mt-16">
+             <div className="w-72 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800">
+              <SidebarSkeleton />
+            </div>
+            <main className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-900">
+              {/* You can optionally include a skeleton for the content header */}
+              <div className="h-20 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800" />
+              <CalendarSkeleton />
+            </main>
+          </div>
+        }
+      >
+        {/* The children of SmartLoader is the successful state UI */}
+        <div className="flex flex-1 mt-16">
+          <div
+            className={`
+              ${sidebarOpen ? 'w-72' : 'w-0'}
+              bg-gray-50 dark:bg-gray-950
+              border-r border-gray-200 dark:border-gray-800
+              overflow-hidden transition-all duration-300 flex-shrink-0
+            `}
+          >
+            <FilterSidebar
+              categories={categories}
+              selectedCategories={selectedCategories}
+              onToggleCategory={(catId) => setSelectedCategories(prev => {
+                const newSet = new Set(prev);
+                if (newSet.has(catId)) newSet.delete(catId);
+                else newSet.add(catId);
+                return newSet;
+              })}
+            />
+          </div>
 
-      <div className="flex flex-1 mt-16">
-        <div
-          className={`
-            ${sidebarOpen ? 'w-72' : 'w-0'}
-            bg-gray-50 dark:bg-gray-950
-            border-r border-gray-200 dark:border-gray-800
-            overflow-hidden transition-all duration-300 flex-shrink-0
-          `}
-        >
-          <FilterSidebar
-            categories={categories}
-            selectedCategories={selectedCategories}
-            onToggleCategory={(catId) => setSelectedCategories(prev => {
-              const newSet = new Set(prev);
-              if (newSet.has(catId)) newSet.delete(catId);
-              else newSet.add(catId);
-              return newSet;
-            })}
-          />
+          <main className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-900">
+            <ContentHeader
+              onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              isSearchFocused={isSearchFocused}
+              onSearchFocus={() => setIsSearchFocused(true)}
+              searchContainerRef={searchContainerRef}
+              suggestions={searchSuggestions}
+              onSuggestionClick={(suggestion) => {
+                setSearchTerm(suggestion.title || 'Untitled Event');
+                setIsSearchFocused(false);
+              }}
+              totalEvents={filteredEvents.length}
+              upcomingEvents={filteredEvents.filter(e => new Date(e.start_time) >= new Date()).length}
+            />
+
+            <BulkActions
+              selectedEvents={selectedEvents}
+              onClearSelection={clearSelection}
+              onBulkComplete={handleBulkComplete}
+              className="mx-6 mt-4"
+            />
+
+            <div className="flex-1 p-6 overflow-auto">
+              <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm h-full flex flex-col">
+                <CalendarHeader
+                  currentDate={currentDate}
+                  view={view}
+                  onNavigateMonth={(dir) => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + dir, 1))}
+                  onSetCurrentDate={() => setCurrentDate(new Date())}
+                  onSetView={setView}
+                  monthNames={monthNames}
+                />
+                
+                <CalendarGrid
+                  days={daysInMonth}
+                  weekDays={weekDays}
+                  getEventsForDay={getEventsForDay}
+                  isToday={isToday}
+                  onEventClick={handleEventClick}
+                  isSelected={isSelected}
+                  selectedCount={selectedCount}
+                />
+              </div>
+            </div>
+          </main>
         </div>
 
-        <main className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-900">
-          <ContentHeader
-            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            isSearchFocused={isSearchFocused}
-            onSearchFocus={() => setIsSearchFocused(true)}
-            searchContainerRef={searchContainerRef}
-            suggestions={searchSuggestions}
-            onSuggestionClick={(suggestion) => {
-              setSearchTerm(suggestion.title || 'Untitled Event');
-              setIsSearchFocused(false);
-            }}
-            totalEvents={filteredEvents.length}
-            upcomingEvents={filteredEvents.filter(e => new Date(e.start_time) >= new Date()).length}
+        {selectedEvent && (
+          <EventModal 
+            event={selectedEvent} 
+            onClose={() => setSelectedEvent(null)}
+            onEventTracked={handleEventTracked}
           />
+        )}
 
-          <div className="flex-1 p-6 overflow-auto">
-            <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm h-full flex flex-col">
-              <CalendarHeader
-                currentDate={currentDate}
-                view={view}
-                onNavigateMonth={(dir) => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + dir, 1))}
-                onSetCurrentDate={() => setCurrentDate(new Date())}
-                onSetView={setView}
-                monthNames={monthNames}
-              />
-              <CalendarGrid
-                days={daysInMonth}
-                weekDays={weekDays}
-                getEventsForDay={getEventsForDay}
-                isToday={isToday}
-                onEventClick={(event) => setSelectedEvent(event as EnrichedEvent)}
-              />
+        {selectedCount > 0 && (
+          <div className="fixed bottom-4 right-4 bg-background-secondary border border-border-color rounded-lg p-3 shadow-lg text-xs text-foreground-tertiary">
+            <div className="space-y-1">
+              <div><kbd className="px-1 py-0.5 bg-background-tertiary rounded">Ctrl+A</kbd> Select all</div>
+              <div><kbd className="px-1 py-0.5 bg-background-tertiary rounded">Ctrl+T</kbd> Track selected</div>
+              <div><kbd className="px-1 py-0.5 bg-background-tertiary rounded">Esc</kbd> Clear selection</div>
             </div>
           </div>
-        </main>
-      </div>
-
-      {selectedEvent && (
-        <EventModal 
-          event={selectedEvent} 
-          onClose={() => setSelectedEvent(null)}
-          onEventTracked={handleEventTracked}
-        />
-      )}
+        )}
+      </SmartLoader>
     </div>
   );
 }
