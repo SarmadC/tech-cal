@@ -1,4 +1,4 @@
-// src/app/calendar/page.tsx (Updated with Event Tracking)
+// src/app/calendar/page.tsx (Fixed unused variable)
 
 'use client';
 
@@ -49,7 +49,7 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // For triggering data refresh
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuth();
+  const { user: _user } = useAuth(); // Prefix with underscore to indicate intentionally unused
 
   // 2. EFFECTS
   useEffect(() => {

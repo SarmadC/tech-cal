@@ -1,4 +1,4 @@
-// src/components/EventModal.tsx (Corrected)
+// src/components/EventModal.tsx (Fixed for Your Database Schema)
 
 'use client';
 
@@ -27,7 +27,7 @@ type Event = {
 interface EventModalProps {
   event: Event;
   onClose: () => void;
-  onEventTracked?: () => void; // Callback to refresh dashboard
+  onEventTracked?: () => void;
 }
 
 // Helper function to create appealing event slugs
@@ -62,8 +62,9 @@ const isEventLive = (startTime: string, endTime: string | null) => {
 export default function EventModal({ event, onClose, onEventTracked }: EventModalProps) {
   const { user } = useAuth();
   const [isTracking, setIsTracking] = useState(false);
-  const [trackingStatus, setTrackingStatus] = useState<'idle' | 'tracking' | 'tracked' | 'error'>('idle');
+  const [_trackingStatus, setTrackingStatus] = useState<'idle' | 'tracking' | 'tracked' | 'error'>('idle');
   const [isTracked, setIsTracked] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   // Safe title and fallbacks for nullable fields
   const eventTitle = event.title || 'Untitled Event';
@@ -93,83 +94,104 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
       if (!user) return;
       
       try {
+        setDebugInfo(`Checking if event ${event.id} is tracked for auth user ${user.id}`);
+        
+        // FIXED: Use user.id directly since user_events.user_id references auth.users(id)
         const { data, error } = await supabase
           .from('user_events')
           .select('id')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id) // This should work with auth.users(id)
           .eq('event_id', event.id)
           .single();
 
-        if (!error && data) {
+        if (error) {
+          // PGRST116 means no rows found, which is fine
+          if (error.code !== 'PGRST116') {
+            console.error('Error checking if event is tracked:', error);
+            setDebugInfo(`Error checking tracked status: ${JSON.stringify(error)}`);
+          } else {
+            setDebugInfo('Event not tracked yet (no rows found)');
+          }
+        } else if (data) {
           setIsTracked(true);
           setTrackingStatus('tracked');
+          setDebugInfo('Event is already tracked');
         }
       } catch (err) {
-        console.error('Error checking if event is tracked:', err);
+        console.error('Unexpected error checking tracked status:', err);
+        setDebugInfo(`Unexpected error: ${err}`);
       }
     };
 
     checkIfTracked();
   }, [user, event.id]);
 
-  // Track event function - updated for your schema
+  // Track event function - SIMPLIFIED to work directly with auth.users
   const handleTrackEvent = async () => {
     if (!user || isTracked) return;
 
     setIsTracking(true);
     setTrackingStatus('tracking');
+    setDebugInfo('Starting track event process...');
 
     try {
-      // First, ensure user exists in public.users table
-      const { error: userError } = await supabase
-        .from('users')
-        .upsert([
-          {
-            id: user.id,
-            email: user.email!,
-            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-            preferences: {
-              notifications: true,
-              theme: 'system',
-              categories: []
-            }
-          }
-        ], { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        });
+      // Debug: Log user info
+      console.log('Auth user info:', {
+        id: user.id,
+        email: user.email,
+        metadata: user.user_metadata
+      });
 
-      if (userError) {
-        console.error('Error upserting user:', userError);
-      }
+      // Debug: Log event info
+      console.log('Event info:', {
+        id: event.id,
+        title: eventTitle
+      });
 
-      // Track the event
-      const { error } = await supabase
+      // SIMPLIFIED: Skip public.users table operations since user_events.user_id references auth.users(id) directly
+      setDebugInfo('Tracking event with auth user ID...');
+
+      const eventTrackingData = {
+        user_id: user.id, // This references auth.users(id) directly
+        event_id: event.id,
+        status: hasEnded ? 'attended' : 'bookmarked'
+        // Removed notes: null to simplify
+      };
+
+      console.log('Tracking event data:', eventTrackingData);
+      setDebugInfo(`Attempting to insert: user_id=${user.id}, event_id=${event.id}, status=${eventTrackingData.status}`);
+
+      // Simplified insert without .select() to avoid potential RLS issues
+      const { error: trackError } = await supabase
         .from('user_events')
-        .insert([
-          {
-            user_id: user.id,
-            event_id: event.id,
-            status: hasEnded ? 'attended' : 'bookmarked', // Use 'bookmarked' as per your schema
-            created_at: new Date().toISOString()
-          }
-        ]);
+        .insert([eventTrackingData]);
 
-      if (error) {
-        console.error('Error tracking event:', error);
+      if (trackError) {
+        console.error('Error tracking event:', trackError);
+        console.error('Full error details:', {
+          code: trackError.code,
+          message: trackError.message,
+          details: trackError.details,
+          hint: trackError.hint
+        });
+        setDebugInfo(`Event tracking failed: Code: ${trackError.code}, Message: ${trackError.message}, Details: ${trackError.details}, Hint: ${trackError.hint}`);
         setTrackingStatus('error');
-      } else {
-        setTrackingStatus('tracked');
-        setIsTracked(true);
-        
-        // Call the callback to refresh dashboard data
-        if (onEventTracked) {
-          onEventTracked();
-        }
+        return;
       }
+
+      console.log('Event tracking successful!');
+      setDebugInfo('✅ Event tracked successfully!');
+      setTrackingStatus('tracked');
+      setIsTracked(true);
+      
+      // Call the callback to refresh dashboard data
+      if (onEventTracked) {
+        onEventTracked();
+      }
+
     } catch (err) {
       console.error('Unexpected error tracking event:', err);
+      setDebugInfo(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
       setTrackingStatus('error');
     } finally {
       setIsTracking(false);
@@ -181,18 +203,21 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
     if (!user || !isTracked) return;
 
     setIsTracking(true);
+    setDebugInfo('Untracking event...');
 
     try {
       const { error } = await supabase
         .from('user_events')
         .delete()
-        .eq('user_id', user.id)
+        .eq('user_id', user.id) // Uses auth.users(id)
         .eq('event_id', event.id);
 
       if (error) {
         console.error('Error untracking event:', error);
+        setDebugInfo(`Untrack failed: ${JSON.stringify(error)}`);
         setTrackingStatus('error');
       } else {
+        setDebugInfo('✅ Event untracked successfully!');
         setTrackingStatus('idle');
         setIsTracked(false);
         
@@ -203,6 +228,7 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
       }
     } catch (err) {
       console.error('Unexpected error untracking event:', err);
+      setDebugInfo(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
       setTrackingStatus('error');
     } finally {
       setIsTracking(false);
@@ -275,6 +301,14 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
         </button>
 
         <div className="p-8">
+          {/* Debug Info (only show in development or when there's an error) */}
+          {(process.env.NODE_ENV === 'development' || debugInfo.includes('failed') || debugInfo.includes('error')) && debugInfo && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h4 className="text-sm font-semibold text-yellow-800 mb-1">Debug Info:</h4>
+              <p className="text-xs text-yellow-700 font-mono">{debugInfo}</p>
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-start justify-between mb-4">
@@ -313,7 +347,7 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
           )}
 
           {/* Track Event Button */}
-          {user && (
+          {user ? (
             <div className="mb-6">
               {!isTracked ? (
                 <button
@@ -355,6 +389,12 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
                   </button>
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800 text-sm">
+                <strong>Sign in to track events</strong> - Keep track of events you&apos;re interested in and get personalized recommendations.
+              </p>
             </div>
           )}
 
@@ -500,7 +540,7 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                  </svg>
                   <span>Download .ics</span>
                 </button>
               </div>

@@ -1,4 +1,4 @@
-// src/app/dashboard/page.tsx (Final Fixed Version)
+// src/app/dashboard/page.tsx (Fixed for Your Database Schema)
 
 'use client';
 
@@ -25,11 +25,13 @@ interface RecentEvent {
   status: 'upcoming' | 'past' | 'live';
 }
 
+// FIXED: Updated interface to match actual Supabase response
 interface UserEventData {
   id: string;
   status: string;
   created_at: string;
   event_id: string;
+  // FIXED: Supabase returns this as an array even for single relations
   events: {
     id: string;
     title: string;
@@ -70,22 +72,23 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const { user, signOut, updateProfile } = useAuth();
-  const userId = useUserId();
+  const authUserId = useUserId(); // This is the auth.users ID
 
   // Load user data
   useEffect(() => {
     const loadUserData = async () => {
-      if (!userId || !user) return;
+      if (!authUserId || !user) return;
 
       try {
         setLoading(true);
         setError(null);
 
-        // Load user profile from public.users
+        // FIXED: Load user profile from public.users using email
+        // Since public.users.id is separate from auth.users.id, we match by email
         const { data: profileData, error: profileError } = await supabase
           .from('users')
           .select('*')
-          .eq('id', userId)
+          .eq('email', user.email!)
           .single();
 
         if (profileError) {
@@ -109,7 +112,8 @@ export default function DashboardPage() {
           });
         }
 
-        // Load user events with proper joins
+        // FIXED: Load user events using auth.users ID (not public.users ID)
+        // user_events.user_id references auth.users(id) directly
         const { data: userEventsRaw, error: eventsError } = await supabase
           .from('user_events')
           .select(`
@@ -124,7 +128,7 @@ export default function DashboardPage() {
               event_type_id
             )
           `)
-          .eq('user_id', userId);
+          .eq('user_id', authUserId); // Use auth.users ID directly
 
         // Load event types for color mapping
         const { data: eventTypes, error: eventTypesError } = await supabase
@@ -142,7 +146,7 @@ export default function DashboardPage() {
           });
           setRecentEvents([]);
         } else if (userEventsRaw) {
-          // Type assertion and data cleaning
+          // FIXED: Type assertion and data cleaning for your schema
           const userEvents = userEventsRaw as UserEventData[];
           
           // Debug: Log the actual structure
@@ -151,14 +155,10 @@ export default function DashboardPage() {
           // Calculate stats
           const now = new Date();
           
-          // Handle the case where events is an array (which it is)
+          // FIXED: Handle the case where events is an array (Supabase returns arrays for relations)
           const upcomingEvents = userEvents?.filter(ue => {
             if (!ue.events || !Array.isArray(ue.events) || ue.events.length === 0) return false;
-            
-            // Take the first event from the array
-            const event = ue.events[0];
-            if (!event || !event.start_time) return false;
-            
+            const event = ue.events[0]; // Take the first (and typically only) event
             return new Date(event.start_time) >= now;
           }).length || 0;
 
@@ -167,9 +167,7 @@ export default function DashboardPage() {
             userEvents
               ?.map(ue => {
                 if (!ue.events || !Array.isArray(ue.events) || ue.events.length === 0) return null;
-                // Take the first event from the array
-                const event = ue.events[0];
-                return event?.event_type_id;
+                return ue.events[0].event_type_id;
               })
               .filter(Boolean) || []
           );
@@ -182,15 +180,12 @@ export default function DashboardPage() {
             });
           }
 
-          // Convert to recent events format
+          // FIXED: Convert to recent events format
           const recent = userEvents
             ?.slice(0, 4)
-            .filter(ue => ue.events && Array.isArray(ue.events) && ue.events.length > 0)
+            .filter(ue => ue.events && Array.isArray(ue.events) && ue.events.length > 0) // Filter out events that don't have event data
             .map(ue => {
-              // Take the first event from the array
-              const event = ue.events![0];
-              if (!event) return null;
-              
+              const event = ue.events![0]; // Take the first event from the array
               const eventType = eventTypeMap.get(event.event_type_id);
               return {
                 id: event.id || '',
@@ -200,8 +195,7 @@ export default function DashboardPage() {
                 color: eventType?.color || '#3B82F6',
                 status: new Date(event.start_time || '') >= now ? 'upcoming' : 'past' as 'upcoming' | 'past'
               };
-            })
-            .filter(Boolean) || []; // Remove null entries
+            }) || [];
 
           setUserStats({
             eventsTracked: userEvents?.length || 0,
@@ -231,10 +225,11 @@ export default function DashboardPage() {
     };
 
     loadUserData();
-  }, [userId, user, refreshKey]);
+  }, [authUserId, user, refreshKey]);
 
   // Function to trigger data refresh (for when events are tracked from calendar)
-  const refreshDashboard = () => {
+  // Note: This function is available but not currently used - keeping for future features
+  const _refreshDashboard = () => {
     setRefreshKey(prev => prev + 1);
   };
 
