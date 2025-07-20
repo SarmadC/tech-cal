@@ -1,4 +1,4 @@
-// src/app/calendar/page.tsx (Updated with SmartLoader)
+// src/app/calendar/page.tsx (Updated with Hybrid View Implementation)
 
 'use client';
 
@@ -12,8 +12,11 @@ import CalendarHeader from '@/components/CalendarHeader';
 import EventModal from '@/components/EventModal';
 import CalendarGrid from '@/components/CalendarGrid';
 import BulkActions, { useBulkSelection, useBulkKeyboardShortcuts } from '@/components/BulkActions';
-// --- NEW IMPORTS ---
 import { SmartLoader, CalendarSkeleton, SidebarSkeleton } from '@/components/Loading';
+
+// --- NEW IMPORTS ---
+import TechCalendar from '@/components/TechCalendar'; // For Week, Day, and List views
+import { EventClickArg } from '@fullcalendar/core'; // Type for FullCalendar's click event
 
 // Type definitions (unchanged)
 type EnrichedEvent = {
@@ -37,6 +40,14 @@ type Category = {
   color: string;
 };
 
+// --- NEW: Map for FullCalendar view names ---
+const viewMap: { [key: string]: string } = {
+  day: 'timeGridDay',
+  week: 'timeGridWeek',
+  month: 'dayGridMonth', // Although we use a custom component for month view
+  list: 'listWeek',
+};
+
 export default function CalendarPage() {
   // 1. STATE MANAGEMENT (unchanged)
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -52,7 +63,7 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const { user: _user } = useAuth();
+  const { user: _user } = useAuth(); // Prefixed to indicate it's intentionally unused for now
   
  const {
     selectedEvents,
@@ -61,8 +72,6 @@ export default function CalendarPage() {
     clearSelection,
     isSelected,
     selectedCount,
-    selectMultiple: _selectMultiple,
-    deselectMultiple: _deselectMultiple,
     toggleMultiple
   } = useBulkSelection();
 
@@ -100,13 +109,13 @@ export default function CalendarPage() {
 
     fetchData();
   }, [refreshKey]);
-
+  
   // --- NEW: HANDLER FOR RETRY BUTTON ---
   const handleRetry = useCallback(() => {
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  // 3. OTHER EFFECTS & LOGIC (unchanged)
+  // 3. EFFECTS & LOGIC (largely unchanged, with additions)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -151,7 +160,6 @@ export default function CalendarPage() {
     });
   }, [enrichedEvents, selectedCategories, searchTerm]);
   
-  // ... other useMemo hooks and handlers remain the same ...
   const searchSuggestions = useMemo(() => {
     if (!searchTerm) return [];
     const lowercasedSearchTerm = searchTerm.toLowerCase();
@@ -194,23 +202,45 @@ export default function CalendarPage() {
     return isCurrentMonth && day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
   }, [currentDate]);
 
+  // --- NEW: Memoized event list for FullCalendar ---
+  const fullCalendarEvents = useMemo(() => {
+    return filteredEvents.map(event => ({
+      id: event.id,
+      title: event.title,
+      start: event.start_time,
+      end: event.end_time || undefined,
+      color: event.color,
+    }));
+  }, [filteredEvents]);
+
   const handleBulkTrack = async () => { if (selectedCount > 0) console.log(`Bulk tracking ${selectedCount} events`); };
   const handleBulkComplete = () => { setRefreshKey(prev => prev + 1); clearSelection(); };
 
-  const handleEventClick = (event: EnrichedEvent, ctrlKey = false, shiftKey = false) => {
+  // This handler is now used by BOTH CalendarGrid and FullCalendar
+  const handleEventClick = useCallback((event: EnrichedEvent, ctrlKey = false, shiftKey = false) => {
     if (ctrlKey) { toggleEvent(event.id); } 
     else if (shiftKey && selectedCount > 0) {
       const dayEvents = getEventsForDay(new Date(event.start_time).getDate(), true);
       toggleMultiple(dayEvents.map(e => e.id));
     } else if (selectedCount > 0) { clearSelection(); setSelectedEvent(event); } 
     else { setSelectedEvent(event); }
-  };
+  }, [toggleEvent, selectedCount, getEventsForDay, toggleMultiple, clearSelection]);
+
+  // --- NEW: Wrapper handler for FullCalendar's event click ---
+  const handleFullCalendarEventClick = useCallback((clickInfo: EventClickArg) => {
+    const eventId = clickInfo.event.id;
+    const clickedEvent = enrichedEvents.find(e => e.id === eventId);
+    if (clickedEvent) {
+      // Call the main handler with the full event object and key press info
+      handleEventClick(clickedEvent, clickInfo.jsEvent.ctrlKey, clickInfo.jsEvent.shiftKey);
+    }
+  }, [enrichedEvents, handleEventClick]);
 
   const handleEventTracked = () => { setRefreshKey(prev => prev + 1); };
 
   useBulkKeyboardShortcuts(selectedEvents, visibleEventIds, { onSelectAll: selectAll, onClearSelection: clearSelection, onBulkTrack: handleBulkTrack });
   
-  // 4. RENDER LOGIC
+  // 4. RENDER LOGIC (UPDATED)
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <MainNavbar />
@@ -219,20 +249,17 @@ export default function CalendarPage() {
         error={error}
         onRetry={handleRetry}
         skeleton={
-          // The skeleton prop now defines the entire loading UI for the main content area
           <div className="flex flex-1 mt-16">
              <div className="w-72 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800">
               <SidebarSkeleton />
             </div>
             <main className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-900">
-              {/* You can optionally include a skeleton for the content header */}
               <div className="h-20 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800" />
               <CalendarSkeleton />
             </main>
           </div>
         }
       >
-        {/* The children of SmartLoader is the successful state UI */}
         <div className="flex flex-1 mt-16">
           <div
             className={`
@@ -289,15 +316,25 @@ export default function CalendarPage() {
                   monthNames={monthNames}
                 />
                 
-                <CalendarGrid
-                  days={daysInMonth}
-                  weekDays={weekDays}
-                  getEventsForDay={getEventsForDay}
-                  isToday={isToday}
-                  onEventClick={handleEventClick}
-                  isSelected={isSelected}
-                  selectedCount={selectedCount}
-                />
+                {view === 'month' ? (
+                  <CalendarGrid
+                    days={daysInMonth}
+                    weekDays={weekDays}
+                    getEventsForDay={getEventsForDay}
+                    isToday={isToday}
+                    onEventClick={handleEventClick}
+                    isSelected={isSelected}
+                    selectedCount={selectedCount}
+                  />
+                ) : (
+                  <div className="p-4 flex-1 h-full"> {/* Ensure container has height for FC */}
+                    <TechCalendar
+                      initialView={viewMap[view]}
+                      events={fullCalendarEvents} // This now matches TechCalendarProps.events
+                      onEventClick={handleFullCalendarEventClick}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </main>

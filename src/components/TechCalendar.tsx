@@ -1,4 +1,4 @@
-'use client';
+// src/components/TechCalendar.tsx (Definitive Final Version)
 
 import { forwardRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
@@ -7,83 +7,48 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import listPlugin from '@fullcalendar/list';
 import { EventClickArg } from '@fullcalendar/core';
 
-type Event = {
+// --- THIS IS THE CRITICAL FIX ---
+// The `end` property must be defined as an optional string (`end?: string`),
+// which translates to `string | undefined`. It MUST NOT include `null`.
+type FullCalendarEvent = {
   id: string;
   title: string;
-  start_time: string;
-  end_time: string | null;
+  start: string;
+  end?: string;
   color: string;
 };
 
+// The props interface now uses the corrected type.
 interface TechCalendarProps {
-  events: Event[];
+  events: FullCalendarEvent[];
   onEventClick: (clickInfo: EventClickArg) => void;
+  initialView?: string;
 }
 
 const TechCalendar = forwardRef<FullCalendar, TechCalendarProps>(
-  ({ events, onEventClick }, ref) => {
-    
-    const formattedEvents = events.map((event) => ({
-      id: event.id,
-      title: event.title,
-      start: event.start_time,
-      end: event.end_time || undefined, // Corrected line
-      backgroundColor: event.color,
-      borderColor: event.color,
-      textColor: '#ffffff',
-    }));
-
+  ({ events, onEventClick, initialView = 'timeGridWeek' }, ref) => {
     return (
-      <div className="h-full">
-        <FullCalendar
-          ref={ref}
-          plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
-          themeSystem="tailwind"
-          initialView="dayGridMonth"
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,listWeek'
-          }}
-          events={formattedEvents}
-          height="100%"
-          eventClick={onEventClick}
-          dayMaxEvents={3}
-          eventDisplay="block"
-          eventTimeFormat={{
-            hour: 'numeric',
-            minute: '2-digit',
-            meridiem: 'short'
-          }}
-          eventDidMount={(info) => {
-            info.el.style.transition = 'all 0.2s ease';
-          }}
-          eventMouseEnter={(info) => {
-            info.el.style.transform = 'translateY(-2px)';
-            info.el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-          }}
-          eventMouseLeave={(info) => {
-            info.el.style.transform = 'translateY(0)';
-            info.el.style.boxShadow = '';
-          }}
-          slotLabelFormat={{
-            hour: 'numeric',
-            minute: '2-digit',
-            meridiem: 'short'
-          }}
-          slotMinTime="06:00:00"
-          slotMaxTime="22:00:00"
-          slotDuration="00:30:00"
-          expandRows={true}
-          stickyHeaderDates={true}
-          listDayFormat={{ weekday: 'long', month: 'long', day: 'numeric' }}
-          listDaySideFormat={false}
-          noEventsContent="No events scheduled"
-        />
-      </div>
+      <FullCalendar
+        ref={ref}
+        plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
+        initialView={initialView}
+        headerToolbar={false}
+        events={events}
+        eventClick={onEventClick}
+        height="100%"
+        dayHeaderFormat={{ weekday: 'short', day: 'numeric', omitCommas: true }}
+        slotLabelFormat={{ hour: 'numeric', minute: '2-digit', omitZeroMinute: false, meridiem: 'short' }}
+        eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
+        slotMinTime="06:00:00"
+        slotMaxTime="24:00:00"
+        eventDisplay="block"
+        eventClassNames="cursor-pointer border-none rounded-md p-1 text-xs"
+        viewClassNames="h-full"
+      />
     );
   }
 );
 
 TechCalendar.displayName = 'TechCalendar';
+
 export default TechCalendar;
