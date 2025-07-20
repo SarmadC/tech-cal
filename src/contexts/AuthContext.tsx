@@ -14,6 +14,7 @@ interface UserProfile {
   avatar_url: string;
   timezone?: string;
   preferences?: Record<string, unknown>;
+};
 
 type ProfileUpdateData = Partial<Omit<UserProfile, 'id'>>;
 
