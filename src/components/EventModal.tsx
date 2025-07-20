@@ -8,12 +8,11 @@ import { supabase } from '@/lib/supabaseClient';
 import { formatToUTC } from '@/lib/calendarUtils';
 import { formatInTimeZone } from 'date-fns-tz';
 import {
-  Clock, X, Check, Copy, AlertTriangle, Lock, RefreshCw, Link as LinkIcon, Calendar, Info, MapPin
+  X, Check, Copy, AlertTriangle, Lock, RefreshCw, Link as LinkIcon, Calendar, MapPin
 } from 'lucide-react';
 import { ModalCountdown } from './CountdownTimer';
 import { ModalHappeningNow, hasHappeningNowStatus } from './HappeningNowIndicator';
 
-// --- Type Definitions ---
 
 type Event = {
   id: string;
