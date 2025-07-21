@@ -13,6 +13,25 @@ import {
   Play,
 } from 'lucide-react';
 
+// Define proper types for the animation positions
+interface PositionState {
+  x: number;
+  y: number;
+  scale: number;
+  rot: number;
+}
+
+interface AnimationPosition {
+  chaos: PositionState;
+  organized: PositionState;
+}
+
+interface AnimationState {
+  positions: AnimationPosition[];
+  isInitialized: boolean;
+  animationFrameId: number;
+}
+
 const heroStats = [
   { number: '500+', label: 'Event Sources' },
   { number: '50K+', label: 'Developers' },
@@ -72,7 +91,7 @@ export default function LandingPage() {
   const chaosHeaderRef = useRef<HTMLDivElement>(null);
   const solutionHeaderRef = useRef<HTMLDivElement>(null);
   const eventCardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const animationStateRef = useRef({ positions: [] as any[], isInitialized: false, animationFrameId: 0 });
+  const animationStateRef = useRef<AnimationState>({ positions: [], isInitialized: false, animationFrameId: 0 });
 
   // Intersection Observer for simple fade/slide animations
   useEffect(() => {
@@ -168,13 +187,18 @@ export default function LandingPage() {
     };
 
     setupPositions();
-    animationStateRef.current.animationFrameId = requestAnimationFrame(animateOnScroll);
+    // Store the animation frame ID in a local variable for cleanup
+    const animationFrameId = requestAnimationFrame(animateOnScroll);
 
     window.addEventListener('resize', setupPositions);
 
     return () => {
       window.removeEventListener('resize', setupPositions);
-      cancelAnimationFrame(animationStateRef.current.animationFrameId);
+      cancelAnimationFrame(animationFrameId);
+      // Also cancel any pending animation frame from the ref
+      if (animationStateRef.current.animationFrameId) {
+        cancelAnimationFrame(animationStateRef.current.animationFrameId);
+      }
     };
   }, []);
 
