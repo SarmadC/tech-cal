@@ -1,309 +1,354 @@
 'use client';
 
 import Link from 'next/link';
-// import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import {
+  Filter,
+  SatelliteDish,
+  Link as LinkIcon,
+  Code2,
+  BarChart3,
+  Users,
+  ArrowRight,
+  Play,
+} from 'lucide-react';
+
+const heroStats = [
+  { number: '500+', label: 'Event Sources' },
+  { number: '50K+', label: 'Developers' },
+  { number: '10h', label: 'Saved/Week' },
+];
 
 const features = [
   {
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-      </svg>
-    ),
-    title: 'Unified Tech Events',
-    description: 'All major tech conferences, keynotes, and releases in one place. Never miss Apple, Google, Microsoft, or startup events.'
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-      </svg>
-    ),
+    icon: <Filter />,
     title: 'Smart Filtering',
-    description: 'Filter by categories like AI/ML, Web Dev, Mobile, Cloud, Security, and more. See only what matters to you.'
+    description: "AI learns your interests and filters out noise. See ML breakthroughs, skip crypto hype. Your feed, your rules.",
   },
   {
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-      </svg>
-    ),
+    icon: <SatelliteDish />,
     title: 'Real-time Updates',
-    description: 'Get notified about schedule changes, new events, and livestream links. Stay ahead of the curve.'
+    description: "Schedule changes, surprise announcements, livestream links. We monitor 500+ sources so you don't have to.",
   },
   {
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-      </svg>
-    ),
-    title: 'Personalized Experience',
-    description: 'AI-powered recommendations based on your interests. Discover events you didn\'t know you needed.'
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
+    icon: <LinkIcon />,
     title: 'Calendar Integration',
-    description: 'Export to Google Calendar, Outlook, or download .ics files. Seamlessly integrate with your workflow.'
+    description: "Syncs with Google Calendar, Outlook, and Apple Calendar. One-click to add events with all the details you need.",
   },
   {
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
-    title: 'Multi-platform',
-    description: 'Access from web, mobile, or desktop. Your tech calendar follows you everywhere.'
-  }
+    icon: <Code2 />,
+    title: 'Developer API',
+    description: "RESTful API, webhooks, and real-time feeds. Integrate our curated event data into your apps.",
+  },
+  {
+    icon: <BarChart3 />,
+    title: 'Event Analytics',
+    description: "Track which events matter most to your industry. See trending topics and attendance insights.",
+  },
+  {
+    icon: <Users />,
+    title: 'Team Collaboration',
+    description: "Share calendars with your team. Coordinate attendance and never double-book important events.",
+  },
 ];
 
-const testimonials = [
-  {
-    quote: "TechCalendar has completely changed how I stay updated with the tech world. I haven't missed a major announcement since I started using it.",
-    author: "Sarah Chen",
-    role: "Senior Developer at Meta",
-    avatar: "SC"
-  },
-  {
-    quote: "As a startup founder, keeping track of industry events is crucial. TechCalendar makes it effortless. It's become an essential tool for our team.",
-    author: "Marcus Rodriguez",
-    role: "CEO at TechFlow",
-    avatar: "MR"
-  },
-  {
-    quote: "The filtering and personalization features are incredible. I only see events relevant to AI/ML, saving me hours of research time each week.",
-    author: "Priya Patel",
-    role: "ML Engineer at Google",
-    avatar: "PP"
-  }
-];
-
-const stats = [
-  { number: '500+', label: 'Tech Events' },
-  { number: '50K+', label: 'Active Users' },
-  { number: '99.9%', label: 'Uptime' },
-  { number: '4.9/5', label: 'User Rating' }
+const eventsData = [
+    { title: "Google I/O 2025", company: "Google", date: "May 14", type: "Conference" },
+    { title: "WWDC 2025", company: "Apple", date: "Jun 10", type: "Developer Conference" },
+    { title: "Microsoft Build", company: "Microsoft", date: "May 21", type: "Developer Conference" },
+    { title: "OpenAI DevDay", company: "OpenAI", date: "Mar 15", type: "AI Conference" },
+    { title: "React Conf", company: "Meta", date: "Apr 22", type: "Framework Conference" },
+    { title: "Next.js Conf", company: "Vercel", date: "Oct 25", type: "Framework Conference" },
+    { title: "Chrome Dev Summit", company: "Google", date: "Nov 12", type: "Web Development" },
+    { title: "TensorFlow Dev Summit", company: "Google", date: "Aug 30", type: "ML Conference" },
+    { title: "AWS re:Invent", company: "Amazon", date: "Nov 27", type: "Cloud Conference" },
+    { title: "DockerCon", company: "Docker", date: "Sep 18", type: "DevOps Conference" },
+    { title: "KubeCon", company: "CNCF", date: "Oct 12", type: "Cloud Native" },
+    { title: "GitHub Universe", company: "GitHub", date: "Nov 08", type: "Developer Conference" }
 ];
 
 export default function LandingPage() {
+  const chaosSectionRef = useRef<HTMLElement>(null);
+  const chaosHeaderRef = useRef<HTMLDivElement>(null);
+  const solutionHeaderRef = useRef<HTMLDivElement>(null);
+  const eventCardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const animationStateRef = useRef({ positions: [] as any[], isInitialized: false, animationFrameId: 0 });
+
+  // Intersection Observer for simple fade/slide animations
+  useEffect(() => {
+    const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, observerOptions);
+
+    const elements = document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right');
+    elements.forEach(el => observer.observe(el));
+
+    return () => elements.forEach(el => observer.unobserve(el));
+  }, []);
+
+  // "Chaos to Order" Animation Logic
+  useEffect(() => {
+    const chaosSection = chaosSectionRef.current;
+    const chaosHeader = chaosHeaderRef.current;
+    const solutionHeader = solutionHeaderRef.current;
+
+    if (!chaosSection || !chaosHeader || !solutionHeader) return;
+
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+    const setupPositions = () => {
+      const isMobile = window.innerWidth <= 768;
+      const cardWidth = 220;
+      const cardHeight = 135;
+      const padding = 20;
+      const cols = isMobile ? 2 : 4;
+      const eventsToAnimate = isMobile ? eventsData.slice(0, 8) : eventsData;
+      
+      const gridWidth = cols * cardWidth + (cols - 1) * padding;
+      const gridHeight = Math.ceil(eventsToAnimate.length / cols) * (cardHeight + padding);
+      const gridStartX = (window.innerWidth - gridWidth) / 2;
+      const gridStartY = (window.innerHeight - gridHeight) * 0.6;
+
+      animationStateRef.current.positions = eventsToAnimate.map((_, index) => {
+        const chaosState = {
+          x: Math.random() * (window.innerWidth - cardWidth),
+          y: Math.random() * window.innerHeight + window.innerHeight * 1.2,
+          scale: 0.5 + Math.random() * 0.5,
+          rot: (Math.random() - 0.5) * 90
+        };
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        const organizedState = {
+          x: gridStartX + col * (cardWidth + padding),
+          y: gridStartY + row * (cardHeight + padding),
+          scale: 1,
+          rot: 0
+        };
+        return { chaos: chaosState, organized: organizedState };
+      });
+      animationStateRef.current.isInitialized = true;
+    };
+
+    const animateOnScroll = () => {
+      if (!animationStateRef.current.isInitialized) return;
+      
+      const rect = chaosSection.getBoundingClientRect();
+      const scrollY = -rect.top;
+
+      if (scrollY > -window.innerHeight && scrollY < chaosSection.offsetHeight) {
+        const scrollTrackLength = chaosSection.offsetHeight - window.innerHeight;
+        const animationEndsAt = scrollTrackLength * 0.75;
+        const progress = Math.max(0, Math.min(1, scrollY / animationEndsAt));
+
+        eventCardRefs.current.forEach((el, index) => {
+          if (el && animationStateRef.current.positions[index]) {
+              const { chaos, organized } = animationStateRef.current.positions[index];
+              const currentX = lerp(chaos.x, organized.x, progress);
+              const currentY = lerp(chaos.y, organized.y, progress);
+              const currentScale = lerp(chaos.scale, organized.scale, progress);
+              const currentRot = lerp(chaos.rot, organized.rot, progress);
+              el.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) scale(${currentScale}) rotate(${currentRot}deg)`;
+          }
+        });
+
+        const headerFadeStartPoint = 0.30;
+        const headerFadeEndPoint = 0.90;
+        const headerProgress = Math.max(0, Math.min(1, (progress - headerFadeStartPoint) / (headerFadeEndPoint - headerFadeStartPoint)));
+
+        chaosHeader.style.opacity = `${1 - headerProgress}`;
+        solutionHeader.style.opacity = `${headerProgress}`;
+      }
+      
+      animationStateRef.current.animationFrameId = requestAnimationFrame(animateOnScroll);
+    };
+
+    setupPositions();
+    animationStateRef.current.animationFrameId = requestAnimationFrame(animateOnScroll);
+
+    window.addEventListener('resize', setupPositions);
+
+    return () => {
+      window.removeEventListener('resize', setupPositions);
+      cancelAnimationFrame(animationStateRef.current.animationFrameId);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navbar */}
-      <nav className="h-16 bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <span className="text-xl font-semibold text-gray-900">TechCalendar</span>
-          </div>
-
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link href="#features" className="text-sm text-gray-600 hover:text-blue-600">Features</Link>
-            <Link href="/pricing" className="text-sm text-gray-600 hover:text-blue-600">Pricing</Link>
-            <Link href="/blog" className="text-sm text-gray-600 hover:text-blue-600">Blog</Link>
-            <Link href="/api-docs" className="text-sm text-gray-600 hover:text-blue-600">API</Link>
-          </div>
-
-          {/* CTA Buttons */}
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/login"
-              className="text-sm font-medium text-gray-600 hover:text-blue-600"
-            >
-              Log In
-            </Link>
-            <Link
-              href="/signup"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all text-sm"
-            >
-              Sign Up
-            </Link>
-          </div>
+    <div className="landing-container">
+      {/* Navigation */}
+      <nav className="nav">
+        <div className="nav-container">
+          <div className="logo">Kure-Cal</div>
+          <ul className="nav-links">
+            <li><Link href="#features" className="nav-link">Features</Link></li>
+            <li><Link href="/api-docs" className="nav-link">API</Link></li>
+            <li><Link href="/blog" className="nav-link">Blog</Link></li>
+          </ul>
+          <Link href="/signup" className="nav-cta">Start Free Trial</Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-20">
-          <div className="text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Never Miss a
-              <span className="text-blue-600"> Tech Event</span>
-              <br />Again
-            </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-12">
-              The world of tech moves fast. TechCalendar brings together conferences, keynotes,
-              product launches, and developer events from across the industry into one beautiful,
-              intuitive calendar.
+      <section className="hero">
+        <div className="hero-bg"></div>
+        <div className="hero-grid"></div>
+
+        <div className="hero-content">
+          <div className="hero-text">
+            <h1 className="hero-title">Never Miss What Matters</h1>
+            <p className="hero-subtitle">{"// antidote to information_overload"}</p>
+            <p className="hero-description">
+              Stop juggling 12 different calendars and missing crucial tech events.
+              Kure-Cal consolidates 500+ event sources into one intelligent calendar
+              that learns what you care about.
             </p>
 
-            {/* Hero Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-              <Link
-                href="/calendar"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-xl transition-all"
-              >
-                Launch Calendar
-              </Link>
-              <Link
-                href="#features"
-                className="bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold py-4 px-8 rounded-xl transition-all border border-gray-200"
-              >
-                Learn More
-              </Link>
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {stats.map((stat, index) => (
-                <div key={index} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                  <div className="text-3xl font-bold text-gray-900">{stat.number}</div>
-                  <div className="text-sm text-gray-500 mt-2">{stat.label}</div>
+            <div className="hero-stats">
+              {heroStats.map((stat, index) => (
+                <div key={index} className="hero-stat">
+                  <span className="hero-stat-number">{stat.number}</span>
+                  <div className="hero-stat-label">{stat.label}</div>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Features Section */}
-      <section id="features" className="bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 py-20">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need to Stay Connected
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Built for developers, designers, founders, and tech enthusiasts who want to stay ahead.
-            </p>
+            <div className="cta-container">
+              <Link href="/calendar" className="cta-button cta-primary">
+                <span>See Live Calendar</span>
+                <ArrowRight size={20} />
+              </Link>
+              <Link href="#" className="cta-button cta-secondary">
+                <span>Watch Demo</span>
+                <Play size={20} />
+              </Link>
+            </div>
           </div>
 
-          {/* Features Grid - Exactly 6 items in 3x2 layout */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="bg-white p-8 rounded-2xl border border-gray-200 hover:border-blue-300 transition-all hover:shadow-lg group"
-              >
-                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 mb-4 group-hover:scale-110 transition-transform">
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-20">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Text Content */}
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                Built by Tech Enthusiasts,
-                <br />For Tech Enthusiasts
-              </h2>
-              <p className="text-lg text-gray-600 mb-6">
-                We understand the struggle of keeping up with the fast-paced tech world.
-                That&apos;s why we built TechCalendar – to create a single source of truth for
-                all tech events globally.
-              </p>
-              <p className="text-lg text-gray-600 mb-8">
-                Our team continuously curates and verifies events from hundreds of sources,
-                ensuring you have access to accurate, up-to-date information about conferences,
-                product launches, hackathons, and developer meetups.
-              </p>
-              <div className="flex items-center space-x-8">
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">2021</div>
-                  <div className="text-sm text-gray-500">Founded</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">24/7</div>
-                  <div className="text-sm text-gray-500">Monitoring</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">100+</div>
-                  <div className="text-sm text-gray-500">Sources</div>
-                </div>
+          <div className="calendar-preview slide-in-right">
+            <div className="calendar-header">
+              <div className="calendar-title">Upcoming Tech Events</div>
+              <div className="calendar-live">
+                <div className="live-dot"></div>
+                Live Updates
               </div>
             </div>
-
-            {/* Image/Visual */}
-            <div className="relative">
-              <div className="aspect-square bg-gradient-to-br from-blue-100 to-blue-50 rounded-3xl flex items-center justify-center">
-                <div className="w-3/4 h-3/4 bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
-                  <div className="h-full bg-gray-50 rounded-xl animate-pulse" />
+            <div className="calendar-events">
+              <div className="calendar-event">
+                <div className="event-date">May 14</div>
+                <div className="event-details">
+                  <div className="event-title">Google I/O 2025</div>
+                  <div className="event-company">Google</div>
                 </div>
+                <div className="event-status status-upcoming">Upcoming</div>
+              </div>
+              <div className="calendar-event">
+                <div className="event-date">May 21</div>
+                <div className="event-details">
+                  <div className="event-title">Microsoft Build</div>
+                  <div className="event-company">Microsoft</div>
+                </div>
+                <div className="event-status status-upcoming">Upcoming</div>
+              </div>
+              <div className="calendar-event">
+                <div className="event-date">Jun 10</div>
+                <div className="event-details">
+                  <div className="event-title">WWDC 2025</div>
+                  <div className="event-company">Apple</div>
+                </div>
+                <div className="event-status status-upcoming">Upcoming</div>
+              </div>
+              <div className="calendar-event">
+                <div className="event-date">NOW</div>
+                <div className="event-details">
+                  <div className="event-title">DevOps Days</div>
+                  <div className="event-company">DevOps Community</div>
+                </div>
+                <div className="event-status status-live">Live</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 py-20">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Loved by Tech Professionals
-            </h2>
-            <p className="text-lg text-gray-600">
-              Join thousands who never miss important tech events
-            </p>
-          </div>
-
-          {/* Testimonials Grid */}
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div
-                key={index}
-                className="bg-white p-8 rounded-2xl border border-gray-200"
-              >
-                <p className="text-gray-600 mb-6 italic">&quot;{testimonial.quote}&quot;</p>
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-semibold">
-                    {testimonial.avatar}
+      {/* Chaos to Order Animation */}
+      <section className="chaos-to-order" ref={chaosSectionRef}>
+        <div className="animation-pinner">
+            <div className="events-container">
+              {eventsData.map((eventData, index) => (
+                  <div 
+                    key={index} 
+                    className="floating-event" 
+                    ref={el => { eventCardRefs.current[index] = el; }}
+                  >
+                      <div className="event-header">
+                          <div className="event-company-tag">{eventData.company}</div>
+                          <div className="event-date-badge">{eventData.date}</div>
+                      </div>
+                      <div className="floating-event-title">{eventData.title}</div>
+                      <div className="floating-event-type">{eventData.type}</div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">{testimonial.author}</div>
-                    <div className="text-sm text-gray-500">{testimonial.role}</div>
-                  </div>
+              ))}
+            </div>
+            <div className="header-container">
+                <div className="chaos-header" ref={chaosHeaderRef}>
+                    <h2 className="chaos-title">The Problem</h2>
+                    <p className="chaos-subtitle">Information scattered everywhere...</p>
                 </div>
-              </div>
-            ))}
-          </div>
+                <div className="solution-header" ref={solutionHeaderRef}>
+                    <h2 className="solution-title">The Solution</h2>
+                    <p className="solution-subtitle">Everything organized, nothing missed.</p>
+                </div>
+            </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-blue-600">
-        <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Ready to Stay Ahead?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Join 50,000+ tech professionals who trust TechCalendar
-          </p>
-          <Link
-            href="/calendar"
-            className="inline-block bg-white hover:bg-gray-100 text-blue-600 font-semibold py-4 px-8 rounded-xl transition-all transform hover:scale-105 shadow-lg"
-          >
-            Get Started Free
-          </Link>
+      {/* Social Proof */}
+      <section className="social-proof fade-in">
+        <h3 className="social-proof-title">Trusted by teams at</h3>
+        <div className="company-logos">
+            <div className="company-logo">Stripe</div>
+            <div className="company-logo">Vercel</div>
+            <div className="company-logo">Linear</div>
+            <div className="company-logo">Notion</div>
+            <div className="company-logo">Figma</div>
+        </div>
+        <p className="user-count">Join 50,000+ developers who never miss important tech events</p>
+      </section>
+
+      {/* Features */}
+      <section className="features" id="features">
+        <div className="features-header fade-in">
+            <h2 className="features-title">The Complete Solution</h2>
+            <p className="features-subtitle">
+                Everything you need to stay on top of the tech world,
+                without the information overload
+            </p>
+        </div>
+
+        <div className="features-grid">
+          {features.map((feature, index) => (
+            <div key={index} className={`feature-card ${index % 2 === 0 ? 'slide-in-left' : 'slide-in-right'}`}>
+              <div className="feature-icon">{feature.icon}</div>
+              <h3 className="feature-title">{feature.title}</h3>
+              <p className="feature-description">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="final-cta">
+        <div className="final-cta-content">
+            <h2 className="fade-in">Ready to cure your tech FOMO?</h2>
+            <p className="fade-in">Join 50,000+ professionals who have found the antidote to information overload.</p>
+            <Link href="/signup" className="final-cta-button fade-in">
+                Start Your Free Trial
+            </Link>
         </div>
       </section>
     </div>

@@ -10,10 +10,11 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isCalendarPage = pathname === '/calendar';
+  // Define paths that should use their own layout (no default Navbar/Footer)
+  const excludedPaths = ['/calendar', '/'];
 
-  // For calendar page, render children directly without navbar/footer
-  if (isCalendarPage) {
+  // If the current path is in the excluded list, render children directly.
+  if (excludedPaths.includes(pathname)) {
     return <>{children}</>;
   }
 
