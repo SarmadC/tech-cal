@@ -49,7 +49,7 @@ const viewMap: { [key: string]: string } = {
 };
 
 export default function CalendarPage() {
-  // 1. STATE MANAGEMENT (unchanged)
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState('month');
   const [selectedEvent, setSelectedEvent] = useState<EnrichedEvent | null>(null);
@@ -63,7 +63,6 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const { user: _user } = useAuth(); // Prefixed to indicate it's intentionally unused for now
   
  const {
     selectedEvents,
@@ -240,7 +239,7 @@ export default function CalendarPage() {
 
   useBulkKeyboardShortcuts(selectedEvents, visibleEventIds, { onSelectAll: selectAll, onClearSelection: clearSelection, onBulkTrack: handleBulkTrack });
   
-  // 4. RENDER LOGIC (UPDATED)
+  // 4. RENDER LOGIC
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <MainNavbar />
