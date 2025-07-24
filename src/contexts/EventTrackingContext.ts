@@ -1,4 +1,4 @@
-// src/hooks/useEventTracking.ts
+// src/contexts/EventTrackingContext.ts (Corrected)
 
 'use client';
 
@@ -14,7 +14,7 @@ interface TrackingResult {
     message?: string;
 }
 
-interface TrackedEvent {
+export interface TrackedEvent {
     id: string;
     event_id: string;
     status: EventStatus;
@@ -146,7 +146,19 @@ export function useEventTracking() {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            return data as TrackedEvent[];
+
+            // The 'data' from Supabase needs to be mapped to the 'TrackedEvent[]' type.
+            // The error indicates that the 'events' property is an array.
+            // We'll take the first element of the 'events' array.
+            return (data || []).map((item: any) => ({
+                id: item.id,
+                event_id: item.event_id,
+                status: item.status as EventStatus,
+                created_at: item.created_at,
+                notes: item.notes,
+                events: item.events && item.events.length > 0 ? item.events[0] : null
+            }));
+
         } catch (error) {
             console.error('Error fetching tracked events:', error);
             return [];
