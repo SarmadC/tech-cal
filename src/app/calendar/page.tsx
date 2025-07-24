@@ -1,10 +1,11 @@
-// src/app/calendar/page.tsx (Updated with Hybrid View Implementation)
+// src/app/calendar/page.tsx (Updated with Event Tracking Integration)
 
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEventTrackingContext, useBulkEventTracking } from '@/contexts/EventTrackingContext';
 import MainNavbar from '@/components/MainNavbar';
 import FilterSidebar from '@/components/FilterSidebar';
 import ContentHeader from '@/components/ContentHeader';
@@ -13,12 +14,10 @@ import EventModal from '@/components/EventModal';
 import CalendarGrid from '@/components/CalendarGrid';
 import BulkActions, { useBulkSelection, useBulkKeyboardShortcuts } from '@/components/BulkActions';
 import { SmartLoader, CalendarSkeleton, SidebarSkeleton } from '@/components/Loading';
+import TechCalendar from '@/components/TechCalendar';
+import { EventClickArg } from '@fullcalendar/core';
 
-// --- NEW IMPORTS ---
-import TechCalendar from '@/components/TechCalendar'; // For Week, Day, and List views
-import { EventClickArg } from '@fullcalendar/core'; // Type for FullCalendar's click event
-
-// Type definitions (unchanged)
+// Type definitions
 type EnrichedEvent = {
     id: string;
     event_type_id: string;
@@ -32,6 +31,7 @@ type EnrichedEvent = {
     source_url: string;
     livestream_url: string | null;
     color: string;
+    isTracked?: boolean; // Add tracking status
 };
 
 type Category = {
@@ -40,17 +40,18 @@ type Category = {
     color: string;
 };
 
-// --- NEW: Map for FullCalendar view names ---
 const viewMap: { [key: string]: string } = {
     day: 'timeGridDay',
     week: 'timeGridWeek',
-    month: 'dayGridMonth', // Although we use a custom component for month view
+    month: 'dayGridMonth',
     list: 'listWeek',
 };
 
 export default function CalendarPage() {
-    // Remove unused user variable - auth context is still available to child components
     const { user: _user } = useAuth();
+    const { isEventTracked, refreshTrackedEvents } = useEventTrackingContext();
+    const { getTrackedEventIds } = useBulkEventTracking();
+
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState('month');
     const [selectedEvent, setSelectedEvent] = useState<EnrichedEvent | null>(null);
@@ -75,7 +76,7 @@ export default function CalendarPage() {
         toggleMultiple
     } = useBulkSelection();
 
-    // 2. DATA FETCHING (unchanged)
+    // Data fetching with tracking status
     useEffect(() => {
         async function fetchData() {
             try {
@@ -110,12 +111,11 @@ export default function CalendarPage() {
         fetchData();
     }, [refreshKey]);
 
-    // --- NEW: HANDLER FOR RETRY BUTTON ---
     const handleRetry = useCallback(() => {
         setRefreshKey(prev => prev + 1);
     }, []);
 
-    // 3. EFFECTS & LOGIC (largely unchanged, with additions)
+    // Effects for keyboard navigation and outside clicks
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -137,16 +137,20 @@ export default function CalendarPage() {
         return () => window.removeEventListener("keydown", handleKey);
     }, [currentDate]);
 
+    // Memoized data with tracking status
     const monthNames = useMemo(() => ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'], []);
     const weekDays = useMemo(() => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], []);
 
     const enrichedEvents = useMemo(() => {
         const categoryColorMap = new Map(categories.map(c => [c.id, c.color]));
+        const trackedEventIds = getTrackedEventIds();
+
         return events.map(event => ({
             ...event,
-            color: categoryColorMap.get(event.event_type_id) || '#737373'
+            color: categoryColorMap.get(event.event_type_id) || '#737373',
+            isTracked: trackedEventIds.includes(event.id)
         }));
-    }, [events, categories]);
+    }, [events, categories, getTrackedEventIds]);
 
     const filteredEvents = useMemo(() => {
         const lowercasedSearchTerm = searchTerm.toLowerCase();
@@ -202,7 +206,6 @@ export default function CalendarPage() {
         return isCurrentMonth && day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
     }, [currentDate]);
 
-    // --- NEW: Memoized event list for FullCalendar ---
     const fullCalendarEvents = useMemo(() => {
         return filteredEvents.map(event => ({
             id: event.id,
@@ -213,10 +216,20 @@ export default function CalendarPage() {
         }));
     }, [filteredEvents]);
 
-    const handleBulkTrack = async () => { if (selectedCount > 0) console.log(`Bulk tracking ${selectedCount} events`); };
-    const handleBulkComplete = () => { setRefreshKey(prev => prev + 1); clearSelection(); };
+    // Event handlers
+    const handleBulkTrack = async () => {
+        if (selectedCount > 0) {
+            console.log(`Bulk tracking ${selectedCount} events`);
+            // The bulk tracking is handled by BulkActions component
+        }
+    };
 
-    // This handler is now used by BOTH CalendarGrid and FullCalendar
+    const handleBulkComplete = () => {
+        setRefreshKey(prev => prev + 1);
+        clearSelection();
+        refreshTrackedEvents(); // Refresh tracking cache
+    };
+
     const handleEventClick = useCallback((event: EnrichedEvent, ctrlKey = false, shiftKey = false) => {
         if (ctrlKey) { toggleEvent(event.id); }
         else if (shiftKey && selectedCount > 0) {
@@ -226,21 +239,37 @@ export default function CalendarPage() {
         else { setSelectedEvent(event); }
     }, [toggleEvent, selectedCount, getEventsForDay, toggleMultiple, clearSelection]);
 
-    // --- NEW: Wrapper handler for FullCalendar's event click ---
     const handleFullCalendarEventClick = useCallback((clickInfo: EventClickArg) => {
         const eventId = clickInfo.event.id;
         const clickedEvent = enrichedEvents.find(e => e.id === eventId);
         if (clickedEvent) {
-            // Call the main handler with the full event object and key press info
             handleEventClick(clickedEvent, clickInfo.jsEvent.ctrlKey, clickInfo.jsEvent.shiftKey);
         }
     }, [enrichedEvents, handleEventClick]);
 
-    const handleEventTracked = () => { setRefreshKey(prev => prev + 1); };
+    const handleEventTracked = () => {
+        setRefreshKey(prev => prev + 1);
+        refreshTrackedEvents(); // Refresh tracking cache
+    };
 
     useBulkKeyboardShortcuts(selectedEvents, visibleEventIds, { onSelectAll: selectAll, onClearSelection: clearSelection, onBulkTrack: handleBulkTrack });
 
-    // 4. RENDER LOGIC
+    // Enhanced stats with tracking info
+    const enhancedStats = useMemo(() => {
+        const trackedCount = filteredEvents.filter(e => e.isTracked).length;
+        const upcomingCount = filteredEvents.filter(e => new Date(e.start_time) >= new Date()).length;
+        const upcomingTrackedCount = filteredEvents.filter(e =>
+            e.isTracked && new Date(e.start_time) >= new Date()
+        ).length;
+
+        return {
+            totalEvents: filteredEvents.length,
+            upcomingEvents: upcomingCount,
+            trackedEvents: trackedCount,
+            upcomingTracked: upcomingTrackedCount
+        };
+    }, [filteredEvents]);
+
     return (
         <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
             <MainNavbar />
@@ -294,8 +323,8 @@ export default function CalendarPage() {
                                 setSearchTerm(suggestion.title || 'Untitled Event');
                                 setIsSearchFocused(false);
                             }}
-                            totalEvents={filteredEvents.length}
-                            upcomingEvents={filteredEvents.filter(e => new Date(e.start_time) >= new Date()).length}
+                            totalEvents={enhancedStats.totalEvents}
+                            upcomingEvents={enhancedStats.upcomingEvents}
                         />
 
                         <BulkActions
@@ -304,6 +333,20 @@ export default function CalendarPage() {
                             onBulkComplete={handleBulkComplete}
                             className="mx-6 mt-4"
                         />
+
+                        {/* Stats Bar */}
+                        {enhancedStats.trackedEvents > 0 && (
+                            <div className="mx-6 mt-2 p-3 bg-accent-primary/10 border border-accent-primary/20 rounded-lg">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-accent-primary font-medium">
+                                        📌 {enhancedStats.trackedEvents} events tracked
+                                    </span>
+                                    <span className="text-accent-primary/80">
+                                        {enhancedStats.upcomingTracked} upcoming
+                                    </span>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex-1 p-6 overflow-auto">
                             <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm h-full flex flex-col">
@@ -327,10 +370,10 @@ export default function CalendarPage() {
                                         selectedCount={selectedCount}
                                     />
                                 ) : (
-                                    <div className="p-4 flex-1 h-full"> {/* Ensure container has height for FC */}
+                                    <div className="p-4 flex-1 h-full">
                                         <TechCalendar
                                             initialView={viewMap[view]}
-                                            events={fullCalendarEvents} // This now matches TechCalendarProps.events
+                                            events={fullCalendarEvents}
                                             onEventClick={handleFullCalendarEventClick}
                                         />
                                     </div>
