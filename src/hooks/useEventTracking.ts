@@ -14,7 +14,7 @@ interface TrackingResult {
     message?: string;
 }
 
-interface TrackedEvent {
+export interface TrackedEvent {
     id: string;
     event_id: string;
     status: EventStatus;
@@ -30,11 +30,28 @@ interface TrackedEvent {
     } | null;
 }
 
+// 👇 FIX #1: The 'events' property from the Supabase join is an array.
+type SupabaseTrackedEvent = {
+    id: string;
+    event_id: string;
+    status: EventStatus;
+    created_at: string;
+    notes?: string;
+    events: {
+        id: string;
+        title: string;
+        start_time: string;
+        end_time: string | null;
+        organizer: string;
+        event_type_id: string;
+    }[] | null; // It should be an array of event objects or null.
+};
+
 export function useEventTracking() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
 
-    // Track an event
+    // ... (trackEvent, untrackEvent functions are unchanged) ...
     const trackEvent = useCallback(async (
         eventId: string,
         status: EventStatus = 'bookmarked',
@@ -46,7 +63,6 @@ export function useEventTracking() {
 
         setLoading(true);
         try {
-            // Check if already tracked
             const { data: existing } = await supabase
                 .from('user_events')
                 .select('id, status')
@@ -55,20 +71,18 @@ export function useEventTracking() {
                 .single();
 
             if (existing) {
-                // Update existing tracking
                 const { error } = await supabase
                     .from('user_events')
                     .update({
                         status,
                         notes,
-                        created_at: new Date().toISOString() // Update timestamp
+                        created_at: new Date().toISOString()
                     })
                     .eq('id', existing.id);
 
                 if (error) throw error;
                 return { success: true, message: `Event status updated to ${status}` };
             } else {
-                // Create new tracking record
                 const { error } = await supabase
                     .from('user_events')
                     .insert({
@@ -93,7 +107,6 @@ export function useEventTracking() {
         }
     }, [user]);
 
-    // Untrack an event
     const untrackEvent = useCallback(async (eventId: string): Promise<TrackingResult> => {
         if (!user) {
             return { success: false, error: 'User not authenticated' };
@@ -120,7 +133,7 @@ export function useEventTracking() {
         }
     }, [user]);
 
-    // Get user's tracked events
+
     const getTrackedEvents = useCallback(async (): Promise<TrackedEvent[]> => {
         if (!user) return [];
 
@@ -128,38 +141,26 @@ export function useEventTracking() {
             const { data, error } = await supabase
                 .from('user_events')
                 .select(`
-          id,
-          event_id,
-          status,
-          created_at,
-          notes,
-          events (
-            id,
-            title,
-            start_time,
-            end_time,
-            organizer,
-            event_type_id
-          )
-        `)
+                    id, event_id, status, created_at, notes,
+                    events (id, title, start_time, end_time, organizer, event_type_id)
+                `)
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            return (data || []).map((item: any) => ({
+
+            // The data from Supabase needs to be explicitly typed to avoid the 'any' error.
+            const rawData = data as SupabaseTrackedEvent[];
+
+            // 👇 FIX #2: Map the raw data and handle the 'events' array.
+            return (rawData || []).map((item) => ({
                 id: item.id,
                 event_id: item.event_id,
-                status: item.status as EventStatus,
+                status: item.status,
                 created_at: item.created_at,
                 notes: item.notes,
-                events: item.events ? {
-                    id: item.events.id,
-                    title: item.events.title,
-                    start_time: item.events.start_time,
-                    end_time: item.events.end_time,
-                    organizer: item.events.organizer,
-                    event_type_id: item.events.event_type_id
-                } : null
+                // Check if the events array exists and has items before accessing the first one.
+                events: item.events && item.events.length > 0 ? item.events[0] : null,
             }));
         } catch (error) {
             console.error('Error fetching tracked events:', error);
@@ -167,7 +168,7 @@ export function useEventTracking() {
         }
     }, [user]);
 
-    // Check if event is tracked
+    // ... (isEventTracked, bulkTrackEvents functions are unchanged) ...
     const isEventTracked = useCallback(async (eventId: string): Promise<{
         isTracked: boolean;
         status?: EventStatus;
@@ -194,7 +195,6 @@ export function useEventTracking() {
         }
     }, [user]);
 
-    // Bulk track events
     const bulkTrackEvents = useCallback(async (
         eventIds: string[],
         status: EventStatus = 'bookmarked'
@@ -205,7 +205,6 @@ export function useEventTracking() {
 
         setLoading(true);
         try {
-            // Check which events are already tracked
             const { data: existing } = await supabase
                 .from('user_events')
                 .select('event_id')
@@ -219,7 +218,6 @@ export function useEventTracking() {
                 return { success: true, message: 'All events are already tracked' };
             }
 
-            // Insert new tracking records
             const insertData = newEventIds.map(eventId => ({
                 user_id: user.id,
                 event_id: eventId,
