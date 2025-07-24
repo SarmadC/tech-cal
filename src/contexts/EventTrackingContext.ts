@@ -30,6 +30,22 @@ export interface TrackedEvent {
     } | null;
 }
 
+type SupabaseTrackedEvent = {
+    id: string;
+    event_id: string;
+    status: EventStatus;
+    created_at: string;
+    notes?: string;
+    events: {
+        id: string;
+        title: string;
+        start_time: string;
+        end_time: string | null;
+        organizer: string;
+        event_type_id: string;
+    }[] | null;
+};
+
 export function useEventTracking() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
@@ -120,7 +136,7 @@ export function useEventTracking() {
         }
     }, [user]);
 
-    // Get user's tracked events
+    // Check if event is tracked
     const getTrackedEvents = useCallback(async (): Promise<TrackedEvent[]> => {
         if (!user) return [];
 
@@ -128,67 +144,28 @@ export function useEventTracking() {
             const { data, error } = await supabase
                 .from('user_events')
                 .select(`
-          id,
-          event_id,
-          status,
-          created_at,
-          notes,
-          events (
-            id,
-            title,
-            start_time,
-            end_time,
-            organizer,
-            event_type_id
-          )
-        `)
+                  id, event_id, status, created_at, notes,
+                  events (id, title, start_time, end_time, organizer, event_type_id)
+                `)
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            // The 'data' from Supabase needs to be mapped to the 'TrackedEvent[]' type.
-            // The error indicates that the 'events' property is an array.
-            // We'll take the first element of the 'events' array.
-            return (data || []).map((item: any) => ({
+            // Use the new SupabaseTrackedEvent type here instead of 'any'
+            return (data || []).map((item: SupabaseTrackedEvent) => ({
                 id: item.id,
                 event_id: item.event_id,
-                status: item.status as EventStatus,
+                status: item.status,
                 created_at: item.created_at,
                 notes: item.notes,
-                events: item.events && item.events.length > 0 ? item.events[0] : null
+                // Check if events exists and has items before accessing the first one
+                events: item.events && item.events.length > 0 ? item.events[0] : null,
             }));
 
         } catch (error) {
             console.error('Error fetching tracked events:', error);
             return [];
-        }
-    }, [user]);
-
-    // Check if event is tracked
-    const isEventTracked = useCallback(async (eventId: string): Promise<{
-        isTracked: boolean;
-        status?: EventStatus;
-    }> => {
-        if (!user) return { isTracked: false };
-
-        try {
-            const { data, error } = await supabase
-                .from('user_events')
-                .select('status')
-                .eq('user_id', user.id)
-                .eq('event_id', eventId)
-                .single();
-
-            if (error && error.code !== 'PGRST116') throw error;
-
-            return {
-                isTracked: !!data,
-                status: data?.status as EventStatus
-            };
-        } catch (error) {
-            console.error('Error checking event tracking status:', error);
-            return { isTracked: false };
         }
     }, [user]);
 
@@ -250,7 +227,6 @@ export function useEventTracking() {
         trackEvent,
         untrackEvent,
         getTrackedEvents,
-        isEventTracked,
         bulkTrackEvents,
         loading
     };

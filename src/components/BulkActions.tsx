@@ -428,39 +428,40 @@ export function useBulkSelection() {
   };
 }
 export function useBulkKeyboardShortcuts(
-  selectedEvents: Set<string>,
-  visibleEventIds: string[],
-  { onSelectAll, onClearSelection, onBulkTrack }: {
-    onSelectAll: (eventIds: string[]) => void;
-    onClearSelection: () => void;
-    onBulkTrack: () => void;
-  }
+    selectedEvents: Set<string>,
+    visibleEventIds: string[],
+    { onSelectAll, onClearSelection, onBulkTrack }: {
+        onSelectAll: (eventIds: string[]) => void;
+        onClearSelection: () => void;
+        // 👇 FIX: Allow the onBulkTrack function to receive the keyboard event
+        onBulkTrack: (event: KeyboardEvent) => void;
+    }
 ) {
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Ignore if user is typing in an input field
-      if (event.target && (event.target as HTMLElement).tagName === 'INPUT') return;
-      
-      // Ctrl/Cmd + A = Select all visible events
-      if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
-        event.preventDefault();
-        onSelectAll(visibleEventIds);
-      }
-      
-      // Escape = Clear selection
-      if (event.key === 'Escape' && selectedEvents.size > 0) {
-        event.preventDefault();
-        onClearSelection();
-      }
-      
-      // Ctrl/Cmd + T = Track selected events
-      if ((event.ctrlKey || event.metaKey) && event.key === 't' && selectedEvents.size > 0) {
-        event.preventDefault();
-        onBulkTrack();
-      }
-    };
+    React.useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            // Ignore if user is typing in an input field
+            if (event.target && (event.target as HTMLElement).tagName === 'INPUT') return;
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedEvents.size, visibleEventIds, onSelectAll, onClearSelection, onBulkTrack]);
+            // Ctrl/Cmd + A = Select all visible events
+            if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
+                event.preventDefault();
+                onSelectAll(visibleEventIds);
+            }
+
+            // Escape = Clear selection
+            if (event.key === 'Escape' && selectedEvents.size > 0) {
+                event.preventDefault();
+                onClearSelection();
+            }
+
+            // Ctrl/Cmd + T = Track selected events
+            if ((event.ctrlKey || event.metaKey) && event.key === 't' && selectedEvents.size > 0) {
+                // The event is now passed to the callback
+                onBulkTrack(event);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedEvents.size, visibleEventIds, onSelectAll, onClearSelection, onBulkTrack]);
 }

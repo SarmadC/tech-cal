@@ -5,11 +5,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-// Correctly import the main hook
-import { useEventTracking, TrackedEvent } from '@/contexts/EventTrackingContext';
 import MainNavbar from '@/components/MainNavbar';
 import FilterSidebar from '@/components/FilterSidebar';
 import ContentHeader from '@/components/ContentHeader';
+import { useEventTracking } from '@/contexts/EventTrackingContext';
 import CalendarHeader from '@/components/CalendarHeader';
 import EventModal from '@/components/EventModal';
 import CalendarGrid from '@/components/CalendarGrid';
@@ -41,12 +40,15 @@ type Category = {
     color: string;
 };
 
+
 const viewMap: { [key: string]: string } = {
     day: 'timeGridDay',
     week: 'timeGridWeek',
     month: 'dayGridMonth',
     list: 'listWeek',
 };
+
+
 
 export default function CalendarPage() {
     const { user } = useAuth();
@@ -231,7 +233,16 @@ export default function CalendarPage() {
         handleRetry();
     };
 
-    useBulkKeyboardShortcuts(selectedEvents, visibleEventIds, { onSelectAll: selectAll, onClearSelection: clearSelection, onBulkTrack: () => bulkTrackEvents([...selectedEvents]) });
+    useBulkKeyboardShortcuts(selectedEvents, visibleEventIds, {
+        onSelectAll: selectAll,
+        onClearSelection: clearSelection,
+
+        onBulkTrack: (e: KeyboardEvent) => {
+            e.preventDefault();
+            bulkTrackEvents([...selectedEvents]);
+        }
+    });
+
 
     // Other handlers (handleEventClick, etc.) remain the same...
     const handleEventClick = useCallback((event: EnrichedEvent, ctrlKey = false, shiftKey = false) => {
