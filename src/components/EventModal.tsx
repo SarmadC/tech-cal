@@ -125,31 +125,29 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
                 .single();
 
             if (existing) {
-                // Update existing tracking
-                const { error } = await supabase
-                    .from('user_events')
-                    .update({
-                        status,
-                        notes,
-                        created_at: new Date().toISOString()
-                    })
-                    .eq('id', existing.id);
 
-                if (error) throw error;
-            } else {
-                // Create new tracking record
-                const { error } = await supabase
-                    .from('user_events')
-                    .insert({
-                        user_id: user.id,
-                        event_id: event.id,
-                        status,
-                        notes,
-                        created_at: new Date().toISOString()
-                    });
+            const { error } = await supabase
+                .from('user_events')
+                .update({
+                    status,
+                    notes
+                })
+                .eq('id', existing.id);
 
-                if (error) throw error;
-            }
+            if (error) throw error;
+        } else {
+            // Create new tracking record
+            const { error } = await supabase
+                .from('user_events')
+                .insert({
+                    user_id: user.id,
+                    event_id: event.id,
+                    status,
+                    notes
+                });
+
+            if (error) throw error;
+        }
 
             setTrackingStatus({ isTracked: true, status });
             onEventTracked?.();
