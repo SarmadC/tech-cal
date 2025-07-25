@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEventTracking, TrackedEvent } from '@/contexts/EventTrackingContext'; // 👈 1. Import TrackedEvent
+import { useEventTracking, TrackedEvent } from '@/hooks/useEventTracking'; // 👈 1. Import TrackedEvent
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import {

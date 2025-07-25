@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import MainNavbar from '@/components/MainNavbar';
 import FilterSidebar from '@/components/FilterSidebar';
 import ContentHeader from '@/components/ContentHeader';
-import { useEventTracking } from '@/contexts/EventTrackingContext';
+import { useEventTracking } from '@/hooks/useEventTracking';
 import CalendarHeader from '@/components/CalendarHeader';
 import EventModal from '@/components/EventModal';
 import CalendarGrid from '@/components/CalendarGrid';
