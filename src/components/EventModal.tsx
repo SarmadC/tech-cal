@@ -1,10 +1,10 @@
-// src/components/EventModal.tsx (Simplified and Fixed)
+// src/components/EventModal.tsx (Fixed)
 
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabaseClient';
+import { useEventTracking, EventStatus } from '@/hooks/useEventTracking'; // 👈 Import the hook
 import { formatToUTC } from '@/lib/calendarUtils';
 import { formatInTimeZone } from 'date-fns-tz';
 import {
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { ModalCountdown } from './CountdownTimer';
 import { ModalHappeningNow, hasHappeningNowStatus } from './HappeningNowIndicator';
+
 
 type Event = {
     id: string;
@@ -35,8 +36,7 @@ interface EventModalProps {
     onEventTracked?: () => void;
 }
 
-type EventStatus = 'bookmarked' | 'attending' | 'attended' | 'cancelled';
-
+// ... (EventTime component remains the same)
 function EventTime({ timeUtc, userTimezone, format }: {
     timeUtc: string | null;
     userTimezone: string;
@@ -56,13 +56,16 @@ function EventTime({ timeUtc, userTimezone, format }: {
 
 export default function EventModal({ event, onClose, onEventTracked }: EventModalProps) {
     const { user, profile } = useAuth();
+    // 👇 Use the centralized hook for all tracking logic
+    const { trackEvent, untrackEvent, isEventTracked, loading } = useEventTracking();
 
     const [trackingStatus, setTrackingStatus] = useState<{
         isTracked: boolean;
         status?: EventStatus;
     }>({ isTracked: false });
 
-    const [loading, setLoading] = useState(false);
+    // 🔻 Remove the local loading state, use the one from the hook instead
+    // const [loading, setLoading] = useState(false); 
     const [showCopiedBanner, setShowCopiedBanner] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [notes, setNotes] = useState('');
@@ -83,107 +86,47 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
     useEffect(() => {
         const checkTrackingStatus = async () => {
             if (!user) return;
-
-            try {
-                const { data, error } = await supabase
-                    .from('user_events')
-                    .select('status')
-                    .eq('user_id', user.id)
-                    .eq('event_id', event.id)
-                    .single();
-
-                if (error && error.code !== 'PGRST116') throw error;
-
-                setTrackingStatus({
-                    isTracked: !!data,
-                    status: data?.status as EventStatus
-                });
-            } catch (err) {
-                console.error('Error checking tracking status:', err);
-            }
+            const status = await isEventTracked(event.id);
+            setTrackingStatus(status);
         };
 
         checkTrackingStatus();
-    }, [user, event.id]);
+    }, [user, event.id, isEventTracked]);
 
+    // 👇 This function now uses the hook
     const handleTrackEvent = async (status: EventStatus = 'bookmarked') => {
         if (!user) {
             setError('Please sign in to track events.');
             return;
         }
 
-        setLoading(true);
         setError(null);
+        const result = await trackEvent(event.id, status, notes);
 
-        try {
-            // Check if already tracked
-            const { data: existing } = await supabase
-                .from('user_events')
-                .select('id, status')
-                .eq('user_id', user.id)
-                .eq('event_id', event.id)
-                .single();
-
-            if (existing) {
-
-            const { error } = await supabase
-                .from('user_events')
-                .update({
-                    status,
-                    notes
-                })
-                .eq('id', existing.id);
-
-            if (error) throw error;
-        } else {
-            // Create new tracking record
-            const { error } = await supabase
-                .from('user_events')
-                .insert({
-                    user_id: user.id,
-                    event_id: event.id,
-                    status,
-                    notes
-                });
-
-            if (error) throw error;
-        }
-
+        if (result.success) {
             setTrackingStatus({ isTracked: true, status });
             onEventTracked?.();
-        } catch (err) {
-            console.error('Error tracking event:', err);
-            setError((err as Error).message || 'Failed to track event');
-        } finally {
-            setLoading(false);
+        } else {
+            setError(result.error || 'Failed to track event');
         }
     };
 
+    // 👇 This function now uses the hook
     const handleUntrackEvent = async () => {
         if (!user) return;
 
-        setLoading(true);
         setError(null);
+        const result = await untrackEvent(event.id);
 
-        try {
-            const { error } = await supabase
-                .from('user_events')
-                .delete()
-                .eq('user_id', user.id)
-                .eq('event_id', event.id);
-
-            if (error) throw error;
-
+        if (result.success) {
             setTrackingStatus({ isTracked: false });
             onEventTracked?.();
-        } catch (err) {
-            console.error('Error untracking event:', err);
-            setError((err as Error).message || 'Failed to untrack event');
-        } finally {
-            setLoading(false);
+        } else {
+            setError(result.error || 'Failed to untrack event');
         }
     };
 
+    // ... (handleCopyLink, googleCalendarLink, handleIcsDownload, etc. all remain the same) ...
     const handleCopyLink = () => {
         const link = `${window.location.origin}/event/${event.id}`;
         navigator.clipboard.writeText(link);
@@ -236,6 +179,8 @@ export default function EventModal({ event, onClose, onEventTracked }: EventModa
         { value: 'attended' as EventStatus, label: 'Attended', icon: <Check className="w-4 h-4" /> },
     ];
 
+
+    // The entire JSX return structure remains the same
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
