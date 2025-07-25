@@ -69,6 +69,9 @@ export default function CalendarPage() {
     const [refreshKey, setRefreshKey] = useState(0);
     const searchContainerRef = useRef<HTMLDivElement>(null);
     const [trackedEventIds, setTrackedEventIds] = useState<Set<string>>(new Set());
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 
     const {
         selectedEvents,
@@ -365,13 +368,13 @@ export default function CalendarPage() {
                                     onNavigateMonth={(dir) => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + dir, 1))}
                                     onSetCurrentDate={() => setCurrentDate(new Date())}
                                     onSetView={setView}
-                                    monthNames={[]}
+                                    monthNames={monthNames} // ✅ Pass the defined array
                                 />
 
                                 {view === 'month' ? (
                                     <CalendarGrid
                                         days={daysInMonth}
-                                        weekDays={[]}
+                                        weekDays={weekDays} // ✅ Pass the defined array
                                         getEventsForDay={getEventsForDay}
                                         isToday={isToday}
                                         onEventClick={handleEventClick}

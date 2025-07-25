@@ -1,5 +1,3 @@
-// src/components/Loading.tsx (Corrected for Hydration Error)
-
 import React from 'react';
 
 // --- Main Loading Components (Unchanged) ---
@@ -98,11 +96,6 @@ export function SidebarSkeleton() {
     </div>
   );
 }
-
-
-// --- Utility Components (Unchanged) ---
-
-// ... (LoadingButton, ErrorState, SmartLoader, etc. remain the same)
 
 export function LoadingButton({ loading, children, onClick, disabled = false, className = '', variant = 'primary'}: {loading: boolean, children: React.ReactNode, onClick?: () => void, disabled?: boolean, className?: string, variant?: 'primary' | 'secondary' | 'danger'}) {
   const baseClasses = 'flex items-center justify-center space-x-2 font-medium py-3 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed';
