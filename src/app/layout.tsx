@@ -1,10 +1,10 @@
-// src/app/layout.tsx
+// src/app/layout.tsx (Corrected)
 
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
-
+import ClientLayout from "@/components/ClientLayout";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -20,9 +20,10 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={inter.className}>
-                {/* AuthProvider is required so the useEventTracking hook can access the user */}
                 <AuthProvider>
-                    {children}
+                    <ClientLayout>
+                        {children}
+                    </ClientLayout>
                 </AuthProvider>
             </body>
         </html>

@@ -1,10 +1,9 @@
-// src/app/dashboard/page.tsx (Corrected)
-
+// Enhanced Dashboard with Personal Insights
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEventTracking, TrackedEvent } from '@/hooks/useEventTracking'; // 👈 1. Import TrackedEvent
+import { useEventTracking, TrackedEvent } from '@/hooks/useEventTracking';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import {
@@ -15,69 +14,225 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';a
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowUpRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import {
+    ArrowUpRight,
+    Calendar,
+    TrendingUp,
+    Clock,
+    Star,
+    Target,
+    Users,
+    Zap,
+    BookOpen,
+    Award,
+    MapPin,
+    Bell,
+    ChevronRight,
+    Sparkles,
+    Activity,
+    Plus
+} from 'lucide-react';
 
-// 👇 2. Define a type for your upcoming events
-type UpcomingEvent = {
+// Types
+type Event = {
     id: string;
     title: string;
     start_time: string;
+    end_time: string | null;
     organizer: string;
+    location: string;
+    event_type_id: string;
 };
 
-export default function DashboardPage() {
-    const { user } = useAuth();
+type EventType = {
+    id: string;
+    name: string;
+    color: string;
+};
+
+type PersonalInsight = {
+    title: string;
+    value: string | number;
+    description: string;
+    icon: React.ReactNode;
+    trend?: 'up' | 'down' | 'stable';
+    trendValue?: string;
+};
+
+export default function EnhancedDashboard() {
+    const { user, profile } = useAuth();
     const { getTrackedEvents } = useEventTracking();
 
-    // 👇 3. Use the specific types with useState
     const [trackedEvents, setTrackedEvents] = useState<TrackedEvent[]>([]);
-    const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+    const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+    const [eventTypes, setEventTypes] = useState<EventType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [greeting, setGreeting] = useState('');
 
+    // Set personalized greeting
     useEffect(() => {
-        async function getUpcomingEvents() {
-            const { data, error } = await supabase
-                .from('events')
-                .select('id, title, start_time, organizer')
-                .order('start_time', { ascending: true })
-                .limit(5);
+        const hour = new Date().getHours();
+        const name = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
 
-            if (error) {
-                console.error('Error fetching upcoming events:', error);
-                return [];
-            }
-            return data;
+        if (hour < 12) {
+            setGreeting(`Good morning, ${name}!`);
+        } else if (hour < 17) {
+            setGreeting(`Good afternoon, ${name}!`);
+        } else {
+            setGreeting(`Good evening, ${name}!`);
         }
+    }, [profile, user]);
 
+    // Fetch data
+    useEffect(() => {
         async function loadDashboardData() {
             if (!user) {
                 setLoading(false);
                 return;
             }
-            setLoading(true);
-            const [tracked, upcoming] = await Promise.all([
-                getTrackedEvents(),
-                getUpcomingEvents(),
-            ]);
-            setTrackedEvents(tracked);
-            setUpcomingEvents(upcoming);
-            setLoading(false);
+
+            try {
+                setLoading(true);
+
+                const [tracked, eventTypesData, upcomingData] = await Promise.all([
+                    getTrackedEvents(),
+                    supabase.from('event_type').select('*'),
+                    supabase
+                        .from('events')
+                        .select('*')
+                        .gte('start_time', new Date().toISOString())
+                        .order('start_time', { ascending: true })
+                        .limit(10)
+                ]);
+
+                setTrackedEvents(tracked);
+                setEventTypes(eventTypesData.data || []);
+                setUpcomingEvents(upcomingData.data || []);
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            } finally {
+                setLoading(false);
+            }
         }
 
         loadDashboardData();
     }, [user, getTrackedEvents]);
 
+    // Calculate insights
+    const insights = useMemo((): PersonalInsight[] => {
+        if (!trackedEvents.length) return [];
+
+        const now = new Date();
+        const thisWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        // Upcoming tracked events
+        const upcomingTracked = trackedEvents.filter(te =>
+            te.events && new Date(te.events.start_time) > now
+        ).length;
+
+        // Events attended this month
+        const attendedThisMonth = trackedEvents.filter(te =>
+            te.status === 'attended' &&
+            new Date(te.created_at) >= thisMonth
+        ).length;
+
+        // Most tracked category
+        const categoryCount = trackedEvents.reduce((acc, te) => {
+            if (te.events?.event_type_id) {
+                acc[te.events.event_type_id] = (acc[te.events.event_type_id] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<string, number>);
+
+        const topCategoryId = Object.entries(categoryCount)
+            .sort(([, a], [, b]) => b - a)[0]?.[0];
+
+        const topCategory = eventTypes.find(et => et.id === topCategoryId);
+
+        // Recent activity
+        const recentActivity = trackedEvents.filter(te =>
+            new Date(te.created_at) >= thisWeek
+        ).length;
+
+        return [
+            {
+                title: 'Upcoming Events',
+                value: upcomingTracked,
+                description: 'Events you\'re tracking',
+                icon: <Calendar className="w-5 h-5" />,
+                trend: upcomingTracked > 5 ? 'up' : upcomingTracked > 2 ? 'stable' : 'down',
+                trendValue: `${upcomingTracked} this week`
+            },
+            {
+                title: 'Events Attended',
+                value: attendedThisMonth,
+                description: 'This month',
+                icon: <Award className="w-5 h-5" />,
+                trend: attendedThisMonth > 2 ? 'up' : 'stable',
+                trendValue: `+${attendedThisMonth} this month`
+            },
+            {
+                title: 'Top Interest',
+                value: topCategory?.name || 'None',
+                description: `${categoryCount[topCategoryId] || 0} events tracked`,
+                icon: <Target className="w-5 h-5" />
+            },
+            {
+                title: 'Weekly Activity',
+                value: recentActivity,
+                description: 'Events tracked this week',
+                icon: <Activity className="w-5 h-5" />,
+                trend: recentActivity > 3 ? 'up' : 'stable'
+            }
+        ];
+    }, [trackedEvents, eventTypes]);
+
+    // Get next few tracked events
+    const nextTrackedEvents = useMemo(() => {
+        return trackedEvents
+            .filter(te => te.events && new Date(te.events.start_time) > new Date())
+            .sort((a, b) =>
+                new Date(a.events!.start_time).getTime() - new Date(b.events!.start_time).getTime()
+            )
+            .slice(0, 5);
+    }, [trackedEvents]);
+
+    // Get recommended events (events not tracked yet)
+    const recommendedEvents = useMemo(() => {
+        const trackedEventIds = new Set(trackedEvents.map(te => te.event_id));
+        return upcomingEvents
+            .filter(event => !trackedEventIds.has(event.id))
+            .slice(0, 6);
+    }, [upcomingEvents, trackedEvents]);
+
+    // Quick stats for the user
+    const quickStats = useMemo(() => {
+        const totalTracked = trackedEvents.length;
+        const totalAttended = trackedEvents.filter(te => te.status === 'attended').length;
+        const totalBookmarked = trackedEvents.filter(te => te.status === 'bookmarked').length;
+
+        return {
+            totalTracked,
+            totalAttended,
+            totalBookmarked,
+            completionRate: totalTracked > 0 ? Math.round((totalAttended / totalTracked) * 100) : 0
+        };
+    }, [trackedEvents]);
+
     const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        });
+    };
+
+    const formatDateShort = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
@@ -86,106 +241,273 @@ export default function DashboardPage() {
 
     if (loading) {
         return (
-            <div className="flex flex-col gap-8 p-4 md:p-8">
-                <Skeleton className="h-32 w-full" />
-                <div className="grid gap-4 md:grid-cols-2">
-                    <Skeleton className="h-64 w-full" />
-                    <Skeleton className="h-64 w-full" />
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+                <div className="max-w-7xl mx-auto space-y-6">
+                    <Skeleton className="h-12 w-80" />
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        {[...Array(4)].map((_, i) => (
+                            <Skeleton key={i} className="h-32" />
+                        ))}
+                    </div>
+                    <div className="grid gap-6 lg:grid-cols-3">
+                        <Skeleton className="h-96 lg:col-span-2" />
+                        <Skeleton className="h-96" />
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-muted/40">
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-                <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">
-                                Tracked Events
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{trackedEvents.length}</div>
-                            <p className="text-xs text-muted-foreground">
-                                You are currently tracking events.
-                            </p>
-                        </CardContent>
-                    </Card>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+            <div className="max-w-7xl mx-auto p-6 space-y-8">
+                {/* Welcome Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between">
+                    <div>
+                        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                            {greeting}
+                        </h1>
+                        <p className="text-lg text-gray-600 flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-yellow-500" />
+                            Ready to discover what's happening in tech today?
+                        </p>
+                    </div>
+                    <div className="flex gap-3 mt-4 md:mt-0">
+                        <Button asChild variant="outline">
+                            <Link href="/calendar">
+                                <Calendar className="w-4 h-4 mr-2" />
+                                View Calendar
+                            </Link>
+                        </Button>
+                        <Button asChild>
+                            <Link href="/calendar">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Track Events
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
-                <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
-                    <Card className="xl:col-span-2">
-                        <CardHeader className="flex flex-row items-center">
-                            <div className="grid gap-2">
-                                <CardTitle>Upcoming Tracked Events</CardTitle>
-                                <CardDescription>
-                                    Events you have bookmarked or marked as attending.
-                                </CardDescription>
+
+                {/* Personal Insights */}
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                    {insights.map((insight, index) => (
+                        <Card key={index} className="relative overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                            <CardHeader className="pb-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="p-2 bg-blue-100 rounded-lg w-fit">
+                                        {insight.icon}
+                                    </div>
+                                    {insight.trend && (
+                                        <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${insight.trend === 'up' ? 'bg-green-100 text-green-700' :
+                                                insight.trend === 'down' ? 'bg-red-100 text-red-700' :
+                                                    'bg-gray-100 text-gray-700'
+                                            }`}>
+                                            <TrendingUp className="w-3 h-3" />
+                                            {insight.trendValue}
+                                        </div>
+                                    )}
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-1">
+                                    <h3 className="font-medium text-gray-900">{insight.title}</h3>
+                                    <div className="text-2xl font-bold text-blue-600">{insight.value}</div>
+                                    <p className="text-sm text-gray-600">{insight.description}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+
+                {/* Main Content Grid */}
+                <div className="grid gap-6 lg:grid-cols-3">
+                    {/* Your Upcoming Events */}
+                    <Card className="lg:col-span-2 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Star className="w-5 h-5 text-yellow-500" />
+                                        Your Upcoming Events
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Events you're tracking and planning to attend
+                                    </CardDescription>
+                                </div>
+                                <Button asChild size="sm" variant="outline">
+                                    <Link href="/calendar">
+                                        View All
+                                        <ArrowUpRight className="h-4 w-4 ml-1" />
+                                    </Link>
+                                </Button>
                             </div>
-                            <Button asChild size="sm" className="ml-auto gap-1">
-                                <Link href="/calendar">
-                                    View All
-                                    <ArrowUpRight className="h-4 w-4" />
-                                </Link>
-                            </Button>
                         </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Event</TableHead>
-                                        <TableHead className="text-right">Date</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {trackedEvents.slice(0, 5).map((event) => ( // ✅ No 'any' error here
-                                        <TableRow key={event.id}>
-                                            <TableCell>
-                                                <div className="font-medium">{event.events?.title}</div>
-                                                <div className="hidden text-sm text-muted-foreground md:inline">
-                                                    {event.events?.organizer}
+                        <CardContent className="space-y-4">
+                            {nextTrackedEvents.length > 0 ? (
+                                nextTrackedEvents.map((trackedEvent) => (
+                                    <div key={trackedEvent.id} className="group p-4 rounded-lg border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                    {trackedEvent.events?.title}
+                                                </h3>
+                                                <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                                                    <span className="flex items-center gap-1">
+                                                        <Clock className="w-4 h-4" />
+                                                        {formatDate(trackedEvent.events?.start_time || '')}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Users className="w-4 h-4" />
+                                                        {trackedEvent.events?.organizer}
+                                                    </span>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {formatDate(event.events?.start_time || '')}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                                {trackedEvent.notes && (
+                                                    <p className="text-sm text-gray-500 mt-2 italic">
+                                                        "{trackedEvent.notes}"
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant={
+                                                    trackedEvent.status === 'attending' ? 'default' :
+                                                        trackedEvent.status === 'bookmarked' ? 'secondary' :
+                                                            'outline'
+                                                }>
+                                                    {trackedEvent.status}
+                                                </Badge>
+                                                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-8">
+                                    <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="font-medium text-gray-900 mb-2">No upcoming events</h3>
+                                    <p className="text-gray-600 mb-4">Start tracking events to see them here</p>
+                                    <Button asChild>
+                                        <Link href="/calendar">Browse Events</Link>
+                                    </Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Discover More Events</CardTitle>
-                            <CardDescription>
-                                Here are some upcoming events in the community.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-8">
-                            {upcomingEvents.map((event) => ( // ✅ No 'any' error here
-                                <div key={event.id} className="flex items-center gap-4">
-                                    <div className="grid gap-1">
-                                        <p className="text-sm font-medium leading-none">
-                                            {event.title}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {event.organizer}
-                                        </p>
+                    {/* Activity Summary & Quick Actions */}
+                    <div className="space-y-6">
+                        {/* Activity Summary */}
+                        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Activity className="w-5 h-5 text-green-500" />
+                                    Your Progress
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-blue-600">{quickStats.totalTracked}</div>
+                                        <div className="text-sm text-gray-600">Total Tracked</div>
                                     </div>
-                                    <div className="ml-auto font-medium">
-                                        <Badge variant="outline">
-                                            {formatDate(event.start_time)}
-                                        </Badge>
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-green-600">{quickStats.totalAttended}</div>
+                                        <div className="text-sm text-gray-600">Attended</div>
                                     </div>
                                 </div>
-                            ))}
+
+                                <div className="pt-4 border-t border-gray-100">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-sm text-gray-600">Completion Rate</span>
+                                        <span className="text-sm font-medium">{quickStats.completionRate}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div
+                                            className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                                            style={{ width: `${quickStats.completionRate}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Quick Actions */}
+                        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                            <CardHeader>
+                                <CardTitle>Quick Actions</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <Button asChild variant="outline" className="w-full justify-start">
+                                    <Link href="/dashboard/growth">
+                                        <BookOpen className="w-4 h-4 mr-2" />
+                                        View Learning Progress
+                                    </Link>
+                                </Button>
+                                <Button asChild variant="outline" className="w-full justify-start">
+                                    <Link href="/settings">
+                                        <Bell className="w-4 h-4 mr-2" />
+                                        Notification Settings
+                                    </Link>
+                                </Button>
+                                <Button asChild variant="outline" className="w-full justify-start">
+                                    <Link href="/api-docs">
+                                        <Zap className="w-4 h-4 mr-2" />
+                                        API Integration
+                                    </Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+
+                {/* Recommended Events */}
+                {recommendedEvents.length > 0 && (
+                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Sparkles className="w-5 h-5 text-purple-500" />
+                                        Recommended for You
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Events we think you might be interested in
+                                    </CardDescription>
+                                </div>
+                                <Button asChild variant="outline" size="sm">
+                                    <Link href="/calendar">See All</Link>
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {recommendedEvents.slice(0, 6).map((event) => (
+                                    <div key={event.id} className="group p-4 rounded-lg border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all cursor-pointer">
+                                        <h3 className="font-medium text-gray-900 group-hover:text-purple-600 transition-colors mb-2">
+                                            {event.title}
+                                        </h3>
+                                        <div className="space-y-1 text-sm text-gray-600">
+                                            <div className="flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
+                                                {formatDateShort(event.start_time)}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Users className="w-3 h-3" />
+                                                {event.organizer}
+                                            </div>
+                                            {event.location && (
+                                                <div className="flex items-center gap-1">
+                                                    <MapPin className="w-3 h-3" />
+                                                    {event.location}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </CardContent>
                     </Card>
-                </div>
-            </main>
+                )}
+            </div>
         </div>
     );
 }
