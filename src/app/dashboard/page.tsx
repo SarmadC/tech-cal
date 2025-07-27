@@ -269,7 +269,7 @@ export default function EnhancedDashboard() {
                         </h1>
                         <p className="text-lg text-gray-600 flex items-center gap-2">
                             <Sparkles className="w-5 h-5 text-yellow-500" />
-                            Ready to discover what's happening in tech today?
+                            Ready to discover what is happening in tech today?
                         </p>
                     </div>
                     <div className="flex gap-3 mt-4 md:mt-0">
@@ -331,7 +331,7 @@ export default function EnhancedDashboard() {
                                         Your Upcoming Events
                                     </CardTitle>
                                     <CardDescription>
-                                        Events you're tracking and planning to attend
+                                        Events you are tracking and planning to attend
                                     </CardDescription>
                                 </div>
                                 <Button asChild size="sm" variant="outline">
@@ -363,7 +363,7 @@ export default function EnhancedDashboard() {
                                                 </div>
                                                 {trackedEvent.notes && (
                                                     <p className="text-sm text-gray-500 mt-2 italic">
-                                                        "{trackedEvent.notes}"
+                                                        `&quot;`{trackedEvent.notes}`&quot;`
                                                     </p>
                                                 )}
                                             </div>

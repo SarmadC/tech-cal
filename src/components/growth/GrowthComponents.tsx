@@ -1,221 +1,190 @@
 // src/components/growth/GrowthComponents.tsx
 'use client';
 
-import { FC, ReactNode } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
+import React, { FC } from 'react';
+import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import {
-    Target,
+    ChevronDown,
+    ArrowRight,
     Calendar,
-    Trophy,
-    Clock,
-    BarChart3,
-    Activity,
+    Zap,
+    TrendingUp,
+    CheckSquare,
     Flame,
-    CheckCircle,
+    Globe,
+    Lightbulb
 } from 'lucide-react';
 
 // --- Type Definitions ---
-interface ChartData {
-    month: string;
-    [key: string]: string | number;
-}
-
-interface CategoryStats {
-    category: string;
-    attended: number;
-    color: string;
-    growth: number;
-}
-
-interface Achievement {
-    id: string;
+interface UpcomingOpportunity {
     title: string;
-    description: string;
-    icon: ReactNode;
-    unlocked: boolean;
-    progress?: number;
-    threshold?: number;
-}
-
-interface UserEvent {
-    attendedAt: string;
+    date: string;
     category: string;
-    status: string;
-    eventTitle: string;
-    organizer: string;
-    eventId: string;
 }
 
-interface LearningStreak {
-    current: number;
-    longest: number;
-    lastEventDate: string | null;
+interface TechStackCurrencyData {
+    category: string;
+    score: number;
+    color: string;
 }
 
 // --- Component Implementations ---
 
-export const TimeframeSelector: FC<{
-    selectedTimeframe: '3m' | '6m' | '1y' | 'all';
-    setSelectedTimeframe: (tf: '3m' | '6m' | '1y' | 'all') => void;
-}> = ({ selectedTimeframe, setSelectedTimeframe }) => (
-    <div className="flex gap-2 mt-4 md:mt-0">
-        {(['3m', '6m', '1y', 'all'] as const).map((period) => (
-            <button
-                key={period}
-                onClick={() => setSelectedTimeframe(period)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedTimeframe === period
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    }`}
-            >
-                {period === 'all' ? 'All Time' : period.toUpperCase()}
+export const GrowthDashboardHeader: FC<{
+    userName: string;
+    selectedPeriod: string;
+    setSelectedPeriod: (period: string) => void;
+}> = ({ userName, selectedPeriod }) => (
+    <div className="flex items-center justify-between mb-8">
+        <div>
+            <p className="text-gray-500 text-sm mb-1">Welcome back, <span className="font-medium">{userName}!</span></p>
+            <h1 className="text-4xl font-light text-gray-800">Your Professional Development</h1>
+        </div>
+        <div className="flex items-center gap-3">
+            <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-gray-200 text-gray-600 text-sm hover:border-gray-300 transition-colors">
+                <span>{selectedPeriod}</span>
+                <ChevronDown className="w-4 h-4" />
             </button>
-        ))}
+        </div>
     </div>
 );
 
-
-export const MetricCard: FC<{ title: string; value: string | number; description: string; icon: ReactNode; }> = ({ title, value, description, icon }) => (
-    <div className="bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-700">
-        <div className="flex items-center justify-between">
-            <div>
-                <p className="text-sm font-medium text-gray-400">{title}</p>
-                <p className="text-3xl font-bold text-white">{value}</p>
-                <p className="text-sm text-green-400 font-medium">{description}</p>
+export const IndustryPulseScoreCard: FC<{ score: number }> = ({ score }) => {
+    const data = [{ name: 'Score', value: score }, { name: 'Remaining', value: 100 - score }];
+    const colors = ['#3b82f6', '#e5e7eb'];
+    return (
+        <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-gray-700 font-medium">Industry Pulse Score</h3>
+                <TrendingUp className="w-5 h-5 text-blue-500" />
             </div>
-            <div className="p-3 bg-blue-600/20 rounded-lg">
-                {icon}
+            <div className="flex-grow flex items-center justify-center my-4">
+                <ResponsiveContainer width="100%" height={150}>
+                    <PieChart>
+                        <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={70} startAngle={90} endAngle={-270} paddingAngle={0} cornerRadius={50}>
+                            {data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke={colors[index % colors.length]} />
+                            ))}
+                        </Pie>
+                        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-3xl font-bold text-gray-800">
+                            {score}%
+                        </text>
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
+            <p className="text-center text-sm text-gray-500">Your alignment with major tech announcements this quarter.</p>
+        </div>
+    );
+};
+
+
+export const FollowThroughRateCard: FC<{ rate: number }> = ({ rate }) => (
+    <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6">
+        <div className="flex items-center justify-between mb-4">
+            <h3 className="text-gray-700 font-medium">Follow-Through Rate</h3>
+            <CheckSquare className="w-5 h-5 text-green-500" />
+        </div>
+        <div className="text-5xl font-bold text-gray-800 mb-2">{rate}%</div>
+        <p className="text-sm text-gray-500">Of bookmarked events you attended. Excellent community engagement!</p>
+    </div>
+);
+
+export const LearningConsistencyCard: FC<{ currentStreak: number, longestStreak: number }> = ({ currentStreak, longestStreak }) => (
+    <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6">
+        <div className="flex items-center justify-between mb-4">
+            <h3 className="text-gray-700 font-medium">Engagement Streak</h3>
+            <Flame className="w-5 h-5 text-orange-500" />
+        </div>
+        <div className="flex items-baseline gap-6">
+            <div>
+                <div className="text-5xl font-bold text-gray-800">{currentStreak}</div>
+                <p className="text-sm text-gray-500">Current Streak</p>
+            </div>
+            <div>
+                <div className="text-2xl font-bold text-gray-400">{longestStreak}</div>
+                <p className="text-sm text-gray-500">Longest</p>
             </div>
         </div>
     </div>
 );
 
-export const AttendanceChart: FC<{ data: ChartData[]; colors: Record<string, string> }> = ({ data, colors }) => (
-    <div className="bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-700 h-96">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-400" />
-            Monthly Attendance
-        </h2>
-        {data.length > 0 ? (
-            <ResponsiveContainer width="100%" height="85%">
-                <BarChart data={data} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#a3a3a3' }} stroke="#a3a3a3" />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#a3a3a3' }} stroke="#a3a3a3" />
-                    <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #404040', borderRadius: '8px', color: '#fff' }} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
-                    <Legend wrapperStyle={{ fontSize: "14px" }} />
-                    {Object.entries(colors).map(([category, color]) => (
-                        <Bar key={category} dataKey={category} stackId="a" fill={color} radius={[4, 4, 0, 0]} />
-                    ))}
-                </BarChart>
-            </ResponsiveContainer>
-        ) : (
-            <div className="text-center py-12 h-full flex flex-col justify-center items-center">
-                <BarChart3 className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">No attendance data available yet.</p>
-            </div>
-        )}
-    </div>
-);
-
-export const FocusAreas: FC<{ stats: CategoryStats[] }> = ({ stats }) => (
-    <div className="bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-700 h-full">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-purple-400" />
-            Learning Focus Areas
-        </h2>
-        {stats.length > 0 ? (
-            <div className="space-y-4">
-                {stats.slice(0, 6).map((category) => (
-                    <div key={category.category} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }}></div>
-                            <span className="font-medium text-gray-200">{category.category}</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="text-right">
-                                <div className="text-sm font-semibold text-white">{category.attended}</div>
-                                <div className="text-xs text-gray-400">attended</div>
-                            </div>
-                        </div>
+export const TechStackCurrencyCard: FC<{ data: TechStackCurrencyData[] }> = ({ data }) => (
+    <div className="col-span-12 md:col-span-7 bg-white rounded-3xl p-6">
+        <div className="flex items-center justify-between mb-6">
+            <h3 className="text-gray-800 font-medium">Tech Stack Relevance</h3>
+            <Zap className="w-4 h-4 text-gray-600" />
+        </div>
+        <div className="space-y-4">
+            {data.map(item => (
+                <div key={item.category}>
+                    <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-700">{item.category}</span>
+                        <span className="text-sm font-bold" style={{ color: item.color }}>{item.score}% Current</span>
                     </div>
-                ))}
-            </div>
-        ) : (
-            <div className="text-center py-12 h-full flex flex-col justify-center items-center">
-                <Target className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">No learning data available yet.</p>
-            </div>
-        )}
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div className="h-2.5 rounded-full" style={{ width: `${item.score}%`, backgroundColor: item.color }}></div>
+                    </div>
+                </div>
+            ))}
+        </div>
     </div>
 );
 
-export const AchievementsList: FC<{ achievements: Achievement[] }> = ({ achievements }) => (
-    <div className="bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-700">
-        <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-yellow-400" />
-            Achievements & Milestones
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {achievements.map((achievement) => (
-                <div key={achievement.id} className={`p-4 rounded-lg border-2 ${achievement.unlocked ? 'border-green-500/30 bg-green-500/10' : 'border-gray-700 bg-gray-900/50'}`}>
-                    <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg ${achievement.unlocked ? 'bg-green-500/20 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
-                            {achievement.unlocked ? <CheckCircle className="w-6 h-6" /> : achievement.icon}
+export const NetworkExpansionCard: FC<{ count: number }> = ({ count }) => (
+    <div className="col-span-12 md:col-span-5 bg-gray-800 rounded-3xl p-6 text-white">
+        <div className="flex items-center justify-between mb-4">
+            <h3 className="text-white font-medium">Network Expansion</h3>
+            <Globe className="w-5 h-5 text-teal-300" />
+        </div>
+        <p className="text-5xl font-bold text-white mb-2">{count}</p>
+        <p className="text-sm text-gray-400">New communities & organizers you&apos;ve engaged with this quarter.</p>
+    </div>
+);
+
+
+export const UpcomingOpportunitiesCard: FC<{ opportunities: UpcomingOpportunity[] }> = ({ opportunities }) => (
+    <div className="col-span-12 bg-white rounded-3xl p-6">
+        <div className="flex items-center justify-between mb-6">
+            <h3 className="text-gray-800 font-medium">Trend Awareness: Upcoming Opportunities</h3>
+            <button className="text-sm text-blue-600 font-medium flex items-center gap-1">
+                <span>See All</span>
+                <ArrowRight className="w-4 h-4" />
+            </button>
+        </div>
+        <div className="space-y-4">
+            {opportunities.length > 0 ? opportunities.map(opp => (
+                <div key={opp.title} className="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-gray-500" />
                         </div>
                         <div>
-                            <h3 className={`font-semibold ${achievement.unlocked ? 'text-green-300' : 'text-gray-200'}`}>{achievement.title}</h3>
-                            <p className={`text-sm ${achievement.unlocked ? 'text-green-400' : 'text-gray-400'}`}>{achievement.description}</p>
+                            <div className="font-medium text-gray-800">{opp.title}</div>
+                            <div className="text-sm text-gray-500">{opp.date} - {opp.category}</div>
                         </div>
                     </div>
+                    <ArrowRight className="w-4 h-4 text-gray-400" />
                 </div>
-            ))}
+            )) : (
+                <p className="text-center text-gray-500 py-8">No specific opportunities based on your top categories right now. Broaden your horizons!</p>
+            )}
         </div>
     </div>
 );
 
-const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-
-export const RecentActivity: FC<{ events: UserEvent[] }> = ({ events }) => (
-    <div className="bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-700 h-full">
-        <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-blue-400" />
-            Recent Learning Activity
-        </h2>
-        <div className="space-y-4">
-            {events.slice(0, 5).map((event, index) => (
-                <div key={`${event.eventId}-${index}`} className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-700/50">
-                    <div className="p-2 rounded-lg bg-blue-600/20">
-                        <Calendar className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div>
-                        <h3 className="font-medium text-gray-200">{event.eventTitle}</h3>
-                        <p className="text-sm text-gray-400">{formatDate(event.attendedAt)}</p>
-                    </div>
+export const IndustryPulseCard: FC<{ trends: string[] }> = ({ trends }) => (
+    <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-gray-800 rounded-3xl p-6 text-white">
+        <div className="flex items-center justify-between mb-4">
+            <h3 className="text-white font-medium">Industry Pulse</h3>
+            <Lightbulb className="w-4 h-4 text-yellow-300" />
+        </div>
+        <p className="text-sm text-gray-400 mb-6">Hot topics based on community engagement.</p>
+        <div className="flex flex-wrap gap-2">
+            {trends.map(trend => (
+                <div key={trend} className="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-sm font-medium">
+                    {trend}
                 </div>
             ))}
-        </div>
-    </div>
-);
-
-export const LearningInsights: FC<{ streak: LearningStreak }> = ({ streak }) => (
-    <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 text-white h-full flex flex-col justify-center shadow-lg">
-        <h2 className="text-xl font-bold mb-2">Keep Your Momentum Going! 🚀</h2>
-        <p className="text-blue-200 mb-4">
-            {streak.current > 0
-                ? `You're on a ${streak.current}-event learning streak!`
-                : `Ready to start a new learning streak?`
-            }
-        </p>
-        <div className="flex items-center gap-4 text-sm mt-auto">
-            <div className="flex items-center gap-2">
-                <Flame className="w-4 h-4" />
-                <span>Current Streak: {streak.current}</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4" />
-                <span>Best Streak: {streak.longest}</span>
-            </div>
         </div>
     </div>
 );
