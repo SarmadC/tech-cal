@@ -10,7 +10,6 @@ import {
     BarChart3,
     Users,
     ArrowRight,
-    Play,
 } from 'lucide-react';
 
 // Define proper types for the animation positions
@@ -218,7 +217,10 @@ export default function LandingPage() {
                         <li><Link href="/api-docs" className="nav-link">API</Link></li>
                         <li><Link href="/blog" className="nav-link">Blog</Link></li>
                     </ul>
-                    <Link href="/signup" className="nav-cta">Start Free Trial</Link>
+                    <div className="flex items-center gap-4">
+                        <Link href="/login" className="nav-link">Sign In</Link>
+                        <Link href="/signup" className="nav-cta">Start Free Trial</Link>
+                    </div>
                 </div>
             </nav>
 
@@ -250,10 +252,6 @@ export default function LandingPage() {
                             <Link href="/calendar" className="cta-button cta-primary">
                                 <span>See Live Calendar</span>
                                 <ArrowRight size={20} />
-                            </Link>
-                            <Link href="#" className="cta-button cta-secondary">
-                                <span>Watch Demo</span>
-                                <Play size={20} />
                             </Link>
                         </div>
                     </div>
