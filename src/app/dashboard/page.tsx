@@ -1,5 +1,5 @@
-// Enhanced Dashboard with Personal Insights
 'use client';
+
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,51 +7,21 @@ import { useEventTracking, TrackedEvent } from '@/hooks/useEventTracking';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+    Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-    ArrowUpRight,
-    Calendar,
-    TrendingUp,
-    Clock,
-    Star,
-    Target,
-    Users,
-    Zap,
-    BookOpen,
-    Award,
-    MapPin,
-    Bell,
-    ChevronRight,
-    Sparkles,
-    Activity,
-    Plus
+    ArrowUpRight, Calendar, TrendingUp, Clock, Star, Target, Users, Zap,
+    BookOpen, Award, MapPin, Bell, ChevronRight, Sparkles, Activity, Plus
 } from 'lucide-react';
 
-// Types
-type Event = {
-    id: string;
-    title: string;
-    start_time: string;
-    end_time: string | null;
-    organizer: string;
-    location: string;
-    event_type_id: string;
-};
+// --- Type Imports ---
+import { AppEvent, AppEventType, SupabaseEvent, SupabaseEventType } from '@/types';
+import { mapSupabaseEventToAppEvent, mapSupabaseEventTypeToAppEventType } from '@/lib/dataMapper';
 
-type EventType = {
-    id: string;
-    name: string;
-    color: string;
-};
-
+// Local Type for this component's UI
 type PersonalInsight = {
     title: string;
     value: string | number;
@@ -64,180 +34,95 @@ type PersonalInsight = {
 export default function EnhancedDashboard() {
     const { user, profile } = useAuth();
     const { getTrackedEvents } = useEventTracking();
-
     const [trackedEvents, setTrackedEvents] = useState<TrackedEvent[]>([]);
-    const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
-    const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+    const [upcomingEvents, setUpcomingEvents] = useState<AppEvent[]>([]);
+    const [eventTypes, setEventTypes] = useState<AppEventType[]>([]);
     const [loading, setLoading] = useState(true);
     const [greeting, setGreeting] = useState('');
 
-    // Set personalized greeting
     useEffect(() => {
         const hour = new Date().getHours();
         const name = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
-
-        if (hour < 12) {
-            setGreeting(`Good morning, ${name}!`);
-        } else if (hour < 17) {
-            setGreeting(`Good afternoon, ${name}!`);
-        } else {
-            setGreeting(`Good evening, ${name}!`);
-        }
+        if (hour < 12) setGreeting(`Good morning, ${name}!`);
+        else if (hour < 17) setGreeting(`Good afternoon, ${name}!`);
+        else setGreeting(`Good evening, ${name}!`);
     }, [profile, user]);
 
-    // Fetch data
     useEffect(() => {
         async function loadDashboardData() {
             if (!user) {
                 setLoading(false);
                 return;
             }
-
             try {
                 setLoading(true);
-
                 const [tracked, eventTypesData, upcomingData] = await Promise.all([
                     getTrackedEvents(),
                     supabase.from('event_type').select('*'),
-                    supabase
-                        .from('events')
-                        .select('*')
-                        .gte('start_time', new Date().toISOString())
-                        .order('start_time', { ascending: true })
-                        .limit(10)
+                    supabase.from('events').select('*').gte('start_time', new Date().toISOString()).order('start_time', { ascending: true }).limit(10)
                 ]);
 
+                const mappedEventTypes = (eventTypesData.data as SupabaseEventType[] || []).map(mapSupabaseEventTypeToAppEventType);
+                const mappedUpcomingEvents = (upcomingData.data as SupabaseEvent[] || []).map(mapSupabaseEventToAppEvent);
+
                 setTrackedEvents(tracked);
-                setEventTypes(eventTypesData.data || []);
-                setUpcomingEvents(upcomingData.data || []);
+                setEventTypes(mappedEventTypes);
+                setUpcomingEvents(mappedUpcomingEvents);
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
             } finally {
                 setLoading(false);
             }
         }
-
         loadDashboardData();
     }, [user, getTrackedEvents]);
 
-    // Calculate insights
     const insights = useMemo((): PersonalInsight[] => {
         if (!trackedEvents.length) return [];
-
         const now = new Date();
         const thisWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        // Upcoming tracked events
-        const upcomingTracked = trackedEvents.filter(te =>
-            te.events && new Date(te.events.start_time) > now
-        ).length;
+        const upcomingTracked = trackedEvents.filter(te => te.event && new Date(te.event.startTime) > now).length;
+        const attendedThisMonth = trackedEvents.filter(te => te.status === 'attended' && new Date(te.trackedAt) >= thisMonth).length;
 
-        // Events attended this month
-        const attendedThisMonth = trackedEvents.filter(te =>
-            te.status === 'attended' &&
-            new Date(te.created_at) >= thisMonth
-        ).length;
-
-        // Most tracked category
         const categoryCount = trackedEvents.reduce((acc, te) => {
-            if (te.events?.event_type_id) {
-                acc[te.events.event_type_id] = (acc[te.events.event_type_id] || 0) + 1;
+            if (te.event?.eventTypeId) {
+                acc[te.event.eventTypeId] = (acc[te.event.eventTypeId] || 0) + 1;
             }
             return acc;
         }, {} as Record<string, number>);
 
-        const topCategoryId = Object.entries(categoryCount)
-            .sort(([, a], [, b]) => b - a)[0]?.[0];
-
+        const topCategoryId = Object.entries(categoryCount).sort(([, a], [, b]) => b - a)[0]?.[0];
         const topCategory = eventTypes.find(et => et.id === topCategoryId);
-
-        // Recent activity
-        const recentActivity = trackedEvents.filter(te =>
-            new Date(te.created_at) >= thisWeek
-        ).length;
+        const recentActivity = trackedEvents.filter(te => new Date(te.trackedAt) >= thisWeek).length;
 
         return [
-            {
-                title: 'Upcoming Events',
-                value: upcomingTracked,
-                description: 'Events you\'re tracking',
-                icon: <Calendar className="w-5 h-5" />,
-                trend: upcomingTracked > 5 ? 'up' : upcomingTracked > 2 ? 'stable' : 'down',
-                trendValue: `${upcomingTracked} this week`
-            },
-            {
-                title: 'Events Attended',
-                value: attendedThisMonth,
-                description: 'This month',
-                icon: <Award className="w-5 h-5" />,
-                trend: attendedThisMonth > 2 ? 'up' : 'stable',
-                trendValue: `+${attendedThisMonth} this month`
-            },
-            {
-                title: 'Top Interest',
-                value: topCategory?.name || 'None',
-                description: `${categoryCount[topCategoryId] || 0} events tracked`,
-                icon: <Target className="w-5 h-5" />
-            },
-            {
-                title: 'Weekly Activity',
-                value: recentActivity,
-                description: 'Events tracked this week',
-                icon: <Activity className="w-5 h-5" />,
-                trend: recentActivity > 3 ? 'up' : 'stable'
-            }
+            { title: 'Upcoming Events', value: upcomingTracked, description: 'Events you\'re tracking', icon: <Calendar className="w-5 h-5" />, trend: upcomingTracked > 5 ? 'up' : upcomingTracked > 2 ? 'stable' : 'down', trendValue: `${upcomingTracked} this week` },
+            { title: 'Events Attended', value: attendedThisMonth, description: 'This month', icon: <Award className="w-5 h-5" />, trend: attendedThisMonth > 2 ? 'up' : 'stable', trendValue: `+${attendedThisMonth} this month` },
+            { title: 'Top Interest', value: topCategory?.name || 'None', description: `${categoryCount[topCategoryId] || 0} events tracked`, icon: <Target className="w-5 h-5" /> },
+            { title: 'Weekly Activity', value: recentActivity, description: 'Events tracked this week', icon: <Activity className="w-5 h-5" />, trend: recentActivity > 3 ? 'up' : 'stable' }
         ];
     }, [trackedEvents, eventTypes]);
 
-    // Get next few tracked events
     const nextTrackedEvents = useMemo(() => {
-        return trackedEvents
-            .filter(te => te.events && new Date(te.events.start_time) > new Date())
-            .sort((a, b) =>
-                new Date(a.events!.start_time).getTime() - new Date(b.events!.start_time).getTime()
-            )
-            .slice(0, 5);
+        return trackedEvents.filter(te => te.event && new Date(te.event.startTime) > new Date()).sort((a, b) => new Date(a.event!.startTime).getTime() - new Date(b.event!.startTime).getTime()).slice(0, 5);
     }, [trackedEvents]);
 
-    // Get recommended events (events not tracked yet)
     const recommendedEvents = useMemo(() => {
-        const trackedEventIds = new Set(trackedEvents.map(te => te.event_id));
-        return upcomingEvents
-            .filter(event => !trackedEventIds.has(event.id))
-            .slice(0, 6);
+        const trackedEventIds = new Set(trackedEvents.map(te => te.eventId));
+        return upcomingEvents.filter(event => !trackedEventIds.has(event.id)).slice(0, 6);
     }, [upcomingEvents, trackedEvents]);
 
-    // Quick stats for the user
     const quickStats = useMemo(() => {
         const totalTracked = trackedEvents.length;
         const totalAttended = trackedEvents.filter(te => te.status === 'attended').length;
         const totalBookmarked = trackedEvents.filter(te => te.status === 'bookmarked').length;
-
-        return {
-            totalTracked,
-            totalAttended,
-            totalBookmarked,
-            completionRate: totalTracked > 0 ? Math.round((totalAttended / totalTracked) * 100) : 0
-        };
+        return { totalTracked, totalAttended, totalBookmarked, completionRate: totalTracked > 0 ? Math.round((totalAttended / totalTracked) * 100) : 0 };
     }, [trackedEvents]);
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-        });
-    };
-
-    const formatDateShort = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-        });
-    };
+    const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const formatDateShort = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
     if (loading) {
         return (
@@ -294,14 +179,9 @@ export default function EnhancedDashboard() {
                         <Card key={index} className="relative overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                             <CardHeader className="pb-2">
                                 <div className="flex items-center justify-between">
-                                    <div className="p-2 bg-blue-100 rounded-lg w-fit">
-                                        {insight.icon}
-                                    </div>
+                                    <div className="p-2 bg-blue-100 rounded-lg w-fit">{insight.icon}</div>
                                     {insight.trend && (
-                                        <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${insight.trend === 'up' ? 'bg-green-100 text-green-700' :
-                                                insight.trend === 'down' ? 'bg-red-100 text-red-700' :
-                                                    'bg-gray-100 text-gray-700'
-                                            }`}>
+                                        <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${insight.trend === 'up' ? 'bg-green-100 text-green-700' : insight.trend === 'down' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
                                             <TrendingUp className="w-3 h-3" />
                                             {insight.trendValue}
                                         </div>
@@ -345,20 +225,20 @@ export default function EnhancedDashboard() {
                         <CardContent className="space-y-4">
                             {nextTrackedEvents.length > 0 ? (
                                 nextTrackedEvents.map((trackedEvent) => (
-                                    <div key={trackedEvent.id} className="group p-4 rounded-lg border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer">
+                                    <div key={trackedEvent.trackingId} className="group p-4 rounded-lg border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer">
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                                                    {trackedEvent.events?.title}
+                                                    {trackedEvent.event?.title}
                                                 </h3>
                                                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                                                     <span className="flex items-center gap-1">
                                                         <Clock className="w-4 h-4" />
-                                                        {formatDate(trackedEvent.events?.start_time || '')}
+                                                        {formatDate(trackedEvent.event?.startTime || '')}
                                                     </span>
                                                     <span className="flex items-center gap-1">
                                                         <Users className="w-4 h-4" />
-                                                        {trackedEvent.events?.organizer}
+                                                        {trackedEvent.event?.organizer}
                                                     </span>
                                                 </div>
                                                 {trackedEvent.notes && (
@@ -368,11 +248,7 @@ export default function EnhancedDashboard() {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Badge variant={
-                                                    trackedEvent.status === 'attending' ? 'default' :
-                                                        trackedEvent.status === 'bookmarked' ? 'secondary' :
-                                                            'outline'
-                                                }>
+                                                <Badge variant={trackedEvent.status === 'attending' ? 'default' : trackedEvent.status === 'bookmarked' ? 'secondary' : 'outline'}>
                                                     {trackedEvent.status}
                                                 </Badge>
                                                 <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
@@ -395,7 +271,6 @@ export default function EnhancedDashboard() {
 
                     {/* Activity Summary & Quick Actions */}
                     <div className="space-y-6">
-                        {/* Activity Summary */}
                         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
@@ -414,7 +289,6 @@ export default function EnhancedDashboard() {
                                         <div className="text-sm text-gray-600">Attended</div>
                                     </div>
                                 </div>
-
                                 <div className="pt-4 border-t border-gray-100">
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-sm text-gray-600">Completion Rate</span>
@@ -429,8 +303,6 @@ export default function EnhancedDashboard() {
                                 </div>
                             </CardContent>
                         </Card>
-
-                        {/* Quick Actions */}
                         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                             <CardHeader>
                                 <CardTitle>Quick Actions</CardTitle>
@@ -488,7 +360,7 @@ export default function EnhancedDashboard() {
                                         <div className="space-y-1 text-sm text-gray-600">
                                             <div className="flex items-center gap-1">
                                                 <Clock className="w-3 h-3" />
-                                                {formatDateShort(event.start_time)}
+                                                {formatDateShort(event.startTime)}
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <Users className="w-3 h-3" />

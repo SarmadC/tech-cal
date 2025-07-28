@@ -22,36 +22,13 @@ import { EventContentArg } from '@fullcalendar/core';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEventTracking, EventStatus } from '@/hooks/useEventTracking';
 import { formatToUTC } from '@/lib/calendarUtils';
+import { AppEvent, AppEventType } from '@/types'; // Import centralized types
 
-// --- Type Definitions (can be moved to a shared types file) ---
-type EnrichedEvent = {
-    id: string;
-    event_type_id: string;
-    title: string;
-    description: string;
-    start_time: string;
-    end_time: string | null;
-    organizer: string;
-    location: string;
-    status: string;
-    source_url: string;
-    livestream_url: string | null;
-    color: string;
-    isTracked?: boolean;
-};
-
-type Category = {
-    id: string;
-    name: string;
-    color: string;
-    count?: number;
-};
-
+// Local type for this component
 type CalendarViewType = 'month' | 'week' | 'day';
 
-
 // --- MiniCalendar Component ---
-const MiniCalendar: FC<{ date: Date; setDate: (d: Date) => void; events: EnrichedEvent[]; currentDate: Date }> = ({ date, setDate, events, currentDate }) => {
+const MiniCalendar: FC<{ date: Date; setDate: (d: Date) => void; events: AppEvent[]; currentDate: Date }> = ({ date, setDate, events, currentDate }) => {
     const monthNames = useMemo(() => ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], []);
     const weekDays = useMemo(() => ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'], []);
 
@@ -61,7 +38,7 @@ const MiniCalendar: FC<{ date: Date; setDate: (d: Date) => void; events: Enriche
         const currentYear = date.getFullYear();
 
         for (const event of events) {
-            const eventDate = new Date(event.start_time);
+            const eventDate = new Date(event.startTime);
             if (eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear) {
                 const day = eventDate.getDate();
                 counts.set(day, (counts.get(day) || 0) + 1);
@@ -133,12 +110,12 @@ const MiniCalendar: FC<{ date: Date; setDate: (d: Date) => void; events: Enriche
 export const Sidebar: FC<{
     currentDate: Date;
     setCurrentDate: (date: Date) => void;
-    categories: Category[];
+    categories: AppEventType[];
     selectedCategories: Set<string>;
     setSelectedCategories: (categories: Set<string>) => void;
-    nextUpcomingEvent?: EnrichedEvent;
+    nextUpcomingEvent?: AppEvent;
     user: { name: string; role: string };
-    events: EnrichedEvent[];
+    events: AppEvent[];
 }> = ({ currentDate, setCurrentDate, categories, selectedCategories, setSelectedCategories, nextUpcomingEvent, user, events }) => {
     const handleCategoryChange = (categoryId: string) => {
         const newSet = new Set(selectedCategories);
@@ -167,7 +144,7 @@ export const Sidebar: FC<{
             {nextUpcomingEvent && (
                 <div className="bg-gray-800 p-4 rounded-lg">
                     <p className="text-sm text-gray-400 mb-2">
-                        {new Date(nextUpcomingEvent.start_time).toLocaleString('en-US', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(nextUpcomingEvent.startTime).toLocaleString('en-US', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                     <h4 className="font-semibold text-white mb-1">{nextUpcomingEvent.title}</h4>
                     <p className="text-sm text-gray-400">{nextUpcomingEvent.location}</p>
@@ -237,14 +214,13 @@ export const CalendarHeader: FC<{
 };
 
 // --- EventDetailPanel Component ---
-export const EventDetailPanel: FC<{ event: EnrichedEvent; onClose: () => void; categories: Category[] }> = ({ event, onClose, categories }) => {
+export const EventDetailPanel: FC<{ event: AppEvent; onClose: () => void; categories: AppEventType[] }> = ({ event, onClose, categories }) => {
     const { user } = useAuth();
     const { trackEvent, untrackEvent, isEventTracked, loading } = useEventTracking();
     const [trackingStatus, setTrackingStatus] = useState<{ isTracked: boolean; status?: EventStatus; }>({ isTracked: false });
     const [notes, setNotes] = useState('');
     const [showCopiedBanner, setShowCopiedBanner] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -285,8 +261,8 @@ export const EventDetailPanel: FC<{ event: EnrichedEvent; onClose: () => void; c
     };
 
     const googleCalendarLink = useMemo(() => {
-        const utcStartTime = formatToUTC(event.start_time);
-        const utcEndTime = formatToUTC(event.end_time || new Date(new Date(event.start_time).getTime() + 60 * 60 * 1000));
+        const utcStartTime = formatToUTC(event.startTime);
+        const utcEndTime = formatToUTC(event.endTime || new Date(new Date(event.startTime).getTime() + 60 * 60 * 1000));
         const url = new URL('https://www.google.com/calendar/render');
         url.searchParams.set('action', 'TEMPLATE');
         url.searchParams.set('text', event.title);
@@ -297,8 +273,8 @@ export const EventDetailPanel: FC<{ event: EnrichedEvent; onClose: () => void; c
     }, [event]);
 
     const handleIcsDownload = () => {
-        const utcStartTime = formatToUTC(event.start_time);
-        const utcEndTime = formatToUTC(event.end_time || new Date(new Date(event.start_time).getTime() + 60 * 60 * 1000));
+        const utcStartTime = formatToUTC(event.startTime);
+        const utcEndTime = formatToUTC(event.endTime || new Date(new Date(event.startTime).getTime() + 60 * 60 * 1000));
         const icsContent = [
             'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//KureCal//EN', 'BEGIN:VEVENT',
             `UID:${event.id}@kurecal.app`, `DTSTAMP:${formatToUTC(new Date())}`, `DTSTART:${utcStartTime}`, `DTEND:${utcEndTime}`,
@@ -314,7 +290,7 @@ export const EventDetailPanel: FC<{ event: EnrichedEvent; onClose: () => void; c
         document.body.removeChild(link);
     };
 
-    const category = categories.find(c => c.id === event.event_type_id);
+    const category = categories.find(c => c.id === event.eventTypeId);
 
     return (
         <aside className="w-96 bg-[#1e1e1e] border-l border-gray-800 p-6 flex flex-col relative">
@@ -334,7 +310,7 @@ export const EventDetailPanel: FC<{ event: EnrichedEvent; onClose: () => void; c
                 <div className="space-y-4">
                     <div className="flex items-center space-x-3 text-sm">
                         <Clock className="w-5 h-5 text-gray-400" />
-                        <span>{new Date(event.start_time).toLocaleString()}</span>
+                        <span>{new Date(event.startTime).toLocaleString()}</span>
                     </div>
                     <div className="flex items-center space-x-3 text-sm">
                         <MapPin className="w-5 h-5 text-gray-400" />
@@ -419,7 +395,7 @@ export const EventDetailPanel: FC<{ event: EnrichedEvent; onClose: () => void; c
 // --- CustomEventContent Component ---
 export const CustomEventContent: FC<EventContentArg> = ({ event }) => {
     const { title, extendedProps } = event;
-    const { color, start_time, end_time } = extendedProps as EnrichedEvent;
+    const { color, startTime, endTime } = extendedProps as AppEvent;
 
     const formatTime = (time: string) => new Date(time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 
@@ -432,7 +408,7 @@ export const CustomEventContent: FC<EventContentArg> = ({ event }) => {
                 <div className="flex-grow overflow-hidden">
                     <p className="font-bold text-sm text-white break-words">{title}</p>
                     <p className="text-xs opacity-90 mt-1 text-white/80">
-                        {formatTime(start_time)} - {end_time ? formatTime(end_time) : ''}
+                        {formatTime(startTime)} - {endTime ? formatTime(endTime) : ''}
                     </p>
                 </div>
             </div>
