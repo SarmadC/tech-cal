@@ -42,7 +42,7 @@ interface AuthActions {
     refreshProfile: () => Promise<void>;
 }
 
-type AuthContextType = AuthState & AuthActions;
+export type AuthContextType = AuthState & AuthActions;
 
 // --- Context Creation ---
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

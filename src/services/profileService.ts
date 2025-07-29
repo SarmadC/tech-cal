@@ -107,18 +107,16 @@ export class ProfileService {
     /**
      * Update user profile
      */
-    static async updateProfile(
+static async updateProfile(
         userId: string,
         updates: ProfileUpdateForm
     ): Promise<ApiResponse<AppProfile>> {
         try {
             // Convert app data to supabase format
-            const supabaseUpdates = profileTransformer.toSupabase({
-                ...updates,
-                updatedAt: new Date().toISOString(),
-            });
+            const supabaseUpdates = profileTransformer.toSupabase(updates);
 
-            // Add the updated_at timestamp
+            // The transformer already handles converting `updatedAt`, so we just need to add it to the updates object.
+            // Let's ensure the timestamp is always fresh.
             const updateData = {
                 ...supabaseUpdates,
                 updated_at: new Date().toISOString(),

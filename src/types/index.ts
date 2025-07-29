@@ -34,11 +34,9 @@ export type SupabaseTrackedEvent = {
     status: 'bookmarked' | 'attending' | 'attended' | 'cancelled';
     notes: string | null;
     created_at: string;
-    // FIX: This must be an array of events or null, as per Supabase's join syntax
     events: SupabaseEvent[] | null;
 };
 
-// NEW: Additional database types
 export type SupabaseProfile = {
     id: string;
     full_name: string;
@@ -80,7 +78,7 @@ export type AppEventType = {
     name: string;
     color: string;
     description: string | null;
-    eventCount?: number; // Enriched data
+    eventCount?: number; 
 };
 
 export type AppTrackedEvent = {
@@ -163,6 +161,7 @@ export type SignupForm = {
 
 export type ProfileUpdateForm = {
     fullName?: string;
+    avatarUrl?: string | null;
     timezone?: string;
     preferences?: Record<string, unknown>;
 };

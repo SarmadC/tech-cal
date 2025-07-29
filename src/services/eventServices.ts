@@ -192,4 +192,60 @@ export class EventService {
             return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch live events' };
         }
     }
+
+        /**
+     * --- ADD THIS NEW METHOD ---
+     * Fetches recommended events based on a user's top categories, excluding events they already track.
+     */
+    static async getRecommendedEvents(
+        categoryNames: string[],
+        excludedEventIds: string[]
+    ): Promise<ApiResponse<AppEvent[]>> {
+        
+        try {
+            if (categoryNames.length === 0) {
+                return { success: true, data: [] };
+            }
+
+            // We need to fetch the category IDs from their names first
+            const { data: categories, error: categoryError } = await supabase
+                .from('event_type')
+                .select('id')
+                .in('name', categoryNames);
+
+            if (categoryError) throw categoryError;
+            
+            const categoryIds = categories.map(c => c.id);
+
+            if (categoryIds.length === 0) {
+                return { success: true, data: [] };
+            }
+            
+            let query = supabase
+                .from('events')
+                .select(`*, event_type:event_type_id (*)`)
+                .in('event_type_id', categoryIds)
+                .gte('start_time', new Date().toISOString())
+                .limit(3); // Fetch a few recommendations
+
+            if (excludedEventIds.length > 0) {
+                query = query.not('id', 'in', `(${excludedEventIds.join(',')})`);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            const events: AppEvent[] = (data as SupabaseEventWithEventType[] || []).map((item) => {
+                const baseEvent = eventTransformer.toApp(item);
+                const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
+                return enrichEvent(baseEvent, { eventType });
+            });
+
+            return { success: true, data: events };
+
+        } catch (error) {
+            console.error('Error fetching recommended opportunities:', error);
+            return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch events' };
+        }
+    }
 }

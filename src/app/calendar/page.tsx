@@ -11,7 +11,6 @@ import { EventTypeService } from '@/services/eventTypeService';
 import { profileTransformer } from '@/utils/transformers'; // To map the profile
 import { AppProfile } from '@/types'; // Import the AppProfile type
 
-// The helper function is no longer needed here, as the logic now lives in the services.
 
 // The page itself is an async Server Component
 export default async function KureCalendarPage() {
