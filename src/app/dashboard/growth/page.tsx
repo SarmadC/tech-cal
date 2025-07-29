@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEventTracking } from '@/hooks/useEventTracking';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import {
     GrowthDashboardHeader,
     FollowThroughRateCard,
@@ -16,7 +16,7 @@ import {
     IndustryPulseScoreCard
 } from '@/components/growth/GrowthComponents';
 import { AppEvent, SupabaseEventType } from '@/types';
-import { fetchRecommendedOpportunities } from '@/lib/eventServices';
+import { fetchRecommendedOpportunities } from '@/services/eventServices';
 import { supabase } from '@/lib/supabaseClient';
 import { mapSupabaseEventTypeToAppEventType } from '@/lib/dataMapper';
 

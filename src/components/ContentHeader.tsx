@@ -1,7 +1,7 @@
 // src/components/ContentHeader.tsx
 
 import { Menu } from 'lucide-react';
-import SearchBar from './SearchBar';
+import SearchBar from './common/SearchBar';
 import { RefObject } from 'react';
 
 // Define the types for props - Updated to match SearchBar types

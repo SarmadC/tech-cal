@@ -1,223 +1,272 @@
-// src/contexts/AuthContext.tsx (Corrected)
-
+// src/contexts/AuthContext.tsx
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
+import {
+    createContext,
+    useContext,
+    useEffect,
+    useState,
+    ReactNode,
+    useCallback,
+    useMemo
+} from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
-import { useRouter, usePathname } from 'next/navigation';
+import { AuthService } from '@/services/authService';
+import { ProfileService } from '@/services/profileService';
+import type {
+    AppProfile,
+    AuthResponse,
+    OAuthProvider,
+    LoginForm,
+    SignupForm,
+    ProfileUpdateForm
+} from '@/types';
 
-// --- Type Definitions ---
-interface UserProfile {
-    id: string;
-    full_name: string;
-    avatar_url: string;
-    timezone?: string;
-    preferences?: Record<string, unknown>;
-};
-
-type ProfileUpdateData = Partial<Omit<UserProfile, 'id'>>;
-
-interface AuthResponse {
-    success: boolean;
-    error?: string;
-    message?: string;
-}
-
-interface AuthContextType {
+// --- Context Types ---
+interface AuthState {
     user: User | null;
     session: Session | null;
-    profile: UserProfile | null;
+    profile: AppProfile | null;
     loading: boolean;
-    signIn: (email: string, password: string) => Promise<AuthResponse>;
-    signUp: (email: string, password: string, fullName: string) => Promise<AuthResponse>;
-    signInWithOAuth: (provider: 'google' | 'github') => Promise<AuthResponse>;
-    signOut: () => Promise<void>;
-    resetPassword: (email: string) => Promise<AuthResponse>;
-    updateProfile: (data: ProfileUpdateData) => Promise<AuthResponse>;
+    initialized: boolean;
 }
 
+interface AuthActions {
+    signIn: (credentials: LoginForm) => Promise<AuthResponse>;
+    signUp: (data: SignupForm) => Promise<AuthResponse>;
+    signInWithOAuth: (provider: OAuthProvider) => Promise<AuthResponse>;
+    signOut: () => Promise<void>;
+    resetPassword: (email: string) => Promise<AuthResponse>;
+    updateProfile: (data: ProfileUpdateForm) => Promise<AuthResponse>;
+    refreshProfile: () => Promise<void>;
+}
+
+type AuthContextType = AuthState & AuthActions;
+
+// --- Context Creation ---
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [session, setSession] = useState<Session | null>(null);
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
-    const router = useRouter();
-    const pathname = usePathname();
+// --- Auth Provider ---
+interface AuthProviderProps {
+    children: ReactNode;
+}
 
-    const ensureUserProfile = useCallback(async (userToProcess: User) => {
+export function AuthProvider({ children }: AuthProviderProps) {
+    // --- State ---
+    const [authState, setAuthState] = useState<AuthState>({
+        user: null,
+        session: null,
+        profile: null,
+        loading: true,
+        initialized: false,
+    });
+
+    // --- Profile Management ---
+    const loadUserProfile = useCallback(async (user: User): Promise<AppProfile | null> => {
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userToProcess.id)
-                .single();
-
-            if (error && error.code !== 'PGRST116') throw error;
-
-            if (data) {
-                setProfile(data);
-            } else {
-                const { data: newProfile, error: insertError } = await supabase
-                    .from('profiles')
-                    .insert({
-                        id: userToProcess.id,
-                        full_name: userToProcess.user_metadata?.full_name || 'New User',
-                        avatar_url: userToProcess.user_metadata?.avatar_url,
-                    }).select().single();
-                if (insertError) throw insertError;
-                setProfile(newProfile);
+            const result = await ProfileService.getProfile(user.id);
+            if (result.success && result.data) {
+                return result.data;
             }
-        } catch (err) {
-            console.error('Error ensuring user profile:', err);
+
+            // If no profile exists, create one
+            const createResult = await ProfileService.createProfile({
+                id: user.id,
+                fullName: user.user_metadata?.full_name || 'New User',
+                avatarUrl: user.user_metadata?.avatar_url || null,
+            });
+
+            return createResult.success ? createResult.data || null : null;
+        } catch (error) {
+            console.error('Error loading user profile:', error);
+            return null;
         }
     }, []);
 
+    const refreshProfile = useCallback(async () => {
+        if (!authState.user) return;
+
+        const profile = await loadUserProfile(authState.user);
+        setAuthState(prev => ({ ...prev, profile }));
+    }, [authState.user, loadUserProfile]);
+
+    // --- Auth State Management ---
+    const updateAuthState = useCallback(async (session: Session | null) => {
+        const user = session?.user || null;
+
+        setAuthState(prev => ({
+            ...prev,
+            user,
+            session,
+            loading: true
+        }));
+
+        // Load profile if user exists
+        const profile = user ? await loadUserProfile(user) : null;
+
+        setAuthState(prev => ({
+            ...prev,
+            profile,
+            loading: false,
+            initialized: true
+        }));
+    }, [loadUserProfile]);
+
+    // --- Initialize Auth State ---
     useEffect(() => {
-        // 1. Immediately fetch the initial session to prevent screen flicker
-        const getInitialSession = async () => {
-            const { data: { session: currentSession } } = await supabase.auth.getSession();
-            setSession(currentSession);
-            setUser(currentSession?.user ?? null);
-            if (currentSession?.user) {
-                await ensureUserProfile(currentSession.user);
+        let mounted = true;
+
+        const initializeAuth = async () => {
+            try {
+                // Get initial session
+                const { data: { session } } = await supabase.auth.getSession();
+
+                if (mounted) {
+                    await updateAuthState(session);
+                }
+            } catch (error) {
+                console.error('Error initializing auth:', error);
+                if (mounted) {
+                    setAuthState(prev => ({
+                        ...prev,
+                        loading: false,
+                        initialized: true
+                    }));
+                }
             }
-            // Set loading to false only after the initial check is complete
-            setLoading(false);
         };
 
-        getInitialSession();
+        initializeAuth();
 
-        // 2. Set up the single, authoritative auth state change listener
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-            async (event, newSession) => {
-                setLoading(true);
-                setSession(newSession);
-                const currentUser = newSession?.user ?? null;
-                setUser(currentUser);
+        return () => {
+            mounted = false;
+        };
+    }, [updateAuthState]);
 
-                if (event === 'SIGNED_IN' && currentUser) {
-                    await ensureUserProfile(currentUser);
-                    // Redirect only if they land on an auth page after signing in
-                    const isAuthPage = pathname === '/login' || pathname === '/signup';
-                    if (isAuthPage) {
-                        router.push('/calendar');
-                    }
-                }
-
-                if (event === 'SIGNED_OUT') {
-                    setProfile(null);
-                    // Only redirect if they are not already on a public page
-                    const isProtectedPage = pathname.startsWith('/dashboard') || pathname.startsWith('/calendar');
-                    if (isProtectedPage) {
-                        router.push('/login');
-                    }
-                }
-
-                setLoading(false);
+    // --- Auth State Listener ---
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+                console.log('Auth state changed:', event);
+                await updateAuthState(session);
             }
         );
 
-        // 3. Clean up the listener on unmount
-        return () => {
-            authListener?.subscription.unsubscribe();
-        };
-    }, [ensureUserProfile, pathname, router]);
+        return () => subscription.unsubscribe();
+    }, [updateAuthState]);
 
-
-    // --- Auth Actions  ---
-    const signIn = async (email: string, password: string): Promise<AuthResponse> => {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) return { success: false, error: error.message };
-        return { success: true, message: 'Successfully signed in!' };
-    };
-
-    const signUp = async (email: string, password: string, fullName: string): Promise<AuthResponse> => {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { full_name: fullName, avatar_url: '' } }, // Ensure avatar_url exists
-        });
-        if (error) return { success: false, error: error.message };
-        if (data.user && !data.user.email_confirmed_at) {
-            return { success: true, message: 'Please check your email to confirm your account.' };
+    // --- Auth Actions ---
+    const signIn = useCallback(async (credentials: LoginForm): Promise<AuthResponse> => {
+        try {
+            setAuthState(prev => ({ ...prev, loading: true }));
+            return await AuthService.signIn(credentials);
+        } catch (error) {
+            setAuthState(prev => ({ ...prev, loading: false }));
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Sign in failed'
+            };
         }
-        return { success: true, message: 'Account created successfully!' };
-    };
+    }, []);
 
-    const signInWithOAuth = async (provider: 'google' | 'github'): Promise<AuthResponse> => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider,
-            options: { redirectTo: `${window.location.origin}/auth/callback` },
-        });
-        if (error) return { success: false, error: error.message };
-        // No need for a message, the browser will redirect immediately
-        return { success: true };
-    };
+    const signUp = useCallback(async (data: SignupForm): Promise<AuthResponse> => {
+        try {
+            setAuthState(prev => ({ ...prev, loading: true }));
+            return await AuthService.signUp(data);
+        } catch (error) {
+            setAuthState(prev => ({ ...prev, loading: false }));
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Sign up failed'
+            };
+        }
+    }, []);
 
-    const signOut = async (): Promise<void> => {
-        await supabase.auth.signOut();
-    };
+    const signInWithOAuth = useCallback(async (provider: OAuthProvider): Promise<AuthResponse> => {
+        try {
+            return await AuthService.signInWithOAuth(provider);
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'OAuth sign in failed'
+            };
+        }
+    }, []);
 
-    const resetPassword = async (email: string): Promise<AuthResponse> => {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/auth/reset-password`,
-        });
-        if (error) return { success: false, error: error.message };
-        return { success: true, message: 'Password reset email sent!' };
-    };
+    const signOut = useCallback(async (): Promise<void> => {
+        try {
+            await AuthService.signOut();
+            setAuthState({
+                user: null,
+                session: null,
+                profile: null,
+                loading: false,
+                initialized: true,
+            });
+        } catch (error) {
+            console.error('Error signing out:', error);
+        }
+    }, []);
 
-    const updateProfile = useCallback(async (data: ProfileUpdateData): Promise<AuthResponse> => {
-        if (!user) return { success: false, error: 'No authenticated user' };
+    const resetPassword = useCallback(async (email: string): Promise<AuthResponse> => {
+        return await AuthService.resetPassword(email);
+    }, []);
+
+    const updateProfile = useCallback(async (data: ProfileUpdateForm): Promise<AuthResponse> => {
+        if (!authState.user) {
+            return { success: false, error: 'No authenticated user' };
+        }
 
         try {
-            // Update the public profiles table first
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .update({
-                    full_name: data.full_name,
-                    timezone: data.timezone,
-                    preferences: data.preferences,
-                    // avatar_url is usually handled separately with storage
-                })
-                .eq('id', user.id);
-            if (profileError) return { success: false, error: profileError.message };
+            const result = await ProfileService.updateProfile(authState.user.id, data);
 
-            // Then, update the auth user's metadata
-            const { data: updatedUser, error: authError } = await supabase.auth.updateUser({
-                data: { full_name: data.full_name, avatar_url: data.avatar_url }
-            });
-            if (authError) return { success: false, error: authError.message };
-
-            // Manually update the profile state to reflect changes immediately
-            if (updatedUser.user) {
-                await ensureUserProfile(updatedUser.user);
+            if (result.success) {
+                // Refresh profile data
+                await refreshProfile();
             }
 
-            return { success: true, message: 'Profile updated successfully!' };
-        } catch (err) {
-            return { success: false, error: (err as Error).message || 'An unexpected error occurred' };
+            return result;
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Profile update failed'
+            };
         }
-    }, [user, ensureUserProfile]);
+    }, [authState.user, refreshProfile]);
 
-    const value = useMemo(() => ({
-        user,
-        session,
-        profile,
-        loading,
+    // --- Memoized Context Value ---
+    const contextValue = useMemo((): AuthContextType => ({
+        // State
+        ...authState,
+
+        // Actions
         signIn,
         signUp,
         signInWithOAuth,
         signOut,
         resetPassword,
         updateProfile,
-    }), [user, session, profile, loading, updateProfile]);
+        refreshProfile,
+    }), [
+        authState,
+        signIn,
+        signUp,
+        signInWithOAuth,
+        signOut,
+        resetPassword,
+        updateProfile,
+        refreshProfile,
+    ]);
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider value={contextValue}>
+            {children}
+        </AuthContext.Provider>
+    );
 }
 
+// --- Hook ---
 export function useAuth(): AuthContextType {
     const context = useContext(AuthContext);
     if (context === undefined) {
@@ -226,12 +275,28 @@ export function useAuth(): AuthContextType {
     return context;
 }
 
+// --- Utility Hooks ---
+export function useUser(): User | null {
+    const { user } = useAuth();
+    return user;
+}
+
+export function useProfile(): AppProfile | null {
+    const { profile } = useAuth();
+    return profile;
+}
+
+export function useIsAuthenticated(): boolean {
+    const { user, initialized } = useAuth();
+    return initialized && !!user;
+}
+
 export function useUserId(): string | null {
     const { user } = useAuth();
     return user?.id || null;
 }
 
-export function useIsAuthenticated(): boolean {
-    const { user, loading } = useAuth();
-    return !loading && !!user;
+export function useAuthLoading(): boolean {
+    const { loading, initialized } = useAuth();
+    return loading || !initialized;
 }
