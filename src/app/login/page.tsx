@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query';
 import { AuthService } from '@/services/authService';
 import { LoginForm, OAuthProvider } from '@/types';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -40,10 +41,8 @@ export default function LoginPage() {
         mutationFn: (credentials: LoginForm) => AuthService.signIn(credentials),
         onSuccess: (result) => {
             if (!result.success) {
-                // Manually throw an error to trigger the `error` state in the mutation
                 throw new Error(result.error || 'Sign in failed');
             }
-            // On success, AuthContext's onAuthStateChange listener will handle the redirect.
             console.log('Sign in successful, redirecting...');
         },
     });

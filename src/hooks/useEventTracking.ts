@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserEventService } from '@/services/userEventService';
 import type { AppTrackedEvent, EventStatus } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner'; // Import the toast function
 
 // --- Type Definitions for our Mutations ---
 
@@ -28,7 +29,7 @@ type BulkTrackEventsVariables = {
 /**
  * A hook for managing all user-event tracking write operations (create, update, delete).
  * Leverages TanStack Query's `useMutation` for robust server-side updates and automatic
- * UI refetching.
+ * UI refetching with toast notifications.
  */
 export function useEventTracking() {
   const { user } = useAuth();
@@ -45,17 +46,17 @@ export function useEventTracking() {
         variables.notes
       );
     },
-    onSuccess: (_, variables) => {
-      // Invalidate queries to trigger a refetch and update the UI automatically.
-      // This ensures the dashboard list and the specific event's status are updated.
+    onSuccess: (result, variables) => {
+      // Invalidate queries to trigger an automatic UI refetch.
       queryClient.invalidateQueries({ queryKey: ['trackedEvents', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['eventTrackingStatus', variables.eventId] });
-      // You would show a success toast here in a real app
-      console.log(`Successfully tracked event ${variables.eventId}`);
+      
+      // Show a success notification
+      toast.success(result.message || 'Event tracked!');
     },
     onError: (error) => {
-      // You would show an error toast here
-      console.error('Failed to track event:', error.message);
+      // Show an error notification
+      toast.error(error.message || 'Failed to track event.');
     },
   });
 
@@ -65,13 +66,16 @@ export function useEventTracking() {
       if (!user) throw new Error('User not authenticated.');
       return UserEventService.untrackEvent(user.id, variables.eventId);
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['trackedEvents', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['eventTrackingStatus', variables.eventId] });
-      console.log(`Successfully untracked event ${variables.eventId}`);
+      
+      // Show a success notification
+      toast.success(result.message || 'Event untracked.');
     },
     onError: (error) => {
-      console.error('Failed to untrack event:', error.message);
+      // Show an error notification
+      toast.error(error.message || 'Failed to untrack event.');
     },
   });
 
@@ -82,18 +86,21 @@ export function useEventTracking() {
       return UserEventService.bulkTrackEvents(user.id, variables.eventIds, variables.status);
     },
     onSuccess: (response) => {
-      // Only invalidate if at least one event was newly tracked.
       if (response.data && response.data.tracked > 0) {
         queryClient.invalidateQueries({ queryKey: ['trackedEvents', user?.id] });
+        // Show a specific success message for bulk actions
+        toast.success(`Successfully tracked ${response.data.tracked} new events!`);
+      } else {
+        // Show an informational message if nothing changed
+        toast.info('All selected events were already tracked.');
       }
-      console.log(response.message || 'Bulk track complete.');
     },
     onError: (error) => {
-      console.error('Failed to bulk track events:', error.message);
+      // Show an error notification for bulk actions
+      toast.error(error.message || 'Failed to bulk track events.');
     },
   });
 
-  // Combine loading states for a general purpose "something is happening" indicator.
   const isLoading = isTracking || isUntracking || isBulkTracking;
 
   return {
@@ -114,19 +121,16 @@ export function useTrackedEvents() {
   const { user } = useAuth();
 
   return useQuery<AppTrackedEvent[]>({
-    // A unique key for this data. TanStack Query uses this for caching.
-    // The query will automatically re-run if `user.id` changes.
     queryKey: ['trackedEvents', user?.id],
-    // The function that fetches the data. It MUST return a promise.
     queryFn: async () => {
-      if (!user) return []; // If no user, return empty array
+      if (!user) return [];
       const response = await UserEventService.getTrackedEvents(user.id);
       if (!response.success || !response.data) {
+        // Errors from queries are automatically caught by TanStack Query
         throw new Error(response.error || 'Failed to fetch tracked events');
       }
       return response.data;
     },
-    // This query will only run if `user` is not null.
     enabled: !!user,
   });
 }

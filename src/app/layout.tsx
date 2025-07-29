@@ -6,6 +6,8 @@ import "./styles/globals.css";
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
 import ClientLayout from "@/components/layout/ClientLayout";
+import { Toaster } from 'sonner';
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -17,7 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={inter.className}>
-        <QueryProvider> {/* Wrap everything */}
+        <Toaster position="bottom-right" richColors />
+        <QueryProvider>
           <AuthProvider>
             <ClientLayout>
               {children}

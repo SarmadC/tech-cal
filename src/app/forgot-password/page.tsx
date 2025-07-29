@@ -7,27 +7,42 @@ import { useMutation } from '@tanstack/react-query';
 import { AuthService } from '@/services/authService';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
 
     // --- MUTATION for sending the reset email ---
-    const { mutate: sendResetEmail, isPending, isSuccess, error, data: successData } = useMutation({
+    // FIX 1: Destructure all the properties we need: data, isPending, isSuccess, error
+    const { 
+        mutate: sendResetEmail, 
+        isPending, 
+        isSuccess, 
+        error, 
+        data: mutationData 
+    } = useMutation({
         mutationFn: (emailAddress: string) => AuthService.resetPassword(emailAddress),
         onSuccess: (result) => {
             if (!result.success) {
                 throw new Error(result.error || 'Failed to send reset email');
             }
-            setEmail(''); // Clear the form on success
+            toast.success(result.message || 'Password reset email sent!');
+            setEmail(''); // Clear the form
         },
+
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        // Basic validation can stay here
+        if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+            toast.error('Please enter a valid email address.');
+            return;
+        }
         sendResetEmail(email);
     };
 
-    const successMessage = successData?.success ? successData.message : '';
+    const successMessage = mutationData?.success ? mutationData.message : '';
 
     return (
         <ProtectedRoute allowUnauthenticated>
@@ -60,6 +75,7 @@ export default function ForgotPasswordPage() {
                                     <label htmlFor="email" className="block text-sm font-medium text-foreground-primary mb-2">Email address</label>
                                     <input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" placeholder="you@example.com" />
                                 </div>
+                                {/* FIX 5: `isPending` is now correctly defined */}
                                 <button type="submit" disabled={isPending} className="w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center disabled:opacity-50">
                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     {isPending ? 'Sending...' : 'Send reset email'}
