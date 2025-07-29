@@ -1,4 +1,4 @@
-// src/services/authService.ts (Corrected)
+// src/services/authService.ts
 import { supabase } from '@/lib/supabaseClient';
 import type {
     AuthResponse,
@@ -13,7 +13,6 @@ export class AuthService {
      */
     static async signIn(credentials: LoginForm): Promise<AuthResponse> {
         try {
-            // Note: 'data' is used here, so no change is needed.
             const { data, error } = await supabase.auth.signInWithPassword({
                 email: credentials.email,
                 password: credentials.password,
@@ -46,12 +45,12 @@ export class AuthService {
         }
     }
 
+
     /**
      * Sign up with email and password
      */
     static async signUp(data: SignupForm): Promise<AuthResponse> {
         try {
-            // ... (validation logic is fine)
             if (data.password !== data.confirmPassword) {
                 return { success: false, error: 'Passwords do not match' };
             }
@@ -62,7 +61,6 @@ export class AuthService {
                 return { success: false, error: 'You must accept the terms of service' };
             }
 
-            // Note: 'authData' is used here, so no change is needed.
             const { data: authData, error } = await supabase.auth.signUp({
                 email: data.email,
                 password: data.password,
@@ -108,12 +106,12 @@ export class AuthService {
         }
     }
 
+
     /**
      * Sign in with OAuth provider
      */
     static async signInWithOAuth(provider: OAuthProvider): Promise<AuthResponse> {
         try {
-            // FIX #1: Rename 'data' to '_data' since it's not used.
             const { data: _data, error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options: {
@@ -144,6 +142,7 @@ export class AuthService {
             };
         }
     }
+
 
     /**
      * Sign out current user
@@ -176,6 +175,7 @@ export class AuthService {
      * Send password reset email
      */
     static async resetPassword(email: string): Promise<AuthResponse> {
+
         try {
             if (!email || !email.includes('@')) {
                 return {
@@ -184,7 +184,6 @@ export class AuthService {
                 };
             }
 
-            // FIX #2: Rename 'data' to '_data' since it's not used.
             const { data: _data, error } = await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo: `${window.location.origin}/auth/reset-password`,
             });
@@ -209,42 +208,44 @@ export class AuthService {
         }
     }
 
+        static async setSessionFromTokens(accessToken: string, refreshToken: string): Promise<AuthResponse> {
+
+        try {
+            const { data, error } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+            });
+
+            if (error) throw error;
+            if (!data.session) throw new Error('Unable to verify reset link.');
+
+            return { success: true };
+        } catch (err) {
+            console.error('Set session error:', err);
+            // Re-throwing is better for useQuery than returning a failure object
+            throw new Error(err instanceof Error ? err.message : 'Invalid or expired reset link.');
+        }
+    }    
+
     /**
      * Update user password
      */
-    static async updatePassword(newPassword: string): Promise<AuthResponse> {
+    static async updateUserPassword(newPassword: string): Promise<AuthResponse> {
         try {
             if (newPassword.length < 8) {
-                return {
-                    success: false,
-                    error: 'Password must be at least 8 characters long'
-                };
+                throw new Error('Password must be at least 8 characters long.');
             }
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
 
-            // FIX #3: Rename 'data' to '_data' since it's not used.
-            const { data: _data, error } = await supabase.auth.updateUser({
-                password: newPassword
-            });
-
-            if (error) {
-                return {
-                    success: false,
-                    error: this.getReadableErrorMessage(error.message)
-                };
-            }
-
-            return {
-                success: true,
-                message: 'Password updated successfully'
-            };
-        } catch (error) {
-            console.error('Password update error:', error);
-            return {
-                success: false,
-                error: 'An error occurred while updating your password'
-            };
+            if (error) throw error;
+            return { success: true, message: 'Password updated successfully!' };
+        } catch (err) {
+            console.error('Password update error:', err);
+            const friendlyError = this.getReadableErrorMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
+            throw new Error(friendlyError);
         }
     }
+
 
     /**
      * Update user email
@@ -258,7 +259,6 @@ export class AuthService {
                 };
             }
 
-            // FIX #4: Rename 'data' to '_data' since it's not used.
             const { data: _data, error } = await supabase.auth.updateUser({
                 email: newEmail
             });

@@ -4,24 +4,23 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query'; // 1. Import useQuery
+import { useQuery } from '@tanstack/react-query'; // Import useQuery
 
-// 2. Import services directly. We will call them from our useQuery hooks.
+// Import services directly to be used within useQuery.
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { UserEventService } from '@/services/userEventService';
 
-// Import UI and Icon components (no changes here)
+// UI and Icon components (no changes here)
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowUpRight, Calendar, TrendingUp, Clock, Star, Target, Users, Zap, BookOpen, Award, MapPin, Bell, ChevronRight, Sparkles, Activity, Plus } from 'lucide-react';
 
-// Import App types (no changes here)
+// App types (no changes here)
 import { AppEvent, AppEventType, AppTrackedEvent } from '@/types';
 
-// PersonalInsight type (no changes here)
 type PersonalInsight = {
     title: string;
     value: string | number;
@@ -33,7 +32,6 @@ type PersonalInsight = {
 
 export default function EnhancedDashboard() {
     const { user, profile } = useAuth();
-    // The greeting logic is pure client-side UI state, so it remains.
     const [greeting, setGreeting] = useState('');
 
     useEffect(() => {
@@ -44,27 +42,19 @@ export default function EnhancedDashboard() {
         else setGreeting(`Good evening, ${name}!`);
     }, [profile, user]);
 
-    // 3. REMOVED: All useState and useEffect hooks for data fetching are gone.
-    // const [trackedEvents, setTrackedEvents] = useState(...);
-    // const [upcomingEvents, setUpcomingEvents] = useState(...);
-    // const [eventTypes, setEventTypes] = useState(...);
-    // const [loading, setLoading] = useState(true);
-    // useEffect(() => { ... }, []);
+    // --- QUERIES for Data Fetching ---
 
-    // 4. ADDED: Three declarative useQuery hooks to manage our data.
-    // They handle loading, error, and data states for us.
-
-    // Query for the user's tracked events.
+    // Query 1: Get the user's tracked events.
     const { data: trackedEvents = [], isLoading: isLoadingTracked } = useQuery<AppTrackedEvent[]>({
         queryKey: ['trackedEvents', user?.id],
         queryFn: async () => {
             const response = await UserEventService.getTrackedEvents(user!.id);
             return response.data || [];
         },
-        enabled: !!user, // This query will only run when the user is authenticated.
+        enabled: !!user, // Only run this query when the user is authenticated.
     });
 
-    // Query for all event types. This data is fairly static and will be cached effectively.
+    // Query 2: Get all event types. This is cached effectively.
     const { data: eventTypes = [], isLoading: isLoadingTypes } = useQuery<AppEventType[]>({
         queryKey: ['eventTypes'],
         queryFn: async () => {
@@ -73,25 +63,24 @@ export default function EnhancedDashboard() {
         },
     });
 
-    // Query for upcoming events for the "Recommended" section.
+    // Query 3: Get upcoming events for the "Recommended" section.
     const { data: upcomingEvents = [], isLoading: isLoadingUpcoming } = useQuery<AppEvent[]>({
         queryKey: ['dashboardUpcomingEvents'],
         queryFn: async () => {
             const response = await EventService.getEvents({ startDate: new Date() });
-            // The original logic limited this, so we keep that transformation here.
             return (response.data || []).slice(0, 10);
         },
     });
 
-    // 5. Create a unified loading state from all queries.
+    // A single, unified loading state derived from all queries.
     const isLoading = isLoadingTracked || isLoadingTypes || isLoadingUpcoming;
 
+    // --- MEMOIZED COMPUTATIONS ---
+    // These hooks now automatically react to data changes from useQuery. No logic changes needed.
 
-    // 6. All your `useMemo` hooks will now work automatically with the data from useQuery.
-    //    No changes are needed in their logic because the variable names are the same.
     const insights = useMemo((): PersonalInsight[] => {
         if (!trackedEvents.length || !eventTypes.length) return [];
-        
+        // ... (logic is correct and remains unchanged)
         const now = new Date();
         const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -132,7 +121,6 @@ export default function EnhancedDashboard() {
     const quickStats = useMemo(() => {
         const totalTracked = trackedEvents.length;
         const totalAttended = trackedEvents.filter(te => te.status === 'attended').length;
-        // Get total events that were actionable (bookmarked or attended).
         const totalActionable = trackedEvents.filter(te => te.status === 'attended' || te.status === 'bookmarked').length;
         return { 
             totalTracked, 
@@ -141,7 +129,6 @@ export default function EnhancedDashboard() {
         };
     }, [trackedEvents]);
 
-    // Helper functions remain unchanged
     const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     const formatDateShort = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -163,8 +150,6 @@ export default function EnhancedDashboard() {
         );
     }
 
-    // 8. The entire return statement for the UI remains THE SAME.
-    //    It now automatically receives fresh, cached data from TanStack Query.
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
             <div className="max-w-7xl mx-auto p-6 space-y-8">

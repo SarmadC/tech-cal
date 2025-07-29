@@ -1,66 +1,61 @@
 // src/app/auth/callback/page.tsx
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, initialized, loading } = useAuth();
+  
+  // Local state for UI feedback, separate from the AuthContext's state
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing authentication...');
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
-      try {
-        // Handle the OAuth callback
-        const { data, error } = await supabase.auth.getSession();
-
-        if (error) {
-          console.error('Auth callback error:', error);
-          setStatus('error');
-          setMessage(error.message || 'Authentication failed');
-          
-          // Redirect to login after a delay
-          setTimeout(() => {
-            router.push('/login?error=auth_callback_failed');
-          }, 3000);
-          return;
-        }
-
-        if (data.session) {
-          setStatus('success');
-          setMessage('Authentication successful! Redirecting...');
-          
-          // Redirect to dashboard or intended destination
-          const redirectTo = searchParams.get('redirect_to') || '/dashboard';
-          setTimeout(() => {
-            router.push(redirectTo);
-          }, 1500);
-        } else {
-          setStatus('error');
-          setMessage('No session found. Please try signing in again.');
-          
-          setTimeout(() => {
-            router.push('/login');
-          }, 3000);
-        }
-      } catch (error) {
-        console.error('Unexpected error in auth callback:', error);
+    // This effect runs whenever the auth state from our context changes.
+    // We wait until the AuthProvider is initialized and no longer loading.
+    if (initialized && !loading) {
+      if (user) {
+        // SUCCESS: The AuthContext has a user!
+        setStatus('success');
+        setMessage('Authentication successful! Redirecting...');
+        
+        const redirectTo = searchParams.get('redirect_to') || '/dashboard';
+        setTimeout(() => {
+          router.push(redirectTo);
+        }, 1500); // A short delay to show the success message
+      } else {
+        // ERROR: The AuthContext finished loading but there's no user.
+        // This means the OAuth flow failed.
         setStatus('error');
-        setMessage('An unexpected error occurred. Please try again.');
+        setMessage('Authentication failed. Please try signing in again.');
         
         setTimeout(() => {
-          router.push('/login');
-        }, 3000);
+          router.push('/login?error=auth_callback_failed');
+        }, 3000); // A longer delay to let the user read the error
       }
-    };
+    }
+  }, [user, initialized, loading, router, searchParams]);
 
-    handleAuthCallback();
-  }, [router, searchParams]);
+  // A failsafe timeout. If the auth context doesn't resolve after ~10 seconds,
+  // something is wrong. Redirect the user back to login.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (status === 'loading') {
+        setStatus('error');
+        setMessage('Authentication timed out. Please try again.');
+        router.push('/login?error=auth_timeout');
+      }
+    }, 10000); // 10-second timeout
 
+    return () => clearTimeout(timeoutId);
+  }, [status, router]);
+
+  // The JSX for rendering the status remains the same as your original code,
+  // as it's already very good!
   return (
     <div className="min-h-screen bg-background-main flex items-center justify-center">
       <div className="max-w-md w-full text-center p-8">
