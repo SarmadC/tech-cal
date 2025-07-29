@@ -1,109 +1,156 @@
 // src/hooks/useEventTracking.ts
-'use client';
-import { useState, useCallback } from 'react';
+'use-client';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { UserEventService } from '@/services/userEventService';
 import type { AppTrackedEvent, EventStatus } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-interface TrackingResult {
-    success: boolean;
-    error?: string;
-    message?: string;
-}
+// --- Type Definitions for our Mutations ---
 
-export type TrackedEvent = AppTrackedEvent;
+type TrackEventVariables = {
+  eventId: string;
+  status: EventStatus;
+  notes?: string;
+};
+
+type UntrackEventVariables = {
+  eventId: string;
+};
+
+type BulkTrackEventsVariables = {
+  eventIds: string[];
+  status?: EventStatus;
+};
+
+// --- Main Hook for Write Operations (Mutations) ---
 
 /**
- * A hook for managing all user-event tracking interactions.
- * It acts as a thin wrapper around the UserEventService.
+ * A hook for managing all user-event tracking write operations (create, update, delete).
+ * Leverages TanStack Query's `useMutation` for robust server-side updates and automatic
+ * UI refetching.
  */
 export function useEventTracking() {
-    const { user } = useAuth();
-    const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-    // The implementation of all these functions remains the same.
-    const trackEvent = useCallback(async (
-        eventId: string,
-        status: EventStatus = 'bookmarked',
-        notes?: string
-    ): Promise<TrackingResult> => {
-        if (!user) return { success: false, error: 'User not authenticated' };
+  // --- MUTATION: Track a single event ---
+  const { mutate: trackEvent, isPending: isTracking } = useMutation({
+    mutationFn: (variables: TrackEventVariables) => {
+      if (!user) throw new Error('User not authenticated.');
+      return UserEventService.trackEvent(
+        user.id,
+        variables.eventId,
+        variables.status,
+        variables.notes
+      );
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate queries to trigger a refetch and update the UI automatically.
+      // This ensures the dashboard list and the specific event's status are updated.
+      queryClient.invalidateQueries({ queryKey: ['trackedEvents', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['eventTrackingStatus', variables.eventId] });
+      // You would show a success toast here in a real app
+      console.log(`Successfully tracked event ${variables.eventId}`);
+    },
+    onError: (error) => {
+      // You would show an error toast here
+      console.error('Failed to track event:', error.message);
+    },
+  });
 
-        setLoading(true);
-        const response = await UserEventService.trackEvent(user.id, eventId, status, notes);
-        setLoading(false);
+  // --- MUTATION: Untrack a single event ---
+  const { mutate: untrackEvent, isPending: isUntracking } = useMutation({
+    mutationFn: (variables: UntrackEventVariables) => {
+      if (!user) throw new Error('User not authenticated.');
+      return UserEventService.untrackEvent(user.id, variables.eventId);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['trackedEvents', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['eventTrackingStatus', variables.eventId] });
+      console.log(`Successfully untracked event ${variables.eventId}`);
+    },
+    onError: (error) => {
+      console.error('Failed to untrack event:', error.message);
+    },
+  });
 
-        return response;
-    }, [user]);
+  // --- MUTATION: Bulk track multiple events ---
+  const { mutate: bulkTrackEvents, isPending: isBulkTracking } = useMutation({
+    mutationFn: (variables: BulkTrackEventsVariables) => {
+      if (!user) throw new Error('User not authenticated.');
+      return UserEventService.bulkTrackEvents(user.id, variables.eventIds, variables.status);
+    },
+    onSuccess: (response) => {
+      // Only invalidate if at least one event was newly tracked.
+      if (response.data && response.data.tracked > 0) {
+        queryClient.invalidateQueries({ queryKey: ['trackedEvents', user?.id] });
+      }
+      console.log(response.message || 'Bulk track complete.');
+    },
+    onError: (error) => {
+      console.error('Failed to bulk track events:', error.message);
+    },
+  });
 
-    const untrackEvent = useCallback(async (eventId: string): Promise<TrackingResult> => {
-        if (!user) return { success: false, error: 'User not authenticated' };
+  // Combine loading states for a general purpose "something is happening" indicator.
+  const isLoading = isTracking || isUntracking || isBulkTracking;
 
-        setLoading(true);
-        const response = await UserEventService.untrackEvent(user.id, eventId);
-        setLoading(false);
+  return {
+    trackEvent,
+    untrackEvent,
+    bulkTrackEvents,
+    isLoading,
+  };
+}
 
-        return response;
-    }, [user]);
+// --- Hook for Reading All Tracked Events ---
 
-    // FIX: The return type `Promise<TrackedEvent[]>` now works correctly because
-    // `TrackedEvent` is a known alias for `AppTrackedEvent`.
-    const getTrackedEvents = useCallback(async (): Promise<TrackedEvent[]> => {
-        if (!user) return [];
+/**
+ * A hook for fetching all events tracked by the current user.
+ * Uses TanStack Query's `useQuery` for caching, background refetching, and more.
+ */
+export function useTrackedEvents() {
+  const { user } = useAuth();
 
-        setLoading(true);
-        const response = await UserEventService.getTrackedEvents(user.id);
-        setLoading(false);
+  return useQuery<AppTrackedEvent[]>({
+    // A unique key for this data. TanStack Query uses this for caching.
+    // The query will automatically re-run if `user.id` changes.
+    queryKey: ['trackedEvents', user?.id],
+    // The function that fetches the data. It MUST return a promise.
+    queryFn: async () => {
+      if (!user) return []; // If no user, return empty array
+      const response = await UserEventService.getTrackedEvents(user.id);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to fetch tracked events');
+      }
+      return response.data;
+    },
+    // This query will only run if `user` is not null.
+    enabled: !!user,
+  });
+}
 
-        if (response.success && response.data) {
-            return response.data;
-        }
+// --- Hook for Reading a Single Event's Tracking Status ---
 
-        if (!response.success) {
-            console.error("Failed to get tracked events:", response.error);
-        }
+/**
+ * A hook for checking if a *specific* event is tracked by the user.
+ * Ideal for use in an event card or event detail panel.
+ * @param eventId The ID of the event to check.
+ */
+export function useEventTrackingStatus(eventId: string | undefined) {
+  const { user } = useAuth();
 
-        return [];
-    }, [user]);
-
-    const isEventTracked = useCallback(async (eventId: string): Promise<{
-        isTracked: boolean;
-        status?: EventStatus;
-    }> => {
-        if (!user) return { isTracked: false };
-
-        const response = await UserEventService.isEventTracked(user.id, eventId);
-
-        if (response.success && response.data) {
-            return response.data;
-        }
-
-        return { isTracked: false };
-    }, [user]);
-
-    const bulkTrackEvents = useCallback(async (
-        eventIds: string[],
-        status: EventStatus = 'bookmarked'
-    ): Promise<TrackingResult> => {
-        if (!user) return { success: false, error: 'User not authenticated' };
-
-        setLoading(true);
-        const response = await UserEventService.bulkTrackEvents(user.id, eventIds, status);
-        setLoading(false);
-
-        return {
-            success: response.success,
-            message: response.message,
-            error: response.error
-        };
-    }, [user]);
-
-    return {
-        trackEvent,
-        untrackEvent,
-        getTrackedEvents,
-        isEventTracked,
-        bulkTrackEvents,
-        loading,
-    };
+  return useQuery({
+    queryKey: ['eventTrackingStatus', eventId, user?.id],
+    queryFn: async () => {
+      if (!user || !eventId) return { isTracked: false };
+      const response = await UserEventService.isEventTracked(user.id, eventId);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to check event status');
+      }
+      return response.data;
+    },
+    enabled: !!user && !!eventId,
+  });
 }
