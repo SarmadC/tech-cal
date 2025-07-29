@@ -1,59 +1,63 @@
-// src/app/calendar/page.tsx (Final Corrected Version)
+// src/app/calendar/page.tsx (Refactored to use Services)
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 import CalendarClientView from './CalendarClientView';
-import { AppEvent, AppEventType, SupabaseEvent, SupabaseEventType } from '@/types';
-import { mapSupabaseEventToAppEvent, mapSupabaseEventTypeToAppEventType } from '@/lib/dataMapper';
+// The service layer is now the primary way to interact with data
+import { EventService } from '@/services/eventServices';
+import { EventTypeService } from '@/services/eventTypeService';
+import { profileTransformer } from '@/utils/transformers'; // To map the profile
+import { AppProfile } from '@/types'; // Import the AppProfile type
 
-// Helper function for server-side data fetching
-async function getInitialCalendarData(supabaseClient: SupabaseClient): Promise<{ initialEvents: AppEvent[], initialCategories: AppEventType[] }> {
-    const [
-        { data: eventTypesData, error: eventTypesError },
-        { data: eventsData, error: eventsError },
-    ] = await Promise.all([
-        supabaseClient.from('event_type').select('*').order('name'),
-        supabaseClient.from('events').select('*').order('start_time', { ascending: true }),
-    ]);
-
-    if (eventTypesError || eventsError) {
-        console.error('Error fetching initial data:', eventTypesError || eventsError);
-        return { initialEvents: [], initialCategories: [] };
-    }
-
-    const mappedEvents = (eventsData as SupabaseEvent[] || []).map(mapSupabaseEventToAppEvent);
-    const mappedEventTypes = (eventTypesData as SupabaseEventType[] || []).map(cat => ({
-        ...mapSupabaseEventTypeToAppEventType(cat),
-        eventCount: (eventsData as SupabaseEvent[])?.filter(e => e.event_type_id === cat.id).length || 0,
-    }));
-
-    return { initialEvents: mappedEvents, initialCategories: mappedEventTypes };
-}
-
+// The helper function is no longer needed here, as the logic now lives in the services.
 
 // The page itself is an async Server Component
 export default async function KureCalendarPage() {
     const cookieStore = cookies();
     const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
+    // 1. Check authentication on the server
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !session.user) {
         redirect('/login');
     }
 
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+    // 2. Fetch all initial data in parallel using our new services
+    const [eventsResponse, categoriesResponse, profileResponse] = await Promise.all([
+        EventService.getEvents(), // Gets all events, already enriched
+        EventTypeService.getEventTypesWithCounts(), // Gets categories with counts
+        supabase.from('profiles').select('*').eq('id', session.user.id).single(), // Fetch raw profile
+    ]);
 
-    // 2. Fetch initial data on the server
-    const { initialEvents, initialCategories } = await getInitialCalendarData(supabase);
+    // Handle potential errors from data fetching
+    if (!eventsResponse.success || !categoriesResponse.success || profileResponse.error) {
+        // You can render a dedicated error component here for a better user experience
+        console.error("Failed to load initial calendar data:",
+            eventsResponse.error || categoriesResponse.error || profileResponse.error
+        );
+        // For now, we'll pass empty arrays to prevent a crash.
+        return (
+            <CalendarClientView
+                initialEvents={[]}
+                initialCategories={[]}
+                profile={null}
+            />
+        );
+    }
 
-    // 3. Pass all necessary data as props to the Client Component
+    // Transform the raw profile data into the AppProfile shape
+    const profile: AppProfile | null = profileResponse.data
+        ? profileTransformer.toApp(profileResponse.data)
+        : null;
+
+
+    // 3. Pass the clean, application-ready data as props to the Client Component
     return (
         <CalendarClientView
-            initialEvents={initialEvents}
-            initialCategories={initialCategories}
+            initialEvents={eventsResponse.data || []}
+            initialCategories={categoriesResponse.data || []}
             profile={profile}
         />
     );

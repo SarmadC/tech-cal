@@ -3,12 +3,15 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserEventService } from '@/services/userEventService';
-import type { AppTrackedEvent as TrackedEvent, EventStatus } from '@/types';
+import type { AppTrackedEvent, EventStatus } from '@/types';
+
 interface TrackingResult {
     success: boolean;
     error?: string;
     message?: string;
 }
+
+export type TrackedEvent = AppTrackedEvent;
 
 /**
  * A hook for managing all user-event tracking interactions.

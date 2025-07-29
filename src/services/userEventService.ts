@@ -1,4 +1,3 @@
-// src/services/userEventService.ts
 
 import { supabase } from '@/lib/supabaseClient';
 import type {
@@ -8,12 +7,11 @@ import type {
     SupabaseTrackedEventWithDetails,
 } from '@/types';
 
-// Import the specific transformer we need for this service.
 import { trackedEventTransformer } from '@/utils/transformers';
 
 export class UserEventService {
     /**
-     * Creates or updates a tracking record for an event for a specific user.
+     * Track an event for a user
      */
     static async trackEvent(
         userId: string,
@@ -22,40 +20,61 @@ export class UserEventService {
         notes?: string
     ): Promise<ApiResponse<void>> {
         try {
-            // First, check if a record already exists.
+            // Check if already tracked
             const { data: existing } = await supabase
                 .from('user_events')
-                .select('id')
+                .select('id, status')
                 .eq('user_id', userId)
                 .eq('event_id', eventId)
                 .single();
 
             if (existing) {
-                // If it exists, update it.
+                // Update existing
                 const { error } = await supabase
                     .from('user_events')
-                    .update({ status, notes, updated_at: new Date().toISOString() })
+                    .update({
+                        status,
+                        notes,
+                        created_at: new Date().toISOString() // Update timestamp
+                    })
                     .eq('id', existing.id);
 
                 if (error) throw error;
-                return { success: true, message: `Event status updated to ${status}` };
+
+                return {
+                    success: true,
+                    message: `Event status updated to ${status}`
+                };
             } else {
-                // If not, create a new record.
+                // Create new
                 const { error } = await supabase
                     .from('user_events')
-                    .insert({ user_id: userId, event_id: eventId, status, notes });
+                    .insert({
+                        user_id: userId,
+                        event_id: eventId,
+                        status,
+                        notes,
+                        created_at: new Date().toISOString()
+                    });
 
                 if (error) throw error;
-                return { success: true, message: 'Event tracked successfully!' };
+
+                return {
+                    success: true,
+                    message: 'Event tracked successfully!'
+                };
             }
         } catch (error) {
             console.error('Error tracking event:', error);
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to track event' };
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to track event'
+            };
         }
     }
 
     /**
-     * Deletes a tracking record for an event for a specific user.
+     * Untrack an event
      */
     static async untrackEvent(userId: string, eventId: string): Promise<ApiResponse<void>> {
         try {
@@ -66,35 +85,31 @@ export class UserEventService {
                 .eq('event_id', eventId);
 
             if (error) throw error;
+
             return { success: true, message: 'Event untracked successfully!' };
         } catch (error) {
             console.error('Error untracking event:', error);
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to untrack event' };
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to untrack event'
+            };
         }
     }
 
     /**
-     * Fetches all of a user's tracked events, joining the full event and event_type details.
+     * Get user's tracked events with full event data
      */
     static async getTrackedEvents(userId: string): Promise<ApiResponse<AppTrackedEvent[]>> {
         try {
             const { data, error } = await supabase
                 .from('user_events')
-                .select(`
-                    *,
-                    events (
-                        *,
-                        event_type:event_type_id (*)
-                    )
-                `)
+                .select(`*, events (*, event_type:event_type_id (*))`)
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-
-            // Use our robust transformer to map the complex, nested data.
-            // The 'as' cast is safe here because our select() query guarantees this shape.
             const trackedEvents = (data as SupabaseTrackedEventWithDetails[] || []).map(trackedEventTransformer.toApp);
+
             return { success: true, data: trackedEvents };
         } catch (error) {
             console.error('Error fetching tracked events:', error);
@@ -102,8 +117,9 @@ export class UserEventService {
         }
     }
 
+
     /**
-     * Checks if a single event is tracked by a user and returns its status if it is.
+     * Check if event is tracked by user
      */
     static async isEventTracked(
         userId: string,
@@ -117,7 +133,6 @@ export class UserEventService {
                 .eq('event_id', eventId)
                 .single();
 
-            // Supabase returns error PGRST116 if no row is found, which is not a real error for us.
             if (error && error.code !== 'PGRST116') throw error;
 
             return {
@@ -129,12 +144,15 @@ export class UserEventService {
             };
         } catch (error) {
             console.error('Error checking event tracking status:', error);
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to check tracking status' };
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to check tracking status'
+            };
         }
     }
 
     /**
-     * Efficiently tracks multiple events, skipping any that are already tracked.
+     * Bulk track multiple events
      */
     static async bulkTrackEvents(
         userId: string,
@@ -142,6 +160,7 @@ export class UserEventService {
         status: EventStatus = 'bookmarked'
     ): Promise<ApiResponse<{ tracked: number; skipped: number }>> {
         try {
+            // Check which events are already tracked
             const { data: existing } = await supabase
                 .from('user_events')
                 .select('event_id')
@@ -155,7 +174,7 @@ export class UserEventService {
                 return {
                     success: true,
                     data: { tracked: 0, skipped: eventIds.length },
-                    message: 'All selected events are already tracked'
+                    message: 'All events are already tracked'
                 };
             }
 
@@ -163,9 +182,13 @@ export class UserEventService {
                 user_id: userId,
                 event_id: eventId,
                 status,
+                created_at: new Date().toISOString()
             }));
 
-            const { error } = await supabase.from('user_events').insert(insertData);
+            const { error } = await supabase
+                .from('user_events')
+                .insert(insertData);
+
             if (error) throw error;
 
             return {
@@ -174,11 +197,14 @@ export class UserEventService {
                     tracked: newEventIds.length,
                     skipped: existingEventIds.size
                 },
-                message: `Successfully tracked ${newEventIds.length} new events!`
+                message: `Successfully tracked ${newEventIds.length} events!`
             };
         } catch (error) {
             console.error('Error bulk tracking events:', error);
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to track events' };
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to track events'
+            };
         }
     }
 }

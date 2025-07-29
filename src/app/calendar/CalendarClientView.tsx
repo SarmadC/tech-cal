@@ -1,4 +1,4 @@
-// src/app/calendar/CalendarClientView.tsx (Final Version)
+// src/app/calendar/CalendarClientView.tsx
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -6,16 +6,14 @@ import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
-// FIX: The 'User' import is now removed as it's no longer used.
-// import { User } from '@supabase/supabase-js'; 
 
-// Import our newly refactored components
+
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel';
 import CustomEventContent from '@/components/calendar/CustomEventContent';
 
-import { AppEvent, AppEventType } from '@/types';
+import { AppEvent, AppEventType, AppProfile } from '@/types';
 import { useEventTracking, TrackedEvent } from '@/hooks/useEventTracking';
 import Loading from '@/components/Loading';
 
@@ -23,7 +21,7 @@ import Loading from '@/components/Loading';
 interface CalendarClientViewProps {
     initialEvents: AppEvent[];
     initialCategories: AppEventType[];
-    profile: { full_name: string; role: string } | null;
+    profile: AppProfile | null;
 }
 
 type CalendarViewType = 'month' | 'week' | 'day';
@@ -128,10 +126,14 @@ export default function CalendarClientView({
                 selectedCategories={selectedCategories}
                 setSelectedCategories={setSelectedCategories}
                 nextUpcomingEvent={nextUpcomingEvent}
-                user={{ name: profile?.full_name || 'Kure-Cal User', role: 'Product Designer' }}
+                user={{
+                    name: profile?.fullName || 'Kure-Cal User',
+                    // Note: 'role' doesn't seem to be part of your AppProfile.
+                    // We'll default it for now. You might want to add 'role' to your profiles table later.
+                    role: 'Product Designer'
+                }}
                 events={filteredEvents}
             />
-
             <main className="flex-1 flex flex-col">
                 <CalendarHeader
                     currentDate={currentDate}

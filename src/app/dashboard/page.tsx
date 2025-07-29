@@ -1,27 +1,26 @@
+// src/app/dashboard/page.tsx (Refactored)
 'use client';
-
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEventTracking, TrackedEvent } from '@/hooks/useEventTracking';
-import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
-import {
-    Card, CardContent, CardDescription, CardHeader, CardTitle,
-} from '@/components/ui/card';
+
+// Import the new services
+import { EventService } from '@/services/eventServices';
+import { EventTypeService } from '@/services/eventTypeService';
+
+// Import UI components
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-    ArrowUpRight, Calendar, TrendingUp, Clock, Star, Target, Users, Zap,
-    BookOpen, Award, MapPin, Bell, ChevronRight, Sparkles, Activity, Plus
-} from 'lucide-react';
+import { ArrowUpRight, Calendar, TrendingUp, Clock, Star, Target, Users, Zap, BookOpen, Award, MapPin, Bell, ChevronRight, Sparkles, Activity, Plus } from 'lucide-react';
 
-// --- Type Imports ---
-import { AppEvent, AppEventType, SupabaseEvent, SupabaseEventType } from '@/types';
-import { mapSupabaseEventToAppEvent, mapSupabaseEventTypeToAppEventType } from '@/lib/dataMapper';
+// Import the App types we need
+import { AppEvent, AppEventType } from '@/types';
 
-// Local Type for this component's UI
+// This local type is fine
 type PersonalInsight = {
     title: string;
     value: string | number;
@@ -42,7 +41,8 @@ export default function EnhancedDashboard() {
 
     useEffect(() => {
         const hour = new Date().getHours();
-        const name = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
+        // FIX: Use the camelCase 'fullName' from the AppProfile type
+        const name = profile?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
         if (hour < 12) setGreeting(`Good morning, ${name}!`);
         else if (hour < 17) setGreeting(`Good afternoon, ${name}!`);
         else setGreeting(`Good evening, ${name}!`);
@@ -56,18 +56,28 @@ export default function EnhancedDashboard() {
             }
             try {
                 setLoading(true);
-                const [tracked, eventTypesData, upcomingData] = await Promise.all([
-                    getTrackedEvents(),
-                    supabase.from('event_type').select('*'),
-                    supabase.from('events').select('*').gte('start_time', new Date().toISOString()).order('start_time', { ascending: true }).limit(10)
+                // FIX: Use the service layer instead of direct supabase calls
+                const [trackedResponse, eventTypesResponse, upcomingResponse] = await Promise.all([
+                    getTrackedEvents(), // This already returns AppTrackedEvent[]
+                    EventTypeService.getEventTypes(),
+                    EventService.getEvents({
+                        startDate: new Date(),
+                        // You might want to define an end date or limit
+                    })
                 ]);
 
-                const mappedEventTypes = (eventTypesData.data as SupabaseEventType[] || []).map(mapSupabaseEventTypeToAppEventType);
-                const mappedUpcomingEvents = (upcomingData.data as SupabaseEvent[] || []).map(mapSupabaseEventToAppEvent);
+                // Set state from the service responses
+                setTrackedEvents(trackedResponse);
 
-                setTrackedEvents(tracked);
-                setEventTypes(mappedEventTypes);
-                setUpcomingEvents(mappedUpcomingEvents);
+                if (eventTypesResponse.success && eventTypesResponse.data) {
+                    setEventTypes(eventTypesResponse.data);
+                }
+
+                if (upcomingResponse.success && upcomingResponse.data) {
+                    // Limit to 10 for the "recommended" section
+                    setUpcomingEvents(upcomingResponse.data.slice(0, 10));
+                }
+
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
             } finally {
@@ -78,7 +88,8 @@ export default function EnhancedDashboard() {
     }, [user, getTrackedEvents]);
 
     const insights = useMemo((): PersonalInsight[] => {
-        if (!trackedEvents.length) return [];
+        if (!trackedEvents.length || !eventTypes.length) return [];
+        // ... (This logic is now type-safe and correct)
         const now = new Date();
         const thisWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
