@@ -1,16 +1,17 @@
-// src/components/calendar/EventActions.tsx
-'use client';
+// src/components/calendar/EventActions.tsx (No changes needed, but for confirmation)
 
+'use client';
 import { FC } from 'react';
 import { Calendar as CalendarIcon, Share2 } from 'lucide-react';
 import { AppEvent } from '@/types';
-import { useEventActions } from '@/hooks/useEventActions'; // Import the new hook
+import { useEventActions } from '@/hooks/useEventActions';
 
 interface EventActionsProps {
     event: AppEvent;
 }
 
 const EventActions: FC<EventActionsProps> = ({ event }) => {
+    // The hook is now simpler to use. It doesn't return any state.
     const { handleShare, googleCalendarLink, handleIcsDownload } = useEventActions(event);
 
     return (
