@@ -96,7 +96,7 @@ const SuccessDisplay = () => (
             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
         </div>
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-            Your password has been successfully updated! You're now signed in.
+            Your password has been successfully updated! You are now signed in.
         </div>
         <p className="text-sm text-foreground-secondary">Redirecting to your dashboard...</p>
         <Link href="/dashboard" className="w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-all inline-block">

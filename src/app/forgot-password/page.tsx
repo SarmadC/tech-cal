@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
                                 </div>
                                 <div className="text-sm text-foreground-secondary space-y-2">
                                     <p>Click the link in the email to reset your password. The link will expire in 1 hour for security reasons.</p>
-                                    <p>Don't see the email? Check your spam folder.</p>
+                                    <p>Don`&apos;`t see the email? Check your spam folder.</p>
                                 </div>
                                 <div className="space-y-3">
                                     <Link href="/login" className="w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-all inline-block text-center">

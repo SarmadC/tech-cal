@@ -8,7 +8,6 @@ import { useMutation } from '@tanstack/react-query';
 import { AuthService } from '@/services/authService';
 import { LoginForm, OAuthProvider } from '@/types';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
-import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -80,7 +79,7 @@ export default function LoginPage() {
                         </Link>
                         <h2 className="mt-6 text-3xl font-bold text-foreground-primary">Welcome back</h2>
                         <p className="mt-2 text-sm text-foreground-secondary">
-                            Don't have an account?{' '}
+                            Don`&apos;`t have an account?{' '}
                             <Link href="/signup" className="font-medium text-accent-primary hover:text-accent-primary-hover">
                                 Sign up free
                             </Link>

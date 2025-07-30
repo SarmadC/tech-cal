@@ -226,7 +226,7 @@ export default function EnhancedDashboard() {
                                                     <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{formatDate(trackedEvent.event?.startTime || '')}</span>
                                                     <span className="flex items-center gap-1"><Users className="w-4 h-4" />{trackedEvent.event?.organizer}</span>
                                                 </div>
-                                                {trackedEvent.notes && (<p className="text-sm text-gray-500 mt-2 italic">`"`{trackedEvent.notes}`"`</p>)}
+                                                {trackedEvent.notes && (<p className="text-sm text-gray-500 mt-2 italic">`&quot;`{trackedEvent.notes}`&quot;`</p>)}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Badge variant={trackedEvent.status === 'attending' ? 'default' : trackedEvent.status === 'bookmarked' ? 'secondary' : 'outline'}>{trackedEvent.status}</Badge>
