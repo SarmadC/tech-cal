@@ -1,20 +1,26 @@
 // src/app/calendar/CalendarClientView.tsx
 'use client';
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
+import { useQuery } from '@tanstack/react-query';
+
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel';
 import CustomEventContent from '@/components/calendar/CustomEventContent';
-import { AppEvent, AppEventType, AppProfile, AppTrackedEvent } from '@/types';
-import { useTrackedEvents } from '@/hooks/useEventTracking';
 import Loading from '@/components/Loading';
 
-// Define props to receive data from the server
+import { AppEvent, AppEventType, AppProfile } from '@/types';
+import { useTrackedEvents } from '@/hooks/useEventTracking';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useFilters } from '@/hooks/useFilters';
+import { EventService } from '@/services/eventServices';
+
+// --- Prop Definitions ---
 interface CalendarClientViewProps {
     initialEvents: AppEvent[];
     initialCategories: AppEventType[];
@@ -29,60 +35,80 @@ const viewMap: { [key: string]: string } = {
     month: 'dayGridMonth',
 };
 
+// --- Main Component ---
 export default function CalendarClientView({
     initialEvents,
     initialCategories,
     profile,
 }: CalendarClientViewProps) {
-    // 👇 FIX #3: Use the new `useTrackedEvents` query hook
-    // It handles fetching, loading, and error states for us.
-    const { data: trackedEvents, isLoading: isLoadingTracked } = useTrackedEvents();
-
-    // Server-side props are still used for the initial display
-    const [events, _setEvents] = useState<AppEvent[]>(initialEvents);
-    const [categories, _setCategories] = useState<AppEventType[]>(initialCategories);
-
-    // Local UI state remains the same
+    // --- State & Refs ---
+    const calendarRef = useRef<FullCalendar>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<CalendarViewType>('week');
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
-    const [selectedCategories, setSelectedCategories] = useState<Set<string>>(() => new Set(initialCategories.map(c => c.id)));
 
-    const calendarRef = useRef<FullCalendar>(null);
-    const trackedEventIds = useMemo(() => {
-        return new Set((trackedEvents || []).map((e: AppTrackedEvent) => e.eventId));
-    }, [trackedEvents]);
+    // --- Filter & Search State Management ---
+    const { activeFilters, setFilters } = useFilters();
+    const [localSearchTerm, setLocalSearchTerm] = useState(activeFilters.searchTerm);
+    const debouncedSearchTerm = useDebounce(localSearchTerm, 500);
+
+    // Sync debounced search term back to the URL
+    useEffect(() => {
+        // This check prevents an unnecessary router push on initial load
+        if (debouncedSearchTerm !== activeFilters.searchTerm) {
+            setFilters({ searchTerm: debouncedSearchTerm });
+        }
+    }, [debouncedSearchTerm, activeFilters.searchTerm, setFilters]);
+
+    // --- Data Fetching with TanStack Query ---
+
+    // Query 1: Fetches the main list of events based on active filters
+    const { data: events, isLoading: isLoadingEvents } = useQuery({
+        queryKey: ['events', activeFilters],
+        queryFn: async () => {
+            const response = await EventService.getEvents(activeFilters);
+            if (!response.success) throw new Error(response.error || 'Failed to fetch events');
+            return response.data || [];
+        },
+        // Use the server-fetched data as the initial state for this query
+        initialData: initialEvents,
+        // Keep the data fresh, but don't cause excessive refetching
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    // Query 2: Fetches the user's tracked events (for enrichment)
+    const { data: trackedEvents } = useTrackedEvents();
+    
+    // --- Memoized Derived State ---
+
+    const trackedEventIds = useMemo(() => new Set((trackedEvents || []).map(e => e.eventId)), [trackedEvents]);
 
     const enrichedEvents = useMemo(() => {
-        const categoryColorMap = new Map(categories.map(c => [c.id, c.color]));
-        return events.map(event => ({
+        return (events || []).map(event => ({
             ...event,
-            color: categoryColorMap.get(event.eventTypeId) || '#737373',
-            isTracked: trackedEventIds.has(event.id)
+            isTracked: trackedEventIds.has(event.id),
         }));
-    }, [events, categories, trackedEventIds]);
-
-    const filteredEvents = useMemo(() => {
-        return enrichedEvents.filter(event => selectedCategories.has(event.eventTypeId));
-    }, [enrichedEvents, selectedCategories]);
+    }, [events, trackedEventIds]);
 
     const nextUpcomingEvent = useMemo(() => {
         const now = new Date();
-        return filteredEvents
+        return (enrichedEvents || [])
             .filter(e => new Date(e.startTime) > now)
             .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
-    }, [filteredEvents]);
+    }, [enrichedEvents]);
 
     const fullCalendarEvents = useMemo(() => {
-        return filteredEvents.map(event => ({
+        return (enrichedEvents || []).map(event => ({
             id: event.id,
-            title: event.title || 'Untitled Event',
+            title: event.title,
             start: event.startTime,
             end: event.endTime || undefined,
             extendedProps: event,
-            color: event.color
+            color: event.category?.color || '#737373',
         }));
-    }, [filteredEvents]);
+    }, [enrichedEvents]);
+
+    // --- Event Handlers ---
 
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
         setSelectedEvent(clickInfo.event.extendedProps as AppEvent);
@@ -105,7 +131,8 @@ export default function CalendarClientView({
         }
     };
 
-    if (isLoadingTracked) {
+    // --- Render Logic ---
+    if (isLoadingEvents && !initialEvents) {
         return <Loading />;
     }
 
@@ -114,15 +141,15 @@ export default function CalendarClientView({
             <CalendarSidebar
                 currentDate={currentDate}
                 setCurrentDate={setCurrentDate}
-                categories={categories}
-                selectedCategories={selectedCategories}
-                setSelectedCategories={setSelectedCategories}
+                categories={initialCategories}
+                selectedCategories={new Set(activeFilters.categories)}
+                setSelectedCategories={(newSet) => setFilters({ categories: Array.from(newSet) })}
                 nextUpcomingEvent={nextUpcomingEvent}
                 user={{
                     name: profile?.fullName || 'Kure-Cal User',
-                    role: 'Product Designer'
+                    role: 'Product Designer',
                 }}
-                events={filteredEvents}
+                events={enrichedEvents}
             />
             <main className="flex-1 flex flex-col">
                 <CalendarHeader
@@ -130,6 +157,7 @@ export default function CalendarClientView({
                     view={view}
                     onNavigate={navigateCalendar}
                     onChangeView={changeView}
+                    // TODO: Add search bar to the header
                 />
                 <div className="flex-1 overflow-hidden p-6">
                     <FullCalendar
@@ -141,7 +169,6 @@ export default function CalendarClientView({
                         eventContent={CustomEventContent}
                         eventClick={handleEventClick}
                         height="100%"
-                    // ... other FullCalendar props
                     />
                 </div>
             </main>
@@ -150,7 +177,7 @@ export default function CalendarClientView({
                 <EventDetailPanel
                     event={selectedEvent}
                     onClose={() => setSelectedEvent(null)}
-                    categories={categories}
+                    categories={initialCategories}
                 />
             )}
         </div>
