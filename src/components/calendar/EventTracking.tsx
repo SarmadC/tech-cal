@@ -2,7 +2,7 @@
 'use client';
 
 import { FC, useState } from 'react';
-import { Check, Star, UserCheck, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
+import { Check, Star, UserCheck, AlertTriangle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEventTracking, useEventTrackingStatus } from '@/hooks/useEventTracking';
 import { AppEvent, EventStatus } from '@/types';
