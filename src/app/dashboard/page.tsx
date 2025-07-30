@@ -15,11 +15,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/Loading'; // Assuming ErrorState is in this file
-import { 
-    ArrowUpRight, Calendar, TrendingUp, Clock, Star, Target, Users, 
-    Zap, BookOpen, Award, MapPin, Bell, ChevronRight, Sparkles, Activity, Plus 
+import {
+    Calendar, Clock, Star, Target, Users,
+    Award, Sparkles, Plus
 } from 'lucide-react';
-import { AppEvent, AppTrackedEvent, AppEventType } from '@/types';
+
 
 // --- Type Definition for this component's derived state ---
 type PersonalInsight = {
