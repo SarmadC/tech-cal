@@ -10,7 +10,6 @@ import type {
     AppTrackedEvent,
     AppProfile,
     EventTransformer,
-    ProfileTransformer
 } from '@/types';
 
 // --- Event Transformers ---
@@ -58,8 +57,8 @@ export const eventTypeTransformer = {
      */
     toApp: (supabaseEventType: SupabaseEventType): AppEventType => ({
         id: supabaseEventType.id,
-        name: supabaseEventType.name,
-        color: supabaseEventType.color,
+        name: supabaseEventType.name || 'Unnamed Category',
+        color: supabaseEventType.color || '#808080', // Default to gray
         description: supabaseEventType.description,
     }),
 
@@ -123,11 +122,7 @@ export const trackedEventTransformer = {
         ...(appTrackedEvent.trackedAt && { created_at: appTrackedEvent.trackedAt }),
     })
 };
-// --- Profile Transformers ---
-export const profileTransformer: ProfileTransformer = {
-    /**
-     * Convert Supabase profile to App profile
-     */
+export const profileTransformer = {
     toApp: (supabaseProfile: SupabaseProfile): AppProfile => ({
         id: supabaseProfile.id,
         fullName: supabaseProfile.full_name,
@@ -138,15 +133,12 @@ export const profileTransformer: ProfileTransformer = {
         updatedAt: supabaseProfile.updated_at,
     }),
 
-    /**
-     * Convert App profile to Supabase profile (for updates/inserts)
-     */
     toSupabase: (appProfile: Partial<AppProfile>): Partial<SupabaseProfile> => ({
-        ...(appProfile.id && { id: appProfile.id }),
-        ...(appProfile.fullName && { full_name: appProfile.fullName }),
-        ...(appProfile.avatarUrl !== undefined && { avatar_url: appProfile.avatarUrl }),
-        ...(appProfile.timezone !== undefined && { timezone: appProfile.timezone }),
-        ...(appProfile.preferences !== undefined && { preferences: appProfile.preferences }),
+        ...(appProfile.hasOwnProperty('id') && { id: appProfile.id }),
+        ...(appProfile.hasOwnProperty('fullName') && { full_name: appProfile.fullName }),
+        ...(appProfile.hasOwnProperty('avatarUrl') && { avatar_url: appProfile.avatarUrl }),
+        ...(appProfile.hasOwnProperty('timezone') && { timezone: appProfile.timezone }),
+        ...(appProfile.hasOwnProperty('preferences') && { preferences: appProfile.preferences }),
     })
 };
 

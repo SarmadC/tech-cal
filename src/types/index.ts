@@ -4,6 +4,8 @@
 
 // Add this line at the top of src/types/index.ts
 import { User, Session } from '@supabase/supabase-js';
+export type { Json } from './supabase';
+import { Json } from './supabase';
 
 export type SupabaseEvent = {
     id: string;
@@ -22,8 +24,8 @@ export type SupabaseEvent = {
 
 export type SupabaseEventType = {
     id: string;
-    name: string;
-    color: string;
+    name: string | null;
+    color: string | null;
     description: string | null;
 };
 
@@ -39,13 +41,15 @@ export type SupabaseTrackedEvent = {
 
 export type SupabaseProfile = {
     id: string;
-    full_name: string;
+    full_name: string | null;
     avatar_url: string | null;
     timezone: string | null;
-    preferences: Record<string, unknown> | null;
-    created_at: string;
-    updated_at: string;
+    preferences: Json | null;
+    created_at: string | null;
+    updated_at: string | null;
 };
+
+
 
 // --- Application Types (camelCase) ---
 // These are the clean, idiomatic types we will use throughout the React app.
@@ -78,7 +82,7 @@ export type AppEventType = {
     name: string;
     color: string;
     description: string | null;
-    eventCount?: number; 
+    eventCount?: number;
 };
 
 export type AppTrackedEvent = {
@@ -93,12 +97,12 @@ export type AppTrackedEvent = {
 
 export type AppProfile = {
     id: string;
-    fullName: string;
+    fullName: string | null;
     avatarUrl: string | null;
     timezone: string | null;
-    preferences: Record<string, unknown> | null;
-    createdAt: string;
-    updatedAt: string;
+    preferences: Json | null;
+    createdAt: string | null;
+    updatedAt: string | null;
 };
 
 // --- Enums & Constants ---
@@ -160,10 +164,10 @@ export type SignupForm = {
 };
 
 export type ProfileUpdateForm = {
-    fullName?: string;
+    fullName?: string | null;
     avatarUrl?: string | null;
-    timezone?: string;
-    preferences?: Record<string, unknown>;
+    timezone?: string | null;
+    preferences?: Json | null;
 };
 
 export type EventTrackingForm = {

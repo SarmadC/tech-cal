@@ -1,18 +1,21 @@
 // src/services/eventTypeService.ts
 
-import { supabase } from '@/lib/supabaseClient';
+// 👇 1. Import the browser client and the client type
+import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
 import type { ApiResponse, AppEventType } from '@/types';
-
-// Import the transformer that converts Supabase event_type data to our app's format.
 import { eventTypeTransformer } from '@/utils/transformers';
 
 export class EventTypeService {
     /**
      * Get all event types, sorted by name.
      */
-    static async getEventTypes(): Promise<ApiResponse<AppEventType[]>> {
+    static async getEventTypes(
+        // 👇 2. Add the optional supabaseClient parameter
+        supabaseClient: SupabaseClientType = browserSupabaseClient
+    ): Promise<ApiResponse<AppEventType[]>> {
         try {
-            const { data, error } = await supabase
+            // 👇 3. Use the provided client
+            const { data, error } = await supabaseClient
                 .from('event_type')
                 .select('*')
                 .order('name');
@@ -34,24 +37,23 @@ export class EventTypeService {
      * Get event types along with a count of events for each type,
      * using a high-performance RPC call.
      */
-    static async getEventTypesWithCounts(): Promise<ApiResponse<AppEventType[]>> {
+    static async getEventTypesWithCounts(
+        // 👇 2. Add the optional supabaseClient parameter
+        supabaseClient: SupabaseClientType = browserSupabaseClient
+    ): Promise<ApiResponse<AppEventType[]>> {
         try {
-            // This calls the 'get_event_types_with_counts' function you created in your Supabase SQL editor.
-            const { data, error } = await supabase.rpc('get_event_types_with_counts');
+            // 👇 3. Use the provided client
+            const { data, error } = await supabaseClient.rpc('get_event_types_with_counts');
             if (error) throw error;
 
             // Define the expected shape of the data returned by the RPC function for type safety.
-            const eventTypes: AppEventType[] = (data || []).map((type: {
-                id: string;
-                name: string;
-                color: string;
-                description: string | null;
-                event_count: bigint; // Supabase returns count() as bigint
-            }) => {
+            const eventTypes: AppEventType[] = (data || []).map((type) => {
+                // We can use the generated types from `supabase.ts` for even better safety
                 const baseType = eventTypeTransformer.toApp(type);
                 return {
                     ...baseType,
-                    eventCount: Number(type.event_count) || 0, // Safely convert bigint to number
+                    // The return type of the RPC function in supabase.ts already defines this as number
+                    eventCount: type.event_count || 0,
                 };
             });
 
@@ -68,9 +70,14 @@ export class EventTypeService {
     /**
      * Get a single event type by its unique ID.
      */
-    static async getEventTypeById(id: string): Promise<ApiResponse<AppEventType>> {
+    static async getEventTypeById(
+        id: string,
+        // 👇 2. Add the optional supabaseClient parameter
+        supabaseClient: SupabaseClientType = browserSupabaseClient
+    ): Promise<ApiResponse<AppEventType>> {
         try {
-            const { data, error } = await supabase
+            // 👇 3. Use the provided client
+            const { data, error } = await supabaseClient
                 .from('event_type')
                 .select('*')
                 .eq('id', id)
