@@ -1,21 +1,17 @@
-// src/app/calendar/page.tsx (Refactored to use Services)
+// src/app/calendar/page.tsx
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-
 import CalendarClientView from './CalendarClientView';
-// The service layer is now the primary way to interact with data
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
-import { profileTransformer } from '@/utils/transformers'; // To map the profile
-import { AppProfile } from '@/types'; // Import the AppProfile type
+import { profileTransformer } from '@/utils/transformers';
+import { AppProfile } from '@/types';
 
 
-// The page itself is an async Server Component
 export default async function KureCalendarPage() {
-    const cookieStore = cookies();
-    const supabase = createServerComponentClient({ cookies: () => cookieStore });
+    const supabase = createServerComponentClient({ cookies });
 
     // 1. Check authentication on the server
     const { data: { session } } = await supabase.auth.getSession();
@@ -23,20 +19,19 @@ export default async function KureCalendarPage() {
         redirect('/login');
     }
 
-    // 2. Fetch all initial data in parallel using our new services
+    // 2. Fetch all initial data in parallel using our services
     const [eventsResponse, categoriesResponse, profileResponse] = await Promise.all([
-        EventService.getEvents(), // Gets all events, already enriched
-        EventTypeService.getEventTypesWithCounts(), // Gets categories with counts
-        supabase.from('profiles').select('*').eq('id', session.user.id).single(), // Fetch raw profile
+        EventService.getEvents(),
+        EventTypeService.getEventTypesWithCounts(),
+        supabase.from('profiles').select('*').eq('id', session.user.id).single(),
     ]);
 
     // Handle potential errors from data fetching
     if (!eventsResponse.success || !categoriesResponse.success || profileResponse.error) {
-        // You can render a dedicated error component here for a better user experience
         console.error("Failed to load initial calendar data:",
             eventsResponse.error || categoriesResponse.error || profileResponse.error
         );
-        // For now, we'll pass empty arrays to prevent a crash.
+        // Render with empty data to prevent a crash, or render a dedicated error component.
         return (
             <CalendarClientView
                 initialEvents={[]}
@@ -50,7 +45,6 @@ export default async function KureCalendarPage() {
     const profile: AppProfile | null = profileResponse.data
         ? profileTransformer.toApp(profileResponse.data)
         : null;
-
 
     // 3. Pass the clean, application-ready data as props to the Client Component
     return (

@@ -4,9 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query'; // Import useQuery
-
-// Import services directly to be used within useQuery.
+import { useQuery } from '@tanstack/react-query';
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { UserEventService } from '@/services/userEventService';

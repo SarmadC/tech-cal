@@ -21,34 +21,21 @@ export class ProfileService {
                 .single();
 
             if (error) {
-                // Handle case where profile doesn't exist yet
                 if (error.code === 'PGRST116') {
-                    return {
-                        success: false,
-                        error: 'Profile not found'
-                    };
+                    return { success: false, error: 'Profile not found' };
                 }
                 throw error;
             }
 
             if (!data) {
-                return {
-                    success: false,
-                    error: 'Profile not found'
-                };
+                return { success: false, error: 'Profile not found' };
             }
 
             const profile = profileTransformer.toApp(data as SupabaseProfile);
-            return {
-                success: true,
-                data: profile
-            };
+            return { success: true, data: profile };
         } catch (error) {
             console.error('Error fetching profile:', error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to fetch profile'
-            };
+            return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch profile' };
         }
     }
 
@@ -201,7 +188,8 @@ static async updateProfile(
             const fileName = `${userId}-${Date.now()}.${fileExt}`;
             const filePath = `avatars/${fileName}`;
 
-            const { data: uploadData, error: uploadError } = await supabase.storage
+            // 👇 FIX IS HERE: Rename `uploadData` to `_uploadData`
+            const { data: _uploadData, error: uploadError } = await supabase.storage
                 .from('avatars')
                 .upload(filePath, avatarFile, {
                     cacheControl: '3600',
@@ -225,7 +213,8 @@ static async updateProfile(
             });
 
             if (!updateResult.success) {
-                throw new Error(updateResult.error);
+                // We can be more specific with the error message
+                throw new Error(updateResult.error || 'Failed to save avatar URL to profile.');
             }
 
             return {
@@ -378,7 +367,8 @@ static async updateProfile(
         avatar_url?: string | null;
     }): Promise<void> {
         try {
-            const updates: any = {};
+            // 👇 FIX IS HERE: Replace `any` with a specific, type-safe object signature.
+            const updates: { full_name?: string; avatar_url?: string | null } = {};
 
             if (metadata.full_name !== undefined) {
                 updates.full_name = metadata.full_name;
@@ -394,11 +384,13 @@ static async updateProfile(
                 });
 
                 if (error) {
+                    // It's better to throw the error here to be handled by the caller,
+                    // but logging is also acceptable for a private helper.
                     console.error('Error updating auth user metadata:', error);
                 }
             }
         } catch (error) {
-            console.error('Error updating auth user metadata:', error);
+            console.error('Error in updateAuthUserMetadata:', error);
         }
     }
 }

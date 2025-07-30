@@ -29,6 +29,7 @@
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "tanstack": "^1.0.3",
     "three": "^0.178.0"
   },
   "devDependencies": {

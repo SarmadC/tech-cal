@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserEventService } from '@/services/userEventService';
 import type { AppTrackedEvent, EventStatus } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner'; // Import the toast function
+import { toast } from 'sonner';
 
 // --- Type Definitions for our Mutations ---
 

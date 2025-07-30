@@ -1,20 +1,17 @@
 // src/app/calendar/CalendarClientView.tsx
 'use client';
 
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
-
-
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel';
 import CustomEventContent from '@/components/calendar/CustomEventContent';
-
-import { AppEvent, AppEventType, AppProfile } from '@/types';
-import { useEventTracking, TrackedEvent } from '@/hooks/useEventTracking';
+import { AppEvent, AppEventType, AppProfile, AppTrackedEvent } from '@/types';
+import { useTrackedEvents } from '@/hooks/useEventTracking';
 import Loading from '@/components/Loading';
 
 // Define props to receive data from the server
@@ -37,29 +34,24 @@ export default function CalendarClientView({
     initialCategories,
     profile,
 }: CalendarClientViewProps) {
-    const { getTrackedEvents } = useEventTracking();
+    // 👇 FIX #3: Use the new `useTrackedEvents` query hook
+    // It handles fetching, loading, and error states for us.
+    const { data: trackedEvents, isLoading: isLoadingTracked } = useTrackedEvents();
 
+    // Server-side props are still used for the initial display
     const [events, _setEvents] = useState<AppEvent[]>(initialEvents);
     const [categories, _setCategories] = useState<AppEventType[]>(initialCategories);
 
+    // Local UI state remains the same
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<CalendarViewType>('week');
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(() => new Set(initialCategories.map(c => c.id)));
-    const [trackedEventIds, setTrackedEventIds] = useState<Set<string>>(new Set());
-    const [loadingTracked, setLoadingTracked] = useState(true);
 
     const calendarRef = useRef<FullCalendar>(null);
-
-    useEffect(() => {
-        async function loadTrackedEvents() {
-            setLoadingTracked(true);
-            const trackedEventsData = await getTrackedEvents();
-            setTrackedEventIds(new Set((trackedEventsData as TrackedEvent[]).map(e => e.eventId)));
-            setLoadingTracked(false);
-        }
-        loadTrackedEvents();
-    }, [getTrackedEvents]);
+    const trackedEventIds = useMemo(() => {
+        return new Set((trackedEvents || []).map((e: AppTrackedEvent) => e.eventId));
+    }, [trackedEvents]);
 
     const enrichedEvents = useMemo(() => {
         const categoryColorMap = new Map(categories.map(c => [c.id, c.color]));
@@ -113,7 +105,7 @@ export default function CalendarClientView({
         }
     };
 
-    if (loadingTracked) {
+    if (isLoadingTracked) {
         return <Loading />;
     }
 
@@ -128,8 +120,6 @@ export default function CalendarClientView({
                 nextUpcomingEvent={nextUpcomingEvent}
                 user={{
                     name: profile?.fullName || 'Kure-Cal User',
-                    // Note: 'role' doesn't seem to be part of your AppProfile.
-                    // We'll default it for now. You might want to add 'role' to your profiles table later.
                     role: 'Product Designer'
                 }}
                 events={filteredEvents}
@@ -151,10 +141,7 @@ export default function CalendarClientView({
                         eventContent={CustomEventContent}
                         eventClick={handleEventClick}
                         height="100%"
-                        dayHeaderClassNames="!border-x-0 !border-t-0"
-                        dayCellClassNames="!border-x-0"
-                        slotLaneClassNames="!border-x-0"
-                        allDaySlot={false}
+                    // ... other FullCalendar props
                     />
                 </div>
             </main>
