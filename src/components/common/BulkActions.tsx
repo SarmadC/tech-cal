@@ -58,7 +58,7 @@ export default function BulkActions({
                 throw new Error(response.error || 'Could not fetch event details for export.');
             }
 
-            // 👇 FIX #2: Make the return inside the map more explicit to satisfy the linter.
+
             const icsEvents = response.data.map(event => {
                 const startTime = new Date(event.startTime).toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
                 const endTime = event.endTime

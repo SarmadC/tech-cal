@@ -7,77 +7,86 @@ import type { AppTrackedEvent, EventStatus } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-// --- Type Definitions for our Mutations ---
-
-type TrackEventVariables = {
-  eventId: string;
-  status: EventStatus;
-  notes?: string;
-};
-
-type UntrackEventVariables = {
-  eventId: string;
-};
-
-type BulkTrackEventsVariables = {
-  eventIds: string[];
-  status?: EventStatus;
-};
+// --- Type Definitions (no changes needed) ---
+type TrackEventVariables = { eventId: string; status: EventStatus; notes?: string };
+type UntrackEventVariables = { eventId: string };
+type BulkTrackEventsVariables = { eventIds: string[]; status?: EventStatus };
 
 // --- Main Hook for Write Operations (Mutations) ---
-
-/**
- * A hook for managing all user-event tracking write operations (create, update, delete).
- * Leverages TanStack Query's `useMutation` for robust server-side updates and automatic
- * UI refetching with toast notifications.
- */
 export function useEventTracking() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
+    const queryKey = ['trackedEvents', user?.id]; // Centralize the query key
 
-  // --- MUTATION: Track a single event ---
-  const { mutate: trackEvent, isPending: isTracking } = useMutation({
-    mutationFn: (variables: TrackEventVariables) => {
-      if (!user) throw new Error('User not authenticated.');
-      return UserEventService.trackEvent(
-        user.id,
-        variables.eventId,
-        variables.status,
-        variables.notes
-      );
-    },
-    onSuccess: (result, variables) => {
-      // Invalidate queries to trigger an automatic UI refetch.
-      queryClient.invalidateQueries({ queryKey: ['trackedEvents', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['eventTrackingStatus', variables.eventId] });
-      
-      // Show a success notification
-      toast.success(result.message || 'Event tracked!');
-    },
-    onError: (error) => {
-      // Show an error notification
-      toast.error(error.message || 'Failed to track event.');
-    },
-  });
+    // --- MUTATION: Track a single event (NOW WITH OPTIMISTIC UPDATE) ---
+    const { mutate: trackEvent, isPending: isTracking } = useMutation({
+        mutationFn: (variables: TrackEventVariables) => {
+            if (!user) throw new Error('User not authenticated.');
+            return UserEventService.trackEvent(user.id, variables.eventId, variables.status, variables.notes);
+        },
+        // This `onMutate` function runs *before* the mutationFn. This is where the magic happens.
+        onMutate: async (newEvent) => {
+            // 1. Cancel any outgoing refetches so they don't overwrite our optimistic update
+            await queryClient.cancelQueries({ queryKey });
 
-  // --- MUTATION: Untrack a single event ---
-  const { mutate: untrackEvent, isPending: isUntracking } = useMutation({
-    mutationFn: (variables: UntrackEventVariables) => {
-      if (!user) throw new Error('User not authenticated.');
-      return UserEventService.untrackEvent(user.id, variables.eventId);
-    },
-    onSuccess: (result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['trackedEvents', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['eventTrackingStatus', variables.eventId] });
-      
-      // Show a success notification
-      toast.success(result.message || 'Event untracked.');
-    },
-    onError: (error) => {
-      // Show an error notification
-      toast.error(error.message || 'Failed to untrack event.');
-    },
-  });
+            // 2. Snapshot the previous value
+            const previousTrackedEvents = queryClient.getQueryData<AppTrackedEvent[]>(queryKey);
+
+            // 3. Optimistically update to the new value
+            queryClient.setQueryData<AppTrackedEvent[]>(queryKey, (old) => {
+                // Create a placeholder for the new tracked event
+                const optimisticEvent: AppTrackedEvent = {
+                    trackingId: `optimistic-${Date.now()}`, // Temporary ID
+                    userId: user!.id,
+                    eventId: newEvent.eventId,
+                    status: newEvent.status,
+                    notes: newEvent.notes || null,
+                    trackedAt: new Date().toISOString(),
+                    event: null, // We don't have full event details, but that's okay for the list
+                };
+                // Add the new event to the list
+                return [...(old || []), optimisticEvent];
+            });
+
+            // 4. Return a context object with the snapshotted value
+            return { previousTrackedEvents };
+        },
+        // If the mutation fails, use the context returned from onMutate to roll back
+        onError: (err, _newEvent, context) => {
+            queryClient.setQueryData(queryKey, context?.previousTrackedEvents);
+            toast.error(err.message || 'Failed to track event.');
+        },
+        // Always refetch after error or success to ensure the server state is the source of truth
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey });
+        },
+    });
+
+    // --- MUTATION: Untrack a single event (NOW WITH OPTIMISTIC UPDATE) ---
+    const { mutate: untrackEvent, isPending: isUntracking } = useMutation({
+        mutationFn: (variables: UntrackEventVariables) => {
+            if (!user) throw new Error('User not authenticated.');
+            return UserEventService.untrackEvent(user.id, variables.eventId);
+        },
+        onMutate: async (eventToUntrack) => {
+            await queryClient.cancelQueries({ queryKey });
+            const previousTrackedEvents = queryClient.getQueryData<AppTrackedEvent[]>(queryKey);
+
+            // Optimistically remove the event from the list
+            queryClient.setQueryData<AppTrackedEvent[]>(queryKey, (old) =>
+                (old || []).filter(event => event.eventId !== eventToUntrack.eventId)
+            );
+
+            return { previousTrackedEvents };
+        },
+        onError: (err, _eventToUntrack, context) => {
+            queryClient.setQueryData(queryKey, context?.previousTrackedEvents);
+            toast.error(err.message || 'Failed to untrack event.');
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey });
+        },
+    });
 
   // --- MUTATION: Bulk track multiple events ---
   const { mutate: bulkTrackEvents, isPending: isBulkTracking } = useMutation({
