@@ -1,9 +1,10 @@
-// src/components/calendar/UpcomingEventCard.tsx (Refactored to use EventCard)
+// src/components/calendar/UpcomingEventCard.tsx
 'use client';
 
 import { FC } from 'react';
+// We still accept a base AppEvent, as the parent component might not know the tracked status
 import { AppEvent } from '@/types';
-import EventCard from './EventCard'; // Import our new generic card!
+import EventCard from './EventCard';
 
 interface UpcomingEventCardProps {
     event: AppEvent;
@@ -16,15 +17,22 @@ const UpcomingEventCard: FC<UpcomingEventCardProps> = ({
     onViewDetails,
     onMarkInterested,
 }) => {
-    // The logic for displaying an event now lives inside EventCard.
-    // This component's only job is to connect the specific actions
-    // (onViewDetails, onMarkInterested) to the generic card's props.
+    // 👇 FIX IS HERE:
+    // We create a new object that conforms to the EnrichedAppEvent type.
+    // We spread the original event properties and provide a default value
+    // for `isTracked` if it's not already present.
+    const enrichedEvent = {
+        ...event,
+        isTracked: event.isTracked ?? false, // Use `false` if `event.isTracked` is undefined or null
+    };
 
     return (
         <EventCard
-            event={event}
-            onCardClick={onViewDetails} // Clicking the card triggers "View Details"
-            onTrackClick={(clickedEvent) => onMarkInterested(clickedEvent)} // Clicking the star triggers "Mark Interested"
+            // Pass the guaranteed-to-be-enriched event object to the child component.
+            event={enrichedEvent}
+            onCardClick={onViewDetails}
+            // The onMarkInterested function from the parent still receives the original AppEvent type
+            onTrackClick={(clickedEvent) => onMarkInterested(clickedEvent)}
         />
     );
 };
