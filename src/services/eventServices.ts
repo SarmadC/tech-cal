@@ -1,5 +1,7 @@
 // src/services/eventServices.ts
+
 import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
+
 import type {
     AppEvent,
     EventFilters,
@@ -7,6 +9,7 @@ import type {
     SearchSuggestion,
     SupabaseEventWithEventType
 } from '@/types';
+
 import {
     eventTransformer,
     eventTypeTransformer,
@@ -16,7 +19,6 @@ import {
 export class EventService {
     /**
      * Fetch events with optional filtering and enrichment.
-     * Can be used on client or server by providing the appropriate Supabase client.
      */
     static async getEvents(
         filters?: EventFilters,
@@ -33,6 +35,8 @@ export class EventService {
             if (filters?.endDate) query = query.lte('start_time', filters.endDate.toISOString());
             if (filters?.searchTerm) query = query.or(`title.ilike.%${filters.searchTerm}%,description.ilike.%${filters.searchTerm}%,organizer.ilike.%${filters.searchTerm}%`);
             if (filters?.status?.length) query = query.in('status', filters.status);
+            if (filters?.eventIds?.length) query = query.in('id', filters.eventIds);
+
 
             const { data, error } = await query;
             if (error) throw error;
@@ -51,7 +55,7 @@ export class EventService {
             return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch events' };
         }
     }
-    
+
     /**
      * Get a single event by ID with full enrichment.
      */

@@ -138,7 +138,9 @@ export type EventFilters = {
     searchTerm?: string;
     collection?: string;
     status?: string[];
+    eventIds?: string[];
 };
+
 
 export type SearchSuggestion = {
     id: string;
