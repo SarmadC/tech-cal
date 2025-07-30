@@ -68,13 +68,28 @@ export default function SignupPage() {
                         )}
 
                         <div className="space-y-3">
-                            <button type="button" onClick={() => signInWithOAuth('google')} disabled={isSubmitting} className="w-full flex items-center justify-center space-x-3 bg-background-main hover:bg-background-tertiary border border-border-color ...">
+                            <button
+                                type="button"
+                                onClick={() => signInWithOAuth('google')}
+                                disabled={isSubmitting}
+                                // FIX: Removed "..." and added missing utility classes for style consistency
+                                className="w-full flex items-center justify-center space-x-3 bg-background-main hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50"
+                            >
+                                {/* It would be good practice to add the Google icon SVG here */}
                                 <span>Sign up with Google</span>
                             </button>
-                            <button type="button" onClick={() => signInWithOAuth('github')} disabled={isSubmitting} className="w-full flex items-center justify-center space-x-3 bg-background-main hover:bg-background-tertiary border border-border-color ...">
+                            <button
+                                type="button"
+                                onClick={() => signInWithOAuth('github')}
+                                disabled={isSubmitting}
+                                // FIX: Removed "..." and added missing utility classes for style consistency
+                                className="w-full flex items-center justify-center space-x-3 bg-background-main hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50"
+                            >
+                                {/* It would be good practice to add the GitHub icon SVG here */}
                                 <span>Sign up with GitHub</span>
                             </button>
                         </div>
+
 
                         <div className="relative my-6">
                             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-color"></div></div>
