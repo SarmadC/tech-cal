@@ -298,7 +298,8 @@ export const isAppEvent = (obj: unknown): obj is AppEvent => {
 
 // --- Type Transformers (moved to separate file later) ---
 export type EventTransformer = {
-    toApp: (supabaseEvent: SupabaseEvent) => AppEvent;
+    toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails) => AppEvent;
+
     toSupabase: (appEvent: Partial<AppEvent>) => Partial<SupabaseEvent>;
 };
 
@@ -311,6 +312,12 @@ export type SupabaseEventWithEventType = SupabaseEvent & {
     event_type: SupabaseEventType | null;
 };
 
+export type SupabaseEventWithDetails = Omit<SupabaseEvent, 'organizer'> & {
+    event_type: SupabaseEventType | null;
+    organizer: { id: string, name: string } | null;
+};
+
+
 export type SupabaseTrackedEventWithDetails = Omit<SupabaseTrackedEvent, 'events'> & {
-    events: SupabaseEventWithEventType | null;
+    events: SupabaseEventWithDetails | null;
 };

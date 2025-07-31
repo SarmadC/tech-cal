@@ -1,15 +1,18 @@
-// src/utils/transformers.ts
+// src/utils/transformers.ts (Corrected and Final)
+
 import type {
     SupabaseEvent,
     SupabaseEventType,
     SupabaseTrackedEvent,
-    SupabaseTrackedEventWithDetails,
     SupabaseProfile,
     AppEvent,
     AppEventType,
     AppTrackedEvent,
     AppProfile,
     EventTransformer,
+    SupabaseEventWithDetails,
+    SupabaseTrackedEventWithDetails,
+    ProfileTransformer, // Ensure this is imported
 } from '@/types';
 
 // --- Event Transformers ---
@@ -17,31 +20,36 @@ export const eventTransformer: EventTransformer = {
     /**
      * Convert Supabase event to App event
      */
-    toApp: (supabaseEvent: SupabaseEvent): AppEvent => ({
-        id: supabaseEvent.id,
-        createdAt: supabaseEvent.created_at,
-        title: supabaseEvent.title,
-        description: supabaseEvent.description,
-        startTime: supabaseEvent.start_time,
-        endTime: supabaseEvent.end_time,
-        organizer: supabaseEvent.organizer,
-        location: supabaseEvent.location,
-        status: supabaseEvent.status,
-        sourceUrl: supabaseEvent.source_url,
-        livestreamUrl: supabaseEvent.livestream_url,
-        eventTypeId: supabaseEvent.event_type_id,
-    }),
+    toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): AppEvent => {
+        // Now that types are correct, this is a simple and safe check.
+        const organizerName = (supabaseEvent as SupabaseEventWithDetails).organizer?.name || 'Unknown Organizer';
+
+        return {
+            id: supabaseEvent.id,
+            createdAt: supabaseEvent.created_at,
+            title: supabaseEvent.title || 'Untitled Event',
+            description: supabaseEvent.description || '',
+            startTime: supabaseEvent.start_time || new Date().toISOString(),
+            endTime: supabaseEvent.end_time,
+            organizer: organizerName, // Use the safely derived name
+            location: supabaseEvent.location || 'Online',
+            status: supabaseEvent.status || 'confirmed',
+            sourceUrl: supabaseEvent.source_url || '#',
+            livestreamUrl: supabaseEvent.livestream_url,
+            eventTypeId: supabaseEvent.event_type_id || '',
+        };
+    },
 
     /**
      * Convert App event to Supabase event (for updates/inserts)
      */
     toSupabase: (appEvent: Partial<AppEvent>): Partial<SupabaseEvent> => ({
+        // ... (this part remains unchanged)
         ...(appEvent.id && { id: appEvent.id }),
         ...(appEvent.title && { title: appEvent.title }),
         ...(appEvent.description && { description: appEvent.description }),
         ...(appEvent.startTime && { start_time: appEvent.startTime }),
         ...(appEvent.endTime !== undefined && { end_time: appEvent.endTime }),
-        ...(appEvent.organizer && { organizer: appEvent.organizer }),
         ...(appEvent.location && { location: appEvent.location }),
         ...(appEvent.status && { status: appEvent.status }),
         ...(appEvent.sourceUrl && { source_url: appEvent.sourceUrl }),
@@ -49,22 +57,14 @@ export const eventTransformer: EventTransformer = {
         ...(appEvent.eventTypeId && { event_type_id: appEvent.eventTypeId }),
     })
 };
-
 // --- Event Type Transformers ---
 export const eventTypeTransformer = {
-    /**
-     * Convert Supabase event type to App event type
-     */
     toApp: (supabaseEventType: SupabaseEventType): AppEventType => ({
         id: supabaseEventType.id,
         name: supabaseEventType.name || 'Unnamed Category',
-        color: supabaseEventType.color || '#808080', // Default to gray
+        color: supabaseEventType.color || '#808080',
         description: supabaseEventType.description,
     }),
-
-    /**
-     * Convert App event type to Supabase event type
-     */
     toSupabase: (appEventType: Partial<AppEventType>): Partial<SupabaseEventType> => ({
         ...(appEventType.id && { id: appEventType.id }),
         ...(appEventType.name && { name: appEventType.name }),
@@ -73,32 +73,40 @@ export const eventTypeTransformer = {
     })
 };
 
+// --- Profile Transformers ---
+// THIS WAS THE MISSING EXPORT
+export const profileTransformer: ProfileTransformer = {
+    toApp: (supabaseProfile: SupabaseProfile): AppProfile => ({
+        id: supabaseProfile.id,
+        fullName: supabaseProfile.full_name,
+        avatarUrl: supabaseProfile.avatar_url,
+        timezone: supabaseProfile.timezone,
+        preferences: supabaseProfile.preferences,
+        createdAt: supabaseProfile.created_at,
+        updatedAt: supabaseProfile.updated_at,
+    }),
+    toSupabase: (appProfile: Partial<AppProfile>): Partial<SupabaseProfile> => ({
+        ...(appProfile.hasOwnProperty('id') && { id: appProfile.id }),
+        ...(appProfile.hasOwnProperty('fullName') && { full_name: appProfile.fullName }),
+        ...(appProfile.hasOwnProperty('avatarUrl') && { avatar_url: appProfile.avatarUrl }),
+        ...(appProfile.hasOwnProperty('timezone') && { timezone: appProfile.timezone }),
+        ...(appProfile.hasOwnProperty('preferences') && { preferences: appProfile.preferences }),
+    })
+};
+
 // --- Tracked Event Transformers ---
 export const trackedEventTransformer = {
-    /**
-     * Convert Supabase tracked event (with nested details) to App tracked event.
-     */
-    // FIX #2: Use the more specific type for the parameter
     toApp: (supabaseTrackedEvent: SupabaseTrackedEventWithDetails): AppTrackedEvent => {
-        // FIX #1: This is the single, correct implementation. The old one is deleted.
-        // FIX #2: The 'as any' cast is no longer needed because the type is correct.
         const joinedEventData = supabaseTrackedEvent.events;
         let appEvent: AppEvent | null = null;
-
         if (joinedEventData) {
-            // First, transform the base event
             const baseAppEvent = eventTransformer.toApp(joinedEventData);
-
-            // Then, check for the doubly-nested event_type
             const joinedEventTypeData = joinedEventData.event_type;
             const appEventType = joinedEventTypeData
                 ? eventTypeTransformer.toApp(joinedEventTypeData)
                 : undefined;
-
-            // Finally, enrich the event with category and color
             appEvent = enrichEvent(baseAppEvent, { eventType: appEventType });
         }
-
         return {
             trackingId: supabaseTrackedEvent.id,
             userId: supabaseTrackedEvent.user_id,
@@ -109,10 +117,6 @@ export const trackedEventTransformer = {
             event: appEvent,
         };
     },
-
-    /**
-     * Convert App tracked event to Supabase tracked event (for updates/inserts)
-     */
     toSupabase: (appTrackedEvent: Partial<AppTrackedEvent>): Partial<SupabaseTrackedEvent> => ({
         ...(appTrackedEvent.trackingId && { id: appTrackedEvent.trackingId }),
         ...(appTrackedEvent.userId && { user_id: appTrackedEvent.userId }),
@@ -122,30 +126,8 @@ export const trackedEventTransformer = {
         ...(appTrackedEvent.trackedAt && { created_at: appTrackedEvent.trackedAt }),
     })
 };
-export const profileTransformer = {
-    toApp: (supabaseProfile: SupabaseProfile): AppProfile => ({
-        id: supabaseProfile.id,
-        fullName: supabaseProfile.full_name,
-        avatarUrl: supabaseProfile.avatar_url,
-        timezone: supabaseProfile.timezone,
-        preferences: supabaseProfile.preferences,
-        createdAt: supabaseProfile.created_at,
-        updatedAt: supabaseProfile.updated_at,
-    }),
-
-    toSupabase: (appProfile: Partial<AppProfile>): Partial<SupabaseProfile> => ({
-        ...(appProfile.hasOwnProperty('id') && { id: appProfile.id }),
-        ...(appProfile.hasOwnProperty('fullName') && { full_name: appProfile.fullName }),
-        ...(appProfile.hasOwnProperty('avatarUrl') && { avatar_url: appProfile.avatarUrl }),
-        ...(appProfile.hasOwnProperty('timezone') && { timezone: appProfile.timezone }),
-        ...(appProfile.hasOwnProperty('preferences') && { preferences: appProfile.preferences }),
-    })
-};
 
 // --- Enrichment Utilities ---
-/**
- * Enrich an event with additional computed data
- */
 export const enrichEvent = (
     event: AppEvent,
     options: {

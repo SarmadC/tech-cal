@@ -1,7 +1,8 @@
-// src/services/eventServices.ts
+// src/services/eventServices.ts (Refactored for New Schema)
 
 import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
-import type { AppEvent, EventFilters, ApiResponse, SearchSuggestion, SupabaseEventWithEventType } from '@/types';
+// NEW: Import SupabaseEventWithDetails to handle the new joined data shape
+import type { AppEvent, EventFilters, ApiResponse, SearchSuggestion, SupabaseEventWithDetails } from '@/types';
 import { eventTransformer, eventTypeTransformer, enrichEvent } from '@/utils/transformers';
 
 export class EventService {
@@ -15,18 +16,24 @@ export class EventService {
         try {
             let query = supabaseClient
                 .from('events')
-                // IMPROVEMENT: Select specific columns from the joined table for better performance.
-                .select(`*, event_type:event_type_id (id, name, color, description)`)
+                // CHANGED: The .select() statement now explicitly joins organizers
+                .select(`
+                    *,
+                    event_type:event_type_id (id, name, color, description),
+                    organizer:organizers (id, name)
+                `)
                 .order('start_time', { ascending: true });
 
             if (filters?.categories?.length) query = query.in('event_type_id', filters.categories);
             if (filters?.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters?.endDate) query = query.lte('start_time', filters.endDate.toISOString());
 
-            // IMPROVEMENT: Use performant full-text search if a search term is provided.
+            // CHANGED: Switched from 'ilike' to high-performance 'textSearch'
             if (filters?.searchTerm) {
-                // Assumes you've set up the 'fts' column as described in the feedback.
-                query = query.textSearch('fts', filters.searchTerm);
+                query = query.textSearch('fts', filters.searchTerm, {
+                    type: 'websearch',
+                    config: 'english'
+                });
             }
 
             if (filters?.status?.length) query = query.in('status', filters.status);
@@ -36,7 +43,8 @@ export class EventService {
             if (error) throw error;
 
             const events: AppEvent[] = (data || []).map((item) => {
-                const typedItem = item as SupabaseEventWithEventType;
+                // NEW: Use the more specific type that includes the joined organizer
+                const typedItem = item as SupabaseEventWithDetails;
                 const baseEvent = eventTransformer.toApp(typedItem);
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });
@@ -59,14 +67,19 @@ export class EventService {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (id, name, color, description)`) // Standardized select
+                // CHANGED: The .select() statement now explicitly joins organizers
+                .select(`
+                    *,
+                    event_type:event_type_id (id, name, color, description),
+                    organizer:organizers (id, name)
+                `)
                 .eq('id', id)
                 .single();
 
             if (error) throw error;
             if (!data) throw new Error('Event not found');
 
-            const item = data as SupabaseEventWithEventType;
+            const item = data as SupabaseEventWithDetails;
             const baseEvent = eventTransformer.toApp(item);
             const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
             const enrichedEvent = enrichEvent(baseEvent, { eventType });
@@ -87,22 +100,30 @@ export class EventService {
         supabaseClient: SupabaseClientType = browserSupabaseClient
     ): Promise<ApiResponse<SearchSuggestion[]>> {
         try {
-            // This is already well-optimized by selecting specific columns. No changes needed.
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`id, title, organizer, start_time`)
-                .or(`title.ilike.%${term}%,organizer.ilike.%${term}%`)
+                // CHANGED: Select now joins the organizer's name
+                .select(`id, title, start_time, organizer:organizers (name)`)
+                // CHANGED: Switched to high-performance Full-Text Search
+                .textSearch('fts', `'${term}'`, {
+                    type: 'websearch',
+                    config: 'english'
+                })
                 .order('start_time', { ascending: true })
                 .limit(limit);
 
             if (error) throw error;
 
-            const suggestions: SearchSuggestion[] = (data || [])
-                .filter((item): item is { id: string; title: string | null; organizer: string | null; start_time: string } => item.start_time !== null)
+            // Type assertion for the new shape of the data
+            type SearchResult = { id: string; title: string | null; start_time: string; organizer: { name: string } | null };
+
+            const suggestions: SearchSuggestion[] = (data as SearchResult[] || [])
+                .filter(item => item.start_time !== null)
                 .map(item => ({
                     id: item.id,
                     title: item.title || 'Untitled Event',
-                    organizer: item.organizer || 'Unknown Organizer',
+                    // CHANGED: Safely access the joined organizer name
+                    organizer: item.organizer?.name || 'Unknown Organizer',
                     startTime: item.start_time,
                     type: 'event' as const
                 }));
@@ -113,6 +134,9 @@ export class EventService {
             return { success: false, error: error instanceof Error ? error.message : 'Search failed' };
         }
     }
+
+    // All methods below this point also need the updated .select() statement
+
     /**
      * Get events by date range (optimized for calendar views).
      */
@@ -126,7 +150,12 @@ export class EventService {
         try {
             let query = supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (id, name, color)`)
+                // CHANGED: The .select() statement now explicitly joins organizers
+                .select(`
+                    *,
+                    event_type:event_type_id (id, name, color),
+                    organizer:organizers (id, name)
+                `)
                 .gte('start_time', startDate.toISOString())
                 .lte('start_time', endDate.toISOString())
                 .order('start_time', { ascending: true });
@@ -137,7 +166,7 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            const events: AppEvent[] = (data as SupabaseEventWithEventType[] || []).map((item) => {
+            const events: AppEvent[] = (data as SupabaseEventWithDetails[] || []).map((item) => {
                 const baseEvent = eventTransformer.toApp(item);
                 const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });
@@ -173,14 +202,19 @@ export class EventService {
             const now = new Date().toISOString();
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (id, name, color)`)
+                // CHANGED: The .select() statement now explicitly joins organizers
+                .select(`
+                    *,
+                    event_type:event_type_id (id, name, color),
+                    organizer:organizers (id, name)
+                `)
                 .lte('start_time', now)
                 .or(`end_time.gte.${now},end_time.is.null`)
                 .order('start_time', { ascending: true });
 
             if (error) throw error;
 
-            const events: AppEvent[] = (data as SupabaseEventWithEventType[] || []).map((item) => {
+            const events: AppEvent[] = (data as SupabaseEventWithDetails[] || []).map((item) => {
                 const baseEvent = eventTransformer.toApp(item);
                 const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });
@@ -215,7 +249,12 @@ export class EventService {
 
             let query = supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*)`)
+                // CHANGED: The .select() statement now explicitly joins organizers
+                .select(`
+                    *,
+                    event_type:event_type_id (*),
+                    organizer:organizers (id, name)
+                `)
                 .in('event_type_id', categoryIds)
                 .gte('start_time', new Date().toISOString())
                 .limit(3);
@@ -227,7 +266,7 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            const events: AppEvent[] = (data as SupabaseEventWithEventType[] || []).map((item) => {
+            const events: AppEvent[] = (data as SupabaseEventWithDetails[] || []).map((item) => {
                 const baseEvent = eventTransformer.toApp(item);
                 const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });

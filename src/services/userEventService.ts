@@ -1,6 +1,5 @@
-// src/services/userEventService.ts
+// src/services/userEventService.ts (Corrected and Final)
 
-// CORRECTED: Import the browser client for default usage and the client type
 import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
 import type {
     ApiResponse,
@@ -19,11 +18,9 @@ export class UserEventService {
         eventId: string,
         status: EventStatus = 'bookmarked',
         notes?: string,
-        // CORRECTED: Added the optional supabaseClient parameter
         supabaseClient: SupabaseClientType = browserSupabaseClient
     ): Promise<ApiResponse<void>> {
         try {
-            // CORRECTED: Using the provided supabaseClient
             const { data: existing } = await supabaseClient
                 .from('user_events')
                 .select('id, status')
@@ -34,14 +31,14 @@ export class UserEventService {
             if (existing) {
                 const { error } = await supabaseClient
                     .from('user_events')
-                    .update({ status, notes, created_at: new Date().toISOString() })
+                    .update({ status, notes, updated_at: new Date().toISOString() }) // FIX: update `updated_at`
                     .eq('id', existing.id);
                 if (error) throw error;
                 return { success: true, message: `Event status updated to ${status}` };
             } else {
                 const { error } = await supabaseClient
                     .from('user_events')
-                    .insert({ user_id: userId, event_id: eventId, status, notes, created_at: new Date().toISOString() });
+                    .insert({ user_id: userId, event_id: eventId, status, notes });
                 if (error) throw error;
                 return { success: true, message: 'Event tracked successfully!' };
             }
@@ -83,10 +80,19 @@ export class UserEventService {
         try {
             const { data, error } = await supabaseClient
                 .from('user_events')
-                .select(`*, events (*, event_type:event_type_id (*))`)
+                .select(`
+                    *, 
+                    events (
+                        *, 
+                        event_type:event_type_id (*),
+                        organizer:organizers (id, name)
+                    )
+                `)
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
+
             if (error) throw error;
+
             const trackedEvents = (data as SupabaseTrackedEventWithDetails[] || []).map(trackedEventTransformer.toApp);
             return { success: true, data: trackedEvents };
         } catch (error) {
@@ -134,14 +140,14 @@ export class UserEventService {
                 .eq('user_id', userId)
                 .in('event_id', eventIds);
 
-            const existingEventIds = new Set(existing?.map(e => e.event_id) || []);
+            const existingEventIds = new Set(existing?.map((e: { event_id: string }) => e.event_id) || []); // FIX: Add explicit type for 'e'
             const newEventIds = eventIds.filter(id => !existingEventIds.has(id));
 
             if (newEventIds.length === 0) {
                 return { success: true, data: { tracked: 0, skipped: eventIds.length }, message: 'All events are already tracked' };
             }
 
-            const insertData = newEventIds.map(eventId => ({ user_id: userId, event_id: eventId, status, created_at: new Date().toISOString() }));
+            const insertData = newEventIds.map(eventId => ({ user_id: userId, event_id: eventId, status }));
             const { error } = await supabaseClient.from('user_events').insert(insertData);
             if (error) throw error;
 
