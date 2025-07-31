@@ -64,7 +64,7 @@ export class ProfileService {
     }
 
     /**
-     * Update user profile
+     * Update user profile and associated auth metadata
      */
     static async updateProfile(
         userId: string,
@@ -72,6 +72,7 @@ export class ProfileService {
         supabaseClient: SupabaseClientType = browserSupabaseClient
     ): Promise<ApiResponse<AppProfile>> {
         try {
+            // 1. Update the 'profiles' table
             const supabaseUpdates = profileTransformer.toSupabase(updates);
             const { data, error } = await supabaseClient
                 .from('profiles')
@@ -83,16 +84,25 @@ export class ProfileService {
             if (error) throw error;
             if (!data) throw new Error('Profile update failed');
 
-            const updatedProfile = profileTransformer.toApp(data);
-
-            if (updates.hasOwnProperty('fullName') || updates.hasOwnProperty('avatarUrl')) {
-                // FIX: Coalesce null to undefined for the helper function
-                await this.updateAuthUserMetadata(
-                    { full_name: updates.fullName ?? undefined, avatar_url: updates.avatarUrl },
-                    supabaseClient
-                );
+            // 2. SIMPLIFIED: Update the 'auth.users' table metadata if needed
+            const authMetadataUpdates: { full_name?: string; avatar_url?: string | null } = {};
+            if (updates.hasOwnProperty('fullName')) {
+                authMetadataUpdates.full_name = updates.fullName ?? undefined;
+            }
+            if (updates.hasOwnProperty('avatarUrl')) {
+                authMetadataUpdates.avatar_url = updates.avatarUrl;
             }
 
+            if (Object.keys(authMetadataUpdates).length > 0) {
+                const { error: authError } = await supabaseClient.auth.updateUser({ data: authMetadataUpdates });
+                if (authError) {
+                    // Log the error but don't fail the whole operation,
+                    // as the primary profile update succeeded.
+                    console.error('Error updating auth user metadata:', authError);
+                }
+            }
+
+            const updatedProfile = profileTransformer.toApp(data);
             return { success: true, data: updatedProfile, message: 'Profile updated successfully' };
         } catch (error) {
             console.error('Error updating profile:', error);

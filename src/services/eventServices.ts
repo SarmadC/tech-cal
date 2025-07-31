@@ -1,20 +1,8 @@
 // src/services/eventServices.ts
 
 import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
-
-import type {
-    AppEvent,
-    EventFilters,
-    ApiResponse,
-    SearchSuggestion,
-    SupabaseEventWithEventType
-} from '@/types';
-
-import {
-    eventTransformer,
-    eventTypeTransformer,
-    enrichEvent,
-} from '@/utils/transformers';
+import type { AppEvent, EventFilters, ApiResponse, SearchSuggestion, SupabaseEventWithEventType } from '@/types';
+import { eventTransformer, eventTypeTransformer, enrichEvent } from '@/utils/transformers';
 
 export class EventService {
     /**
@@ -27,22 +15,27 @@ export class EventService {
         try {
             let query = supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*)`)
+                // IMPROVEMENT: Select specific columns from the joined table for better performance.
+                .select(`*, event_type:event_type_id (id, name, color, description)`)
                 .order('start_time', { ascending: true });
 
             if (filters?.categories?.length) query = query.in('event_type_id', filters.categories);
             if (filters?.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters?.endDate) query = query.lte('start_time', filters.endDate.toISOString());
-            if (filters?.searchTerm) query = query.or(`title.ilike.%${filters.searchTerm}%,description.ilike.%${filters.searchTerm}%,organizer.ilike.%${filters.searchTerm}%`);
+
+            // IMPROVEMENT: Use performant full-text search if a search term is provided.
+            if (filters?.searchTerm) {
+                // Assumes you've set up the 'fts' column as described in the feedback.
+                query = query.textSearch('fts', filters.searchTerm);
+            }
+
             if (filters?.status?.length) query = query.in('status', filters.status);
             if (filters?.eventIds?.length) query = query.in('id', filters.eventIds);
-
 
             const { data, error } = await query;
             if (error) throw error;
 
             const events: AppEvent[] = (data || []).map((item) => {
-                // Asserting the type since the join makes it non-null in practice for our app
                 const typedItem = item as SupabaseEventWithEventType;
                 const baseEvent = eventTransformer.toApp(typedItem);
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
@@ -66,7 +59,7 @@ export class EventService {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*)`)
+                .select(`*, event_type:event_type_id (id, name, color, description)`) // Standardized select
                 .eq('id', id)
                 .single();
 
@@ -94,6 +87,7 @@ export class EventService {
         supabaseClient: SupabaseClientType = browserSupabaseClient
     ): Promise<ApiResponse<SearchSuggestion[]>> {
         try {
+            // This is already well-optimized by selecting specific columns. No changes needed.
             const { data, error } = await supabaseClient
                 .from('events')
                 .select(`id, title, organizer, start_time`)
@@ -103,14 +97,13 @@ export class EventService {
 
             if (error) throw error;
 
-
             const suggestions: SearchSuggestion[] = (data || [])
                 .filter((item): item is { id: string; title: string | null; organizer: string | null; start_time: string } => item.start_time !== null)
                 .map(item => ({
                     id: item.id,
                     title: item.title || 'Untitled Event',
                     organizer: item.organizer || 'Unknown Organizer',
-                    startTime: item.start_time, // Now guaranteed to be a string
+                    startTime: item.start_time,
                     type: 'event' as const
                 }));
 
@@ -120,7 +113,6 @@ export class EventService {
             return { success: false, error: error instanceof Error ? error.message : 'Search failed' };
         }
     }
-
     /**
      * Get events by date range (optimized for calendar views).
      */

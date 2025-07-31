@@ -1,6 +1,6 @@
 // src/services/eventTypeService.ts
 
-// 👇 1. Import the browser client and the client type
+
 import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
 import type { ApiResponse, AppEventType } from '@/types';
 import { eventTypeTransformer } from '@/utils/transformers';
@@ -10,11 +10,10 @@ export class EventTypeService {
      * Get all event types, sorted by name.
      */
     static async getEventTypes(
-        // 👇 2. Add the optional supabaseClient parameter
         supabaseClient: SupabaseClientType = browserSupabaseClient
     ): Promise<ApiResponse<AppEventType[]>> {
         try {
-            // 👇 3. Use the provided client
+
             const { data, error } = await supabaseClient
                 .from('event_type')
                 .select('*')
@@ -38,11 +37,11 @@ export class EventTypeService {
      * using a high-performance RPC call.
      */
     static async getEventTypesWithCounts(
-        // 👇 2. Add the optional supabaseClient parameter
+
         supabaseClient: SupabaseClientType = browserSupabaseClient
     ): Promise<ApiResponse<AppEventType[]>> {
         try {
-            // 👇 3. Use the provided client
+
             const { data, error } = await supabaseClient.rpc('get_event_types_with_counts');
             if (error) throw error;
 
