@@ -32,7 +32,6 @@ export class UserEventService {
                 .single();
 
             if (existing) {
-                // CORRECTED: Using the provided supabaseClient
                 const { error } = await supabaseClient
                     .from('user_events')
                     .update({ status, notes, created_at: new Date().toISOString() })
@@ -40,7 +39,6 @@ export class UserEventService {
                 if (error) throw error;
                 return { success: true, message: `Event status updated to ${status}` };
             } else {
-                // CORRECTED: Using the provided supabaseClient
                 const { error } = await supabaseClient
                     .from('user_events')
                     .insert({ user_id: userId, event_id: eventId, status, notes, created_at: new Date().toISOString() });

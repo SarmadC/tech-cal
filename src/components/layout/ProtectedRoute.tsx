@@ -1,8 +1,8 @@
 // src/components/layout/ProtectedRoute.tsx
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation'; // Add usePathname
-import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
 
@@ -19,27 +19,41 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
     const { user, loading } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
+    const [shouldRender, setShouldRender] = useState(false);
 
-    if (loading) {
-        return <Loading />;
-    }
+    useEffect(() => {
+        if (loading) return; // Wait for auth to finish loading
 
-    const isAuthenticated = !!user;
-    const isGuestRoute = allowUnauthenticated;
+        const isAuthenticated = !!user;
+        const isGuestRoute = allowUnauthenticated;
 
-    if (!isGuestRoute && !isAuthenticated) {
-        router.replace(redirectTo);
-        return <Loading />;
-    }
+        if (!isGuestRoute && !isAuthenticated) {
+            // Redirect unauthenticated users away from protected routes
+            const currentPath = pathname;
+            const redirectUrl = redirectTo + (currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}` : '');
+            router.replace(redirectUrl);
+            return;
+        }
 
-    if (isGuestRoute && isAuthenticated) {
-        router.replace('/dashboard');
+        if (isGuestRoute && isAuthenticated) {
+            // Redirect authenticated users away from guest-only routes
+            const redirect = new URLSearchParams(window.location.search).get('redirect');
+            router.replace(redirect || '/dashboard');
+            return;
+        }
+
+        // If we get here, user should see the content
+        setShouldRender(true);
+    }, [user, loading, router, redirectTo, allowUnauthenticated, pathname]);
+
+    // Show loading while auth is loading or while we're deciding what to do
+    if (loading || !shouldRender) {
         return <Loading />;
     }
 
     return <>{children}</>;
 }
-
 
 // --- Helper Components and Hooks ---
 
@@ -66,9 +80,11 @@ interface AuthGateProps {
 
 export function AuthGate({ authenticated, unauthenticated, loading }: AuthGateProps) {
     const { user, loading: authLoading } = useAuth();
+
     if (authLoading) {
         return <>{loading || <Loading />}</>;
     }
+
     return <>{user ? authenticated : unauthenticated}</>;
 }
 
@@ -79,16 +95,16 @@ export function useAuthRedirect(
 ) {
     const { user, loading } = useAuth();
     const router = useRouter();
-    const pathname = usePathname(); // Get current path
+    const pathname = usePathname();
 
     useEffect(() => {
         if (loading) return; // Don't do anything while loading
 
-        if (user && pathname !== authenticatedRoute) {
-            // OPTIMIZATION: Only redirect if not already on the target page
+        if (user && pathname === unauthenticatedRoute) {
+            // Only redirect if currently on the unauthenticated route
             router.push(authenticatedRoute);
-        } else if (!user && pathname !== unauthenticatedRoute) {
-            // OPTIMIZATION: Only redirect if not already on the target page
+        } else if (!user && pathname === authenticatedRoute) {
+            // Only redirect if currently on the authenticated route
             router.push(unauthenticatedRoute);
         }
     }, [user, loading, router, authenticatedRoute, unauthenticatedRoute, pathname]);

@@ -8,7 +8,8 @@ import {
     useState,
     ReactNode,
     useCallback,
-    useMemo
+    useMemo,
+    useRef
 } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
@@ -62,6 +63,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         initialized: false,
     });
 
+    // Use ref to track if we're currently updating auth state to prevent race conditions
+    const isUpdatingRef = useRef(false);
+
     // --- Profile Management ---
     const loadUserProfile = useCallback(async (user: User): Promise<AppProfile | null> => {
         try {
@@ -73,7 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             // If no profile exists, create one
             const createResult = await ProfileService.createProfile({
                 id: user.id,
-                fullName: user.user_metadata?.full_name || 'New User',
+                fullName: user.user_metadata?.full_name || null,
                 avatarUrl: user.user_metadata?.avatar_url || null,
             });
 
@@ -85,32 +89,53 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, []);
 
     const refreshProfile = useCallback(async () => {
-        if (!authState.user) return;
+        if (!authState.user || isUpdatingRef.current) return;
 
-        const profile = await loadUserProfile(authState.user);
-        setAuthState(prev => ({ ...prev, profile }));
+        try {
+            const profile = await loadUserProfile(authState.user);
+            setAuthState(prev => ({ ...prev, profile }));
+        } catch (error) {
+            console.error('Error refreshing profile:', error);
+        }
     }, [authState.user, loadUserProfile]);
 
     // --- Auth State Management ---
     const updateAuthState = useCallback(async (session: Session | null) => {
-        const user = session?.user || null;
+        // Prevent multiple simultaneous updates
+        if (isUpdatingRef.current) return;
+        isUpdatingRef.current = true;
 
-        setAuthState(prev => ({
-            ...prev,
-            user,
-            session,
-            loading: true
-        }));
+        try {
+            const user = session?.user || null;
 
-        // Load profile if user exists
-        const profile = user ? await loadUserProfile(user) : null;
+            // First update with user/session
+            setAuthState(prev => ({
+                ...prev,
+                user,
+                session,
+                loading: true
+            }));
 
-        setAuthState(prev => ({
-            ...prev,
-            profile,
-            loading: false,
-            initialized: true
-        }));
+            // Load profile if user exists
+            const profile = user ? await loadUserProfile(user) : null;
+
+            // Final update with all data
+            setAuthState(prev => ({
+                ...prev,
+                profile,
+                loading: false,
+                initialized: true
+            }));
+        } catch (error) {
+            console.error('Error updating auth state:', error);
+            setAuthState(prev => ({
+                ...prev,
+                loading: false,
+                initialized: true
+            }));
+        } finally {
+            isUpdatingRef.current = false;
+        }
     }, [loadUserProfile]);
 
     // --- Initialize Auth State ---
@@ -119,9 +144,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         const initializeAuth = async () => {
             try {
-                // Get initial session
                 const { data: { session } } = await supabase.auth.getSession();
-
                 if (mounted) {
                     await updateAuthState(session);
                 }
@@ -149,7 +172,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 console.log('Auth state changed:', event);
-                await updateAuthState(session);
+
+                // Don't update during sign out to prevent race conditions
+                if (event === 'SIGNED_OUT') {
+                    setAuthState({
+                        user: null,
+                        session: null,
+                        profile: null,
+                        loading: false,
+                        initialized: true,
+                    });
+                } else {
+                    await updateAuthState(session);
+                }
             }
         );
 
@@ -159,10 +194,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // --- Auth Actions ---
     const signIn = useCallback(async (credentials: LoginForm): Promise<AuthResponse> => {
         try {
-            setAuthState(prev => ({ ...prev, loading: true }));
-            return await AuthService.signIn(credentials);
+            const result = await AuthService.signIn(credentials);
+            // Don't manually update state - let the auth listener handle it
+            return result;
         } catch (error) {
-            setAuthState(prev => ({ ...prev, loading: false }));
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Sign in failed'
@@ -172,10 +207,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const signUp = useCallback(async (data: SignupForm): Promise<AuthResponse> => {
         try {
-            setAuthState(prev => ({ ...prev, loading: true }));
-            return await AuthService.signUp(data);
+            const result = await AuthService.signUp(data);
+            // Don't manually update state - let the auth listener handle it
+            return result;
         } catch (error) {
-            setAuthState(prev => ({ ...prev, loading: false }));
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Sign up failed'
@@ -197,13 +232,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const signOut = useCallback(async (): Promise<void> => {
         try {
             await AuthService.signOut();
-            setAuthState({
-                user: null,
-                session: null,
-                profile: null,
-                loading: false,
-                initialized: true,
-            });
+            // State will be updated by the auth listener
         } catch (error) {
             console.error('Error signing out:', error);
         }
@@ -220,12 +249,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         try {
             const result = await ProfileService.updateProfile(authState.user.id, data);
-
             if (result.success) {
-                // Refresh profile data
                 await refreshProfile();
             }
-
             return result;
         } catch (error) {
             return {
@@ -239,7 +265,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const contextValue = useMemo((): AuthContextType => ({
         // State
         ...authState,
-
         // Actions
         signIn,
         signUp,
