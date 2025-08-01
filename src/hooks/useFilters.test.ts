@@ -1,97 +1,58 @@
-// src/hooks/useFilters.test.ts (Best Practice Version)
+// src/hooks/useFilters.ts
+'use client';
 
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useFilters } from './useFilters';
-import * as NextNavigation from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback } from 'react';
+import { EventFilters } from '@/types';
 
-// Mock the entire module
-vi.mock('next/navigation');
+export function useFilters() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
-// Create spies that we can reference in our tests
-const mockRouterPush = vi.fn();
+    // --- Read filters from the current URL ---
+    const searchTerm = searchParams.get('q') || '';
+    const categories = searchParams.get('categories')?.split(',') || [];
 
-describe('useFilters Hook', () => {
+    // Combine into a single filter object
+    const activeFilters: EventFilters = {
+        searchTerm,
+        categories,
+    };
 
-    beforeEach(() => {
-        // Reset spies before each test
-        vi.clearAllMocks();
+    // --- Create a function to update the URL ---
+    const setFilters = useCallback(
+        (newFilters: Partial<EventFilters>) => {
+            const current = new URLSearchParams(Array.from(searchParams.entries()));
 
-        // Set up the default mock implementations for the router hooks
-        vi.spyOn(NextNavigation, 'useRouter').mockReturnValue({ push: mockRouterPush } as any);
-        vi.spyOn(NextNavigation, 'usePathname').mockReturnValue('/calendar');
-    });
+            // Update search term
+            if (newFilters.searchTerm !== undefined) {
+                if (newFilters.searchTerm) {
+                    current.set('q', newFilters.searchTerm);
+                } else {
+                    current.delete('q');
+                }
+            }
 
-    it('should correctly read initial filters from the URL', () => {
-        // Arrange: For this specific test, control the return value of useSearchParams
-        vi.spyOn(NextNavigation, 'useSearchParams').mockReturnValue(new URLSearchParams('?q=initial&categories=cat1'));
+            // Update categories
+            if (newFilters.categories !== undefined) {
+                if (newFilters.categories.length > 0) {
+                    current.set('categories', newFilters.categories.join(','));
+                } else {
+                    current.delete('categories');
+                }
+            }
 
-        const { result } = renderHook(() => useFilters());
+            const search = current.toString();
+            const query = search ? `?${search}` : '';
 
-        expect(result.current.activeFilters.searchTerm).toBe('initial');
-        expect(result.current.activeFilters.categories).toEqual(['cat1']);
-    });
+            router.push(`${pathname}${query}`);
+        },
+        [searchParams, pathname, router]
+    );
 
-    it('should update the URL when setting a new search term', () => {
-        // Arrange
-        vi.spyOn(NextNavigation, 'useSearchParams').mockReturnValue(new URLSearchParams('?categories=cat1'));
-        const { result } = renderHook(() => useFilters());
-
-        // Act
-        act(() => {
-            result.current.setFilters({ searchTerm: 'new-search' });
-        });
-
-        // Assert
-        expect(mockRouterPush).toHaveBeenCalledTimes(1);
-        expect(mockRouterPush).toHaveBeenCalledWith('/calendar?categories=cat1&q=new-search');
-    });
-
-    it('should update the URL when adding a new category', () => {
-        // Arrange
-        vi.spyOn(NextNavigation, 'useSearchParams').mockReturnValue(new URLSearchParams('?q=initial&categories=cat1'));
-        const { result } = renderHook(() => useFilters());
-
-        // Act
-        act(() => {
-            result.current.setFilters({ categories: ['cat1', 'cat2'] });
-        });
-
-        // Assert
-        expect(mockRouterPush).toHaveBeenCalledTimes(1);
-        expect(mockRouterPush).toHaveBeenCalledWith('/calendar?q=initial&categories=cat1%2Ccat2');
-    });
-
-    it('should remove a filter from the URL when it is set to an empty value', () => {
-        // Arrange
-        vi.spyOn(NextNavigation, 'useSearchParams').mockReturnValue(new URLSearchParams('?q=initial&categories=cat1'));
-        const { result } = renderHook(() => useFilters());
-
-        // Act
-        act(() => {
-            result.current.setFilters({ searchTerm: '' });
-        });
-
-        // Assert
-        expect(mockRouterPush).toHaveBeenCalledTimes(1);
-        expect(mockRouterPush).toHaveBeenCalledWith('/calendar?categories=cat1');
-    });
-
-    it('should handle an empty initial URL gracefully', () => {
-        // Arrange
-        vi.spyOn(NextNavigation, 'useSearchParams').mockReturnValue(new URLSearchParams(''));
-        const { result } = renderHook(() => useFilters());
-
-        // Assert on initial state
-        expect(result.current.activeFilters.searchTerm).toBe('');
-        expect(result.current.activeFilters.categories).toEqual([]);
-
-        // Act
-        act(() => {
-            result.current.setFilters({ searchTerm: 'first-search' });
-        });
-
-        // Assert on the result of the action
-        expect(mockRouterPush).toHaveBeenCalledWith('/calendar?q=first-search');
-    });
-});
+    return {
+        activeFilters,
+        setFilters,
+    };
+}

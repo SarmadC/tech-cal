@@ -267,3 +267,28 @@ export function useAuth(): AuthContextType {
     }
     return context;
 }
+
+export function useUser(): User | null {
+    const { user } = useAuth();
+    return user;
+}
+
+export function useProfile(): AppProfile | null {
+    const { profile } = useAuth();
+    return profile;
+}
+
+export function useIsAuthenticated(): boolean {
+    const { user, initialized } = useAuth();
+    return initialized && !!user;
+}
+
+export function useUserId(): string | null {
+    const { user } = useAuth();
+    return user?.id || null;
+}
+
+export function useAuthLoading(): boolean {
+    const { loading, initialized } = useAuth();
+    return loading || !initialized;
+}
