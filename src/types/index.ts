@@ -10,22 +10,24 @@ import { Json } from './supabase';
 export type SupabaseEvent = {
     id: string;
     created_at: string;
-    title: string;
-    description: string;
+    updated_at: string | null;
+    title: string | null;
+    description: string | null;
     start_time: string;
     end_time: string | null;
-    organizer: string;
-    location: string;
-    status: string;
-    source_url: string;
+    organizer_id: string | null;
+    location: string | null;
+    status: string | null;
+    source_url: string | null;
     livestream_url: string | null;
-    event_type_id: string;
+    event_type_id: string | null;
 };
 
+// Also update SupabaseEventType to match your schema
 export type SupabaseEventType = {
     id: string;
-    name: string | null;
-    color: string | null;
+    name: string | null; // Your schema allows null
+    color: string | null; // Your schema allows null
     description: string | null;
 };
 

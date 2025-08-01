@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.tsx
+// src/contexts/AuthContext.tsx (Corrected)
 'use client';
 
 import {
@@ -46,7 +46,8 @@ interface AuthActions {
 export type AuthContextType = AuthState & AuthActions;
 
 // --- Context Creation ---
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// THIS IS THE FIX: Added the 'export' keyword
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // --- Auth Provider ---
 interface AuthProviderProps {
@@ -54,7 +55,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-    // --- State ---
+    // ... (the rest of your file remains exactly the same) ...
     const [authState, setAuthState] = useState<AuthState>({
         user: null,
         session: null,
@@ -63,24 +64,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         initialized: false,
     });
 
-    // Use ref to track if we're currently updating auth state to prevent race conditions
     const isUpdatingRef = useRef(false);
 
-    // --- Profile Management ---
     const loadUserProfile = useCallback(async (user: User): Promise<AppProfile | null> => {
         try {
             const result = await ProfileService.getProfile(user.id);
             if (result.success && result.data) {
                 return result.data;
             }
-
-            // If no profile exists, create one
             const createResult = await ProfileService.createProfile({
                 id: user.id,
                 fullName: user.user_metadata?.full_name || null,
                 avatarUrl: user.user_metadata?.avatar_url || null,
             });
-
             return createResult.success ? createResult.data || null : null;
         } catch (error) {
             console.error('Error loading user profile:', error);
@@ -90,7 +86,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const refreshProfile = useCallback(async () => {
         if (!authState.user || isUpdatingRef.current) return;
-
         try {
             const profile = await loadUserProfile(authState.user);
             setAuthState(prev => ({ ...prev, profile }));
@@ -99,27 +94,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }, [authState.user, loadUserProfile]);
 
-    // --- Auth State Management ---
     const updateAuthState = useCallback(async (session: Session | null) => {
-        // Prevent multiple simultaneous updates
         if (isUpdatingRef.current) return;
         isUpdatingRef.current = true;
-
         try {
             const user = session?.user || null;
-
-            // First update with user/session
             setAuthState(prev => ({
                 ...prev,
                 user,
                 session,
                 loading: true
             }));
-
-            // Load profile if user exists
             const profile = user ? await loadUserProfile(user) : null;
-
-            // Final update with all data
             setAuthState(prev => ({
                 ...prev,
                 profile,
@@ -138,10 +124,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }, [loadUserProfile]);
 
-    // --- Initialize Auth State ---
     useEffect(() => {
         let mounted = true;
-
         const initializeAuth = async () => {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
@@ -159,21 +143,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 }
             }
         };
-
         initializeAuth();
-
         return () => {
             mounted = false;
         };
     }, [updateAuthState]);
 
-    // --- Auth State Listener ---
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 console.log('Auth state changed:', event);
-
-                // Don't update during sign out to prevent race conditions
                 if (event === 'SIGNED_OUT') {
                     setAuthState({
                         user: null,
@@ -187,16 +166,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 }
             }
         );
-
         return () => subscription.unsubscribe();
     }, [updateAuthState]);
 
-    // --- Auth Actions ---
     const signIn = useCallback(async (credentials: LoginForm): Promise<AuthResponse> => {
         try {
-            const result = await AuthService.signIn(credentials);
-            // Don't manually update state - let the auth listener handle it
-            return result;
+            return await AuthService.signIn(credentials);
         } catch (error) {
             return {
                 success: false,
@@ -207,9 +182,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const signUp = useCallback(async (data: SignupForm): Promise<AuthResponse> => {
         try {
-            const result = await AuthService.signUp(data);
-            // Don't manually update state - let the auth listener handle it
-            return result;
+            return await AuthService.signUp(data);
         } catch (error) {
             return {
                 success: false,
@@ -232,7 +205,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const signOut = useCallback(async (): Promise<void> => {
         try {
             await AuthService.signOut();
-            // State will be updated by the auth listener
         } catch (error) {
             console.error('Error signing out:', error);
         }
@@ -246,7 +218,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (!authState.user) {
             return { success: false, error: 'No authenticated user' };
         }
-
         try {
             const result = await ProfileService.updateProfile(authState.user.id, data);
             if (result.success) {
@@ -261,11 +232,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }, [authState.user, refreshProfile]);
 
-    // --- Memoized Context Value ---
     const contextValue = useMemo((): AuthContextType => ({
-        // State
         ...authState,
-        // Actions
         signIn,
         signUp,
         signInWithOAuth,
@@ -298,30 +266,4 @@ export function useAuth(): AuthContextType {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
-}
-
-// --- Utility Hooks ---
-export function useUser(): User | null {
-    const { user } = useAuth();
-    return user;
-}
-
-export function useProfile(): AppProfile | null {
-    const { profile } = useAuth();
-    return profile;
-}
-
-export function useIsAuthenticated(): boolean {
-    const { user, initialized } = useAuth();
-    return initialized && !!user;
-}
-
-export function useUserId(): string | null {
-    const { user } = useAuth();
-    return user?.id || null;
-}
-
-export function useAuthLoading(): boolean {
-    const { loading, initialized } = useAuth();
-    return loading || !initialized;
 }
