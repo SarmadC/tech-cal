@@ -1,4 +1,4 @@
-// src/components/Navbar.tsx (Updated with Auth Integration)
+// src/components/Navbar.tsx (Updated with API removed)
 
 'use client';
 
@@ -26,7 +26,7 @@ export default function Navbar() {
         { href: '/#features', label: 'Features' },
         { href: '/pricing', label: 'Pricing' },
         { href: '/blog', label: 'Blog' },
-        { href: '/api-docs', label: 'API' },
+        // REMOVED: { href: '/api-docs', label: 'API' },
     ];
 
     // Add authenticated-only links

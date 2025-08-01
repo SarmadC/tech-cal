@@ -1,4 +1,4 @@
-// src/components/common/UserMenu.tsx
+// src/components/common/UserMenu.tsx (Updated with API Keys removed)
 
 'use client';
 
@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Settings, LogOut, Calendar, BarChart3, ChevronDown, KeyRound, CreditCard } from 'lucide-react';
+import { User, Settings, LogOut, Calendar, BarChart3, ChevronDown, CreditCard } from 'lucide-react';
 
 export default function UserMenu() {
     const [isOpen, setIsOpen] = useState(false);
@@ -107,7 +107,6 @@ export default function UserMenu() {
                 <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 border border-border-color rounded-xl shadow-lg z-50 overflow-hidden">
                     {/* User Info Header */}
                     <div className="px-4 py-3 border-b border-border-color bg-background-secondary">
-                        {/* ... (user info header content remains the same) */}
                         <div className="flex items-center space-x-3">
                             {user.user_metadata?.avatar_url ? (
                                 <Image
@@ -167,15 +166,15 @@ export default function UserMenu() {
                             <span className="text-sm text-foreground-primary">Profile</span>
                         </Link>
 
-                        {/* The "API Keys" link now points to the 'api' tab on the settings page. */}
-                        <Link
+                        {/* REMOVED: API Keys link */}
+                        {/* <Link
                             href="/dashboard/settings?tab=api"
                             onClick={() => setIsOpen(false)}
                             className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
                         >
                             <KeyRound className="w-4 h-4 text-foreground-tertiary" />
                             <span className="text-sm text-foreground-primary">API Keys</span>
-                        </Link>
+                        </Link> */}
 
                         {/* The "Billing" link now points to the 'billing' tab on the settings page. */}
                         <Link
