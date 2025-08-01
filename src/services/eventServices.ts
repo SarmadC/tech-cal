@@ -1,9 +1,9 @@
-// src/services/eventServices.ts (Refactored for New Schema)
+// src/services/eventServices.ts 
 
 import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
-// NEW: Import SupabaseEventWithDetails to handle the new joined data shape
 import type { AppEvent, EventFilters, ApiResponse, SearchSuggestion, SupabaseEventWithDetails } from '@/types';
 import { eventTransformer, eventTypeTransformer, enrichEvent } from '@/utils/transformers';
+import * as Sentry from "@sentry/nextjs";
 
 export class EventService {
     /**
@@ -16,7 +16,6 @@ export class EventService {
         try {
             let query = supabaseClient
                 .from('events')
-                // CHANGED: The .select() statement now explicitly joins organizers
                 .select(`
                     *,
                     event_type:event_type_id (id, name, color, description),
@@ -28,7 +27,6 @@ export class EventService {
             if (filters?.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters?.endDate) query = query.lte('start_time', filters.endDate.toISOString());
 
-            // CHANGED: Switched from 'ilike' to high-performance 'textSearch'
             if (filters?.searchTerm) {
                 query = query.textSearch('fts', filters.searchTerm, {
                     type: 'websearch',
@@ -43,7 +41,6 @@ export class EventService {
             if (error) throw error;
 
             const events: AppEvent[] = (data || []).map((item) => {
-                // NEW: Use the more specific type that includes the joined organizer
                 const typedItem = item as SupabaseEventWithDetails;
                 const baseEvent = eventTransformer.toApp(typedItem);
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
@@ -53,6 +50,9 @@ export class EventService {
             return { success: true, data: events };
         } catch (error) {
             console.error('Error fetching events:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEvents', filters }
+            });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch events' };
         }
     }
@@ -67,7 +67,6 @@ export class EventService {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
-                // CHANGED: The .select() statement now explicitly joins organizers
                 .select(`
                     *,
                     event_type:event_type_id (id, name, color, description),
@@ -86,7 +85,11 @@ export class EventService {
 
             return { success: true, data: enrichedEvent };
         } catch (error) {
-            console.error('Error fetching event:', error);
+            console.error('Error fetching event by ID:', error);
+            // ADDED: Sentry capture
+            Sentry.captureException(error, {
+                extra: { function: 'getEventById', eventId: id }
+            });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch event' };
         }
     }
@@ -102,9 +105,7 @@ export class EventService {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
-                // CHANGED: Select now joins the organizer's name
                 .select(`id, title, start_time, organizer:organizers (name)`)
-                // CHANGED: Switched to high-performance Full-Text Search
                 .textSearch('fts', `'${term}'`, {
                     type: 'websearch',
                     config: 'english'
@@ -114,7 +115,6 @@ export class EventService {
 
             if (error) throw error;
 
-            // Type assertion for the new shape of the data
             type SearchResult = { id: string; title: string | null; start_time: string; organizer: { name: string } | null };
 
             const suggestions: SearchSuggestion[] = (data as SearchResult[] || [])
@@ -122,7 +122,6 @@ export class EventService {
                 .map(item => ({
                     id: item.id,
                     title: item.title || 'Untitled Event',
-                    // CHANGED: Safely access the joined organizer name
                     organizer: item.organizer?.name || 'Unknown Organizer',
                     startTime: item.start_time,
                     type: 'event' as const
@@ -131,11 +130,13 @@ export class EventService {
             return { success: true, data: suggestions };
         } catch (error) {
             console.error('Error searching events:', error);
+            // ADDED: Sentry capture
+            Sentry.captureException(error, {
+                extra: { function: 'searchEvents', searchTerm: term, limit }
+            });
             return { success: false, error: error instanceof Error ? error.message : 'Search failed' };
         }
     }
-
-    // All methods below this point also need the updated .select() statement
 
     /**
      * Get events by date range (optimized for calendar views).
@@ -150,7 +151,6 @@ export class EventService {
         try {
             let query = supabaseClient
                 .from('events')
-                // CHANGED: The .select() statement now explicitly joins organizers
                 .select(`
                     *,
                     event_type:event_type_id (id, name, color),
@@ -175,6 +175,9 @@ export class EventService {
             return { success: true, data: events };
         } catch (error) {
             console.error('Error fetching events by date range:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventsByDateRange', startDate, endDate, categoryIds, limit }
+            });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch events' };
         }
     }
@@ -202,7 +205,6 @@ export class EventService {
             const now = new Date().toISOString();
             const { data, error } = await supabaseClient
                 .from('events')
-                // CHANGED: The .select() statement now explicitly joins organizers
                 .select(`
                     *,
                     event_type:event_type_id (id, name, color),
@@ -223,6 +225,9 @@ export class EventService {
             return { success: true, data: events };
         } catch (error) {
             console.error('Error fetching live events:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getLiveEvents' }
+            });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch live events' };
         }
     }
@@ -249,7 +254,6 @@ export class EventService {
 
             let query = supabaseClient
                 .from('events')
-                // CHANGED: The .select() statement now explicitly joins organizers
                 .select(`
                     *,
                     event_type:event_type_id (*),
@@ -274,7 +278,10 @@ export class EventService {
 
             return { success: true, data: events };
         } catch (error) {
-            console.error('Error fetching recommended opportunities:', error);
+            console.error('Error fetching recommended events:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getRecommendedEvents', categoryNames, excludedEventIds }
+            });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch events' };
         }
     }

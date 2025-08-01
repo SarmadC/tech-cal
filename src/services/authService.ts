@@ -1,6 +1,7 @@
 // src/services/authService.ts
 import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
 import type { AuthResponse, OAuthProvider, LoginForm, SignupForm } from '@/types';
+import * as Sentry from "@sentry/nextjs";
 
 export class AuthService {
     // Helper to make all methods use the correct client
@@ -43,6 +44,7 @@ export class AuthService {
             };
         } catch (error) {
             console.error('Sign in error:', error);
+            Sentry.captureException(error);
             return {
                 success: false,
                 error: 'An unexpected error occurred during sign in'
@@ -103,6 +105,7 @@ export class AuthService {
             };
         } catch (error) {
             console.error('Sign up error:', error);
+            Sentry.captureException(error);
             return {
                 success: false,
                 error: 'An unexpected error occurred during account creation'
@@ -125,7 +128,7 @@ export class AuthService {
             if (error) return { success: false, error: this.getReadableErrorMessage(error.message) };
             return { success: true, message: `Redirecting to ${provider}...` };
         } catch (error) {
-            console.error('OAuth sign in error:', error);
+            Sentry.captureException(error, { extra: { function: 'signInWithOAuth', provider } });
             return { success: false, error: `Failed to sign in with ${provider}` };
         }
     }
@@ -142,6 +145,7 @@ export class AuthService {
             return { success: true, message: 'Successfully signed out' };
         } catch (error) {
             console.error('Sign out error:', error);
+            Sentry.captureException(error, { extra: { function: 'signOut' } });
             return { success: false, error: 'An error occurred during sign out' };
         }
     }
@@ -161,6 +165,7 @@ export class AuthService {
             return { success: true, message: 'If an account with that email exists, a reset link will be sent.' };
         } catch (error) {
             console.error('Password reset error:', error);
+            Sentry.captureException(error);
             return { success: false, error: 'An error occurred while sending the reset email' };
         }
     }
@@ -176,6 +181,7 @@ export class AuthService {
             if (!data.session) throw new Error('Unable to verify reset link.');
             return { success: true };
         } catch (err) {
+            Sentry.captureException(err);
             throw new Error(err instanceof Error ? err.message : 'Invalid or expired reset link.');
         }
     }
@@ -193,6 +199,7 @@ export class AuthService {
             if (error) throw error;
             return { success: true, message: 'Password updated successfully!' };
         } catch (err) {
+            Sentry.captureException(err);
             const friendlyError = this.getReadableErrorMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
             throw new Error(friendlyError);
         }
@@ -214,6 +221,7 @@ export class AuthService {
             return { success: true, message: 'Please check your new email address to confirm the change.' };
         } catch (error) {
             console.error('Email update error:', error);
+            Sentry.captureException(error);
             return { success: false, error: 'An error occurred while updating your email' };
         }
     }
@@ -233,6 +241,7 @@ export class AuthService {
             return session;
         } catch (error) {
             console.error('Error getting current session:', error);
+            Sentry.captureException(error);
             return null;
         }
     }
@@ -251,6 +260,7 @@ export class AuthService {
             return user;
         } catch (error) {
             console.error('Error getting current user:', error);
+            Sentry.captureException(error);
             return null;
         }
     }

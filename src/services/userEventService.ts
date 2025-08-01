@@ -1,4 +1,4 @@
-// src/services/userEventService.ts (Corrected and Final)
+// src/services/userEventService.ts
 
 import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
 import type {
@@ -8,6 +8,7 @@ import type {
     SupabaseTrackedEventWithDetails,
 } from '@/types';
 import { trackedEventTransformer } from '@/utils/transformers';
+import * as Sentry from "@sentry/nextjs";
 
 export class UserEventService {
     /**
@@ -31,7 +32,7 @@ export class UserEventService {
             if (existing) {
                 const { error } = await supabaseClient
                     .from('user_events')
-                    .update({ status, notes, updated_at: new Date().toISOString() }) // FIX: update `updated_at`
+                    .update({ status, notes, updated_at: new Date().toISOString() })
                     .eq('id', existing.id);
                 if (error) throw error;
                 return { success: true, message: `Event status updated to ${status}` };
@@ -44,6 +45,7 @@ export class UserEventService {
             }
         } catch (error) {
             console.error('Error tracking event:', error);
+            Sentry.captureException(error, { extra: { function: 'trackEvent', userId, eventId, status } });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to track event' };
         }
     }
@@ -66,6 +68,7 @@ export class UserEventService {
             return { success: true, message: 'Event untracked successfully!' };
         } catch (error) {
             console.error('Error untracking event:', error);
+            Sentry.captureException(error, { extra: { function: 'untrackEvent', userId, eventId } });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to untrack event' };
         }
     }
@@ -97,6 +100,7 @@ export class UserEventService {
             return { success: true, data: trackedEvents };
         } catch (error) {
             console.error('Error fetching tracked events:', error);
+            Sentry.captureException(error, { extra: { function: 'getTrackedEvents', userId } });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch tracked events' };
         }
     }
@@ -120,6 +124,7 @@ export class UserEventService {
             return { success: true, data: { isTracked: !!data, status: data?.status as EventStatus } };
         } catch (error) {
             console.error('Error checking event tracking status:', error);
+            Sentry.captureException(error, { extra: { function: 'isEventTracked', userId, eventId } });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to check tracking status' };
         }
     }
@@ -140,7 +145,7 @@ export class UserEventService {
                 .eq('user_id', userId)
                 .in('event_id', eventIds);
 
-            const existingEventIds = new Set(existing?.map((e: { event_id: string }) => e.event_id) || []); // FIX: Add explicit type for 'e'
+            const existingEventIds = new Set(existing?.map((e: { event_id: string }) => e.event_id) || []);
             const newEventIds = eventIds.filter(id => !existingEventIds.has(id));
 
             if (newEventIds.length === 0) {
@@ -154,6 +159,7 @@ export class UserEventService {
             return { success: true, data: { tracked: newEventIds.length, skipped: existingEventIds.size }, message: `Successfully tracked ${newEventIds.length} events!` };
         } catch (error) {
             console.error('Error bulk tracking events:', error);
+            Sentry.captureException(error, { extra: { function: 'bulkTrackEvents', userId, eventIdsCount: eventIds.length, status } });
             return { success: false, error: error instanceof Error ? error.message : 'Failed to track events' };
         }
     }

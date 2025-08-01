@@ -1,9 +1,9 @@
 // src/services/eventTypeService.ts
 
-
 import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
 import type { ApiResponse, AppEventType } from '@/types';
 import { eventTypeTransformer } from '@/utils/transformers';
+import * as Sentry from "@sentry/nextjs"; // ADDED: Import Sentry
 
 export class EventTypeService {
     /**
@@ -13,7 +13,6 @@ export class EventTypeService {
         supabaseClient: SupabaseClientType = browserSupabaseClient
     ): Promise<ApiResponse<AppEventType[]>> {
         try {
-
             const { data, error } = await supabaseClient
                 .from('event_type')
                 .select('*')
@@ -25,6 +24,7 @@ export class EventTypeService {
             return { success: true, data: eventTypes };
         } catch (error) {
             console.error('Error fetching event types:', error);
+            Sentry.captureException(error, { extra: { function: 'getEventTypes' } });
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to fetch event types'
@@ -37,21 +37,16 @@ export class EventTypeService {
      * using a high-performance RPC call.
      */
     static async getEventTypesWithCounts(
-
         supabaseClient: SupabaseClientType = browserSupabaseClient
     ): Promise<ApiResponse<AppEventType[]>> {
         try {
-
             const { data, error } = await supabaseClient.rpc('get_event_types_with_counts');
             if (error) throw error;
 
-            // Define the expected shape of the data returned by the RPC function for type safety.
             const eventTypes: AppEventType[] = (data || []).map((type) => {
-                // We can use the generated types from `supabase.ts` for even better safety
                 const baseType = eventTypeTransformer.toApp(type);
                 return {
                     ...baseType,
-                    // The return type of the RPC function in supabase.ts already defines this as number
                     eventCount: type.event_count || 0,
                 };
             });
@@ -59,6 +54,7 @@ export class EventTypeService {
             return { success: true, data: eventTypes };
         } catch (error) {
             console.error('Error fetching event types with counts:', error);
+            Sentry.captureException(error, { extra: { function: 'getEventTypesWithCounts' } });
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to fetch event types'
@@ -71,11 +67,9 @@ export class EventTypeService {
      */
     static async getEventTypeById(
         id: string,
-        // 👇 2. Add the optional supabaseClient parameter
         supabaseClient: SupabaseClientType = browserSupabaseClient
     ): Promise<ApiResponse<AppEventType>> {
         try {
-            // 👇 3. Use the provided client
             const { data, error } = await supabaseClient
                 .from('event_type')
                 .select('*')
@@ -89,6 +83,7 @@ export class EventTypeService {
             return { success: true, data: eventType };
         } catch (error) {
             console.error('Error fetching event type:', error);
+            Sentry.captureException(error, { extra: { function: 'getEventTypeById', id } });
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to fetch event type'
