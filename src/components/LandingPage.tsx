@@ -6,7 +6,6 @@ import {
     Filter,
     SatelliteDish,
     Link as LinkIcon,
-    Code2,
     BarChart3,
     Users,
     ArrowRight,
@@ -53,11 +52,12 @@ const features = [
         title: 'Calendar Integration',
         description: "Syncs with Google Calendar, Outlook, and Apple Calendar. One-click to add events with all the details you need.",
     },
-    {
-        icon: <Code2 />,
-        title: 'Developer API',
-        description: "RESTful API, webhooks, and real-time feeds. Integrate our curated event data into your apps.",
-    },
+    // REMOVED: API Feature Card
+    // {
+    //     icon: <Code2 />,
+    //     title: 'Developer API',
+    //     description: "RESTful API, webhooks, and real-time feeds. Integrate our curated event data into your apps.",
+    // },
     {
         icon: <BarChart3 />,
         title: 'Event Analytics',
