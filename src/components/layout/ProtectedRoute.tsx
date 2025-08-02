@@ -1,13 +1,21 @@
-// src/components/layout/ProtectedRoute.tsx
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
+import { ReactNode, useEffect } from 'react';
+
+// --- HELPER COMPONENT FOR REDIRECTION ---
+function Redirect({ to }: { to: string }) {
+    const router = useRouter();
+    useEffect(() => {
+        router.replace(to);
+    }, [router, to]);
+    return <Loading />;
+}
 
 interface ProtectedRouteProps {
-    children: React.ReactNode;
+    children: ReactNode;
     redirectTo?: string;
     allowUnauthenticated?: boolean;
 }
@@ -17,39 +25,25 @@ export default function ProtectedRoute({
     redirectTo = '/login',
     allowUnauthenticated = false,
 }: ProtectedRouteProps) {
-    const { user, loading } = useAuth();
-    const router = useRouter();
+    const { user, initialized } = useAuth();
+    // const router = useRouter(); // <-- REMOVED: This was unused.
     const pathname = usePathname();
-    const [shouldRender, setShouldRender] = useState(false);
+    const searchParams = useSearchParams();
 
-    useEffect(() => {
-        if (loading) return; // Wait for auth to finish loading
-
-        const isAuthenticated = !!user;
-        const isGuestRoute = allowUnauthenticated;
-
-        if (!isGuestRoute && !isAuthenticated) {
-            // Redirect unauthenticated users away from protected routes
-            const currentPath = pathname;
-            const redirectUrl = redirectTo + (currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}` : '');
-            router.replace(redirectUrl);
-            return;
-        }
-
-        if (isGuestRoute && isAuthenticated) {
-            // Redirect authenticated users away from guest-only routes
-            const redirect = new URLSearchParams(window.location.search).get('redirect');
-            router.replace(redirect || '/dashboard');
-            return;
-        }
-
-        // If we get here, user should see the content
-        setShouldRender(true);
-    }, [user, loading, router, redirectTo, allowUnauthenticated, pathname]);
-
-    // Show loading while auth is loading or while we're deciding what to do
-    if (loading || !shouldRender) {
+    if (!initialized) {
         return <Loading />;
+    }
+
+    const isAuthenticated = !!user;
+
+    if (allowUnauthenticated && isAuthenticated) {
+        const redirectUrl = searchParams.get('redirect') || '/dashboard';
+        return <Redirect to={redirectUrl} />;
+    }
+
+    if (!allowUnauthenticated && !isAuthenticated) {
+        const redirectUrl = `${redirectTo}?redirect=${encodeURIComponent(pathname)}`;
+        return <Redirect to={redirectUrl} />;
     }
 
     return <>{children}</>;
@@ -57,7 +51,6 @@ export default function ProtectedRoute({
 
 // --- Helper Components and Hooks ---
 
-// Higher-order component for protecting entire pages
 export function withAuth<P extends object>(
     Component: React.ComponentType<P>,
     options?: { redirectTo?: string; allowUnauthenticated?: boolean }
@@ -71,14 +64,17 @@ export function withAuth<P extends object>(
     return WrappedComponent;
 }
 
-// Component for displaying different content based on auth status
-interface AuthGateProps {
-    authenticated: React.ReactNode;
-    unauthenticated: React.ReactNode;
-    loading?: React.ReactNode;
-}
-
-export function AuthGate({ authenticated, unauthenticated, loading }: AuthGateProps) {
+// vvv THIS IS THE FIX for AuthGateProps vvv
+// Define the props inline here.
+export function AuthGate({
+    authenticated,
+    unauthenticated,
+    loading
+}: {
+    authenticated: ReactNode;
+    unauthenticated: ReactNode;
+    loading?: ReactNode;
+}) {
     const { user, loading: authLoading } = useAuth();
 
     if (authLoading) {
@@ -88,7 +84,6 @@ export function AuthGate({ authenticated, unauthenticated, loading }: AuthGatePr
     return <>{user ? authenticated : unauthenticated}</>;
 }
 
-// Hook for redirecting based on auth status
 export function useAuthRedirect(
     authenticatedRoute: string = '/dashboard',
     unauthenticatedRoute: string = '/login'
@@ -98,13 +93,10 @@ export function useAuthRedirect(
     const pathname = usePathname();
 
     useEffect(() => {
-        if (loading) return; // Don't do anything while loading
-
+        if (loading) return;
         if (user && pathname === unauthenticatedRoute) {
-            // Only redirect if currently on the unauthenticated route
             router.push(authenticatedRoute);
         } else if (!user && pathname === authenticatedRoute) {
-            // Only redirect if currently on the authenticated route
             router.push(unauthenticatedRoute);
         }
     }, [user, loading, router, authenticatedRoute, unauthenticatedRoute, pathname]);

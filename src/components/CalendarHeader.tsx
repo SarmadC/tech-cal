@@ -1,84 +1,60 @@
-// src/components/CalendarHeader.tsx
+// src/components/calendar/CalendarHeader.tsx
+'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { FC } from 'react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, LayoutDashboard } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
-// The interface for props remains the same
-interface CalendarHeaderProps {
-  currentDate: Date;
-  view: string;
-  onNavigateMonth: (direction: number) => void;
-  onSetCurrentDate: () => void;
-  onSetView: (view: string) => void;
-  monthNames: string[];
+type CalendarViewType = 'month' | 'week' | 'day';
+
+export interface CalendarHeaderProps {
+    currentDate: Date;
+    view: CalendarViewType;
+    onNavigate: (dir: 'prev' | 'next' | 'today') => void;
+    onChangeView: (view: CalendarViewType) => void;
 }
 
-export default function CalendarHeader({
-  currentDate, view, onNavigateMonth, onSetCurrentDate, onSetView, monthNames,
-}: CalendarHeaderProps) {
-  return (
-    // Main container with theme-aware bottom border
-    <div className="h-16 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
-      
-      {/* Left-side navigation controls */}
-      <div className="flex items-center gap-2">
-        <button 
-          onClick={() => onNavigateMonth(-1)} 
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
-        <button 
-          onClick={onSetCurrentDate} 
-          className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-        >
-          Today
-        </button>
-        <button 
-          onClick={() => onNavigateMonth(1)} 
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-        >
-          <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
-      </div>
+const CalendarHeader: FC<CalendarHeaderProps> = ({ currentDate, view, onNavigate, onChangeView }) => {
+    const { signOut } = useAuth(); // Get signOut function
 
-      {/* Center month and year title */}
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-        {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-      </h2>
+    return (
+        <header className="h-20 flex-shrink-0 px-6 flex items-center justify-between border-b border-gray-800">
+            {/* vvv NEW: Dashboard Link vvv */}
+            <div className="flex items-center space-x-4">
+                <Link href="/dashboard" className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg" title="Go to Dashboard">
+                    <LayoutDashboard className="w-5 h-5" />
+                </Link>
+                <h1 className="text-xl font-semibold text-white">
+                    {currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                </h1>
+            </div>
+            {/* ^^^ END NEW ^^^ */}
 
-      {/* Right-side view switcher */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-        <button 
-          onClick={() => onSetView('month')} 
-          className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-            view === 'month' 
-              ? 'bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 shadow-sm' 
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-          }`}
-        >
-          Month
-        </button>
-        <button 
-          onClick={() => onSetView('week')} 
-          className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-            view === 'week' 
-              ? 'bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 shadow-sm' 
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-          }`}
-        >
-          Week
-        </button>
-        <button 
-          onClick={() => onSetView('day')} 
-          className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-            view === 'day' 
-              ? 'bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 shadow-sm' 
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-          }`}
-        >
-          Day
-        </button>
-      </div>
-    </div>
-  );
-}
+            <div className="flex items-center space-x-4">
+                <div className="flex items-center bg-gray-800 rounded-lg">
+                    {(['month', 'week', 'day'] as CalendarViewType[]).map(v => (
+                        <button
+                            key={v}
+                            onClick={() => onChangeView(v)}
+                            className={`px-4 py-2 text-sm rounded-md transition-colors capitalize ${view === v ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-700/50'}`}
+                        >
+                            {v}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex items-center space-x-2">
+                    <button onClick={() => onNavigate('prev')} className="p-2 hover:bg-gray-800 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
+                    <button onClick={() => onNavigate('today')} className="text-sm px-3 py-1.5 border border-gray-700 rounded-lg hover:bg-gray-800">Today</button>
+                    <button onClick={() => onNavigate('next')} className="p-2 hover:bg-gray-800 rounded-lg"><ChevronRight className="w-5 h-5" /></button>
+                </div>
+                {/* vvv NEW: Sign Out Button (optional but good UX) vvv */}
+                <button onClick={signOut} className="text-sm px-3 py-1.5 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/20">
+                    Sign Out
+                </button>
+            </div>
+        </header>
+    );
+};
+
+export default CalendarHeader;

@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test'; // <-- REMOVE 'devices'
+import { defineConfig } from '@playwright/test';
 
 /**
  * Read environment variables from file.
@@ -14,6 +14,10 @@ import { defineConfig } from '@playwright/test'; // <-- REMOVE 'devices'
 
 export default defineConfig({
     testDir: './tests',
+
+    // vvv THIS IS THE LINE TO ADD vvv
+    testMatch: /.*\.spec\.ts/,
+
     /* Run tests in files in parallel */
     fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */

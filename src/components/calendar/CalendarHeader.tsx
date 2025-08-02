@@ -2,9 +2,10 @@
 'use client';
 
 import { FC } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, LayoutDashboard } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
-// This type is specific to this component's props
 type CalendarViewType = 'month' | 'week' | 'day';
 
 export interface CalendarHeaderProps {
@@ -15,11 +16,20 @@ export interface CalendarHeaderProps {
 }
 
 const CalendarHeader: FC<CalendarHeaderProps> = ({ currentDate, view, onNavigate, onChangeView }) => {
+    const { signOut } = useAuth(); // Get the signOut function from the context
+
     return (
         <header className="h-20 flex-shrink-0 px-6 flex items-center justify-between border-b border-gray-800">
-            <h1 className="text-xl font-semibold text-white">
-                {currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-            </h1>
+            {/* THIS IS THE NEW SECTION WITH THE DASHBOARD LINK */}
+            <div className="flex items-center space-x-4">
+                <Link href="/dashboard" className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg" title="Go to Dashboard">
+                    <LayoutDashboard className="w-5 h-5" />
+                </Link>
+                <h1 className="text-xl font-semibold text-white">
+                    {currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                </h1>
+            </div>
+
             <div className="flex items-center space-x-4">
                 <div className="flex items-center bg-gray-800 rounded-lg">
                     {(['month', 'week', 'day'] as CalendarViewType[]).map(v => (
@@ -37,6 +47,10 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({ currentDate, view, onNavigate
                     <button onClick={() => onNavigate('today')} className="text-sm px-3 py-1.5 border border-gray-700 rounded-lg hover:bg-gray-800">Today</button>
                     <button onClick={() => onNavigate('next')} className="p-2 hover:bg-gray-800 rounded-lg"><ChevronRight className="w-5 h-5" /></button>
                 </div>
+
+                <button onClick={signOut} className="text-sm px-3 py-1.5 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/20">
+                    Sign Out
+                </button>
             </div>
         </header>
     );
