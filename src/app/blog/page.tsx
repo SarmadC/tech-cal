@@ -73,18 +73,14 @@ const blogPosts = [
 
 const categories = ['All', 'AI & ML', 'Web Dev', 'Mobile', 'Cloud', 'Security', 'AR/VR', 'Programming'];
 
-// Server Components receive searchParams as a prop
 export default function BlogPage({
-    searchParams
+    searchParams,
 }: {
-    searchParams?: {
-        q?: string;
-        category?: string;
-    }
+    searchParams: { [key: string]: string | string[] | undefined };
 }) {
-    // Read filters from the URL on the server
-    const searchTerm = searchParams?.q || '';
-    const selectedCategory = searchParams?.category || 'All';
+    // Read filters from the URL on the server. We cast to string for simplicity.
+    const searchTerm = (searchParams?.q as string) || '';
+    const selectedCategory = (searchParams?.category as string) || 'All';
 
     // Perform filtering on the server
     const filteredPosts = blogPosts.filter(post => {
