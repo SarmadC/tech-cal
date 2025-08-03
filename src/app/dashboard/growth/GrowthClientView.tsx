@@ -5,17 +5,12 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { GrowthDashboardHeader, FollowThroughRateCard, LearningConsistencyCard, TechStackCurrencyCard, UpcomingOpportunitiesCard, NetworkExpansionCard, IndustryPulseScoreCard } from '@/components/growth/GrowthComponents';
 import { EventService } from '@/services/eventServices';
 import { UserEventService } from '@/services/userEventService';
-
-// Import the client creator
 import { createClient } from '@/utils/supabase/client';
-// Import the necessary App types for props
 import type { AppTrackedEvent, AppEvent } from '@/types';
 
-// Define the props this component will receive from the server
 interface GrowthClientViewProps {
     initialTrackedEvents: AppTrackedEvent[];
     initialOpportunities: AppEvent[];
@@ -27,14 +22,12 @@ interface CategoryStats {
     color: string;
 }
 
-// --- Main Client Component ---
 export default function GrowthClientView({
     initialTrackedEvents,
     initialOpportunities
 }: GrowthClientViewProps) {
     const { user, profile } = useAuth();
     const [selectedPeriod, setSelectedPeriod] = useState('Yearly');
-    // Create a client instance for client-side fetches
     const [supabase] = useState(() => createClient());
 
     const { data: trackedEvents, error: trackedEventsError } = useQuery({
@@ -45,15 +38,12 @@ export default function GrowthClientView({
             return response.data || [];
         },
         enabled: !!user,
-        initialData: initialTrackedEvents, // Use server-fetched data
+        initialData: initialTrackedEvents,
     });
-
-    // All analytics logic remains on the client, as it's interactive and depends on client-side state
     const analytics = useMemo(() => {
         if (!trackedEvents || trackedEvents.length === 0) {
             return null;
         }
-        // ... The entire analytics calculation block remains exactly the same
         const attendedEvents = trackedEvents.filter(te => te.status === 'attended');
         const bookmarkedEvents = trackedEvents.filter(te => te.status === 'bookmarked');
         let followThroughRate = 0;
@@ -103,8 +93,6 @@ export default function GrowthClientView({
         const trackedEventIds = trackedEvents.map(e => e.eventId);
         return { followThroughRate, learningStreak, techStackCurrency, industryPulseScore, networkExpansion, topCategories, trackedEventIds };
     }, [trackedEvents]);
-
-    // The dependent query now also uses the client instance and initialData
     const { data: upcomingOpportunities, error: opportunitiesError } = useQuery({
         queryKey: ['upcomingOpportunities', analytics?.topCategories, analytics?.trackedEventIds],
         queryFn: async () => {
@@ -113,49 +101,43 @@ export default function GrowthClientView({
             return response.data || [];
         },
         enabled: !!analytics && analytics.topCategories.length > 0,
-        initialData: initialOpportunities, // Use server-fetched data
+        initialData: initialOpportunities,
     });
-
-    // The initial `isLoading` is gone, as data is provided by the server.
     const queryError = trackedEventsError || opportunitiesError;
 
     if (queryError) {
-        return <ProtectedRoute><div className="text-center text-red-500 p-8">Error: {queryError.message}</div></ProtectedRoute>;
+        return <div className="text-center text-red-500 p-8">Error: {queryError.message}</div>;
     }
 
     if (!analytics) {
         return (
-            <ProtectedRoute>
-                <div className="min-h-screen bg-gray-100 p-6">
-                    <div className="max-w-7xl mx-auto text-center py-20">
-                        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Start Your Growth Journey</h2>
-                        <p className="text-gray-500 mb-6">Track and attend events to see your professional development analytics here.</p>
-                        <Link href="/calendar" className="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700">Browse Events</Link>
-                    </div>
+            <div className="min-h-screen bg-gray-100 p-6">
+                <div className="max-w-7xl mx-auto text-center py-20">
+                    <h2 className="text-2xl font-semibold text-gray-700 mb-4">Start Your Growth Journey</h2>
+                    <p className="text-gray-500 mb-6">Track and attend events to see your professional development analytics here.</p>
+                    <Link href="/calendar" className="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700">Browse Events</Link>
                 </div>
-            </ProtectedRoute>
+            </div>
         );
     }
 
     return (
-        <ProtectedRoute>
-            <div className="min-h-screen bg-gray-100 p-6">
-                <div className="max-w-7xl mx-auto">
-                    <GrowthDashboardHeader userName={profile?.fullName?.split(' ')[0] || 'User'} selectedPeriod={selectedPeriod} setSelectedPeriod={setSelectedPeriod} />
-                    <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
-                        <UpcomingOpportunitiesCard opportunities={(upcomingOpportunities || []).map(o => ({
-                            title: o.title,
-                            date: new Date(o.startTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
-                            category: o.category?.name || 'General'
-                        }))} />
-                        <IndustryPulseScoreCard score={analytics.industryPulseScore} />
-                        <FollowThroughRateCard rate={analytics.followThroughRate} />
-                        <LearningConsistencyCard currentStreak={analytics.learningStreak.current} longestStreak={analytics.learningStreak.longest} />
-                        <TechStackCurrencyCard data={analytics.techStackCurrency} />
-                        <NetworkExpansionCard count={analytics.networkExpansion} />
-                    </div>
+        <div className="min-h-screen bg-gray-100 p-6">
+            <div className="max-w-7xl mx-auto">
+                <GrowthDashboardHeader userName={profile?.fullName?.split(' ')[0] || 'User'} selectedPeriod={selectedPeriod} setSelectedPeriod={setSelectedPeriod} />
+                <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+                    <UpcomingOpportunitiesCard opportunities={(upcomingOpportunities || []).map(o => ({
+                        title: o.title,
+                        date: new Date(o.startTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+                        category: o.category?.name || 'General'
+                    }))} />
+                    <IndustryPulseScoreCard score={analytics.industryPulseScore} />
+                    <FollowThroughRateCard rate={analytics.followThroughRate} />
+                    <LearningConsistencyCard currentStreak={analytics.learningStreak.current} longestStreak={analytics.learningStreak.longest} />
+                    <TechStackCurrencyCard data={analytics.techStackCurrency} />
+                    <NetworkExpansionCard count={analytics.networkExpansion} />
                 </div>
             </div>
-        </ProtectedRoute>
+        </div>
     );
 }

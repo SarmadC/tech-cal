@@ -7,59 +7,29 @@ import Link from 'next/link';
 import { useMutation } from '@tanstack/react-query';
 import { AuthService } from '@/services/authService';
 import { Loader2 } from 'lucide-react';
-
-// Import the client creator
 import { createClient } from '@/utils/supabase/client';
 
-// NOTE: ResetPasswordForm and SuccessDisplay UI components can stay in this file
-// or be moved to their own files for better organization. For simplicity, we'll keep them here.
+// 1. IMPORT Zod and React Hook Form libraries
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 
-const ResetPasswordForm = ({ onFormSubmit, isPending, mutationError }: {
-    onFormSubmit: (password: string) => void;
-    isPending: boolean;
-    mutationError: Error | null;
-}) => {
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [formError, setFormError] = useState('');
+// 2. DEFINE the Zod validation schema
+const ResetPasswordSchema = z.object({
+    password: z.string().min(8, { message: "Password must be at least 8 characters long." }),
+    confirmPassword: z.string().min(8, { message: "Please confirm your password." }),
+})
+    // Use refine to add a custom validation rule for matching passwords
+    .refine(data => data.password === data.confirmPassword, {
+        message: "Passwords do not match.",
+        path: ["confirmPassword"], // Show the error on the confirmPassword field
+    });
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setFormError('');
-        if (password.length < 8) {
-            setFormError('Password must be at least 8 characters long');
-            return;
-        }
-        if (password !== confirmPassword) {
-            setFormError('Passwords do not match');
-            return;
-        }
-        onFormSubmit(password);
-    };
+// Infer the TypeScript type from the schema
+type ResetPasswordFormData = z.infer<typeof ResetPasswordSchema>;
 
-    return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            {(formError || mutationError) && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                    {formError || mutationError?.message}
-                </div>
-            )}
-            <div>
-                <label htmlFor="password" className="block text-sm font-medium text-foreground-primary mb-2">New Password</label>
-                <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" placeholder="••••••••" />
-            </div>
-            <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground-primary mb-2">Confirm New Password</label>
-                <input id="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" placeholder="••••••••" />
-            </div>
-            <button type="submit" disabled={isPending} className="w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center">
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isPending ? 'Updating...' : 'Update password'}
-            </button>
-        </form>
-    );
-};
-
+// The SuccessDisplay component can remain the same
 const SuccessDisplay = () => (
     <div className="text-center space-y-6">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
@@ -75,22 +45,44 @@ const SuccessDisplay = () => (
     </div>
 );
 
-
-// --- The Main Client Component ---
+// --- The Main Client Component (Now includes the form logic) ---
 export default function ResetPasswordClientView() {
     const router = useRouter();
-    // Create a client instance for the mutation
     const [supabase] = useState(() => createClient());
 
-    // MUTATION: Update the user's password.
-    const { mutate: updatePassword, isPending, isSuccess, error: mutationError } = useMutation({
-        mutationFn: (newPassword: string) => AuthService.updateUserPassword(newPassword, supabase),
-        onSuccess: () => {
-            setTimeout(() => {
-                router.push('/dashboard');
-            }, 3000);
-        },
+    // 3. INITIALIZE React Hook Form
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<ResetPasswordFormData>({
+        resolver: zodResolver(ResetPasswordSchema),
     });
+
+    // The useMutation hook remains, as it's great for this
+    const { mutate: updatePassword, isSuccess } = useMutation({
+        mutationFn: (newPassword: string) => AuthService.updateUserPassword(newPassword, supabase),
+        onSuccess: (result) => {
+            if (result.success) {
+                toast.success("Password updated successfully!");
+                setTimeout(() => {
+                    router.push('/dashboard');
+                }, 3000);
+            } else {
+                // If the service returns an error, show it
+                toast.error("Update Failed", { description: result.error });
+            }
+        },
+        onError: (error) => {
+            toast.error("Update Failed", { description: error.message });
+        }
+    });
+
+    // 4. CREATE the onSubmit handler
+    const onSubmit = (data: ResetPasswordFormData) => {
+        // The data is already validated by Zod at this point
+        updatePassword(data.password);
+    };
 
     return (
         <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -114,11 +106,37 @@ export default function ResetPasswordClientView() {
                     {isSuccess ? (
                         <SuccessDisplay />
                     ) : (
-                        <ResetPasswordForm
-                            onFormSubmit={updatePassword}
-                            isPending={isPending}
-                            mutationError={mutationError as Error | null}
-                        />
+                        // 5. WIRE UP the form with the handleSubmit wrapper
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            <div>
+                                <label htmlFor="password" className="block text-sm font-medium text-foreground-primary mb-2">New Password</label>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    {...register('password')}
+                                    className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                                    placeholder="••••••••"
+                                    aria-invalid={errors.password ? "true" : "false"}
+                                />
+                                {errors.password && <p className="mt-2 text-sm text-red-500">{errors.password.message}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground-primary mb-2">Confirm New Password</label>
+                                <input
+                                    id="confirmPassword"
+                                    type="password"
+                                    {...register('confirmPassword')}
+                                    className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                                    placeholder="••••••••"
+                                    aria-invalid={errors.confirmPassword ? "true" : "false"}
+                                />
+                                {errors.confirmPassword && <p className="mt-2 text-sm text-red-500">{errors.confirmPassword.message}</p>}
+                            </div>
+                            <button type="submit" disabled={isSubmitting} className="w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center">
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {isSubmitting ? 'Updating...' : 'Update password'}
+                            </button>
+                        </form>
                     )}
                 </div>
             </div>

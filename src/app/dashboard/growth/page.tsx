@@ -12,7 +12,6 @@ const getTopCategories = (trackedEvents: AppTrackedEvent[]) => {
     const categoryCount = attendedEvents.reduce((acc, te) => {
         if (te.event?.category?.name) {
             const categoryName = te.event.category.name;
-            // Now TypeScript knows `acc` can be indexed by a string.
             acc[categoryName] = (acc[categoryName] || 0) + 1;
         }
         return acc;

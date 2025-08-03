@@ -1,8 +1,10 @@
-// src/components/calendar/EventDetailPanel.tsx (The final, clean version)
+// src/components/calendar/EventDetailPanel.tsx
 'use client';
 
 import { FC } from 'react';
-import { X } from 'lucide-react';
+import Link from 'next/link';
+import { X, ArrowUpRight } from 'lucide-react';
+
 import { AppEvent, AppEventType } from '@/types';
 import EventInfo from './EventInfo';
 import EventActions from './EventActions';
@@ -26,16 +28,24 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 </button>
             </div>
 
-            <div className="flex-1 space-y-6 overflow-y-auto">
-                <h3 className="text-2xl font-bold text-white">{event.title}</h3>
-                {/* Component for displaying info */}
+            <div className="flex-1 space-y-6 overflow-y-auto pr-2 -mr-2">
+                <div className="flex items-start justify-between">
+                    <h3 className="text-2xl font-bold text-white flex-1">{event.title}</h3>
+
+                    <Link
+                        href={`/events/${event.id}`}
+                        className="ml-4 p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors"
+                        title="View full page"
+                    >
+                        <ArrowUpRight className="w-5 h-5" />
+                    </Link>
+                </div>
+
                 <EventInfo event={event} category={category} />
             </div>
 
-            <div className="mt-6 space-y-4">
-                {/* Component for user tracking state */}
+            <div className="mt-6 space-y-4 pt-4 border-t border-gray-800">
                 <EventTracking event={event} />
-                {/* Component for external actions */}
                 <EventActions event={event} />
             </div>
         </aside>

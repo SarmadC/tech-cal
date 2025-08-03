@@ -12,18 +12,20 @@ import { LoginForm, AuthProviders } from '@/components/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-// 1. IMPORT the client creator
 import { createClient } from '@/utils/supabase/client';
+// 1. IMPORT THE NEW SERVER ACTION
+import { loginAction } from '@/app/auth/actions';
 
 export default function LoginPage() {
-    // 2. CREATE the Supabase client instance
     const [supabase] = useState(() => createClient());
     const [urlError, setUrlError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false); // Local loading state for the form
+    const [formError, setFormError] = useState<string | null>(null); // Local error state for the form
     const searchParams = useSearchParams();
     const router = useRouter();
     const { user, initialized } = useAuth();
 
-    // Handle URL-based errors
+    // This useEffect for handling URL errors is still useful
     useEffect(() => {
         const errorParam = searchParams.get('error');
         if (errorParam) {
@@ -40,33 +42,41 @@ export default function LoginPage() {
         }
     }, [searchParams]);
 
-    // Handle successful authentication
+    // This useEffect for redirecting after the user object is available is still the best approach
     useEffect(() => {
         if (initialized && user) {
             const redirectTo = searchParams.get('redirect') || '/dashboard';
-            toast.success('Successfully signed in!');
-            setTimeout(() => {
-                router.replace(redirectTo);
-            }, 100);
+            // router.refresh() is important to ensure server components get the new session
+            router.refresh();
+            router.replace(redirectTo);
         }
     }, [user, initialized, router, searchParams]);
 
-    const { mutate: signIn, isPending: isSigningIn, error: signInError } = useMutation({
-        // 3. PASS the client instance to the service method
-        mutationFn: (credentials: LoginFormType) => AuthService.signIn(credentials, supabase),
-        onSuccess: (result) => {
-            if (!result.success) {
-                throw new Error(result.error || 'Sign in failed');
-            }
-            toast.success('Sign in successful!');
-        },
-        onError: (error) => {
-            toast.error(error.message || 'Sign in failed');
-        }
-    });
+    // 2. REMOVE the useMutation hook for email/password sign-in.
+    /*
+    const { mutate: signIn, isPending: isSigningIn, error: signInError } = useMutation({ ... });
+    */
 
+    // 3. CREATE a new handler function that calls the Server Action.
+    const handleSignIn = async (credentials: LoginFormType) => {
+        setIsSubmitting(true);
+        setFormError(null);
+
+        const result = await loginAction(credentials);
+
+        if (result.success) {
+            toast.success('Sign in successful!');
+            // The useEffect above will handle the redirect once the user object is updated.
+        } else {
+            setFormError(result.error || 'Sign in failed. Please check your credentials.');
+            toast.error(result.error || 'Sign in failed.');
+        }
+
+        setIsSubmitting(false);
+    };
+
+    // The OAuth mutation remains the same as it handles a client-side redirect flow.
     const { mutate: signInWithOAuth, isPending: isSigningInWithOAuth, error: oAuthError } = useMutation({
-        // 3. PASS the client instance to the service method
         mutationFn: (provider: OAuthProvider) => AuthService.signInWithOAuth(provider, supabase),
         onSuccess: (result) => {
             if (!result.success) {
@@ -79,13 +89,15 @@ export default function LoginPage() {
         }
     });
 
-    const combinedError = urlError || signInError?.message || oAuthError?.message;
+    // The combined error now uses the local formError state
+    const combinedError = urlError || formError || oAuthError?.message;
 
     return (
         <ProtectedRoute allowUnauthenticated>
             <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full">
                     <div className="text-center mb-8">
+                        {/* ... Header JSX is unchanged ... */}
                         <Link href="/" className="inline-flex items-center space-x-2">
                             <div className="w-12 h-12 bg-accent-primary rounded-xl flex items-center justify-center">
                                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,6 +122,7 @@ export default function LoginPage() {
                         />
 
                         <div className="relative my-6">
+                            {/* ... Separator JSX is unchanged ... */}
                             <div className="absolute inset-0 flex items-center">
                                 <div className="w-full border-t border-border-color"></div>
                             </div>
@@ -120,9 +133,10 @@ export default function LoginPage() {
                             </div>
                         </div>
 
+                        {/* 4. PASS the new handler and state to the LoginForm component */}
                         <LoginForm
-                            onSubmit={signIn}
-                            isPending={isSigningIn}
+                            onSubmit={handleSignIn}
+                            isPending={isSubmitting}
                             error={combinedError}
                         />
                     </div>

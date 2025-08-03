@@ -2,46 +2,40 @@
 'use client';
 
 import Link from 'next/link';
-// 1. IMPORT useState
+// ✅ REMOVED useTransition from the import
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { AuthService } from '@/services/authService';
-import { SignupForm as SignupFormType, OAuthProvider } from '@/types';
+import { SignupForm as SignupFormType } from '@/types';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import SignupForm from '@/components/auth/SignupForm';
 import { toast } from 'sonner';
 
-// 2. IMPORT the client creator
-import { createClient } from '@/utils/supabase/client';
+// Import the new server actions
+import { signupAction, oauthSignInAction } from '@/app/auth/actions';
 
 export default function SignupPage() {
-    // 3. CREATE the Supabase client instance
-    const [supabase] = useState(() => createClient());
+    // Local state for handling the form submission
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    const { mutate: signUp, isPending: isSigningUp, error: signUpError, data: signUpData } = useMutation({
-        // 4. PASS the client instance to the service method
-        mutationFn: (formValues: SignupFormType) => AuthService.signUp(formValues, supabase),
-        onSuccess: (result) => {
-            if (!result.success) {
-                throw new Error(result.error || 'Sign up failed');
-            }
+    // This handler function now calls the signupAction server action
+    const handleSignUp = async (formData: SignupFormType) => {
+        setIsSubmitting(true);
+        setFormError(null);
+        setSuccessMessage(null);
+
+        const result = await signupAction(formData);
+
+        if (result.success) {
             toast.success(result.message || 'Account created! Please check your email.');
-        },
-    });
-
-    const { mutate: signInWithOAuth, isPending: isSigningInWithOAuth, error: oAuthError } = useMutation({
-        // 4. PASS the client instance to the service method
-        mutationFn: (provider: OAuthProvider) => AuthService.signInWithOAuth(provider, supabase),
-        onSuccess: (result) => {
-            if (!result.success) {
-                throw new Error(result.error || 'OAuth sign up failed');
-            }
+            setSuccessMessage(result.message || 'Account created! Please check your email.');
+        } else {
+            toast.error(result.error || 'Sign up failed.');
+            setFormError(result.error || 'An unknown error occurred.');
         }
-    });
 
-    const combinedError = signUpError?.message || oAuthError?.message;
-    const isSubmitting = isSigningUp || isSigningInWithOAuth;
-    const successMessage = signUpData?.success ? signUpData.message : '';
+        setIsSubmitting(false);
+    };
 
     return (
         <ProtectedRoute allowUnauthenticated>
@@ -62,34 +56,35 @@ export default function SignupPage() {
 
                     {/* Form Container */}
                     <div className="bg-background-secondary rounded-2xl p-8 border border-border-color">
-                        {combinedError && (
+                        {formError && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-6">
-                                {combinedError}
+                                {formError}
                             </div>
                         )}
-                        {successMessage && !signUpError && (
+                        {successMessage && !formError && (
                             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-6">
                                 {successMessage}
                             </div>
                         )}
 
+                        {/* Use the formAction prop to call the server action directly */}
                         <div className="space-y-3">
-                            <button
-                                type="button"
-                                onClick={() => signInWithOAuth('google')}
-                                disabled={isSubmitting}
-                                className="w-full flex items-center justify-center space-x-3 bg-background-main hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50"
-                            >
-                                <span>Sign up with Google</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => signInWithOAuth('github')}
-                                disabled={isSubmitting}
-                                className="w-full flex items-center justify-center space-x-3 bg-background-main hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50"
-                            >
-                                <span>Sign up with GitHub</span>
-                            </button>
+                            <form action={() => oauthSignInAction('google')}>
+                                <button
+                                    type="submit"
+                                    className="w-full flex items-center justify-center space-x-3 bg-background-main hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-3 px-4 rounded-lg transition-all"
+                                >
+                                    <span>Sign up with Google</span>
+                                </button>
+                            </form>
+                            <form action={() => oauthSignInAction('github')}>
+                                <button
+                                    type="submit"
+                                    className="w-full flex items-center justify-center space-x-3 bg-background-main hover:bg-background-tertiary border border-border-color text-foreground-primary font-medium py-3 px-4 rounded-lg transition-all"
+                                >
+                                    <span>Sign up with GitHub</span>
+                                </button>
+                            </form>
                         </div>
 
                         <div className="relative my-6">
@@ -98,8 +93,8 @@ export default function SignupPage() {
                         </div>
 
                         <SignupForm
-                            onSubmit={signUp}
-                            isPending={isSigningUp}
+                            onSubmit={handleSignUp}
+                            isPending={isSubmitting}
                         />
                     </div>
                 </div>
