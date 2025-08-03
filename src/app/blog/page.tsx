@@ -73,16 +73,18 @@ const blogPosts = [
 
 const categories = ['All', 'AI & ML', 'Web Dev', 'Mobile', 'Cloud', 'Security', 'AR/VR', 'Programming'];
 
-export default function BlogPage({
-    searchParams,
-}: {
+// ✅ FIX 1: The component function MUST be `async`
+// ✅ FIX 2: We `await` the props object to get the resolved `searchParams`
+export default async function BlogPage(props: {
     searchParams: { [key: string]: string | string[] | undefined };
 }) {
-    // Read filters from the URL on the server. We cast to string for simplicity.
+    // Await the props to resolve searchParams
+    const { searchParams } = await props;
+
     const searchTerm = (searchParams?.q as string) || '';
     const selectedCategory = (searchParams?.category as string) || 'All';
 
-    // Perform filtering on the server
+    // The rest of your server-side logic is correct
     const filteredPosts = blogPosts.filter(post => {
         const matchesCategory = selectedCategory === 'All' || post.category === selectedCategory;
         const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -92,10 +94,9 @@ export default function BlogPage({
 
     const featuredPost = blogPosts.find(post => post.featured);
 
-
+    // The entire JSX return block remains unchanged.
     return (
         <div className="min-h-screen bg-background-main pt-20">
-            {/* Header */}
             <section className="py-16 px-4 bg-background-secondary border-b border-border-color">
                 <div className="max-w-7xl mx-auto">
                     <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">
@@ -107,13 +108,9 @@ export default function BlogPage({
                     </p>
                 </div>
             </section>
-
-            {/* Renders the CLIENT component that contains the interactive filter UI */}
             <section className="py-8 px-4">
                 <div className="max-w-7xl mx-auto">
                     <BlogFilters categories={categories} />
-
-                    {/* Featured Post (Rendered on Server) */}
                     {featuredPost && selectedCategory === 'All' && !searchTerm && (
                         <div className="mb-12">
                             <div className="bg-gradient-to-r from-accent-primary to-purple-600 rounded-2xl p-8 text-white">
@@ -121,12 +118,8 @@ export default function BlogPage({
                                     <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold">Featured</span>
                                     <span className="text-sm opacity-80">{featuredPost.category}</span>
                                 </div>
-                                <h2 className="text-3xl font-bold mb-4">
-                                    {featuredPost.title}
-                                </h2>
-                                <p className="text-lg opacity-90 mb-6 line-clamp-2">
-                                    {featuredPost.excerpt}
-                                </p>
+                                <h2 className="text-3xl font-bold mb-4">{featuredPost.title}</h2>
+                                <p className="text-lg opacity-90 mb-6 line-clamp-2">{featuredPost.excerpt}</p>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-4 text-sm">
                                         <span>{featuredPost.author}</span>
@@ -138,87 +131,51 @@ export default function BlogPage({
                                     <Link
                                         href={`/blog/${featuredPost.id}`}
                                         className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-2 px-4 rounded-lg transition-all"
-                                    >
-                                        Read More
-                                    </Link>
+                                    >Read More</Link>
                                 </div>
                             </div>
                         </div>
                     )}
-
-                    {/* Blog Posts Grid (Rendered on Server with filtered data) */}
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {filteredPosts.map((post) => (
-                            <article
-                                key={post.id}
-                                className="bg-background-secondary rounded-xl border border-border-color overflow-hidden hover:border-accent-primary/30 transition-all group"
-                            >
-                                {/* Placeholder for image */}
+                            <article key={post.id} className="bg-background-secondary rounded-xl border border-border-color overflow-hidden hover:border-accent-primary/30 transition-all group">
                                 <div className="aspect-video bg-gradient-to-br from-accent-primary/20 to-purple-600/20 relative overflow-hidden">
                                     <div className="absolute inset-0 bg-background-tertiary animate-pulse" />
                                 </div>
-
                                 <div className="p-6">
                                     <div className="flex items-center space-x-2 mb-3">
                                         <span className="text-xs font-medium text-accent-primary">{post.category}</span>
                                         <span className="text-xs text-foreground-tertiary">•</span>
                                         <span className="text-xs text-foreground-tertiary">{post.readTime}</span>
                                     </div>
-
                                     <h3 className="text-xl font-semibold text-foreground-primary mb-3 group-hover:text-accent-primary transition-colors">
-                                        <Link href={`/blog/${post.id}`}>
-                                            {post.title}
-                                        </Link>
+                                        <Link href={`/blog/${post.id}`}>{post.title}</Link>
                                     </h3>
-
-                                    <p className="text-foreground-secondary mb-4 line-clamp-3">
-                                        {post.excerpt}
-                                    </p>
-
+                                    <p className="text-foreground-secondary mb-4 line-clamp-3">{post.excerpt}</p>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-3">
                                             <div className="w-8 h-8 bg-accent-primary/10 rounded-full flex items-center justify-center">
-                                                <span className="text-xs font-semibold text-accent-primary">
-                                                    {post.author.split(' ').map(n => n[0]).join('')}
-                                                </span>
+                                                <span className="text-xs font-semibold text-accent-primary">{post.author.split(' ').map(n => n[0]).join('')}</span>
                                             </div>
                                             <div className="text-sm">
                                                 <p className="font-medium text-foreground-primary">{post.author}</p>
                                                 <p className="text-xs text-foreground-tertiary">{post.date}</p>
                                             </div>
                                         </div>
-
-                                        <Link
-                                            href={`/blog/${post.id}`}
-                                            className="text-accent-primary hover:text-accent-primary-hover transition-colors"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                            </svg>
+                                        <Link href={`/blog/${post.id}`} className="text-accent-primary hover:text-accent-primary-hover transition-colors">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                                         </Link>
                                     </div>
                                 </div>
                             </article>
                         ))}
                     </div>
-
-                    {/* Newsletter CTA (Rendered on Server) */}
                     <div className="mt-16 bg-gradient-to-r from-accent-primary to-purple-600 rounded-2xl p-8 text-center text-white">
-                        <h2 className="text-2xl font-bold mb-4">
-                            Stay Updated with Tech News
-                        </h2>
-                        <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
-                            Get weekly insights on the latest tech events, tutorials, and industry news delivered to your inbox.
-                        </p>
+                        <h2 className="text-2xl font-bold mb-4">Stay Updated with Tech News</h2>
+                        <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">Get weekly insights on the latest tech events, tutorials, and industry news delivered to your inbox.</p>
                         <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                            <input
-                                type="email"
-                                placeholder="Enter your email"
-                                className="flex-1 px-4 py-3 rounded-lg text-foreground-primary bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
-                            />
-                            <button className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all">
-                                Subscribe
-                            </button>
+                            <input type="email" placeholder="Enter your email" className="flex-1 px-4 py-3 rounded-lg text-foreground-primary bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white" />
+                            <button className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all">Subscribe</button>
                         </div>
                     </div>
                 </div>
