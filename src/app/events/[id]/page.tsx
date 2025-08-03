@@ -4,16 +4,22 @@ import { createClient } from '@/utils/supabase/server';
 import { EventService } from '@/services/eventServices';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import {Clock, MapPin, Users, Tag, ArrowLeft } from 'lucide-react';
+import { Clock, MapPin, Users, Tag, ArrowLeft } from 'lucide-react';
 
 // Import our interactive client component
 import EventTracking from '@/components/calendar/EventTracking';
 import EventActions from '@/components/calendar/EventActions';
 
-// This is an async Server Component
-export default async function EventDetailPage({ params }: { params: { id: string } }) {
+// ✅ FIX: Update the props type to indicate params is a Promise
+export default async function EventDetailPage({
+    params
+}: {
+    params: Promise<{ id: string }>
+}) {
     const supabase = await createClient();
-    const eventId = params.id;
+
+    // ✅ FIX: Await params directly
+    const { id: eventId } = await params;
 
     // Fetch the specific event data on the server
     const { data: event, error } = await EventService.getEventById(eventId, supabase);
