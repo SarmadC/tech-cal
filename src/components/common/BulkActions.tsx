@@ -8,6 +8,10 @@ import { EventService } from '@/services/eventServices';
 import { LoadingButton } from '@/components/Loading';
 import { toast } from 'sonner';
 
+// 1. IMPORT the client creator
+import { createClient } from '@/utils/supabase/client';
+import { EventStatus } from '@/types'; // Import EventStatus for handleBulkTrack
+
 interface BulkActionsProps {
     selectedEvents: Set<string>;
     onClearSelection: () => void;
@@ -23,6 +27,8 @@ export default function BulkActions({
     onBulkComplete,
     className = ''
 }: BulkActionsProps) {
+    // 2. CREATE the Supabase client instance
+    const [supabase] = useState(() => createClient());
     const { user } = useAuth();
     const selectedEventArray = Array.from(selectedEvents);
     const selectedCount = selectedEventArray.length;
@@ -33,10 +39,10 @@ export default function BulkActions({
     const handleBulkTrack = () => {
         if (!user || selectedCount === 0) return;
         bulkTrackEvents(
-            { eventIds: selectedEventArray },
+            // The status should be explicitly provided
+            { eventIds: selectedEventArray, status: 'bookmarked' as EventStatus },
             {
                 onSuccess: (response) => {
-                    // 👇 FIX #1: Safely check if response.data and response.data.tracked exist
                     if (response.data?.tracked && response.data.tracked > 0) {
                         onBulkComplete();
                     }
@@ -53,12 +59,13 @@ export default function BulkActions({
         if (selectedCount === 0) return;
         setLocalLoading('export');
         try {
-            const response = await EventService.getEvents({ eventIds: selectedEventArray });
+            // 3. PASS the client instance to the service method
+            const response = await EventService.getEvents({ eventIds: selectedEventArray }, supabase);
             if (!response.success || !response.data || response.data.length === 0) {
                 throw new Error(response.error || 'Could not fetch event details for export.');
             }
 
-
+            // ... The rest of the function remains exactly the same ...
             const icsEvents = response.data.map(event => {
                 const startTime = new Date(event.startTime).toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
                 const endTime = event.endTime
@@ -101,7 +108,7 @@ export default function BulkActions({
             const shareUrl = `${window.location.origin}/calendar?events=${selectedEventArray.join(',')}`;
             await navigator.clipboard.writeText(shareUrl);
             toast.success('Share link copied to clipboard!');
-        } catch (_err) { // Already fixed: using _err
+        } catch (_err) {
             toast.error('Failed to copy share link.');
         } finally {
             setLocalLoading(null);
@@ -109,7 +116,6 @@ export default function BulkActions({
     };
 
     if (selectedCount === 0) return null;
-
 
     return (
         <div className={`bg-background-secondary border border-border-color rounded-xl p-4 shadow-sm ${className}`}>

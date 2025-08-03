@@ -2,10 +2,14 @@
 'use client';
 
 import Link from 'next/link';
+// 1. IMPORT useState to hold the client instance
+import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { AuthService } from '@/services/authService';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import ForgotPasswordForm from '@/components/auth/ForgotPassword';
+// 2. IMPORT the client creator
+import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
 
 // --- UI Sub-component for Success State ---
@@ -31,8 +35,12 @@ const SuccessDisplay = ({ message }: { message: string }) => (
 
 // --- Main Page Component ---
 export default function ForgotPasswordPage() {
+    // 3. CREATE the Supabase client instance
+    const [supabase] = useState(() => createClient());
+
     const { mutate: sendResetEmail, isPending, isSuccess, error, data: mutationData } = useMutation({
-        mutationFn: (emailAddress: string) => AuthService.resetPassword(emailAddress),
+        // 4. PASS the client to the service method
+        mutationFn: (emailAddress: string) => AuthService.resetPassword(emailAddress, supabase),
         onSuccess: (result) => {
             if (!result.success) {
                 throw new Error(result.error || 'Failed to send reset email');

@@ -12,7 +12,12 @@ import { LoginForm, AuthProviders } from '@/components/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+// 1. IMPORT the client creator
+import { createClient } from '@/utils/supabase/client';
+
 export default function LoginPage() {
+    // 2. CREATE the Supabase client instance
+    const [supabase] = useState(() => createClient());
     const [urlError, setUrlError] = useState('');
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -40,8 +45,6 @@ export default function LoginPage() {
         if (initialized && user) {
             const redirectTo = searchParams.get('redirect') || '/dashboard';
             toast.success('Successfully signed in!');
-
-            // Use setTimeout to ensure the redirect happens after the current render
             setTimeout(() => {
                 router.replace(redirectTo);
             }, 100);
@@ -49,12 +52,12 @@ export default function LoginPage() {
     }, [user, initialized, router, searchParams]);
 
     const { mutate: signIn, isPending: isSigningIn, error: signInError } = useMutation({
-        mutationFn: (credentials: LoginFormType) => AuthService.signIn(credentials),
+        // 3. PASS the client instance to the service method
+        mutationFn: (credentials: LoginFormType) => AuthService.signIn(credentials, supabase),
         onSuccess: (result) => {
             if (!result.success) {
                 throw new Error(result.error || 'Sign in failed');
             }
-            // Don't navigate here - let the useEffect handle it
             toast.success('Sign in successful!');
         },
         onError: (error) => {
@@ -63,12 +66,12 @@ export default function LoginPage() {
     });
 
     const { mutate: signInWithOAuth, isPending: isSigningInWithOAuth, error: oAuthError } = useMutation({
-        mutationFn: (provider: OAuthProvider) => AuthService.signInWithOAuth(provider),
+        // 3. PASS the client instance to the service method
+        mutationFn: (provider: OAuthProvider) => AuthService.signInWithOAuth(provider, supabase),
         onSuccess: (result) => {
             if (!result.success) {
                 throw new Error(result.error || 'OAuth sign in failed');
             }
-            // OAuth will redirect automatically
             toast.success('Redirecting...');
         },
         onError: (error) => {
@@ -93,7 +96,7 @@ export default function LoginPage() {
                         </Link>
                         <h2 className="mt-6 text-3xl font-bold text-foreground-primary">Welcome back</h2>
                         <p className="mt-2 text-sm text-foreground-secondary">
-                            Don&apos;t have an account?{' '}
+                            Don`&apos;`t have an account?{' '}
                             <Link href="/signup" className="font-medium text-accent-primary hover:text-accent-primary-hover">
                                 Sign up free
                             </Link>

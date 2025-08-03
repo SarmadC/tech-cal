@@ -8,6 +8,9 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
+// 1. IMPORT the client creator
+import { createClient } from '@/utils/supabase/client';
+
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel';
@@ -37,6 +40,9 @@ export default function CalendarClientView({
     initialCategories,
     profile,
 }: CalendarClientViewProps) {
+    // 2. CREATE the Supabase client instance
+    const [supabase] = useState(() => createClient());
+
     // --- STATE MANAGEMENT ---
     const calendarRef = useRef<FullCalendar>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -48,7 +54,6 @@ export default function CalendarClientView({
     const [localSearchTerm, _setLocalSearchTerm] = useState(activeFilters.searchTerm);
     const debouncedSearchTerm = useDebounce(localSearchTerm, 400);
 
-    // Effect to sync debounced search term back to the URL
     useEffect(() => {
         setFilters({ searchTerm: debouncedSearchTerm });
     }, [debouncedSearchTerm, setFilters]);
@@ -59,7 +64,8 @@ export default function CalendarClientView({
     const { data: events, isLoading: isLoadingEvents } = useQuery({
         queryKey: ['events', activeFilters],
         queryFn: async () => {
-            const response = await EventService.getEvents(activeFilters);
+            // 3. PASS the client instance to the service method
+            const response = await EventService.getEvents(activeFilters, supabase);
             if (!response.success) throw new Error(response.error || 'Failed to fetch events');
             return response.data || [];
         },
@@ -67,7 +73,7 @@ export default function CalendarClientView({
         placeholderData: keepPreviousData,
     });
 
-    // --- DERIVED/MEMOIZED STATE ---
+    // --- DERIVED/MEMOIZED STATE (No changes needed) ---
     const trackedEventIds = useMemo(() => {
         return new Set((trackedEvents || []).map((e: AppTrackedEvent) => e.eventId));
     }, [trackedEvents]);
@@ -99,7 +105,7 @@ export default function CalendarClientView({
         }));
     }, [enrichedEvents]);
 
-    // --- CALLBACKS & HANDLERS ---
+    // --- CALLBACKS & HANDLERS (No changes needed) ---
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
         setSelectedEvent(clickInfo.event.extendedProps as AppEvent);
     }, []);
@@ -121,6 +127,7 @@ export default function CalendarClientView({
         return <Loading />;
     }
 
+    // --- JSX (No changes needed) ---
     return (
         <div className="flex h-screen bg-[#171717] text-gray-300 font-sans">
             <CalendarSidebar
@@ -142,7 +149,6 @@ export default function CalendarClientView({
                     view={view}
                     onNavigate={navigateCalendar}
                     onChangeView={changeView}
-                // TODO: Pass search term props to a SearchBar in the header
                 />
                 <div className="flex-1 overflow-hidden p-6">
                     {isLoadingEvents && (

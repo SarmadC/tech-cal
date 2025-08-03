@@ -1,15 +1,18 @@
 // src/components/auth/ForgotPassword.test.tsx
 
-import { render, screen } from '@/utils/test-utils'; // Using our custom render
+import { render, screen } from '@/utils/test-utils'; // Using our custom render is sufficient
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import ForgotPasswordForm from './ForgotPassword';
-import { BrowserRouter } from 'react-router-dom';
+// 1. REMOVE the incorrect import from react-router-dom
+// import { BrowserRouter } from 'react-router-dom';
 
-// The component contains a <Link>, so it needs router context to render
+// 2. REMOVE the unnecessary custom render function
+/*
 const renderWithRouter = (ui: React.ReactElement) => {
     return render(ui, { wrapper: BrowserRouter });
 };
+*/
 
 describe('ForgotPasswordForm Component', () => {
 
@@ -18,7 +21,8 @@ describe('ForgotPasswordForm Component', () => {
         const user = userEvent.setup();
         const mockOnSubmit = vi.fn();
 
-        renderWithRouter(<ForgotPasswordForm onSubmit={mockOnSubmit} isPending={false} />);
+        // 3. USE the standard `render` from your test-utils
+        render(<ForgotPasswordForm onSubmit={mockOnSubmit} isPending={false} />);
 
         // Act
         const emailInput = screen.getByLabelText(/email address/i);
@@ -34,7 +38,7 @@ describe('ForgotPasswordForm Component', () => {
 
     it('should disable the submit button and show "Sending..." when isPending is true', () => {
         // Arrange
-        renderWithRouter(<ForgotPasswordForm onSubmit={vi.fn()} isPending={true} />);
+        render(<ForgotPasswordForm onSubmit={vi.fn()} isPending={true} />);
 
         // Act
         const submitButton = screen.getByRole('button', { name: /sending.../i });
@@ -47,7 +51,7 @@ describe('ForgotPasswordForm Component', () => {
     it('should display an error message when an error is passed', () => {
         // Arrange
         const errorMessage = 'No account found with this email.';
-        renderWithRouter(<ForgotPasswordForm onSubmit={vi.fn()} isPending={false} error={errorMessage} />);
+        render(<ForgotPasswordForm onSubmit={vi.fn()} isPending={false} error={errorMessage} />);
 
         // Act
         const errorElement = screen.getByText(errorMessage);
@@ -59,7 +63,7 @@ describe('ForgotPasswordForm Component', () => {
 
     it('should have a link to go back to the sign-in page', () => {
         // Arrange
-        renderWithRouter(<ForgotPasswordForm onSubmit={vi.fn()} isPending={false} />);
+        render(<ForgotPasswordForm onSubmit={vi.fn()} isPending={false} />);
 
         // Act
         const backLink = screen.getByRole('link', { name: /back to sign in/i });

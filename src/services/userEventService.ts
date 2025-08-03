@@ -1,6 +1,7 @@
 // src/services/userEventService.ts
 
-import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/types/supabase';
 import type {
     ApiResponse,
     EventStatus,
@@ -10,16 +11,19 @@ import type {
 import { trackedEventTransformer } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
 
+// Define the fully-typed Supabase client type
+type SupabaseClientType = SupabaseClient<Database>;
+
 export class UserEventService {
     /**
-     * Track an event for a user
+     * Track an event for a user or update its status if already tracked.
      */
     static async trackEvent(
         userId: string,
         eventId: string,
-        status: EventStatus = 'bookmarked',
-        notes?: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        status: EventStatus,
+        notes: string | undefined,
+        supabaseClient: SupabaseClientType // Now a required parameter
     ): Promise<ApiResponse<void>> {
         try {
             const { data: existing } = await supabaseClient
@@ -51,12 +55,12 @@ export class UserEventService {
     }
 
     /**
-     * Untrack an event
+     * Untrack an event for a user.
      */
     static async untrackEvent(
         userId: string,
         eventId: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Now a required parameter
     ): Promise<ApiResponse<void>> {
         try {
             const { error } = await supabaseClient
@@ -74,11 +78,11 @@ export class UserEventService {
     }
 
     /**
-     * Get user's tracked events with full event data
+     * Get a user's tracked events with full event data.
      */
     static async getTrackedEvents(
         userId: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Now a required parameter
     ): Promise<ApiResponse<AppTrackedEvent[]>> {
         try {
             const { data, error } = await supabaseClient
@@ -106,12 +110,12 @@ export class UserEventService {
     }
 
     /**
-     * Check if event is tracked by user
+     * Check if an event is tracked by a user and get its status.
      */
     static async isEventTracked(
         userId: string,
         eventId: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Now a required parameter
     ): Promise<ApiResponse<{ isTracked: boolean; status?: EventStatus }>> {
         try {
             const { data, error } = await supabaseClient
@@ -120,8 +124,8 @@ export class UserEventService {
                 .eq('user_id', userId)
                 .eq('event_id', eventId)
                 .single();
-            if (error && error.code !== 'PGRST116') throw error;
-            return { success: true, data: { isTracked: !!data, status: data?.status as EventStatus } };
+            if (error && error.code !== 'PGRST116') throw error; // 'PGRST116' means no rows found, which is not an error here
+            return { success: true, data: { isTracked: !!data, status: data?.status as EventStatus | undefined } };
         } catch (error) {
             console.error('Error checking event tracking status:', error);
             Sentry.captureException(error, { extra: { function: 'isEventTracked', userId, eventId } });
@@ -130,31 +134,33 @@ export class UserEventService {
     }
 
     /**
-     * Bulk track multiple events
+     * Bulk track multiple events for a user.
      */
     static async bulkTrackEvents(
         userId: string,
         eventIds: string[],
-        status: EventStatus = 'bookmarked',
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        status: EventStatus,
+        supabaseClient: SupabaseClientType // Now a required parameter
     ): Promise<ApiResponse<{ tracked: number; skipped: number }>> {
         try {
-            const { data: existing } = await supabaseClient
+            const { data: existing, error: fetchError } = await supabaseClient
                 .from('user_events')
                 .select('event_id')
                 .eq('user_id', userId)
                 .in('event_id', eventIds);
 
-            const existingEventIds = new Set(existing?.map((e: { event_id: string }) => e.event_id) || []);
+            if (fetchError) throw fetchError;
+
+            const existingEventIds = new Set(existing?.map(e => e.event_id) || []);
             const newEventIds = eventIds.filter(id => !existingEventIds.has(id));
 
             if (newEventIds.length === 0) {
-                return { success: true, data: { tracked: 0, skipped: eventIds.length }, message: 'All events are already tracked' };
+                return { success: true, data: { tracked: 0, skipped: eventIds.length }, message: 'All selected events are already tracked' };
             }
 
             const insertData = newEventIds.map(eventId => ({ user_id: userId, event_id: eventId, status }));
-            const { error } = await supabaseClient.from('user_events').insert(insertData);
-            if (error) throw error;
+            const { error: insertError } = await supabaseClient.from('user_events').insert(insertData);
+            if (insertError) throw insertError;
 
             return { success: true, data: { tracked: newEventIds.length, skipped: existingEventIds.size }, message: `Successfully tracked ${newEventIds.length} events!` };
         } catch (error) {

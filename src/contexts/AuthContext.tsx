@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.tsx (Corrected)
+// src/contexts/AuthContext.tsx
 'use client';
 
 import {
@@ -9,10 +9,10 @@ import {
     ReactNode,
     useCallback,
     useMemo,
-    useRef
 } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabaseClient';
+import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
+
+import { createClient } from '@/utils/supabase/client';
 import { AuthService } from '@/services/authService';
 import { ProfileService } from '@/services/profileService';
 import type {
@@ -24,7 +24,7 @@ import type {
     ProfileUpdateForm
 } from '@/types';
 
-// --- Context Types ---
+// --- Context Types (No change here) ---
 interface AuthState {
     user: User | null;
     session: Session | null;
@@ -44,9 +44,6 @@ interface AuthActions {
 }
 
 export type AuthContextType = AuthState & AuthActions;
-
-// --- Context Creation ---
-// THIS IS THE FIX: Added the 'export' keyword
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // --- Auth Provider ---
@@ -55,7 +52,8 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-    // ... (the rest of your file remains exactly the same) ...
+    const [supabase] = useState(() => createClient());
+
     const [authState, setAuthState] = useState<AuthState>({
         user: null,
         session: null,
@@ -64,11 +62,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         initialized: false,
     });
 
-    const isUpdatingRef = useRef(false);
-
     const loadUserProfile = useCallback(async (user: User): Promise<AppProfile | null> => {
         try {
-            const result = await ProfileService.getProfile(user.id);
+            const result = await ProfileService.getProfile(user.id, supabase);
             if (result.success && result.data) {
                 return result.data;
             }
@@ -76,16 +72,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 id: user.id,
                 fullName: user.user_metadata?.full_name || null,
                 avatarUrl: user.user_metadata?.avatar_url || null,
-            });
+            }, supabase);
             return createResult.success ? createResult.data || null : null;
         } catch (error) {
             console.error('Error loading user profile:', error);
             return null;
         }
-    }, []);
+    }, [supabase]);
 
     const refreshProfile = useCallback(async () => {
-        if (!authState.user || isUpdatingRef.current) return;
+        if (!authState.user) return;
         try {
             const profile = await loadUserProfile(authState.user);
             setAuthState(prev => ({ ...prev, profile }));
@@ -95,142 +91,71 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, [authState.user, loadUserProfile]);
 
     const updateAuthState = useCallback(async (session: Session | null) => {
-        if (isUpdatingRef.current) return;
-        isUpdatingRef.current = true;
-        try {
-            const user = session?.user || null;
-            setAuthState(prev => ({
-                ...prev,
-                user,
-                session,
-                loading: true
-            }));
-            const profile = user ? await loadUserProfile(user) : null;
-            setAuthState(prev => ({
-                ...prev,
-                profile,
-                loading: false,
-                initialized: true
-            }));
-        } catch (error) {
-            console.error('Error updating auth state:', error);
-            setAuthState(prev => ({
-                ...prev,
-                loading: false,
-                initialized: true
-            }));
-        } finally {
-            isUpdatingRef.current = false;
-        }
+        const user = session?.user || null;
+        setAuthState(prev => ({
+            ...prev,
+            user,
+            session,
+            loading: true
+        }));
+        const profile = user ? await loadUserProfile(user) : null;
+        setAuthState(prev => ({
+            ...prev,
+            profile,
+            loading: false,
+            initialized: true
+        }));
     }, [loadUserProfile]);
 
     useEffect(() => {
-        let mounted = true;
         const initializeAuth = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (mounted) {
-                    await updateAuthState(session);
-                }
-            } catch (error) {
-                console.error('Error initializing auth:', error);
-                if (mounted) {
-                    setAuthState(prev => ({
-                        ...prev,
-                        loading: false,
-                        initialized: true
-                    }));
-                }
-            }
+            const { data: { session } } = await supabase.auth.getSession();
+            await updateAuthState(session);
         };
         initializeAuth();
-        return () => {
-            mounted = false;
-        };
-    }, [updateAuthState]);
+    }, [supabase, updateAuthState]);
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
+            // ✅ FIX: Add explicit types for the callback parameters
+            async (event: AuthChangeEvent, session: Session | null) => {
                 console.log('Auth state changed:', event);
-                if (event === 'SIGNED_OUT') {
-                    setAuthState({
-                        user: null,
-                        session: null,
-                        profile: null,
-                        loading: false,
-                        initialized: true,
-                    });
-                } else {
-                    await updateAuthState(session);
-                }
+                await updateAuthState(session);
             }
         );
         return () => subscription.unsubscribe();
-    }, [updateAuthState]);
+    }, [supabase, updateAuthState]);
 
     const signIn = useCallback(async (credentials: LoginForm): Promise<AuthResponse> => {
-        try {
-            return await AuthService.signIn(credentials);
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Sign in failed'
-            };
-        }
-    }, []);
+        return await AuthService.signIn(credentials, supabase);
+    }, [supabase]);
 
     const signUp = useCallback(async (data: SignupForm): Promise<AuthResponse> => {
-        try {
-            return await AuthService.signUp(data);
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Sign up failed'
-            };
-        }
-    }, []);
+        return await AuthService.signUp(data, supabase);
+    }, [supabase]);
 
     const signInWithOAuth = useCallback(async (provider: OAuthProvider): Promise<AuthResponse> => {
-        try {
-            return await AuthService.signInWithOAuth(provider);
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'OAuth sign in failed'
-            };
-        }
-    }, []);
+        return await AuthService.signInWithOAuth(provider, supabase);
+    }, [supabase]);
 
     const signOut = useCallback(async (): Promise<void> => {
-        try {
-            await AuthService.signOut();
-        } catch (error) {
-            console.error('Error signing out:', error);
-        }
-    }, []);
+        await AuthService.signOut(supabase);
+    }, [supabase]);
 
     const resetPassword = useCallback(async (email: string): Promise<AuthResponse> => {
-        return await AuthService.resetPassword(email);
-    }, []);
+        return await AuthService.resetPassword(email, supabase);
+    }, [supabase]);
 
     const updateProfile = useCallback(async (data: ProfileUpdateForm): Promise<AuthResponse> => {
         if (!authState.user) {
             return { success: false, error: 'No authenticated user' };
         }
-        try {
-            const result = await ProfileService.updateProfile(authState.user.id, data);
-            if (result.success) {
-                await refreshProfile();
-            }
-            return result;
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Profile update failed'
-            };
+        const result = await ProfileService.updateProfile(authState.user.id, data, supabase);
+        if (result.success) {
+            await refreshProfile();
         }
-    }, [authState.user, refreshProfile]);
+        return result;
+    }, [authState.user, refreshProfile, supabase]);
 
     const contextValue = useMemo((): AuthContextType => ({
         ...authState,
@@ -259,7 +184,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
 }
 
-// --- Hook ---
+// --- Hooks (No change here) ---
 export function useAuth(): AuthContextType {
     const context = useContext(AuthContext);
     if (context === undefined) {

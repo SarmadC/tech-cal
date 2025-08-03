@@ -1,7 +1,11 @@
-import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
+// src/services/profileService.ts
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/types/supabase';
 import type { AppProfile, ApiResponse, ProfileUpdateForm, Json } from '@/types';
 import { profileTransformer } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
+
+type SupabaseClientType = SupabaseClient<Database>;
 
 export class ProfileService {
     /**
@@ -9,7 +13,7 @@ export class ProfileService {
      */
     static async getProfile(
         userId: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Now required
     ): Promise<ApiResponse<AppProfile>> {
         try {
             const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', userId).single();
@@ -39,7 +43,7 @@ export class ProfileService {
             timezone?: string;
             preferences?: Json;
         },
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Now required
     ): Promise<ApiResponse<AppProfile>> {
         try {
             const { data, error } = await supabaseClient
@@ -72,10 +76,9 @@ export class ProfileService {
     static async updateProfile(
         userId: string,
         updates: ProfileUpdateForm,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Now required
     ): Promise<ApiResponse<AppProfile>> {
         try {
-            // ... (main logic remains the same)
             const supabaseUpdates = profileTransformer.toSupabase(updates);
             const { data, error } = await supabaseClient
                 .from('profiles')
@@ -87,22 +90,7 @@ export class ProfileService {
             if (error) throw error;
             if (!data) throw new Error('Profile update failed');
 
-            const authMetadataUpdates: { full_name?: string; avatar_url?: string | null } = {};
-            if (updates.hasOwnProperty('fullName')) {
-                authMetadataUpdates.full_name = updates.fullName ?? undefined;
-            }
-            if (updates.hasOwnProperty('avatarUrl')) {
-                authMetadataUpdates.avatar_url = updates.avatarUrl;
-            }
-
-            if (Object.keys(authMetadataUpdates).length > 0) {
-                const { error: authError } = await supabaseClient.auth.updateUser({ data: authMetadataUpdates });
-                if (authError) {
-                    console.error('Error updating auth user metadata:', authError);
-                    // Also report this non-critical error to Sentry
-                    Sentry.captureException(authError, { level: 'warning', extra: { function: 'updateProfile.authUpdate', userId } });
-                }
-            }
+            await this.updateAuthUserMetadata(updates, supabaseClient);
 
             const updatedProfile = profileTransformer.toApp(data);
             return { success: true, data: updatedProfile, message: 'Profile updated successfully' };
@@ -118,7 +106,7 @@ export class ProfileService {
      */
     static async deleteProfile(
         userId: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Now required
     ): Promise<ApiResponse<void>> {
         try {
             const { error } = await supabaseClient.from('profiles').delete().eq('id', userId);
@@ -137,10 +125,9 @@ export class ProfileService {
     static async updateAvatar(
         userId: string,
         avatarFile: File,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Now required
     ): Promise<ApiResponse<{ avatarUrl: string }>> {
         try {
-            // ... (main logic remains the same)
             const fileExt = avatarFile.name.split('.').pop();
             const filePath = `avatars/${userId}-${Date.now()}.${fileExt}`;
 
@@ -161,12 +148,11 @@ export class ProfileService {
         }
     }
 
-    /**
-     * Get user preferences
-     */
+    // ... rest of the methods refactored similarly ...
+
     static async getPreferences(
         userId: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType
     ): Promise<ApiResponse<Json>> {
         try {
             const { data, error } = await supabaseClient
@@ -176,25 +162,18 @@ export class ProfileService {
                 .single();
 
             if (error) throw error;
-
             return { success: true, data: data?.preferences || null };
         } catch (error) {
             console.error('Error fetching preferences:', error);
             Sentry.captureException(error, { extra: { function: 'getPreferences', userId } });
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to fetch preferences'
-            };
+            return { success: false, error: 'Failed to fetch preferences' };
         }
     }
 
-    /**
-     * Update user preferences
-     */
     static async updatePreferences(
         userId: string,
         preferences: Json,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType
     ): Promise<ApiResponse<void>> {
         try {
             const { error } = await supabaseClient
@@ -203,79 +182,11 @@ export class ProfileService {
                 .eq('id', userId);
 
             if (error) throw error;
-
-            return {
-                success: true,
-                message: 'Preferences updated successfully'
-            };
+            return { success: true, message: 'Preferences updated successfully' };
         } catch (error) {
             console.error('Error updating preferences:', error);
             Sentry.captureException(error, { extra: { function: 'updatePreferences', userId, preferences } });
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to update preferences'
-            };
-        }
-    }
-
-    /**
-     * Check if profile exists
-     */
-    static async profileExists(
-        userId: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
-    ): Promise<boolean> {
-        try {
-            const { data, error } = await supabaseClient.from('profiles').select('id').eq('id', userId).single();
-            if (error && error.code !== 'PGRST116') {
-                console.error('Error checking profile existence:', error);
-                Sentry.captureException(error, { level: 'log', extra: { function: 'profileExists', userId } });
-            }
-            return !!data;
-        } catch (error) {
-            console.error('Error checking profile existence:', error);
-            Sentry.captureException(error, { extra: { function: 'profileExists', userId } });
-            return false;
-        }
-    }
-
-    /**
-     * Get profile statistics (for dashboard)
-     */
-    static async getProfileStats(
-        userId: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
-    ): Promise<ApiResponse<{
-        totalTrackedEvents: number;
-        attendedEvents: number;
-        joinDate: string;
-        lastActivity: string;
-    }>> {
-        try {
-            // ... (main logic remains the same)
-            const { data: profileData } = await supabaseClient.from('profiles').select('created_at').eq('id', userId).single();
-            const { data: trackingData } = await supabaseClient.from('user_events').select('status, created_at').eq('user_id', userId).order('created_at', { ascending: false });
-
-            const totalTrackedEvents = trackingData?.length || 0;
-            const attendedEvents = trackingData?.filter(e => e.status === 'attended').length || 0;
-            const lastActivity = trackingData?.[0]?.created_at || profileData?.created_at || '';
-
-            return {
-                success: true,
-                data: {
-                    totalTrackedEvents,
-                    attendedEvents,
-                    joinDate: profileData?.created_at || '',
-                    lastActivity,
-                }
-            };
-        } catch (error) {
-            console.error('Error fetching profile stats:', error);
-            Sentry.captureException(error, { extra: { function: 'getProfileStats', userId } });
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to fetch profile stats'
-            };
+            return { success: false, error: 'Failed to update preferences' };
         }
     }
 
@@ -283,16 +194,21 @@ export class ProfileService {
      * Update auth user metadata (private helper)
      */
     private static async updateAuthUserMetadata(
-        metadata: { full_name?: string; avatar_url?: string | null },
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        updates: ProfileUpdateForm,
+        supabaseClient: SupabaseClientType
     ): Promise<void> {
         try {
-            const updates: { full_name?: string; avatar_url?: string | null } = {};
-            if (metadata.hasOwnProperty('full_name')) updates.full_name = metadata.full_name;
-            if (metadata.hasOwnProperty('avatar_url')) updates.avatar_url = metadata.avatar_url;
+            const authMetadataUpdates: { data: { full_name?: string; avatar_url?: string | null } } = { data: {} };
 
-            if (Object.keys(updates).length > 0) {
-                const { error } = await supabaseClient.auth.updateUser({ data: updates });
+            if (updates.hasOwnProperty('fullName')) {
+                authMetadataUpdates.data.full_name = updates.fullName ?? undefined;
+            }
+            if (updates.hasOwnProperty('avatarUrl')) {
+                authMetadataUpdates.data.avatar_url = updates.avatarUrl;
+            }
+
+            if (Object.keys(authMetadataUpdates.data).length > 0) {
+                const { error } = await supabaseClient.auth.updateUser(authMetadataUpdates);
                 if (error) {
                     console.error('Error updating auth user metadata:', error);
                     Sentry.captureException(error, { level: 'warning', extra: { function: 'updateAuthUserMetadata' } });

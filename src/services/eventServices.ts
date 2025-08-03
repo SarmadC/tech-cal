@@ -1,17 +1,21 @@
 // src/services/eventServices.ts 
 
-import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/types/supabase';
 import type { AppEvent, EventFilters, ApiResponse, SearchSuggestion, SupabaseEventWithDetails } from '@/types';
 import { eventTransformer, eventTypeTransformer, enrichEvent } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
+
+// Define the fully-typed Supabase client type
+type SupabaseClientType = SupabaseClient<Database>;
 
 export class EventService {
     /**
      * Fetch events with optional filtering and enrichment.
      */
     static async getEvents(
-        filters?: EventFilters,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        filters: EventFilters = {}, // Default filters to an empty object
+        supabaseClient: SupabaseClientType // Parameter is now required
     ): Promise<ApiResponse<AppEvent[]>> {
         try {
             let query = supabaseClient
@@ -23,19 +27,19 @@ export class EventService {
                 `)
                 .order('start_time', { ascending: true });
 
-            if (filters?.categories?.length) query = query.in('event_type_id', filters.categories);
-            if (filters?.startDate) query = query.gte('start_time', filters.startDate.toISOString());
-            if (filters?.endDate) query = query.lte('start_time', filters.endDate.toISOString());
+            if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
+            if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
+            if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
 
-            if (filters?.searchTerm) {
+            if (filters.searchTerm) {
                 query = query.textSearch('fts', filters.searchTerm, {
                     type: 'websearch',
                     config: 'english'
                 });
             }
 
-            if (filters?.status?.length) query = query.in('status', filters.status);
-            if (filters?.eventIds?.length) query = query.in('id', filters.eventIds);
+            if (filters.status?.length) query = query.in('status', filters.status);
+            if (filters.eventIds?.length) query = query.in('id', filters.eventIds);
 
             const { data, error } = await query;
             if (error) throw error;
@@ -62,7 +66,7 @@ export class EventService {
      */
     static async getEventById(
         id: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Parameter is now required
     ): Promise<ApiResponse<AppEvent>> {
         try {
             const { data, error } = await supabaseClient
@@ -86,7 +90,6 @@ export class EventService {
             return { success: true, data: enrichedEvent };
         } catch (error) {
             console.error('Error fetching event by ID:', error);
-            // ADDED: Sentry capture
             Sentry.captureException(error, {
                 extra: { function: 'getEventById', eventId: id }
             });
@@ -99,8 +102,8 @@ export class EventService {
      */
     static async searchEvents(
         term: string,
-        limit = 10,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType, // Parameter is now required
+        limit = 10
     ): Promise<ApiResponse<SearchSuggestion[]>> {
         try {
             const { data, error } = await supabaseClient
@@ -130,7 +133,6 @@ export class EventService {
             return { success: true, data: suggestions };
         } catch (error) {
             console.error('Error searching events:', error);
-            // ADDED: Sentry capture
             Sentry.captureException(error, {
                 extra: { function: 'searchEvents', searchTerm: term, limit }
             });
@@ -144,9 +146,9 @@ export class EventService {
     static async getEventsByDateRange(
         startDate: Date,
         endDate: Date,
+        supabaseClient: SupabaseClientType, // Parameter is now required
         categoryIds?: string[],
-        limit?: number,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        limit?: number
     ): Promise<ApiResponse<AppEvent[]>> {
         try {
             let query = supabaseClient
@@ -186,20 +188,20 @@ export class EventService {
      * Get upcoming events (next 30 days).
      */
     static async getUpcomingEvents(
-        limit = 50,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType, // Parameter is now required
+        limit = 50
     ): Promise<ApiResponse<AppEvent[]>> {
         const now = new Date();
         const futureDate = new Date();
         futureDate.setDate(now.getDate() + 30);
-        return this.getEventsByDateRange(now, futureDate, undefined, limit, supabaseClient);
+        return this.getEventsByDateRange(now, futureDate, supabaseClient, undefined, limit);
     }
 
     /**
      * Get live events (happening now).
      */
     static async getLiveEvents(
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Parameter is now required
     ): Promise<ApiResponse<AppEvent[]>> {
         try {
             const now = new Date().toISOString();
@@ -238,7 +240,7 @@ export class EventService {
     static async getRecommendedEvents(
         categoryNames: string[],
         excludedEventIds: string[],
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType // Parameter is now required
     ): Promise<ApiResponse<AppEvent[]>> {
         try {
             if (categoryNames.length === 0) return { success: true, data: [] };

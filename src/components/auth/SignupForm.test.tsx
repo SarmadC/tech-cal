@@ -1,14 +1,19 @@
-// src/components/auth/SignupForm.test.tsx (Final Corrected Version)
+// src/components/auth/SignupForm.test.tsx
 
-import { render, screen } from '@testing-library/react';
+// 1. IMPORT the correct render function
+import { render, screen } from '@/utils/test-utils';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import SignupForm from './SignupForm';
-import { BrowserRouter } from 'react-router-dom';
+// 2. REMOVE the incorrect import
+// import { BrowserRouter } from 'react-router-dom';
 
+// 3. REMOVE the unnecessary custom render function
+/*
 const renderWithRouter = (ui: React.ReactElement) => {
     return render(ui, { wrapper: BrowserRouter });
 };
+*/
 
 describe('SignupForm Component', () => {
 
@@ -16,7 +21,8 @@ describe('SignupForm Component', () => {
         const user = userEvent.setup();
         const mockOnSubmit = vi.fn();
 
-        renderWithRouter(<SignupForm onSubmit={mockOnSubmit} isPending={false} />);
+        // 4. USE the standard render function from your test-utils
+        render(<SignupForm onSubmit={mockOnSubmit} isPending={false} />);
 
         const nameInput = screen.getByLabelText(/full name/i);
         const emailInput = screen.getByLabelText(/email address/i);
@@ -44,7 +50,7 @@ describe('SignupForm Component', () => {
 
     it('should disable the submit button until the terms are accepted', async () => {
         const user = userEvent.setup();
-        renderWithRouter(<SignupForm onSubmit={vi.fn()} isPending={false} />);
+        render(<SignupForm onSubmit={vi.fn()} isPending={false} />);
         const termsCheckbox = screen.getByLabelText(/i agree to the/i);
         const createAccountButton = screen.getByRole('button', { name: /create account/i });
 
@@ -57,14 +63,13 @@ describe('SignupForm Component', () => {
         // Arrange
         const user = userEvent.setup();
         const mockOnSubmit = vi.fn();
-        renderWithRouter(<SignupForm onSubmit={mockOnSubmit} isPending={false} />);
+        render(<SignupForm onSubmit={mockOnSubmit} isPending={false} />);
 
         // Act
         const nameInput = screen.getByLabelText(/full name/i);
         const emailInput = screen.getByLabelText(/email address/i);
         await user.type(nameInput, 'Test User');
         await user.type(emailInput, 'test@user.com');
-
 
         const passwordInput = screen.getByLabelText(/^password \*/i);
         const confirmPasswordInput = screen.getByLabelText(/confirm password/i);

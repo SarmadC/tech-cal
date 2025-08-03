@@ -1,16 +1,22 @@
 // src/services/eventTypeService.ts
 
-import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
+// 1. IMPORT THE GENERIC CLIENT AND YOUR DATABASE TYPES
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/types/supabase';
 import type { ApiResponse, AppEventType } from '@/types';
 import { eventTypeTransformer } from '@/utils/transformers';
-import * as Sentry from "@sentry/nextjs"; // ADDED: Import Sentry
+import * as Sentry from "@sentry/nextjs";
+
+// 2. DEFINE THE TYPE-SAFE CLIENT TYPE
+type SupabaseClientType = SupabaseClient<Database>;
 
 export class EventTypeService {
     /**
      * Get all event types, sorted by name.
      */
+    // 3. MAKE THE supabaseClient PARAMETER REQUIRED
     static async getEventTypes(
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType
     ): Promise<ApiResponse<AppEventType[]>> {
         try {
             const { data, error } = await supabaseClient
@@ -36,10 +42,12 @@ export class EventTypeService {
      * Get event types along with a count of events for each type,
      * using a high-performance RPC call.
      */
+    // 4. MAKE THE supabaseClient PARAMETER REQUIRED
     static async getEventTypesWithCounts(
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType
     ): Promise<ApiResponse<AppEventType[]>> {
         try {
+            // Your RPC call will now be fully type-safe!
             const { data, error } = await supabaseClient.rpc('get_event_types_with_counts');
             if (error) throw error;
 
@@ -65,9 +73,10 @@ export class EventTypeService {
     /**
      * Get a single event type by its unique ID.
      */
+    // 5. MAKE THE supabaseClient PARAMETER REQUIRED
     static async getEventTypeById(
         id: string,
-        supabaseClient: SupabaseClientType = browserSupabaseClient
+        supabaseClient: SupabaseClientType
     ): Promise<ApiResponse<AppEventType>> {
         try {
             const { data, error } = await supabaseClient

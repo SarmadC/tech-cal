@@ -1,66 +1,52 @@
 // src/services/authService.ts
-import { supabase as browserSupabaseClient, SupabaseClientType } from '@/lib/supabaseClient';
+import { SupabaseClient } from '@supabase/supabase-js';
 import type { AuthResponse, OAuthProvider, LoginForm, SignupForm } from '@/types';
 import * as Sentry from "@sentry/nextjs";
 
-export class AuthService {
-    // Helper to make all methods use the correct client
-    private static getClient(supabaseClient?: SupabaseClientType): SupabaseClientType {
-        return supabaseClient || browserSupabaseClient;
-    }
+// 1. IMPORT THE GENERATED DATABASE TYPE
+// This is the blueprint of your database schema.
+import { Database } from '@/types/supabase';
 
+// 2. USE THE 'Database' TYPE INSTEAD OF 'any'
+// This makes the client fully aware of your tables, columns, and RPC functions.
+// All ESLint errors will now be fixed.
+type SupabaseClientType = SupabaseClient<Database>;
+
+export class AuthService {
     /**
      * Sign in with email and password
      */
     static async signIn(
         credentials: LoginForm,
-        supabaseClient?: SupabaseClientType
+        supabaseClient: SupabaseClientType
     ): Promise<AuthResponse> {
-        const client = this.getClient(supabaseClient);
         try {
-            const { data, error } = await client.auth.signInWithPassword({
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: credentials.email,
                 password: credentials.password,
-
             });
 
             if (error) {
-                return {
-                    success: false,
-                    error: this.getReadableErrorMessage(error.message)
-                };
+                return { success: false, error: this.getReadableErrorMessage(error.message) };
             }
-
             if (!data.user) {
-                return {
-                    success: false,
-                    error: 'Authentication failed - no user returned'
-                };
+                return { success: false, error: 'Authentication failed - no user returned' };
             }
-
-            return {
-                success: true,
-                message: 'Successfully signed in!'
-            };
+            return { success: true, message: 'Successfully signed in!' };
         } catch (error) {
             console.error('Sign in error:', error);
             Sentry.captureException(error);
-            return {
-                success: false,
-                error: 'An unexpected error occurred during sign in'
-            };
+            return { success: false, error: 'An unexpected error occurred during sign in' };
         }
     }
-
 
     /**
      * Sign up with email and password
      */
     static async signUp(
         data: SignupForm,
-        supabaseClient?: SupabaseClientType
+        supabaseClient: SupabaseClientType
     ): Promise<AuthResponse> {
-        const client = this.getClient(supabaseClient);
         try {
             if (data.password !== data.confirmPassword) {
                 return { success: false, error: 'Passwords do not match' };
@@ -72,59 +58,41 @@ export class AuthService {
                 return { success: false, error: 'You must accept the terms of service' };
             }
 
-            const { data: authData, error } = await client.auth.signUp({
+            const { data: authData, error } = await supabaseClient.auth.signUp({
                 email: data.email,
                 password: data.password,
                 options: { data: { full_name: data.name } },
             });
 
             if (error) {
-                return {
-                    success: false,
-                    error: this.getReadableErrorMessage(error.message)
-                };
+                return { success: false, error: this.getReadableErrorMessage(error.message) };
             }
-
             if (!authData.user) {
-                return {
-                    success: false,
-                    error: 'Account creation failed - no user returned'
-                };
+                return { success: false, error: 'Account creation failed - no user returned' };
             }
-
             if (authData.user && !authData.user.email_confirmed_at) {
-                return {
-                    success: true,
-                    message: 'Please check your email to confirm your account before signing in.'
-                };
+                return { success: true, message: 'Please check your email to confirm your account.' };
             }
-
-            return {
-                success: true,
-                message: 'Account created successfully!'
-            };
+            return { success: true, message: 'Account created successfully!' };
         } catch (error) {
             console.error('Sign up error:', error);
             Sentry.captureException(error);
-            return {
-                success: false,
-                error: 'An unexpected error occurred during account creation'
-            };
+            return { success: false, error: 'An unexpected error occurred during account creation' };
         }
     }
-
 
     /**
      * Sign in with OAuth provider
      */
     static async signInWithOAuth(
         provider: OAuthProvider,
-        supabaseClient?: SupabaseClientType
+        supabaseClient: SupabaseClientType
     ): Promise<AuthResponse> {
-        const client = this.getClient(supabaseClient);
         try {
-            const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
-            const { error } = await client.auth.signInWithOAuth({ provider, options: { redirectTo } });
+            // NOTE: window.location.origin is only available in the browser.
+            // This method should only be called from a Client Component.
+            const redirectTo = `${window.location.origin}/auth/callback`;
+            const { error } = await supabaseClient.auth.signInWithOAuth({ provider, options: { redirectTo } });
             if (error) return { success: false, error: this.getReadableErrorMessage(error.message) };
             return { success: true, message: `Redirecting to ${provider}...` };
         } catch (error) {
@@ -133,14 +101,12 @@ export class AuthService {
         }
     }
 
-
     /**
      * Sign out current user
      */
-    static async signOut(supabaseClient?: SupabaseClientType): Promise<AuthResponse> {
-        const client = this.getClient(supabaseClient);
+    static async signOut(supabaseClient: SupabaseClientType): Promise<AuthResponse> {
         try {
-            const { error } = await client.auth.signOut();
+            const { error } = await supabaseClient.auth.signOut();
             if (error) return { success: false, error: this.getReadableErrorMessage(error.message) };
             return { success: true, message: 'Successfully signed out' };
         } catch (error) {
@@ -155,14 +121,13 @@ export class AuthService {
      */
     static async resetPassword(
         email: string,
-        supabaseClient?: SupabaseClientType
+        supabaseClient: SupabaseClientType
     ): Promise<AuthResponse> {
-        const client = this.getClient(supabaseClient);
         try {
-            const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password`;
-            const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+            const redirectTo = `${window.location.origin}/auth/reset-password`;
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
             if (error) return { success: false, error: this.getReadableErrorMessage(error.message) };
-            return { success: true, message: 'If an account with that email exists, a reset link will be sent.' };
+            return { success: true, message: 'If an account with that email exists, a reset link has been sent.' };
         } catch (error) {
             console.error('Password reset error:', error);
             Sentry.captureException(error);
@@ -170,10 +135,16 @@ export class AuthService {
         }
     }
 
-    static async setSessionFromTokens(accessToken: string, refreshToken: string, supabaseClient?: SupabaseClientType): Promise<AuthResponse> {
-        const client = this.getClient(supabaseClient);
+    /**
+     * Set the session from tokens, typically used in an auth callback or reset flow.
+     */
+    static async setSessionFromTokens(
+        accessToken: string,
+        refreshToken: string,
+        supabaseClient: SupabaseClientType
+    ): Promise<AuthResponse> {
         try {
-            const { data, error } = await client.auth.setSession({
+            const { data, error } = await supabaseClient.auth.setSession({
                 access_token: accessToken,
                 refresh_token: refreshToken,
             });
@@ -182,41 +153,44 @@ export class AuthService {
             return { success: true };
         } catch (err) {
             Sentry.captureException(err);
-            throw new Error(err instanceof Error ? err.message : 'Invalid or expired reset link.');
+            const message = err instanceof Error ? err.message : 'Invalid or expired reset link.';
+            return { success: false, error: message };
         }
     }
 
     /**
      * Update user password
      */
-    static async updateUserPassword(newPassword: string, supabaseClient?: SupabaseClientType): Promise<AuthResponse> {
-        const client = this.getClient(supabaseClient);
+    static async updateUserPassword(
+        newPassword: string,
+        supabaseClient: SupabaseClientType
+    ): Promise<AuthResponse> {
         try {
             if (newPassword.length < 8) {
-                throw new Error('Password must be at least 8 characters long.');
+                return { success: false, error: 'Password must be at least 8 characters long.' };
             }
-            const { error } = await client.auth.updateUser({ password: newPassword });
+            const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
             if (error) throw error;
             return { success: true, message: 'Password updated successfully!' };
         } catch (err) {
             Sentry.captureException(err);
             const friendlyError = this.getReadableErrorMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
-            throw new Error(friendlyError);
+            return { success: false, error: friendlyError };
         }
     }
-
 
     /**
      * Update user email
      */
-    static async updateEmail(newEmail: string, supabaseClient?: SupabaseClientType): Promise<AuthResponse> {
-        // CORRECTED: Uses the getClient() helper instead of the direct import
-        const client = this.getClient(supabaseClient);
+    static async updateEmail(
+        newEmail: string,
+        supabaseClient: SupabaseClientType
+    ): Promise<AuthResponse> {
         try {
             if (!newEmail || !newEmail.includes('@')) {
                 return { success: false, error: 'Please enter a valid email address' };
             }
-            const { error } = await client.auth.updateUser({ email: newEmail });
+            const { error } = await supabaseClient.auth.updateUser({ email: newEmail });
             if (error) return { success: false, error: this.getReadableErrorMessage(error.message) };
             return { success: true, message: 'Please check your new email address to confirm the change.' };
         } catch (error) {
@@ -226,51 +200,22 @@ export class AuthService {
         }
     }
 
-
     /**
      * Get current user
      */
-    static async getCurrentSession(supabaseClient?: SupabaseClientType) {
-        const client = this.getClient(supabaseClient);
+    static async getCurrentUser(supabaseClient: SupabaseClientType) {
         try {
-            const { data: { session }, error } = await client.auth.getSession();
+            const { data: { user }, error } = await supabaseClient.auth.getUser();
             if (error) {
-                console.error('Error getting session:', error);
-                return null;
-            }
-            return session;
-        } catch (error) {
-            console.error('Error getting current session:', error);
-            Sentry.captureException(error);
-            return null;
-        }
-    }
-
-    /**
-     * Get current user
-     */
-    static async getCurrentUser(supabaseClient?: SupabaseClientType) {
-        const client = this.getClient(supabaseClient);
-        try {
-            const { data: { user }, error } = await client.auth.getUser();
-            if (error) {
-                console.error('Error getting user:', error);
+                console.error('Error getting user:', error.message);
                 return null;
             }
             return user;
         } catch (error) {
-            console.error('Error getting current user:', error);
+            console.error('Exception getting current user:', error);
             Sentry.captureException(error);
             return null;
         }
-    }
-
-    /**
-     * Check if user is authenticated
-     */
-    static async isAuthenticated(supabaseClient?: SupabaseClientType): Promise<boolean> {
-        const session = await this.getCurrentSession(supabaseClient);
-        return !!session?.user;
     }
 
     /**
@@ -288,19 +233,11 @@ export class AuthService {
             'Too many requests': 'Too many attempts. Please wait a moment before trying again.',
         };
 
-        // Check for exact matches first
-        if (errorMap[errorMessage]) {
-            return errorMap[errorMessage];
-        }
-
-        // Check for partial matches
         for (const [key, value] of Object.entries(errorMap)) {
             if (errorMessage.toLowerCase().includes(key.toLowerCase())) {
                 return value;
             }
         }
-
-        // Return original message if no match found
-        return errorMessage;
+        return errorMessage; // Return original message if no match found
     }
 }
