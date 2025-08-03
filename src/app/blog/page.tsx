@@ -3,83 +3,82 @@ import Link from 'next/link';
 import BlogFilters from './BlogFilters';
 
 const blogPosts = [
-  {
-    id: 1,
-    title: 'The Future of AI: Insights from Google I/O 2024',
-    excerpt: 'Google unveiled groundbreaking AI advancements at I/O 2024, including updates to Gemini and new developer tools that promise to revolutionize how we build applications.',
-    author: 'Sarah Chen',
-    date: 'Jan 15, 2024',
-    readTime: '5 min read',
-    category: 'AI & ML',
-    image: '/blog/ai-future.jpg',
-    featured: true
-  },
-  {
-    id: 2,
-    title: 'React 19: Everything You Need to Know',
-    excerpt: 'React 19 brings significant performance improvements and new features. Here\'s a comprehensive guide to what\'s new and how to migrate your applications.',
-    author: 'Marcus Rodriguez',
-    date: 'Jan 12, 2024',
-    readTime: '8 min read',
-    category: 'Web Dev',
-    image: '/blog/react-19.jpg',
-    featured: false
-  },
-  {
-    id: 3,
-    title: 'Apple Vision Pro: A Developer\'s Perspective',
-    excerpt: 'After spending a month developing for Vision Pro, here are my insights on the platform\'s potential and challenges for developers.',
-    author: 'Alex Kim',
-    date: 'Jan 10, 2024',
-    readTime: '10 min read',
-    category: 'AR/VR',
-    image: '/blog/vision-pro.jpg',
-    featured: false
-  },
-  {
-    id: 4,
-    title: 'Cloud Computing Trends to Watch in 2024',
-    excerpt: 'From edge computing to sustainable cloud practices, explore the trends shaping the future of cloud infrastructure this year.',
-    author: 'Priya Patel',
-    date: 'Jan 8, 2024',
-    readTime: '6 min read',
-    category: 'Cloud',
-    image: '/blog/cloud-trends.jpg',
-    featured: false
-  },
-  {
-    id: 5,
-    title: 'Building Secure APIs: Best Practices for 2024',
-    excerpt: 'Security should be at the forefront of API development. Learn the latest best practices and tools to protect your APIs from common vulnerabilities.',
-    author: 'David Thompson',
-    date: 'Jan 5, 2024',
-    readTime: '7 min read',
-    category: 'Security',
-    image: '/blog/api-security.jpg',
-    featured: false
-  },
-  {
-    id: 6,
-    title: 'The Rise of Rust in Systems Programming',
-    excerpt: 'Why more companies are choosing Rust for systems programming and how it\'s changing the landscape of low-level development.',
-    author: 'Emily Zhang',
-    date: 'Jan 3, 2024',
-    readTime: '9 min read',
-    category: 'Programming',
-    image: '/blog/rust-systems.jpg',
-    featured: false
-  }
+    {
+        id: 1,
+        title: 'The Future of AI: Insights from Google I/O 2024',
+        excerpt: 'Google unveiled groundbreaking AI advancements at I/O 2024, including updates to Gemini and new developer tools that promise to revolutionize how we build applications.',
+        author: 'Sarah Chen',
+        date: 'Jan 15, 2024',
+        readTime: '5 min read',
+        category: 'AI & ML',
+        image: '/blog/ai-future.jpg',
+        featured: true
+    },
+    {
+        id: 2,
+        title: 'React 19: Everything You Need to Know',
+        excerpt: 'React 19 brings significant performance improvements and new features. Here\'s a comprehensive guide to what\'s new and how to migrate your applications.',
+        author: 'Marcus Rodriguez',
+        date: 'Jan 12, 2024',
+        readTime: '8 min read',
+        category: 'Web Dev',
+        image: '/blog/react-19.jpg',
+        featured: false
+    },
+    {
+        id: 3,
+        title: 'Apple Vision Pro: A Developer\'s Perspective',
+        excerpt: 'After spending a month developing for Vision Pro, here are my insights on the platform\'s potential and challenges for developers.',
+        author: 'Alex Kim',
+        date: 'Jan 10, 2024',
+        readTime: '10 min read',
+        category: 'AR/VR',
+        image: '/blog/vision-pro.jpg',
+        featured: false
+    },
+    {
+        id: 4,
+        title: 'Cloud Computing Trends to Watch in 2024',
+        excerpt: 'From edge computing to sustainable cloud practices, explore the trends shaping the future of cloud infrastructure this year.',
+        author: 'Priya Patel',
+        date: 'Jan 8, 2024',
+        readTime: '6 min read',
+        category: 'Cloud',
+        image: '/blog/cloud-trends.jpg',
+        featured: false
+    },
+    {
+        id: 5,
+        title: 'Building Secure APIs: Best Practices for 2024',
+        excerpt: 'Security should be at the forefront of API development. Learn the latest best practices and tools to protect your APIs from common vulnerabilities.',
+        author: 'David Thompson',
+        date: 'Jan 5, 2024',
+        readTime: '7 min read',
+        category: 'Security',
+        image: '/blog/api-security.jpg',
+        featured: false
+    },
+    {
+        id: 6,
+        title: 'The Rise of Rust in Systems Programming',
+        excerpt: 'Why more companies are choosing Rust for systems programming and how it\'s changing the landscape of low-level development.',
+        author: 'Emily Zhang',
+        date: 'Jan 3, 2024',
+        readTime: '9 min read',
+        category: 'Programming',
+        image: '/blog/rust-systems.jpg',
+        featured: false
+    }
 ];
 
 const categories = ['All', 'AI & ML', 'Web Dev', 'Mobile', 'Cloud', 'Security', 'AR/VR', 'Programming'];
 
-// ✅ FIX 1: The component function MUST be `async`
-// ✅ FIX 2: We `await` the props object to get the resolved `searchParams`
+// ✅ FIX: Update the props type to indicate searchParams is a Promise
 export default async function BlogPage(props: {
-    searchParams: { [key: string]: string | string[] | undefined };
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-    // Await the props to resolve searchParams
-    const { searchParams } = await props;
+    // ✅ FIX: Await searchParams directly
+    const searchParams = await props.searchParams;
 
     const searchTerm = (searchParams?.q as string) || '';
     const selectedCategory = (searchParams?.category as string) || 'All';
