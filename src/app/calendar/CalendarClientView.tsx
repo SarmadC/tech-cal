@@ -23,7 +23,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useFilters } from '@/hooks/useFilters';
 import { EventService } from '@/services/eventServices';
 
-interface CalendarClientViewProps {
+interface CalendarClientViewProps { 
     initialEvents: AppEvent[];
     initialCategories: AppEventType[];
     profile: AppProfile | null;

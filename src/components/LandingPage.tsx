@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
 import {
     Filter,
     SatelliteDish,
@@ -11,25 +12,19 @@ import {
     ArrowRight,
 } from 'lucide-react';
 
-// Define proper types for the animation positions
+// --- Type Definitions ---
 interface PositionState {
     x: number;
     y: number;
     scale: number;
     rot: number;
 }
-
 interface AnimationPosition {
     chaos: PositionState;
     organized: PositionState;
 }
 
-// Keep a direct reference to the animation frame ID
-interface AnimationState {
-    positions: AnimationPosition[];
-    isInitialized: boolean;
-}
-
+// --- Data Constants ---
 const heroStats = [
     { number: '500+', label: 'Event Sources' },
     { number: '50K+', label: 'Developers' },
@@ -52,12 +47,6 @@ const features = [
         title: 'Calendar Integration',
         description: "Syncs with Google Calendar, Outlook, and Apple Calendar. One-click to add events with all the details you need.",
     },
-    // REMOVED: API Feature Card
-    // {
-    //     icon: <Code2 />,
-    //     title: 'Developer API',
-    //     description: "RESTful API, webhooks, and real-time feeds. Integrate our curated event data into your apps.",
-    // },
     {
         icon: <BarChart3 />,
         title: 'Event Analytics',
@@ -85,15 +74,47 @@ const eventsData = [
     { title: "GitHub Universe", company: "GitHub", date: "Nov 08", type: "Developer Conference" }
 ];
 
+// --- Animated Event Card Sub-Component ---
+const AnimatedEventCard = ({
+    eventData,
+    positions,
+    scrollYProgress
+}: {
+    eventData: typeof eventsData[0],
+    positions: AnimationPosition,
+    scrollYProgress: MotionValue<number>
+}) => {
+    const x = useTransform(scrollYProgress, [0, 1], [positions.chaos.x, positions.organized.x]);
+    const y = useTransform(scrollYProgress, [0, 1], [positions.chaos.y, positions.organized.y]);
+    const scale = useTransform(scrollYProgress, [0, 1], [positions.chaos.scale, positions.organized.scale]);
+    const rotate = useTransform(scrollYProgress, [0, 1], [positions.chaos.rot, positions.organized.rot]);
+
+    return (
+        <motion.div
+            className="floating-event"
+            style={{ x, y, scale, rotate }}
+        >
+            <div className="event-header">
+                <div className="event-company-tag">{eventData.company}</div>
+                <div className="event-date-badge">{eventData.date}</div>
+            </div>
+            <div className="floating-event-title">{eventData.title}</div>
+            <div className="floating-event-type">{eventData.type}</div>
+        </motion.div>
+    );
+};
+
+// --- Main Landing Page Component ---
 export default function LandingPage() {
     const chaosSectionRef = useRef<HTMLElement>(null);
-    const chaosHeaderRef = useRef<HTMLDivElement>(null);
-    const solutionHeaderRef = useRef<HTMLDivElement>(null);
-    const eventCardRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const animationStateRef = useRef<AnimationState>({ positions: [], isInitialized: false });
-    const animationFrameIdRef = useRef<number>(0);
+    const [animationPositions, setAnimationPositions] = useState<AnimationPosition[]>([]);
 
-    // Intersection Observer for simple fade/slide animations
+    const { scrollYProgress } = useScroll({
+        target: chaosSectionRef,
+        offset: ["start start", "end end"]
+    });
+
+    // Effect for setting up Intersection Observers for simple animations
     useEffect(() => {
         const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
         const observer = new IntersectionObserver((entries) => {
@@ -110,20 +131,14 @@ export default function LandingPage() {
         return () => elements.forEach(el => observer.unobserve(el));
     }, []);
 
-    // "Chaos to Order" Animation Logic
+    // Effect for setting up positions for the complex scroll animation
+    // NEW, CORRECTED useEffect
     useEffect(() => {
-        const chaosSection = chaosSectionRef.current;
-        const chaosHeader = chaosHeaderRef.current;
-        const solutionHeader = solutionHeaderRef.current;
-
-        // A stable reference to the mutable animation frame ID
-        const animationFrameId = animationFrameIdRef;
-
-        if (!chaosSection || !chaosHeader || !solutionHeader) return;
-
-        const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-
         const setupPositions = () => {
+            // We no longer need sectionRect for height calculations.
+            if (!chaosSectionRef.current) return;
+            const sectionWidth = chaosSectionRef.current.getBoundingClientRect().width;
+
             const isMobile = window.innerWidth <= 768;
             const cardWidth = 220;
             const cardHeight = 135;
@@ -133,13 +148,17 @@ export default function LandingPage() {
 
             const gridWidth = cols * cardWidth + (cols - 1) * padding;
             const gridHeight = Math.ceil(eventsToAnimate.length / cols) * (cardHeight + padding);
-            const gridStartX = (window.innerWidth - gridWidth) / 2;
-            const gridStartY = (window.innerHeight - gridHeight) * 0.6;
 
-            animationStateRef.current.positions = eventsToAnimate.map((_, index) => {
+            // Use sectionWidth for horizontal centering, but window.innerHeight for vertical centering.
+            const gridStartX = (sectionWidth - gridWidth) / 2;
+            const gridStartY = (window.innerHeight - gridHeight) * 0.5; // CORRECTED
+
+            const positions = eventsToAnimate.map((_, index) => {
                 const chaosState = {
-                    x: Math.random() * (window.innerWidth - cardWidth),
-                    y: Math.random() * window.innerHeight + window.innerHeight * 1.2,
+                    x: Math.random() * (sectionWidth - cardWidth),
+                    // The starting Y position is now calculated based on the viewport height,
+                    // placing it just below the visible area.
+                    y: window.innerHeight + Math.random() * 200, // CORRECTED
                     scale: 0.5 + Math.random() * 0.5,
                     rot: (Math.random() - 0.5) * 90
                 };
@@ -153,58 +172,17 @@ export default function LandingPage() {
                 };
                 return { chaos: chaosState, organized: organizedState };
             });
-            animationStateRef.current.isInitialized = true;
-        };
-
-        const animateOnScroll = () => {
-            if (!animationStateRef.current.isInitialized) {
-                animationFrameId.current = requestAnimationFrame(animateOnScroll);
-                return;
-            }
-
-            const rect = chaosSection.getBoundingClientRect();
-            const scrollY = -rect.top;
-
-            if (scrollY > -window.innerHeight && scrollY < chaosSection.offsetHeight) {
-                const scrollTrackLength = chaosSection.offsetHeight - window.innerHeight;
-                const animationEndsAt = scrollTrackLength * 0.75;
-                const progress = Math.max(0, Math.min(1, scrollY / animationEndsAt));
-
-                eventCardRefs.current.forEach((el, index) => {
-                    if (el && animationStateRef.current.positions[index]) {
-                        const { chaos, organized } = animationStateRef.current.positions[index];
-                        const currentX = lerp(chaos.x, organized.x, progress);
-                        const currentY = lerp(chaos.y, organized.y, progress);
-                        const currentScale = lerp(chaos.scale, organized.scale, progress);
-                        const currentRot = lerp(chaos.rot, organized.rot, progress);
-                        el.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) scale(${currentScale}) rotate(${currentRot}deg)`;
-                    }
-                });
-
-                const headerFadeStartPoint = 0.30;
-                const headerFadeEndPoint = 0.90;
-                const headerProgress = Math.max(0, Math.min(1, (progress - headerFadeStartPoint) / (headerFadeEndPoint - headerFadeStartPoint)));
-
-                chaosHeader.style.opacity = `${1 - headerProgress}`;
-                solutionHeader.style.opacity = `${headerProgress}`;
-            }
-
-            animationFrameId.current = requestAnimationFrame(animateOnScroll);
+            setAnimationPositions(positions);
         };
 
         setupPositions();
-        animateOnScroll();
-
         window.addEventListener('resize', setupPositions);
+        return () => window.removeEventListener('resize', setupPositions);
+    }, []);
 
-        // This is the cleanup function that runs when the component unmounts.
-        return () => {
-            window.removeEventListener('resize', setupPositions);
-            // Cancel the currently scheduled animation frame using the ref.
-            // This is the correct pattern for this type of animation loop.
-            cancelAnimationFrame(animationFrameId.current);
-        };
-    }, []); // This effect runs only once on mount
+
+    const chaosHeaderOpacity = useTransform(scrollYProgress, [0.1, 0.4], [1, 0]);
+    const solutionHeaderOpacity = useTransform(scrollYProgress, [0.6, 0.9], [0, 1]);
 
     return (
         <div className="landing-container">
@@ -214,7 +192,6 @@ export default function LandingPage() {
                     <div className="logo">Kure-Cal</div>
                     <ul className="nav-links">
                         <li><Link href="#features" className="nav-link">Features</Link></li>
-                        <li><Link href="/api-docs" className="nav-link">API</Link></li>
                         <li><Link href="/blog" className="nav-link">Blog</Link></li>
                     </ul>
                     <div className="flex items-center gap-4">
@@ -306,30 +283,24 @@ export default function LandingPage() {
             <section className="chaos-to-order" ref={chaosSectionRef}>
                 <div className="animation-pinner">
                     <div className="events-container">
-                        {eventsData.map((eventData, index) => (
-                            <div
+                        {animationPositions.map((pos, index) => (
+                            <AnimatedEventCard
                                 key={index}
-                                className="floating-event"
-                                ref={el => { eventCardRefs.current[index] = el; }}
-                            >
-                                <div className="event-header">
-                                    <div className="event-company-tag">{eventData.company}</div>
-                                    <div className="event-date-badge">{eventData.date}</div>
-                                </div>
-                                <div className="floating-event-title">{eventData.title}</div>
-                                <div className="floating-event-type">{eventData.type}</div>
-                            </div>
+                                eventData={eventsData[index]}
+                                positions={pos}
+                                scrollYProgress={scrollYProgress}
+                            />
                         ))}
                     </div>
                     <div className="header-container">
-                        <div className="chaos-header" ref={chaosHeaderRef}>
+                        <motion.div className="chaos-header" style={{ opacity: chaosHeaderOpacity }}>
                             <h2 className="chaos-title">The Problem</h2>
                             <p className="chaos-subtitle">Information scattered everywhere...</p>
-                        </div>
-                        <div className="solution-header" ref={solutionHeaderRef}>
+                        </motion.div>
+                        <motion.div className="solution-header" style={{ opacity: solutionHeaderOpacity }}>
                             <h2 className="solution-title">The Solution</h2>
                             <p className="solution-subtitle">Everything organized, nothing missed.</p>
-                        </div>
+                        </motion.div>
                     </div>
                 </div>
             </section>

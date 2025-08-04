@@ -52,10 +52,6 @@ export default function LoginPage() {
         }
     }, [user, initialized, router, searchParams]);
 
-    // 2. REMOVE the useMutation hook for email/password sign-in.
-    /*
-    const { mutate: signIn, isPending: isSigningIn, error: signInError } = useMutation({ ... });
-    */
 
     // 3. CREATE a new handler function that calls the Server Action.
     const handleSignIn = async (credentials: LoginFormType) => {
@@ -75,7 +71,6 @@ export default function LoginPage() {
         setIsSubmitting(false);
     };
 
-    // The OAuth mutation remains the same as it handles a client-side redirect flow.
     const { mutate: signInWithOAuth, isPending: isSigningInWithOAuth, error: oAuthError } = useMutation({
         mutationFn: (provider: OAuthProvider) => AuthService.signInWithOAuth(provider, supabase),
         onSuccess: (result) => {

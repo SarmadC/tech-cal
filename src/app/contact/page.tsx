@@ -7,6 +7,7 @@ import { submitContactFormAction, type ContactFormState } from './actions';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Helper component for the submit button to show a pending state
 function SubmitButton() {
@@ -89,13 +90,18 @@ export default function ContactPage() {
                             </div>
                             <div>
                                 <label htmlFor="subject" className="block text-sm font-medium text-foreground-primary mb-2">Subject *</label>
-                                <select id="subject" name="subject" required defaultValue="general" className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary">
-                                    <option value="general">General Inquiry</option>
-                                    <option value="sales">Enterprise Sales</option>
-                                    <option value="support">Technical Support</option>
-                                    <option value="partnership">Partnership</option>
-                                    <option value="investment">Investment Opportunity</option>
-                                </select>
+                                <Select name="subject" required defaultValue="general">
+                                    <SelectTrigger id="subject" className="w-full">
+                                        <SelectValue placeholder="Select a subject..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="general">General Inquiry</SelectItem>
+                                        <SelectItem value="sales">Enterprise Sales</SelectItem>
+                                        <SelectItem value="support">Technical Support</SelectItem>
+                                        <SelectItem value="partnership">Partnership</SelectItem>
+                                        <SelectItem value="investment">Investment Opportunity</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 {state.errors?.subject && <p className="text-red-500 text-sm mt-1">{state.errors.subject[0]}</p>}
                             </div>
                             <div>

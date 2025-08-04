@@ -47,7 +47,6 @@ const plans = [
             'Up to 10 team members',
             'Shared team calendars',
             'Admin dashboard',
-            // REMOVED: 'API access',
             'Custom integrations',
             'Priority support',
             'SSO authentication'

@@ -1,4 +1,4 @@
-// src/app/layout.tsx (Corrected)
+// src/app/layout.tsx
 
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -7,6 +7,8 @@ import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
 import ClientLayout from "@/components/layout/ClientLayout";
 import { Toaster } from 'sonner';
+// 1. Import the new provider
+import SmoothScrollProvider from "@/components/providers/SmoothScrollProvier";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,18 +18,21 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body className={inter.className}>
-        <Toaster position="bottom-right" richColors />
-        <QueryProvider>
-          <AuthProvider>
-            <ClientLayout>
-              {children}
-            </ClientLayout>
-          </AuthProvider>
-        </QueryProvider>
-      </body>
-    </html>
-  );
+    return (
+        <html lang="en">
+            <body className={inter.className}>
+                {/* 2. Wrap everything inside the body with the provider */}
+                <SmoothScrollProvider>
+                    <Toaster position="bottom-right" richColors />
+                    <QueryProvider>
+                        <AuthProvider>
+                            <ClientLayout>
+                                {children}
+                            </ClientLayout>
+                        </AuthProvider>
+                    </QueryProvider>
+                </SmoothScrollProvider>
+            </body>
+        </html>
+    );
 }

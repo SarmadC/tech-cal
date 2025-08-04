@@ -323,3 +323,4 @@ export type SupabaseEventWithDetails = Omit<SupabaseEvent, 'organizer'> & {
 export type SupabaseTrackedEventWithDetails = Omit<SupabaseTrackedEvent, 'events'> & {
     events: SupabaseEventWithDetails | null;
 };
+

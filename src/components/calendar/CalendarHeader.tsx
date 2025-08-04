@@ -16,11 +16,11 @@ export interface CalendarHeaderProps {
 }
 
 const CalendarHeader: FC<CalendarHeaderProps> = ({ currentDate, view, onNavigate, onChangeView }) => {
-    const { signOut } = useAuth(); // Get the signOut function from the context
+    const { signOut } = useAuth();
 
     return (
         <header className="h-20 flex-shrink-0 px-6 flex items-center justify-between border-b border-gray-800">
-            {/* THIS IS THE NEW SECTION WITH THE DASHBOARD LINK */}
+            {/* This section includes the link back to the main dashboard. */}
             <div className="flex items-center space-x-4">
                 <Link href="/dashboard" className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg" title="Go to Dashboard">
                     <LayoutDashboard className="w-5 h-5" />
@@ -31,6 +31,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({ currentDate, view, onNavigate
             </div>
 
             <div className="flex items-center space-x-4">
+                {/* View switcher buttons (Month, Week, Day) */}
                 <div className="flex items-center bg-gray-800 rounded-lg">
                     {(['month', 'week', 'day'] as CalendarViewType[]).map(v => (
                         <button
@@ -42,12 +43,14 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({ currentDate, view, onNavigate
                         </button>
                     ))}
                 </div>
+                {/* Navigation controls (Prev, Today, Next) */}
                 <div className="flex items-center space-x-2">
                     <button onClick={() => onNavigate('prev')} className="p-2 hover:bg-gray-800 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
                     <button onClick={() => onNavigate('today')} className="text-sm px-3 py-1.5 border border-gray-700 rounded-lg hover:bg-gray-800">Today</button>
                     <button onClick={() => onNavigate('next')} className="p-2 hover:bg-gray-800 rounded-lg"><ChevronRight className="w-5 h-5" /></button>
                 </div>
 
+                {/* The Sign Out button provides essential user functionality. */}
                 <button onClick={signOut} className="text-sm px-3 py-1.5 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/20">
                     Sign Out
                 </button>
