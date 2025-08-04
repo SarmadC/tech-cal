@@ -8,6 +8,8 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
+// --- Schemas ---
+
 const LoginSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
     password: z.string().min(1, { message: "Password is required." }),
@@ -26,6 +28,12 @@ const SignupSchema = z.object({
     path: ["confirmPassword"],
 });
 
+const ForgotPasswordSchema = z.object({
+    email: z.string().email({ message: "Please enter a valid email address." }),
+});
+
+
+// --- Actions ---
 
 export async function loginAction(credentials: LoginForm) {
     const validatedFields = LoginSchema.safeParse(credentials);
@@ -37,9 +45,9 @@ export async function loginAction(credentials: LoginForm) {
         };
     }
 
-    const supabase = await createClient()
-    const result = await AuthService.signIn(validatedFields.data, supabase)
-    return result
+    const supabase = await createClient();
+    const result = await AuthService.signIn(validatedFields.data, supabase);
+    return result;
 }
 
 export async function signupAction(formData: SignupForm) {
@@ -52,32 +60,47 @@ export async function signupAction(formData: SignupForm) {
             error: firstError || "Invalid fields provided. Please check your inputs.",
         };
     }
-    const supabase = await createClient()
-    const result = await AuthService.signUp(validatedFields.data, supabase)
-    return result
+    const supabase = await createClient();
+    const result = await AuthService.signUp(validatedFields.data, supabase);
+    return result;
 }
 
-// OAuth action is unchanged
 export async function oauthSignInAction(provider: OAuthProvider) {
-    const headerStore = await headers()
-    const origin = headerStore.get('origin')
-    const supabase = await createClient()
+    const headerStore = await headers();
+    const origin = headerStore.get('origin');
+    const supabase = await createClient();
 
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
             redirectTo: `${origin}/auth/callback`,
         },
-    })
+    });
 
     if (error) {
-        console.error('OAuth Error:', error.message)
-        return redirect('/login?error=oauth_failed')
+        console.error('OAuth Error:', error.message);
+        return redirect('/login?error=oauth_failed');
     }
 
     if (data.url) {
-        return redirect(data.url)
+        return redirect(data.url);
     }
 
-    return redirect('/login?error=oauth_provider_error')
+    return redirect('/login?error=oauth_provider_error');
+}
+
+export async function forgotPasswordAction(data: { email: string }) {
+
+    const validatedFields = ForgotPasswordSchema.safeParse(data);
+    if (!validatedFields.success) {
+        return {
+            success: false,
+            error: validatedFields.error.flatten().fieldErrors.email?.[0] || 'Invalid email format.'
+        };
+    }
+
+    const supabase = await createClient();
+    const result = await AuthService.resetPassword(validatedFields.data.email, supabase);
+
+    return result;
 }
