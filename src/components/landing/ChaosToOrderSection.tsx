@@ -1,3 +1,5 @@
+// src/components/landing/ChaosToOrderSection.tsx
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -6,7 +8,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { eventsData } from '@/data/landing-page-data';
 import { AnimatedEventCard } from './AnimatedEventCard';
-import './ChaosToOrder.css'; // Import the dedicated styles
+import '@/app/styles/ChaosToOrder.css';
 
 // Register GSAP plugins safely for client-side execution
 if (typeof window !== 'undefined') {
@@ -23,7 +25,9 @@ export function ChaosToOrderSection() {
     renderer: THREE.WebGLRenderer;
     particles: THREE.Points | null;
   } | null>(null);
-  const animationFrameRef = useRef<number>();
+
+  const animationFrameRef = useRef<number | undefined>();
+
   const scrollProgressRef = useRef(0);
 
   // Initialize Three.js scene
