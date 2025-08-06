@@ -1,31 +1,45 @@
 'use client';
 
-import { motion, useTransform, MotionValue } from 'framer-motion';
+import { useRef, useEffect } from 'react';
 import { eventsData } from '@/data/landing-page-data';
 
-interface PositionState { x: number; y: number; scale: number; rot: number; }
-export interface AnimationPosition { chaos: PositionState; organized: PositionState; }
-
-interface AnimatedEventCardProps {
-    eventData: typeof eventsData[0];
-    positions: AnimationPosition;
-    scrollYProgress: MotionValue<number>;
+interface EventCardProps {
+  event: typeof eventsData[0];
+  index: number;
 }
 
-export function AnimatedEventCard({ eventData, positions, scrollYProgress }: AnimatedEventCardProps) {
-    const x = useTransform(scrollYProgress, [0, 1], [positions.chaos.x, positions.organized.x]);
-    const y = useTransform(scrollYProgress, [0, 1], [positions.chaos.y, positions.organized.y]);
-    const scale = useTransform(scrollYProgress, [0, 1], [positions.chaos.scale, positions.organized.scale]);
-    const rotate = useTransform(scrollYProgress, [0, 1], [positions.chaos.rot, positions.organized.rot]);
+export function AnimatedEventCard({ event, index }: EventCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
 
-    return (
-        <motion.div className="floating-event" style={{ x, y, scale, rotate }}>
-            <div className="event-header">
-                <div className="event-company-tag">{eventData.company}</div>
-                <div className="event-date-badge">{eventData.date}</div>
-            </div>
-            <div className="floating-event-title">{eventData.title}</div>
-            <div className="floating-event-type">{eventData.type}</div>
-        </motion.div>
-    );
+  useEffect(() => {
+    if (!cardRef.current) return;
+    
+    // Initialize with random position data stored in data attributes
+    const card = cardRef.current;
+    const chaosX = Math.random() * (window.innerWidth - 300);
+    const chaosY = Math.random() * (window.innerHeight - 150);
+    const chaosRot = (Math.random() - 0.5) * 45;
+    const chaosScale = 0.7 + Math.random() * 0.3;
+    
+    card.dataset.chaosX = String(chaosX);
+    card.dataset.chaosY = String(chaosY);
+    card.dataset.chaosRot = String(chaosRot);
+    card.dataset.chaosScale = String(chaosScale);
+    
+    // Make visible after a staggered delay for a nice entry effect
+    setTimeout(() => {
+      card.classList.add('visible');
+    }, index * 100);
+  }, [index]);
+
+  return (
+    <div ref={cardRef} className="event-card-animated" data-index={index}>
+      <div className="event-card-header">
+        <div className="event-card-company">{event.company}</div>
+        <div className="event-card-date">{event.date}</div>
+      </div>
+      <div className="event-card-title">{event.title}</div>
+      <div className="event-card-type">{event.type}</div>
+    </div>
+  );
 }
