@@ -1,75 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ---------------------------------------------- */
-/* 1. MODERN MINIMAL DESIGN SYSTEM               */
+/* 1. SOPHISTICATED DESIGN SYSTEM                */
 /* ---------------------------------------------- */
 
 :root {
-  /* Primary Background - Clean white/light theme */
-  --background-main: #ffffff;
-  --background-secondary: #fafafa;
-  --background-tertiary: #f5f5f5;
+  /* Sophisticated Dark Palette - Primary */
+  --background-main: #0a0a0b;
+  --background-secondary: #111113;
+  --background-tertiary: #18181b;
+  --background-elevated: #1f1f23;
   
-  /* Sophisticated Grays */
-  --gray-50: #fafafa;
-  --gray-100: #f5f5f5;
-  --gray-200: #e5e5e5;
-  --gray-300: #d4d4d4;
-  --gray-400: #a3a3a3;
-  --gray-500: #737373;
-  --gray-600: #525252;
-  --gray-700: #404040;
-  --gray-800: #262626;
-  --gray-900: #171717;
+  /* Refined Text Colors */
+  --foreground-primary: #fafafa;
+  --foreground-secondary: #a1a1aa;
+  --foreground-tertiary: #71717a;
+  --foreground-muted: #52525b;
   
-  /* Text Colors */
-  --foreground-primary: #171717;
-  --foreground-secondary: #525252;
-  --foreground-tertiary: #737373;
-  
-  /* Accent Colors - Modern Blue */
-  --accent-primary: #2563eb;
-  --accent-primary-hover: #1d4ed8;
-  --accent-primary-light: #dbeafe;
+  /* Modern Orange Accent System */
+  --accent-primary: #f97316;
+  --accent-primary-hover: #ea6610;
+  --accent-primary-light: rgba(249, 115, 22, 0.12);
+  --accent-border: rgba(249, 115, 22, 0.24);
   
   /* Semantic Colors */
   --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.12);
   --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.12);
   --error: #ef4444;
+  --error-light: rgba(239, 68, 68, 0.12);
   
-  /* Borders */
-  --border-color: #e5e5e5;
-  --border-color-strong: #d4d4d4;
+  /* Sophisticated Border System */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --border-accent: var(--accent-border);
   
-  /* Shadows - Subtle and refined */
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  /* Refined Shadow System */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.16);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
+  
+  /* Typography Scale */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  
+  /* Refined Spacing System */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
+/* Light mode override (for users who prefer light theme) */
+@media (prefers-color-scheme: light) {
   :root {
-    --background-main: #0a0a0a;
-    --background-secondary: #171717;
-    --background-tertiary: #262626;
-    --foreground-primary: #fafafa;
-    --foreground-secondary: #d4d4d4;
-    --foreground-tertiary: #a3a3a3;
-    --border-color: #262626;
-    --border-color-strong: #404040;
-    --accent-primary: #3b82f6;
-    --accent-primary-hover: #2563eb;
-    --accent-primary-light: #1e293b;
+    --background-main: #ffffff;
+    --background-secondary: #fafafa;
+    --background-tertiary: #f5f5f5;
+    --background-elevated: #ffffff;
+    --foreground-primary: #171717;
+    --foreground-secondary: #525252;
+    --foreground-tertiary: #737373;
+    --foreground-muted: #a3a3a3;
+    --border-subtle: rgba(0, 0, 0, 0.06);
+    --border-default: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.12);
   }
 }
 
 /* ---------------------------------------------- */
-/* 2. BASE STYLES                                */
+/* 2. REFINED BASE STYLES                        */
 /* ---------------------------------------------- */
 
 * {
@@ -78,52 +91,98 @@
 
 html {
   scroll-behavior: smooth;
+  font-family: var(--font-sans);
 }
 
 body {
   color: var(--foreground-primary);
   background: var(--background-main);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+  font-family: var(--font-sans);
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Typography scale */
-h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
-h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; }
-h3 { font-size: 1.25rem; font-weight: 600; }
-h4 { font-size: 1.125rem; font-weight: 500; }
+/* Sophisticated Typography Scale */
+h1 { 
+  font-family: var(--font-serif);
+  font-size: 2.25rem; 
+  font-weight: 400; 
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
 
-/* Focus states */
+h2 { 
+  font-family: var(--font-serif);
+  font-size: 1.75rem; 
+  font-weight: 400; 
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+h3 { 
+  font-size: 1.25rem; 
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+h4 { 
+  font-size: 1.125rem; 
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+p {
+  line-height: 1.6;
+  color: var(--foreground-secondary);
+}
+
+/* Refined Focus States */
 :focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* Scrollbar - Minimal and modern */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--background-secondary); }
+/* Modern Scrollbar */
+::-webkit-scrollbar { 
+  width: 8px; 
+  height: 8px; 
+}
+
+::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+
 ::-webkit-scrollbar-thumb { 
-  background: var(--gray-300); 
-  border-radius: 5px;
-  border: 2px solid var(--background-secondary);
+  background: var(--border-strong); 
+  border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+
+::-webkit-scrollbar-thumb:hover { 
+  background: var(--border-strong);
+  opacity: 0.8;
+}
 
 /* ---------------------------------------------- */
-/* 3. CALENDAR SPECIFIC STYLES                   */
+/* 3. SOPHISTICATED CALENDAR STYLES              */
 /* ---------------------------------------------- */
 
-/* ---------------------------------------------- */
-/* 3. CALENDAR SPECIFIC STYLES                   */
-/* ---------------------------------------------- */
+/* Calendar container */
+.calendar-container {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+}
 
-/* Calendar scrollbar styling */
+/* Calendar scrollbar */
 .calendar-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .calendar-scroll::-webkit-scrollbar-track {
@@ -131,103 +190,137 @@ h4 { font-size: 1.125rem; font-weight: 500; }
 }
 
 .calendar-scroll::-webkit-scrollbar-thumb {
-  background: var(--gray-300);
-  border-radius: 4px;
+  background: var(--border-default);
+  border-radius: 3px;
 }
 
 .calendar-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-400);
+  background: var(--border-strong);
 }
 
 /* Calendar grid animations */
 .calendar-day {
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--background-tertiary);
+  border: 1px solid var(--border-subtle);
 }
 
 .calendar-day:hover {
-  background-color: var(--gray-50);
+  background: var(--background-elevated);
+  border-color: var(--border-default);
+  transform: scale(1.01);
+}
+
+.calendar-day.today {
+  background: var(--accent-primary-light);
+  border-color: var(--accent-border);
+}
+
+.calendar-day.has-events {
+  border-color: var(--border-default);
 }
 
 /* Event badges */
 .event-badge {
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  background: var(--background-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-xs);
 }
 
 .event-badge:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  opacity: 0.9;
+  box-shadow: var(--shadow-sm);
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-light);
 }
 
-/* Category checkbox custom styling */
+.event-badge.priority-high {
+  border-color: var(--error);
+  background: var(--error-light);
+}
+
+.event-badge.priority-medium {
+  border-color: var(--warning);
+  background: var(--warning-light);
+}
+
+.event-badge.priority-low {
+  border-color: var(--success);
+  background: var(--success-light);
+}
+
+/* Category checkbox - Refined styling */
 .category-checkbox {
   appearance: none;
-  width: 1.25rem;
-  height: 1.25rem;
-  border: 2px solid var(--gray-300);
-  border-radius: 0.25rem;
-  transition: all 0.15s ease;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-strong);
+  border-radius: 4px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
+  background: var(--background-tertiary);
 }
 
 .category-checkbox:checked {
-  background-color: var(--accent-primary);
+  background: var(--accent-primary);
   border-color: var(--accent-primary);
 }
 
 .category-checkbox:checked::after {
   content: '';
   position: absolute;
-  left: 4px;
-  top: 1px;
-  width: 6px;
-  height: 10px;
+  left: 3px;
+  top: 0px;
+  width: 4px;
+  height: 8px;
   border: solid white;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 
 .category-checkbox:hover {
-  border-color: var(--gray-400);
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-light);
 }
 
 .category-checkbox:checked:hover {
-  background-color: var(--accent-primary-hover);
+  background: var(--accent-primary-hover);
   border-color: var(--accent-primary-hover);
 }
 
-/* Mobile responsiveness for calendar */
-@media (max-width: 640px) {
-  .calendar-day {
-    min-height: 80px;
-  }
-  
-  .event-badge {
-    font-size: 0.625rem;
-    padding: 0.125rem 0.25rem;
-  }
-}
 /* ---------------------------------------------- */
-/* 4. EVENT STYLING                              */
+/* 4. MODERN EVENT STYLING                       */
 /* ---------------------------------------------- */
 
 .fc-event {
   border: none;
-  border-radius: 0.375rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8125rem;
+  border-radius: 4px;
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.75rem;
   font-weight: 500;
-  margin: 0.125rem 0.25rem;
+  font-family: var(--font-sans);
+  margin: var(--space-1);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-xs);
+  border: 1px solid var(--border-default);
+  background: var(--background-elevated);
+  color: var(--foreground-primary);
 }
 
 .fc-event:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-light);
 }
 
 .fc-event-title {
@@ -235,48 +328,107 @@ h4 { font-size: 1.125rem; font-weight: 500; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: inherit;
 }
 
-/* Event colors - Use opacity for softer look */
-.fc-event {
-  opacity: 0.9;
+.fc-event-time {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
-.fc-event:hover {
-  opacity: 1;
+/* Event category colors */
+.fc-event.category-work {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-light);
+}
+
+.fc-event.category-personal {
+  border-color: var(--success);
+  background: var(--success-light);
+}
+
+.fc-event.category-meeting {
+  border-color: var(--warning);
+  background: var(--warning-light);
+}
+
+.fc-event.category-important {
+  border-color: var(--error);
+  background: var(--error-light);
 }
 
 /* ---------------------------------------------- */
-/* 5. CUSTOM COMPONENT STYLES                    */
+/* 5. REFINED COMPONENT STYLES                   */
 /* ---------------------------------------------- */
 
-/* Smooth transitions */
+/* Smooth sophisticated transitions */
 * {
-  transition-property: background-color, border-color, color, fill, stroke;
+  transition-property: background-color, border-color, color, fill, stroke, opacity, transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition-duration: 200ms;
 }
 
 /* Buttons and interactive elements */
 button, a {
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 /* Input fields */
 input, textarea, select {
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  background: var(--background-tertiary);
+  border: 1px solid var(--border-default);
+  color: var(--foreground-primary);
+  font-family: var(--font-sans);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-light);
+  background: var(--background-elevated);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--foreground-tertiary);
 }
 
 /* Cards and surfaces */
 .surface-card {
-  background: var(--background-main);
-  border: 1px solid var(--border-color);
-  border-radius: 0.75rem;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
   box-shadow: var(--shadow-sm);
+  padding: var(--space-6);
+}
+
+.surface-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+/* Modal and overlay backgrounds */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  box-shadow: var(--shadow-xl);
 }
 
 /* ---------------------------------------------- */
-/* 7. TAILWIND V4 CUSTOM UTILITIES               */
+/* 6. SOPHISTICATED UTILITY CLASSES              */
 /* ---------------------------------------------- */
 
 @layer utilities {
@@ -284,11 +436,13 @@ input, textarea, select {
   .bg-background-main { background-color: var(--background-main); }
   .bg-background-secondary { background-color: var(--background-secondary); }
   .bg-background-tertiary { background-color: var(--background-tertiary); }
+  .bg-background-elevated { background-color: var(--background-elevated); }
   
   /* Text color utilities */
   .text-foreground-primary { color: var(--foreground-primary); }
   .text-foreground-secondary { color: var(--foreground-secondary); }
   .text-foreground-tertiary { color: var(--foreground-tertiary); }
+  .text-foreground-muted { color: var(--foreground-muted); }
   
   /* Accent color utilities */
   .bg-accent-primary { background-color: var(--accent-primary); }
@@ -297,18 +451,23 @@ input, textarea, select {
   .text-accent-primary { color: var(--accent-primary); }
   .text-accent-primary-hover { color: var(--accent-primary-hover); }
   .border-accent-primary { border-color: var(--accent-primary); }
+  .border-accent-border { border-color: var(--accent-border); }
   
   /* Semantic color utilities */
   .bg-success { background-color: var(--success); }
+  .bg-success-light { background-color: var(--success-light); }
   .bg-warning { background-color: var(--warning); }
+  .bg-warning-light { background-color: var(--warning-light); }
   .bg-error { background-color: var(--error); }
+  .bg-error-light { background-color: var(--error-light); }
   .text-success { color: var(--success); }
   .text-warning { color: var(--warning); }
   .text-error { color: var(--error); }
   
   /* Border utilities */
-  .border-border-color { border-color: var(--border-color); }
-  .border-border-color-strong { border-color: var(--border-color-strong); }
+  .border-subtle { border-color: var(--border-subtle); }
+  .border-default { border-color: var(--border-default); }
+  .border-strong { border-color: var(--border-strong); }
   
   /* Shadow utilities */
   .shadow-xs { box-shadow: var(--shadow-xs); }
@@ -316,67 +475,57 @@ input, textarea, select {
   .shadow-md { box-shadow: var(--shadow-md); }
   .shadow-lg { box-shadow: var(--shadow-lg); }
   .shadow-xl { box-shadow: var(--shadow-xl); }
+  
+  /* Typography utilities */
+  .font-sans { font-family: var(--font-sans); }
+  .font-serif { font-family: var(--font-serif); }
+  .font-mono { font-family: var(--font-mono); }
+  
+  /* Spacing utilities */
+  .space-1 { gap: var(--space-1); }
+  .space-2 { gap: var(--space-2); }
+  .space-3 { gap: var(--space-3); }
+  .space-4 { gap: var(--space-4); }
+  .space-6 { gap: var(--space-6); }
+  .space-8 { gap: var(--space-8); }
+  .space-12 { gap: var(--space-12); }
+  .space-16 { gap: var(--space-16); }
 }
 
-
+/* ---------------------------------------------- */
+/* 7. SHADCN/UI INTEGRATION (MODERNIZED)         */
+/* ---------------------------------------------- */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    /* Shadcn variables mapped to our design system */
+    --background: 10 10 11; /* #0a0a0b */
+    --foreground: 250 250 250; /* #fafafa */
+    --card: 17 17 19; /* #111113 */
+    --card-foreground: 250 250 250; /* #fafafa */
+    --popover: 17 17 19; /* #111113 */
+    --popover-foreground: 250 250 250; /* #fafafa */
+    --primary: 24 116 22; /* #f97316 - our orange */
+    --primary-foreground: 255 255 255; /* white */
+    --secondary: 24 24 27; /* #18181b */
+    --secondary-foreground: 161 161 170; /* #a1a1aa */
+    --muted: 24 24 27; /* #18181b */
+    --muted-foreground: 113 113 122; /* #71717a */
+    --accent: 24 116 22; /* #f97316 - our orange */
+    --accent-foreground: 255 255 255; /* white */
+    --destructive: 239 68 68; /* #ef4444 */
+    --destructive-foreground: 255 255 255; /* white */
+    --border: 39 39 42; /* #27272a */
+    --input: 39 39 42; /* #27272a */
+    --ring: 24 116 22; /* #f97316 - our orange */
+    --chart-1: 24 116 22; /* #f97316 */
+    --chart-2: 16 185 129; /* #10b981 */
+    --chart-3: 245 158 11; /* #f59e0b */
+    --chart-4: 239 68 68; /* #ef4444 */
+    --chart-5: 168 85 247; /* #a855f7 */
     --radius: 0.5rem;
   }
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
 }
-
-
 
 @layer base {
   * {
@@ -384,5 +533,55 @@ input, textarea, select {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+}
+
+/* ---------------------------------------------- */
+/* 8. MOBILE RESPONSIVE REFINEMENTS              */
+/* ---------------------------------------------- */
+
+@media (max-width: 640px) {
+  .calendar-day {
+    min-height: 70px;
+    padding: var(--space-1);
+  }
+  
+  .event-badge {
+    font-size: 0.65rem;
+    padding: 2px var(--space-1);
+    margin: 1px;
+  }
+  
+  .fc-event {
+    font-size: 0.65rem;
+    padding: 2px var(--space-1);
+    margin: 1px;
+  }
+  
+  .surface-card {
+    padding: var(--space-4);
+  }
+  
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.125rem; }
+}
+
+/* ---------------------------------------------- */
+/* 9. PRINT STYLES                               */
+/* ---------------------------------------------- */
+
+@media print {
+  .calendar-container {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+  
+  .event-badge, .fc-event {
+    box-shadow: none;
+    border: 1px solid #000;
+    background: white !important;
+    color: black !important;
   }
 }
