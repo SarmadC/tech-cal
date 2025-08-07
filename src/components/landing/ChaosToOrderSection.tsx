@@ -89,27 +89,23 @@ export function ChaosToOrderSection() {
 
         // 2. Set up a debounced resize handler for position recalculations
         const handleResize = () => {
-            calculateCardPositions(container);
-
-            // Reposition the absolutely positioned calendar frame after calculation
-            const frame = container.querySelector<HTMLElement>('.calendar-frame');
-            if (frame && container.dataset.calendarStartX) {
-                frame.style.left = `${container.dataset.calendarStartX}px`;
-                frame.style.top = `${container.dataset.calendarStartY}px`;
-                frame.style.width = `${container.dataset.calendarWidth}px`;
-                frame.style.height = `${container.dataset.calendarHeight}px`;
-            }
+            // Use a small timeout to ensure the calendar DOM is ready
+            setTimeout(() => {
+                calculateCardPositions(container);
+            }, 50);
         };
         const debouncedResizeHandler = debounce(handleResize, 150);
         window.addEventListener('resize', debouncedResizeHandler);
 
-        // 3. Run the initial calculation
-        handleResize();
+        // 3. Run the initial calculation with a small delay to ensure DOM is ready
+        setTimeout(() => {
+            handleResize();
 
-        // 4. Stagger the initial card visibility for a nice fade-in effect
-        domCacheRef.current.cards?.forEach((card: HTMLElement, i: number) => {
-            setTimeout(() => card.classList.add('visible'), i * 50);
-        });
+            // 4. Stagger the initial card visibility for a nice fade-in effect
+            domCacheRef.current.cards?.forEach((card: HTMLElement, i: number) => {
+                setTimeout(() => card.classList.add('visible'), i * 50);
+            });
+        }, 100);
 
         // Cleanup function
         return () => {

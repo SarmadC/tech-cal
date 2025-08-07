@@ -118,7 +118,7 @@ export function useThreeScene(
 }
 
 /**
- * Hook #2: Calculates card positions, now with self-documenting constants.
+ * Hook #2: Calculates card positions using actual DOM measurements for accuracy.
  */
 export function useCardPositions(
     events: { date: string }[]
@@ -126,40 +126,64 @@ export function useCardPositions(
     const [positions, setPositions] = useState<AllCardPositions>({ chaos: [], order: [] });
 
     const calculatePositions = useCallback((container: HTMLElement) => {
-        // --- Configuration Constants for easy tweaking ---
-        const TARGET_CARD_HEIGHT_PX = 80;
-        const GRID_ROWS = 5;
-        const GRID_COLS = 7;
-        const GRID_GAP_PX = 2;
-        const GRID_PADDING_PX = 2;
-        const HEADER_HEIGHT_PX = 100;
-        const TOP_MARGIN_PX = 20;
-        const DAY_NUMBER_HEIGHT_PX = 28;
-        const CARD_PADDING_HORIZONTAL_PX = 4;
-        const CARD_PADDING_BOTTOM_PX = 4;
+        // Wait for the calendar frame to be in the DOM
+        const calendarFrame = container.querySelector('.calendar-frame');
+        if (!calendarFrame) {
+            console.warn('Calendar frame not found, retrying...');
+            setTimeout(() => calculatePositions(container), 100);
+            return;
+        }
 
-        // --- Derived Layout Calculations ---
-        const GRID_CONTENT_HEIGHT = (GRID_ROWS * TARGET_CARD_HEIGHT_PX) + ((GRID_ROWS - 1) * GRID_GAP_PX) + (2 * GRID_PADDING_PX);
-        const calendarHeight = HEADER_HEIGHT_PX + GRID_CONTENT_HEIGHT;
+        // --- Configuration Constants ---
+        const firstDayOffset = 4; // May 1st, 2025 is a Thursday (Sun=0)
+        const CARD_MARGIN = 4; // Margin inside each cell for the card
+        const DAY_NUMBER_HEIGHT = 24; // Height reserved for day number
+
+        // --- Calculate calendar dimensions and position it ---
         const calendarWidth = window.innerWidth > 768
-            ? Math.min(1100, window.innerWidth * 0.9)
-            : window.innerWidth * 0.95;
+            ? Math.min(900, window.innerWidth * 0.8)
+            : window.innerWidth * 0.9;
+
+        const calendarHeight = window.innerWidth > 768 ? 450 : 350;
 
         const calendarX = (window.innerWidth - calendarWidth) / 2;
-        const calendarY = Math.max(TOP_MARGIN_PX, (window.innerHeight - calendarHeight) / 2);
+        const calendarY = Math.max(20, (window.innerHeight - calendarHeight) / 2);
 
-        const gridInnerWidth = calendarWidth - (2 * GRID_PADDING_PX);
-        const gridInnerHeight = calendarHeight - HEADER_HEIGHT_PX - (2 * GRID_PADDING_PX);
+        // Position the calendar frame
+        const calendarEl = calendarFrame as HTMLElement;
+        calendarEl.style.left = `${calendarX}px`;
+        calendarEl.style.top = `${calendarY}px`;
+        calendarEl.style.width = `${calendarWidth}px`;
+        calendarEl.style.height = `${calendarHeight}px`;
 
-        const cellWidth = (gridInnerWidth - ((GRID_COLS - 1) * GRID_GAP_PX)) / GRID_COLS;
-        const cellHeight = (gridInnerHeight - ((GRID_ROWS - 1) * GRID_GAP_PX)) / GRID_ROWS;
+        // Force a layout update and get actual measurements
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        calendarEl.offsetHeight; // Force reflow
+        const calendarGrid = calendarEl.querySelector('.calendar-grid') as HTMLElement;
 
-        const cardWidth = cellWidth - (2 * CARD_PADDING_HORIZONTAL_PX);
-        const cardHeight = cellHeight - DAY_NUMBER_HEIGHT_PX - CARD_PADDING_BOTTOM_PX;
+        if (!calendarGrid) {
+            console.warn('Calendar grid not found');
+            return;
+        }
 
-        // Grid offset based on the first day of the month
-        const firstDayOffset = 4; // May 1st, 2025 is a Thursday (Sun=0)
+        const cells = calendarGrid.querySelectorAll('.calendar-cell');
 
+        if (cells.length === 0) {
+            console.warn('Calendar cells not found');
+            return;
+        }
+
+        // Calculate cell dimensions from actual DOM
+        const firstCell = cells[0] as HTMLElement;
+        const cellRect = firstCell.getBoundingClientRect();
+        const cellWidth = cellRect.width;
+        const cellHeight = cellRect.height;
+
+        // Calculate available space for cards in each cell
+        const availableCardWidth = Math.max(50, cellWidth - (CARD_MARGIN * 2));
+        const availableCardHeight = Math.max(30, cellHeight - DAY_NUMBER_HEIGHT - CARD_MARGIN);
+
+        // Generate chaos positions (random)
         const newChaos = Array.from({ length: events.length }, () => ({
             x: Math.random() * (window.innerWidth - 240),
             y: Math.random() * (window.innerHeight - 120),
@@ -167,29 +191,41 @@ export function useCardPositions(
             scale: 0.7 + Math.random() * 0.3
         }));
 
+        // Get container position to establish coordinate system
+        const containerRect = container.getBoundingClientRect();
+
+        // Calculate order positions (calendar grid)
         const newOrder = events.map((event) => {
             const dayOfMonth = parseInt(event.date.split(' ')[1]);
             const cellIndex = dayOfMonth + firstDayOffset - 1;
-            const col = cellIndex % GRID_COLS;
-            const row = Math.floor(cellIndex / GRID_COLS);
 
-            const x = calendarX + GRID_PADDING_PX + (col * (cellWidth + GRID_GAP_PX)) + CARD_PADDING_HORIZONTAL_PX;
-            const y = calendarY + HEADER_HEIGHT_PX + GRID_PADDING_PX + (row * (cellHeight + GRID_GAP_PX)) + DAY_NUMBER_HEIGHT_PX;
+            if (cellIndex < 0 || cellIndex >= cells.length) {
+                console.warn(`Invalid cell index ${cellIndex} for day ${dayOfMonth}`);
+                return { x: calendarX, y: calendarY };
+            }
+
+            const cell = cells[cellIndex] as HTMLElement;
+            const cellRect = cell.getBoundingClientRect();
+
+            // Convert viewport coordinates to container-relative coordinates
+            const x = cellRect.left - containerRect.left + CARD_MARGIN;
+            const y = cellRect.top - containerRect.top + DAY_NUMBER_HEIGHT + 2; // +2 for small gap
 
             return { x, y };
         });
 
+        // Store calculated values for animation use
         container.dataset.calendarStartX = String(calendarX);
         container.dataset.calendarStartY = String(calendarY);
         container.dataset.calendarWidth = String(calendarWidth);
         container.dataset.calendarHeight = String(calendarHeight);
-        container.dataset.cardWidth = String(cardWidth);
-        container.dataset.cardHeight = String(cardHeight);
+        container.dataset.cardWidth = String(availableCardWidth);
+        container.dataset.cardHeight = String(availableCardHeight);
 
         setPositions({ chaos: newChaos, order: newOrder });
     }, [events]);
 
-    return [positions, calculatePositions];
+    return [positions, calculatePositions]; // 🚨 THIS WAS MISSING!
 }
 
 /**
@@ -211,31 +247,44 @@ export function useScrollAnimation(
         const updateCards = (progress: number) => {
             if (!container || !cards) return;
 
-            const targetWidth = parseFloat(container.dataset.cardWidth || '100');
-            const targetHeight = parseFloat(container.dataset.cardHeight || '60');
+            const targetWidth = parseFloat(container.dataset.cardWidth || '120');
+            const targetHeight = parseFloat(container.dataset.cardHeight || '40');
             const originalWidth = 240;
-            const originalHeight = 120;
+            const originalHeight = 100;
 
-            const SIZING_START_PROGRESS = 0.3;
-            const SIZING_DURATION_PROGRESS = 1 - SIZING_START_PROGRESS;
+            // More gradual size transition - start later and finish earlier
+            const SIZING_START_PROGRESS = 0.4;
+            const SIZING_END_PROGRESS = 0.9;
+            const SIZING_DURATION_PROGRESS = SIZING_END_PROGRESS - SIZING_START_PROGRESS;
 
             cards.forEach((card, i) => {
                 const chaos = positions.chaos[i];
                 const order = positions.order[i];
 
+                if (!chaos || !order) {
+                    console.warn(`Missing positions for card ${i}:`, { chaos, order });
+                    return;
+                }
+
+                // Position interpolation with easing
+                const positionEasing = gsap.parseEase("power2.inOut")(progress);
                 gsap.set(card, {
-                    x: gsap.utils.interpolate(chaos.x, order.x, progress),
-                    y: gsap.utils.interpolate(chaos.y, order.y, progress),
-                    rotation: gsap.utils.interpolate(chaos.rot, 0, progress),
-                    scale: gsap.utils.interpolate(chaos.scale, 1, progress),
+                    x: gsap.utils.interpolate(chaos.x, order.x, positionEasing),
+                    y: gsap.utils.interpolate(chaos.y, order.y, positionEasing),
+                    rotation: gsap.utils.interpolate(chaos.rot, 0, positionEasing),
+                    scale: gsap.utils.interpolate(chaos.scale, 1, positionEasing),
                 });
 
+                // Size interpolation with different timing
                 let currentWidth, currentHeight;
-                if (progress > SIZING_START_PROGRESS) {
+                if (progress >= SIZING_START_PROGRESS && progress <= SIZING_END_PROGRESS) {
                     const sizeProgress = (progress - SIZING_START_PROGRESS) / SIZING_DURATION_PROGRESS;
                     const easedProgress = gsap.parseEase("power1.inOut")(sizeProgress);
                     currentWidth = gsap.utils.interpolate(originalWidth, targetWidth, easedProgress);
                     currentHeight = gsap.utils.interpolate(originalHeight, targetHeight, easedProgress);
+                } else if (progress > SIZING_END_PROGRESS) {
+                    currentWidth = targetWidth;
+                    currentHeight = targetHeight;
                 } else {
                     currentWidth = originalWidth;
                     currentHeight = originalHeight;
@@ -246,7 +295,9 @@ export function useScrollAnimation(
                     height: currentHeight
                 });
 
+                // State classes for different visual styles
                 card.classList.toggle('chaos-state', progress < 0.3);
+                card.classList.toggle('organizing', progress >= 0.3 && progress < 0.7);
                 card.classList.toggle('calendar-view', progress >= 0.7);
             });
         };

@@ -4,7 +4,7 @@
  * This file contains styles for the main layout, animated event cards,
  * a dynamic calendar, text overlays, and responsive adjustments.
  *
- * Final Refactored Version.
+ * Corrected Version with Proper Calendar Grid Layout.
  */
 
 /* ==========================================================================
@@ -119,73 +119,70 @@
 }
 
 /* Modifier: Calendar View (compact card) */
-
 .event-card-animated.calendar-view {
-  /* Restore the multi-line layout and spacious padding */
-  display: block; /* No longer flex */
-  padding: 0.5rem;
+  /* Compact layout for calendar view */
+  display: block;
+  padding: 0.3rem;
   
-  /* Standard styles from before */
-  border: 1px solid rgba(99, 102, 241, 0.4);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25), 0 2px 4px rgba(0,0,0,0.3);
+  /* Enhanced visual styling for calendar cards */
+  border: 1px solid rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.3), 0 2px 4px rgba(0,0,0,0.3);
   cursor: pointer;
   transition: transform 0.2s ease-out, border-color 0.2s ease-out, box-shadow 0.2s ease-out;
+  
+  /* Ensure content fits in small space */
+  overflow: hidden;
 }
 
 /* Restore all children elements to be visible */
 .event-card-animated.calendar-view .event-card-header,
-.event-card-animated.calendar-view .event-card-date,
-.event-card-animated.calendar-view .event-card-title,
-.event-card-animated.calendar-view .event-card-type {
-  display: flex; /* or block, as appropriate */
+.event-card-animated.calendar-view .event-card-company,
+.event-card-animated.calendar-view .event-card-title {
+  display: flex;
 }
 
-.event-card-animated.calendar-view:hover {
-  transform: scale(1.05) translateY(-2px);
-  border-color: rgba(34, 211, 238, 0.8);
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.5), 0 4px 8px rgba(0,0,0,0.4);
-  z-index: 20;
-}
-
+/* Hide date and type in calendar view to save space */
 .event-card-animated.calendar-view .event-card-date,
 .event-card-animated.calendar-view .event-card-type {
   display: none;
 }
 
+.event-card-animated.calendar-view:hover {
+  transform: scale(1.08) translateY(-1px);
+  border-color: rgba(34, 211, 238, 0.8);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.5), 0 3px 6px rgba(0,0,0,0.4);
+  z-index: 20;
+}
 
 .event-card-animated.calendar-view .event-card-header {
-  margin-bottom: 0.25rem;
-  gap: 0.25rem;
+  margin-bottom: 0.2rem;
+  gap: 0.2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
-
-
-
 
 .event-card-animated.calendar-view .event-card-company {
-  font-size: 0.5rem;
-  padding: 0.1rem 0.3rem;
-  border-radius: 4px;
+  font-size: 0.45rem;
+  padding: 0.1rem 0.25rem;
+  border-radius: 3px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
 }
-
-.event-card-animated.calendar-view .event-card-date {
-  font-size: 0.5rem;
-}
-
-
 
 .event-card-animated.calendar-view .event-card-title {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.1;
   color: #ffffff;
-  white-space: normal; /* Allow wrapping if needed */
+  white-space: normal;
   overflow: hidden;
-}
-
-.event-card-animated.calendar-view .event-card-type {
-  font-size: 0.5rem;
-  font-weight: 400;
-  color: rgba(248, 250, 252, 0.6);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
 }
 
 /* State Classes for Cards */
@@ -202,6 +199,7 @@
 .event-card-animated.organizing {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(34, 211, 238, 0.05));
   border-color: rgba(99, 102, 241, 0.4);
+  opacity: 0.9;
 }
 
 .event-card-animated.organized-list {
@@ -222,10 +220,12 @@
   transition: opacity 0.5s ease;
   pointer-events: none;
   z-index: 3;
+  /* Ensure the calendar has a consistent layout */
+  box-sizing: border-box;
 }
 
 .calendar-header {
-  height: 85px;
+  height: 80px;
   padding: 0.75rem 1rem;
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(34, 211, 238, 0.1));
   border: 2px solid rgba(99, 102, 241, 0.3);
@@ -233,6 +233,7 @@
   border-radius: 16px 16px 0 0;
   backdrop-filter: blur(10px);
   box-sizing: border-box;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .calendar-month {
@@ -275,13 +276,16 @@
   border-radius: 0 0 16px 16px;
   backdrop-filter: blur(15px);
   padding: 2px;
+  box-sizing: border-box;
+  flex: 1; /* Take remaining space */
+  min-height: 250px; /* Ensure minimum height */
 }
 
 .calendar-cell {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 50px;
+  min-height: 60px; /* Increased for better card fit */
   padding: 0.25rem;
   background: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8));
   border: 1px solid rgba(99, 102, 241, 0.15);
@@ -427,7 +431,7 @@
 
   .event-card-animated {
     width: 200px;
-    height: 100px;
+    height: 90px;
     padding: 0.75rem;
   }
 
@@ -447,20 +451,21 @@
   
   .event-card-animated.calendar-view .event-card-title {
       font-size: 0.45rem;
+      -webkit-line-clamp: 1; /* Single line on mobile */
   }
   
   .event-card-animated.calendar-view .event-card-company {
       font-size: 0.35rem;
-      padding: 0.05rem 0.2rem;
+      padding: 0.05rem 0.15rem;
   }
 
   .calendar-header {
-    height: 75px;
+    height: 65px;
     padding: 0.5rem 0.75rem;
   }
 
   .calendar-month {
-    font-size: 1.1rem;
+    font-size: 1rem;
     margin-bottom: 0.35rem;
   }
 
@@ -469,7 +474,7 @@
   }
 
   .calendar-cell {
-    min-height: 40px;
+    min-height: 45px;
     padding: 0.2rem;
   }
 
@@ -492,9 +497,9 @@
 
 @media (max-width: 480px) {
   .event-card-animated {
-    width: 150px;
-    height: 80px;
-    padding: 0.6rem;
+    width: 160px;
+    height: 75px;
+    padding: 0.5rem;
   }
 
   .event-card-title {
@@ -511,5 +516,14 @@
 
   .event-card-animated.calendar-view .event-card-title {
       font-size: 0.4rem;
+  }
+  
+  .event-card-animated.calendar-view .event-card-company {
+      font-size: 0.3rem;
+      padding: 0.05rem 0.1rem;
+  }
+
+  .calendar-cell {
+    min-height: 35px;
   }
 }
