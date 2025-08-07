@@ -21,18 +21,13 @@ export function AnimatedEventCard({ event, index }: EventCardProps) {
   }, []);
 
   return (
-    <div 
-      ref={cardRef} 
-      className="event-card-animated" 
-      data-index={index}
-      // No inline styles needed - CSS handles initial dimensions
-    >
-      <div className="event-card-header">
-        <div className="event-card-company">{event.company}</div>
-        <div className="event-card-date">{event.date}</div>
+      <div ref={cardRef} className="event-card-animated" data-index={index}>
+          <div className="event-card-header">
+              <div className="event-card-company">{event.company}</div>
+              <div className="event-card-date">{event.date}</div>
+          </div>
+          <div className="event-card-title">{event.title}</div>
+          <div className="event-card-type">{event.type}</div>
       </div>
-      <div className="event-card-title">{event.title}</div>
-      <div className="event-card-type">{event.type}</div>
-    </div>
   );
 }

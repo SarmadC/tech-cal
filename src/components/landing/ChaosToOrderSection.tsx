@@ -1,11 +1,23 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { AnimatedEventCard } from './AnimatedEventCard';
 import { useThreeScene, useCardPositions, useScrollAnimation, DomCache } from './useChaosAnimation';
 import '@/app/styles/ChaosToOrder.css';
 
-// Updated event data with specific dates
+// Debounce helper function
+function debounce<F extends (...args: unknown[]) => unknown>(func: F, wait: number): (...args: Parameters<F>) => void {
+    let timeout: NodeJS.Timeout | null = null;
+    return function executedFunction(...args: Parameters<F>) {
+        const later = () => {
+            timeout = null;
+            func(...args);
+        };
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 const animationEventsData = [
     { company: 'Meta', date: 'May 1', title: 'React Conf', type: 'Framework Conference' },
     { company: 'OpenAI', date: 'May 4', title: 'OpenAI DevDay', type: 'AI Conference' },
@@ -18,40 +30,6 @@ const animationEventsData = [
     { company: 'Amazon', date: 'May 30', title: 'AWS re:Invent', type: 'Cloud Conference' }
 ];
 
-const renderCalendarCells = (eventDays: { [key: number]: string[] } | null) => {
-    const cells = [];
-    const firstDayOffset = 4; // May 1st, 2025 is a Thursday
-    const daysInMonth = 31;
-
-    for (let i = 0; i < 35; i++) {
-        const dayNumber = i - firstDayOffset + 1;
-        const isDayInMonth = dayNumber > 0 && dayNumber <= daysInMonth;
-        const hasEvents = eventDays && eventDays[dayNumber];
-        
-        cells.push(
-            <div key={`cell-${i}`} className={`calendar-cell ${hasEvents ? 'has-event' : ''}`}>
-                {isDayInMonth && (
-                    <>
-                        <span className="day-number">{dayNumber}</span>
-                        {hasEvents && (
-                            <div className="event-indicators">
-                                {hasEvents.map((company, idx) => (
-                                    <div 
-                                        key={idx} 
-                                        className={`event-dot company-${company.toLowerCase().replace(/\s+/g, '-')}`}
-                                        title={company}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
-        );
-    }
-    return cells;
-};
-
 export function ChaosToOrderSection() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -61,63 +39,91 @@ export function ChaosToOrderSection() {
         cards: null, chaosTitle: null, chaosSubtitle: null, orderTitle: null, orderSubtitle: null
     });
 
+    // --- HOOKS ---
     const [cardPositions, calculateCardPositions] = useCardPositions(animationEventsData);
     useThreeScene(canvasRef, scrollProgressRef);
     useScrollAnimation(sectionRef, containerRef, domCacheRef, cardPositions, scrollProgressRef);
-    
+
+    // --- MEMOIZED CALCULATIONS ---
+    const eventDays = useMemo(() =>
+        animationEventsData.reduce((acc, event) => {
+            const day = parseInt(event.date.split(' ')[1]);
+            if (!acc[day]) acc[day] = [];
+            acc[day].push(event.company);
+            return acc;
+        }, {} as { [key: number]: string[] })
+        , []); // Runs only once
+
+    const calendarCells = useMemo(() => {
+        const cells = [];
+        const firstDayOffset = 4;
+        const daysInMonth = 31;
+        for (let i = 0; i < 35; i++) {
+            const dayNumber = i - firstDayOffset + 1;
+            const isDayInMonth = dayNumber > 0 && dayNumber <= daysInMonth;
+            const hasEvents = eventDays && eventDays[dayNumber];
+            cells.push(
+                <div key={`cell-${i}`} className={`calendar-cell ${hasEvents ? 'has-event' : ''}`}>
+                    {isDayInMonth && <span className="day-number">{dayNumber}</span>}
+                </div>
+            );
+        }
+        return cells;
+    }, [eventDays]); // Runs only when eventDays changes (which is once)
+
+    // --- EFFECTS ---
+    // This consolidated effect handles all initial setup and resizing.
     useEffect(() => {
-        if (!containerRef.current || !sectionRef.current) return;
+        const container = containerRef.current;
+        const section = sectionRef.current;
+        if (!container || !section) return;
 
-        // Cache DOM elements
-        domCacheRef.current.cards = containerRef.current.querySelectorAll<HTMLElement>('.event-card-animated');
-        domCacheRef.current.chaosTitle = sectionRef.current.querySelector<HTMLElement>('.chaos-title');
-        domCacheRef.current.chaosSubtitle = sectionRef.current.querySelector<HTMLElement>('.chaos-subtitle');
-        domCacheRef.current.orderTitle = sectionRef.current.querySelector<HTMLElement>('.order-title');
-        domCacheRef.current.orderSubtitle = sectionRef.current.querySelector<HTMLElement>('.order-subtitle');
+        // 1. Cache all DOM nodes
+        domCacheRef.current = {
+            cards: container.querySelectorAll<HTMLElement>('.event-card-animated'),
+            chaosTitle: section.querySelector<HTMLElement>('.chaos-title'),
+            chaosSubtitle: section.querySelector<HTMLElement>('.chaos-subtitle'),
+            orderTitle: section.querySelector<HTMLElement>('.order-title'),
+            orderSubtitle: section.querySelector<HTMLElement>('.order-subtitle'),
+        };
 
-        calculateCardPositions(containerRef.current);
-        
-        // Initial card visibility
+        // 2. Set up a debounced resize handler for position recalculations
+        const handleResize = () => {
+            calculateCardPositions(container);
+
+            // Reposition the absolutely positioned calendar frame after calculation
+            const frame = container.querySelector<HTMLElement>('.calendar-frame');
+            if (frame && container.dataset.calendarStartX) {
+                frame.style.left = `${container.dataset.calendarStartX}px`;
+                frame.style.top = `${container.dataset.calendarStartY}px`;
+                frame.style.width = `${container.dataset.calendarWidth}px`;
+                frame.style.height = `${container.dataset.calendarHeight}px`;
+            }
+        };
+        const debouncedResizeHandler = debounce(handleResize, 150);
+        window.addEventListener('resize', debouncedResizeHandler);
+
+        // 3. Run the initial calculation
+        handleResize();
+
+        // 4. Stagger the initial card visibility for a nice fade-in effect
         domCacheRef.current.cards?.forEach((card: HTMLElement, i: number) => {
             setTimeout(() => card.classList.add('visible'), i * 50);
         });
+
+        // Cleanup function
+        return () => {
+            window.removeEventListener('resize', debouncedResizeHandler);
+        };
     }, [calculateCardPositions]);
 
-    // Parse event days for calendar indicators
-    const eventDays = animationEventsData.reduce((acc, event) => {
-        const day = parseInt(event.date.split(' ')[1]);
-        if (!acc[day]) acc[day] = [];
-        acc[day].push(event.company);
-        return acc;
-    }, {} as { [key: number]: string[] });
-
-    useEffect(() => {
-        const container = containerRef.current;
-        if (!container || !container.dataset.calendarStartX) return;
-
-        const calendarFrame = container.querySelector<HTMLElement>('.calendar-frame');
-        if (calendarFrame) {
-            calendarFrame.style.left = `${container.dataset.calendarStartX}px`;
-            calendarFrame.style.top = `${container.dataset.calendarStartY}px`;
-            calendarFrame.style.width = `${container.dataset.calendarWidth}px`;
-            calendarFrame.style.height = `${container.dataset.calendarHeight}px`;
-        }
-        
-        // Position the event list label
-        const eventListLabel = container.querySelector<HTMLElement>('.event-list-label');
-        if (eventListLabel && container.dataset.listLabelX && container.dataset.listLabelY) {
-            eventListLabel.style.left = `${container.dataset.listLabelX}px`;
-            eventListLabel.style.top = `${container.dataset.listLabelY}px`;
-        }
-    }, [cardPositions]);
-
+    // --- RENDER ---
     return (
         <section ref={sectionRef} className="chaos-section">
             <div className="sticky-container">
                 <canvas ref={canvasRef} className="three-canvas" />
-                
+
                 <div ref={containerRef} className="cards-container">
-                    {/* Clean calendar with event indicators */}
                     <div className="calendar-frame clean-calendar" style={{ opacity: 0 }}>
                         <div className="calendar-header">
                             <h3 className="calendar-month">May 2025</h3>
@@ -127,23 +133,20 @@ export function ChaosToOrderSection() {
                             </div>
                         </div>
                         <div className="calendar-grid">
-                            {renderCalendarCells(eventDays)}
+                            {calendarCells}
                         </div>
                     </div>
-                    
-                    {/* Event list label (appears with organized cards) */}
+
                     <div className="event-list-label" style={{ opacity: 0 }}>
                         <h3>Upcoming Events</h3>
                         <p>Your personalized tech calendar</p>
                     </div>
-                    
-                    {/* Event cards */}
+
                     {animationEventsData.map((event, index) => (
                         <AnimatedEventCard key={index} event={event} index={index} />
                     ))}
                 </div>
-                
-                {/* Text overlays */}
+
                 <div className="text-overlay-container">
                     <div className="chaos-text-wrapper">
                         <h2 className="chaos-title">The Problem: Information Chaos</h2>
