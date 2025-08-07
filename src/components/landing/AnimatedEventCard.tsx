@@ -14,11 +14,9 @@ export function AnimatedEventCard({ event, index }: EventCardProps) {
   useEffect(() => {
     if (!cardRef.current) return;
     
-    // Don't store position data in DOM - it's now handled by the parent component
-    // This reduces DOM manipulation and improves performance
-    
-    // The parent component will handle visibility, so we don't need to do it here
-    // This was causing redundant operations
+    // Set initial off-screen position to prevent flash
+    // This will be immediately overridden by the animation hook
+    cardRef.current.style.transform = 'translate3d(-9999px, -9999px, 0)';
     
   }, []);
 
@@ -27,16 +25,7 @@ export function AnimatedEventCard({ event, index }: EventCardProps) {
       ref={cardRef} 
       className="event-card-animated" 
       data-index={index}
-      // Add inline styles for better performance on initial render
-      style={{
-        // Start offscreen to prevent flash of unstyled content
-        transform: 'translate3d(-9999px, -9999px, 0)',
-        // Ensure GPU acceleration from the start
-        willChange: 'transform, width, height',
-        // Set initial dimensions
-        width: '240px',
-        height: '120px'
-      }}
+      // No inline styles needed - CSS handles initial dimensions
     >
       <div className="event-card-header">
         <div className="event-card-company">{event.company}</div>

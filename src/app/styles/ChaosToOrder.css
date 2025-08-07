@@ -1,449 +1,524 @@
-/* Styles for the GSAP + Three.js Chaos to Order Section */
+/*
+ * CSS for the "Chaos to Order" Animation
+ *
+ * This file contains styles for the main layout, animated event cards,
+ * a dynamic calendar, text overlays, and responsive adjustments.
+ *
+ * Refactored for clarity, performance, and maintainability.
+ */
+
+/* ==========================================================================
+   General Layout & Animation Containers
+   ========================================================================== */
 
 .chaos-section {
-    position: relative;
-    height: 250vh; /* Fixed height for consistent scrolling */
-    background: linear-gradient(180deg, #0f172a 0%, rgba(99, 102, 241, 0.05) 25%, rgba(34, 211, 238, 0.05) 75%, #0f172a 100%);
-}
-
-@media (max-width: 768px) {
-    .chaos-section {
-        height: 200vh; /* Reduced for mobile */
-    }
+  position: relative;
+  height: 250vh;
+  background: linear-gradient(
+    180deg,
+    #0f172a 0%,
+    rgba(99, 102, 241, 0.05) 25%,
+    rgba(34, 211, 238, 0.05) 75%,
+    #0f172a 100%
+  );
 }
 
 .sticky-container {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow: hidden;
-    perspective: 1000px;
-    /* Enable hardware acceleration */
-    transform: translateZ(0);
-    will-change: transform;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  perspective: 1000px;
+  transform: translateZ(0); /* Promotes to its own compositing layer for performance */
+  will-change: transform;
 }
 
 .three-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .cards-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 5;
-    /* Enable GPU acceleration for container */
-    transform: translateZ(0);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  transform: translateZ(0);
 }
 
+/* ==========================================================================
+   Event Cards (Base, Modifiers & States)
+   ========================================================================== */
+
+/* Base Card Style */
 .event-card-animated {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 240px; /* Initial width */
-    height: 120px; /* Initial height - important for animation */
-    padding: 1.25rem;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    border-radius: 16px;
-    opacity: 0;
-    transform-style: preserve-3d;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    z-index: 10; /* Ensure cards appear above calendar */
-    /* Optimize for animations */
-    will-change: transform, opacity, width, height;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    /* Use CSS transitions only for specific properties */
-    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, width 0.3s ease, height 0.3s ease;
-    overflow: hidden; /* Prevent content overflow during resize */
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 100px;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  opacity: 0;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  z-index: 10;
 }
 
 .event-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem; /* Reduced from 0.75rem */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
 }
 
 .event-card-company {
-    padding: 0.25rem 0.5rem; /* Reduced padding */
-    background: linear-gradient(135deg, #6366f1, #818cf8);
-    border-radius: 15px;
-    font-size: 0.7rem; /* Reduced from 0.8rem */
-    color: white;
-    font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border-radius: 10px;
+  font-size: 0.65rem;
+  color: white;
+  font-weight: 600;
 }
 
 .event-card-date {
-    font-size: 0.7rem; /* Reduced from 0.8rem */
-    color: #22d3ee;
-    font-weight: 700;
-    text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+  font-size: 0.65rem;
+  color: #22d3ee;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
 }
 
 .event-card-title {
-    font-size: 1.1rem; /* Reduced from 1.35rem */
-    font-weight: 800;
-    margin-bottom: 0.25rem; /* Reduced from 0.35rem */
-    color: white;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    line-height: 1.2;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 0.2rem;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .event-card-type {
-    color: rgba(248, 250, 252, 0.7);
-    font-size: 0.75rem; /* Reduced from 0.85rem */
-    font-weight: 500;
+  color: rgba(248, 250, 252, 0.7);
+  font-size: 0.65rem;
+  font-weight: 500;
 }
 
-/* Updated text positioning - centered and above cards */
+/* Modifier: Calendar View (compact card) */
+.event-card-animated.calendar-view {
+  width: auto !important;
+  height: auto !important;
+  padding: 0.25rem !important;
+}
+
+.event-card-animated.calendar-view .event-card-header {
+  margin-bottom: 0;
+  width: 100%;
+  gap: 0.25rem;
+}
+
+.event-card-animated.calendar-view .event-card-company {
+  font-size: 0.4rem;
+  font-weight: 600;
+  padding: 0.05rem 0.25rem;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.event-card-animated.calendar-view .event-card-title {
+  font-size: 0.5rem;
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0;
+  padding: 0;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* State Classes for Cards (use !important to enforce state styles) */
+.event-card-animated.visible {
+  opacity: 1 !important;
+}
+
+.event-card-animated.chaos-state {
+  opacity: 0.7 !important;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.6), rgba(30, 41, 59, 0.6)) !important;
+  filter: blur(0.5px);
+}
+
+.event-card-animated.organizing {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(34, 211, 238, 0.05)) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+}
+
+.event-card-animated.organized-list {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(34, 211, 238, 0.1)) !important;
+  border: 1px solid rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ==========================================================================
+   Calendar Components
+   ========================================================================== */
+
+.calendar-frame.clean-calendar {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.calendar-header {
+  height: 85px;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(34, 211, 238, 0.1));
+  border: 2px solid rgba(99, 102, 241, 0.3);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 16px 16px 0 0;
+  backdrop-filter: blur(10px);
+  box-sizing: border-box;
+}
+
+.calendar-month {
+  margin-bottom: 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: white;
+  text-align: center;
+  background: linear-gradient(135deg, #6366f1, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  text-align: center;
+  padding: 0.25rem 0;
+  border-top: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.calendar-days span {
+  padding: 0.25rem 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #22d3ee;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.calendar-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 1px;
+  padding: 1px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 2px solid rgba(99, 102, 241, 0.3);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  backdrop-filter: blur(5px);
+  box-sizing: border-box;
+}
+
+.calendar-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 50px;
+  padding: 0.25rem;
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  border-radius: 4px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.calendar-cell:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.calendar-cell .day-number {
+  margin-bottom: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.5);
+}
+
+.calendar-cell.has-event .day-number {
+  color: rgba(248, 250, 252, 0.9);
+}
+
+/* Event Indicators (Dots) */
+.event-indicators {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-top: auto;
+}
+
+.event-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+  animation: pulse 2s ease-in-out infinite;
+  transition: transform 0.3s ease;
+}
+
+.event-dot:hover {
+  transform: scale(1.5);
+}
+
+/* Company-specific colors for dots */
+.event-dot.company-meta { background: linear-gradient(135deg, #0668e1, #0081f1); }
+.event-dot.company-openai { background: linear-gradient(135deg, #10a37f, #1ad4a1); }
+.event-dot.company-google { background: linear-gradient(135deg, #4285f4, #669df6); }
+.event-dot.company-microsoft { background: linear-gradient(135deg, #00bcf2, #00d4ff); }
+.event-dot.company-github { background: linear-gradient(135deg, #24292e, #4a5568); }
+.event-dot.company-docker { background: linear-gradient(135deg, #2496ed, #4fa8f5); }
+.event-dot.company-amazon { background: linear-gradient(135deg, #ff9900, #ffb84d); }
+.event-dot.company-apple,
+.event-dot.company-vercel { background: linear-gradient(135deg, #000000, #333333); }
+
+/* ==========================================================================
+   Text Overlays & Labels
+   ========================================================================== */
+
+.event-list-label {
+  position: absolute;
+  opacity: 0;
+  z-index: 8;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+.event-list-label h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 0.25rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.event-list-label p {
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.7);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
+}
+
 .text-overlay-container {
-    position: absolute;
-    top: 8%; /* Moved higher to give more space */
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    pointer-events: none;
-    z-index: 10;
-    width: 90%;
-    max-width: 800px; /* Reduced from 900px */
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 800px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 10;
 }
 
 .chaos-text-wrapper,
 .order-text-wrapper {
-    position: absolute;
-    width: 100%;
-    left: 50%;
-    transform: translateX(-50%);
+  position: absolute;
+  width: 100%;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-.chaos-title, .order-title {
-    font-size: clamp(1.75rem, 4vw, 2.75rem); /* Reduced from 3.5rem */
-    font-weight: 900;
-    margin-bottom: 0.75rem; /* Reduced from 1rem */
-    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
-    color: white;
-    /* Enable GPU acceleration for text */
-    will-change: opacity, transform;
-    transform: translateZ(0);
+/* Common title and subtitle styles */
+.chaos-title,
+.order-title {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 900;
+  margin-bottom: 0.75rem;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+  will-change: opacity, transform;
+  transform: translateZ(0);
 }
 
-.chaos-subtitle, .order-subtitle {
-    font-size: 1.1rem; /* Reduced from 1.25rem */
-    color: rgba(248, 250, 252, 0.8);
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-    /* Enable GPU acceleration for text */
-    will-change: opacity, transform;
-    transform: translateZ(0);
+.chaos-subtitle,
+.order-subtitle {
+  font-size: 1.1rem;
+  color: rgba(248, 250, 252, 0.8);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  will-change: opacity, transform;
+  transform: translateZ(0);
 }
 
-.chaos-title, .chaos-subtitle {
-    opacity: 1; /* Start visible */
+/* Specific text styles */
+.chaos-title {
+  color: white;
+  opacity: 1;
 }
 
-.order-title, .order-subtitle {
-    display: none;
-    opacity: 0;
+.chaos-subtitle {
+  opacity: 1;
 }
 
 .order-title {
-    background: linear-gradient(135deg, #6366f1, #22d3ee);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  display: none;
+  opacity: 0;
+  background: linear-gradient(135deg, #6366f1, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .order-subtitle {
-    color: rgba(248, 250, 252, 0.9);
+  display: none;
+  opacity: 0;
 }
 
-/* Calendar Frame Styling */
-.calendar-frame {
-    position: absolute;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-    pointer-events: none;
-    z-index: 3;
-    /* Position will be set dynamically via JavaScript */
-    display: flex;
-    flex-direction: column;
-}
+/* ==========================================================================
+   Keyframes
+   ========================================================================== */
 
-.calendar-header {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(34, 211, 238, 0.1));
-    border: 2px solid rgba(99, 102, 241, 0.4);
-    border-bottom: 1px solid rgba(99, 102, 241, 0.3);
-    border-radius: 16px 16px 0 0;
-    padding: 1rem;
-    backdrop-filter: blur(10px);
-}
-
-.calendar-month {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: white;
-    text-align: center;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, #6366f1, #22d3ee);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
-}
-
-.calendar-days {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0;
-    text-align: center;
-    padding: 0.5rem 0;
-    border-top: 1px solid rgba(99, 102, 241, 0.3);
-}
-
-.calendar-days span {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #22d3ee;
-    padding: 0.5rem 0;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.calendar-grid {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    gap: 2px;
-    background: rgba(99, 102, 241, 0.1);
-    border: 2px solid rgba(99, 102, 241, 0.3);
-    border-top: none;
-    border-radius: 0 0 16px 16px;
-    padding: 2px;
-    backdrop-filter: blur(5px);
-}
-
-.calendar-cell {
-    background: rgba(15, 23, 42, 0.2);
-    border: 1px solid rgba(99, 102, 241, 0.15);
-    border-radius: 4px;
-    transition: background 0.3s ease;
-    position: relative;
-}
-
-.calendar-cell::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, transparent, rgba(99, 102, 241, 0.03));
-    border-radius: 4px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.calendar-cell:hover::before {
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.8;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+  }
+  50% {
     opacity: 1;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.8);
+  }
 }
 
-/* Card states for calendar view */
-.event-card-animated.calendar-view {
-    padding: 0.4rem; /* Compact padding */
-    border-radius: 8px;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.25), rgba(30, 41, 59, 0.25));
-    border: 1px solid rgba(99, 102, 241, 0.5);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: 0.2rem;
-    transition: all 0.3s ease;
-}
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
 
-
-.event-card-animated.calendar-view .event-card-header {
-    margin-bottom: 0;
-    width: 100%;
-}
-
-.event-card-animated.calendar-view .event-card-title {
-    font-size: 0.6rem; /* Compact title */
-    font-weight: 600;
-    line-height: 1.25;
-    margin: 0;
-    padding: 0;
-    color: #e2e8f0; /* Slightly softer white */
-    white-space: normal;
-}
-
-.event-card-animated.calendar-view .event-card-type {
-    display: none; 
-}
-
-.event-card-animated.calendar-view .event-card-company {
-    font-size: 0.5rem; /* Even smaller company tag */
-    padding: 0.1rem 0.35rem;
-    border-radius: 6px;
-    font-weight: 600;
-}
-
-.event-card-animated.calendar-view .event-card-date {
-    display: none;
-}
-
-/* Card state classes */
-.event-card-animated.visible {
-    opacity: 1 !important;
-}
-
-.event-card-animated.chaos-state {
-    opacity: 0.7 !important;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.6), rgba(30, 41, 59, 0.6)) !important;
-    filter: blur(0.5px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
-}
-
-.event-card-animated.organized {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(34, 211, 238, 0.1)) !important;
-    border-color: rgba(99, 102, 241, 0.5) !important;
-    box-shadow: 
-        0 0 20px rgba(99, 102, 241, 0.3), 
-        0 15px 40px rgba(0, 0, 0, 0.4), 
-        inset 0 0 15px rgba(99, 102, 241, 0.1) !important;
-}
-
-.event-card-animated.calendar-view {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(34, 211, 238, 0.15)) !important;
-    border: 1px solid rgba(99, 102, 241, 0.6) !important;
-    box-shadow: 
-        0 0 15px rgba(99, 102, 241, 0.4),
-        0 4px 12px rgba(0, 0, 0, 0.3) !important;
-}
-
-.calendar-cell .day-number {
-    position: absolute;
-    top: 4px;
-    right: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: rgba(248, 250, 252, 0.4);
-    transition: color 0.3s ease;
-}
-
-.calendar-cell:hover .day-number {
-    color: rgba(248, 250, 252, 0.8);
-}
-
-/* Performance optimization for mobile */
 @media (max-width: 768px) {
-    .event-card-animated {
-        width: 200px;
-        height: 100px; /* Set initial height for mobile */
-        padding: 1rem;
-    }
-    
-    .event-card-title {
-        font-size: 1rem;
-    }
-    
-    .event-card-company {
-        font-size: 0.65rem;
-        padding: 0.2rem 0.4rem;
-    }
-    
-    .event-card-date {
-        font-size: 0.65rem;
-    }
-    
-    .event-card-type {
-        font-size: 0.7rem;
-    }
-    
-    .text-overlay-container {
-        top: 5%;
-    }
-    
-    .chaos-title, .order-title {
-        font-size: clamp(1.5rem, 5vw, 2rem);
-    }
-    
-    .chaos-subtitle, .order-subtitle {
-        font-size: 0.9rem;
-    }
-    
-    /* Calendar adjustments for mobile */
-    .calendar-month {
-        font-size: 1.2rem;
-    }
-    
-    .calendar-days span {
-        font-size: 0.65rem;
-    }
-    
-    .calendar-grid {
-        gap: 1px;
-    }
-    
-    .event-card-animated.calendar-view {
-        padding: 0.4rem !important;
-    }
-    
-    .event-card-animated.calendar-view .event-card-title {
-        font-size: 0.65rem !important;
-    }
-    
-    .event-card-animated.calendar-view .event-card-company {
-        font-size: 0.5rem !important;
-    }
+  .chaos-section {
+    height: 200vh;
+  }
+
+  .event-card-animated {
+    width: 200px;
+    height: 100px;
+    padding: 0.75rem;
+  }
+
+  .event-card-title {
+    font-size: 0.8rem;
+  }
+
+  .event-card-company {
+    font-size: 0.6rem;
+    padding: 0.15rem 0.35rem;
+  }
+  
+  /* Compact calendar-view cards on mobile */
+  .event-card-animated.calendar-view {
+    padding: 0.2rem !important;
+  }
+  
+  .event-card-animated.calendar-view .event-card-title {
+      font-size: 0.45rem !important;
+  }
+  
+  .event-card-animated.calendar-view .event-card-company {
+      font-size: 0.35rem !important;
+      padding: 0.05rem 0.2rem;
+  }
+
+  .calendar-header {
+    height: 75px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .calendar-month {
+    font-size: 1.1rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .calendar-days span {
+    font-size: 0.55rem;
+  }
+
+  .calendar-cell {
+    min-height: 40px;
+    padding: 0.2rem;
+  }
+
+  .calendar-cell .day-number {
+    font-size: 0.6rem;
+  }
+
+  .event-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .event-list-label {
+    text-align: center;
+  }
+
+  .event-list-label h3 {
+    font-size: 1rem;
+  }
+
+  .event-list-label p {
+    font-size: 0.75rem;
+  }
 }
 
 @media (max-width: 480px) {
-    .event-card-animated {
-        width: 150px;
-        height: 80px;
-        padding: 0.75rem;
-    }
-    
-    .event-card-title {
-        font-size: 0.85rem;
-    }
-    
-    .event-card-company {
-        font-size: 0.6rem;
-    }
-    
-    .event-card-type {
-        font-size: 0.65rem;
-    }
-    
-    .calendar-days span {
-        font-size: 0.55rem;
-        padding: 0.25rem 0;
-    }
-    
-    .calendar-cell {
-        min-height: 40px;
-    }
-}
+  .event-card-animated {
+    width: 150px;
+    height: 80px;
+    padding: 0.6rem;
+  }
 
-/* Reduce motion for accessibility */
-@media (prefers-reduced-motion: reduce) {
-    .event-card-animated {
-        transition: none !important;
-        will-change: auto !important;
-    }
-    
-    .chaos-title, .order-title,
-    .chaos-subtitle, .order-subtitle {
-        will-change: auto !important;
-    }
+  .event-card-title {
+    font-size: 0.75rem;
+  }
+
+  .event-card-company {
+    font-size: 0.55rem;
+  }
+  
+  .event-card-animated.calendar-view {
+    padding: 0.15rem !important;
+  }
+
+  .event-card-animated.calendar-view .event-card-title {
+      font-size: 0.4rem !important;
+  }
+  
+  .event-dot {
+    width: 5px;
+    height: 5px;
+  }
 }

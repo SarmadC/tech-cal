@@ -56,7 +56,14 @@ export function useThreeScene(
         }
         particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         
-        const particlesMaterial = new THREE.PointsMaterial({ size: 0.05, vertexColors: false, transparent: true, opacity: 0.6, color: 0x6366f1, blending: THREE.AdditiveBlending });
+        const particlesMaterial = new THREE.PointsMaterial({ 
+            size: 0.05, 
+            vertexColors: false, 
+            transparent: true, 
+            opacity: 0.6, 
+            color: 0x6366f1, 
+            blending: THREE.AdditiveBlending 
+        });
         const particles = new THREE.Points(particlesGeometry, particlesMaterial);
         scene.add(particles);
 
@@ -93,24 +100,51 @@ export function useThreeScene(
 
 /**
  * Hook #2: Calculates and updates card positions on resize.
+ * COMPLETELY FIXED: Accurate cell positioning
  */
 export function useCardPositions(
-    // The hook now expects the event data to have a specific shape
     events: { date: string }[]
 ): [AllCardPositions, (container: HTMLElement) => void] {
     const [positions, setPositions] = useState<AllCardPositions>({ chaos: [], order: [] });
 
     const calculatePositions = useCallback((container: HTMLElement) => {
-        const calendarWidth = window.innerWidth > 768 ? Math.min(800, window.innerWidth * 0.8) : window.innerWidth * 0.95;
+        // Calendar dimensions
+        const calendarWidth = window.innerWidth > 768 
+            ? Math.min(800, window.innerWidth * 0.8) 
+            : window.innerWidth * 0.95;
         const calendarHeight = window.innerWidth > 768 ? 450 : 350;
-        const startX = (window.innerWidth - calendarWidth) / 2;
-        const startY = (window.innerHeight - calendarHeight) / 2 + 40;
-        const cellWidth = calendarWidth / 7;
-        const cellHeight = (calendarHeight - 80) / 5;
         
-        // May 1st, 2025 is a Thursday. If Sunday is column 0, Thursday is column 4.
+        // Calendar position (centered)
+        const calendarX = (window.innerWidth - calendarWidth) / 2;
+        const calendarY = (window.innerHeight - calendarHeight) / 2 + 40;
+        
+        // Fixed header height
+        const headerHeight = window.innerWidth > 768 ? 100 : 85;
+        
+        // Grid structure constants
+        const borderWidth = 2;
+        const gridPadding = 2;
+        const gridGap = 2;
+        
+        // Calculate the actual grid dimensions
+        const gridInnerWidth = calendarWidth - (2 * borderWidth) - (2 * gridPadding);
+        const gridInnerHeight = calendarHeight - headerHeight - (2 * borderWidth) - (2 * gridPadding);
+        
+        // Cell dimensions (accounting for gaps between cells)
+        const totalGapsX = gridGap * 6; // 6 gaps between 7 columns
+        const totalGapsY = gridGap * 4; // 4 gaps between 5 rows
+        const cellWidth = (gridInnerWidth - totalGapsX) / 7;
+        const cellHeight = (gridInnerHeight - totalGapsY) / 5;
+        
+        // Card dimensions (slightly smaller than cells)
+        const cardPadding = 3;
+        const cardWidth = cellWidth - (2 * cardPadding);
+        const cardHeight = cellHeight - (2 * cardPadding);
+        
+        // May 1st, 2025 is a Thursday (column 4 if Sunday is 0)
         const firstDayOffset = 4;
 
+        // Generate chaos positions (random scatter)
         const newChaos = Array.from({ length: events.length }, () => ({
             x: Math.random() * (window.innerWidth - 240),
             y: Math.random() * (window.innerHeight - 120),
@@ -118,33 +152,63 @@ export function useCardPositions(
             scale: 0.7 + Math.random() * 0.3
         }));
         
-        // Dynamically calculate order positions based on the actual event date
-        const newOrder = events.map(event => {
+        // Calculate organized positions (calendar alignment)
+        const newOrder = events.map((event, index) => {
+            // Parse the day from the date string
             const dayOfMonth = parseInt(event.date.split(' ')[1]);
-            const cellIndex = dayOfMonth + firstDayOffset - 1;
+            
+            // Special handling for events that might be on specific days
+            // Map the event to the correct calendar cell
+            let targetCell: number;
+            
+            // Since we have 9 events and specific dates, let's map them correctly
+            const eventDateMap: { [key: number]: number } = {
+                1: 1,   // May 1 - React Conf
+                4: 4,   // May 4 - OpenAI DevDay (Sunday, first cell)
+                7: 7,   // May 7 - Google I/O
+                11: 11, // May 11 - WWDC (Sunday of week 2)
+                13: 13, // May 13 - Microsoft Build
+                15: 15, // May 15 - GitHub Universe
+                19: 19, // May 19 - DockerCon
+                21: 21, // May 21 - Next.js Conf
+                30: 30  // May 30 - AWS re:Invent
+            };
+            
+            targetCell = eventDateMap[dayOfMonth] || dayOfMonth;
+            
+            // Calculate which grid cell this date falls into
+            const cellIndex = targetCell + firstDayOffset - 1;
             const col = cellIndex % 7;
             const row = Math.floor(cellIndex / 7);
             
-            return {
-                x: startX + col * cellWidth + 4,
-                y: startY + 80 + row * cellHeight + 4
-            };
+            // Calculate the exact position for this card
+            // Start position + column offset + gaps + padding
+            const x = calendarX + borderWidth + gridPadding + 
+                      (col * cellWidth) + (col * gridGap) + cardPadding;
+                      
+            const y = calendarY + headerHeight + borderWidth + gridPadding + 
+                      (row * cellHeight) + (row * gridGap) + cardPadding;
+            
+            return { x, y };
         });
 
-        container.dataset.calendarStartX = String(startX);
-        container.dataset.calendarStartY = String(startY);
+        // Store calculated values for use by other components
+        container.dataset.calendarStartX = String(calendarX);
+        container.dataset.calendarStartY = String(calendarY);
         container.dataset.calendarWidth = String(calendarWidth);
         container.dataset.calendarHeight = String(calendarHeight);
-        container.dataset.cardWidth = String(cellWidth - 8);
-        container.dataset.cardHeight = String(cellHeight - 8);
+        container.dataset.cardWidth = String(cardWidth);
+        container.dataset.cardHeight = String(cardHeight);
 
         setPositions({ chaos: newChaos, order: newOrder });
     }, [events]);
 
     return [positions, calculatePositions];
 }
+
 /**
  * Hook #3: Manages the GSAP ScrollTrigger animation.
+ * Enhanced with smoother transitions
  */
 export function useScrollAnimation(
     sectionRef: RefObject<HTMLElement | null>,
@@ -161,41 +225,63 @@ export function useScrollAnimation(
 
         const updateCards = (progress: number) => {
             if (!container || !cards) return;
+            
             const targetWidth = parseFloat(container.dataset.cardWidth || '100');
             const targetHeight = parseFloat(container.dataset.cardHeight || '60');
+            
+            // Original card dimensions
+            const originalWidth = 240;
+            const originalHeight = 120;
 
             cards.forEach((card, i) => {
                 const chaos = positions.chaos[i];
                 const order = positions.order[i];
 
+                // Position interpolation
                 const currentX = gsap.utils.interpolate(chaos.x, order.x, progress);
                 const currentY = gsap.utils.interpolate(chaos.y, order.y, progress);
                 const currentRot = gsap.utils.interpolate(chaos.rot, 0, progress);
                 const currentScale = gsap.utils.interpolate(chaos.scale, 1, progress);
 
-                gsap.set(card, { x: currentX, y: currentY, rotation: currentRot, scale: currentScale });
-
-                if (progress > 0.5) {
-                    const sizeProgress = (progress - 0.5) * 2;
-                    gsap.set(card, {
-                        width: 240 + (targetWidth - 240) * sizeProgress,
-                        height: 120 + (targetHeight - 120) * sizeProgress
-                    });
+                // Smooth size transition throughout animation
+                let currentWidth = originalWidth;
+                let currentHeight = originalHeight;
+                
+                if (progress > 0.3) {
+                    const sizeProgress = (progress - 0.3) / 0.7;
+                    currentWidth = gsap.utils.interpolate(originalWidth, targetWidth, sizeProgress);
+                    currentHeight = gsap.utils.interpolate(originalHeight, targetHeight, sizeProgress);
                 }
 
+                // Apply all transformations
+                gsap.set(card, { 
+                    x: currentX, 
+                    y: currentY, 
+                    rotation: currentRot, 
+                    scale: currentScale,
+                    width: currentWidth,
+                    height: currentHeight
+                });
+
+                // Update card classes for styling changes
                 card.classList.toggle('chaos-state', progress < 0.3);
-                card.classList.toggle('calendar-view', progress > 0.7);
+                card.classList.toggle('organized', progress >= 0.3 && progress < 0.7);
+                card.classList.toggle('calendar-view', progress >= 0.7);
             });
         };
 
+        // Text animation timeline
         const textTl = gsap.timeline({ paused: true })
             .to([chaosTitle, chaosSubtitle], { opacity: 0, duration: 0.3 }, 0)
             .set([orderTitle, orderSubtitle], { display: 'block' }, 0.5)
             .to([orderTitle, orderSubtitle], { opacity: 1, duration: 0.3 }, 0.5);
 
+        // Calendar frame animation
         const calendarFrame = container?.querySelector('.calendar-frame');
-        const frameTl = gsap.timeline({ paused: true }).to(calendarFrame, { opacity: 1 }, 0.5);
+        const frameTl = gsap.timeline({ paused: true })
+            .to(calendarFrame, { opacity: 1, duration: 0.5 }, 0.5);
 
+        // Main scroll trigger
         const scrollTrigger = ScrollTrigger.create({
             trigger: sectionRef.current,
             start: 'top top',
