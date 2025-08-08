@@ -6,38 +6,44 @@ import { features } from '@/data/landing-page-data';
 export function FeaturesGrid() {
     const gridRef = useRef<HTMLDivElement>(null);
 
-    // Enhanced bento layout with varied sizes for visual hierarchy
+    // Better bento box layout - creating a more balanced grid
     const bentoLayouts = [
-        "md:col-span-2 md:row-span-2 hero-feature", // Hero feature (2x2)
-        "md:col-span-2 md:row-span-1 wide-feature", // Wide secondary feature
-        "md:col-span-1 md:row-span-2 tall-feature", // Tall feature  
-        "md:col-span-1 md:row-span-1 regular-feature", // Regular card
-        "md:col-span-1 md:row-span-1 regular-feature", // Regular card
-        "md:col-span-1 md:row-span-1 regular-feature", // Regular card
+        "md:col-span-2 md:row-span-2 hero-feature",     // Smart Filtering (2x2)
+        "md:col-span-2 md:row-span-1 wide-feature",     // Real-time Updates (2x1)  
+        "md:col-span-1 md:row-span-1 regular-feature",  // Calendar Sync (1x1)
+        "md:col-span-1 md:row-span-1 regular-feature",  // Custom Views (1x1)
+        "md:col-span-2 md:row-span-1 wide-feature",     // Team Collaboration (2x1)
+        "md:col-span-2 md:row-span-1 wide-feature",     // Analytics Dashboard (2x1)
     ];
 
-    // Intersection Observer for staggered animations
     useEffect(() => {
-        const observerOptions = { 
-            threshold: 0.1, 
-            rootMargin: '0px 0px -50px 0px' 
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
         };
-        
+
         const observer = new IntersectionObserver((entries) => {
             entries.forEach((entry, index) => {
                 if (entry.isIntersecting) {
-                    // Staggered animation delay
                     setTimeout(() => {
                         entry.target.classList.add('visible');
-                    }, index * 100); // 100ms delay between cards
+                    }, index * 100);
                 }
             });
         }, observerOptions);
 
-        const cards = gridRef.current?.querySelectorAll('.bento-card');
+        // ✅ Fixed: Use the correct class name
+        const cards = gridRef.current?.querySelectorAll('.bento-card-enhanced');
         cards?.forEach(card => observer.observe(card));
 
-        return () => cards?.forEach(card => observer.unobserve(card));
+        // ✅ Also observe the header for fade-in animation
+        const header = gridRef.current?.parentElement?.querySelector('.features-header');
+        if (header) observer.observe(header);
+
+        return () => {
+            cards?.forEach(card => observer.unobserve(card));
+            if (header) observer.unobserve(header);
+        };
     }, []);
 
     return (
@@ -50,25 +56,19 @@ export function FeaturesGrid() {
                 </p>
             </div>
 
-            {/* Enhanced Bento Grid Container */}
             <div ref={gridRef} className="bento-grid-enhanced">
                 {features.map((feature, index) => {
                     const layoutClass = bentoLayouts[index % bentoLayouts.length];
                     const animationClass = `slide-in-stagger`;
 
                     return (
-                        <div 
-                            key={index} 
+                        <div
+                            key={index}
                             className={`bento-card-enhanced ${layoutClass} ${animationClass}`}
                             data-index={index}
                         >
-                            {/* Background Pattern */}
                             <div className="card-pattern"></div>
-                            
-                            {/* Gradient Overlay */}
                             <div className="card-gradient"></div>
-                            
-                            {/* Content */}
                             <div className="bento-card-content-enhanced">
                                 <div className="feature-icon-enhanced">
                                     <div className="icon-wrapper">
@@ -77,22 +77,9 @@ export function FeaturesGrid() {
                                 </div>
                                 <h3 className="feature-title-enhanced">{feature.title}</h3>
                                 <p className="feature-description-enhanced">{feature.description}</p>
-                                
-                                {/* Interactive Elements for Hero Feature */}
-                                {index === 0 && (
-                                    <div className="hero-extras">
-                                        <div className="mini-calendar">
-                                            <div className="calendar-dots">
-                                                <span className="dot active"></span>
-                                                <span className="dot"></span>
-                                                <span className="dot"></span>
-                                                <span className="dot busy"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {/* Progress Ring for Secondary Features */}
+
+                                {/* Removed the calendar dots from Smart Filtering */}
+
                                 {(index === 1 || index === 2) && (
                                     <div className="progress-ring">
                                         <svg className="progress-svg" width="40" height="40">
@@ -120,8 +107,7 @@ export function FeaturesGrid() {
                                         </svg>
                                     </div>
                                 )}
-                                
-                                {/* Magnetic Hover Arrow */}
+
                                 <div className="bento-arrow-enhanced">
                                     <div className="arrow-container">
                                         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
