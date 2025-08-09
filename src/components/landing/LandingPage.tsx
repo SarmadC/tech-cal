@@ -6,10 +6,10 @@ import {
     HeroSection,
     ChaosToOrderSection,
     SocialProof,
-    FeaturesGrid, // This import now works
-    FinalCTA      // This import now works
-} from './'; // This barrel file now correctly exports the children
-
+    FeaturesGrid,
+    FinalCTA,
+    Footer
+} from './';
 export default function LandingPage() {
     // The IntersectionObserver logic for simple animations can live here,
     // as it controls multiple child components.
@@ -39,6 +39,7 @@ export default function LandingPage() {
                 <FeaturesGrid />
                 <FinalCTA />
             </main>
+            <Footer />
         </div>
     );
 }
