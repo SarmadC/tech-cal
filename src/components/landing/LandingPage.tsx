@@ -7,7 +7,6 @@ import {
     ChaosToOrderSection,
     SocialProof,
     FeaturesGrid,
-    FinalCTA,
     Footer
 } from './';
 export default function LandingPage() {
@@ -37,7 +36,6 @@ export default function LandingPage() {
                 <ChaosToOrderSection />
                 <SocialProof />
                 <FeaturesGrid />
-                <FinalCTA />
             </main>
             <Footer />
         </div>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 
+
 export function LandingNav() {
     return (
         <nav className="nav">
