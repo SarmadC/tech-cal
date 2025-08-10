@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRight, Calendar, Mail, Twitter, Linkedin } from 'lucide-react';
-import '@/app/styles/Footer.css';
+import '@/app/styles/footer.css';
 
 export function Footer() {
     return (
