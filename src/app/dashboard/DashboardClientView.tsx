@@ -1,4 +1,3 @@
-// src/app/dashboard/DashboardClientView.tsx
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -28,7 +27,6 @@ type PersonalInsight = {
     icon: React.ReactNode;
 };
 
-
 export default function DashboardClientView({
     initialTrackedEvents,
     initialEventTypes,
@@ -37,7 +35,6 @@ export default function DashboardClientView({
     const [supabase] = useState(() => createClient());
     const { user, profile } = useAuth();
 
-    // ... (All useQuery and useMemo hooks remain exactly the same) ...
     const {
         data: trackedEvents,
         isError: isTrackedError,
@@ -45,10 +42,10 @@ export default function DashboardClientView({
         refetch: refetchTracked,
     } = useQuery({
         queryKey: ['trackedEvents', user?.id],
-        queryFn: async () => {
-            const response = await UserEventService.getTrackedEvents(user!.id, supabase);
-            if (!response.success) throw new Error(response.error || 'Failed to fetch tracked events');
-            return response.data || [];
+        queryFn: () => {
+             // CHANGED: Call service directly. Throws on error.
+            if (!user) return []; // Return empty array if no user, don't query
+            return UserEventService.getTrackedEvents(user.id, supabase);
         },
         enabled: !!user,
         initialData: initialTrackedEvents,
@@ -61,11 +58,8 @@ export default function DashboardClientView({
         refetch: refetchTypes,
     } = useQuery({
         queryKey: ['eventTypes'],
-        queryFn: async () => {
-            const response = await EventTypeService.getEventTypes(supabase);
-            if (!response.success) throw new Error(response.error || 'Failed to fetch event types');
-            return response.data || [];
-        },
+        // CHANGED: Call service directly.
+        queryFn: () => EventTypeService.getEventTypes(supabase),
         initialData: initialEventTypes,
     });
 
@@ -76,20 +70,24 @@ export default function DashboardClientView({
         refetch: refetchUpcoming,
     } = useQuery({
         queryKey: ['allUpcomingEvents'],
-        queryFn: async () => {
-            const response = await EventService.getEvents({ startDate: new Date() }, supabase);
-            if (!response.success) throw new Error(response.error || 'Failed to fetch upcoming events');
-            return response.data || [];
-        },
+        // CHANGED: Call service directly.
+        queryFn: () => EventService.getEvents({ startDate: new Date() }, supabase),
         initialData: initialUpcomingEvents,
     });
+
     const isError = isTrackedError || isTypesError || isUpcomingError;
-    const errorMessage = [trackedError?.message, typesError?.message, upcomingError?.message].filter(Boolean).join('; ');
+    const errorMessage = [
+        (trackedError as Error)?.message,
+        (typesError as Error)?.message,
+        (upcomingError as Error)?.message
+    ].filter(Boolean).join('; ');
+
     const handleRetry = () => {
         if (isTrackedError) refetchTracked();
         if (isTypesError) refetchTypes();
         if (isUpcomingError) refetchUpcoming();
     };
+
     const greeting = useMemo(() => {
         const hour = new Date().getHours();
         const name = profile?.fullName?.split(' ')[0] || 'there';
@@ -97,16 +95,18 @@ export default function DashboardClientView({
         if (hour < 17) return `Good afternoon, ${name}!`;
         return `Good evening, ${name}!`;
     }, [profile]);
+
     const insights = useMemo((): PersonalInsight[] => {
         if (!trackedEvents || !eventTypes) return [];
-        const upcomingTracked = trackedEvents.filter(te => te.event && new Date(te.event.startTime) > new Date()).length;
-        const attendedThisMonth = trackedEvents.filter(te => te.status === 'attended' && new Date(te.trackedAt).getMonth() === new Date().getMonth()).length;
-        const categoryCount = trackedEvents.reduce((acc, te) => {
+        // CHANGED: Added explicit types
+        const upcomingTracked = trackedEvents.filter((te: AppTrackedEvent) => te.event && new Date(te.event.startTime) > new Date()).length;
+        const attendedThisMonth = trackedEvents.filter((te: AppTrackedEvent) => te.status === 'attended' && new Date(te.trackedAt).getMonth() === new Date().getMonth()).length;
+        const categoryCount = trackedEvents.reduce((acc: Record<string, number>, te: AppTrackedEvent) => {
             if (te.event?.eventTypeId) acc[te.event.eventTypeId] = (acc[te.event.eventTypeId] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
         const topCategoryId = Object.keys(categoryCount).sort((a, b) => categoryCount[b] - categoryCount[a])[0];
-        const topCategory = eventTypes.find(et => et.id === topCategoryId);
+        const topCategory = eventTypes.find((et: AppEventType) => et.id === topCategoryId);
         return [
             { title: 'Upcoming Events', value: upcomingTracked, description: "You're tracking", icon: <Calendar className="w-5 h-5" /> },
             { title: 'Events Attended', value: attendedThisMonth, description: 'This month', icon: <Award className="w-5 h-5" /> },
@@ -114,19 +114,22 @@ export default function DashboardClientView({
             { title: 'Total Tracked', value: trackedEvents.length, description: 'All time', icon: <Star className="w-5 h-5" /> },
         ];
     }, [trackedEvents, eventTypes]);
+
     const nextTrackedEvents = useMemo(() => {
         return (trackedEvents || [])
-            .filter(te => te.event && new Date(te.event.startTime) > new Date())
-            .sort((a, b) => new Date(a.event!.startTime).getTime() - new Date(b.event!.startTime).getTime())
+            // CHANGED: Added explicit types
+            .filter((te: AppTrackedEvent) => te.event && new Date(te.event.startTime) > new Date())
+            .sort((a: AppTrackedEvent, b: AppTrackedEvent) => new Date(a.event!.startTime).getTime() - new Date(b.event!.startTime).getTime())
             .slice(0, 5);
     }, [trackedEvents]);
+    
     const recommendedEvents = useMemo(() => {
-        const trackedEventIds = new Set((trackedEvents || []).map(te => te.eventId));
-        return (allUpcomingEvents || []).filter(event => !trackedEventIds.has(event.id)).slice(0, 6);
+        const trackedEventIds = new Set((trackedEvents || []).map((te: AppTrackedEvent) => te.eventId));
+        // CHANGED: Added explicit type
+        return (allUpcomingEvents || []).filter((event: AppEvent) => !trackedEventIds.has(event.id)).slice(0, 6);
     }, [allUpcomingEvents, trackedEvents]);
 
     if (isError) {
-        // 2. REMOVE the ProtectedRoute wrapper from the error state
         return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6 flex items-center justify-center">
                 <ErrorState error={errorMessage} onRetry={handleRetry} />
@@ -136,11 +139,9 @@ export default function DashboardClientView({
 
     const formatDate = (dateString: string) => new Date(dateString).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-    // 3. REMOVE the ProtectedRoute wrapper from the main return statement
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
             <div className="max-w-7xl mx-auto p-6 space-y-8">
-                {/* ... The rest of the JSX is unchanged ... */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between">
                     <div>
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">{greeting}</h1>
@@ -176,7 +177,7 @@ export default function DashboardClientView({
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {nextTrackedEvents.length > 0 ? (
-                            nextTrackedEvents.map((trackedEvent) => (
+                            nextTrackedEvents.map((trackedEvent: AppTrackedEvent) => (
                                 <div key={trackedEvent.trackingId} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
                                     <h3 className="font-semibold text-gray-900">{trackedEvent.event?.title}</h3>
                                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
@@ -203,7 +204,7 @@ export default function DashboardClientView({
                             <CardDescription>Based on your interests.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {recommendedEvents.map((event) => (
+                            {recommendedEvents.map((event: AppEvent) => (
                                 <div key={event.id} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
                                     <h3 className="font-medium text-gray-900 mb-2">{event.title}</h3>
                                 </div>
