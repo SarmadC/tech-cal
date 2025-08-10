@@ -1,4 +1,3 @@
-// src/app/dashboard/growth/GrowthClientView.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -32,30 +31,31 @@ export default function GrowthClientView({
 
     const { data: trackedEvents, error: trackedEventsError } = useQuery({
         queryKey: ['trackedEvents', user?.id],
-        queryFn: async () => {
-            const response = await UserEventService.getTrackedEvents(user!.id, supabase);
-            if (!response.success) throw new Error(response.error || "Failed to fetch tracked events");
-            return response.data || [];
+        queryFn: () => {
+            // CHANGED: Call the service directly. It will return the data array or throw an error.
+            if (!user) return [];
+            return UserEventService.getTrackedEvents(user.id, supabase);
         },
         enabled: !!user,
         initialData: initialTrackedEvents,
     });
+
     const analytics = useMemo(() => {
         if (!trackedEvents || trackedEvents.length === 0) {
             return null;
         }
-        const attendedEvents = trackedEvents.filter(te => te.status === 'attended');
-        const bookmarkedEvents = trackedEvents.filter(te => te.status === 'bookmarked');
+        const attendedEvents = trackedEvents.filter((te: AppTrackedEvent) => te.status === 'attended');
+        const bookmarkedEvents = trackedEvents.filter((te: AppTrackedEvent) => te.status === 'bookmarked');
         let followThroughRate = 0;
         if (bookmarkedEvents.length > 0) {
-            const attendedFromBookmarks = bookmarkedEvents.filter(b => attendedEvents.some(a => a.eventId === b.eventId)).length;
+            const attendedFromBookmarks = bookmarkedEvents.filter((b: AppTrackedEvent) => attendedEvents.some((a: AppTrackedEvent) => a.eventId === b.eventId)).length;
             followThroughRate = Math.round((attendedFromBookmarks / bookmarkedEvents.length) * 100);
         } else if (attendedEvents.length > 0) {
             followThroughRate = 100;
         }
         let learningStreak = { current: 0, longest: 0 };
         if (attendedEvents.length > 0) {
-            const sortedEvents = attendedEvents.sort((a, b) => new Date(b.trackedAt).getTime() - new Date(a.trackedAt).getTime());
+            const sortedEvents = attendedEvents.sort((a: AppTrackedEvent, b: AppTrackedEvent) => new Date(b.trackedAt).getTime() - new Date(a.trackedAt).getTime());
             let current = 0, longest = 0, tempStreak = 1;
             const now = new Date();
             const daysSinceLastEvent = Math.floor((now.getTime() - new Date(sortedEvents[0].trackedAt).getTime()) / 86400000);
@@ -69,7 +69,7 @@ export default function GrowthClientView({
             learningStreak = { current, longest };
         }
         const categoryColors = { 'AI & ML': '#a855f7', 'Web Dev': '#3b82f6', 'Cloud': '#f59e0b', 'Security': '#ef4444', 'Mobile': '#8b5cf6', 'DevOps': '#059669', 'AR/VR': '#f97316', 'Programming': '#8b5cf6', 'Data Science': '#ec4899', 'Blockchain': '#10b981' };
-        const categoryCount = attendedEvents.reduce((acc, te) => {
+        const categoryCount = attendedEvents.reduce((acc: Record<string, { attended: number; color: string }>, te: AppTrackedEvent) => {
             if (!te.event?.category) return acc;
             const categoryName = te.event.category.name;
             if (!acc[categoryName]) { acc[categoryName] = { attended: 0, color: categoryColors[categoryName as keyof typeof categoryColors] || '#6B7280' }; }
@@ -78,35 +78,39 @@ export default function GrowthClientView({
         }, {} as Record<string, { attended: number; color: string }>);
         const statsArray: CategoryStats[] = Object.entries(categoryCount).map(([category, stats]) => ({ category, ...stats })).sort((a, b) => b.attended - a.attended);
         const techStackCurrency = statsArray.slice(0, 3).map(stat => {
-            const recentEvent = attendedEvents.filter(te => te.event?.category?.name === stat.category).sort((a, b) => new Date(b.trackedAt).getTime() - new Date(a.trackedAt).getTime())[0];
+            const recentEvent = attendedEvents.filter((te: AppTrackedEvent) => te.event?.category?.name === stat.category).sort((a: AppTrackedEvent, b: AppTrackedEvent) => new Date(b.trackedAt).getTime() - new Date(a.trackedAt).getTime())[0];
             const daysSince = recentEvent ? (new Date().getTime() - new Date(recentEvent.trackedAt).getTime()) / (1000 * 3600 * 24) : 180;
             const score = Math.max(0, Math.round(100 - (daysSince / 1.8)));
             return { category: stat.category, score, color: stat.color };
         });
         const majorAnnouncers = ['apple', 'google', 'openai', 'microsoft', 'amazon', 'meta', 'nvidia'];
         const quarterAgo = new Date(); quarterAgo.setMonth(quarterAgo.getMonth() - 3);
-        const recentAttended = attendedEvents.filter(te => new Date(te.trackedAt) > quarterAgo);
-        const majorEventsAttended = recentAttended.filter(te => te.event && majorAnnouncers.some(a => te.event!.organizer.toLowerCase().includes(a))).length;
-        const industryPulseScore = Math.round((majorEventsAttended / 10) * 100);
-        const networkExpansion = new Set(recentAttended.map(te => te.event?.organizer).filter(Boolean)).size;
+        const recentAttended = attendedEvents.filter((te: AppTrackedEvent) => new Date(te.trackedAt) > quarterAgo);
+        const majorEventsAttended = recentAttended.filter((te: AppTrackedEvent) => te.event && majorAnnouncers.some(a => te.event!.organizer.toLowerCase().includes(a))).length;
+        const industryPulseScore = Math.min(100, Math.round((majorEventsAttended / 5) * 100)); // Adjusted logic to cap at 100
+        const networkExpansion = new Set(recentAttended.map((te: AppTrackedEvent) => te.event?.organizer).filter(Boolean)).size;
         const topCategories = statsArray.slice(0, 3).map(s => s.category);
-        const trackedEventIds = trackedEvents.map(e => e.eventId);
+        const trackedEventIds = trackedEvents.map((e: AppTrackedEvent) => e.eventId);
         return { followThroughRate, learningStreak, techStackCurrency, industryPulseScore, networkExpansion, topCategories, trackedEventIds };
     }, [trackedEvents]);
+
     const { data: upcomingOpportunities, error: opportunitiesError } = useQuery({
         queryKey: ['upcomingOpportunities', analytics?.topCategories, analytics?.trackedEventIds],
-        queryFn: async () => {
-            const response = await EventService.getRecommendedEvents(analytics!.topCategories, analytics!.trackedEventIds, supabase);
-            if (!response.success) throw new Error(response.error || "Failed to fetch opportunities");
-            return response.data || [];
+        queryFn: () => {
+            // CHANGED: Call the service directly.
+            if (!analytics?.topCategories || analytics.topCategories.length === 0 || !analytics.trackedEventIds) {
+                return [];
+            }
+            return EventService.getRecommendedEvents(analytics.topCategories, analytics.trackedEventIds, supabase);
         },
         enabled: !!analytics && analytics.topCategories.length > 0,
         initialData: initialOpportunities,
     });
+
     const queryError = trackedEventsError || opportunitiesError;
 
     if (queryError) {
-        return <div className="text-center text-red-500 p-8">Error: {queryError.message}</div>;
+        return <div className="text-center text-red-500 p-8">Error: {(queryError as Error).message}</div>;
     }
 
     if (!analytics) {
@@ -126,7 +130,7 @@ export default function GrowthClientView({
             <div className="max-w-7xl mx-auto">
                 <GrowthDashboardHeader userName={profile?.fullName?.split(' ')[0] || 'User'} selectedPeriod={selectedPeriod} setSelectedPeriod={setSelectedPeriod} />
                 <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
-                    <UpcomingOpportunitiesCard opportunities={(upcomingOpportunities || []).map(o => ({
+                    <UpcomingOpportunitiesCard opportunities={(upcomingOpportunities || []).map((o: AppEvent) => ({
                         title: o.title,
                         date: new Date(o.startTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
                         category: o.category?.name || 'General'
