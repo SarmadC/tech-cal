@@ -1,4 +1,3 @@
-// src/contexts/AuthContext.tsx
 'use client';
 
 import {
@@ -24,7 +23,6 @@ import type {
     ProfileUpdateForm
 } from '@/types';
 
-// --- Context Types (No change here) ---
 interface AuthState {
     user: User | null;
     session: Session | null;
@@ -46,7 +44,6 @@ interface AuthActions {
 export type AuthContextType = AuthState & AuthActions;
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// --- Auth Provider ---
 interface AuthProviderProps {
     children: ReactNode;
 }
@@ -64,19 +61,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const loadUserProfile = useCallback(async (user: User): Promise<AppProfile | null> => {
         try {
-            const result = await ProfileService.getProfile(user.id, supabase);
-            if (result.success && result.data) {
-                return result.data;
+            const profile = await ProfileService.getProfile(user.id, supabase);
+            return profile;
+        } catch (error: unknown) { // CHANGED: from `any` to `unknown`
+            console.error('Error fetching user profile:', error);
+            try {
+                const createdProfile = await ProfileService.createProfile({
+                    id: user.id,
+                    fullName: user.user_metadata?.full_name || null,
+                    avatarUrl: user.user_metadata?.avatar_url || null,
+                }, supabase);
+                return createdProfile;
+            } catch (createError) {
+                console.error('Error creating user profile after initial fetch failed:', createError);
+                return null;
             }
-            const createResult = await ProfileService.createProfile({
-                id: user.id,
-                fullName: user.user_metadata?.full_name || null,
-                avatarUrl: user.user_metadata?.avatar_url || null,
-            }, supabase);
-            return createResult.success ? createResult.data || null : null;
-        } catch (error) {
-            console.error('Error loading user profile:', error);
-            return null;
         }
     }, [supabase]);
 
@@ -117,7 +116,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            // ✅ FIX: Add explicit types for the callback parameters
             async (event: AuthChangeEvent, session: Session | null) => {
                 console.log('Auth state changed:', event);
                 await updateAuthState(session);
@@ -150,11 +148,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (!authState.user) {
             return { success: false, error: 'No authenticated user' };
         }
-        const result = await ProfileService.updateProfile(authState.user.id, data, supabase);
-        if (result.success) {
+        try {
+            await ProfileService.updateProfile(authState.user.id, data, supabase);
             await refreshProfile();
+            return { success: true, message: 'Profile updated successfully!' };
+        } catch (error: unknown) { // CHANGED: from `any` to `unknown`
+            console.error('Error updating user profile in AuthContext:', error);
+            // ADDED: Type check before accessing properties
+            const errorMessage = error instanceof Error ? error.message : 'Failed to update profile.';
+            return { success: false, error: errorMessage };
         }
-        return result;
     }, [authState.user, refreshProfile, supabase]);
 
     const contextValue = useMemo((): AuthContextType => ({
@@ -184,7 +187,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
 }
 
-// --- Hooks (No change here) ---
 export function useAuth(): AuthContextType {
     const context = useContext(AuthContext);
     if (context === undefined) {
