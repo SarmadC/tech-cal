@@ -5,33 +5,31 @@ import { EventService } from '@/services/eventServices';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, MapPin, Users, Tag, ArrowLeft } from 'lucide-react';
-import type { AppEvent } from '@/types'; // Import the type for our variable
+import type { AppEvent } from '@/types';
 
 import EventTracking from '@/components/calendar/EventTracking';
 import EventActions from '@/components/calendar/EventActions';
 
-export default async function EventDetailPage({
-    params
-}: {
-    params: { id: string } // The `params` object itself is not a promise
-}) {
-    const supabase = await createClient();
-    const { id: eventId } = params; // No need to await params
+// --- CHANGED SECTION START ---
+// Define a type for our page's props for better readability and safety.
+type EventDetailPageProps = {
+    params: { id: string };
+    searchParams: { [key: string]: string | string[] | undefined };
+};
 
-    // --- CHANGED SECTION START ---
+// Use the defined type for the component's props.
+export default async function EventDetailPage({ params }: EventDetailPageProps) {
+// --- CHANGED SECTION END ---
+    const supabase = await createClient();
+    const { id: eventId } = params;
+
     let event: AppEvent;
     try {
-        // Service now returns the event directly or throws an error.
         event = await EventService.getEventById(eventId, supabase);
     } catch (error) {
-        // If the service throws an error (e.g., event not found), we'll catch it.
         console.error(`Failed to fetch event ${eventId}:`, error);
-        // The notFound() function is the correct way to trigger a 404 page in a Server Component.
         notFound();
     }
-    // --- CHANGED SECTION END ---
-
-    // If we reach here, `event` is guaranteed to be a valid AppEvent.
     
     const formattedStartTime = new Date(event.startTime).toLocaleString('en-US', {
         dateStyle: 'full',
