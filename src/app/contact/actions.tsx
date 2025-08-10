@@ -53,7 +53,7 @@ export async function submitContactFormAction(
         const toEmail = 'sarmad@kure-cal.com';
 
         await resend.emails.send({
-            from: 'Contact Form <onboarding@resend.dev>',
+            from: 'Kure-Cal Contact Form <noreply@kure-cal.com>',
             to: [toEmail],
             subject: `New Contact Form Message: ${subject}`,
             replyTo: email,

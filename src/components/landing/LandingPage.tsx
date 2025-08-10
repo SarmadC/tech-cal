@@ -1,17 +1,28 @@
 'use client';
 
 import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+const ChaosToOrderSection = dynamic(
+    // This function tells Next.js how to load the component
+    () => import('./ChaosToOrderSection').then((mod) => mod.ChaosToOrderSection),
+    {
+        // This component uses browser APIs, so we must disable Server-Side Rendering
+        ssr: false,
+        // This provides a placeholder to prevent the page layout from shifting while the component loads
+        loading: () => <div style={{ height: '250vh' }} />
+    }
+);
+
 import {
     LandingNav,
     HeroSection,
-    ChaosToOrderSection,
     SocialProof,
     FeaturesGrid,
     Footer
 } from './';
+
 export default function LandingPage() {
-    // The IntersectionObserver logic for simple animations can live here,
-    // as it controls multiple child components.
     useEffect(() => {
         const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
         const observer = new IntersectionObserver((entries) => {
@@ -33,6 +44,7 @@ export default function LandingPage() {
             <LandingNav />
             <main>
                 <HeroSection />
+                {/* This now renders the dynamically loaded component */}
                 <ChaosToOrderSection />
                 <SocialProof />
                 <FeaturesGrid />

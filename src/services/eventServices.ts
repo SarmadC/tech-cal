@@ -1,48 +1,33 @@
-// src/services/eventServices.ts 
-
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
-import type { AppEvent, EventFilters, ApiResponse, SearchSuggestion, SupabaseEventWithDetails } from '@/types';
+import type { AppEvent, EventFilters, SearchSuggestion, SupabaseEventWithDetails } from '@/types';
 import { eventTransformer, eventTypeTransformer, enrichEvent } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
 
-// Define the fully-typed Supabase client type
 type SupabaseClientType = SupabaseClient<Database>;
 
+// Note: The Promise return type is simplified. We no longer need ApiResponse.
+// The function will now either successfully return `AppEvent[]` or throw an error.
 export class EventService {
-    /**
-     * Fetch events with optional filtering and enrichment.
-     */
     static async getEvents(
-        filters: EventFilters = {}, // Default filters to an empty object
-        supabaseClient: SupabaseClientType // Parameter is now required
-    ): Promise<ApiResponse<AppEvent[]>> {
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType
+    ): Promise<AppEvent[]> {
         try {
             let query = supabaseClient
                 .from('events')
-                .select(`
-                    *,
-                    event_type:event_type_id (id, name, color, description),
-                    organizer:organizers (id, name)
-                `)
+                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
                 .order('start_time', { ascending: true });
 
             if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
-
-            if (filters.searchTerm) {
-                query = query.textSearch('fts', filters.searchTerm, {
-                    type: 'websearch',
-                    config: 'english'
-                });
-            }
-
+            if (filters.searchTerm) query = query.textSearch('fts', filters.searchTerm, { type: 'websearch', config: 'english' });
             if (filters.status?.length) query = query.in('status', filters.status);
             if (filters.eventIds?.length) query = query.in('id', filters.eventIds);
 
             const { data, error } = await query;
-            if (error) throw error;
+            if (error) throw error; // If Supabase returns an error, we throw it immediately.
 
             const events: AppEvent[] = (data || []).map((item) => {
                 const typedItem = item as SupabaseEventWithDetails;
@@ -51,68 +36,55 @@ export class EventService {
                 return enrichEvent(baseEvent, { eventType });
             });
 
-            return { success: true, data: events };
+            return events; // On success, just return the data.
         } catch (error) {
             console.error('Error fetching events:', error);
             Sentry.captureException(error, {
                 extra: { function: 'getEvents', filters }
             });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch events' };
+            // Re-throw a new, more generic error to be caught by the UI layer (e.g., React Query).
+            throw new Error('Failed to fetch events.');
         }
     }
 
-    /**
-     * Get a single event by ID with full enrichment.
-     */
     static async getEventById(
         id: string,
-        supabaseClient: SupabaseClientType // Parameter is now required
-    ): Promise<ApiResponse<AppEvent>> {
+        supabaseClient: SupabaseClientType
+    ): Promise<AppEvent> {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`
-                    *,
-                    event_type:event_type_id (id, name, color, description),
-                    organizer:organizers (id, name)
-                `)
+                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
                 .eq('id', id)
                 .single();
 
             if (error) throw error;
-            if (!data) throw new Error('Event not found');
+            if (!data) throw new Error('Event not found'); // Specific error for not found case.
 
             const item = data as SupabaseEventWithDetails;
             const baseEvent = eventTransformer.toApp(item);
             const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
-            const enrichedEvent = enrichEvent(baseEvent, { eventType });
 
-            return { success: true, data: enrichedEvent };
+            return enrichEvent(baseEvent, { eventType });
         } catch (error) {
             console.error('Error fetching event by ID:', error);
             Sentry.captureException(error, {
                 extra: { function: 'getEventById', eventId: id }
             });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch event' };
+            throw new Error(`Failed to fetch event with ID: ${id}.`);
         }
     }
 
-    /**
-     * Search events with smart suggestions.
-     */
     static async searchEvents(
         term: string,
-        supabaseClient: SupabaseClientType, // Parameter is now required
+        supabaseClient: SupabaseClientType,
         limit = 10
-    ): Promise<ApiResponse<SearchSuggestion[]>> {
+    ): Promise<SearchSuggestion[]> {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
                 .select(`id, title, start_time, organizer:organizers (name)`)
-                .textSearch('fts', `'${term}'`, {
-                    type: 'websearch',
-                    config: 'english'
-                })
+                .textSearch('fts', `'${term}'`, { type: 'websearch', config: 'english' })
                 .order('start_time', { ascending: true })
                 .limit(limit);
 
@@ -120,7 +92,7 @@ export class EventService {
 
             type SearchResult = { id: string; title: string | null; start_time: string; organizer: { name: string } | null };
 
-            const suggestions: SearchSuggestion[] = (data as SearchResult[] || [])
+            return (data as SearchResult[] || [])
                 .filter(item => item.start_time !== null)
                 .map(item => ({
                     id: item.id,
@@ -129,35 +101,26 @@ export class EventService {
                     startTime: item.start_time,
                     type: 'event' as const
                 }));
-
-            return { success: true, data: suggestions };
         } catch (error) {
             console.error('Error searching events:', error);
             Sentry.captureException(error, {
                 extra: { function: 'searchEvents', searchTerm: term, limit }
             });
-            return { success: false, error: error instanceof Error ? error.message : 'Search failed' };
+            throw new Error('Search failed. Please try again.');
         }
     }
 
-    /**
-     * Get events by date range (optimized for calendar views).
-     */
     static async getEventsByDateRange(
         startDate: Date,
         endDate: Date,
-        supabaseClient: SupabaseClientType, // Parameter is now required
+        supabaseClient: SupabaseClientType,
         categoryIds?: string[],
         limit?: number
-    ): Promise<ApiResponse<AppEvent[]>> {
+    ): Promise<AppEvent[]> {
         try {
             let query = supabaseClient
                 .from('events')
-                .select(`
-                    *,
-                    event_type:event_type_id (id, name, color),
-                    organizer:organizers (id, name)
-                `)
+                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
                 .gte('start_time', startDate.toISOString())
                 .lte('start_time', endDate.toISOString())
                 .order('start_time', { ascending: true });
@@ -168,82 +131,65 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            const events: AppEvent[] = (data as SupabaseEventWithDetails[] || []).map((item) => {
+            return (data as SupabaseEventWithDetails[] || []).map((item) => {
                 const baseEvent = eventTransformer.toApp(item);
                 const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });
             });
-
-            return { success: true, data: events };
         } catch (error) {
             console.error('Error fetching events by date range:', error);
             Sentry.captureException(error, {
                 extra: { function: 'getEventsByDateRange', startDate, endDate, categoryIds, limit }
             });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch events' };
+            throw new Error('Failed to fetch events in the specified date range.');
         }
     }
 
-    /**
-     * Get upcoming events (next 30 days).
-     */
     static async getUpcomingEvents(
-        supabaseClient: SupabaseClientType, // Parameter is now required
+        supabaseClient: SupabaseClientType,
         limit = 50
-    ): Promise<ApiResponse<AppEvent[]>> {
+    ): Promise<AppEvent[]> {
         const now = new Date();
         const futureDate = new Date();
         futureDate.setDate(now.getDate() + 30);
         return this.getEventsByDateRange(now, futureDate, supabaseClient, undefined, limit);
     }
 
-    /**
-     * Get live events (happening now).
-     */
     static async getLiveEvents(
-        supabaseClient: SupabaseClientType // Parameter is now required
-    ): Promise<ApiResponse<AppEvent[]>> {
+        supabaseClient: SupabaseClientType
+    ): Promise<AppEvent[]> {
         try {
             const now = new Date().toISOString();
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`
-                    *,
-                    event_type:event_type_id (id, name, color),
-                    organizer:organizers (id, name)
-                `)
+                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
                 .lte('start_time', now)
                 .or(`end_time.gte.${now},end_time.is.null`)
                 .order('start_time', { ascending: true });
 
             if (error) throw error;
 
-            const events: AppEvent[] = (data as SupabaseEventWithDetails[] || []).map((item) => {
+            return (data as SupabaseEventWithDetails[] || []).map((item) => {
                 const baseEvent = eventTransformer.toApp(item);
                 const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });
             });
-
-            return { success: true, data: events };
         } catch (error) {
             console.error('Error fetching live events:', error);
             Sentry.captureException(error, {
                 extra: { function: 'getLiveEvents' }
             });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch live events' };
+            throw new Error('Failed to fetch live events.');
         }
     }
 
-    /**
-     * Fetches recommended events based on a user's top categories.
-     */
     static async getRecommendedEvents(
         categoryNames: string[],
         excludedEventIds: string[],
-        supabaseClient: SupabaseClientType // Parameter is now required
-    ): Promise<ApiResponse<AppEvent[]>> {
+        supabaseClient: SupabaseClientType
+    ): Promise<AppEvent[]> {
         try {
-            if (categoryNames.length === 0) return { success: true, data: [] };
+            if (categoryNames.length === 0) return [];
 
             const { data: categories, error: categoryError } = await supabaseClient
                 .from('event_type')
@@ -252,15 +198,11 @@ export class EventService {
             if (categoryError) throw categoryError;
 
             const categoryIds = categories.map(c => c.id);
-            if (categoryIds.length === 0) return { success: true, data: [] };
+            if (categoryIds.length === 0) return [];
 
             let query = supabaseClient
                 .from('events')
-                .select(`
-                    *,
-                    event_type:event_type_id (*),
-                    organizer:organizers (id, name)
-                `)
+                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
                 .in('event_type_id', categoryIds)
                 .gte('start_time', new Date().toISOString())
                 .limit(3);
@@ -272,19 +214,17 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            const events: AppEvent[] = (data as SupabaseEventWithDetails[] || []).map((item) => {
+            return (data as SupabaseEventWithDetails[] || []).map((item) => {
                 const baseEvent = eventTransformer.toApp(item);
                 const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });
             });
-
-            return { success: true, data: events };
         } catch (error) {
             console.error('Error fetching recommended events:', error);
             Sentry.captureException(error, {
                 extra: { function: 'getRecommendedEvents', categoryNames, excludedEventIds }
             });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch events' };
+            throw new Error('Failed to fetch recommended events.');
         }
     }
 }

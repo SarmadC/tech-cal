@@ -1,30 +1,26 @@
-// src/services/userEventService.ts
-
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 import type {
-    ApiResponse,
     EventStatus,
     AppTrackedEvent,
     SupabaseTrackedEventWithDetails,
-} from '@/types';
+} from '@/types'; // ApiResponse removed
 import { trackedEventTransformer } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
 
-// Define the fully-typed Supabase client type
 type SupabaseClientType = SupabaseClient<Database>;
 
 export class UserEventService {
     /**
-     * Track an event for a user or update its status if already tracked.
+     * Track an event or update its status. Throws on failure.
      */
     static async trackEvent(
         userId: string,
         eventId: string,
         status: EventStatus,
         notes: string | undefined,
-        supabaseClient: SupabaseClientType // Now a required parameter
-    ): Promise<ApiResponse<void>> {
+        supabaseClient: SupabaseClientType
+    ): Promise<void> { // Return type is now Promise<void>
         try {
             const { data: existing } = await supabaseClient
                 .from('user_events')
@@ -39,29 +35,27 @@ export class UserEventService {
                     .update({ status, notes, updated_at: new Date().toISOString() })
                     .eq('id', existing.id);
                 if (error) throw error;
-                return { success: true, message: `Event status updated to ${status}` };
             } else {
                 const { error } = await supabaseClient
                     .from('user_events')
                     .insert({ user_id: userId, event_id: eventId, status, notes });
                 if (error) throw error;
-                return { success: true, message: 'Event tracked successfully!' };
             }
         } catch (error) {
             console.error('Error tracking event:', error);
             Sentry.captureException(error, { extra: { function: 'trackEvent', userId, eventId, status } });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to track event' };
+            throw new Error('Failed to track event.');
         }
     }
 
     /**
-     * Untrack an event for a user.
+     * Untrack an event for a user. Throws on failure.
      */
     static async untrackEvent(
         userId: string,
         eventId: string,
-        supabaseClient: SupabaseClientType // Now a required parameter
-    ): Promise<ApiResponse<void>> {
+        supabaseClient: SupabaseClientType
+    ): Promise<void> { // Return type is now Promise<void>
         try {
             const { error } = await supabaseClient
                 .from('user_events')
@@ -69,54 +63,45 @@ export class UserEventService {
                 .eq('user_id', userId)
                 .eq('event_id', eventId);
             if (error) throw error;
-            return { success: true, message: 'Event untracked successfully!' };
         } catch (error) {
             console.error('Error untracking event:', error);
             Sentry.captureException(error, { extra: { function: 'untrackEvent', userId, eventId } });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to untrack event' };
+            throw new Error('Failed to untrack event.');
         }
     }
 
     /**
-     * Get a user's tracked events with full event data.
+     * Get a user's tracked events. Throws on failure.
      */
     static async getTrackedEvents(
         userId: string,
-        supabaseClient: SupabaseClientType // Now a required parameter
-    ): Promise<ApiResponse<AppTrackedEvent[]>> {
+        supabaseClient: SupabaseClientType
+    ): Promise<AppTrackedEvent[]> { // Return type is now Promise<AppTrackedEvent[]>
         try {
             const { data, error } = await supabaseClient
                 .from('user_events')
-                .select(`
-                    *, 
-                    events (
-                        *, 
-                        event_type:event_type_id (*),
-                        organizer:organizers (id, name)
-                    )
-                `)
+                .select(`*, events (*, event_type:event_type_id (*), organizer:organizers (id, name))`)
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            const trackedEvents = (data as SupabaseTrackedEventWithDetails[] || []).map(trackedEventTransformer.toApp);
-            return { success: true, data: trackedEvents };
+            return (data as SupabaseTrackedEventWithDetails[] || []).map(trackedEventTransformer.toApp);
         } catch (error) {
             console.error('Error fetching tracked events:', error);
             Sentry.captureException(error, { extra: { function: 'getTrackedEvents', userId } });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch tracked events' };
+            throw new Error('Failed to fetch tracked events.');
         }
     }
 
     /**
-     * Check if an event is tracked by a user and get its status.
+     * Check if an event is tracked by a user. Throws on failure.
      */
     static async isEventTracked(
         userId: string,
         eventId: string,
-        supabaseClient: SupabaseClientType // Now a required parameter
-    ): Promise<ApiResponse<{ isTracked: boolean; status?: EventStatus }>> {
+        supabaseClient: SupabaseClientType
+    ): Promise<{ isTracked: boolean; status?: EventStatus }> { // Return type updated
         try {
             const { data, error } = await supabaseClient
                 .from('user_events')
@@ -124,24 +109,27 @@ export class UserEventService {
                 .eq('user_id', userId)
                 .eq('event_id', eventId)
                 .single();
-            if (error && error.code !== 'PGRST116') throw error; // 'PGRST116' means no rows found, which is not an error here
-            return { success: true, data: { isTracked: !!data, status: data?.status as EventStatus | undefined } };
+
+            // 'PGRST116' means 0 rows found, which is a valid success case here (event is not tracked).
+            if (error && error.code !== 'PGRST116') throw error;
+
+            return { isTracked: !!data, status: data?.status as EventStatus | undefined };
         } catch (error) {
             console.error('Error checking event tracking status:', error);
             Sentry.captureException(error, { extra: { function: 'isEventTracked', userId, eventId } });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to check tracking status' };
+            throw new Error('Failed to check tracking status.');
         }
     }
 
     /**
-     * Bulk track multiple events for a user.
+     * Bulk track multiple events. Throws on failure.
      */
     static async bulkTrackEvents(
         userId: string,
         eventIds: string[],
         status: EventStatus,
-        supabaseClient: SupabaseClientType // Now a required parameter
-    ): Promise<ApiResponse<{ tracked: number; skipped: number }>> {
+        supabaseClient: SupabaseClientType
+    ): Promise<{ tracked: number; skipped: number }> { // Return type updated
         try {
             const { data: existing, error: fetchError } = await supabaseClient
                 .from('user_events')
@@ -155,18 +143,19 @@ export class UserEventService {
             const newEventIds = eventIds.filter(id => !existingEventIds.has(id));
 
             if (newEventIds.length === 0) {
-                return { success: true, data: { tracked: 0, skipped: eventIds.length }, message: 'All selected events are already tracked' };
+                // This is a success case, so we return directly.
+                return { tracked: 0, skipped: eventIds.length };
             }
 
             const insertData = newEventIds.map(eventId => ({ user_id: userId, event_id: eventId, status }));
             const { error: insertError } = await supabaseClient.from('user_events').insert(insertData);
             if (insertError) throw insertError;
 
-            return { success: true, data: { tracked: newEventIds.length, skipped: existingEventIds.size }, message: `Successfully tracked ${newEventIds.length} events!` };
+            return { tracked: newEventIds.length, skipped: existingEventIds.size };
         } catch (error) {
             console.error('Error bulk tracking events:', error);
             Sentry.captureException(error, { extra: { function: 'bulkTrackEvents', userId, eventIdsCount: eventIds.length, status } });
-            return { success: false, error: error instanceof Error ? error.message : 'Failed to track events' };
+            throw new Error('Failed to track events in bulk.');
         }
     }
 }
