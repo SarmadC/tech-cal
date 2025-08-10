@@ -107,10 +107,9 @@ export function useEventTrackingStatus(eventId: string | undefined) {
 
     return useQuery({
         queryKey: ['eventTrackingStatus', eventId, user?.id],
-        // --- CHANGED queryFn ---
-        queryFn: () => {
-            if (!user || !eventId) return { isTracked: false };
-            // Service now returns data directly or throws an error.
+        queryFn: async () => {
+            if (!user || !eventId) return { isTracked: false, status: undefined };
+
             return UserEventService.isEventTracked(user.id, eventId, supabase);
         },
         enabled: !!user && !!eventId,
