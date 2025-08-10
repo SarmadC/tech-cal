@@ -1,14 +1,12 @@
-// src/app/calendar/CalendarClientView.tsx
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
-// 1. IMPORT the client creator
 import { createClient } from '@/utils/supabase/client';
 
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
@@ -18,12 +16,13 @@ import CustomEventContent from '@/components/calendar/CustomEventContent';
 import Loading from '@/components/Loading';
 
 import { AppEvent, AppEventType, AppProfile, AppTrackedEvent } from '@/types';
-import { useTrackedEvents } from '@/hooks/useEventTracking';
-import { useDebounce } from '@/hooks/useDebounce';
+// We will also update useTrackedEvents to use the new service pattern
+import { UserEventService } from '@/services/userEventService';
+import { useAuth } from '@/contexts/AuthContext';
 import { useFilters } from '@/hooks/useFilters';
 import { EventService } from '@/services/eventServices';
 
-interface CalendarClientViewProps { 
+interface CalendarClientViewProps {
     initialEvents: AppEvent[];
     initialCategories: AppEventType[];
     profile: AppProfile | null;
@@ -40,47 +39,47 @@ export default function CalendarClientView({
     initialCategories,
     profile,
 }: CalendarClientViewProps) {
-    // 2. CREATE the Supabase client instance
     const [supabase] = useState(() => createClient());
+    const { user } = useAuth(); // Get user for tracked events query
 
-    // --- STATE MANAGEMENT ---
     const calendarRef = useRef<FullCalendar>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<CalendarViewType>('week');
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
 
-    // --- URL-BASED FILTER STATE ---
     const { activeFilters, setFilters } = useFilters();
-    const [localSearchTerm, _setLocalSearchTerm] = useState(activeFilters.searchTerm);
-    const debouncedSearchTerm = useDebounce(localSearchTerm, 400);
 
-    useEffect(() => {
-        setFilters({ searchTerm: debouncedSearchTerm });
-    }, [debouncedSearchTerm, setFilters]);
+    // REMOVED THE REDUNDANT LOCAL STATE. The `activeFilters.searchTerm` from the useFilters hook is the source of truth.
+    // The debouncing should happen where the user *input* is, not here.
+    // For now, we will directly use activeFilters.searchTerm in the query.
+    // If you add a search bar, you would use useState and useDebounce inside *that* component.
 
     // --- DATA FETCHING ---
-    const { data: trackedEvents, isLoading: isLoadingTracked } = useTrackedEvents();
-
-    const { data: events, isLoading: isLoadingEvents } = useQuery({
-        queryKey: ['events', activeFilters],
-        queryFn: async () => {
-            // 3. PASS the client instance to the service method
-            const response = await EventService.getEvents(activeFilters, supabase);
-            if (!response.success) throw new Error(response.error || 'Failed to fetch events');
-            return response.data || [];
+    const { data: trackedEvents, isLoading: isLoadingTracked } = useQuery({
+        queryKey: ['trackedEvents', user?.id],
+        queryFn: () => {
+            if (!user) return [];
+            // useTrackedEvents was a hook, now we call the service directly
+            return UserEventService.getTrackedEvents(user.id, supabase);
         },
+        enabled: !!user,
+    });
+
+    const { data: events, isLoading: isLoadingEvents, isError, error } = useQuery({
+        queryKey: ['events', activeFilters],
+        queryFn: () => EventService.getEvents(activeFilters, supabase),
         initialData: initialEvents,
         placeholderData: keepPreviousData,
     });
 
-    // --- DERIVED/MEMOIZED STATE (No changes needed) ---
+    // --- DERIVED/MEMOIZED STATE ---
     const trackedEventIds = useMemo(() => {
         return new Set((trackedEvents || []).map((e: AppTrackedEvent) => e.eventId));
     }, [trackedEvents]);
 
     const enrichedEvents = useMemo(() => {
         const categoryColorMap = new Map(initialCategories.map(c => [c.id, c.color]));
-        return (events || []).map(event => ({
+        return (events || []).map((event: AppEvent) => ({
             ...event,
             color: categoryColorMap.get(event.eventTypeId) || '#737373',
             isTracked: trackedEventIds.has(event.id)
@@ -90,8 +89,8 @@ export default function CalendarClientView({
     const nextUpcomingEvent = useMemo(() => {
         const now = new Date();
         return enrichedEvents
-            .filter(e => new Date(e.startTime) > now)
-            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
+            .filter((e: AppEvent) => new Date(e.startTime) > now)
+            .sort((a: AppEvent, b: AppEvent) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
     }, [enrichedEvents]);
 
     const fullCalendarEvents = useMemo(() => {
@@ -105,7 +104,7 @@ export default function CalendarClientView({
         }));
     }, [enrichedEvents]);
 
-    // --- CALLBACKS & HANDLERS (No changes needed) ---
+    // --- CALLBACKS & HANDLERS ---
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
         setSelectedEvent(clickInfo.event.extendedProps as AppEvent);
     }, []);
@@ -122,12 +121,14 @@ export default function CalendarClientView({
         setView(newView);
     };
 
-    // Use the most relevant loading state
     if (isLoadingTracked && !trackedEvents) {
         return <Loading />;
     }
 
-    // --- JSX (No changes needed) ---
+    if (isError) {
+        return <div>Error loading events: {error.message}</div>
+    }
+
     return (
         <div className="flex h-screen bg-[#171717] text-gray-300 font-sans">
             <CalendarSidebar
