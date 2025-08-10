@@ -1,181 +1,197 @@
-// src/app/blog/page.tsx
+// FINAL, POLISHED, AND TYPE-SAFE VERSION for: src/app/blog/page.tsx
+
 import Link from 'next/link';
 import BlogFilters from './BlogFilters';
+import { createClient } from '@/utils/supabase/server';
+import { sanitizeFtsQuery } from '@/lib/securityUtils';
+import SubscribeForm from './SubscribeForm';
 
-const blogPosts = [
-    {
-        id: 1,
-        title: 'The Future of AI: Insights from Google I/O 2024',
-        excerpt: 'Google unveiled groundbreaking AI advancements at I/O 2024, including updates to Gemini and new developer tools that promise to revolutionize how we build applications.',
-        author: 'Sarah Chen',
-        date: 'Jan 15, 2024',
-        readTime: '5 min read',
-        category: 'AI & ML',
-        image: '/blog/ai-future.jpg',
-        featured: true
-    },
-    {
-        id: 2,
-        title: 'React 19: Everything You Need to Know',
-        excerpt: 'React 19 brings significant performance improvements and new features. Here\'s a comprehensive guide to what\'s new and how to migrate your applications.',
-        author: 'Marcus Rodriguez',
-        date: 'Jan 12, 2024',
-        readTime: '8 min read',
-        category: 'Web Dev',
-        image: '/blog/react-19.jpg',
-        featured: false
-    },
-    {
-        id: 3,
-        title: 'Apple Vision Pro: A Developer\'s Perspective',
-        excerpt: 'After spending a month developing for Vision Pro, here are my insights on the platform\'s potential and challenges for developers.',
-        author: 'Alex Kim',
-        date: 'Jan 10, 2024',
-        readTime: '10 min read',
-        category: 'AR/VR',
-        image: '/blog/vision-pro.jpg',
-        featured: false
-    },
-    {
-        id: 4,
-        title: 'Cloud Computing Trends to Watch in 2024',
-        excerpt: 'From edge computing to sustainable cloud practices, explore the trends shaping the future of cloud infrastructure this year.',
-        author: 'Priya Patel',
-        date: 'Jan 8, 2024',
-        readTime: '6 min read',
-        category: 'Cloud',
-        image: '/blog/cloud-trends.jpg',
-        featured: false
-    },
-    {
-        id: 5,
-        title: 'Building Secure APIs: Best Practices for 2024',
-        excerpt: 'Security should be at the forefront of API development. Learn the latest best practices and tools to protect your APIs from common vulnerabilities.',
-        author: 'David Thompson',
-        date: 'Jan 5, 2024',
-        readTime: '7 min read',
-        category: 'Security',
-        image: '/blog/api-security.jpg',
-        featured: false
-    },
-    {
-        id: 6,
-        title: 'The Rise of Rust in Systems Programming',
-        excerpt: 'Why more companies are choosing Rust for systems programming and how it\'s changing the landscape of low-level development.',
-        author: 'Emily Zhang',
-        date: 'Jan 3, 2024',
-        readTime: '9 min read',
-        category: 'Programming',
-        image: '/blog/rust-systems.jpg',
-        featured: false
-    }
-];
+// Define a more specific type for your posts based on the query
+// This improves type safety and autocompletion in your JSX.
+type PostWithDetails = {
+    id: string;
+    title: string | null;
+    slug: string | null;
+    excerpt: string | null;
+    published_at: string | null;
+    read_time_minutes: number | null;
+    category: { name: string | null } | null;
+    author: { full_name: string | null } | null;
+};
 
-const categories = ['All', 'AI & ML', 'Web Dev', 'Mobile', 'Cloud', 'Security', 'AR/VR', 'Programming'];
+// Helper to format dates consistently
+function formatDate(dateString: string | null) {
+    if (!dateString) return 'Date not available';
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+}
 
-// ✅ FIX: Update the props type to indicate searchParams is a Promise
-export default async function BlogPage(props: {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+// Helper to safely get author initials
+function getAuthorInitials(author: { full_name: string | null } | null): string {
+    const name = author?.full_name;
+    if (!name) return '??';
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+}
+
+
+export default async function BlogPage({ searchParams }: {
+    searchParams: { [key: string]: string | string[] | undefined };
 }) {
-    // ✅ FIX: Await searchParams directly
-    const searchParams = await props.searchParams;
-
+    const supabase = await createClient();
     const searchTerm = (searchParams?.q as string) || '';
     const selectedCategory = (searchParams?.category as string) || 'All';
 
-    // The rest of your server-side logic is correct
-    const filteredPosts = blogPosts.filter(post => {
-        const matchesCategory = selectedCategory === 'All' || post.category === selectedCategory;
-        const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
+    // --- Dynamic Data Fetching Logic ---
 
-    const featuredPost = blogPosts.find(post => post.featured);
+    // 1. Fetch all available categories dynamically for the filter component
+    const { data: categoriesData, error: categoriesError } = await supabase
+        .from('post_categories')
+        .select('name')
+        .order('name');
 
-    // The entire JSX return block remains unchanged.
+    // ✅ FIX: Handle potential error when fetching categories
+    if (categoriesError) {
+        console.error("Error fetching categories:", categoriesError.message);
+        // Fallback to a default list if fetching fails
+    }
+    const categories = ['All', ...(categoriesData?.map(c => c.name) || [])];
+
+    // 2. Build the main query for posts with JOINs
+    const postQuery = supabase
+        .from('posts')
+        .select(`
+            id,
+            title,
+            slug,
+            excerpt,
+            published_at,
+            read_time_minutes,
+            category: post_categories ( name ),
+            author: profiles ( full_name )
+        `)
+        .eq('status', 'published')
+        .lte('published_at', new Date().toISOString())
+        .order('published_at', { ascending: false });
+
+    // 3. Apply category filtering on the JOINED table
+    if (selectedCategory !== 'All') {
+        postQuery.eq('category.name', selectedCategory);
+    }
+
+    // 4. Apply the SECURE search term filter
+    if (searchTerm) {
+        const sanitizedSearchTerm = sanitizeFtsQuery(searchTerm, ' | ');
+        if (sanitizedSearchTerm) {
+            postQuery.textSearch('fts', sanitizedSearchTerm, { type: 'plain', config: 'english' });
+        }
+    }
+
+    // Execute the query and cast the result to our specific type
+    const { data, error: postsError } = await postQuery;
+    const filteredPosts: PostWithDetails[] = data || [];
+
+    if (postsError) {
+        console.error("Error fetching posts:", postsError.message);
+    }
+
+    // Fetch the featured post
+    const { data: featuredPostData, error: featuredError } = await supabase
+        .from('posts')
+        .select(`*, category:post_categories(name), author:profiles(full_name)`)
+        .eq('featured', true)
+        .eq('status', 'published')
+        .limit(1)
+        .single();
+
+    // ✅ FIX: Type the featuredPost variable for safety
+    const featuredPost: PostWithDetails | null = featuredPostData;
+
+    if (featuredError && featuredError.code !== 'PGRST116') {
+        console.error("Error fetching featured post:", featuredError.message);
+    }
+
     return (
         <div className="min-h-screen bg-background-main pt-20">
             <section className="py-16 px-4 bg-background-secondary border-b border-border-color">
                 <div className="max-w-7xl mx-auto">
-                    <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">
-                        TechCalendar Blog
-                    </h1>
-                    <p className="text-xl text-foreground-secondary max-w-3xl">
-                        Stay informed with insights, tutorials, and news from the tech world.
-                        Learn from industry experts and discover what is shaping the future of technology.
-                    </p>
+                    <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">TechCalendar Blog</h1>
+                    <p className="text-xl text-foreground-secondary max-w-3xl">Stay informed with insights, tutorials, and news from the tech world.</p>
                 </div>
             </section>
+
             <section className="py-8 px-4">
                 <div className="max-w-7xl mx-auto">
                     <BlogFilters categories={categories} />
+
                     {featuredPost && selectedCategory === 'All' && !searchTerm && (
                         <div className="mb-12">
                             <div className="bg-gradient-to-r from-accent-primary to-purple-600 rounded-2xl p-8 text-white">
                                 <div className="flex items-center space-x-2 mb-4">
                                     <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold">Featured</span>
-                                    <span className="text-sm opacity-80">{featuredPost.category}</span>
+                                    <span className="text-sm opacity-80">{featuredPost.category?.name}</span>
                                 </div>
                                 <h2 className="text-3xl font-bold mb-4">{featuredPost.title}</h2>
                                 <p className="text-lg opacity-90 mb-6 line-clamp-2">{featuredPost.excerpt}</p>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-4 text-sm">
-                                        <span>{featuredPost.author}</span>
+                                        <span>{featuredPost.author?.full_name}</span>
                                         <span className="opacity-60">•</span>
-                                        <span>{featuredPost.date}</span>
+                                        <span>{formatDate(featuredPost.published_at)}</span>
                                         <span className="opacity-60">•</span>
-                                        <span>{featuredPost.readTime}</span>
+                                        <span>{featuredPost.read_time_minutes} min read</span>
                                     </div>
-                                    <Link
-                                        href={`/blog/${featuredPost.id}`}
-                                        className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-2 px-4 rounded-lg transition-all"
-                                    >Read More</Link>
+                                    <Link href={`/blog/${featuredPost.slug}`} className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-2 px-4 rounded-lg transition-all">
+                                        Read More
+                                    </Link>
                                 </div>
                             </div>
                         </div>
                     )}
+
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {filteredPosts.map((post) => (
+                        {filteredPosts.length > 0 ? filteredPosts.map((post) => (
                             <article key={post.id} className="bg-background-secondary rounded-xl border border-border-color overflow-hidden hover:border-accent-primary/30 transition-all group">
                                 <div className="aspect-video bg-gradient-to-br from-accent-primary/20 to-purple-600/20 relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-background-tertiary animate-pulse" />
+                                    {/* Placeholder for featured_image_url */}
+                                    <div className="absolute inset-0 bg-background-tertiary" />
                                 </div>
                                 <div className="p-6">
                                     <div className="flex items-center space-x-2 mb-3">
-                                        <span className="text-xs font-medium text-accent-primary">{post.category}</span>
+                                        <span className="text-xs font-medium text-accent-primary">{post.category?.name}</span>
                                         <span className="text-xs text-foreground-tertiary">•</span>
-                                        <span className="text-xs text-foreground-tertiary">{post.readTime}</span>
+                                        <span className="text-xs text-foreground-tertiary">{post.read_time_minutes} min read</span>
                                     </div>
                                     <h3 className="text-xl font-semibold text-foreground-primary mb-3 group-hover:text-accent-primary transition-colors">
-                                        <Link href={`/blog/${post.id}`}>{post.title}</Link>
+                                        <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                                     </h3>
                                     <p className="text-foreground-secondary mb-4 line-clamp-3">{post.excerpt}</p>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-3">
                                             <div className="w-8 h-8 bg-accent-primary/10 rounded-full flex items-center justify-center">
-                                                <span className="text-xs font-semibold text-accent-primary">{post.author.split(' ').map(n => n[0]).join('')}</span>
+                                                <span className="text-xs font-semibold text-accent-primary">
+                                                    {getAuthorInitials(post.author)}
+                                                </span>
                                             </div>
                                             <div className="text-sm">
-                                                <p className="font-medium text-foreground-primary">{post.author}</p>
-                                                <p className="text-xs text-foreground-tertiary">{post.date}</p>
+                                                <p className="font-medium text-foreground-primary">{post.author?.full_name}</p>
+                                                <p className="text-xs text-foreground-tertiary">{formatDate(post.published_at)}</p>
                                             </div>
                                         </div>
-                                        <Link href={`/blog/${post.id}`} className="text-accent-primary hover:text-accent-primary-hover transition-colors">
+                                        <Link href={`/blog/${post.slug}`} className="text-accent-primary hover:text-accent-primary-hover transition-colors">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                                         </Link>
                                     </div>
                                 </div>
                             </article>
-                        ))}
+                        )) : (
+                            <p className="col-span-full text-center text-foreground-secondary">No posts found matching your criteria.</p>
+                        )}
                     </div>
                     <div className="mt-16 bg-gradient-to-r from-accent-primary to-purple-600 rounded-2xl p-8 text-center text-white">
-                        <h2 className="text-2xl font-bold mb-4">Stay Updated with Tech News</h2>
-                        <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">Get weekly insights on the latest tech events, tutorials, and industry news delivered to your inbox.</p>
-                        <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                            <input type="email" placeholder="Enter your email" className="flex-1 px-4 py-3 rounded-lg text-foreground-primary bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white" />
-                            <button className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all">Subscribe</button>
-                        </div>
+                        <SubscribeForm />
                     </div>
                 </div>
             </section>

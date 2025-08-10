@@ -1,0 +1,64 @@
+// src/app/blog/SubscribeForm.tsx
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { useFormState, useFormStatus } from 'react-dom';
+import { toast } from 'sonner';
+import { subscribeToAction, type SubscribeFormState } from './actions';
+import { Loader2 } from 'lucide-react';
+
+// A separate button component to automatically handle the loading state
+function SubmitButton() {
+    const { pending } = useFormStatus();
+    return (
+        <button
+            type="submit"
+            disabled={pending}
+            className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {pending ? 'Subscribing...' : 'Subscribe'}
+        </button>
+    );
+}
+
+export default function SubscribeForm() {
+    const formRef = useRef<HTMLFormElement>(null);
+
+    const initialState: SubscribeFormState = {
+        message: '',
+        status: 'idle',
+    };
+
+    // The useFormState hook manages the form's lifecycle
+    const [state, formAction] = useFormState(subscribeToAction, initialState);
+
+    // Use useEffect to show toast notifications based on the form's state
+    useEffect(() => {
+        if (state.status === 'success') {
+            toast.success(state.message);
+            formRef.current?.reset(); // Clear the form on success
+        } else if (state.status === 'error') {
+            toast.error(state.message);
+        }
+    }, [state]);
+
+    return (
+        <form ref={formRef} action={formAction} className="mt-8">
+            <h2 className="text-2xl font-bold mb-4">Stay Updated with Tech News</h2>
+            <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
+                Get weekly insights on the latest tech events, tutorials, and industry news delivered to your inbox.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+                <input
+                    type="email"
+                    name="email" // The name attribute is crucial for FormData
+                    placeholder="Enter your email"
+                    required
+                    className="flex-1 px-4 py-3 rounded-lg text-foreground-primary bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+                />
+                <SubmitButton />
+            </div>
+        </form>
+    );
+}

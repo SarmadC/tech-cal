@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       audit_log: {
@@ -246,11 +271,11 @@ export type Database = {
           end_time: string | null
           event_image_url: string | null
           event_type_id: string | null
+          fts: unknown | null
           id: string
           language: string | null
           livestream_url: string | null
           location: string | null
-          organizer: string | null
           organizer_id: string | null
           prerequisites: string | null
           price_range: string | null
@@ -262,11 +287,11 @@ export type Database = {
           social_media_hashtag: string | null
           source_url: string | null
           speaker_lineup: Json | null
-          start_time: string | null
+          start_time: string
           status: string | null
           target_audience: string | null
           timezone: string | null
-          title: string | null
+          title: string
           updated_at: string | null
           venue_id: string | null
           virtual_platform: string | null
@@ -283,11 +308,11 @@ export type Database = {
           end_time?: string | null
           event_image_url?: string | null
           event_type_id?: string | null
+          fts?: unknown | null
           id?: string
           language?: string | null
           livestream_url?: string | null
           location?: string | null
-          organizer?: string | null
           organizer_id?: string | null
           prerequisites?: string | null
           price_range?: string | null
@@ -299,11 +324,11 @@ export type Database = {
           social_media_hashtag?: string | null
           source_url?: string | null
           speaker_lineup?: Json | null
-          start_time?: string | null
+          start_time: string
           status?: string | null
           target_audience?: string | null
           timezone?: string | null
-          title?: string | null
+          title: string
           updated_at?: string | null
           venue_id?: string | null
           virtual_platform?: string | null
@@ -320,11 +345,11 @@ export type Database = {
           end_time?: string | null
           event_image_url?: string | null
           event_type_id?: string | null
+          fts?: unknown | null
           id?: string
           language?: string | null
           livestream_url?: string | null
           location?: string | null
-          organizer?: string | null
           organizer_id?: string | null
           prerequisites?: string | null
           price_range?: string | null
@@ -336,11 +361,11 @@ export type Database = {
           social_media_hashtag?: string | null
           source_url?: string | null
           speaker_lineup?: Json | null
-          start_time?: string | null
+          start_time?: string
           status?: string | null
           target_audience?: string | null
           timezone?: string | null
-          title?: string | null
+          title?: string
           updated_at?: string | null
           venue_id?: string | null
           virtual_platform?: string | null
@@ -406,6 +431,106 @@ export type Database = {
         }
         Relationships: []
       }
+      post_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          author_id: string | null
+          category_id: string | null
+          content: string | null
+          created_at: string
+          excerpt: string | null
+          featured: boolean
+          featured_image_url: string | null
+          fts: unknown | null
+          id: string
+          published_at: string | null
+          read_time_minutes: number | null
+          slug: string
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          category_id?: string | null
+          content?: string | null
+          created_at?: string
+          excerpt?: string | null
+          featured?: boolean
+          featured_image_url?: string | null
+          fts?: unknown | null
+          id?: string
+          published_at?: string | null
+          read_time_minutes?: number | null
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          category_id?: string | null
+          content?: string | null
+          created_at?: string
+          excerpt?: string | null
+          featured?: boolean
+          featured_image_url?: string | null
+          fts?: unknown | null
+          id?: string
+          published_at?: string | null
+          read_time_minutes?: number | null
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "posts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "post_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -442,6 +567,24 @@ export type Database = {
           preferences?: Json | null
           timezone?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      subscribers: {
+        Row: {
+          email: string
+          id: string
+          subscribed_at: string
+        }
+        Insert: {
+          email: string
+          id?: string
+          subscribed_at?: string
+        }
+        Update: {
+          email?: string
+          id?: string
+          subscribed_at?: string
         }
         Relationships: []
       }
@@ -615,7 +758,6 @@ export type Database = {
           language: string | null
           livestream_url: string | null
           location: string | null
-          organizer: string | null
           organizer_id: string | null
           organizer_name: string | null
           organizer_website: string | null
@@ -847,6 +989,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

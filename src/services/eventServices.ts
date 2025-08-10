@@ -6,8 +6,27 @@ import * as Sentry from "@sentry/nextjs";
 
 type SupabaseClientType = SupabaseClient<Database>;
 
-// Note: The Promise return type is simplified. We no longer need ApiResponse.
-// The function will now either successfully return `AppEvent[]` or throw an error.
+/**
+ * Helper function to sanitize a string for a full-text search query.
+ * This prevents FTS query injection by removing special operators.
+ * @param query The raw search string from the user.
+ * @param joiner The operator to join terms with ('&' for AND, '|' for OR).
+ * @returns A sanitized query string safe for Supabase FTS.
+ */
+function sanitizeFtsQuery(query: string, joiner: ' & ' | ' | ' = ' & '): string {
+    // 1. Remove special FTS operators: & | ! : ' ( ) < >
+    const sanitized = query.replace(/[&|!:'()<>]+/g, '');
+
+    // 2. Split into words, filter out empty strings, and join with the specified operator.
+    const terms = sanitized.trim().split(/\s+/).filter(Boolean);
+
+    if (terms.length === 0) {
+        return '';
+    }
+
+    return terms.join(joiner);
+}
+
 export class EventService {
     static async getEvents(
         filters: EventFilters = {},
@@ -22,12 +41,20 @@ export class EventService {
             if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
-            if (filters.searchTerm) query = query.textSearch('fts', filters.searchTerm, { type: 'websearch', config: 'english' });
+
+            // ✅ FIX: Sanitize the search term before using it in the query.
+            if (filters.searchTerm) {
+                const sanitizedSearchTerm = sanitizeFtsQuery(filters.searchTerm, ' & '); // Use AND logic
+                if (sanitizedSearchTerm) {
+                    query = query.textSearch('fts', sanitizedSearchTerm, { type: 'plain', config: 'english' });
+                }
+            }
+
             if (filters.status?.length) query = query.in('status', filters.status);
             if (filters.eventIds?.length) query = query.in('id', filters.eventIds);
 
             const { data, error } = await query;
-            if (error) throw error; // If Supabase returns an error, we throw it immediately.
+            if (error) throw error;
 
             const events: AppEvent[] = (data || []).map((item) => {
                 const typedItem = item as SupabaseEventWithDetails;
@@ -36,13 +63,12 @@ export class EventService {
                 return enrichEvent(baseEvent, { eventType });
             });
 
-            return events; // On success, just return the data.
+            return events;
         } catch (error) {
             console.error('Error fetching events:', error);
             Sentry.captureException(error, {
                 extra: { function: 'getEvents', filters }
             });
-            // Re-throw a new, more generic error to be caught by the UI layer (e.g., React Query).
             throw new Error('Failed to fetch events.');
         }
     }
@@ -59,7 +85,7 @@ export class EventService {
                 .single();
 
             if (error) throw error;
-            if (!data) throw new Error('Event not found'); // Specific error for not found case.
+            if (!data) throw new Error('Event not found');
 
             const item = data as SupabaseEventWithDetails;
             const baseEvent = eventTransformer.toApp(item);
@@ -81,10 +107,19 @@ export class EventService {
         limit = 10
     ): Promise<SearchSuggestion[]> {
         try {
+            // ✅ FIX: Sanitize the search term for the suggestions search as well.
+            const sanitizedTerm = sanitizeFtsQuery(term, ' | '); // Use OR logic for better suggestions
+
+            // If the sanitized term is empty (e.g., user only typed '!'), return no results.
+            if (!sanitizedTerm) {
+                return [];
+            }
+
             const { data, error } = await supabaseClient
                 .from('events')
                 .select(`id, title, start_time, organizer:organizers (name)`)
-                .textSearch('fts', `'${term}'`, { type: 'websearch', config: 'english' })
+                // ⚠️ ATTENTION: Note the change from 'websearch' to 'plain'
+                .textSearch('fts', sanitizedTerm, { type: 'plain', config: 'english' })
                 .order('start_time', { ascending: true })
                 .limit(limit);
 
@@ -110,6 +145,7 @@ export class EventService {
         }
     }
 
+    // ... (the rest of your file remains the same)
     static async getEventsByDateRange(
         startDate: Date,
         endDate: Date,
