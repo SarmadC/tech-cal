@@ -1,4 +1,3 @@
-// src/components/common/BulkActions.tsx
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -8,9 +7,8 @@ import { EventService } from '@/services/eventServices';
 import { LoadingButton } from '@/components/Loading';
 import { toast } from 'sonner';
 
-// 1. IMPORT the client creator
 import { createClient } from '@/utils/supabase/client';
-import { EventStatus } from '@/types'; // Import EventStatus for handleBulkTrack
+import { EventStatus } from '@/types';
 
 interface BulkActionsProps {
     selectedEvents: Set<string>;
@@ -27,7 +25,6 @@ export default function BulkActions({
     onBulkComplete,
     className = ''
 }: BulkActionsProps) {
-    // 2. CREATE the Supabase client instance
     const [supabase] = useState(() => createClient());
     const { user } = useAuth();
     const selectedEventArray = Array.from(selectedEvents);
@@ -39,11 +36,11 @@ export default function BulkActions({
     const handleBulkTrack = () => {
         if (!user || selectedCount === 0) return;
         bulkTrackEvents(
-            // The status should be explicitly provided
             { eventIds: selectedEventArray, status: 'bookmarked' as EventStatus },
             {
                 onSuccess: (response) => {
-                    if (response.data?.tracked && response.data.tracked > 0) {
+                    // CHANGED: The `response` is now the data object directly.
+                    if (response?.tracked && response.tracked > 0) {
                         onBulkComplete();
                     }
                 }
@@ -59,14 +56,14 @@ export default function BulkActions({
         if (selectedCount === 0) return;
         setLocalLoading('export');
         try {
-            // 3. PASS the client instance to the service method
-            const response = await EventService.getEvents({ eventIds: selectedEventArray }, supabase);
-            if (!response.success || !response.data || response.data.length === 0) {
-                throw new Error(response.error || 'Could not fetch event details for export.');
+            // CHANGED: The service now returns the event array directly or throws an error.
+            const eventsToExport = await EventService.getEvents({ eventIds: selectedEventArray }, supabase);
+
+            if (!eventsToExport || eventsToExport.length === 0) {
+                throw new Error('Could not fetch event details for export.');
             }
 
-            // ... The rest of the function remains exactly the same ...
-            const icsEvents = response.data.map(event => {
+            const icsEvents = eventsToExport.map(event => {
                 const startTime = new Date(event.startTime).toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
                 const endTime = event.endTime
                     ? new Date(event.endTime).toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z'
@@ -92,7 +89,7 @@ export default function BulkActions({
             link.click();
             document.body.removeChild(link);
 
-            toast.success(`Exported ${response.data.length} events to .ics file.`);
+            toast.success(`Exported ${eventsToExport.length} events to .ics file.`);
 
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to export events.');
@@ -149,20 +146,18 @@ export default function BulkActions({
     );
 }
 
-// --- Hook for managing bulk selection state ---
+// Hooks can remain unchanged
 export function useBulkSelection() {
     const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
 
     const toggleEvent = useCallback((eventId: string) => {
         setSelectedEvents(prev => {
             const newSet = new Set(prev);
-
             if (newSet.has(eventId)) {
                 newSet.delete(eventId);
             } else {
                 newSet.add(eventId);
             }
-
             return newSet;
         });
     }, []);
@@ -189,7 +184,6 @@ export function useBulkSelection() {
     };
 }
 
-// --- Hook for keyboard shortcuts ---
 export function useBulkKeyboardShortcuts(
     selectedEvents: Set<string>,
     visibleEventIds: string[],
