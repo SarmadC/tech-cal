@@ -1,5 +1,3 @@
-// src/app/events/[id]/page.tsx
-
 import { createClient } from '@/utils/supabase/server';
 import { EventService } from '@/services/eventServices';
 import { notFound } from 'next/navigation';
@@ -10,18 +8,16 @@ import type { AppEvent } from '@/types';
 import EventTracking from '@/components/calendar/EventTracking';
 import EventActions from '@/components/calendar/EventActions';
 
-// --- CHANGED SECTION START ---
-// Define a type for our page's props for better readability and safety.
 type EventDetailPageProps = {
-    params: { id: string };
-    searchParams: { [key: string]: string | string[] | undefined };
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-// Use the defined type for the component's props.
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
-// --- CHANGED SECTION END ---
     const supabase = await createClient();
-    const { id: eventId } = params;
+
+    // Await the params Promise
+    const { id: eventId } = await params;
 
     let event: AppEvent;
     try {
@@ -30,7 +26,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         console.error(`Failed to fetch event ${eventId}:`, error);
         notFound();
     }
-    
+
     const formattedStartTime = new Date(event.startTime).toLocaleString('en-US', {
         dateStyle: 'full',
         timeStyle: 'short',
