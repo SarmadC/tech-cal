@@ -35,13 +35,14 @@ function getAuthorInitials(author: { full_name: string | null } | null): string 
     if (!name) return '??';
     return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
 }
-
 type BlogPageProps = {
-    params: { slug?: string };
+    params: { slug?: string }; // `params` is an object, not a promise
     searchParams: { [key: string]: string | string[] | undefined };
 };
 
+// ✅ 2. THE FIX: Accept the entire `props` object with the correct type.
 export default async function BlogPage(props: BlogPageProps) {
+    // ✅ 3. DESTRUCTURE the props you need inside the function body.
     const { searchParams } = props;
 
     const supabase = await createClient();
