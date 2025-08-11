@@ -1,4 +1,4 @@
-// FINAL, POLISHED, AND TYPE-SAFE VERSION for: src/app/blog/page.tsx
+// src/app/blog/page.tsx
 
 import Link from 'next/link';
 import BlogFilters from './BlogFilters';
@@ -37,9 +37,16 @@ function getAuthorInitials(author: { full_name: string | null } | null): string 
 }
 
 
-export default async function BlogPage({ searchParams }: {
+// in src/app/blog/page.tsx
+
+type BlogPageProps = {
+    params: Record<string, never>;
     searchParams: { [key: string]: string | string[] | undefined };
-}) {
+};
+
+// ✅ USE THE STANDARD TYPE in the function signature
+export default async function BlogPage({ searchParams }: BlogPageProps) {
+
     const supabase = await createClient();
     const searchTerm = (searchParams?.q as string) || '';
     const selectedCategory = (searchParams?.category as string) || 'All';
