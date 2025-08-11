@@ -1,12 +1,9 @@
-// src/app/blog/page.tsx
-
 import Link from 'next/link';
 import BlogFilters from './BlogFilters';
 import { createClient } from '@/utils/supabase/server';
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import SubscribeForm from './SubscribeForm';
 
-// This specific type for the post data is still a great practice.
 type PostWithDetails = {
     id: string;
     title: string | null;
@@ -18,7 +15,6 @@ type PostWithDetails = {
     author: { full_name: string | null } | null;
 };
 
-// Helper functions are also correct.
 function formatDate(dateString: string | null) {
     if (!dateString) return 'Date not available';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -34,21 +30,15 @@ function getAuthorInitials(author: { full_name: string | null } | null): string 
     return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
 }
 
-// ✅ THE FIX: Apply the exact signature pattern from the Next.js documentation.
-// We are destructuring the props and providing the type inline.
-export default async function BlogPage({
-    params: _params, // We receive `params` even if we don't use it.
-    searchParams,
-}: {
-    params: { slug?: string }; // Use the correct type for params.
-    searchParams: { [key: string]: string | string[] | undefined }; // And for searchParams.
-}) {
-    // The body of your component was already correct. No changes are needed here.
+type BlogPageProps = {
+    searchParams: { [key: string]: string | string[] | undefined };
+};
+
+export default async function BlogPage({ searchParams }: BlogPageProps) {
     const supabase = await createClient();
     const searchTerm = (searchParams?.q as string) || '';
     const selectedCategory = (searchParams?.category as string) || 'All';
 
-    // --- Dynamic Data Fetching Logic ---
     const { data: categoriesData, error: categoriesError } = await supabase
         .from('post_categories')
         .select('name')
@@ -57,12 +47,17 @@ export default async function BlogPage({
     if (categoriesError) {
         console.error("Error fetching categories:", categoriesError.message);
     }
-    const categories = ['All', ...(categoriesData?.map(c => c.name as string) || [])];
+    const categories = ['All', ...(categoriesData?.map(c => c.name) || [])];
 
     const postQuery = supabase
         .from('posts')
         .select(`
-            id, title, slug, excerpt, published_at, read_time_minutes,
+            id,
+            title,
+            slug,
+            excerpt,
+            published_at,
+            read_time_minutes,
             category: post_categories ( name ),
             author: profiles ( full_name )
         `)
@@ -144,7 +139,6 @@ export default async function BlogPage({
                         {filteredPosts.length > 0 ? filteredPosts.map((post) => (
                             <article key={post.id} className="bg-background-secondary rounded-xl border border-border-color overflow-hidden hover:border-accent-primary/30 transition-all group">
                                 <div className="aspect-video bg-gradient-to-br from-accent-primary/20 to-purple-600/20 relative overflow-hidden">
-                                    {/* Placeholder for featured_image_url */}
                                     <div className="absolute inset-0 bg-background-tertiary" />
                                 </div>
                                 <div className="p-6">
