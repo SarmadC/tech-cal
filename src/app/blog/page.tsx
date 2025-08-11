@@ -39,18 +39,17 @@ function getAuthorInitials(author: { full_name: string | null } | null): string 
 
 // in src/app/blog/page.tsx
 
-type BlogPageProps = {
-    params: Record<string, never>;
+export default async function BlogPage({
+    params: _params,
+    searchParams,
+}: {
+    params: { slug?: string };
+    // ✅ FIX: Corrected the index signature syntax. Removed "in".
     searchParams: { [key: string]: string | string[] | undefined };
-};
-
-// ✅ USE THE STANDARD TYPE in the function signature
-export default async function BlogPage({ searchParams }: BlogPageProps) {
-
+}) {
     const supabase = await createClient();
     const searchTerm = (searchParams?.q as string) || '';
     const selectedCategory = (searchParams?.category as string) || 'All';
-
     // --- Dynamic Data Fetching Logic ---
 
     // 1. Fetch all available categories dynamically for the filter component
