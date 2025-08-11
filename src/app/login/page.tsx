@@ -1,91 +1,81 @@
-// src/app/login/page.tsx
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMutation } from '@tanstack/react-query';
-import { AuthService } from '@/services/authService';
-import { LoginForm as LoginFormType, OAuthProvider } from '@/types';
-import ProtectedRoute from '@/components/layout/ProtectedRoute';
-import { LoginForm, AuthProviders } from '@/components/auth';
-import { useAuth } from '@/contexts/AuthContext';
+import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 
-import { createClient } from '@/utils/supabase/client';
-// 1. IMPORT THE NEW SERVER ACTION
-import { loginAction } from '@/app/auth/actions';
+import { loginAction, oauthSignInAction } from '@/app/auth/actions';
+import { useAuth } from '@/contexts/AuthContext';
+
+import ProtectedRoute from '@/components/layout/ProtectedRoute';
+import {AuthProviders } from '@/components/auth';
+import type { OAuthProvider } from '@/types';
+
+// The initial state for our form
+const initialState = {
+    message: '',
+    errors: {},
+    success: false,
+};
+
+// A small, dedicated component to show the loading state of the form.
+// This is the modern replacement for the `isPending` prop.
+function LoginButton() {
+    const { pending } = useFormStatus();
+    return (
+        <button
+            type="submit"
+            disabled={pending}
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-accent-primary hover:bg-accent-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-primary disabled:bg-opacity-50"
+        >
+            {pending ? 'Signing In...' : 'Sign In'}
+        </button>
+    );
+}
+
 
 export default function LoginPage() {
-    const [supabase] = useState(() => createClient());
-    const [urlError, setUrlError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false); // Local loading state for the form
-    const [formError, setFormError] = useState<string | null>(null); // Local error state for the form
-    const searchParams = useSearchParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user, initialized } = useAuth();
 
-    // This useEffect for handling URL errors is still useful
+    // 1. Setup useFormState to manage the entire form lifecycle
+    const [state, formAction] = useFormState(loginAction, initialState);
+
+    // 2. Handle URL-based messages (from OAuth redirects, etc.)
     useEffect(() => {
-        const errorParam = searchParams.get('error');
-        if (errorParam) {
-            switch (errorParam) {
-                case 'auth_callback_failed':
-                    setUrlError('Authentication failed. Please try again.');
-                    break;
-                case 'access_denied':
-                    setUrlError('Access was denied. Please try again.');
-                    break;
-                default:
-                    setUrlError('An unknown error occurred during authentication.');
-            }
+        const message = searchParams.get('message');
+        if (message) {
+            toast.error(message);
         }
     }, [searchParams]);
 
-    // This useEffect for redirecting after the user object is available is still the best approach
+    // 3. Handle form submission results from the Server Action
+    useEffect(() => {
+        if (state.success === false && (state.errors?._form || state.message)) {
+            // Display form-level errors from the server action state
+            toast.error(state.errors?._form?.[0] || state.message);
+        }
+        // No need for a success toast here; the redirect is the success indicator.
+    }, [state]);
+
+    // 4. Redirect the user if they are already logged in
     useEffect(() => {
         if (initialized && user) {
             const redirectTo = searchParams.get('redirect') || '/dashboard';
-            // router.refresh() is important to ensure server components get the new session
-            router.refresh();
+            router.refresh(); // Ensure server components get the new session
             router.replace(redirectTo);
         }
     }, [user, initialized, router, searchParams]);
 
 
-    // 3. CREATE a new handler function that calls the Server Action.
-    const handleSignIn = async (credentials: LoginFormType) => {
-        setIsSubmitting(true);
-        setFormError(null);
-
-        const result = await loginAction(credentials);
-
-        if (result.success) {
-            toast.success('Sign in successful!');
-            // The useEffect above will handle the redirect once the user object is updated.
-        } else {
-            setFormError(result.error || 'Sign in failed. Please check your credentials.');
-            toast.error(result.error || 'Sign in failed.');
-        }
-
-        setIsSubmitting(false);
+    // Handler for OAuth providers. This remains a client-side action that calls the server action.
+    const handleOAuthSignIn = async (provider: OAuthProvider) => {
+        // We don't need useMutation for this, just call the server action directly.
+        await oauthSignInAction(provider);
     };
-
-    const { mutate: signInWithOAuth, isPending: isSigningInWithOAuth, error: oAuthError } = useMutation({
-        mutationFn: (provider: OAuthProvider) => AuthService.signInWithOAuth(provider, supabase),
-        onSuccess: (result) => {
-            if (!result.success) {
-                throw new Error(result.error || 'OAuth sign in failed');
-            }
-            toast.success('Redirecting...');
-        },
-        onError: (error) => {
-            toast.error(error.message || 'OAuth sign in failed');
-        }
-    });
-
-    // The combined error now uses the local formError state
-    const combinedError = urlError || formError || oAuthError?.message;
 
     return (
         <ProtectedRoute allowUnauthenticated>
@@ -112,8 +102,8 @@ export default function LoginPage() {
 
                     <div className="bg-background-secondary rounded-2xl p-8 border border-border-color">
                         <AuthProviders
-                            onSelectProvider={signInWithOAuth}
-                            isPending={isSigningInWithOAuth}
+                            onSelectProvider={handleOAuthSignIn}
+                            isPending={false} // Loading is handled by the browser redirect
                         />
 
                         <div className="relative my-6">
@@ -128,12 +118,37 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        {/* 4. PASS the new handler and state to the LoginForm component */}
-                        <LoginForm
-                            onSubmit={handleSignIn}
-                            isPending={isSubmitting}
-                            error={combinedError}
-                        />
+                        {/* 5. The form now directly uses the server action */}
+                        {/* The LoginForm component will need to be adapted slightly */}
+                        <form action={formAction} className="space-y-6">
+                            <div className="space-y-2">
+                                <label htmlFor="email" className="text-sm font-medium text-foreground-secondary">Email address</label>
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    required
+                                    className="block w-full px-3 py-2 border border-border-color rounded-lg shadow-sm placeholder-foreground-muted focus:outline-none focus:ring-accent-primary focus:border-accent-primary sm:text-sm"
+                                />
+                                {state.errors?.email && <p className="text-sm text-red-500 mt-1">{state.errors.email[0]}</p>}
+                            </div>
+
+                             <div className="space-y-2">
+                                <label htmlFor="password" className="text-sm font-medium text-foreground-secondary">Password</label>
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    required
+                                    className="block w-full px-3 py-2 border border-border-color rounded-lg shadow-sm placeholder-foreground-muted focus:outline-none focus:ring-accent-primary focus:border-accent-primary sm:text-sm"
+                                />
+                                {state.errors?.password && <p className="text-sm text-red-500 mt-1">{state.errors.password[0]}</p>}
+                            </div>
+
+                            <LoginButton />
+                        </form>
                     </div>
                 </div>
             </div>

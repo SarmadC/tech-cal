@@ -39,12 +39,25 @@ function getAuthorInitials(author: { full_name: string | null } | null): string 
 }
 
 type BlogPageProps = {
+<<<<<<< HEAD
     params: Promise<Record<string, string>>;
     searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function BlogPage({ searchParams }: BlogPageProps) {
     const sp = await searchParams;
+=======
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+export default async function BlogPage({ searchParams }: BlogPageProps) {
+    // Await the searchParams Promise
+    const resolvedSearchParams = await searchParams;
+    
+    const supabase = await createClient();
+    const searchTerm = (resolvedSearchParams?.q as string) || '';
+    const selectedCategory = (resolvedSearchParams?.category as string) || 'All';
+>>>>>>> 63a8f681937378e7fd17700c06d534bb1443dbea
 
     const supabase = await createClient();
     const searchTerm = (sp?.q as string) || '';

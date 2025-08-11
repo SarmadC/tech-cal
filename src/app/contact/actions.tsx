@@ -1,19 +1,11 @@
-// src/app/contact/actions.ts
 'use server'
 
-import { z } from 'zod';
 import { Resend } from 'resend';
 import { ContactFormEmail } from '@/components/emails/ContactFormEmail';
+import { ContactFormSchema } from '@/lib/schemas'; // Import from central location
 
+// Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-const ContactSchema = z.object({
-    name: z.string().min(2, { message: "Please enter your name." }),
-    email: z.string().email({ message: "Please enter a valid email address." }),
-    company: z.string().optional(),
-    subject: z.string().min(1, { message: "Please select a subject." }),
-    message: z.string().min(10, { message: "Message must be at least 10 characters." }),
-});
 
 export type ContactFormState = {
     message: string;
@@ -32,7 +24,18 @@ export async function submitContactFormAction(
     prevState: ContactFormState,
     formData: FormData
 ): Promise<ContactFormState> {
-    const validatedFields = ContactSchema.safeParse({
+    // Add a check for the Resend API Key to prevent runtime errors
+    if (!process.env.RESEND_API_KEY) {
+        console.error("RESEND_API_KEY is not configured.");
+        return {
+            success: false,
+            message: "Server Configuration Error.",
+            errors: { _form: ["The contact form is currently unavailable."] }
+        }
+    }
+
+    // Validate form data
+    const validatedFields = ContactFormSchema.safeParse({
         name: formData.get('name'),
         email: formData.get('email'),
         company: formData.get('company'),
@@ -43,20 +46,20 @@ export async function submitContactFormAction(
     if (!validatedFields.success) {
         return {
             success: false,
-            message: "Validation failed.",
+            message: "Validation failed. Please check the fields for errors.",
             errors: validatedFields.error.flatten().fieldErrors,
         };
     }
 
+    // Send the email within a try...catch block
     try {
         const { name, email, company, subject, message } = validatedFields.data;
-        const toEmail = 'sarmad@kure-cal.com';
-
+        
         await resend.emails.send({
-            from: 'Kure-Cal Contact Form <noreply@kure-cal.com>',
-            to: [toEmail],
+            from: 'Kure-Cal Contact Form <noreply@kure-cal.com>', // Your correct setting
+            to: ['sarmad@kure-cal.com'],
             subject: `New Contact Form Message: ${subject}`,
-            replyTo: email,
+            replyTo: email, // Your correct setting
             react: <ContactFormEmail name={name} email={email} company={company} subject={subject} message={message} />,
         });
 
@@ -69,7 +72,7 @@ export async function submitContactFormAction(
         return {
             success: false,
             message: "Server Error.",
-            errors: { _form: ["Failed to send message. Please try again later."] },
+            errors: { _form: ["Failed to send your message. Please try again later."] },
         };
     }
 }
