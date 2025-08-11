@@ -13,15 +13,13 @@ import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import {AuthProviders } from '@/components/auth';
 import type { OAuthProvider } from '@/types';
 
-// The initial state for our form
+
 const initialState = {
     message: '',
     errors: {},
     success: false,
 };
 
-// A small, dedicated component to show the loading state of the form.
-// This is the modern replacement for the `isPending` prop.
 function LoginButton() {
     const { pending } = useFormStatus();
     return (
