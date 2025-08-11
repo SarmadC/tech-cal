@@ -1,75 +1,189 @@
-// src/app/auth/actions.ts
 'use server'
 
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { AuthService } from '@/services/authService'
-import { LoginForm, SignupForm, OAuthProvider } from '@/types'
-import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
-import { z } from 'zod'
+import { OAuthProvider } from '@/types'
 
-// --- Schemas ---
+// Correctly import all schemas from the new central location
+import { 
+    LoginSchema, 
+    SignupSchema, 
+    ForgotPasswordSchema,
+    ResetPasswordSchema 
+} from '@/lib/schemas'
 
-const LoginSchema = z.object({
-    email: z.string().email({ message: "Please enter a valid email address." }),
-    password: z.string().min(1, { message: "Password is required." }),
-});
-
-const SignupSchema = z.object({
-    name: z.string().min(2, { message: "Full name must be at least 2 characters." }),
-    email: z.string().email({ message: "Please enter a valid email address." }),
-    password: z.string().min(8, { message: "Password must be at least 8 characters long." }),
-    confirmPassword: z.string(),
-    acceptTerms: z.boolean().refine(val => val === true, {
-        message: "You must accept the Terms of Service."
-    })
-}).refine(data => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
-});
-
-const ForgotPasswordSchema = z.object({
-    email: z.string().email({ message: "Please enter a valid email address." }),
-});
-
+// A reusable FormState type for all auth actions
+export type AuthFormState = {
+    message: string;
+    errors?: {
+        name?: string[];
+        email?: string[];
+        password?: string[];
+        confirmPassword?: string[];
+        acceptTerms?: string[];
+        _form?: string[];
+    };
+    success: boolean;
+}
 
 // --- Actions ---
 
-export async function loginAction(credentials: LoginForm) {
-    const validatedFields = LoginSchema.safeParse(credentials);
+export async function loginAction(
+    prevState: AuthFormState,
+    formData: FormData
+): Promise<AuthFormState> {
+    const validatedFields = LoginSchema.safeParse(
+        Object.fromEntries(formData.entries())
+    );
 
     if (!validatedFields.success) {
         return {
             success: false,
-            error: "Invalid fields provided. Please check your email and password.",
+            message: 'Invalid data provided.',
+            errors: validatedFields.error.flatten().fieldErrors,
         };
     }
 
-    const supabase = await createClient();
-    const result = await AuthService.signIn(validatedFields.data, supabase);
-    return result;
-}
-
-export async function signupAction(formData: SignupForm) {
-    const validatedFields = SignupSchema.safeParse(formData);
-
-    if (!validatedFields.success) {
-        const firstError = Object.values(validatedFields.error.flatten().fieldErrors).flat()[0];
+    // FIX: Await the async createClient() function
+    const supabase = await createClient(); 
+    try {
+        await AuthService.signIn(validatedFields.data, supabase);
+    } catch (error) {
+        console.error("Login Action Error:", error);
         return {
             success: false,
-            error: firstError || "Invalid fields provided. Please check your inputs.",
+            message: 'Authentication failed.',
+            errors: { _form: [(error as Error).message] },
         };
     }
-    const supabase = await createClient();
-    const result = await AuthService.signUp(validatedFields.data, supabase);
-    return result;
+
+    return redirect('/dashboard');
 }
+
+export async function signupAction(
+    prevState: AuthFormState,
+    formData: FormData
+): Promise<AuthFormState> {
+    const validatedFields = SignupSchema.safeParse(
+        Object.fromEntries(formData.entries())
+    );
+
+    if (!validatedFields.success) {
+        return {
+            success: false,
+            message: 'Invalid data provided.',
+            errors: validatedFields.error.flatten().fieldErrors,
+        };
+    }
+
+    // FIX: Transform the data to match the expected service layer types
+    const { acceptTerms, ...restOfData } = validatedFields.data;
+    const serviceData = {
+        ...restOfData,
+        acceptTerms: acceptTerms === 'on', // Convert "on" string to a true boolean
+    };
+
+    // FIX: Await the async createClient() function
+    const supabase = await createClient();
+    try {
+        // Pass the correctly typed data to the service
+        await AuthService.signUp(serviceData, supabase);
+    } catch (error) {
+        console.error("Signup Action Error:", error);
+        return {
+            success: false,
+            message: 'Signup failed.',
+            errors: { _form: [(error as Error).message] },
+        };
+    }
+
+    return redirect('/dashboard');
+}
+
+export async function forgotPasswordAction(
+    prevState: AuthFormState,
+    formData: FormData
+): Promise<AuthFormState> {
+    const validatedFields = ForgotPasswordSchema.safeParse(
+        Object.fromEntries(formData.entries())
+    );
+
+    if (!validatedFields.success) {
+        return {
+            success: false,
+            message: 'Invalid email provided.',
+            errors: validatedFields.error.flatten().fieldErrors,
+        };
+    }
+
+    // FIX: Await the async createClient() function
+    const supabase = await createClient();
+    try {
+        await AuthService.resetPassword(validatedFields.data.email, supabase);
+    } catch (error)
+    {
+        console.error("Forgot Password Action Error:", error);
+        return {
+            success: false,
+            message: 'Failed to send reset link.',
+            errors: { _form: [(error as Error).message] },
+        };
+    }
+
+    return {
+        success: true,
+        message: 'Password reset link has been sent to your email.',
+    };
+}
+
+export async function updatePasswordAction(
+    prevState: AuthFormState,
+    formData: FormData
+): Promise<AuthFormState> {
+    const validatedFields = ResetPasswordSchema.safeParse(
+        Object.fromEntries(formData.entries())
+    );
+
+    if (!validatedFields.success) {
+        return {
+            success: false,
+            message: 'Invalid data provided.',
+            errors: validatedFields.error.flatten().fieldErrors,
+        };
+    }
+
+    // FIX: Await the async createClient() function
+    const supabase = await createClient();
+    try {
+        await AuthService.updateUserPassword(validatedFields.data.password, supabase);
+    } catch (error) {
+        console.error("Update Password Action Error:", error);
+        return {
+            success: false,
+            message: 'Failed to update password.',
+            errors: { _form: [(error as Error).message] },
+        };
+    }
+
+    return {
+        success: true,
+        message: 'Password updated successfully!',
+    };
+}
+
+
+// --- OAuth Action ---
 
 export async function oauthSignInAction(provider: OAuthProvider) {
     const headerStore = await headers();
     const origin = headerStore.get('origin');
+    
+    // FIX: Await the async createClient() function
     const supabase = await createClient();
 
+    // Now this call is correct because 'supabase' is no longer a Promise
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -79,28 +193,12 @@ export async function oauthSignInAction(provider: OAuthProvider) {
 
     if (error) {
         console.error('OAuth Error:', error.message);
-        return redirect('/login?error=oauth_failed');
+        return redirect('/login?message=Could not authenticate with provider.');
     }
 
     if (data.url) {
         return redirect(data.url);
     }
-
-    return redirect('/login?error=oauth_provider_error');
-}
-
-export async function forgotPasswordAction(data: { email: string }) {
-
-    const validatedFields = ForgotPasswordSchema.safeParse(data);
-    if (!validatedFields.success) {
-        return {
-            success: false,
-            error: validatedFields.error.flatten().fieldErrors.email?.[0] || 'Invalid email format.'
-        };
-    }
-
-    const supabase = await createClient();
-    const result = await AuthService.resetPassword(validatedFields.data.email, supabase);
-
-    return result;
+    
+    return redirect('/login?message=An unexpected error occurred with the OAuth provider.');
 }

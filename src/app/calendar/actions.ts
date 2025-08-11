@@ -1,72 +1,67 @@
-// src/app/calendar/actions.ts
-'use server';
+'use server'
 
 import { createClient } from '@/utils/supabase/server';
 import { UserEventService } from '@/services/userEventService';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
-
-
-// Import Rate Limiting packages
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
 
+// Import the correct, centralized schemas
+import { EventStatusUpdateSchema, EventIdSchema } from '@/lib/schemas';
+
+// Initialize the rate limiter
 const ratelimit = new Ratelimit({
     redis: kv,
-    limiter: Ratelimit.slidingWindow(10, '10 s'),
+    // Allow 10 requests per 10 seconds per user ID
+    limiter: Ratelimit.slidingWindow(10, '10 s'), 
     analytics: true,
-    prefix: 'ratelimit_kurecal',
+    prefix: 'ratelimit_kurecal_calendar',
 });
 
-// Zod schema for validating input
-const TrackEventSchema = z.object({
-    eventId: z.string().uuid(),
-    status: z.enum(['bookmarked', 'attending', 'attended', 'cancelled']),
-    notes: z.string().optional(),
-});
-
-const UntrackEventSchema = z.object({
-    eventId: z.string().uuid(),
-});
-
-// Server Action for tracking an event
+// --- Server Action for tracking an event ---
 export async function trackEventAction(formData: FormData) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-        return { success: false, error: 'Authentication required.' };
-    }
+  if (!user) {
+    return { success: false, error: "Authentication required." };
+  }
 
-    // APPLY the rate limit
-    const { success: rateLimitSuccess } = await ratelimit.limit(user.id);
-    if (!rateLimitSuccess) {
-        return { success: false, error: 'Too many requests. Please try again in a moment.' };
-    }
+  // Apply rate limiting
+  const { success: rateLimitSuccess } = await ratelimit.limit(user.id);
+  if (!rateLimitSuccess) {
+      return { success: false, error: 'Too many requests. Please try again in a moment.' };
+  }
 
-    const validatedFields = TrackEventSchema.safeParse({
-        eventId: formData.get('eventId'),
-        status: formData.get('status'),
-        notes: formData.get('notes'),
-    });
+  // Use the correct schema for validation
+  const validationResult = EventStatusUpdateSchema.safeParse({
+    eventId: formData.get('eventId'),
+    status: formData.get('status'),
+    notes: formData.get('notes'), // Include notes if they are passed
+  });
 
-    if (!validatedFields.success) {
-        return { success: false, error: 'Invalid input.' };
-    }
+  if (!validationResult.success) {
+    console.error("Validation failed:", validationResult.error.flatten().fieldErrors);
+    return { success: false, error: "Invalid input data provided." };
+  }
 
-    const { eventId, status, notes } = validatedFields.data;
+  const { eventId, status, notes } = validationResult.data;
 
-    try {
-        await UserEventService.trackEvent(user.id, eventId, status, notes, supabase);
-        revalidatePath('/calendar');
-        revalidatePath('/dashboard');
-        return { success: true };
-    } catch (e) {
-        const error = e as Error;
-        return { success: false, error: error.message };
-    }
+  try {
+    await UserEventService.trackEvent(user.id, eventId, status, notes, supabase);
+    revalidatePath('/calendar');
+    revalidatePath('/dashboard');
+    return { success: true, message: "Event tracked successfully." };
+
+  } catch (error) {
+    console.error("Error tracking event:", error);
+    // You can use a generic message or pass the actual error message
+    return { success: false, error: (error as Error).message || "A server error occurred." };
+  }
 }
 
+
+// --- Server Action for untracking an event ---
 export async function untrackEventAction(formData: FormData) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -75,29 +70,31 @@ export async function untrackEventAction(formData: FormData) {
         return { success: false, error: 'Authentication required.' };
     }
 
-    // APPLY the rate limit here too
+    // Apply rate limiting
     const { success: rateLimitSuccess } = await ratelimit.limit(user.id);
     if (!rateLimitSuccess) {
         return { success: false, error: 'Too many requests. Please try again in a moment.' };
     }
 
-    const validatedFields = UntrackEventSchema.safeParse({
+    // Use the reusable EventIdSchema for validation
+    const validationResult = EventIdSchema.safeParse({
         eventId: formData.get('eventId'),
     });
 
-    if (!validatedFields.success) {
-        return { success: false, error: 'Invalid input.' };
+    if (!validationResult.success) {
+        console.error("Validation failed:", validationResult.error.flatten().fieldErrors);
+        return { success: false, error: 'Invalid input data provided.' };
     }
 
-    const { eventId } = validatedFields.data;
+    const { eventId } = validationResult.data;
 
     try {
         await UserEventService.untrackEvent(user.id, eventId, supabase);
         revalidatePath('/calendar');
-        revalidatePath('/dashboard');
-        return { success: true };
-    } catch (e) {
-        const error = e as Error;
-        return { success: false, error: error.message };
+        revalidatePath('/dashboard'); // Untracking might affect dashboard stats
+        return { success: true, message: 'Event untracked successfully.' };
+    } catch (error) {
+        console.error("Error untracking event:", error);
+        return { success: false, error: (error as Error).message || "A server error occurred." };
     }
 }

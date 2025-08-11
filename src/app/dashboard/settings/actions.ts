@@ -5,17 +5,23 @@ import { ProfileService } from '@/services/profileService'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
-const ProfileSchema = z.object({
-    fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
+// Best Practice: Define schema in a central location for reusability.
+// Assuming a file exists at `src/lib/schemas.ts`
+// If not, this is where you'd import it from. For this example, we'll define it here.
+const ProfileUpdateSchema = z.object({
+    fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }).or(z.literal('')),
+    // Adding .or(z.literal('')) allows an empty string, which is a common use case for optional fields.
+    // If the field MUST have content if present, remove .or(z.literal('')).
     timezone: z.string().optional(),
 });
 
+// The FormState type remains the same as it's perfectly structured for useFormState.
 export type FormState = {
     message: string;
     errors?: {
         fullName?: string[];
         timezone?: string[];
-        _form?: string[];
+        _form?: string[]; // For general, non-field-specific errors
     };
     success: boolean;
 }
@@ -26,56 +32,59 @@ export async function updateUserProfileAction(
 ): Promise<FormState> {
     const supabase = await createClient();
 
+    // 1. Authentication Check: Ensure a user is logged in.
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         return {
+            success: false,
             message: "Authentication error.",
             errors: { _form: ["You must be logged in to update your profile."] },
-            success: false
         };
     }
 
-    const validatedFields = ProfileSchema.safeParse({
+    // 2. Input Validation: Use Zod's safeParse to validate form data.
+    const validatedFields = ProfileUpdateSchema.safeParse({
         fullName: formData.get('fullName'),
         timezone: formData.get('timezone'),
     });
 
     if (!validatedFields.success) {
         return {
-            message: "Invalid form data. Please check the fields.",
-            errors: validatedFields.error.flatten().fieldErrors,
             success: false,
+            message: "Invalid data submitted. Please check the form for errors.",
+            // Flatten errors to match the structure expected by the form state.
+            errors: validatedFields.error.flatten().fieldErrors,
         };
     }
 
-    // --- CHANGED SECTION START ---
+    // 3. Business Logic / Service Call: Use a try...catch block for robust error handling.
     try {
-        // If validation succeeds, call the service to update the profile.
-        // We no longer destructure `{ error }` because the service throws on failure.
+        // The service is called with the *validated* data.
+        // We assume `ProfileService.updateProfile` will throw an error on failure.
+        // We don't need to destructure `{ error }` from the result anymore.
         await ProfileService.updateProfile(user.id, {
             fullName: validatedFields.data.fullName,
             timezone: validatedFields.data.timezone,
         }, supabase);
 
     } catch (error) {
-        // If the service throws an error, we catch it here.
-        console.error("Profile update error:", error);
-        // Return a generic error message to the client form.
+        // This block catches any errors thrown from the service layer (e.g., database failures).
+        console.error("Profile update failed in action:", error);
+        
+        // Return a generic error to the user to avoid leaking implementation details.
         return {
-            message: "Database error.",
-            errors: { _form: ["Failed to update profile. Please try again."] },
-            success: false
+            success: false,
+            message: "A server error occurred.",
+            errors: { _form: ["Failed to update profile. Please try again later."] },
         };
     }
-    // --- CHANGED SECTION END ---
 
-    // On success, revalidate the paths where the user's data is displayed.
+    // 4. Revalidation and Success Response: This code only runs if the `try` block succeeds.
     revalidatePath('/dashboard/settings');
-    revalidatePath('/dashboard');
+    revalidatePath('/dashboard'); // Revalidate any other page that shows user info.
 
-    // Return a success message.
     return {
+        success: true,
         message: "Profile updated successfully!",
-        success: true
     };
 }

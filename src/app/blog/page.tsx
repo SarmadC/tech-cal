@@ -31,13 +31,16 @@ function getAuthorInitials(author: { full_name: string | null } | null): string 
 }
 
 type BlogPageProps = {
-    searchParams: { [key: string]: string | string[] | undefined };
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 export default async function BlogPage({ searchParams }: BlogPageProps) {
+    // Await the searchParams Promise
+    const resolvedSearchParams = await searchParams;
+    
     const supabase = await createClient();
-    const searchTerm = (searchParams?.q as string) || '';
-    const selectedCategory = (searchParams?.category as string) || 'All';
+    const searchTerm = (resolvedSearchParams?.q as string) || '';
+    const selectedCategory = (resolvedSearchParams?.category as string) || 'All';
 
     const { data: categoriesData, error: categoriesError } = await supabase
         .from('post_categories')
