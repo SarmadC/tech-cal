@@ -36,17 +36,14 @@ function getAuthorInitials(author: { full_name: string | null } | null): string 
     return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
 }
 
-
-// in src/app/blog/page.tsx
-
-export default async function BlogPage({
-    params: _params,
-    searchParams,
-}: {
+type BlogPageProps = {
     params: { slug?: string };
-    // ✅ FIX: Corrected the index signature syntax. Removed "in".
     searchParams: { [key: string]: string | string[] | undefined };
-}) {
+};
+
+export default async function BlogPage(props: BlogPageProps) {
+    const { searchParams } = props;
+
     const supabase = await createClient();
     const searchTerm = (searchParams?.q as string) || '';
     const selectedCategory = (searchParams?.category as string) || 'All';
