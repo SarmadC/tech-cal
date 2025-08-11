@@ -6,8 +6,7 @@ import { createClient } from '@/utils/supabase/server';
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import SubscribeForm from './SubscribeForm';
 
-// Define a more specific type for your posts based on the query
-// This improves type safety and autocompletion in your JSX.
+// This specific type for the post data is still a great practice.
 type PostWithDetails = {
     id: string;
     title: string | null;
@@ -19,7 +18,7 @@ type PostWithDetails = {
     author: { full_name: string | null } | null;
 };
 
-// Helper to format dates consistently
+// Helper functions are also correct.
 function formatDate(dateString: string | null) {
     if (!dateString) return 'Date not available';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -29,50 +28,41 @@ function formatDate(dateString: string | null) {
     });
 }
 
-// Helper to safely get author initials
 function getAuthorInitials(author: { full_name: string | null } | null): string {
     const name = author?.full_name;
     if (!name) return '??';
     return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
 }
-type BlogPageProps = {
-    params: { slug?: string }; // `params` is an object, not a promise
-    searchParams: { [key: string]: string | string[] | undefined };
-};
 
-// ✅ 2. THE FIX: Accept the entire `props` object with the correct type.
-export default async function BlogPage(props: BlogPageProps) {
-    // ✅ 3. DESTRUCTURE the props you need inside the function body.
-    const { searchParams } = props;
-
+// ✅ THE FIX: Apply the exact signature pattern from the Next.js documentation.
+// We are destructuring the props and providing the type inline.
+export default async function BlogPage({
+    params: _params, // We receive `params` even if we don't use it.
+    searchParams,
+}: {
+    params: { slug?: string }; // Use the correct type for params.
+    searchParams: { [key: string]: string | string[] | undefined }; // And for searchParams.
+}) {
+    // The body of your component was already correct. No changes are needed here.
     const supabase = await createClient();
     const searchTerm = (searchParams?.q as string) || '';
     const selectedCategory = (searchParams?.category as string) || 'All';
-    // --- Dynamic Data Fetching Logic ---
 
-    // 1. Fetch all available categories dynamically for the filter component
+    // --- Dynamic Data Fetching Logic ---
     const { data: categoriesData, error: categoriesError } = await supabase
         .from('post_categories')
         .select('name')
         .order('name');
 
-    // ✅ FIX: Handle potential error when fetching categories
     if (categoriesError) {
         console.error("Error fetching categories:", categoriesError.message);
-        // Fallback to a default list if fetching fails
     }
-    const categories = ['All', ...(categoriesData?.map(c => c.name) || [])];
+    const categories = ['All', ...(categoriesData?.map(c => c.name as string) || [])];
 
-    // 2. Build the main query for posts with JOINs
     const postQuery = supabase
         .from('posts')
         .select(`
-            id,
-            title,
-            slug,
-            excerpt,
-            published_at,
-            read_time_minutes,
+            id, title, slug, excerpt, published_at, read_time_minutes,
             category: post_categories ( name ),
             author: profiles ( full_name )
         `)
@@ -80,12 +70,10 @@ export default async function BlogPage(props: BlogPageProps) {
         .lte('published_at', new Date().toISOString())
         .order('published_at', { ascending: false });
 
-    // 3. Apply category filtering on the JOINED table
     if (selectedCategory !== 'All') {
         postQuery.eq('category.name', selectedCategory);
     }
 
-    // 4. Apply the SECURE search term filter
     if (searchTerm) {
         const sanitizedSearchTerm = sanitizeFtsQuery(searchTerm, ' | ');
         if (sanitizedSearchTerm) {
@@ -93,7 +81,6 @@ export default async function BlogPage(props: BlogPageProps) {
         }
     }
 
-    // Execute the query and cast the result to our specific type
     const { data, error: postsError } = await postQuery;
     const filteredPosts: PostWithDetails[] = data || [];
 
@@ -101,7 +88,6 @@ export default async function BlogPage(props: BlogPageProps) {
         console.error("Error fetching posts:", postsError.message);
     }
 
-    // Fetch the featured post
     const { data: featuredPostData, error: featuredError } = await supabase
         .from('posts')
         .select(`*, category:post_categories(name), author:profiles(full_name)`)
@@ -110,7 +96,6 @@ export default async function BlogPage(props: BlogPageProps) {
         .limit(1)
         .single();
 
-    // ✅ FIX: Type the featuredPost variable for safety
     const featuredPost: PostWithDetails | null = featuredPostData;
 
     if (featuredError && featuredError.code !== 'PGRST116') {
