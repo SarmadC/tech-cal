@@ -1,36 +1,22 @@
 // src/app/auth/reset-password/ResetPasswordClientView.tsx
-'use client'
+'use client';
 
-// 1. CORRECTED IMPORTS
-import { useEffect, useActionState } from 'react';      // Core hooks from 'react'
-import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
-
+import { useEffect, useActionState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
-import { updatePasswordAction } from '@/app/auth/actions';
-import { AuthFormState } from '@/app/auth/actions'; // Import the state type
 
-// The initial state for our form
+import { SimpleForm } from '@/components/auth/SimpleForm'; // Use the same simple form
+import { updatePasswordAction } from '@/app/auth/actions';
+import type { AuthFormState } from '@/app/auth/actions';
+
 const initialState: AuthFormState = {
     message: '',
     errors: {},
     success: false,
 };
 
-// A dedicated component for the submit button to access form status
-function SubmitButton() {
-    const { pending } = useFormStatus();
-    return (
-        <button type="submit" disabled={pending} className="w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center">
-            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {pending ? 'Updating...' : 'Update password'}
-        </button>
-    );
-}
-
-// SuccessDisplay can remain mostly the same
+// SuccessDisplay can remain as it is.
 const SuccessDisplay = () => (
     <div className="text-center space-y-6">
         <div className="w-16 h-16 bg-success-light rounded-full flex items-center justify-center mx-auto">
@@ -40,8 +26,8 @@ const SuccessDisplay = () => (
             Your password has been successfully updated!
         </div>
         <p className="text-sm text-foreground-secondary">Redirecting to your dashboard...</p>
-        <Link href="/dashboard" className="w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-all inline-block">
-            Go to Dashboard
+        <Link href="/dashboard" className="w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-all inline-block text-center">
+            Go to Dashboard Now
         </Link>
     </div>
 );
@@ -49,24 +35,20 @@ const SuccessDisplay = () => (
 
 export default function ResetPasswordClientView() {
     const router = useRouter();
-
-    // 2. RENAME useFormState to useActionState
     const [state, formAction] = useActionState(updatePasswordAction, initialState);
 
-    // Use useEffect to react to state changes from the server action
     useEffect(() => {
         if (state.success) {
-            toast.success(state.message);
-            // Redirect after a short delay to allow the user to see the success message
-            setTimeout(() => {
+            toast.success(state.message || 'Password updated successfully!');
+            const timer = setTimeout(() => {
                 router.push('/dashboard');
             }, 2000);
-        } else if (state.message && (state.errors?._form || state.errors?.password)) {
-            // Handle form-level or password-specific errors
+            return () => clearTimeout(timer); // Cleanup timer on unmount
+        } else if (state.message) {
+            // Show toast for any error message
             toast.error(state.errors?._form?.[0] || state.message);
         }
     }, [state, router]);
-
 
     return (
         <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -90,7 +72,7 @@ export default function ResetPasswordClientView() {
                     {state.success ? (
                         <SuccessDisplay />
                     ) : (
-                        <form action={formAction} className="space-y-6">
+                        <SimpleForm action={formAction} submitButtonText="Update password">
                             <div>
                                 <label htmlFor="password" className="block text-sm font-medium text-foreground-secondary mb-2">New Password</label>
                                 <input
@@ -115,9 +97,7 @@ export default function ResetPasswordClientView() {
                                 />
                                 {state.errors?.confirmPassword && <p className="mt-2 text-sm text-red-500">{state.errors.confirmPassword[0]}</p>}
                             </div>
-
-                            <SubmitButton />
-                        </form>
+                        </SimpleForm>
                     )}
                 </div>
             </div>

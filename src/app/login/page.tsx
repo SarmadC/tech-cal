@@ -1,20 +1,15 @@
-// src/app/login/page.tsx
-'use client'
-
-// 1. CORRECTED IMPORTS - This is the critical fix
-import { useEffect, useActionState } from 'react';      // Core hooks from 'react'
-import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
+// src/app/login/page.tsx (Refactored)
+'use client';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 
 import { loginAction, oauthSignInAction } from '@/app/auth/actions';
-import { useAuth } from '@/contexts/AuthContext';
-import ProtectedRoute from '@/components/layout/ProtectedRoute';
+import { AuthForm } from '@/components/auth/AuthForm';
 import { AuthProviders } from '@/components/auth';
+import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import type { OAuthProvider } from '@/types';
-import { AuthFormState } from '@/app/auth/actions';
+import type { AuthFormState } from '@/app/auth/actions';
 
 const initialState: AuthFormState = {
     message: '',
@@ -22,58 +17,25 @@ const initialState: AuthFormState = {
     success: false,
 };
 
-function LoginButton() {
-    // This hook will now be correctly found because it's imported from 'react-dom'
-    const { pending } = useFormStatus();
-    return (
-        <button
-            type="submit"
-            disabled={pending}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-accent-primary hover:bg-accent-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-primary disabled:bg-opacity-50"
-        >
-            {pending ? 'Signing In...' : 'Sign In'}
-        </button>
-    );
-}
-
 export default function LoginPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { user, initialized } = useAuth();
-
-    const [state, formAction] = useActionState(loginAction, initialState);
-
-    // All useEffect and handler logic remains the same
-    useEffect(() => {
-        const message = searchParams.get('message');
-        if (message) {
-            toast.error(message);
-        }
-    }, [searchParams]);
-
-    useEffect(() => {
-        if (state.success === false && (state.errors?._form || state.message)) {
-            toast.error(state.errors?._form?.[0] || state.message);
-        }
-    }, [state]);
-
-    useEffect(() => {
-        if (initialized && user) {
-            const redirectTo = searchParams.get('redirect') || '/dashboard';
-            router.refresh();
-            router.replace(redirectTo);
-        }
-    }, [user, initialized, router, searchParams]);
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         await oauthSignInAction(provider);
     };
 
-    // The JSX remains the same
+    const handleLoginSuccess = () => {
+        const redirectTo = searchParams.get('redirect') || '/dashboard';
+        router.refresh(); // Important to refresh server-side state
+        router.replace(redirectTo);
+    };
+
     return (
         <ProtectedRoute allowUnauthenticated>
             <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full">
+                    {/* Header section remains the same */}
                     <div className="text-center mb-8">
                         <Link href="/" className="inline-flex items-center space-x-2">
                             <div className="w-12 h-12 bg-accent-primary rounded-xl flex items-center justify-center">
@@ -85,7 +47,7 @@ export default function LoginPage() {
                         </Link>
                         <h2 className="mt-6 text-3xl font-bold text-foreground-primary">Welcome back</h2>
                         <p className="mt-2 text-sm text-foreground-secondary">
-                            Don`&apos;`t have an account?{' '}
+                            Don&apos;t have an account?{' '}
                             <Link href="/signup" className="font-medium text-accent-primary hover:text-accent-primary-hover">
                                 Sign up free
                             </Link>
@@ -93,10 +55,7 @@ export default function LoginPage() {
                     </div>
 
                     <div className="bg-background-secondary rounded-2xl p-8 border border-border-default">
-                        <AuthProviders
-                            onSelectProvider={handleOAuthSignIn}
-                            isPending={false}
-                        />
+                        <AuthProviders onSelectProvider={handleOAuthSignIn} isPending={false} />
 
                         <div className="relative my-6">
                             <div className="absolute inset-0 flex items-center">
@@ -109,35 +68,43 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <form action={formAction} className="space-y-6">
-                            <div className="space-y-2">
-                                <label htmlFor="email" className="text-sm font-medium text-foreground-secondary">Email address</label>
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
-                                    required
-                                    className="block w-full px-3 py-2 border border-border-default rounded-lg shadow-sm bg-background-tertiary placeholder-foreground-muted focus:outline-none focus:ring-accent-primary focus:border-accent-primary sm:text-sm"
-                                />
-                                {state.errors?.email && <p className="text-sm text-red-500 mt-1">{state.errors.email[0]}</p>}
-                            </div>
+                        {/* --- THIS IS THE REFACTORED FORM --- */}
+                        <AuthForm
+                            action={loginAction}
+                            initialState={initialState}
+                            submitButtonText="Sign In"
+                            onSuccess={handleLoginSuccess}
+                        >
+                            {(state) => (
+                                <>
+                                    <div className="space-y-2">
+                                        <label htmlFor="email" className="text-sm font-medium text-foreground-secondary">Email address</label>
+                                        <input
+                                            id="email"
+                                            name="email"
+                                            type="email"
+                                            autoComplete="email"
+                                            required
+                                            className="block w-full px-3 py-2 border border-border-default rounded-lg shadow-sm bg-background-tertiary placeholder-foreground-muted focus:outline-none focus:ring-accent-primary focus:border-accent-primary sm:text-sm"
+                                        />
+                                        {state.errors?.email && <p className="text-sm text-red-500 mt-1">{state.errors.email[0]}</p>}
+                                    </div>
 
-                            <div className="space-y-2">
-                                <label htmlFor="password" className="text-sm font-medium text-foreground-secondary">Password</label>
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    autoComplete="current-password"
-                                    required
-                                    className="block w-full px-3 py-2 border border-border-default rounded-lg shadow-sm bg-background-tertiary placeholder-foreground-muted focus:outline-none focus:ring-accent-primary focus:border-accent-primary sm:text-sm"
-                                />
-                                {state.errors?.password && <p className="text-sm text-red-500 mt-1">{state.errors.password[0]}</p>}
-                            </div>
-
-                            <LoginButton />
-                        </form>
+                                    <div className="space-y-2">
+                                        <label htmlFor="password" className="text-sm font-medium text-foreground-secondary">Password</label>
+                                        <input
+                                            id="password"
+                                            name="password"
+                                            type="password"
+                                            autoComplete="current-password"
+                                            required
+                                            className="block w-full px-3 py-2 border border-border-default rounded-lg shadow-sm bg-background-tertiary placeholder-foreground-muted focus:outline-none focus:ring-accent-primary focus:border-accent-primary sm:text-sm"
+                                        />
+                                        {state.errors?.password && <p className="text-sm text-red-500 mt-1">{state.errors.password[0]}</p>}
+                                    </div>
+                                </>
+                            )}
+                        </AuthForm>
                     </div>
                 </div>
             </div>

@@ -1,25 +1,36 @@
-// src/components/calendar/CalendarSidebar.tsx - UPDATED to remove redundant category filters
+// src/components/calendar/CalendarSidebar.tsx (Corrected & Refactored)
 import { FC } from 'react';
 import { AppEvent, AppEventType } from '@/types';
 import MiniCalendar from './MiniCalendar';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 interface SidebarProps {
     currentDate: Date;
     setCurrentDate: (date: Date) => void;
     categories: AppEventType[]; // Keep for mini calendar event dots
-    selectedCategories: Set<string>; // Remove this from UI
-    setSelectedCategories: (categories: Set<string>) => void; // Remove this from UI
-    nextUpcomingEvent?: AppEvent;
     user: { name: string; role: string };
     events: AppEvent[];
+    // These were unused in the JSX, so we can remove them if they aren't needed elsewhere
+    // selectedCategories: Set<string>;
+    // setSelectedCategories: (categories: Set<string>) => void;
+    // nextUpcomingEvent?: AppEvent;
 }
+
+// A small, custom fallback that matches your sidebar's theme
+const WidgetFallback = () => (
+    <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-gray-700 bg-gray-800/50 text-xs text-gray-500">
+        Could not load this widget
+    </div>
+);
+
 
 const CalendarSidebar: FC<SidebarProps> = ({
     currentDate,
     setCurrentDate,
-    user,
+    user, // This is now used
     events
 }) => {
+    // This function is now used
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             month: 'short',
@@ -60,75 +71,80 @@ const CalendarSidebar: FC<SidebarProps> = ({
             {/* Mini Calendar */}
             <div className="mb-8">
                 <h3 className="text-white text-lg font-semibold mb-4">Calendar</h3>
-                <MiniCalendar
-                    date={currentDate}
-                    setDate={setCurrentDate}
-                    events={events}
-                    currentDate={currentDate}
-                />
+                <ErrorBoundary fallback={<WidgetFallback />}>
+                    <MiniCalendar
+                        date={currentDate}
+                        setDate={setCurrentDate}
+                        events={events}
+                        currentDate={currentDate}
+                    />
+                </ErrorBoundary>
             </div>
-
-            {/* REMOVED: Filter by Category section - now handled by Smart Filters */}
 
             {/* Upcoming Events */}
             <div className="flex-1">
                 <h3 className="text-white text-lg font-semibold mb-4">Upcoming Events</h3>
-                <div className="space-y-3">
-                    {upcomingEvents.length > 0 ? (
-                        upcomingEvents.map((event) => (
-                            <div
-                                key={event.id}
-                                className="bg-gray-800/50 rounded-lg p-3 hover:bg-gray-700/50 transition-colors cursor-pointer"
-                            >
-                                <div className="flex items-start space-x-3">
-                                    <div
-                                        className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                                        style={{ backgroundColor: event.color || '#3B82F6' }}
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="text-white text-sm font-medium line-clamp-2 mb-1">
-                                            {event.title}
-                                        </h4>
-                                        <p className="text-gray-400 text-xs mb-1">
-                                            {formatDate(event.startTime)}
-                                        </p>
-                                        <p className="text-gray-500 text-xs line-clamp-1">
-                                            {event.organizer}
-                                        </p>
-                                        {event.isTracked && (
-                                            <div className="flex items-center space-x-1 mt-1">
-                                                <div className="w-3 h-3 bg-green-500 rounded-full" />
-                                                <span className="text-green-400 text-xs">Tracked</span>
-                                            </div>
-                                        )}
+                <ErrorBoundary fallback={<WidgetFallback />}>
+                    <div className="space-y-3">
+                        {upcomingEvents.length > 0 ? (
+                            upcomingEvents.map((event) => (
+                                <div
+                                    key={event.id}
+                                    className="bg-gray-800/50 rounded-lg p-3 hover:bg-gray-700/50 transition-colors cursor-pointer"
+                                >
+                                    <div className="flex items-start space-x-3">
+                                        <div
+                                            className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
+                                            style={{ backgroundColor: event.color || '#3B82F6' }}
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="text-white text-sm font-medium line-clamp-2 mb-1">
+                                                {event.title}
+                                            </h4>
+                                            {/* formatDate is now used here */}
+                                            <p className="text-gray-400 text-xs mb-1">
+                                                {formatDate(event.startTime)}
+                                            </p>
+                                            <p className="text-gray-500 text-xs line-clamp-1">
+                                                {event.organizer}
+                                            </p>
+                                            {event.isTracked && (
+                                                <div className="flex items-center space-x-1 mt-1">
+                                                    <div className="w-3 h-3 bg-green-500 rounded-full" />
+                                                    <span className="text-green-400 text-xs">Tracked</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="text-gray-500 text-sm text-center py-8">
+                                No upcoming events
                             </div>
-                        ))
-                    ) : (
-                        <div className="text-gray-500 text-sm text-center py-8">
-                            No upcoming events
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                </ErrorBoundary>
             </div>
 
             {/* Quick Stats */}
             <div className="mt-6 pt-6 border-t border-gray-800">
-                <div className="grid grid-cols-2 gap-4 text-center">
-                    <div>
-                        <div className="text-white text-xl font-bold">
-                            {events.filter(e => e.isTracked).length}
+                <ErrorBoundary fallback={<WidgetFallback />}>
+                    <div className="grid grid-cols-2 gap-4 text-center">
+                        <div>
+                            <div className="text-white text-xl font-bold">
+                                {events.filter(e => e.isTracked).length}
+                            </div>
+                            <div className="text-gray-400 text-xs">Tracked</div>
                         </div>
-                        <div className="text-gray-400 text-xs">Tracked</div>
-                    </div>
-                    <div>
-                        <div className="text-white text-xl font-bold">
-                            {upcomingEvents.length}
+                        <div>
+                            <div className="text-white text-xl font-bold">
+                                {upcomingEvents.length}
+                            </div>
+                            <div className="text-gray-400 text-xs">Upcoming</div>
                         </div>
-                        <div className="text-gray-400 text-xs">Upcoming</div>
                     </div>
-                </div>
+                </ErrorBoundary>
             </div>
 
             {/* Help Text */}

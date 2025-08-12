@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Settings, LogOut, Calendar, BarChart3, ChevronDown, CreditCard } from 'lucide-react';
+import { User, Settings, LogOut, Calendar, BarChart3, ChevronDown, CreditCard, TrendingUp } from 'lucide-react';
 
 export default function UserMenu() {
     const [isOpen, setIsOpen] = useState(false);
@@ -144,6 +144,18 @@ export default function UserMenu() {
                             <BarChart3 className="w-4 h-4 text-foreground-tertiary" />
                             <span className="text-sm text-foreground-primary">Dashboard</span>
                         </Link>
+
+                        <Link
+                            href="/dashboard/growth"
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
+                        >
+                            <TrendingUp className="w-4 h-4 text-foreground-tertiary" />
+                            <span className="text-sm text-foreground-primary">Growth</span>
+                        </Link>
+
+
+
                         <Link
                             href="/calendar"
                             onClick={() => setIsOpen(false)}
@@ -166,15 +178,6 @@ export default function UserMenu() {
                             <span className="text-sm text-foreground-primary">Profile</span>
                         </Link>
 
-                        {/* REMOVED: API Keys link */}
-                        {/* <Link
-                            href="/dashboard/settings?tab=api"
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
-                        >
-                            <KeyRound className="w-4 h-4 text-foreground-tertiary" />
-                            <span className="text-sm text-foreground-primary">API Keys</span>
-                        </Link> */}
 
                         {/* The "Billing" link now points to the 'billing' tab on the settings page. */}
                         <Link

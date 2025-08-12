@@ -1,27 +1,32 @@
-// src/app/calendar/CalendarClientView.tsx
+// src/app/calendar/CalendarClientView.tsx (Fully Modified Imports)
 'use client';
 
 import { useState, useMemo, useCallback, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
-// 1. REMOVED keepPreviousData from this import
 import { useQuery } from '@tanstack/react-query';
+import dynamic from 'next/dynamic'; // Added
 
 import { createClient } from '@/utils/supabase/client';
 
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
-import EventDetailPanel from '@/components/calendar/EventDetailPanel';
 import Loading from '@/components/Loading';
 import CalendarWithPreview from '@/components/calendar/CalendarWithPreview';
-import SmartFilterPanel from '@/components/calendar/SmartFilterPanel';
 import { useSmartFilters } from '@/hooks/useSmartFilters';
 
 import { AppEvent, AppEventType, AppProfile, AppTrackedEvent } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth } from '@/contexts/AuthContext';
-// 2. REMOVED the unused EventService import
-// import { EventService } from '@/services/eventServices';
+
+// Dynamically import the components that are not visible on initial load
+const EventDetailPanel = dynamic(() => import('@/components/calendar/EventDetailPanel'), {
+    ssr: false,
+});
+
+const SmartFilterPanel = dynamic(() => import('@/components/calendar/SmartFilterPanel'), {
+    ssr: false,
+});
 
 interface CalendarClientViewProps {
     initialEvents: AppEvent[];
@@ -83,12 +88,6 @@ export default function CalendarClientView({
         }));
     }, [filteredEvents, initialCategories, trackedEventIds]);
 
-    const nextUpcomingEvent = useMemo(() => {
-        const now = new Date();
-        return enrichedEvents
-            .filter((e: AppEvent) => new Date(e.startTime) > now)
-            .sort((a: AppEvent, b: AppEvent) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
-    }, [enrichedEvents]);
 
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
         setSelectedEvent(clickInfo.event.extendedProps as AppEvent);
@@ -115,10 +114,7 @@ export default function CalendarClientView({
             <CalendarSidebar
                 currentDate={currentDate}
                 setCurrentDate={setCurrentDate}
-                categories={initialCategories}
-                selectedCategories={new Set()}
-                setSelectedCategories={() => { }}
-                nextUpcomingEvent={nextUpcomingEvent}
+                categories={initialCategories} // Used by MiniCalendar for event dots
                 user={{
                     name: profile?.fullName || 'Kure-Cal User',
                     role: 'Product Designer'

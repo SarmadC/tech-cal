@@ -1,38 +1,21 @@
-// src/app/forgot-password/page.tsx
-'use client'
+// src/app/forgot-password/page.tsx (Corrected)
+'use client';
 
-// 1. CORRECTED IMPORTS
-import { useEffect, useActionState } from 'react';      // Core hooks from 'react'
-import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
-
+import { useEffect, useActionState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
-import { Button } from '@/components/ui/button';
+import { SimpleForm } from '@/components/auth/SimpleForm';
 import { forgotPasswordAction } from '@/app/auth/actions';
-import { AuthFormState } from '@/app/auth/actions'; // Import the state type
+import type { AuthFormState } from '@/app/auth/actions';
 
-// The initial state for our form, matching the AuthFormState type
 const initialState: AuthFormState = {
     message: '',
     errors: {},
     success: false,
 };
 
-// A dedicated component for the submit button to handle pending state
-function SubmitButton() {
-    const { pending } = useFormStatus();
-    return (
-        <Button type="submit" disabled={pending} className="w-full">
-            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {pending ? 'Sending...' : 'Send reset email'}
-        </Button>
-    );
-}
-
-// UI Sub-component for Success State
 const SuccessDisplay = ({ message }: { message: string }) => (
     <div className="text-center space-y-6">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
@@ -43,9 +26,9 @@ const SuccessDisplay = ({ message }: { message: string }) => (
         </div>
         <div className="text-sm text-foreground-secondary space-y-2">
             <p>Click the link in the email to reset your password. The link will expire in 1 hour for security reasons.</p>
-            <p>Don`&apos;`t see the email? Check your spam folder.</p>
+            <p>Don&apos;t see the email? Check your spam folder.</p>
         </div>
-        <div className="space-y-3">
+        <div>
             <Link href="/login" className="w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-all inline-block text-center">
                 Back to sign in
             </Link>
@@ -53,16 +36,15 @@ const SuccessDisplay = ({ message }: { message: string }) => (
     </div>
 );
 
-// Main Page Component
+
 export default function ForgotPasswordPage() {
-    // 2. RENAME useFormState to useActionState
     const [state, formAction] = useActionState(forgotPasswordAction, initialState);
 
-    // Use useEffect to show toast notifications from the server's response
     useEffect(() => {
         if (state.success) {
-            // No toast needed on success, the UI changes to the SuccessDisplay component.
-        } else if (state.message && (state.errors?._form || state.errors?.email)) {
+            // Success UI is shown, no toast needed.
+        } else if (state.message) {
+            // Show toast for any error message that comes back.
             toast.error(state.errors?._form?.[0] || state.errors?.email?.[0] || state.message);
         }
     }, [state]);
@@ -71,10 +53,10 @@ export default function ForgotPasswordPage() {
         <ProtectedRoute allowUnauthenticated>
             <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full">
+                    {/* Header section is unchanged */}
                     <div className="text-center mb-8">
                         <Link href="/" className="inline-flex items-center space-x-2">
                             <div className="w-12 h-12 bg-accent-primary rounded-xl flex items-center justify-center">
-                                {/* SVG Logo */}
                                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
@@ -93,7 +75,7 @@ export default function ForgotPasswordPage() {
                         {state.success ? (
                             <SuccessDisplay message={state.message} />
                         ) : (
-                            <form action={formAction} className="space-y-6">
+                            <SimpleForm action={formAction} submitButtonText="Send reset email">
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-medium text-foreground-secondary mb-2">Email address</label>
                                     <input
@@ -107,15 +89,12 @@ export default function ForgotPasswordPage() {
                                     />
                                     {state.errors?.email && <p className="mt-2 text-sm text-red-500">{state.errors.email[0]}</p>}
                                 </div>
-
-                                <SubmitButton />
-
-                                <div className="text-center">
+                                <div className="text-center !mt-8">
                                     <Link href="/login" className="text-sm font-medium text-accent-primary hover:text-accent-primary-hover">
                                         ← Back to sign in
                                     </Link>
                                 </div>
-                            </form>
+                            </SimpleForm>
                         )}
                     </div>
                 </div>

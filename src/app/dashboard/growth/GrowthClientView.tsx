@@ -1,14 +1,24 @@
+// src/app/dashboard/growth/GrowthClientView.tsx (Fully Corrected)
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+import Link from 'next/link'; // Keep Link for the empty state
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { GrowthDashboardHeader, FollowThroughRateCard, LearningConsistencyCard, TechStackCurrencyCard, UpcomingOpportunitiesCard, NetworkExpansionCard, IndustryPulseScoreCard } from '@/components/growth/GrowthComponents';
+import {
+    GrowthDashboardHeader,
+    FollowThroughRateCard,
+    LearningConsistencyCard,
+    TechStackCurrencyCard,
+    UpcomingOpportunitiesCard,
+    NetworkExpansionCard,
+    IndustryPulseScoreCard
+} from '@/components/growth/GrowthComponents';
 import { EventService } from '@/services/eventServices';
 import { UserEventService } from '@/services/userEventService';
 import { createClient } from '@/utils/supabase/client';
 import type { AppTrackedEvent, AppEvent } from '@/types';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 interface GrowthClientViewProps {
     initialTrackedEvents: AppTrackedEvent[];
@@ -21,6 +31,14 @@ interface CategoryStats {
     color: string;
 }
 
+// Define a custom fallback for the cards
+const CardFallback = () => (
+    <div className="flex h-full min-h-[180px] items-center justify-center rounded-lg border-2 border-dashed border-red-200 bg-red-50 text-xs text-red-600">
+        Error loading this metric.
+    </div>
+);
+
+
 export default function GrowthClientView({
     initialTrackedEvents,
     initialOpportunities
@@ -32,7 +50,6 @@ export default function GrowthClientView({
     const { data: trackedEvents, error: trackedEventsError } = useQuery({
         queryKey: ['trackedEvents', user?.id],
         queryFn: () => {
-            // CHANGED: Call the service directly. It will return the data array or throw an error.
             if (!user) return [];
             return UserEventService.getTrackedEvents(user.id, supabase);
         },
@@ -87,7 +104,7 @@ export default function GrowthClientView({
         const quarterAgo = new Date(); quarterAgo.setMonth(quarterAgo.getMonth() - 3);
         const recentAttended = attendedEvents.filter((te: AppTrackedEvent) => new Date(te.trackedAt) > quarterAgo);
         const majorEventsAttended = recentAttended.filter((te: AppTrackedEvent) => te.event && majorAnnouncers.some(a => te.event!.organizer.toLowerCase().includes(a))).length;
-        const industryPulseScore = Math.min(100, Math.round((majorEventsAttended / 5) * 100)); // Adjusted logic to cap at 100
+        const industryPulseScore = Math.min(100, Math.round((majorEventsAttended / 5) * 100));
         const networkExpansion = new Set(recentAttended.map((te: AppTrackedEvent) => te.event?.organizer).filter(Boolean)).size;
         const topCategories = statsArray.slice(0, 3).map(s => s.category);
         const trackedEventIds = trackedEvents.map((e: AppTrackedEvent) => e.eventId);
@@ -97,7 +114,6 @@ export default function GrowthClientView({
     const { data: upcomingOpportunities, error: opportunitiesError } = useQuery({
         queryKey: ['upcomingOpportunities', analytics?.topCategories, analytics?.trackedEventIds],
         queryFn: () => {
-            // CHANGED: Call the service directly.
             if (!analytics?.topCategories || analytics.topCategories.length === 0 || !analytics.trackedEventIds) {
                 return [];
             }
@@ -113,6 +129,7 @@ export default function GrowthClientView({
         return <div className="text-center text-red-500 p-8">Error: {(queryError as Error).message}</div>;
     }
 
+    // This block handles the case where there is no data to analyze yet.
     if (!analytics) {
         return (
             <div className="min-h-screen bg-gray-100 p-6">
@@ -125,21 +142,42 @@ export default function GrowthClientView({
         );
     }
 
+    // By the time we reach this return statement, `analytics` is guaranteed to be non-null.
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <div className="max-w-7xl mx-auto">
-                <GrowthDashboardHeader userName={profile?.fullName?.split(' ')[0] || 'User'} selectedPeriod={selectedPeriod} setSelectedPeriod={setSelectedPeriod} />
-                <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
-                    <UpcomingOpportunitiesCard opportunities={(upcomingOpportunities || []).map((o: AppEvent) => ({
-                        title: o.title,
-                        date: new Date(o.startTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
-                        category: o.category?.name || 'General'
-                    }))} />
-                    <IndustryPulseScoreCard score={analytics.industryPulseScore} />
-                    <FollowThroughRateCard rate={analytics.followThroughRate} />
-                    <LearningConsistencyCard currentStreak={analytics.learningStreak.current} longestStreak={analytics.learningStreak.longest} />
-                    <TechStackCurrencyCard data={analytics.techStackCurrency} />
-                    <NetworkExpansionCard count={analytics.networkExpansion} />
+                <ErrorBoundary fallback={<CardFallback />}>
+                    <GrowthDashboardHeader userName={profile?.fullName?.split(' ')[0] || 'User'} selectedPeriod={selectedPeriod} setSelectedPeriod={setSelectedPeriod} />
+                </ErrorBoundary>
+
+                <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)] mt-6">
+                    <ErrorBoundary fallback={<CardFallback />}>
+                        <UpcomingOpportunitiesCard opportunities={(upcomingOpportunities || []).map((o: AppEvent) => ({
+                            title: o.title,
+                            date: new Date(o.startTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+                            category: o.category?.name || 'General'
+                        }))} />
+                    </ErrorBoundary>
+
+                    <ErrorBoundary fallback={<CardFallback />}>
+                        <IndustryPulseScoreCard score={analytics.industryPulseScore} />
+                    </ErrorBoundary>
+
+                    <ErrorBoundary fallback={<CardFallback />}>
+                        <FollowThroughRateCard rate={analytics.followThroughRate} />
+                    </ErrorBoundary>
+
+                    <ErrorBoundary fallback={<CardFallback />}>
+                        <LearningConsistencyCard currentStreak={analytics.learningStreak.current} longestStreak={analytics.learningStreak.longest} />
+                    </ErrorBoundary>
+
+                    <ErrorBoundary fallback={<CardFallback />}>
+                        <TechStackCurrencyCard data={analytics.techStackCurrency} />
+                    </ErrorBoundary>
+
+                    <ErrorBoundary fallback={<CardFallback />}>
+                        <NetworkExpansionCard count={analytics.networkExpansion} />
+                    </ErrorBoundary>
                 </div>
             </div>
         </div>

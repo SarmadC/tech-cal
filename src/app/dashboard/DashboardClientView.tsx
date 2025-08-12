@@ -1,5 +1,6 @@
 'use client';
 
+
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +15,9 @@ import { ErrorState } from '@/components/Loading';
 import { Calendar, Clock, Star, Target, Users, Award, Sparkles, Plus } from 'lucide-react';
 import type { AppTrackedEvent, AppEventType, AppEvent } from '@/types';
 
+// 1. Import the ErrorBoundary
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+
 interface DashboardClientViewProps {
     initialTrackedEvents: AppTrackedEvent[];
     initialEventTypes: AppEventType[];
@@ -26,6 +30,12 @@ type PersonalInsight = {
     description: string;
     icon: React.ReactNode;
 };
+
+const SectionFallback = () => (
+    <div className="flex h-full min-h-[150px] items-center justify-center rounded-lg border-2 border-dashed border-red-200 bg-red-50 text-sm text-red-600">
+        There was an error loading this section.
+    </div>
+);
 
 export default function DashboardClientView({
     initialTrackedEvents,
@@ -142,75 +152,83 @@ export default function DashboardClientView({
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
             <div className="max-w-7xl mx-auto p-6 space-y-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between">
-                    <div>
-                        <h1 className="text-4xl font-bold text-gray-900 mb-2">{greeting}</h1>
-                        <p className="text-lg text-gray-600 flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-yellow-500" />
-                            Ready to discover what is happening in tech today?
-                        </p>
+                <ErrorBoundary fallback={<SectionFallback />}>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between">
+                        <div>
+                            <h1 className="text-4xl font-bold text-gray-900 mb-2">{greeting}</h1>
+                            <p className="text-lg text-gray-600 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-yellow-500" />
+                                Ready to discover what is happening in tech today?
+                            </p>
+                        </div>
+                        <div className="flex gap-3 mt-4 md:mt-0">
+                            <Button asChild><Link href="/calendar"><Plus className="w-4 h-4 mr-2" />Track Events</Link></Button>
+                        </div>
                     </div>
-                    <div className="flex gap-3 mt-4 md:mt-0">
-                        <Button asChild><Link href="/calendar"><Plus className="w-4 h-4 mr-2" />Track Events</Link></Button>
+                </ErrorBoundary>
+
+                <ErrorBoundary fallback={<SectionFallback />}>
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        {insights.map((insight, index) => (
+                            <Card key={index} className="relative overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                                <CardHeader className="pb-2">
+                                    <div className="p-2 bg-blue-100 rounded-lg w-fit">{insight.icon}</div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-blue-600">{insight.value}</div>
+                                    <p className="text-sm text-gray-600">{insight.title}</p>
+                                    <p className="text-xs text-gray-500">{insight.description}</p>
+                                </CardContent>
+                            </Card>
+                        ))}
                     </div>
-                </div>
+                </ErrorBoundary>
 
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    {insights.map((insight, index) => (
-                        <Card key={index} className="relative overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                            <CardHeader className="pb-2">
-                                <div className="p-2 bg-blue-100 rounded-lg w-fit">{insight.icon}</div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-blue-600">{insight.value}</div>
-                                <p className="text-sm text-gray-600">{insight.title}</p>
-                                <p className="text-xs text-gray-500">{insight.description}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                    <CardHeader>
-                        <CardTitle>Your Upcoming Events</CardTitle>
-                        <CardDescription>Events you are tracking.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {nextTrackedEvents.length > 0 ? (
-                            nextTrackedEvents.map((trackedEvent: AppTrackedEvent) => (
-                                <div key={trackedEvent.trackingId} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
-                                    <h3 className="font-semibold text-gray-900">{trackedEvent.event?.title}</h3>
-                                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                                        <span><Clock className="w-4 h-4 inline mr-1" />{formatDate(trackedEvent.event?.startTime || '')}</span>
-                                        <span><Users className="w-4 h-4 inline mr-1" />{trackedEvent.event?.organizer}</span>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center py-8">
-                                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                <h3 className="font-medium text-gray-900 mb-2">No upcoming events</h3>
-                                <p className="text-gray-600 mb-4">Start tracking events to see them here.</p>
-                                <Button asChild><Link href="/calendar">Browse Events</Link></Button>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {recommendedEvents.length > 0 && (
+                <ErrorBoundary fallback={<SectionFallback />}>
                     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                         <CardHeader>
-                            <CardTitle>Recommended for You</CardTitle>
-                            <CardDescription>Based on your interests.</CardDescription>
+                            <CardTitle>Your Upcoming Events</CardTitle>
+                            <CardDescription>Events you are tracking.</CardDescription>
                         </CardHeader>
-                        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {recommendedEvents.map((event: AppEvent) => (
-                                <div key={event.id} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
-                                    <h3 className="font-medium text-gray-900 mb-2">{event.title}</h3>
+                        <CardContent className="space-y-4">
+                            {nextTrackedEvents.length > 0 ? (
+                                nextTrackedEvents.map((trackedEvent: AppTrackedEvent) => (
+                                    <div key={trackedEvent.trackingId} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
+                                        <h3 className="font-semibold text-gray-900">{trackedEvent.event?.title}</h3>
+                                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                                            <span><Clock className="w-4 h-4 inline mr-1" />{formatDate(trackedEvent.event?.startTime || '')}</span>
+                                            <span><Users className="w-4 h-4 inline mr-1" />{trackedEvent.event?.organizer}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-8">
+                                    <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="font-medium text-gray-900 mb-2">No upcoming events</h3>
+                                    <p className="text-gray-600 mb-4">Start tracking events to see them here.</p>
+                                    <Button asChild><Link href="/calendar">Browse Events</Link></Button>
                                 </div>
-                            ))}
+                            )}
                         </CardContent>
                     </Card>
+                </ErrorBoundary>
+
+                {recommendedEvents.length > 0 && (
+                    <ErrorBoundary fallback={<SectionFallback />}>
+                        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                            <CardHeader>
+                                <CardTitle>Recommended for You</CardTitle>
+                                <CardDescription>Based on your interests.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {recommendedEvents.map((event: AppEvent) => (
+                                    <div key={event.id} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
+                                        <h3 className="font-medium text-gray-900 mb-2">{event.title}</h3>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    </ErrorBoundary>
                 )}
             </div>
         </div>
