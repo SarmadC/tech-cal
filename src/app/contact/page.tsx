@@ -1,8 +1,10 @@
 // src/app/contact/page.tsx
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
-import { useEffect, useRef } from 'react';
+// 1. CORRECTED IMPORTS
+import { useEffect, useRef, useActionState } from 'react'; // Core hooks from 'react'
+import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
+
 import { submitContactFormAction, type ContactFormState } from './actions';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -23,7 +25,9 @@ function SubmitButton() {
 export default function ContactPage() {
     const formRef = useRef<HTMLFormElement>(null);
     const initialState: ContactFormState = { message: '', success: false, errors: {} };
-    const [state, formAction] = useFormState(submitContactFormAction, initialState);
+
+    // 2. RENAME useFormState to useActionState
+    const [state, formAction] = useActionState(submitContactFormAction, initialState);
 
     // Effect to show toasts based on the form action's state
     useEffect(() => {
@@ -70,28 +74,28 @@ export default function ContactPage() {
                     </div>
 
                     {/* Contact Form section */}
-                    <div className="bg-background-secondary rounded-2xl p-8 border border-border-color">
+                    <div className="bg-background-secondary rounded-2xl p-8 border border-border-default">
                         <form ref={formRef} action={formAction} className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="name" className="block text-sm font-medium text-foreground-primary mb-2">Name *</label>
-                                    <input type="text" id="name" name="name" required className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
+                                    <label htmlFor="name" className="block text-sm font-medium text-foreground-secondary mb-2">Name *</label>
+                                    <input type="text" id="name" name="name" required className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
                                     {state.errors?.name && <p className="text-red-500 text-sm mt-1">{state.errors.name[0]}</p>}
                                 </div>
                                 <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-foreground-primary mb-2">Email *</label>
-                                    <input type="email" id="email" name="email" required className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
+                                    <label htmlFor="email" className="block text-sm font-medium text-foreground-secondary mb-2">Email *</label>
+                                    <input type="email" id="email" name="email" required className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
                                     {state.errors?.email && <p className="text-red-500 text-sm mt-1">{state.errors.email[0]}</p>}
                                 </div>
                             </div>
                             <div>
-                                <label htmlFor="company" className="block text-sm font-medium text-foreground-primary mb-2">Company</label>
-                                <input type="text" id="company" name="company" className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
+                                <label htmlFor="company" className="block text-sm font-medium text-foreground-secondary mb-2">Company</label>
+                                <input type="text" id="company" name="company" className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary" />
                             </div>
                             <div>
-                                <label htmlFor="subject" className="block text-sm font-medium text-foreground-primary mb-2">Subject *</label>
-                                <Select name="subject" required defaultValue="general">
-                                    <SelectTrigger id="subject" className="w-full">
+                                <label htmlFor="subject" className="block text-sm font-medium text-foreground-secondary mb-2">Subject *</label>
+                                <Select name="subject" required>
+                                    <SelectTrigger id="subject" className="w-full bg-background-main border-border-default text-foreground-secondary">
                                         <SelectValue placeholder="Select a subject..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -105,8 +109,8 @@ export default function ContactPage() {
                                 {state.errors?.subject && <p className="text-red-500 text-sm mt-1">{state.errors.subject[0]}</p>}
                             </div>
                             <div>
-                                <label htmlFor="message" className="block text-sm font-medium text-foreground-primary mb-2">Message *</label>
-                                <textarea id="message" name="message" required rows={4} className="w-full px-4 py-2.5 bg-background-main border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary resize-none" placeholder="Tell us more about how we can help..." />
+                                <label htmlFor="message" className="block text-sm font-medium text-foreground-secondary mb-2">Message *</label>
+                                <textarea id="message" name="message" required rows={4} className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary resize-none" placeholder="Tell us more about how we can help..." />
                                 {state.errors?.message && <p className="text-red-500 text-sm mt-1">{state.errors.message[0]}</p>}
                             </div>
                             <SubmitButton />

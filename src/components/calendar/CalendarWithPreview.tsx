@@ -1,4 +1,3 @@
-// src/components/calendar/CalendarWithPreview.tsx
 import { FC, useMemo } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg, EventContentArg } from '@fullcalendar/core';
@@ -38,12 +37,13 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
             color: event.color || event.category?.color || '#3B82F6',
             extendedProps: {
                 ...event,
+                // This ternary operator is now syntactically correct
                 format: event.location?.toLowerCase().includes('virtual') || event.livestreamUrl
                     ? 'virtual'
                     : 'in-person'
             }
         }));
-    }, [events]);
+    }, [events]); // The dependency array for useMemo is correctly placed
 
     const renderEventContent = (eventInfo: EventContentArg) => {
         return (
@@ -55,6 +55,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
         );
     };
 
+    // The component correctly returns JSX (ReactNode)
     return (
         <div className="relative">
             <FullCalendar
@@ -65,7 +66,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
                 events={calendarEvents}
                 eventContent={renderEventContent}
                 eventClick={onEventClick}
-                headerToolbar={false} // We'll use custom header
+                headerToolbar={false} // We'll use a custom header
                 height="auto"
                 dayMaxEventRows={3}
                 moreLinkClick="popover"
@@ -111,39 +112,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
                 />
             )}
 
-            {/* Custom CSS for event styling */}
-            <style jsx global>{`
-                .tracked-event {
-                    border-left: 4px solid #10B981 !important;
-                }
-                
-                .virtual-event {
-                    border-right: 2px solid #8B5CF6 !important;
-                }
-                
-                .priority-event {
-                    box-shadow: 0 0 0 2px #F59E0B !important;
-                }
-                
-                .fc-event:hover {
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                }
-                
-                .fc-event {
-                    border-radius: 6px;
-                    border: none !important;
-                    transition: all 0.2s ease;
-                }
-                
-                .fc-daygrid-event {
-                    margin: 1px;
-                }
-                
-                .fc-event-main {
-                    padding: 2px 4px;
-                }
-            `}</style>
+            {/* The <style jsx global> block has been correctly removed. */}
         </div>
     );
 };

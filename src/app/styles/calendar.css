@@ -1,0 +1,204 @@
+/* ==========================================================================
+   KURE-CAL CALENDAR & FILTERS STYLES
+   ========================================================================== */
+
+/* ==========================================================================
+   1. GRID & LAYOUT
+   ========================================================================== */
+
+/* Reduce visual noise of the main grid lines */
+.fc-theme-standard td, .fc-theme-standard th {
+    border-color: var(--border-subtle);
+}
+
+/* Add breathing room inside each day cell's frame */
+.fc .fc-daygrid-day-frame {
+    padding: 12px;
+}
+
+/* De-emphasize the date numbers for days not in the current month */
+.fc-day-other .fc-daygrid-day-top {
+    opacity: 0.4;
+}
+
+/* Highlight the current day for easy reference */
+.fc .fc-day-today {
+    background-color: var(--accent-primary-light);
+}
+.fc .fc-day-today .fc-daygrid-day-top {
+    opacity: 1; /* Ensure today's date number is fully visible */
+}
+.fc .fc-day-today .fc-daygrid-day-number {
+    font-weight: 700;
+    color: var(--accent-primary);
+    background-color: rgba(249, 115, 22, 0.1);
+    border-radius: 9999px;
+    padding: 2px 6px;
+}
+
+
+/* ==========================================================================
+   2. EVENT STYLING
+   ========================================================================== */
+
+/* The outer container for an event in the grid */
+.fc-daygrid-event {
+    margin-bottom: 6px; /* Vertical space between events */
+    border: none !important;
+    background-color: transparent !important;
+    border-radius: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: transform 0.2s ease-in-out;
+    z-index: 1;
+}
+
+/* The actual colored box inside the event container */
+.fc-daygrid-event .fc-event-main {
+    border-radius: 6px;
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+/* The hover "lift" effect */
+.fc-daygrid-event:hover {
+    transform: translateY(-2px);
+    z-index: 10;
+}
+.fc-daygrid-event:hover .fc-event-main {
+    box-shadow: var(--shadow-lg);
+}
+
+
+/* --- Multi-Day "Pill" Effect --- */
+
+.fc-daygrid-event.fc-event-start .fc-event-main {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.fc-daygrid-event.fc-event-end .fc-event-main {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+.fc-daygrid-event:not(.fc-event-start):not(.fc-event-end) .fc-event-main {
+    border-radius: 0; /* Middle segments are square */
+}
+
+
+/* ==========================================================================
+   3. EVENT CONTENT & INDICATORS
+   ========================================================================== */
+
+/* --- Hierarchy for content inside our EnhancedEventContent component --- */
+.fc-event-main-content .event-title {
+    font-weight: 600;
+    color: var(--foreground-primary);
+}
+.fc-event-main-content .event-time,
+.fc-event-main-content .event-organizer {
+    opacity: 0.75;
+    transition: opacity 0.2s ease-in-out;
+}
+.fc-daygrid-event:hover .event-time,
+.fc-daygrid-event:hover .event-organizer {
+    opacity: 0.9;
+}
+
+/* --- Status Indicators --- */
+.tracked-event .fc-event-main {
+    border-left: 3px solid var(--success) !important;
+}
+.virtual-event .fc-event-main {
+    border-right: 3px solid #8B5CF6 !important; /* Note: This color is not in your theme variables */
+}
+.priority-event .fc-event-main {
+    box-shadow: 0 0 8px 1px var(--warning) !important;
+}
+.priority-event:hover .fc-event-main {
+    box-shadow: var(--shadow-lg), 0 0 8px 1px var(--warning) !important;
+}
+
+
+/* ==========================================================================
+   4. "+ MORE" LINK (for event overflow)
+   ========================================================================== */
+
+.fc .fc-daygrid-day-bottom {
+  padding: 2px 8px;
+}
+
+.fc .fc-daygrid-more-link {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--foreground-secondary);
+  background-color: var(--background-tertiary);
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+.fc .fc-daygrid-more-link:hover {
+  color: var(--foreground-primary);
+  background-color: var(--background-elevated);
+  box-shadow: var(--shadow-md);
+}
+
+/* ==========================================================================
+   5. SMART FILTERS
+   ========================================================================== */
+
+/* --- Toggle Button (in Header) --- */
+.filter-toggle-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    background-color: var(--background-secondary);
+    color: var(--foreground-secondary);
+}
+.filter-toggle-button:hover {
+    border-color: var(--border-strong);
+    background-color: var(--background-tertiary);
+    color: var(--foreground-primary);
+}
+.filter-toggle-button.active {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* --- Active Filter Count Badge --- */
+.filter-count-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 9999px;
+    background-color: var(--accent-primary);
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+/* --- Filter Panel (Slide-out Menu) --- */
+.smart-filter-panel {
+    background-color: var(--background-secondary);
+    border-left: 1px solid var(--border-subtle);
+    padding: 24px;
+    color: var(--foreground-secondary);
+}
+.smart-filter-panel h3,
+.smart-filter-panel h4 {
+    color: var(--foreground-primary);
+}
+.smart-filter-panel label:hover {
+    background-color: var(--background-tertiary);
+}

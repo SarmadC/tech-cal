@@ -1,4 +1,3 @@
-// src/components/calendar/EnhancedEventContent.tsx
 import { FC, useRef } from 'react';
 import { EventContentArg } from '@fullcalendar/core';
 import { AppEvent } from '@/types';
@@ -12,11 +11,20 @@ interface EnhancedEventContentProps extends EventContentArg {
 const EnhancedEventContent: FC<EnhancedEventContentProps> = ({
     event,
     timeText,
+    isStart,
     onEventHover,
     onEventLeave
 }) => {
-    const eventData = event.extendedProps as AppEvent;
+    // Hooks must be called at the top level before any conditional returns.
     const eventRef = useRef<HTMLDivElement>(null);
+
+    // For multi-day events, only render the full content on the first day segment.
+    // Subsequent segments will be blank, creating the "continuous pill" effect.
+    if (!isStart) {
+        return <div className="fc-event-title-blank">&nbsp;</div>;
+    }
+
+    const eventData = event.extendedProps as AppEvent;
 
     const handleMouseEnter = (e: React.MouseEvent) => {
         if (onEventHover && eventData) {
@@ -45,64 +53,63 @@ const EnhancedEventContent: FC<EnhancedEventContentProps> = ({
         return now >= start && (!end || now <= end);
     };
 
-    const isUpcoming = () => {
-        const now = new Date();
-        const start = new Date(eventData.startTime);
-        const hourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
-        return start <= hourFromNow && start > now;
-    };
+    // Note: The isUpcoming and status indicators are now integrated into the main body
+    // to allow for better layout control and hover effects if desired.
 
     return (
         <div
             ref={eventRef}
-            className="h-full w-full p-1 relative group cursor-pointer transition-all duration-200 hover:shadow-md"
+            // The `group` class enables `group-hover:` styles on child elements
+            className="h-full w-full p-1.5 relative group cursor-pointer overflow-hidden"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
         >
-            {/* Live/Upcoming indicators */}
-            <div className="absolute top-0 right-0 flex space-x-1 z-10">
-                {isLive() && (
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                )}
-                {isUpcoming() && (
-                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                )}
-                {eventData.isTracked && (
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                )}
-            </div>
-
-            {/* Event content */}
-            <div className="h-full flex flex-col">
-                <div className="font-medium text-xs mb-1 line-clamp-2 group-hover:font-semibold transition-all">
-                    {event.title}
+            {/* The fc-event-main-content class is for the global CSS to target */}
+            <div className="fc-event-main-content h-full flex flex-col">
+                {/* --- TOP ROW: Title and Live Indicator --- */}
+                <div className="flex items-start justify-between">
+                    {/* The `event-title` class receives styles from globals.css */}
+                    <p className="event-title text-xs mb-1 line-clamp-1">
+                        {event.title}
+                    </p>
+                    {isLive() && (
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse flex-shrink-0 ml-1"></div>
+                    )}
                 </div>
 
-                {timeText && (
-                    <div className="text-xs opacity-75 mb-1">
-                        {formatTime(eventData.startTime)}
+
+                {/* --- MIDDLE ROW: Time and Organizer (Revealed on Hover) --- */}
+                {/* This whole block will fade in on hover */}
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {timeText && (
+                        /* The `event-time` class receives styles from globals.css */
+                        <div className="event-time text-xs">
+                            {formatTime(eventData.startTime)}
+                        </div>
+                    )}
+                    {/* The `event-organizer` class receives styles from globals.css */}
+                    <div className="event-organizer text-xs line-clamp-1">
+                        {eventData.organizer}
                     </div>
-                )}
-
-                <div className="text-xs opacity-60 line-clamp-1">
-                    {eventData.organizer}
                 </div>
 
-                {/* Format badge for larger events */}
-                {event.extendedProps?.format && (
-                    <div className="mt-auto">
+
+                {/* --- BOTTOM ROW (FOOTER): Tracked Icon and Format Badge (Revealed on Hover) --- */}
+                <div className="mt-auto flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {eventData.isTracked ? (
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    ) : <div></div> /* Empty div to maintain space-between alignment */}
+
+                    {event.extendedProps?.format && (
                         <Badge
                             variant="outline"
-                            className="text-xs px-1 py-0 h-4 opacity-80 group-hover:opacity-100"
+                            className="text-xs px-1 py-0 h-4"
                         >
                             {event.extendedProps.format === 'virtual' ? '🌐' : '📍'}
                         </Badge>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
-
-            {/* Hover overlay */}
-            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded pointer-events-none"></div>
         </div>
     );
 };

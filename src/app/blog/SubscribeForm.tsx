@@ -1,8 +1,10 @@
 // src/app/blog/SubscribeForm.tsx
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+// 1. CORRECTED IMPORTS
+import { useEffect, useRef, useActionState } from 'react'; // Core hooks from 'react'
+import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
+
 import { toast } from 'sonner';
 import { subscribeToAction, type SubscribeFormState } from './actions';
 import { Loader2 } from 'lucide-react';
@@ -30,8 +32,8 @@ export default function SubscribeForm() {
         status: 'idle',
     };
 
-    // The useFormState hook manages the form's lifecycle
-    const [state, formAction] = useFormState(subscribeToAction, initialState);
+    // 2. RENAME useFormState to useActionState
+    const [state, formAction] = useActionState(subscribeToAction, initialState);
 
     // Use useEffect to show toast notifications based on the form's state
     useEffect(() => {
@@ -55,7 +57,8 @@ export default function SubscribeForm() {
                     name="email" // The name attribute is crucial for FormData
                     placeholder="Enter your email"
                     required
-                    className="flex-1 px-4 py-3 rounded-lg text-foreground-primary bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white"
+                    // Theming consistency: Using theme variables
+                    className="flex-1 px-4 py-3 rounded-lg text-foreground-primary bg-background-main border border-border-default placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary"
                 />
                 <SubmitButton />
             </div>

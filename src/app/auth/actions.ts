@@ -1,17 +1,18 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
+// 1. REMOVED the 'headers' import as it's unreliable for this purpose
+// import { headers } from 'next/headers' 
 import { createClient } from '@/utils/supabase/server'
 import { AuthService } from '@/services/authService'
 import { OAuthProvider } from '@/types'
 
 // Correctly import all schemas from the new central location
-import { 
-    LoginSchema, 
-    SignupSchema, 
+import {
+    LoginSchema,
+    SignupSchema,
     ForgotPasswordSchema,
-    ResetPasswordSchema 
+    ResetPasswordSchema
 } from '@/lib/schemas'
 
 // A reusable FormState type for all auth actions
@@ -46,8 +47,7 @@ export async function loginAction(
         };
     }
 
-    // FIX: Await the async createClient() function
-    const supabase = await createClient(); 
+    const supabase = await createClient();
     try {
         await AuthService.signIn(validatedFields.data, supabase);
     } catch (error) {
@@ -78,17 +78,14 @@ export async function signupAction(
         };
     }
 
-    // FIX: Transform the data to match the expected service layer types
     const { acceptTerms, ...restOfData } = validatedFields.data;
     const serviceData = {
         ...restOfData,
-        acceptTerms: acceptTerms === 'on', // Convert "on" string to a true boolean
+        acceptTerms: acceptTerms === 'on',
     };
 
-    // FIX: Await the async createClient() function
     const supabase = await createClient();
     try {
-        // Pass the correctly typed data to the service
         await AuthService.signUp(serviceData, supabase);
     } catch (error) {
         console.error("Signup Action Error:", error);
@@ -118,12 +115,10 @@ export async function forgotPasswordAction(
         };
     }
 
-    // FIX: Await the async createClient() function
     const supabase = await createClient();
     try {
         await AuthService.resetPassword(validatedFields.data.email, supabase);
-    } catch (error)
-    {
+    } catch (error) {
         console.error("Forgot Password Action Error:", error);
         return {
             success: false,
@@ -154,7 +149,6 @@ export async function updatePasswordAction(
         };
     }
 
-    // FIX: Await the async createClient() function
     const supabase = await createClient();
     try {
         await AuthService.updateUserPassword(validatedFields.data.password, supabase);
@@ -174,31 +168,48 @@ export async function updatePasswordAction(
 }
 
 
-// --- OAuth Action ---
+// --- OAuth Action (Modified) ---
 
 export async function oauthSignInAction(provider: OAuthProvider) {
-    const headerStore = await headers();
-    const origin = headerStore.get('origin');
-    
-    // FIX: Await the async createClient() function
+    // 2. ROBUST ORIGIN DETECTION LOGIC
+    // This reliably determines the correct URL for local dev vs. production.
+    const origin =
+        process.env.NODE_ENV === 'development'
+            ? process.env.NEXT_PUBLIC_SITE_URL // From your .env.local file
+            : process.env.NEXT_PUBLIC_VERCEL_URL; // Automatically set by Vercel in production
+
+    // 3. CONSTRUCT THE FULL REDIRECT URL
+    const redirectTo = `${origin}/auth/callback`;
+
+    // 4. (Optional but Recommended) DEBUGGING LOG
+    // Check your terminal where `npm run dev` is running to see this output.
+    console.log('Constructed Redirect URL for OAuth:', redirectTo);
+
+    // 5. ADD A CHECK to ensure the environment variable is set.
+    if (!origin) {
+        const errorMessage = 'Server configuration error: Site URL environment variable is not set.';
+        console.error(errorMessage);
+        return redirect(`/login?message=${encodeURIComponent(errorMessage)}`);
+    }
+
     const supabase = await createClient();
 
-    // Now this call is correct because 'supabase' is no longer a Promise
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-            redirectTo: `${origin}/auth/callback`,
+            // 6. USE THE NEW, RELIABLE URL
+            redirectTo: redirectTo,
         },
     });
 
     if (error) {
         console.error('OAuth Error:', error.message);
-        return redirect('/login?message=Could not authenticate with provider.');
+        return redirect(`/login?message=Could not authenticate with ${provider}.`);
     }
 
     if (data.url) {
         return redirect(data.url);
     }
-    
-    return redirect('/login?message=An unexpected error occurred with the OAuth provider.');
+
+    return redirect('/login?message=An unexpected error occurred.');
 }

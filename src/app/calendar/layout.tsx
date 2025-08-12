@@ -1,8 +1,10 @@
-// src/app/calendar/layout.tsx
+import '../styles/calendar.css';
+import '../styles/smart-filters.css';
+
 export default function CalendarLayout({
-  children,
+    children,
 }: {
-  children: React.ReactNode
+    children: React.ReactNode
 }) {
-  return <>{children}</>;
+    return <>{children}</>;
 }
