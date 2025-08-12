@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { loginAction, oauthSignInAction } from '@/app/auth/actions';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { AuthProviders } from '@/components/auth';
-import ProtectedRoute from '@/components/layout/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import Loading from '@/components/Loading';
 import type { OAuthProvider } from '@/types';
 import type { AuthFormState } from '@/app/auth/actions';
 
@@ -17,159 +18,97 @@ export default function LoginPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+    const { user, initialized } = useAuth();
 
-    // Handle errors passed back from the server-side auth callback
+    useEffect(() => {
+        if (initialized && user) {
+            const redirectTo = searchParams.get('redirect') || '/calendar';
+            router.push(redirectTo);
+        }
+    }, [initialized, user, router, searchParams]);
+
     useEffect(() => {
         const error = searchParams.get('error');
         if (error) {
             toast.error("Authentication Failed", {
                 description: "There was a problem signing you in. Please try again.",
             });
-            // Clean the URL so the error doesn't persist on refresh
             router.replace('/login', { scroll: false });
         }
     }, [searchParams, router]);
 
-    // The initial state for our email/password form
     const initialState: AuthFormState = { message: '', success: false };
 
-    // Handler for OAuth provider clicks (Google, GitHub, etc.)
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         setIsOAuthLoading(true);
         toast.loading(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
         await oauthSignInAction(provider);
-        // If the redirect fails for some reason, we can reset the button after a timeout
         setTimeout(() => setIsOAuthLoading(false), 5000);
     };
 
-    // Handler for successful email/password login
     const handleLoginSuccess = () => {
         const redirectTo = searchParams.get('redirect') || '/calendar';
-        // Redirect instantly. The success toast is handled by AuthContext on the destination page.
         router.push(redirectTo);
     };
 
+    if (!initialized || user) {
+        return <Loading />;
+    }
+
     return (
-        <ProtectedRoute allowUnauthenticated>
-            <div className="min-h-screen flex items-center justify-center bg-background-main px-4 sm:px-6 lg:px-8">
-                <div className="max-w-md w-full space-y-8">
-                    {/* Header section */}
-                    <div className="text-center">
-                        <h2 className="mt-6 text-3xl font-bold text-foreground-primary">
-                            Welcome back
-                        </h2>
-                        <p className="mt-2 text-sm text-foreground-secondary">
-                            Sign in to your account to continue
-                        </p>
-                    </div>
+        <div className="min-h-screen flex items-center justify-center bg-background-main px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full space-y-8">
+                <div className="text-center">
+                    <h2 className="mt-6 text-3xl font-bold text-foreground-primary">Welcome back</h2>
+                    <p className="mt-2 text-sm text-foreground-secondary">Sign in to your account to continue</p>
+                </div>
 
-                    {/* OAuth Providers */}
-                    <AuthProviders 
-                        onSelectProvider={handleOAuthSignIn}
-                        isPending={isOAuthLoading}
-                        actionText="Continue"
-                    />
+                <AuthProviders onSelectProvider={handleOAuthSignIn} isPending={isOAuthLoading} actionText="Continue" />
 
-                    {/* Divider */}
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border-default" />
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-background-main text-foreground-secondary">
-                                Or continue with email
-                            </span>
-                        </div>
-                    </div>
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-default" /></div>
+                    <div className="relative flex justify-center text-sm"><span className="px-2 bg-background-main text-foreground-secondary">Or continue with email</span></div>
+                </div>
 
-                    {/* Email/Password Form */}
-                    <AuthForm
-                        action={loginAction}
-                        initialState={initialState}
-                        submitButtonText="Sign In"
-                        onSuccess={handleLoginSuccess}
-                    >
-                        {(state) => (
-                            <>
-                                {/* Email Field */}
-                                <div className="space-y-2">
-                                    <label htmlFor="email" className="block text-sm font-medium text-foreground-primary">
-                                        Email address
-                                    </label>
-                                    <input
-                                        id="email"
-                                        name="email"
-                                        type="email"
-                                        autoComplete="email"
-                                        required
-                                        className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                                        placeholder="you@example.com"
-                                    />
-                                    {state.errors?.email && (
-                                        <p className="text-sm text-error">{state.errors.email[0]}</p>
-                                    )}
+                <AuthForm action={loginAction} initialState={initialState} submitButtonText="Sign In" onSuccess={handleLoginSuccess}>
+                    {(state) => (
+                        <>
+                            {/* Email Field */}
+                            <div className="space-y-2">
+                                <label htmlFor="email" className="block text-sm font-medium text-foreground-primary">Email address</label>
+                                <input id="email" name="email" type="email" autoComplete="email" required className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent" placeholder="you@example.com" />
+                                {state.errors?.email && (<p className="text-sm text-error">{state.errors.email[0]}</p>)}
+                            </div>
+
+                            {/* Password Field */}
+                            <div className="space-y-2">
+                                <label htmlFor="password" className="block text-sm font-medium text-foreground-primary">Password</label>
+                                <input id="password" name="password" type="password" autoComplete="current-password" required className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent" placeholder="••••••••" />
+                                {state.errors?.password && (<p className="text-sm text-error">{state.errors.password[0]}</p>)}
+                            </div>
+
+                            {/* Remember Me & Forgot Password */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                    <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-accent-primary focus:ring-accent-primary border-border-default rounded" />
+                                    <label htmlFor="remember-me" className="ml-2 block text-sm text-foreground-secondary">Remember me</label>
                                 </div>
-
-                                {/* Password Field */}
-                                <div className="space-y-2">
-                                    <label htmlFor="password" className="block text-sm font-medium text-foreground-primary">
-                                        Password
-                                    </label>
-                                    <input
-                                        id="password"
-                                        name="password"
-                                        type="password"
-                                        autoComplete="current-password"
-                                        required
-                                        className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                                        placeholder="••••••••"
-                                    />
-                                    {state.errors?.password && (
-                                        <p className="text-sm text-error">{state.errors.password[0]}</p>
-                                    )}
+                                <div className="text-sm">
+                                    <Link href="/forgot-password" className="font-medium text-accent-primary hover:text-accent-primary-hover">Forgot your password?</Link>
                                 </div>
+                            </div>
+                        </>
+                    )}
+                </AuthForm>
+                {/* --- END OF CORRECTED SECTION --- */}
 
-                                {/* Remember Me & Forgot Password */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center">
-                                        <input
-                                            id="remember-me"
-                                            name="remember-me"
-                                            type="checkbox"
-                                            className="h-4 w-4 text-accent-primary focus:ring-accent-primary border-border-default rounded"
-                                        />
-                                        <label htmlFor="remember-me" className="ml-2 block text-sm text-foreground-secondary">
-                                            Remember me
-                                        </label>
-                                    </div>
-
-                                    <div className="text-sm">
-                                        <Link 
-                                            href="/forgot-password" 
-                                            className="font-medium text-accent-primary hover:text-accent-primary-hover"
-                                        >
-                                            Forgot your password?
-                                        </Link>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </AuthForm>
-
-                    {/* Sign Up Link */}
-                    <div className="text-center">
-                        <p className="text-sm text-foreground-secondary">
-                            Don&apos;t have an account?{' '}
-                            <Link 
-                                href="/signup" 
-                                className="font-medium text-accent-primary hover:text-accent-primary-hover"
-                            >
-                                Sign up here
-                            </Link>
-                        </p>
-                    </div>
+                <div className="text-center">
+                    <p className="text-sm text-foreground-secondary">
+                        Don&apos;t have an account?{' '}
+                        <Link href="/signup" className="font-medium text-accent-primary hover:text-accent-primary-hover">Sign up here</Link>
+                    </p>
                 </div>
             </div>
-        </ProtectedRoute>
+        </div>
     );
 }
