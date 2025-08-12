@@ -1,9 +1,9 @@
-// src/app/login/page.tsx (Refined)
+// src/app/login/page.tsx (Complete and Correct)
 'use client';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react'; // <-- Add useEffect
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 import { loginAction, oauthSignInAction } from '@/app/auth/actions';
@@ -18,38 +18,34 @@ export default function LoginPage() {
     const searchParams = useSearchParams();
     const [isOAuthLoading, setIsOAuthLoading] = useState(false);
 
-    // --- NEW: Handle errors from the auth callback ---
+    // Handle errors passed back from the server-side auth callback
     useEffect(() => {
         const error = searchParams.get('error');
         if (error) {
             toast.error("Authentication Failed", {
                 description: "There was a problem signing you in. Please try again.",
             });
-            // Optional: Clean the URL so the error doesn't persist on refresh
+            // Clean the URL so the error doesn't persist on refresh
             router.replace('/login', { scroll: false });
         }
     }, [searchParams, router]);
 
+    // The initial state for our email/password form
     const initialState: AuthFormState = { message: '', success: false };
 
+    // Handler for OAuth provider clicks (Google, GitHub, etc.)
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         setIsOAuthLoading(true);
-        // The loading state is enough, no need to store the provider name
         toast.loading(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
-        // We don't need a try/catch here. The server action handles the logic.
-        // If it fails, the user stays on the page and the loading state will reset
-        // or they can try again. The real error happens on the callback.
         await oauthSignInAction(provider);
-        // On failure, the user might not be redirected, so we should handle that.
-        // For simplicity, we'll let them click again. A timeout could also work.
-        // setTimeout(() => setIsOAuthLoading(false), 5000); // Optional: reset after 5s
+        // If the redirect fails for some reason, we can reset the button after a timeout
+        setTimeout(() => setIsOAuthLoading(false), 5000);
     };
 
+    // Handler for successful email/password login
     const handleLoginSuccess = () => {
         const redirectTo = searchParams.get('redirect') || '/calendar';
-        
-        // --- REFINED: Instant redirect ---
-        // The success toast is now handled by AuthContext on the destination page.
+        // Redirect instantly. The success toast is handled by AuthContext on the destination page.
         router.push(redirectTo);
     };
 
@@ -57,7 +53,7 @@ export default function LoginPage() {
         <ProtectedRoute allowUnauthenticated>
             <div className="min-h-screen flex items-center justify-center bg-background-main px-4 sm:px-6 lg:px-8">
                 <div className="max-w-md w-full space-y-8">
-                    {/* Header section (Looks good) */}
+                    {/* Header section */}
                     <div className="text-center">
                         <h2 className="mt-6 text-3xl font-bold text-foreground-primary">
                             Welcome back
@@ -74,7 +70,7 @@ export default function LoginPage() {
                         actionText="Continue"
                     />
 
-                    {/* Divider (Looks good) */}
+                    {/* Divider */}
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-border-default" />
@@ -86,7 +82,7 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    {/* Email/Password Form (Looks good, no changes needed) */}
+                    {/* Email/Password Form */}
                     <AuthForm
                         action={loginAction}
                         initialState={initialState}
@@ -95,15 +91,75 @@ export default function LoginPage() {
                     >
                         {(state) => (
                             <>
-                                {/* Fields are well-structured, no changes needed */}
+                                {/* Email Field */}
+                                <div className="space-y-2">
+                                    <label htmlFor="email" className="block text-sm font-medium text-foreground-primary">
+                                        Email address
+                                    </label>
+                                    <input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        autoComplete="email"
+                                        required
+                                        className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+                                        placeholder="you@example.com"
+                                    />
+                                    {state.errors?.email && (
+                                        <p className="text-sm text-error">{state.errors.email[0]}</p>
+                                    )}
+                                </div>
+
+                                {/* Password Field */}
+                                <div className="space-y-2">
+                                    <label htmlFor="password" className="block text-sm font-medium text-foreground-primary">
+                                        Password
+                                    </label>
+                                    <input
+                                        id="password"
+                                        name="password"
+                                        type="password"
+                                        autoComplete="current-password"
+                                        required
+                                        className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+                                        placeholder="••••••••"
+                                    />
+                                    {state.errors?.password && (
+                                        <p className="text-sm text-error">{state.errors.password[0]}</p>
+                                    )}
+                                </div>
+
+                                {/* Remember Me & Forgot Password */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center">
+                                        <input
+                                            id="remember-me"
+                                            name="remember-me"
+                                            type="checkbox"
+                                            className="h-4 w-4 text-accent-primary focus:ring-accent-primary border-border-default rounded"
+                                        />
+                                        <label htmlFor="remember-me" className="ml-2 block text-sm text-foreground-secondary">
+                                            Remember me
+                                        </label>
+                                    </div>
+
+                                    <div className="text-sm">
+                                        <Link 
+                                            href="/forgot-password" 
+                                            className="font-medium text-accent-primary hover:text-accent-primary-hover"
+                                        >
+                                            Forgot your password?
+                                        </Link>
+                                    </div>
+                                </div>
                             </>
                         )}
                     </AuthForm>
 
-                    {/* Sign Up Link (Looks good) */}
+                    {/* Sign Up Link */}
                     <div className="text-center">
                         <p className="text-sm text-foreground-secondary">
-                            Don't have an account?{' '}
+                            Don&apos;t have an account?{' '}
                             <Link 
                                 href="/signup" 
                                 className="font-medium text-accent-primary hover:text-accent-primary-hover"
