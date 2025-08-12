@@ -10,7 +10,7 @@ import { loginAction, oauthSignInAction } from '@/app/auth/actions';
 import { useAuth } from '@/contexts/AuthContext';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
-import {AuthProviders } from '@/components/auth';
+import { AuthProviders } from '@/components/auth';
 import type { OAuthProvider } from '@/types';
 
 
@@ -40,6 +40,7 @@ export default function LoginPage() {
     const { user, initialized } = useAuth();
 
     // 1. Setup useFormState to manage the entire form lifecycle
+    // Note: Keeping useFormState until React version supports useActionState
     const [state, formAction] = useFormState(loginAction, initialState);
 
     // 2. Handle URL-based messages (from OAuth redirects, etc.)
@@ -84,7 +85,7 @@ export default function LoginPage() {
                         <Link href="/" className="inline-flex items-center space-x-2">
                             <div className="w-12 h-12 bg-accent-primary rounded-xl flex items-center justify-center">
                                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z" />
                                 </svg>
                             </div>
                             <span className="text-2xl font-bold text-foreground-primary">TechCalendar</span>
@@ -132,7 +133,7 @@ export default function LoginPage() {
                                 {state.errors?.email && <p className="text-sm text-red-500 mt-1">{state.errors.email[0]}</p>}
                             </div>
 
-                             <div className="space-y-2">
+                            <div className="space-y-2">
                                 <label htmlFor="password" className="text-sm font-medium text-foreground-secondary">Password</label>
                                 <input
                                     id="password"

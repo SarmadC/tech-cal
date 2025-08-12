@@ -3,23 +3,22 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { Filter } from 'lucide-react';
 
 import { createClient } from '@/utils/supabase/client';
 
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel';
-import CustomEventContent from '@/components/calendar/CustomEventContent';
 import Loading from '@/components/Loading';
+import CalendarWithPreview from '@/components/calendar/CalendarWithPreview';
+import SmartFilterPanel from '@/components/calendar/SmartFilterPanel';
+import { useSmartFilters } from '@/hooks/useSmartFilters';
 
 import { AppEvent, AppEventType, AppProfile, AppTrackedEvent } from '@/types';
-// We will also update useTrackedEvents to use the new service pattern
 import { UserEventService } from '@/services/userEventService';
 import { useAuth } from '@/contexts/AuthContext';
-import { useFilters } from '@/hooks/useFilters';
 import { EventService } from '@/services/eventServices';
 
 interface CalendarClientViewProps {
@@ -31,7 +30,9 @@ interface CalendarClientViewProps {
 type CalendarViewType = 'month' | 'week' | 'day';
 
 const viewMap: { [key: string]: string } = {
-    day: 'timeGridDay', week: 'timeGridWeek', month: 'dayGridMonth',
+    day: 'timeGridDay',
+    week: 'timeGridWeek',
+    month: 'dayGridMonth',
 };
 
 export default function CalendarClientView({
@@ -40,36 +41,55 @@ export default function CalendarClientView({
     profile,
 }: CalendarClientViewProps) {
     const [supabase] = useState(() => createClient());
-    const { user } = useAuth(); // Get user for tracked events query
+    const { user } = useAuth();
 
     const calendarRef = useRef<FullCalendar>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<CalendarViewType>('week');
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
 
-    const { activeFilters, setFilters } = useFilters();
-
-    // REMOVED THE REDUNDANT LOCAL STATE. The `activeFilters.searchTerm` from the useFilters hook is the source of truth.
-    // The debouncing should happen where the user *input* is, not here.
-    // For now, we will directly use activeFilters.searchTerm in the query.
-    // If you add a search bar, you would use useState and useDebounce inside *that* component.
+    // Smart Filters - handles ALL filtering now
+    const {
+        filters,
+        filteredEvents,
+        updateFilter,
+        resetFilters,
+        applyQuickFilter,
+        activeFilterCount,
+        isFilterPanelOpen,
+        setIsFilterPanelOpen,
+    } = useSmartFilters(initialEvents, profile);
 
     // --- DATA FETCHING ---
     const { data: trackedEvents, isLoading: isLoadingTracked } = useQuery({
         queryKey: ['trackedEvents', user?.id],
         queryFn: () => {
             if (!user) return [];
-            // useTrackedEvents was a hook, now we call the service directly
             return UserEventService.getTrackedEvents(user.id, supabase);
         },
         enabled: !!user,
     });
 
+    // Use smart filtered events instead of server-side filtering for most cases
     const { data: events, isLoading: isLoadingEvents, isError, error } = useQuery({
-        queryKey: ['events', activeFilters],
-        queryFn: () => EventService.getEvents(activeFilters, supabase),
-        initialData: initialEvents,
+        queryKey: ['events', filters],
+        queryFn: () => {
+            // For basic filters, use client-side filtering from useSmartFilters
+            if (filters.searchTerm || filters.dateRange.start || filters.dateRange.end) {
+                // Only fetch from server if we have search terms or date ranges
+                return EventService.getEvents({
+                    categories: filters.categories,
+                    searchTerm: filters.searchTerm,
+                    startDate: filters.dateRange.start || undefined,
+                    endDate: filters.dateRange.end || undefined,
+                }, supabase);
+            }
+            // Otherwise use client-side filtered events
+            return Promise.resolve(filteredEvents);
+        },
+        initialData: filteredEvents,
         placeholderData: keepPreviousData,
+        enabled: !!user,
     });
 
     // --- DERIVED/MEMOIZED STATE ---
@@ -91,17 +111,6 @@ export default function CalendarClientView({
         return enrichedEvents
             .filter((e: AppEvent) => new Date(e.startTime) > now)
             .sort((a: AppEvent, b: AppEvent) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
-    }, [enrichedEvents]);
-
-    const fullCalendarEvents = useMemo(() => {
-        return enrichedEvents.map(event => ({
-            id: event.id,
-            title: event.title || 'Untitled Event',
-            start: event.startTime,
-            end: event.endTime || undefined,
-            extendedProps: event,
-            color: event.color
-        }));
     }, [enrichedEvents]);
 
     // --- CALLBACKS & HANDLERS ---
@@ -126,17 +135,18 @@ export default function CalendarClientView({
     }
 
     if (isError) {
-        return <div>Error loading events: {error.message}</div>
+        return <div>Error loading events: {error?.message}</div>
     }
 
     return (
         <div className="flex h-screen bg-[#171717] text-gray-300 font-sans">
+            {/* UPDATED Sidebar - No more category filters, handled by Smart Filters */}
             <CalendarSidebar
                 currentDate={currentDate}
                 setCurrentDate={setCurrentDate}
-                categories={initialCategories}
-                selectedCategories={new Set(activeFilters.categories)}
-                setSelectedCategories={(newSet) => setFilters({ categories: Array.from(newSet) })}
+                categories={initialCategories} // Still needed for mini calendar dots
+                selectedCategories={new Set()} // Not used anymore
+                setSelectedCategories={() => { }} // Not used anymore
                 nextUpcomingEvent={nextUpcomingEvent}
                 user={{
                     name: profile?.fullName || 'Kure-Cal User',
@@ -144,36 +154,82 @@ export default function CalendarClientView({
                 }}
                 events={enrichedEvents}
             />
+
+            {/* Main Content */}
             <main className="flex-1 flex flex-col">
-                <CalendarHeader
-                    currentDate={currentDate}
-                    view={view}
-                    onNavigate={navigateCalendar}
-                    onChangeView={changeView}
-                />
-                <div className="flex-1 overflow-hidden p-6">
-                    {isLoadingEvents && (
-                        <div className="absolute top-24 right-10 z-10 p-2 bg-gray-600/50 rounded-lg text-xs animate-pulse">
-                            Loading...
+                {/* Header with Smart Filter Toggle */}
+                <div className="flex items-center justify-between">
+                    <CalendarHeader
+                        currentDate={currentDate}
+                        view={view}
+                        onNavigate={navigateCalendar}
+                        onChangeView={changeView}
+                    />
+
+                    {/* Smart Filter Toggle Button - Now the ONLY filtering interface */}
+                    <div className="flex items-center space-x-2 mr-6">
+                        <button
+                            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+                            className={`px-3 py-2 rounded-lg border transition-colors ${isFilterPanelOpen || activeFilterCount > 0
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-gray-700 border-gray-600 hover:bg-gray-600'
+                                }`}
+                        >
+                            <div className="flex items-center space-x-2">
+                                <Filter className="w-4 h-4" />
+                                <span className="text-sm">Smart Filters</span>
+                                {activeFilterCount > 0 && (
+                                    <span className="bg-white/20 text-xs px-1.5 py-0.5 rounded-full">
+                                        {activeFilterCount}
+                                    </span>
+                                )}
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Calendar and Filter Panel Container */}
+                <div className="flex-1 flex relative">
+                    {/* Calendar Container */}
+                    <div className={`flex-1 transition-all duration-300 ${isFilterPanelOpen ? 'mr-80' : ''
+                        }`}>
+                        <div className="flex-1 overflow-hidden p-6">
+                            {/* Loading Indicator */}
+                            {isLoadingEvents && (
+                                <div className="absolute top-24 right-10 z-10 p-2 bg-gray-600/50 rounded-lg text-xs animate-pulse">
+                                    Loading...
+                                </div>
+                            )}
+
+                            {/* Enhanced Calendar with Preview Cards */}
+                            <CalendarWithPreview
+                                events={enrichedEvents}
+                                onEventClick={handleEventClick}
+                                view={viewMap[view]}
+                                date={currentDate}
+                                calendarRef={calendarRef}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Smart Filter Panel - Comprehensive filtering */}
+                    {isFilterPanelOpen && (
+                        <div className="w-80 border-l border-gray-700 bg-[#1e1e1e]">
+                            <SmartFilterPanel
+                                filters={filters}
+                                onUpdateFilter={updateFilter}
+                                onResetFilters={resetFilters}
+                                onApplyQuickFilter={applyQuickFilter}
+                                activeFilterCount={activeFilterCount}
+                                isOpen={isFilterPanelOpen}
+                                onClose={() => setIsFilterPanelOpen(false)}
+                            />
                         </div>
                     )}
-                    <FullCalendar
-                        ref={calendarRef}
-                        plugins={[dayGridPlugin, timeGridPlugin]}
-                        initialView={viewMap[view]}
-                        headerToolbar={false}
-                        events={fullCalendarEvents}
-                        eventContent={CustomEventContent}
-                        eventClick={handleEventClick}
-                        height="100%"
-                        dayHeaderClassNames="!border-x-0 !border-t-0"
-                        dayCellClassNames="!border-x-0"
-                        slotLaneClassNames="!border-x-0"
-                        allDaySlot={false}
-                    />
                 </div>
             </main>
 
+            {/* Event Detail Panel */}
             {selectedEvent && (
                 <EventDetailPanel
                     event={selectedEvent}
@@ -181,6 +237,66 @@ export default function CalendarClientView({
                     categories={initialCategories}
                 />
             )}
+
+            {/* Custom Styles for Dark Theme */}
+            <style jsx global>{`
+                /* Smart Filter Panel Dark Theme Override */
+                .smart-filter-panel {
+                    background: #1e1e1e !important;
+                    color: #d1d5db !important;
+                }
+                
+                .smart-filter-panel h3,
+                .smart-filter-panel h4 {
+                    color: #f9fafb !important;
+                }
+                
+                .smart-filter-panel input[type="radio"],
+                .smart-filter-panel input[type="checkbox"] {
+                    accent-color: #3b82f6 !important;
+                }
+                
+                .smart-filter-panel label:hover {
+                    background-color: rgba(75, 85, 99, 0.3) !important;
+                    border-radius: 6px;
+                    padding: 4px;
+                    margin: -4px;
+                }
+                
+                /* Enhanced Event Styling */
+                .tracked-event {
+                    border-left: 4px solid #10B981 !important;
+                }
+                
+                .virtual-event {
+                    border-right: 2px solid #8B5CF6 !important;
+                }
+                
+                .priority-event {
+                    box-shadow: 0 0 0 2px #F59E0B !important;
+                }
+                
+                .fc-event:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    z-index: 10;
+                }
+                
+                .fc-event {
+                    border-radius: 6px;
+                    border: none !important;
+                    transition: all 0.2s ease;
+                    cursor: pointer;
+                }
+                
+                .fc-daygrid-event {
+                    margin: 1px;
+                }
+                
+                .fc-event-main {
+                    padding: 2px 4px;
+                }
+            `}</style>
         </div>
     );
 }

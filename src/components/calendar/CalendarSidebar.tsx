@@ -1,16 +1,14 @@
-// src/components/calendar/CalendarSidebar.tsx
-'use client';
-
+// src/components/calendar/CalendarSidebar.tsx - UPDATED to remove redundant category filters
 import { FC } from 'react';
 import { AppEvent, AppEventType } from '@/types';
-import MiniCalendar from './MiniCalendar'; // Import the new component
+import MiniCalendar from './MiniCalendar';
 
 interface SidebarProps {
     currentDate: Date;
     setCurrentDate: (date: Date) => void;
-    categories: AppEventType[];
-    selectedCategories: Set<string>;
-    setSelectedCategories: (categories: Set<string>) => void;
+    categories: AppEventType[]; // Keep for mini calendar event dots
+    selectedCategories: Set<string>; // Remove this from UI
+    setSelectedCategories: (categories: Set<string>) => void; // Remove this from UI
     nextUpcomingEvent?: AppEvent;
     user: { name: string; role: string };
     events: AppEvent[];
@@ -19,73 +17,128 @@ interface SidebarProps {
 const CalendarSidebar: FC<SidebarProps> = ({
     currentDate,
     setCurrentDate,
-    categories,
-    selectedCategories,
-    setSelectedCategories,
-    nextUpcomingEvent,
     user,
-    events,
+    events
 }) => {
-    // ... (All the code from the original Sidebar component)
-    const handleCategoryChange = (categoryId: string) => {
-        const newSet = new Set(selectedCategories);
-        if (newSet.has(categoryId)) {
-            newSet.delete(categoryId);
-        } else {
-            newSet.add(categoryId);
-        }
-        setSelectedCategories(newSet);
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
     };
 
+    const getUpcomingEvents = () => {
+        const now = new Date();
+        return events
+            .filter(event => new Date(event.startTime) > now)
+            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+            .slice(0, 5);
+    };
+
+    const upcomingEvents = getUpcomingEvents();
+
     return (
-        <aside className="w-80 bg-[#1e1e1e] border-r border-gray-800 p-6 flex flex-col space-y-6">
-            <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center font-bold text-white">
-                    {user.name.charAt(0)}
-                </div>
-                <div>
-                    <p className="font-semibold text-white">{user.name}</p>
-                    <p className="text-sm text-gray-400">{user.role}</p>
+        <aside className="w-80 bg-[#1e1e1e] border-r border-gray-800 p-6 flex flex-col">
+            {/* User Info */}
+            <div className="mb-8">
+                <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                        <span className="text-white font-medium text-sm">
+                            {user.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                    </div>
+                    <div>
+                        <h2 className="text-white font-semibold">{user.name}</h2>
+                        <p className="text-gray-400 text-sm">{user.role}</p>
+                    </div>
                 </div>
             </div>
 
-            <MiniCalendar date={currentDate} setDate={setCurrentDate} events={events} currentDate={currentDate} />
+            {/* Mini Calendar */}
+            <div className="mb-8">
+                <h3 className="text-white text-lg font-semibold mb-4">Calendar</h3>
+                <MiniCalendar
+                    date={currentDate}
+                    setDate={setCurrentDate}
+                    events={events}
+                    currentDate={currentDate}
+                />
+            </div>
 
-            {nextUpcomingEvent && (
-                <div className="bg-gray-800 p-4 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-2">
-                        {new Date(nextUpcomingEvent.startTime).toLocaleString('en-US', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    <h4 className="font-semibold text-white mb-1">{nextUpcomingEvent.title}</h4>
-                    <p className="text-sm text-gray-400">{nextUpcomingEvent.location}</p>
-                    <div className="flex space-x-2 mt-3">
-                        <button className="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-md">Details</button>
-                        <button className="text-sm bg-gray-900 hover:bg-black px-3 py-1 rounded-md">Later</button>
+            {/* REMOVED: Filter by Category section - now handled by Smart Filters */}
+
+            {/* Upcoming Events */}
+            <div className="flex-1">
+                <h3 className="text-white text-lg font-semibold mb-4">Upcoming Events</h3>
+                <div className="space-y-3">
+                    {upcomingEvents.length > 0 ? (
+                        upcomingEvents.map((event) => (
+                            <div
+                                key={event.id}
+                                className="bg-gray-800/50 rounded-lg p-3 hover:bg-gray-700/50 transition-colors cursor-pointer"
+                            >
+                                <div className="flex items-start space-x-3">
+                                    <div
+                                        className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
+                                        style={{ backgroundColor: event.color || '#3B82F6' }}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-white text-sm font-medium line-clamp-2 mb-1">
+                                            {event.title}
+                                        </h4>
+                                        <p className="text-gray-400 text-xs mb-1">
+                                            {formatDate(event.startTime)}
+                                        </p>
+                                        <p className="text-gray-500 text-xs line-clamp-1">
+                                            {event.organizer}
+                                        </p>
+                                        {event.isTracked && (
+                                            <div className="flex items-center space-x-1 mt-1">
+                                                <div className="w-3 h-3 bg-green-500 rounded-full" />
+                                                <span className="text-green-400 text-xs">Tracked</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-gray-500 text-sm text-center py-8">
+                            No upcoming events
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="mt-6 pt-6 border-t border-gray-800">
+                <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <div className="text-white text-xl font-bold">
+                            {events.filter(e => e.isTracked).length}
+                        </div>
+                        <div className="text-gray-400 text-xs">Tracked</div>
+                    </div>
+                    <div>
+                        <div className="text-white text-xl font-bold">
+                            {upcomingEvents.length}
+                        </div>
+                        <div className="text-gray-400 text-xs">Upcoming</div>
                     </div>
                 </div>
-            )}
+            </div>
 
-            <div className="flex-1 space-y-4 overflow-y-auto">
-                <div>
-                    <h3 className="text-sm font-semibold text-gray-400 mb-3">Filter by Category</h3>
-                    <div className="space-y-2">
-                        {categories.map(cat => (
-                            <label key={cat.id} className="flex items-center space-x-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedCategories.has(cat.id)}
-                                    onChange={() => handleCategoryChange(cat.id)}
-                                    className="form-checkbox bg-gray-700 border-gray-600 rounded"
-                                    style={{ accentColor: cat.color }}
-                                />
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                                <span className="text-sm">{cat.name}</span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
+            {/* Help Text */}
+            <div className="mt-6 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg">
+                <p className="text-blue-300 text-xs text-center">
+                    💡 Use <strong>Smart Filters</strong> to find events by format, cost, difficulty, and more!
+                </p>
             </div>
         </aside>
     );
 };
+
 export default CalendarSidebar;
