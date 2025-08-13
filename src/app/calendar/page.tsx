@@ -1,13 +1,13 @@
-// src/app/calendar/page.tsx (Final Version)
-
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import CalendarClientView from './CalendarClientView';
+// Import the Client Wrapper, which will handle the Day View logic
 import { DayViewClientWrapper } from './DayViewClientWrapper';
 
+type CalendarViewType = 'month' | 'week' | 'day';
 
 export default async function CalendarPage({
     searchParams,
@@ -21,13 +21,14 @@ export default async function CalendarPage({
         return redirect('/login?redirect=/calendar');
     }
 
-    const view = searchParams.view || 'month';
+    // FIX for TypeScript errors: Access properties directly.
+    const view = (searchParams.view as CalendarViewType) || 'month';
+    const dateParam = searchParams.date as string | undefined;
 
     // ========================================================================
     // RENDER THE DAY VIEW (Using the Wrapper)
     // ========================================================================
     if (view === 'day') {
-        const dateParam = searchParams.date as string | undefined;
         // Parse date from URL or default to today. Add robust checking.
         const currentDate = dateParam && !isNaN(new Date(dateParam).getTime())
             ? new Date(dateParam)
@@ -43,6 +44,7 @@ export default async function CalendarPage({
             supabase
         );
 
+        // FIX for missing props: Render the wrapper which provides the props.
         return (
             <DayViewClientWrapper
                 initialDate={currentDate}
@@ -52,18 +54,20 @@ export default async function CalendarPage({
     }
 
     // ========================================================================
-    // RENDER THE DEFAULT MONTH/WEEK VIEW (This logic is unchanged)
+    // RENDER THE DEFAULT MONTH/WEEK VIEW
     // ========================================================================
+
+    // Default to Month/Week view - No changes needed to the data fetching
     const [eventsData, categoriesData, profileData] = await Promise.allSettled([
         EventService.getEvents({}, supabase),
         EventTypeService.getEventTypes(supabase),
         ProfileService.getProfile(user.id, supabase)
     ]);
-
     const events = eventsData.status === 'fulfilled' ? eventsData.value : [];
     const categories = categoriesData.status === 'fulfilled' ? categoriesData.value : [];
     const profile = profileData.status === 'fulfilled' ? profileData.value : null;
 
+    // This component will handle its own logic for displaying the month/week
     return (
         <CalendarClientView
             initialEvents={events}

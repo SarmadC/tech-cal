@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Monitor, Building, Star, Plus, Calendar } from 'lucide-react';
-import type { AppEvent } from '@/types'; // Assuming your event type is here
+import { Clock, Monitor, Building, Star, Calendar } from 'lucide-react';
+import type { AppEvent } from '@/types';
 
 // ==========================================================================
 // 1. Child Component: The Event Card
@@ -48,7 +48,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, style, onSelect }) => {
     );
 };
 
-
+// ==========================================================================
+// 2. Child Component: The Details Sidebar
+// ==========================================================================
 interface DetailsSidebarProps {
     selectedEvent: AppEvent | null;
 }
@@ -60,7 +62,7 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({ selectedEvent }) => {
 
     if (!selectedEvent) {
         return (
-            <div className="w-96 border-l border-gray-200 bg-white flex flex-col">
+            <div className="w-96 border-l border-gray-200 bg-white flex-col hidden lg:flex"> {/* Hide on smaller screens */}
                 <div className="p-6 border-b border-gray-200">
                     <h3 className="text-lg font-semibold">Event Details</h3>
                 </div>
@@ -75,7 +77,7 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({ selectedEvent }) => {
     }
 
     return (
-        <div className="w-96 border-l border-gray-200 bg-white flex flex-col">
+        <div className="w-96 border-l border-gray-200 bg-white flex-col hidden lg:flex"> {/* Hide on smaller screens */}
             <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold">Event Details</h3>
             </div>
@@ -122,9 +124,8 @@ const DetailsSidebar: React.FC<DetailsSidebarProps> = ({ selectedEvent }) => {
     );
 };
 
-
 // ==========================================================================
-// 3. Main Parent Component
+// 3. Main Parent Component (Simplified)
 // ==========================================================================
 interface TechCalendarDayViewProps {
     events: AppEvent[];
@@ -140,11 +141,10 @@ export const TechCalendarDayView: React.FC<TechCalendarDayViewProps> = ({
     date,
     startHour = 8,
     endHour = 20,
-    onPrevDay,
-    onNextDay,
 }) => {
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
-    const [timeInterval, setTimeInterval] = useState(30);
+    // The timeInterval can be a static value or passed as a prop if needed elsewhere
+    const timeInterval = 30;
 
     const eventTracks = useMemo(() => {
         const tracksMap = new Map();
@@ -158,15 +158,12 @@ export const TechCalendarDayView: React.FC<TechCalendarDayViewProps> = ({
         return Array.from(tracksMap.values());
     }, [events]);
 
-    // This logic is already correct from your version.
     const timeSlots = useMemo(() => {
         const slots: Date[] = [];
         const iterator = new Date(date);
         iterator.setHours(startHour, 0, 0, 0);
-
         const endDateTime = new Date(date);
         endDateTime.setHours(endHour, 0, 0, 0);
-
         while (iterator < endDateTime) {
             slots.push(new Date(iterator));
             iterator.setMinutes(iterator.getMinutes() + timeInterval);
@@ -185,14 +182,11 @@ export const TechCalendarDayView: React.FC<TechCalendarDayViewProps> = ({
     const getEventStyle = (event: AppEvent) => {
         const start = new Date(event.startTime);
         const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 60 * 60 * 1000);
-
         const eventStartHour = start.getHours() + start.getMinutes() / 60;
         const eventEndHour = end.getHours() + end.getMinutes() / 60;
-
-        const rowHeight = timeInterval === 30 ? 60 : 120;
+        const rowHeight = 60; // Based on 30min intervals
         const top = (eventStartHour - startHour) * rowHeight;
         const height = (eventEndHour - eventStartHour) * rowHeight;
-
         return {
             top: `${top}px`, height: `${height}px`,
             backgroundColor: (event.color || '#cccccc') + '25',
@@ -202,50 +196,16 @@ export const TechCalendarDayView: React.FC<TechCalendarDayViewProps> = ({
     };
 
     return (
-        <div className="flex h-screen bg-gray-50 text-gray-800 font-sans">
+        <div className="flex h-full text-gray-800 font-sans">
             <div className="flex-1 flex flex-col">
-                {/* Header */}
-                <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-20">
-                    <div className="flex items-center justify-between px-6 py-3">
-                        <div className="flex items-center gap-4">
-                            <select
-                                // [FIX #1] Added `text-gray-700` to override global white text color
-                                className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                value={timeInterval}
-                                onChange={(e) => setTimeInterval(Number(e.target.value))}
-                            >
-                                <option value={30}>30 min intervals</option>
-                                <option value={60}>60 min intervals</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button onClick={onPrevDay} className="p-2 hover:bg-gray-100 rounded-md transition-colors">
-                                <ChevronLeft className="w-5 h-5" />
-                            </button>
-                            <h2 className="text-lg font-semibold text-gray-700 px-4">
-                                {date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                            </h2>
-                            <button onClick={onNextDay} className="p-2 hover:bg-gray-100 rounded-md transition-colors">
-                                <ChevronRight className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div>
-                            <button className="bg-gray-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-semibold hover:bg-gray-700">
-                                <Plus className="w-4 h-4" />
-                                Add Event
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                {/* The Header section has been completely removed from this component */}
 
                 {/* Calendar Grid */}
                 <div className="flex-1 flex overflow-hidden">
                     <div className="w-20 border-r border-gray-200 bg-white/50 text-right">
-                        <div className="sticky top-[61px] bg-white border-b border-gray-200 h-12"></div>
-                        {/* [FIX] Correctly render the time slots to prevent "Invalid Date" */}
+                        {/* Time labels */}
                         {timeSlots.map((slot, index) => (
                             <div key={index} className="h-[60px] border-b border-gray-200/70 pr-2 pt-0.5">
-                                {/* Only show the label for full hours for a cleaner look */}
                                 {slot.getMinutes() === 0 && (
                                     <span className="text-xs text-gray-400">
                                         {slot.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}
@@ -256,9 +216,10 @@ export const TechCalendarDayView: React.FC<TechCalendarDayViewProps> = ({
                     </div>
 
                     <div className="flex-1 flex overflow-x-auto">
+                        {/* Event Tracks and Events */}
                         {eventTracks.map(track => (
                             <div key={track.id} className="flex-1 min-w-[220px] border-r border-gray-200 relative">
-                                <div className="sticky top-[61px] bg-white border-b border-gray-200 h-12 px-3 flex items-center z-10">
+                                <div className="sticky top-0 bg-white border-b border-gray-200 h-12 px-3 flex items-center z-10">
                                     <span className="font-semibold" style={{ color: track.color }}>
                                         {track.name}
                                     </span>
