@@ -1,0 +1,334 @@
+/* ============================================
+   PREMIUM COLOR SYSTEM FOR KURE-CAL
+   Add to: src/app/styles/premium-colors.css
+   ============================================ */
+
+:root {
+  /* Premium Gradient Accents */
+  --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #7c8ff0 0%, #8a5bb8 100%);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  
+  /* Live Event Colors */
+  --live-gradient: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+  --live-glow: 0 0 40px rgba(244, 63, 94, 0.4);
+  --live-pulse-color: rgba(244, 63, 94, 0.6);
+  
+  /* Success Colors */
+  --success-gradient: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+  --success-glow: 0 0 30px rgba(16, 185, 129, 0.3);
+  
+  /* Premium Glow Effects */
+  --premium-glow: 0 0 40px rgba(102, 126, 234, 0.3);
+  --premium-glow-strong: 0 0 60px rgba(102, 126, 234, 0.5);
+  --card-glow: 0 10px 40px -10px rgba(102, 126, 234, 0.2);
+  
+  /* Metallic Accents */
+  --gold-gradient: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  --silver-gradient: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%);
+  --bronze-gradient: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  
+  /* Dark Mode Enhancements */
+  --dark-surface-gradient: linear-gradient(145deg, #1e1e1e 0%, #151515 100%);
+  --dark-card-gradient: linear-gradient(145deg, rgba(30, 30, 30, 0.8) 0%, rgba(20, 20, 20, 0.9) 100%);
+  
+  /* Aurora Effects */
+  --aurora-gradient-1: linear-gradient(45deg, #667eea, #764ba2, #f43f5e, #667eea);
+  --aurora-gradient-2: linear-gradient(-45deg, #14b8a6, #3b82f6, #8b5cf6, #14b8a6);
+  
+  /* Category Color Enhancement */
+  --category-enhanced-opacity: 0.15;
+  --category-hover-opacity: 0.25;
+}
+
+/* Dark mode specific colors */
+.dark {
+  --background-gradient: linear-gradient(180deg, #0a0a0a 0%, #111111 100%);
+  --card-surface: rgba(255, 255, 255, 0.03);
+  --card-surface-hover: rgba(255, 255, 255, 0.05);
+  --border-glow: rgba(102, 126, 234, 0.2);
+}
+
+/* ============================================
+   GRADIENT TEXT EFFECTS
+   ============================================ */
+
+.gradient-text {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-hover {
+  transition: all 0.3s ease;
+}
+
+.gradient-text-hover:hover {
+  background: var(--accent-gradient-hover);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   PREMIUM BUTTONS
+   ============================================ */
+
+.btn-premium {
+  background: var(--accent-gradient);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-premium:hover::before {
+  left: 100%;
+}
+
+.btn-premium:hover {
+  box-shadow: var(--premium-glow);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   LIVE EVENT STYLES
+   ============================================ */
+
+.live-badge {
+  background: var(--live-gradient);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.live-badge::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: var(--live-gradient);
+  border-radius: inherit;
+  opacity: 0.4;
+  animation: pulse-live 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  z-index: -1;
+}
+
+@keyframes pulse-live {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+/* ============================================
+   CARD ENHANCEMENTS
+   ============================================ */
+
+.card-premium {
+  background: var(--dark-card-gradient);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-premium::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent-gradient);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-premium:hover::before {
+  opacity: 1;
+}
+
+.card-premium:hover {
+  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: var(--card-glow);
+}
+
+/* ============================================
+   GLOWING BORDERS
+   ============================================ */
+
+.border-glow {
+  position: relative;
+  border: 1px solid transparent;
+  background: linear-gradient(var(--dark-surface-gradient)) padding-box,
+              var(--accent-gradient) border-box;
+}
+
+.border-glow-hover {
+  transition: all 0.3s ease;
+}
+
+.border-glow-hover:hover {
+  box-shadow: var(--premium-glow);
+}
+
+/* ============================================
+   STATUS INDICATORS
+   ============================================ */
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.status-dot.live {
+  background: var(--live-gradient);
+  box-shadow: var(--live-glow);
+}
+
+.status-dot.success {
+  background: var(--success-gradient);
+  box-shadow: var(--success-glow);
+}
+
+.status-dot.premium {
+  background: var(--accent-gradient);
+  box-shadow: var(--premium-glow);
+}
+
+/* ============================================
+   CATEGORY COLOR ENHANCEMENT
+   ============================================ */
+
+.category-tag {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.category-tag::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(45deg, var(--color, #667eea), transparent);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.category-tag:hover::before {
+  opacity: 1;
+}
+
+/* ============================================
+   AURORA BACKGROUND EFFECT
+   ============================================ */
+
+.aurora-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.aurora-bg::before,
+.aurora-bg::after {
+  content: '';
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  opacity: 0.03;
+  animation: aurora 15s ease-in-out infinite;
+}
+
+.aurora-bg::before {
+  background: var(--aurora-gradient-1);
+  animation-duration: 15s;
+}
+
+.aurora-bg::after {
+  background: var(--aurora-gradient-2);
+  animation-duration: 20s;
+  animation-delay: -5s;
+}
+
+@keyframes aurora {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  33% {
+    transform: rotate(120deg) scale(1.1);
+  }
+  66% {
+    transform: rotate(240deg) scale(0.9);
+  }
+}
+
+/* ============================================
+   PREMIUM FOCUS STATES
+   ============================================ */
+
+.input-premium:focus {
+  outline: none;
+  border-color: transparent;
+  background: linear-gradient(var(--dark-surface-gradient)) padding-box,
+              var(--accent-gradient) border-box;
+  box-shadow: var(--premium-glow);
+}
+
+/* ============================================
+   ACHIEVEMENT BADGES
+   ============================================ */
+
+.badge-gold {
+  background: var(--gold-gradient);
+  color: #78350f;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+}
+
+.badge-silver {
+  background: var(--silver-gradient);
+  color: #374151;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(229, 231, 235, 0.3);
+}
+
+.badge-bronze {
+  background: var(--bronze-gradient);
+  color: #fef3c7;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(217, 119, 6, 0.3);
+}
+
+/* ============================================
+   SMOOTH COLOR TRANSITIONS
+   ============================================ */
+
+.color-transition {
+  transition: background-color 0.3s ease, 
+              color 0.3s ease,
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}

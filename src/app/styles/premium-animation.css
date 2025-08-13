@@ -1,0 +1,196 @@
+/* ============================================
+   PREMIUM MICRO-ANIMATIONS FOR KURE-CAL
+   ============================================ */
+
+/* 1. PREMIUM CARD ANIMATIONS */
+.premium-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+.premium-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 
+        0 20px 40px -15px rgba(0, 0, 0, 0.3),
+        0 0 40px -10px var(--accent-primary, #ff6b35);
+}
+
+/* 2. MAGNETIC HOVER EFFECT */
+.magnetic-hover {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.magnetic-hover:hover {
+    animation: magnetic-pull 0.4s ease-out;
+}
+
+@keyframes magnetic-pull {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.98); }
+    100% { transform: scale(1.02); }
+}
+
+/* 3. BUTTON PRESS EFFECTS */
+.premium-button {
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.premium-button:active {
+    transform: scale(0.98);
+}
+
+.premium-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+    pointer-events: none;
+}
+
+.premium-button:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* 4. SMOOTH ENTRANCE ANIMATIONS */
+.fade-in-up {
+    animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Staggered animations for lists */
+.stagger-item {
+    opacity: 0;
+    animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 50ms; }
+.stagger-item:nth-child(3) { animation-delay: 100ms; }
+.stagger-item:nth-child(4) { animation-delay: 150ms; }
+.stagger-item:nth-child(5) { animation-delay: 200ms; }
+.stagger-item:nth-child(6) { animation-delay: 250ms; }
+.stagger-item:nth-child(7) { animation-delay: 300ms; }
+.stagger-item:nth-child(8) { animation-delay: 350ms; }
+
+/* 5. SMOOTH LOADING STATES */
+.smooth-spinner {
+    animation: smooth-rotate 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes smooth-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 6. HOVER LIFT FOR SMALL ELEMENTS */
+.hover-lift {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+}
+
+/* 7. SCALE ON INTERACTION */
+.scale-on-hover {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scale-on-hover:hover {
+    transform: scale(1.05);
+}
+
+.scale-on-hover:active {
+    transform: scale(0.95);
+}
+
+/* 8. GLOW EFFECTS FOR FOCUS */
+.premium-focus {
+    transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-focus:focus {
+    box-shadow: 
+        0 0 0 3px rgba(255, 107, 53, 0.1),
+        0 0 20px rgba(255, 107, 53, 0.2);
+    outline: none;
+}
+
+/* 9. SMOOTH COLOR TRANSITIONS */
+.smooth-colors {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease,
+                border-color 0.3s ease;
+}
+
+/* 10. ELASTIC BOUNCE FOR SUCCESS */
+.bounce-in {
+    animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* 11. PULSE FOR LIVE EVENTS */
+.pulse-live {
+    position: relative;
+}
+
+.pulse-live::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: var(--accent-primary, #ff6b35);
+    border-radius: inherit;
+    opacity: 0.4;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0;
+        transform: scale(1.1);
+    }
+}

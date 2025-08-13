@@ -1,76 +1,69 @@
-// src/app/calendar/page.tsx (Updated)
+// src/app/calendar/page.tsx (Final Version)
+
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import CalendarClientView from './CalendarClientView';
-import type { AppEvent, AppEventType, AppProfile } from '@/types';
+import { DayViewClientWrapper } from './DayViewClientWrapper';
 
-export default async function CalendarPage() {
-    console.log('Calendar page: Checking authentication...');
-    
+
+export default async function CalendarPage({
+    searchParams,
+}: {
+    searchParams: { [key: string]: string | string[] | undefined };
+}) {
     const supabase = await createClient();
-    
-    // Check if user is authenticated
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
-        console.log('Calendar page: No user found, redirecting to login');
-        redirect('/login?redirect=/calendar');
+        return redirect('/login?redirect=/calendar');
     }
 
-    console.log('Calendar page: User authenticated:', user.email);
+    const view = searchParams.view || 'month';
 
-    // Define variables to hold our data
-    let events: AppEvent[] = [];
-    let categories: AppEventType[] = [];
-    let profile: AppProfile | null = null;
+    // ========================================================================
+    // RENDER THE DAY VIEW (Using the Wrapper)
+    // ========================================================================
+    if (view === 'day') {
+        const dateParam = searchParams.date as string | undefined;
+        // Parse date from URL or default to today. Add robust checking.
+        const currentDate = dateParam && !isNaN(new Date(dateParam).getTime())
+            ? new Date(dateParam)
+            : new Date();
 
-    try {
-        console.log('Calendar page: Fetching data...');
-        
-        // Fetch all necessary data in parallel on the server.
-        const [eventsData, categoriesData, profileData] = await Promise.allSettled([
-            EventService.getEvents({}, supabase),
-            EventTypeService.getEventTypes(supabase),
-            ProfileService.getProfile(user.id, supabase)
-        ]);
+        const startOfDay = new Date(currentDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(currentDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
 
-        // Handle events
-        if (eventsData.status === 'fulfilled') {
-            events = eventsData.value;
-            console.log('Calendar page: Loaded', events.length, 'events');
-        } else {
-            console.error('Calendar page: Failed to load events:', eventsData.reason);
-        }
+        const eventsForDay = await EventService.getEvents(
+            { startDate: startOfDay, endDate: endOfDay },
+            supabase
+        );
 
-        // Handle categories  
-        if (categoriesData.status === 'fulfilled') {
-            categories = categoriesData.value;
-            console.log('Calendar page: Loaded', categories.length, 'categories');
-        } else {
-            console.error('Calendar page: Failed to load categories:', categoriesData.reason);
-        }
-
-        // Handle profile
-        if (profileData.status === 'fulfilled') {
-            profile = profileData.value;
-            console.log('Calendar page: Loaded profile for:', profile?.fullName);
-        } else {
-            console.warn('Calendar page: Profile not found, user might be new:', profileData.reason);
-            // This is okay for new users who haven't set up their profile yet
-        }
-
-    } catch (error) {
-        console.error('Calendar page: Unexpected error during data fetching:', error);
-        // We can still render the client component with empty data
-        // The client component will handle showing appropriate error states
+        return (
+            <DayViewClientWrapper
+                initialDate={currentDate}
+                initialEvents={eventsForDay}
+            />
+        );
     }
 
-    console.log('Calendar page: Rendering with data - Events:', events.length, 'Categories:', categories.length, 'Profile:', !!profile);
+    // ========================================================================
+    // RENDER THE DEFAULT MONTH/WEEK VIEW (This logic is unchanged)
+    // ========================================================================
+    const [eventsData, categoriesData, profileData] = await Promise.allSettled([
+        EventService.getEvents({}, supabase),
+        EventTypeService.getEventTypes(supabase),
+        ProfileService.getProfile(user.id, supabase)
+    ]);
 
-    // Render the Client Component and pass the server-fetched data as props.
+    const events = eventsData.status === 'fulfilled' ? eventsData.value : [];
+    const categories = categoriesData.status === 'fulfilled' ? categoriesData.value : [];
+    const profile = profileData.status === 'fulfilled' ? profileData.value : null;
+
     return (
         <CalendarClientView
             initialEvents={events}

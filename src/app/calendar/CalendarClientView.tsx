@@ -1,32 +1,25 @@
-// src/app/calendar/CalendarClientView.tsx (Fully Modified Imports)
 'use client';
 
 import { useState, useMemo, useCallback, useRef } from 'react';
+// [THE FIX] Removed 'useRouter' as it is no longer used in this component.
+import { useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import { useQuery } from '@tanstack/react-query';
-import dynamic from 'next/dynamic'; // Added
+import dynamic from 'next/dynamic';
 
 import { createClient } from '@/utils/supabase/client';
-
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import Loading from '@/components/Loading';
 import CalendarWithPreview from '@/components/calendar/CalendarWithPreview';
 import { useSmartFilters } from '@/hooks/useSmartFilters';
-
 import { AppEvent, AppEventType, AppProfile, AppTrackedEvent } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Dynamically import the components that are not visible on initial load
-const EventDetailPanel = dynamic(() => import('@/components/calendar/EventDetailPanel'), {
-    ssr: false,
-});
-
-const SmartFilterPanel = dynamic(() => import('@/components/calendar/SmartFilterPanel'), {
-    ssr: false,
-});
+const EventDetailPanel = dynamic(() => import('@/components/calendar/EventDetailPanel'), { ssr: false });
+const SmartFilterPanel = dynamic(() => import('@/components/calendar/SmartFilterPanel'), { ssr: false });
 
 interface CalendarClientViewProps {
     initialEvents: AppEvent[];
@@ -49,11 +42,13 @@ export default function CalendarClientView({
 }: CalendarClientViewProps) {
     const [supabase] = useState(() => createClient());
     const { user } = useAuth();
+    const searchParams = useSearchParams();
 
     const calendarRef = useRef<FullCalendar>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [view, setView] = useState<CalendarViewType>('week');
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
+
+    const view = (searchParams.get('view') as CalendarViewType) || 'month';
 
     const {
         filters,
@@ -88,7 +83,6 @@ export default function CalendarClientView({
         }));
     }, [filteredEvents, initialCategories, trackedEventIds]);
 
-
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
         setSelectedEvent(clickInfo.event.extendedProps as AppEvent);
     }, []);
@@ -100,12 +94,7 @@ export default function CalendarClientView({
         setCurrentDate(api.getDate());
     };
 
-    const changeView = (newView: CalendarViewType) => {
-        calendarRef.current?.getApi().changeView(viewMap[newView]);
-        setView(newView);
-    };
-
-    if (isLoadingTracked && !trackedEvents) {
+    if (isLoadingTracked && !initialEvents) {
         return <Loading />;
     }
 
@@ -114,19 +103,14 @@ export default function CalendarClientView({
             <CalendarSidebar
                 currentDate={currentDate}
                 setCurrentDate={setCurrentDate}
-                categories={initialCategories} // Used by MiniCalendar for event dots
-                user={{
-                    name: profile?.fullName || 'Kure-Cal User',
-                    role: 'Product Designer'
-                }}
+                categories={initialCategories}
+                user={{ name: profile?.fullName || 'Kure-Cal User', role: 'Product Designer' }}
                 events={enrichedEvents}
             />
             <main className="flex-1 flex flex-col">
                 <CalendarHeader
                     currentDate={currentDate}
-                    view={view}
                     onNavigate={navigateCalendar}
-                    onChangeView={changeView}
                     isFilterPanelOpen={isFilterPanelOpen}
                     onToggleFilters={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
                     activeFilterCount={activeFilterCount}

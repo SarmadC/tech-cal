@@ -5,6 +5,8 @@ import { Inter } from "next/font/google";
 import { Toaster } from 'sonner';
 
 import "./styles/globals.css";
+import './styles/premium-animation.css';
+import './styles/premium-colors.css';   
 
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";

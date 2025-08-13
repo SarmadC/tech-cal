@@ -38,6 +38,7 @@ const EventCard: FC<EventCardProps> = ({
         <div
             onClick={() => onCardClick?.(event)}
             className={`
+                premium-card smooth-colors
                 bg-[#1e1e1e] border border-gray-800 rounded-xl p-4
                 transition-all duration-200 cursor-pointer group
                 hover:border-blue-500/50 hover:bg-[#2a2a2a]
@@ -49,7 +50,7 @@ const EventCard: FC<EventCardProps> = ({
                     <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
                         {event.title}
                     </span>
-                    <span className="text-sm text-gray-400 flex items-center mt-1">
+                    <span className="text-sm text-gray-400 flex items-center mt-1 hover-lift">
                         <Users className="w-3 h-3 mr-1.5" /> {event.organizer}
                     </span>
                 </div>
@@ -59,13 +60,17 @@ const EventCard: FC<EventCardProps> = ({
                             e.stopPropagation();
                             onTrackClick(event, isTracked);
                         }}
-                        className={`p-2 rounded-full transition-colors ${isTracked
+                        className={`
+                            premium-button scale-on-hover
+                            p-2 rounded-full transition-colors
+                            ${isTracked
                                 ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
                                 : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                            }`}
+                            }
+                        `}
                         aria-label={isTracked ? 'Untrack Event' : 'Track Event'}
                     >
-                        <Star className={`w-4 h-4 ${isTracked ? 'fill-current' : ''}`} />
+                        <Star className={`w-4 h-4 ${isTracked ? 'fill-current bounce-in' : ''}`} />
                     </button>
                 )}
             </div>
@@ -76,12 +81,12 @@ const EventCard: FC<EventCardProps> = ({
 
             <div className="flex justify-between items-center text-xs text-gray-400">
                 <div className="flex items-center space-x-3">
-                    <span className="flex items-center">
+                    <span className="flex items-center hover-lift">
                         <Clock className="w-3 h-3 mr-1" />
                         {formatDate(event.startTime)}
                     </span>
                     {event.location && (
-                        <span className="flex items-center truncate">
+                        <span className="flex items-center truncate hover-lift">
                             <MapPin className="w-3 h-3 mr-1" />
                             {event.location}
                         </span>
@@ -89,7 +94,7 @@ const EventCard: FC<EventCardProps> = ({
                 </div>
                 <Badge
                     variant="outline"
-                    className="border-gray-700"
+                    className="border-gray-700 scale-on-hover"
                     style={{
                         borderColor: event.color,
                         color: event.color,
