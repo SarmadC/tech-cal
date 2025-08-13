@@ -4,30 +4,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---------------------------------------------- */
-/* 1. SOPHISTICATED DESIGN SYSTEM                */
-/* ---------------------------------------------- */
+/* ============================================== */
+/* 1. CORE DESIGN SYSTEM & THEME DEFINITIONS      */
+/* ============================================== */
 
 :root {
-  /* Sophisticated Dark Palette - Primary */
+  /* --- Dark Theme (Default) --- */
   --background-main: #0a0a0b;
   --background-secondary: #111113;
   --background-tertiary: #18181b;
   --background-elevated: #1f1f23;
   
-  /* Refined Text Colors */
   --foreground-primary: #fafafa;
   --foreground-secondary: #a1a1aa;
   --foreground-tertiary: #71717a;
   --foreground-muted: #52525b;
   
-  /* Modern Orange Accent System */
   --accent-primary: #f97316;
   --accent-primary-hover: #ea6610;
   --accent-primary-light: rgba(249, 115, 22, 0.12);
   --accent-border: rgba(249, 115, 22, 0.24);
   
-  /* Semantic Colors */
   --success: #10b981;
   --success-light: rgba(16, 185, 129, 0.12);
   --warning: #f59e0b;
@@ -35,25 +32,23 @@
   --error: #ef4444;
   --error-light: rgba(239, 68, 68, 0.12);
   
-  /* Sophisticated Border System */
+  --virtual-event: #8B5CF6;
+  
   --border-subtle: rgba(255, 255, 255, 0.06);
   --border-default: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.12);
   --border-accent: var(--accent-border);
   
-  /* Refined Shadow System */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.1);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.16);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
   
-  /* Typography Scale */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-serif: 'Instrument Serif', Georgia, serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
   
-  /* Refined Spacing System */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -64,29 +59,37 @@
   --space-16: 64px;
 }
 
-/* Light mode override (for users who prefer light theme) */
-@media (prefers-color-scheme: light) {
-  :root {
-    --background-main: #ffffff;
-    --background-secondary: #fafafa;
-    --background-tertiary: #f5f5f5;
-    --background-elevated: #ffffff;
-    --foreground-primary: #171717;
-    --foreground-secondary: #525252;
-    --foreground-tertiary: #737373;
-    --foreground-muted: #a3a3a3;
-    --border-subtle: rgba(0, 0, 0, 0.06);
-    --border-default: rgba(0, 0, 0, 0.08);
-    --border-strong: rgba(0, 0, 0, 0.12);
-  }
+/* --- Light Theme Override --- */
+.light {
+  --background-main: #ffffff;
+  --background-secondary: #fafafa;
+  --background-tertiary: #f5f5f5;
+  --background-elevated: #ffffff;
+  --foreground-primary: #171717;
+  --foreground-secondary: #525252;
+  --foreground-tertiary: #737373;
+  --foreground-muted: #a3a3a3;
+  
+  --accent-primary-light: rgba(249, 115, 22, 0.1);
+  --success-light: rgba(16, 185, 129, 0.1);
+  --warning-light: rgba(245, 158, 11, 0.1);
+  --error-light: rgba(239, 68, 68, 0.1);
+  
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.12);
 }
 
-/* ---------------------------------------------- */
-/* 2. REFINED BASE STYLES                        */
-/* ---------------------------------------------- */
+/* ============================================== */
+/* 2. GLOBAL BASE & ELEMENT STYLES                */
+/* ============================================== */
 
 * {
   box-sizing: border-box;
+  /* Defining transitions on all elements for a smooth, animated UI */
+  transition-property: background-color, border-color, color, fill, stroke, opacity, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
 html {
@@ -105,302 +108,42 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Sophisticated Typography Scale */
-h1 { 
-  font-family: var(--font-serif);
-  font-size: 2.25rem; 
-  font-weight: 400; 
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
+/* Typography Scale */
+h1 { font-family: var(--font-serif); font-size: 2.25rem; font-weight: 400; letter-spacing: -0.02em; line-height: 1.2; }
+h2 { font-family: var(--font-serif); font-size: 1.75rem; font-weight: 400; letter-spacing: -0.02em; line-height: 1.3; }
+h3 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.4; }
+h4 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
+p { line-height: 1.6; color: var(--foreground-secondary); }
 
-h2 { 
-  font-family: var(--font-serif);
-  font-size: 1.75rem; 
-  font-weight: 400; 
-  letter-spacing: -0.02em;
-  line-height: 1.3;
-}
+/* Focus States & Scrollbar */
+:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; border-radius: 4px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); opacity: 0.8; }
 
-h3 { 
-  font-size: 1.25rem; 
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.4;
-}
+/* ============================================== */
+/* 3. GLOBAL COMPONENT STYLES                     */
+/* ============================================== */
 
-h4 { 
-  font-size: 1.125rem; 
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-p {
-  line-height: 1.6;
-  color: var(--foreground-secondary);
-}
-
-/* Refined Focus States */
-:focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* Modern Scrollbar */
-::-webkit-scrollbar { 
-  width: 8px; 
-  height: 8px; 
-}
-
-::-webkit-scrollbar-track { 
-  background: transparent; 
-}
-
-::-webkit-scrollbar-thumb { 
-  background: var(--border-strong); 
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover { 
-  background: var(--border-strong);
-  opacity: 0.8;
-}
-
-/* ---------------------------------------------- */
-/* 3. SOPHISTICATED CALENDAR STYLES              */
-/* ---------------------------------------------- */
-
-/* Calendar container */
-.calendar-container {
-  background: var(--background-secondary);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
-  box-shadow: var(--shadow-lg);
-}
-
-/* Calendar scrollbar */
-.calendar-scroll::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.calendar-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.calendar-scroll::-webkit-scrollbar-thumb {
-  background: var(--border-default);
-  border-radius: 3px;
-}
-
-.calendar-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong);
-}
-
-/* Calendar grid animations */
-.calendar-day {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: var(--background-tertiary);
-  border: 1px solid var(--border-subtle);
-}
-
-.calendar-day:hover {
-  background: var(--background-elevated);
-  border-color: var(--border-default);
-  transform: scale(1.01);
-}
-
-.calendar-day.today {
-  background: var(--accent-primary-light);
-  border-color: var(--accent-border);
-}
-
-.calendar-day.has-events {
-  border-color: var(--border-default);
-}
-
-/* Event badges */
-.event-badge {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  background: var(--background-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: 4px;
-  padding: var(--space-1) var(--space-2);
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 500;
-  box-shadow: var(--shadow-xs);
-}
-
-.event-badge:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-  border-color: var(--accent-primary);
-  background: var(--accent-primary-light);
-}
-
-.event-badge.priority-high {
-  border-color: var(--error);
-  background: var(--error-light);
-}
-
-.event-badge.priority-medium {
-  border-color: var(--warning);
-  background: var(--warning-light);
-}
-
-.event-badge.priority-low {
-  border-color: var(--success);
-  background: var(--success-light);
-}
-
-/* Category checkbox - Refined styling */
-.category-checkbox {
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border-strong);
-  border-radius: 4px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  position: relative;
-  background: var(--background-tertiary);
-}
-
-.category-checkbox:checked {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-}
-
-.category-checkbox:checked::after {
-  content: '';
-  position: absolute;
-  left: 3px;
-  top: 0px;
-  width: 4px;
-  height: 8px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.category-checkbox:hover {
-  border-color: var(--accent-primary);
-  background: var(--accent-primary-light);
-}
-
-.category-checkbox:checked:hover {
-  background: var(--accent-primary-hover);
-  border-color: var(--accent-primary-hover);
-}
-
-/* ---------------------------------------------- */
-/* 4. MODERN EVENT STYLING                       */
-/* ---------------------------------------------- */
-
-.fc-event {
-  border: none;
-  border-radius: 4px;
-  padding: var(--space-1) var(--space-2);
-  font-size: 0.75rem;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  margin: var(--space-1);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow-xs);
-  border: 1px solid var(--border-default);
-  background: var(--background-elevated);
-  color: var(--foreground-primary);
-}
-
-.fc-event:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-  border-color: var(--accent-primary);
-  background: var(--accent-primary-light);
-}
-
-.fc-event-title {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: inherit;
-}
-
-.fc-event-time {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 500;
-  opacity: 0.8;
-}
-
-/* Event category colors */
-.fc-event.category-work {
-  border-color: var(--accent-primary);
-  background: var(--accent-primary-light);
-}
-
-.fc-event.category-personal {
-  border-color: var(--success);
-  background: var(--success-light);
-}
-
-.fc-event.category-meeting {
-  border-color: var(--warning);
-  background: var(--warning-light);
-}
-
-.fc-event.category-important {
-  border-color: var(--error);
-  background: var(--error-light);
-}
-
-/* ---------------------------------------------- */
-/* 5. REFINED COMPONENT STYLES                   */
-/* ---------------------------------------------- */
-
-/* Smooth sophisticated transitions */
-* {
-  transition-property: background-color, border-color, color, fill, stroke, opacity, transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
-}
-
-/* Buttons and interactive elements */
-button, a {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-button:focus-visible, a:focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 2px;
-}
-
-/* Input fields */
+/* Form Elements */
 input, textarea, select {
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   background: var(--background-tertiary);
   border: 1px solid var(--border-default);
   color: var(--foreground-primary);
   font-family: var(--font-sans);
 }
-
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px var(--accent-primary-light);
   background: var(--background-elevated);
 }
-
 input::placeholder, textarea::placeholder {
   color: var(--foreground-tertiary);
 }
 
-/* Cards and surfaces */
+/* Cards & Surfaces */
 .surface-card {
   background: var(--background-secondary);
   border: 1px solid var(--border-default);
@@ -408,18 +151,13 @@ input::placeholder, textarea::placeholder {
   box-shadow: var(--shadow-sm);
   padding: var(--space-6);
 }
-
 .surface-card:hover {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-md);
 }
 
-/* Modal and overlay backgrounds */
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-}
-
+/* Modals */
+.modal-overlay { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
 .modal-content {
   background: var(--background-secondary);
   border: 1px solid var(--border-default);
@@ -427,24 +165,21 @@ input::placeholder, textarea::placeholder {
   box-shadow: var(--shadow-xl);
 }
 
-/* ---------------------------------------------- */
-/* 6. SOPHISTICATED UTILITY CLASSES              */
-/* ---------------------------------------------- */
+/* ============================================== */
+/* 4. TAILWIND UTILITY LAYER                      */
+/* ============================================== */
 
 @layer utilities {
-  /* Background utilities */
   .bg-background-main { background-color: var(--background-main); }
   .bg-background-secondary { background-color: var(--background-secondary); }
   .bg-background-tertiary { background-color: var(--background-tertiary); }
   .bg-background-elevated { background-color: var(--background-elevated); }
   
-  /* Text color utilities */
   .text-foreground-primary { color: var(--foreground-primary); }
   .text-foreground-secondary { color: var(--foreground-secondary); }
   .text-foreground-tertiary { color: var(--foreground-tertiary); }
   .text-foreground-muted { color: var(--foreground-muted); }
   
-  /* Accent color utilities */
   .bg-accent-primary { background-color: var(--accent-primary); }
   .bg-accent-primary-hover { background-color: var(--accent-primary-hover); }
   .bg-accent-primary-light { background-color: var(--accent-primary-light); }
@@ -453,7 +188,6 @@ input::placeholder, textarea::placeholder {
   .border-accent-primary { border-color: var(--accent-primary); }
   .border-accent-border { border-color: var(--accent-border); }
   
-  /* Semantic color utilities */
   .bg-success { background-color: var(--success); }
   .bg-success-light { background-color: var(--success-light); }
   .bg-warning { background-color: var(--warning); }
@@ -464,24 +198,20 @@ input::placeholder, textarea::placeholder {
   .text-warning { color: var(--warning); }
   .text-error { color: var(--error); }
   
-  /* Border utilities */
   .border-subtle { border-color: var(--border-subtle); }
   .border-default { border-color: var(--border-default); }
   .border-strong { border-color: var(--border-strong); }
   
-  /* Shadow utilities */
   .shadow-xs { box-shadow: var(--shadow-xs); }
   .shadow-sm { box-shadow: var(--shadow-sm); }
   .shadow-md { box-shadow: var(--shadow-md); }
   .shadow-lg { box-shadow: var(--shadow-lg); }
   .shadow-xl { box-shadow: var(--shadow-xl); }
   
-  /* Typography utilities */
   .font-sans { font-family: var(--font-sans); }
   .font-serif { font-family: var(--font-serif); }
   .font-mono { font-family: var(--font-mono); }
   
-  /* Spacing utilities */
   .space-1 { gap: var(--space-1); }
   .space-2 { gap: var(--space-2); }
   .space-3 { gap: var(--space-3); }
@@ -492,72 +222,74 @@ input::placeholder, textarea::placeholder {
   .space-16 { gap: var(--space-16); }
 }
 
-/* ---------------------------------------------- */
-/* 7. SHADCN/UI INTEGRATION (MODERNIZED)         */
-/* ---------------------------------------------- */
+/* ============================================== */
+/* 5. SHADCN/UI INTEGRATION & BASE LAYER          */
+/* ============================================== */
 
 @layer base {
   :root {
-    /* Shadcn variables mapped to our design system */
-    --background: 10 10 11; /* #0a0a0b */
-    --foreground: 250 250 250; /* #fafafa */
-    --card: 17 17 19; /* #111113 */
-    --card-foreground: 250 250 250; /* #fafafa */
-    --popover: 17 17 19; /* #111113 */
-    --popover-foreground: 250 250 250; /* #fafafa */
-    --primary: 24 116 22; /* #f97316 - our orange */
-    --primary-foreground: 255 255 255; /* white */
-    --secondary: 24 24 27; /* #18181b */
-    --secondary-foreground: 161 161 170; /* #a1a1aa */
-    --muted: 24 24 27; /* #18181b */
-    --muted-foreground: 113 113 122; /* #71717a */
-    --accent: 24 116 22; /* #f97316 - our orange */
-    --accent-foreground: 255 255 255; /* white */
-    --destructive: 239 68 68; /* #ef4444 */
-    --destructive-foreground: 255 255 255; /* white */
-    --border: 39 39 42; /* #27272a */
-    --input: 39 39 42; /* #27272a */
-    --ring: 24 116 22; /* #f97316 - our orange */
-    --chart-1: 24 116 22; /* #f97316 */
-    --chart-2: 16 185 129; /* #10b981 */
-    --chart-3: 245 158 11; /* #f59e0b */
-    --chart-4: 239 68 68; /* #ef4444 */
-    --chart-5: 168 85 247; /* #a855f7 */
+    /* --- Dark Theme Shadcn Mapping --- */
+    --background: 10 10 11;
+    --foreground: 250 250 250;
+    --card: 17 17 19;
+    --card-foreground: 250 250 250;
+    --popover: 17 17 19;
+    --popover-foreground: 250 250 250;
+    --primary: 249 115 22;
+    --primary-foreground: 255 255 255;
+    --secondary: 24 24 27;
+    --secondary-foreground: 161 161 170;
+    --muted: 24 24 27;
+    --muted-foreground: 113 113 122;
+    --accent: 249 115 22;
+    --accent-foreground: 255 255 255;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --border: 39 39 42;
+    --input: 39 39 42;
+    --ring: 249 115 22;
     --radius: 0.5rem;
   }
-}
+ 
+  .light {
+    /* --- Light Theme Shadcn Override --- */
+    --background: 255 255 255;
+    --foreground: 23 23 23;
+    --card: 250 250 250;
+    --card-foreground: 23 23 23;
+    --popover: 250 250 250;
+    --popover-foreground: 23 23 23;
+    --primary: 249 115 22;
+    --primary-foreground: 255 255 255;
+    /* CRITICAL FIX for invisible badge text in light mode */
+    --secondary: 245 245 245;
+    --secondary-foreground: 23 23 23;
+    --muted: 245 245 245;
+    --muted-foreground: 163 163 163;
+    --accent: 249 115 22;
+    --accent-foreground: 255 255 255;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --border: 229 229 229;
+    --input: 229 229 229;
+    --ring: 249 115 22;
+  }
 
-@layer base {
+  /* --- Final Base Apply Rules --- */
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans);
   }
 }
 
-/* ---------------------------------------------- */
-/* 8. MOBILE RESPONSIVE REFINEMENTS              */
-/* ---------------------------------------------- */
+/* ============================================== */
+/* 6. RESPONSIVE & PRINT STYLES                   */
+/* ============================================== */
 
 @media (max-width: 640px) {
-  .calendar-day {
-    min-height: 70px;
-    padding: var(--space-1);
-  }
-  
-  .event-badge {
-    font-size: 0.65rem;
-    padding: 2px var(--space-1);
-    margin: 1px;
-  }
-  
-  .fc-event {
-    font-size: 0.65rem;
-    padding: 2px var(--space-1);
-    margin: 1px;
-  }
+  /* [REMOVED] calendar-day and event-badge styles. They should live in `calendar.css` */
   
   .surface-card {
     padding: var(--space-4);
@@ -568,19 +300,9 @@ input::placeholder, textarea::placeholder {
   h3 { font-size: 1.125rem; }
 }
 
-/* ---------------------------------------------- */
-/* 9. PRINT STYLES                               */
-/* ---------------------------------------------- */
-
 @media print {
-  .calendar-container {
-    box-shadow: none;
-    border: 1px solid #000;
-  }
-  
-  .event-badge, .fc-event {
-    box-shadow: none;
-    border: 1px solid #000;
+  /* [REMOVED] calendar-container and event-badge styles. They should live in `calendar.css` */
+  body {
     background: white !important;
     color: black !important;
   }

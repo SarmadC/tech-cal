@@ -1,32 +1,30 @@
 /* ==========================================================================
-   KURE-CAL CALENDAR & FILTERS STYLES
+   1. GENERIC CALENDAR & GRID STYLES
    ========================================================================== */
 
-/* ==========================================================================
-   1. GRID & LAYOUT
-   ========================================================================== */
+.calendar-container {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+}
 
-/* Reduce visual noise of the main grid lines */
 .fc-theme-standard td, .fc-theme-standard th {
     border-color: var(--border-subtle);
 }
-
-/* Add breathing room inside each day cell's frame */
 .fc .fc-daygrid-day-frame {
     padding: 12px;
 }
-
-/* De-emphasize the date numbers for days not in the current month */
 .fc-day-other .fc-daygrid-day-top {
     opacity: 0.4;
 }
 
-/* Highlight the current day for easy reference */
+/* Highlight for the current day ("Today") */
 .fc .fc-day-today {
     background-color: var(--accent-primary-light);
 }
 .fc .fc-day-today .fc-daygrid-day-top {
-    opacity: 1; /* Ensure today's date number is fully visible */
+    opacity: 1;
 }
 .fc .fc-day-today .fc-daygrid-day-number {
     font-weight: 700;
@@ -36,41 +34,39 @@
     padding: 2px 6px;
 }
 
-
 /* ==========================================================================
-   2. EVENT STYLING
+   2. GLOBAL EVENT STYLING (FOR ALL VIEWS)
    ========================================================================== */
 
-/* The outer container for an event in the grid */
-.fc-daygrid-event {
-    margin-bottom: 6px; /* Vertical space between events */
-    border: none !important;
-    background-color: transparent !important;
-    border-radius: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    transition: transform 0.2s ease-in-out;
-    z-index: 1;
-}
-
-/* The actual colored box inside the event container */
-.fc-daygrid-event .fc-event-main {
+/*
+ * This is the new, generic rule for ALL event types in ALL views.
+ * It sets the shape, font, and cursor, but lets JavaScript control the color.
+ */
+.fc-event {
     border-radius: 6px;
-    transition: box-shadow 0.2s ease-in-out;
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.8rem; /* Slightly larger for better readability */
+    font-weight: 500;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    border-width: 1px; /* Use border-width to ensure border shows up */
+    border-style: solid;
+    /* NO background-color or border-color here - let JS handle it */
 }
 
-/* The hover "lift" effect */
-.fc-daygrid-event:hover {
+/* Generic hover effect for all events */
+.fc-event:hover {
     transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
     z-index: 10;
 }
-.fc-daygrid-event:hover .fc-event-main {
-    box-shadow: var(--shadow-lg);
+
+/* --- Specific rule for Month View event spacing --- */
+.fc-daygrid-event {
+    margin-bottom: 6px;
 }
 
-
-/* --- Multi-Day "Pill" Effect --- */
-
+/* --- Specific rules for Multi-Day "Pill" Effect in Month View --- */
 .fc-daygrid-event.fc-event-start .fc-event-main {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
@@ -80,73 +76,31 @@
     border-bottom-left-radius: 0;
 }
 .fc-daygrid-event:not(.fc-event-start):not(.fc-event-end) .fc-event-main {
-    border-radius: 0; /* Middle segments are square */
+    border-radius: 0;
 }
 
 
-/* ==========================================================================
-   3. EVENT CONTENT & INDICATORS
-   ========================================================================== */
-
-/* --- Hierarchy for content inside our EnhancedEventContent component --- */
-.fc-event-main-content .event-title {
-    font-weight: 600;
-    color: var(--foreground-primary);
-}
-.fc-event-main-content .event-time,
-.fc-event-main-content .event-organizer {
-    opacity: 0.75;
-    transition: opacity 0.2s ease-in-out;
-}
-.fc-daygrid-event:hover .event-time,
-.fc-daygrid-event:hover .event-organizer {
-    opacity: 0.9;
-}
-
-/* --- Status Indicators --- */
-.tracked-event .fc-event-main {
+/* --- Status Indicators (Tracked, Virtual, Priority) --- */
+.tracked-event {
     border-left: 3px solid var(--success) !important;
 }
-.virtual-event .fc-event-main {
-    border-right: 3px solid #8B5CF6 !important; /* Note: This color is not in your theme variables */
+.virtual-event {
+    border-right: 3px solid var(--virtual-event) !important;
 }
-.priority-event .fc-event-main {
+.priority-event {
     box-shadow: 0 0 8px 1px var(--warning) !important;
 }
-.priority-event:hover .fc-event-main {
+.priority-event:hover {
     box-shadow: var(--shadow-lg), 0 0 8px 1px var(--warning) !important;
 }
 
 
-/* ==========================================================================
-   4. "+ MORE" LINK (for event overflow)
-   ========================================================================== */
-
-.fc .fc-daygrid-day-bottom {
-  padding: 2px 8px;
-}
-
-.fc .fc-daygrid-more-link {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--foreground-secondary);
-  background-color: var(--background-tertiary);
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: all 0.2s ease-in-out;
-}
-
-.fc .fc-daygrid-more-link:hover {
-  color: var(--foreground-primary);
-  background-color: var(--background-elevated);
-  box-shadow: var(--shadow-md);
-}
 
 /* ==========================================================================
-   5. SMART FILTERS
+   3. SMART FILTERS & OTHER COMPONENTS
    ========================================================================== */
 
-/* --- Toggle Button (in Header) --- */
+/* Toggle Button (in Header) */
 .filter-toggle-button {
     position: relative;
     display: flex;
@@ -170,7 +124,7 @@
     color: var(--accent-primary);
 }
 
-/* --- Active Filter Count Badge --- */
+/* Active Filter Count Badge */
 .filter-count-badge {
     position: absolute;
     top: -8px;
@@ -188,7 +142,7 @@
     box-shadow: var(--shadow-md);
 }
 
-/* --- Filter Panel (Slide-out Menu) --- */
+/* Filter Panel (Slide-out Menu) */
 .smart-filter-panel {
     background-color: var(--background-secondary);
     border-left: 1px solid var(--border-subtle);
