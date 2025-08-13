@@ -1,25 +1,27 @@
 'use client';
 
 import { useState, useMemo, useCallback, useRef } from 'react';
-// [THE FIX] Removed 'useRouter' as it is no longer used in this component.
-import { useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 
 import { createClient } from '@/utils/supabase/client';
-import CalendarSidebar from '@/components/calendar/CalendarSidebar';
-import CalendarHeader from '@/components/calendar/CalendarHeader';
+import { CalendarLayout, type CalendarLayoutContext } from './CalendarLayout';
 import Loading from '@/components/Loading';
 import CalendarWithPreview from '@/components/calendar/CalendarWithPreview';
+import SmartFilterPanel from '@/components/calendar/SmartFilterPanel';
+
 import { useSmartFilters } from '@/hooks/useSmartFilters';
-import { AppEvent, AppEventType, AppProfile, AppTrackedEvent } from '@/types';
+import { AppEvent, AppEventType, AppProfile } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth } from '@/contexts/AuthContext';
 
-const EventDetailPanel = dynamic(() => import('@/components/calendar/EventDetailPanel'), { ssr: false });
-const SmartFilterPanel = dynamic(() => import('@/components/calendar/SmartFilterPanel'), { ssr: false });
+// Dynamic import for heavy components
+const EventDetailPanelDynamic = dynamic(
+    () => import('@/components/calendar/EventDetailPanel'),
+    { loading: () => <Loading /> }
+);
 
 interface CalendarClientViewProps {
     initialEvents: AppEvent[];
@@ -27,108 +29,95 @@ interface CalendarClientViewProps {
     profile: AppProfile | null;
 }
 
-type CalendarViewType = 'month' | 'week' | 'day';
-
-const viewMap: { [key: string]: string } = {
-    day: 'timeGridDay',
-    week: 'timeGridWeek',
-    month: 'dayGridMonth',
-};
-
 export default function CalendarClientView({
     initialEvents,
     initialCategories,
     profile,
 }: CalendarClientViewProps) {
-    const [supabase] = useState(() => createClient());
     const { user } = useAuth();
-    const searchParams = useSearchParams();
+    const calendarRef = useRef<FullCalendar | null>(null);
 
-    const calendarRef = useRef<FullCalendar>(null);
-    const [currentDate, setCurrentDate] = useState(new Date());
+    // --- State Management ---
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
+    const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
-    const view = (searchParams.get('view') as CalendarViewType) || 'month';
-
+    // --- Smart Filters ---
     const {
         filters,
         filteredEvents,
         updateFilter,
         resetFilters,
         applyQuickFilter,
-        activeFilterCount,
-        isFilterPanelOpen,
-        setIsFilterPanelOpen,
+        activeFilterCount
     } = useSmartFilters(initialEvents, profile);
 
-    const { data: trackedEvents, isLoading: isLoadingTracked } = useQuery({
+    // --- Data Fetching & Processing ---
+    const { data: trackedEvents = [] } = useQuery({
         queryKey: ['trackedEvents', user?.id],
-        queryFn: () => {
-            if (!user) return [];
+        queryFn: async () => {
+            if (!user?.id) return [];
+            const supabase = createClient();
             return UserEventService.getTrackedEvents(user.id, supabase);
         },
-        enabled: !!user,
+        enabled: !!user?.id,
+        staleTime: 5 * 60 * 1000, // 5 minutes
     });
 
-    const trackedEventIds = useMemo(() => {
-        return new Set((trackedEvents || []).map((e: AppTrackedEvent) => e.eventId));
-    }, [trackedEvents]);
-
     const enrichedEvents = useMemo(() => {
-        const categoryColorMap = new Map(initialCategories.map(c => [c.id, c.color]));
-        return filteredEvents.map((event: AppEvent) => ({
+        const trackedEventIds = new Set(trackedEvents.map(te => te.eventId));
+        return filteredEvents.map(event => ({
             ...event,
-            color: categoryColorMap.get(event.eventTypeId) || '#737373',
             isTracked: trackedEventIds.has(event.id)
         }));
-    }, [filteredEvents, initialCategories, trackedEventIds]);
+    }, [filteredEvents, trackedEvents]);
 
+    // --- Event Handlers ---
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
-        setSelectedEvent(clickInfo.event.extendedProps as AppEvent);
+        // The event object is nested in extendedProps in FullCalendar
+        const eventData = clickInfo.event.extendedProps as AppEvent;
+        setSelectedEvent(eventData);
     }, []);
 
-    const navigateCalendar = (direction: 'prev' | 'next' | 'today') => {
-        const api = calendarRef.current?.getApi();
-        if (!api) return;
-        api[direction]();
-        setCurrentDate(api.getDate());
+    const toggleFilterPanel = useCallback(() => {
+        setIsFilterPanelOpen(prev => !prev);
+    }, []);
+
+    const closeEventDetail = useCallback(() => {
+        setSelectedEvent(null);
+    }, []);
+
+    // --- Render Logic ---
+    const renderCalendarContent = (context: CalendarLayoutContext) => {
+        // This component is only responsible for rendering the Week/Month calendar.
+        // It correctly passes the view from the context to the preview component.
+        return (
+            <CalendarWithPreview
+                events={enrichedEvents}
+                onEventClick={handleEventClick}
+                view={context.view}
+                calendarRef={context.calendarRef}
+            />
+        );
     };
 
-    if (isLoadingTracked && !initialEvents) {
-        return <Loading />;
-    }
-
     return (
-        <div className="flex h-screen bg-background-main text-foreground-primary font-sans">
-            <CalendarSidebar
-                currentDate={currentDate}
-                setCurrentDate={setCurrentDate}
-                categories={initialCategories}
-                user={{ name: profile?.fullName || 'Kure-Cal User', role: 'Product Designer' }}
-                events={enrichedEvents}
-            />
-            <main className="flex-1 flex flex-col">
-                <CalendarHeader
-                    currentDate={currentDate}
-                    onNavigate={navigateCalendar}
-                    isFilterPanelOpen={isFilterPanelOpen}
-                    onToggleFilters={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-                    activeFilterCount={activeFilterCount}
-                />
-                <div className="flex-1 flex relative overflow-hidden">
-                    <div className="flex-1 transition-all duration-300">
-                        <div className="h-full overflow-y-auto p-4 md:p-6">
-                            <CalendarWithPreview
-                                events={enrichedEvents}
-                                onEventClick={handleEventClick}
-                                view={viewMap[view]}
-                                date={currentDate}
-                                calendarRef={calendarRef}
-                            />
-                        </div>
+        <CalendarLayout
+            profile={profile}
+            categories={initialCategories}
+            onToggleFilters={toggleFilterPanel}
+            isFilterPanelOpen={isFilterPanelOpen}
+            activeFilterCount={activeFilterCount}
+            calendarRef={calendarRef}
+            renderContent={(context) => (
+                <div className="flex h-full">
+                    {/* Main Calendar Content */}
+                    <div className="flex-1 relative">
+                        {renderCalendarContent(context)}
                     </div>
+
+                    {/* Smart Filter Panel (Sidebar) */}
                     {isFilterPanelOpen && (
-                        <div className="w-80 border-l border-border-subtle bg-background-secondary shadow-lg">
+                        <div className="w-80 border-l border-border-default bg-background-elevated">
                             <SmartFilterPanel
                                 filters={filters}
                                 onUpdateFilter={updateFilter}
@@ -136,19 +125,23 @@ export default function CalendarClientView({
                                 onApplyQuickFilter={applyQuickFilter}
                                 activeFilterCount={activeFilterCount}
                                 isOpen={isFilterPanelOpen}
-                                onClose={() => setIsFilterPanelOpen(false)}
+                                onClose={toggleFilterPanel}
+                            />
+                        </div>
+                    )}
+
+                    {/* Event Detail Panel (Sidebar) */}
+                    {selectedEvent && (
+                        <div className="w-96 border-l border-border-default bg-background-elevated">
+                            <EventDetailPanelDynamic
+                                event={selectedEvent}
+                                onClose={closeEventDetail}
+                                categories={initialCategories}
                             />
                         </div>
                     )}
                 </div>
-            </main>
-            {selectedEvent && (
-                <EventDetailPanel
-                    event={selectedEvent}
-                    onClose={() => setSelectedEvent(null)}
-                    categories={initialCategories}
-                />
             )}
-        </div>
+        />
     );
 }

@@ -1,92 +1,154 @@
-'use client';
-
-// [FIX #1] Import 'React' to use React.cloneElement
-import React, { useState, useRef, useCallback } from 'react';
+// src/app/calendar/CalendarLayout.tsx
+import React, { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
-import type { AppProfile, AppEventType } from '@/types';
+import type { AppProfile, AppEventType, AppEvent } from '@/types';
 
-// [FIX #2] Define the type for the props that will be added to the child component
-interface InjectedChildProps {
+type CalendarViewType = 'month' | 'week' | 'day';
+
+// Calendar context for passing data to children
+export interface CalendarLayoutContext {
+    view: string;
+    date: Date;
+    onNavigate: (direction: 'prev' | 'next' | 'today') => void;
+    onViewChange: (view: string) => void;
+    onDateChange: (date: Date) => void;
     calendarRef?: React.RefObject<FullCalendar | null>;
 }
 
-export function CalendarLayout({
-    profile,
-    categories,
-    children,
-}: {
+export interface CalendarLayoutProps {
+    children?: ReactNode;
     profile: AppProfile | null;
     categories: AppEventType[];
-    children: React.ReactNode;
-}) {
+    events?: AppEvent[];
+    currentDate?: Date;
+    onDateChange?: (date: Date) => void;
+    onNavigate?: (direction: 'prev' | 'next' | 'today') => void;
+    onToggleFilters?: () => void;
+    isFilterPanelOpen?: boolean;
+    activeFilterCount?: number;
+    calendarRef?: React.RefObject<FullCalendar | null>;
+    renderContent?: (context: CalendarLayoutContext) => ReactNode;
+}
+
+export function CalendarLayout({
+    children,
+    profile,
+    categories,
+    events = [],
+    currentDate,
+    onDateChange,
+    onNavigate,
+    onToggleFilters,
+    isFilterPanelOpen = false,
+    activeFilterCount = 0,
+    calendarRef,
+    renderContent,
+}: CalendarLayoutProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const calendarRef = useRef<FullCalendar | null>(null);
 
+    // Get current view from URL
+    const view = (searchParams.get('view') as CalendarViewType) || 'month';
+
+    // Get current date from URL or use provided date or default to today
     const dateParam = searchParams.get('date');
-    const initialDate = dateParam && !isNaN(new Date(dateParam).getTime()) ? new Date(dateParam) : new Date();
-    const [currentDate, setCurrentDate] = useState(initialDate);
+    const urlDate = dateParam ? new Date(dateParam) : null;
+    const activeDate = currentDate || urlDate || new Date();
 
-    const [isFilterPanelOpen, setFilterPanelOpen] = useState(false);
+    const formatDateForURL = (date: Date): string => {
+        return date.toISOString().split('T')[0];
+    };
 
-    const formatDateForURL = (date: Date) => date.toISOString().split('T')[0];
+    const handleViewChange = (newView: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('view', newView);
+        params.set('date', formatDateForURL(activeDate));
+        router.push(`/calendar?${params.toString()}`, { scroll: false });
+    };
 
-    const handleNavigate = useCallback((direction: 'prev' | 'next' | 'today') => {
-        const view = searchParams.get('view') || 'month';
-        let newDate = new Date(currentDate);
+    const handleDateChange = (newDate: Date) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('date', formatDateForURL(newDate));
+        router.push(`/calendar?${params.toString()}`, { scroll: false });
+        onDateChange?.(newDate);
+    };
 
-        if (direction === 'today') {
-            newDate = new Date();
-        } else {
-            if (view === 'day') {
-                newDate.setDate(currentDate.getDate() + (direction === 'next' ? 1 : -1));
-            } else {
-                // For month/week, let FullCalendar handle it, then sync state
-                const api = calendarRef.current?.getApi();
-                if (!api) return;
-                api[direction]();
-                newDate = api.getDate();
-            }
+    const handleNavigation = (direction: 'prev' | 'next' | 'today') => {
+        onNavigate?.(direction);
+
+        // Get the new date from the calendar after navigation
+        if (calendarRef?.current) {
+            const calendarApi = calendarRef.current.getApi();
+            const newDate = calendarApi.getDate();
+            handleDateChange(newDate);
         }
+    };
 
-        const dateStr = formatDateForURL(newDate);
-        // Only push a new URL for day view or if the date actually changes
-        // This avoids unnecessary re-renders for month/week view internal navigation
-        if (view === 'day' || direction === 'today') {
-            router.push(`/calendar?view=${view}&date=${dateStr}`);
-        }
-        setCurrentDate(newDate);
+    const handleToggleFilters = () => {
+        onToggleFilters?.();
+    };
 
-    }, [currentDate, router, searchParams]);
+    // Create context object to pass to children or render prop
+    const layoutContext: CalendarLayoutContext = {
+        view,
+        date: activeDate,
+        onNavigate: handleNavigation,
+        onViewChange: handleViewChange,
+        onDateChange: handleDateChange,
+        calendarRef,
+    };
+
+    // Use render prop if provided, otherwise use children
+    const content = renderContent ? renderContent(layoutContext) : children;
+
+    // If no sidebar data provided (like in Next.js layout), render simpler layout
+    if (!profile && categories.length === 0) {
+        return (
+            <div className="flex h-screen bg-background-main">
+                <div className="flex-1 flex flex-col">
+                    <div className="flex-1 overflow-hidden">
+                        {content}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex h-screen bg-background-main text-foreground-primary font-sans">
-            <CalendarSidebar
-                currentDate={currentDate}
-                setCurrentDate={() => { }}
-                categories={categories}
-                user={{ name: profile?.fullName || 'User', role: '' }}
-                events={[]}
-            />
-            <main className="flex-1 flex flex-col">
-                <CalendarHeader
-                    currentDate={currentDate}
-                    onNavigate={handleNavigate}
-                    isFilterPanelOpen={isFilterPanelOpen}
-                    onToggleFilters={() => setFilterPanelOpen(!isFilterPanelOpen)}
-                    activeFilterCount={0}
+        <div className="flex h-screen bg-background-main">
+            {/* Sidebar */}
+            <div className="w-80 border-r border-border-default bg-background-elevated">
+                <CalendarSidebar
+                    currentDate={activeDate}
+                    setCurrentDate={handleDateChange}
+                    categories={categories}
+                    user={{
+                        name: profile?.fullName || 'User',
+                        role: 'Member'
+                    }}
+                    events={events}
                 />
-                <div className="flex-1 overflow-auto">
+            </div>
 
-                    {React.isValidElement<InjectedChildProps>(children)
-                        ? React.cloneElement(children, { calendarRef })
-                        : children
-                    }
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col">
+                {/* Header */}
+                <CalendarHeader
+                    currentDate={activeDate}
+                    onNavigate={handleNavigation}
+                    onToggleFilters={handleToggleFilters}
+                    isFilterPanelOpen={isFilterPanelOpen}
+                    activeFilterCount={activeFilterCount}
+                />
+
+                {/* Calendar Content */}
+                <div className="flex-1 overflow-hidden">
+                    {content}
                 </div>
-            </main>
+            </div>
         </div>
     );
 }
