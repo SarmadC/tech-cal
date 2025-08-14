@@ -262,7 +262,7 @@ export function useScrollAnimation(
                 const order = positions.order[i];
 
                 if (!chaos || !order) {
-                    console.warn(`Missing positions for card ${i}:`, { chaos, order });
+                    console.warn('Missing positions for card:', i, { chaos, order });
                     return;
                 }
 
