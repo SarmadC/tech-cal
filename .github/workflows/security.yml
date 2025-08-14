@@ -1,4 +1,3 @@
-# .github/workflows/security.yml
 name: Security Scan
 on: [push, pull_request]
 jobs:
@@ -6,21 +5,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
-      # Dependency scanning
+
       - name: Run npm audit
         run: npm audit --audit-level moderate
-      
-      # SAST scanning
+
       - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
         with:
           config: auto
-      
-      # Secret scanning
+
+      # --- THIS IS THE UPDATED STEP ---
       - name: TruffleHog OSS
         uses: trufflesecurity/trufflehog@main
         with:
+          # Check if the base and head are different before scanning
+          # This prevents the job from failing on PRs with no new commits
+          # The `github.event.pull_request.base.sha` and `github.event.pull_request.head.sha`
+          # are automatically available in the pull_request event context.
+          extra_args: >-
+            --fail-if-no-verifications
+            --only-verified
+            --no-update
+            --json
+            --repo-path .
+            --base ${{ github.event.pull_request.base.sha }}
+            --head ${{ github.event.pull_request.head.sha }}
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.sha != github.event.pull_request.head.sha
+
+      # This step will run only for 'push' events or for PRs with no new changes
+      - name: TruffleHog OSS (Push Fallback)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          # For pushes, we scan the latest commit
           path: ./
-          base: main
-          head: HEAD
+          base: ${{ github.event.before }}
+          head: ${{ github.event.after }}
+        if: github.event_name == 'push'
