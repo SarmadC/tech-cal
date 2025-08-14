@@ -88,8 +88,24 @@ export default function CalendarClientView({
 
     // --- Render Logic ---
     const renderCalendarContent = (context: CalendarLayoutContext) => {
-        // This component is only responsible for rendering the Week/Month calendar.
-        // It correctly passes the view from the context to the preview component.
+        // Note: Day view is now handled directly in page.tsx with TechCalendarDayView
+        // This component only handles Month and Week views
+        if (context.view === 'day') {
+            return (
+                <div className="flex items-center justify-center h-full bg-gray-50">
+                    <div className="text-center">
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">Day View</h3>
+                        <p className="text-gray-600">
+                            Day view is handled by a specialized component.
+                        </p>
+                        <p className="text-sm text-gray-500 mt-2">
+                            If you are seeing this, there might be a routing issue.
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <CalendarWithPreview
                 events={enrichedEvents}

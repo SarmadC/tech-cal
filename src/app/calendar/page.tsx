@@ -42,27 +42,19 @@ export default async function CalendarPage({
             ProfileService.getProfile(user.id, supabase),
         ]);
 
-        // Special handling for day view
+        // Special handling for day view with the new TechCalendarDayView
         if (view === 'day') {
-            const dayStart = new Date(currentDate);
-            dayStart.setHours(0, 0, 0, 0);
-            const dayEnd = new Date(currentDate);
-            dayEnd.setHours(23, 59, 59, 999);
-
-            const dayEvents = events.filter(event => {
-                const eventStart = new Date(event.startTime);
-                return eventStart >= dayStart && eventStart <= dayEnd;
-            });
-
             return (
                 <TechCalendarDayView
-                    events={dayEvents}
+                    events={events}
                     initialDate={currentDate}
+                    categories={categories}
+                    profile={profile}
                 />
             );
         }
 
-        // Default calendar view
+        // Default calendar view for month/week
         return (
             <CalendarClientView
                 initialEvents={events}

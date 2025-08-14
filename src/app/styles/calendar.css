@@ -156,3 +156,55 @@
 .smart-filter-panel label:hover {
     background-color: var(--background-tertiary);
 }
+
+/* --- Dynamic Day View Styles --- */
+.tech-day-view {
+    --fc-border-color: var(--border-subtle);
+    --fc-page-bg-color: var(--background-main);
+    --fc-neutral-bg-color: var(--background-secondary);
+    --fc-event-bg-color: var(--background-elevated);
+    --fc-event-text-color: var(--foreground-primary);
+}
+
+/* Hide the column header, as there's only one "day" column */
+.tech-day-view .fc-col-header {
+    display: none;
+}
+
+/* Style for the time labels on the left (Y-axis) */
+.tech-day-view .fc-timegrid-slot-label-cushion {
+    color: var(--foreground-tertiary);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    padding: 0 0.5rem;
+}
+
+/* Remove borders from the time grid cells for a cleaner look */
+.tech-day-view .fc-timegrid-slot,
+.tech-day-view .fc-timegrid-col.fc-day {
+    border-color: transparent;
+}
+
+/* Style the line that divides time slots */
+.tech-day-view .fc-timegrid-slot-lane {
+    border-bottom: 1px dashed var(--border-subtle);
+}
+.tech-day-view .fc-timegrid-slot:last-child .fc-timegrid-slot-lane {
+    border-bottom: none;
+}
+
+
+/* Basic styling for the event cards */
+.tech-day-view .fc-timegrid-event {
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin: 1px 4px; /* Give a little space between overlapping events */
+}
+
+.tech-day-view .fc-timegrid-event .fc-event-main {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
