@@ -1,0 +1,390 @@
+/* ==========================================================================
+   TECH DAY VIEW STYLES
+   ========================================================================== */
+
+.tech-day-view {
+    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+}
+
+/* Grid Layout */
+.tech-day-grid {
+    display: grid;
+    grid-template-columns: 100px repeat(4, 1fr);
+    gap: 0;
+}
+
+/* Time Slot Styling */
+.time-slot {
+    background: var(--background-secondary, #f8fafc);
+    border-right: 1px solid var(--border-subtle, #e2e8f0);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+.time-slot-label {
+    text-align: center;
+}
+
+.time-slot-hour {
+    font-weight: 600;
+    color: var(--foreground-primary, #1e293b);
+    font-size: 0.875rem;
+}
+
+.time-slot-minutes {
+    font-size: 0.75rem;
+    color: var(--foreground-tertiary, #64748b);
+    margin-top: 2px;
+}
+
+/* Event Category Columns */
+.category-column {
+    border-left: 1px solid var(--border-subtle, #e2e8f0);
+    padding: 0.5rem;
+    background: var(--background-main, #ffffff);
+    min-height: 80px;
+}
+
+.category-header {
+    background: var(--background-main, #ffffff);
+    border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+    padding: 1rem;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.category-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--foreground-primary, #1e293b);
+    margin-bottom: 0.25rem;
+}
+
+.category-count {
+    font-size: 0.875rem;
+    color: var(--foreground-tertiary, #64748b);
+}
+
+/* Event Card Styles */
+.event-card {
+    background: var(--background-main, #ffffff);
+    border: 1px solid var(--border-default, #d1d5db);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    position: relative;
+}
+
+.event-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+    border-color: var(--border-strong, #9ca3af);
+}
+
+.event-card.live {
+    background: var(--background-inverse, #1e293b);
+    color: var(--foreground-inverse, #ffffff);
+    border-left: 4px solid var(--success, #10b981);
+}
+
+.event-card.tracked {
+    ring: 2px;
+    ring-color: var(--accent-primary, #3b82f6);
+    ring-opacity: 0.5;
+}
+
+/* Event Card Content */
+.event-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.25;
+    color: var(--foreground-primary, #1e293b);
+    margin-bottom: 0.5rem;
+}
+
+.event-card.live .event-title {
+    color: var(--foreground-inverse, #ffffff);
+}
+
+.event-time {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--foreground-secondary, #64748b);
+    margin-bottom: 0.5rem;
+}
+
+.event-card.live .event-time {
+    color: var(--foreground-tertiary-inverse, #cbd5e1);
+}
+
+.event-organizer {
+    font-size: 0.75rem;
+    color: var(--foreground-tertiary, #9ca3af);
+    margin-bottom: 0.5rem;
+}
+
+.event-card.live .event-organizer {
+    color: var(--foreground-secondary-inverse, #94a3b8);
+}
+
+/* Event Tags */
+.event-tags {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.event-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.event-tag.tech {
+    background: var(--background-tertiary, #f1f5f9);
+    color: var(--foreground-secondary, #475569);
+}
+
+.event-card.live .event-tag.tech {
+    background: var(--background-secondary-inverse, #374151);
+    color: var(--foreground-tertiary-inverse, #d1d5db);
+}
+
+.event-tag.live {
+    background: var(--success, #10b981);
+    color: var(--foreground-inverse, #ffffff);
+    font-weight: 600;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Category Indicators */
+.category-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.category-indicator.conferences {
+    background: #3b82f6; /* Blue */
+}
+
+.category-indicator.workshops {
+    background: #10b981; /* Green */
+}
+
+.category-indicator.webinars {
+    background: #8b5cf6; /* Purple */
+}
+
+.category-indicator.networking {
+    background: #f59e0b; /* Orange */
+}
+
+/* Tracking Indicator */
+.tracking-indicator {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 8px;
+    height: 8px;
+    background: var(--accent-primary, #3b82f6);
+    border-radius: 50%;
+}
+
+/* Virtual Event Icon */
+.virtual-icon {
+    color: var(--accent-primary, #3b82f6);
+    flex-shrink: 0;
+}
+
+.event-card.live .virtual-icon {
+    color: var(--accent-primary-light, #60a5fa);
+}
+
+/* Sidebar Styles */
+.event-sidebar {
+    background: var(--background-main, #ffffff);
+    border-left: 1px solid var(--border-default, #d1d5db);
+    width: 384px; /* w-96 */
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.sidebar-close {
+    padding: 0.25rem;
+    color: var(--foreground-tertiary, #9ca3af);
+    hover: var(--foreground-secondary, #6b7280);
+    border-radius: 4px;
+    transition: colors 0.2s;
+}
+
+.sidebar-close:hover {
+    background: var(--background-tertiary, #f8fafc);
+}
+
+.sidebar-section {
+    margin-bottom: 1.5rem;
+}
+
+.sidebar-section-title {
+    font-weight: 600;
+    color: var(--foreground-primary, #1e293b);
+    margin-bottom: 0.5rem;
+}
+
+.sidebar-action-button {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.sidebar-action-button.primary {
+    background: var(--accent-primary, #3b82f6);
+    color: var(--foreground-inverse, #ffffff);
+}
+
+.sidebar-action-button.primary:hover {
+    background: var(--accent-primary-hover, #2563eb);
+}
+
+.sidebar-action-button.secondary {
+    background: transparent;
+    color: var(--foreground-secondary, #64748b);
+    border: 1px solid var(--border-default, #d1d5db);
+}
+
+.sidebar-action-button.secondary:hover {
+    background: var(--background-tertiary, #f8fafc);
+}
+
+.sidebar-action-button.danger {
+    background: var(--background-tertiary, #fef2f2);
+    color: var(--error, #dc2626);
+}
+
+.sidebar-action-button.danger:hover {
+    background: var(--error-light, #fee2e2);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .tech-day-grid {
+        grid-template-columns: 80px repeat(2, 1fr);
+    }
+    
+    .event-sidebar {
+        width: 320px;
+    }
+    
+    /* Hide calendar sidebar on smaller screens */
+    .calendar-sidebar {
+        display: none;
+    }
+    
+    .main-calendar-content {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .tech-day-grid {
+        grid-template-columns: 60px 1fr;
+    }
+    
+    .category-header {
+        padding: 0.75rem;
+    }
+    
+    .event-sidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        width: 100%;
+        max-width: 400px;
+        z-index: 50;
+        box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
+    }
+    
+    /* Hide calendar sidebar on mobile */
+    .calendar-sidebar {
+        display: none;
+    }
+    
+    /* Make main content full width on mobile */
+    .main-calendar-content {
+        width: 100%;
+    }
+}
+
+/* Animation Utilities */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: .5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom Scrollbar */
+.tech-day-view *::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tech-day-view *::-webkit-scrollbar-track {
+    background: var(--background-tertiary, #f8fafc);
+}
+
+.tech-day-view *::-webkit-scrollbar-thumb {
+    background: var(--border-strong, #9ca3af);
+    border-radius: 3px;
+}
+
+.tech-day-view *::-webkit-scrollbar-thumb:hover {
+    background: var(--foreground-tertiary, #64748b);
+}
+
+/* Utility Classes for Layout */
+.calendar-sidebar {
+    width: 320px;
+    border-right: 1px solid var(--border-default, #d1d5db);
+    background: var(--background-elevated, #ffffff);
+}
+
+.main-calendar-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}

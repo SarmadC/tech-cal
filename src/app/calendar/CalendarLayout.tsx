@@ -19,7 +19,7 @@ export interface CalendarLayoutContext {
 }
 
 export interface CalendarLayoutProps {
-    children?: ReactNode;
+    children?: ReactNode; // Make children optional
     profile: AppProfile | null;
     categories: AppEventType[];
     events?: AppEvent[];
@@ -30,6 +30,7 @@ export interface CalendarLayoutProps {
     isFilterPanelOpen?: boolean;
     activeFilterCount?: number;
     calendarRef?: React.RefObject<FullCalendar | null>;
+    // Optional render prop for type-safe children
     renderContent?: (context: CalendarLayoutContext) => ReactNode;
 }
 
@@ -91,7 +92,7 @@ export function CalendarLayout({
         onToggleFilters?.();
     };
 
-    // Create context object to pass to children or render prop
+    // Create context object for children
     const layoutContext: CalendarLayoutContext = {
         view,
         date: activeDate,
