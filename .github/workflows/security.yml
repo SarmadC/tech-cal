@@ -1,10 +1,21 @@
 name: Security Scan
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          # Fetch depth 0 is required for TruffleHog to scan the full history
+          fetch-depth: 0
 
       - name: Run npm audit
         run: npm audit --audit-level moderate
@@ -14,30 +25,21 @@ jobs:
         with:
           config: auto
 
-      # --- THIS IS THE UPDATED STEP ---
-      - name: TruffleHog OSS
+      - name: TruffleHog Scan for Pull Requests
+        # This step only runs on pull requests to 'main'
+        if: github.event_name == 'pull_request'
         uses: trufflesecurity/trufflehog@main
         with:
-          # Check if the base and head are different before scanning
-          # This prevents the job from failing on PRs with no new commits
-          # The `github.event.pull_request.base.sha` and `github.event.pull_request.head.sha`
-          # are automatically available in the pull_request event context.
-          extra_args: >-
-            --fail-if-no-verifications
-            --only-verified
-            --no-update
-            --json
-            --repo-path .
-            --base ${{ github.event.pull_request.base.sha }}
-            --head ${{ github.event.pull_request.head.sha }}
-        if: github.event_name == 'pull_request' && github.event.pull_request.base.sha != github.event.pull_request.head.sha
-
-      # This step will run only for 'push' events or for PRs with no new changes
-      - name: TruffleHog OSS (Push Fallback)
+          # Compare the PR's head commit against the base commit
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+          # The 'path' argument is not needed when using base/head
+          
+      - name: TruffleHog Scan for Pushes
+        # This step only runs on pushes to 'main'
+        if: github.event_name == 'push'
         uses: trufflesecurity/trufflehog@main
         with:
-          # For pushes, we scan the latest commit
-          path: ./
+          # Compare the last two commits in the push
           base: ${{ github.event.before }}
           head: ${{ github.event.after }}
-        if: github.event_name == 'push'
