@@ -1,26 +1,45 @@
-# .github/workflows/security.yml
 name: Security Scan
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
-      # Dependency scanning
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          # Fetch depth 0 is required for TruffleHog to scan the full history
+          fetch-depth: 0
+
       - name: Run npm audit
         run: npm audit --audit-level moderate
-      
-      # SAST scanning
+
       - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
         with:
           config: auto
-      
-      # Secret scanning
-      - name: TruffleHog OSS
+
+      - name: TruffleHog Scan for Pull Requests
+        # This step only runs on pull requests to 'main'
+        if: github.event_name == 'pull_request'
         uses: trufflesecurity/trufflehog@main
         with:
-          path: ./
-          base: main
-          head: HEAD
+          # Compare the PR's head commit against the base commit
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+          # The 'path' argument is not needed when using base/head
+          
+      - name: TruffleHog Scan for Pushes
+        # This step only runs on pushes to 'main'
+        if: github.event_name == 'push'
+        uses: trufflesecurity/trufflehog@main
+        with:
+          # Compare the last two commits in the push
+          base: ${{ github.event.before }}
+          head: ${{ github.event.after }}

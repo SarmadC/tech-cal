@@ -1,31 +1,65 @@
-import { FC, useMemo } from 'react';
+// src/components/calendar/CalendarWithPreview.tsx
+import { FC, useMemo, useRef, useCallback, useEffect } from 'react'; // 1. Add useEffect to imports
 import FullCalendar from '@fullcalendar/react';
-import { EventClickArg, EventContentArg } from '@fullcalendar/core';
+import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
+import listPlugin from '@fullcalendar/list';
 import { AppEvent } from '@/types';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';
 import EnhancedEventContent from './EnhancedEventContent';
 
-interface CalendarWithPreviewProps {
+
+export interface CalendarWithPreviewProps {
     events: AppEvent[];
     onEventClick?: (clickInfo: EventClickArg) => void;
     view?: string;
     date?: Date;
     onNavigate?: (direction: 'prev' | 'next' | 'today') => void;
     onViewChange?: (view: string) => void;
+    onDateChange?: (date: Date) => void;
     calendarRef?: React.RefObject<FullCalendar | null>;
+    className?: string;
 }
+
 
 const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
     events,
     onEventClick,
     view = 'dayGridMonth',
     date,
-    calendarRef
+    onDateChange,
+    calendarRef,
+    className = '',
 }) => {
-    const { previewState, showPreview, hidePreview, forceHidePreview } = useEventPreview();
+    const internalCalendarRef = useRef<FullCalendar | null>(null);
+    const activeCalendarRef = calendarRef || internalCalendarRef;
+
+    const {
+        previewState,
+        showPreview,
+        hidePreview
+    } = useEventPreview();
+
+    const fullCalendarView = useMemo(() => {
+        switch (view) {
+            case 'week':
+                return 'timeGridWeek';
+            case 'month':
+            default:
+                return 'dayGridMonth';
+        }
+    }, [view]);
+
+    useEffect(() => {
+        const calendarApi = calendarRef?.current?.getApi();
+        if (calendarApi && calendarApi.view.type !== fullCalendarView) {
+            setTimeout(() => {
+                calendarApi.changeView(fullCalendarView);
+            }, 0);
+        }
+    }, [fullCalendarView, calendarRef]);
 
     // Transform events for FullCalendar
     const calendarEvents = useMemo(() => {
@@ -34,85 +68,97 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
             title: event.title,
             start: event.startTime,
             end: event.endTime || undefined, // Convert null to undefined for FullCalendar
-            color: event.color || event.category?.color || '#3B82F6',
+            color: event.color || '#3b82f6',
             extendedProps: {
                 ...event,
-                // This ternary operator is now syntactically correct
-                format: event.location?.toLowerCase().includes('virtual') || event.livestreamUrl
-                    ? 'virtual'
-                    : 'in-person'
+                isTracked: event.isTracked || false,
             }
         }));
-    }, [events]); // The dependency array for useMemo is correctly placed
+    }, [events]);
 
-    const renderEventContent = (eventInfo: EventContentArg) => {
+    // Enhanced event content renderer
+    const renderEventContent = useCallback((eventInfo: EventContentArg) => {
         return (
             <EnhancedEventContent
                 {...eventInfo}
-                onEventHover={showPreview}
+                onEventHover={(event, position) => {
+                    showPreview(event, position);
+                }}
                 onEventLeave={hidePreview}
             />
         );
-    };
+    }, [showPreview, hidePreview]);
 
-    // The component correctly returns JSX (ReactNode)
+    // Handle event clicks
+    const handleEventClick = useCallback((clickInfo: EventClickArg) => {
+        clickInfo.jsEvent.preventDefault();
+        hidePreview();
+        onEventClick?.(clickInfo);
+    }, [onEventClick, hidePreview]);
+
+    // Handle event mounting (for styling)
+    const handleEventDidMount = useCallback((info: EventMountArg) => {
+        const eventData = info.event.extendedProps as AppEvent;
+        // Add tracking class for styling
+        if (eventData.isTracked) {
+            info.el.classList.add('tracked-event');
+        }
+    }, []);
+
+    // Handle event mouse enter
+    const handleEventMouseEnter = useCallback((info: EventHoveringArg) => {
+        const event = info.event.extendedProps as AppEvent;
+        const rect = info.el.getBoundingClientRect();
+        // Create a position object that matches the expected interface
+        const position = {
+            x: rect.left + rect.width / 2,
+            y: rect.top
+        };
+        showPreview(event, position);
+    }, [showPreview]);
+
+    // Handle date changes (from calendar navigation)
+    const handleDatesSet = useCallback((dateInfo: { start: Date }) => {
+        onDateChange?.(dateInfo.start);
+    }, [onDateChange]);
+
     return (
-        <div className="relative">
+        <div className={`calendar-container relative ${className}`}>
             <FullCalendar
-                ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin]}
-                initialView={view}
+                ref={activeCalendarRef}
+                plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
+                initialView={fullCalendarView}
                 initialDate={date}
                 events={calendarEvents}
                 eventContent={renderEventContent}
-                eventClick={onEventClick}
-                headerToolbar={false} // We'll use a custom header
+                eventClick={handleEventClick}
+                eventDidMount={handleEventDidMount}
+                eventMouseEnter={handleEventMouseEnter}
+                eventMouseLeave={hidePreview}
+                datesSet={handleDatesSet}
+                headerToolbar={false}
                 height="auto"
-                dayMaxEventRows={3}
+                dayMaxEvents={3}
                 moreLinkClick="popover"
                 eventDisplay="block"
                 displayEventTime={true}
-                eventMinHeight={30}
-                eventMaxStack={3}
-                dayHeaderFormat={{ weekday: 'short' }}
-                slotMinTime="06:00:00"
-                slotMaxTime="23:00:00"
                 allDaySlot={false}
-                eventDidMount={(info) => {
-                    // Add custom classes based on event properties
-                    const eventData = info.event.extendedProps as AppEvent & { format?: string };
-
-                    if (eventData.isTracked) {
-                        info.el.classList.add('tracked-event');
-                    }
-
-                    // Add format-specific styling
-                    if (eventData.format === 'virtual') {
-                        info.el.classList.add('virtual-event');
-                    }
-
-                    // Add priority styling based on category or other criteria
-                    if (eventData.category?.name.toLowerCase().includes('important')) {
-                        info.el.classList.add('priority-event');
-                    }
-                }}
+                slotMinTime="06:00:00"
+                slotMaxTime="22:00:00"
+                expandRows={true}
+                stickyHeaderDates={true}
+                nowIndicator={true}
             />
 
-            {/* Preview Card Overlay */}
+            {/* Event Preview Card */}
             {previewState.event && (
                 <EventPreviewCard
                     event={previewState.event}
                     isVisible={previewState.isVisible}
                     position={previewState.position}
-                    onClose={forceHidePreview}
-                    onTrackingChange={(isTracked) => {
-                        // Update the event in your state management
-                        console.log('Event tracking changed:', isTracked);
-                    }}
+                    onClose={hidePreview}
                 />
             )}
-
-            {/* The <style jsx global> block has been correctly removed. */}
         </div>
     );
 };

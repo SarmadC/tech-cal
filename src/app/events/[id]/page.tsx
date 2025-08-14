@@ -23,7 +23,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     try {
         event = await EventService.getEventById(eventId, supabase);
     } catch (error) {
-        console.error(`Failed to fetch event ${eventId}:`, error);
+        console.error('Failed to fetch event:', eventId, error);
         notFound();
     }
 

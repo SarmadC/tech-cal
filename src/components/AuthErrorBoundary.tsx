@@ -153,7 +153,7 @@ export default AuthErrorBoundary;
 // Hook for functional components to handle auth errors
 export function useAuthErrorHandler() {
   const handleAuthError = (error: Error, context: string = 'Authentication') => {
-    console.error(`${context} error:`, error);
+      console.error(context, 'error:', error);
     
     // You could dispatch to a global error state or show a toast notification
     // For now, we'll just log it
