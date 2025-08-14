@@ -37,9 +37,10 @@ interface EventCardProps {
     event: AppEvent;
     onClick: () => void;
     categoryColor: string;
+    spanHours?: number;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor }) => {
+const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor, spanHours = 1 }) => {
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
     const duration = endTime ?
@@ -49,11 +50,16 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor }) 
     const isVirtual = event.location?.toLowerCase().includes('virtual') || event.livestreamUrl;
     const isLive = new Date() >= startTime && (endTime ? new Date() <= endTime : false);
 
+    // Calculate the height based on span hours (each hour slot is ~80px + borders)
+    const cardHeight = spanHours > 1 ? `${spanHours * 80 + (spanHours - 1) * 1}px` : 'auto';
+
     return (
         <div
             onClick={onClick}
+            style={spanHours > 1 ? { height: cardHeight, minHeight: cardHeight } : {}}
             className={`
                 relative p-3 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg
+                ${spanHours > 1 ? 'flex flex-col justify-between' : ''}
                 ${isLive ? 'bg-gray-800 text-white border-l-4 border-green-400' : 'bg-white hover:bg-gray-50 border border-gray-200'}
                 ${event.isTracked ? 'ring-2 ring-blue-400' : ''}
             `}
@@ -72,6 +78,11 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor }) 
             <div className={`flex items-center gap-1 mb-2 text-xs ${isLive ? 'text-gray-300' : 'text-gray-600'}`}>
                 <Clock className="w-3 h-3" />
                 <span>{duration}</span>
+                {spanHours > 1 && (
+                    <span className={`ml-1 px-1 py-0.5 rounded text-xs font-medium ${isLive ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>
+                        {spanHours}h
+                    </span>
+                )}
             </div>
 
             {/* Organizer */}
@@ -80,7 +91,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor }) 
             </div>
 
             {/* Tags/Categories */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 mt-auto">
                 <div className={`w-2 h-2 rounded-full ${categoryColor}`} />
                 {event.eventTypeId && (
                     <span className={`text-xs px-2 py-1 rounded-full ${isLive ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
@@ -155,13 +166,33 @@ export function TechCalendarDayView({
         return categorized;
     }, [dayEvents]);
 
-    // Get events for a specific time slot and category
-    const getEventsForSlot = (hour: number, categoryId: string) => {
+    // Get events that START in a specific time slot and category
+    const getEventsStartingInSlot = (hour: number, categoryId: string) => {
         return categorizedEvents[categoryId]?.filter(event => {
-            const eventHour = new Date(event.startTime).getHours();
-            const eventEndHour = event.endTime ? new Date(event.endTime).getHours() : eventHour + 1;
-            return hour >= eventHour && hour < eventEndHour;
+            const eventStartHour = new Date(event.startTime).getHours();
+            return eventStartHour === hour;
         }) || [];
+    };
+
+    // Calculate how many hours an event spans
+    const getEventSpanHours = (event: AppEvent) => {
+        if (!event.endTime) return 1;
+        const startHour = new Date(event.startTime).getHours();
+        const endHour = new Date(event.endTime).getHours();
+        const startMinutes = new Date(event.startTime).getMinutes();
+        const endMinutes = new Date(event.endTime).getMinutes();
+
+        // Calculate total span including partial hours
+        let span = endHour - startHour;
+        if (endMinutes > 0) span += 1; // Add partial hour if event doesn't end exactly on the hour
+        return Math.max(1, span);
+    };
+
+    // Check if any events start in this slot across all categories
+    const hasEventsStartingInSlot = (hour: number) => {
+        return EVENT_CATEGORIES.some(category =>
+            getEventsStartingInSlot(hour, category.id).length > 0
+        );
     };
 
     const handleEventClick = (event: AppEvent) => {
@@ -263,7 +294,7 @@ export function TechCalendarDayView({
                                                 <span className="font-medium text-gray-900">{category.name}</span>
                                             </div>
                                             <div className="text-sm text-gray-500 mt-1">
-                                                {categoryEvents.length} events
+                                                {categoryEvents.length} {categoryEvents.length === 1 ? 'event' : 'events'}
                                             </div>
                                         </div>
                                     );
@@ -273,11 +304,9 @@ export function TechCalendarDayView({
                             {/* Time Slots */}
                             <div className="divide-y divide-gray-200">
                                 {TIME_SLOTS.map(slot => {
-                                    const hasEvents = EVENT_CATEGORIES.some(category =>
-                                        getEventsForSlot(slot.hour, category.id).length > 0
-                                    );
+                                    const hasEvents = hasEventsStartingInSlot(slot.hour);
 
-                                    // Only show time slots that have events or are during typical event hours (8 AM - 11 PM)
+                                    // Only show time slots that have events starting or are during typical event hours (8 AM - 11 PM)
                                     if (!hasEvents && (slot.hour < 8 || slot.hour > 23)) {
                                         return null;
                                     }
@@ -294,18 +323,22 @@ export function TechCalendarDayView({
 
                                             {/* Event Columns */}
                                             {EVENT_CATEGORIES.map(category => {
-                                                const slotEvents = getEventsForSlot(slot.hour, category.id);
+                                                const slotEvents = getEventsStartingInSlot(slot.hour, category.id);
                                                 return (
                                                     <div key={category.id} className="p-2 border-l border-gray-200 bg-white">
                                                         <div className="space-y-2">
-                                                            {slotEvents.map(event => (
-                                                                <EventCard
-                                                                    key={event.id}
-                                                                    event={event}
-                                                                    onClick={() => handleEventClick(event)}
-                                                                    categoryColor={category.color}
-                                                                />
-                                                            ))}
+                                                            {slotEvents.map(event => {
+                                                                const spanHours = getEventSpanHours(event);
+                                                                return (
+                                                                    <EventCard
+                                                                        key={event.id}
+                                                                        event={event}
+                                                                        onClick={() => handleEventClick(event)}
+                                                                        categoryColor={category.color}
+                                                                        spanHours={spanHours}
+                                                                    />
+                                                                );
+                                                            })}
                                                         </div>
                                                     </div>
                                                 );

@@ -83,12 +83,14 @@
     cursor: pointer;
     transition: all 0.2s ease-in-out;
     position: relative;
+    z-index: 1;
 }
 
 .event-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
     border-color: var(--border-strong, #9ca3af);
+    z-index: 10;
 }
 
 .event-card.live {
@@ -101,6 +103,16 @@
     ring: 2px;
     ring-color: var(--accent-primary, #3b82f6);
     ring-opacity: 0.5;
+}
+
+/* Multi-hour event cards */
+.event-card.spanning {
+    position: relative;
+    z-index: 5;
+}
+
+.event-card.spanning:hover {
+    z-index: 15;
 }
 
 /* Event Card Content */
@@ -171,6 +183,18 @@
     color: var(--foreground-inverse, #ffffff);
     font-weight: 600;
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.event-tag.duration {
+    background: var(--accent-primary-light, #dbeafe);
+    color: var(--accent-primary, #3b82f6);
+    font-weight: 600;
+    font-size: 0.7rem;
+}
+
+.event-card.live .event-tag.duration {
+    background: var(--background-secondary-inverse, #374151);
+    color: var(--accent-primary-light, #93c5fd);
 }
 
 /* Category Indicators */
