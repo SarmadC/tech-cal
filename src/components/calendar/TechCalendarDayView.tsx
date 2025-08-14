@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Users, Globe, Monitor, MapPin, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Globe, Monitor, MapPin, Clock } from 'lucide-react';
 import { AppEvent, AppEventType, AppProfile } from '@/types';
 import CalendarSidebar from './CalendarSidebar';
+import EventDetailPanel from './EventDetailPanel';
 
 export interface TechCalendarDayViewProps {
     events: AppEvent[];
@@ -393,93 +394,11 @@ export function TechCalendarDayView({
 
                     {/* Event Details Sidebar */}
                     {selectedEvent && (
-                        <div className="w-96 bg-white border-l border-gray-200 p-6 overflow-y-auto">
-                            <div className="space-y-6">
-                                {/* Header */}
-                                <div>
-                                    <div className="flex items-start justify-between mb-4">
-                                        <h3 className="text-lg font-semibold text-gray-900">Event Details</h3>
-                                        <button
-                                            onClick={() => setSelectedEvent(null)}
-                                            className="p-1 hover:bg-gray-100 rounded"
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                    <h2 className="text-xl font-bold text-gray-900 mb-2">{selectedEvent.title}</h2>
-                                    <p className="text-gray-600">{selectedEvent.organizer}</p>
-                                </div>
-
-                                {/* Event Info */}
-                                <div className="space-y-4">
-                                    <div>
-                                        <h4 className="font-medium text-gray-900 mb-2">Schedule</h4>
-                                        <div className="flex items-center space-x-2 text-gray-600">
-                                            <Calendar className="w-4 h-4" />
-                                            <span>{formatDate(new Date(selectedEvent.startTime))}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2 text-gray-600 mt-1">
-                                            <Clock className="w-4 h-4" />
-                                            <span>
-                                                {new Date(selectedEvent.startTime).toLocaleTimeString('en-US', {
-                                                    hour: 'numeric',
-                                                    minute: '2-digit',
-                                                    hour12: true
-                                                })}
-                                                {selectedEvent.endTime && ` - ${new Date(selectedEvent.endTime).toLocaleTimeString('en-US', {
-                                                    hour: 'numeric',
-                                                    minute: '2-digit',
-                                                    hour12: true
-                                                })}`}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h4 className="font-medium text-gray-900 mb-2">Location</h4>
-                                        <div className="flex items-center space-x-2 text-gray-600">
-                                            <MapPin className="w-4 h-4" />
-                                            <span>{selectedEvent.location || 'TBA'}</span>
-                                        </div>
-                                        {selectedEvent.livestreamUrl && (
-                                            <div className="flex items-center space-x-2 text-blue-600 mt-1">
-                                                <Globe className="w-4 h-4" />
-                                                <a
-                                                    href={selectedEvent.livestreamUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="hover:underline"
-                                                >
-                                                    Join Virtual Event
-                                                </a>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <h4 className="font-medium text-gray-900 mb-2">Description</h4>
-                                        <p className="text-gray-600 text-sm leading-relaxed">
-                                            {selectedEvent.description}
-                                        </p>
-                                    </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="space-y-2 pt-4 border-t border-gray-200">
-                                        <button
-                                            className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${selectedEvent.isTracked
-                                                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                                }`}
-                                        >
-                                            {selectedEvent.isTracked ? 'Untrack Event' : 'Track Event'}
-                                        </button>
-                                        <button className="w-full py-2 px-4 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                                            Add to Calendar
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <EventDetailPanel
+                            event={selectedEvent}
+                            onClose={() => setSelectedEvent(null)}
+                            categories={categories}
+                        />
                     )}
                 </div>
             </div>
