@@ -109,10 +109,28 @@
 .event-card.spanning {
     position: relative;
     z-index: 5;
+    overflow: visible;
 }
 
 .event-card.spanning:hover {
     z-index: 15;
+}
+
+/* Event grid cell positioning */
+.event-grid-cell {
+    position: relative;
+    overflow: visible;
+}
+
+/* Ensure spanning events can extend beyond their grid cell */
+.time-slot-row {
+    position: relative;
+    z-index: 1;
+}
+
+.spanning-event-container {
+    position: relative;
+    z-index: 10;
 }
 
 /* Event Card Content */

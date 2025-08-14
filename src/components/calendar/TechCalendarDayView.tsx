@@ -38,9 +38,10 @@ interface EventCardProps {
     onClick: () => void;
     categoryColor: string;
     spanHours?: number;
+    slotHeight?: number;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor, spanHours = 1 }) => {
+const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor, spanHours = 1, slotHeight: _slotHeight = 80 }) => {
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
     const duration = endTime ?
@@ -50,18 +51,41 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor, sp
     const isVirtual = event.location?.toLowerCase().includes('virtual') || event.livestreamUrl;
     const isLive = new Date() >= startTime && (endTime ? new Date() <= endTime : false);
 
-    // Calculate the height based on span hours (each hour slot is ~80px + borders)
-    const cardHeight = spanHours > 1 ? `${spanHours * 80 + (spanHours - 1) * 1}px` : 'auto';
+    // Calculate the height more precisely for spanning events
+    const calculateSpanningHeight = () => {
+        if (spanHours <= 1) return 'auto';
+
+        // Debug: Let's use a much larger calculation to see if the issue is the height calculation
+        // Each time slot is 80px minimum height + borders and gaps
+        // For a 3-hour event, we want it to span approximately 240px+ to reach from 6 AM to 9 AM
+        const totalHeight = spanHours * 100; // Simplified: 100px per hour to test
+
+        return `${totalHeight}px`;
+    };
+
+    const cardHeight = calculateSpanningHeight();
+    const isSpanning = spanHours > 1;
+
+    const cardStyle = isSpanning ? {
+        height: cardHeight,
+        minHeight: cardHeight,
+        position: 'absolute' as const,
+        top: '8px', // Account for container padding
+        left: '8px', // Account for container padding  
+        right: '8px', // Account for container padding
+        zIndex: 10,
+    } : {};
 
     return (
         <div
             onClick={onClick}
-            style={spanHours > 1 ? { height: cardHeight, minHeight: cardHeight } : {}}
+            style={cardStyle}
             className={`
                 relative p-3 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg
-                ${spanHours > 1 ? 'flex flex-col justify-between' : ''}
+                ${isSpanning ? 'flex flex-col justify-between spanning' : ''}
                 ${isLive ? 'bg-gray-800 text-white border-l-4 border-green-400' : 'bg-white hover:bg-gray-50 border border-gray-200'}
                 ${event.isTracked ? 'ring-2 ring-blue-400' : ''}
+                event-card
             `}
         >
             {/* Event Header */}
@@ -79,14 +103,14 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor, sp
                 <Clock className="w-3 h-3" />
                 <span>{duration}</span>
                 {spanHours > 1 && (
-                    <span className={`ml-1 px-1 py-0.5 rounded text-xs font-medium ${isLive ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>
+                    <span className={`ml-1 px-1.5 py-0.5 rounded text-xs font-medium ${isLive ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>
                         {spanHours}h
                     </span>
                 )}
             </div>
 
             {/* Organizer */}
-            <div className={`text-xs ${isLive ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+            <div className={`text-xs ${isLive ? 'text-gray-400' : 'text-gray-500'} mb-2 ${isSpanning ? 'flex-shrink-0' : ''}`}>
                 {event.organizer}
             </div>
 
@@ -174,17 +198,25 @@ export function TechCalendarDayView({
         }) || [];
     };
 
-    // Calculate how many hours an event spans
+    // Calculate how many time slots an event should span
     const getEventSpanHours = (event: AppEvent) => {
         if (!event.endTime) return 1;
-        const startHour = new Date(event.startTime).getHours();
-        const endHour = new Date(event.endTime).getHours();
-        const startMinutes = new Date(event.startTime).getMinutes();
-        const endMinutes = new Date(event.endTime).getMinutes();
 
-        // Calculate total span including partial hours
+        const startTime = new Date(event.startTime);
+        const endTime = new Date(event.endTime);
+
+        const startHour = startTime.getHours();
+        const endHour = endTime.getHours();
+        const endMinutes = endTime.getMinutes();
+
+        // Calculate how many hour slots this event spans
         let span = endHour - startHour;
-        if (endMinutes > 0) span += 1; // Add partial hour if event doesn't end exactly on the hour
+
+        // If the event ends with minutes (not exactly on the hour), it takes up that hour slot too
+        if (endMinutes > 0) {
+            span += 1;
+        }
+
         return Math.max(1, span);
     };
 
@@ -194,6 +226,21 @@ export function TechCalendarDayView({
             getEventsStartingInSlot(hour, category.id).length > 0
         );
     };
+
+    // Get all hours that should be displayed (either have events or are in business hours)
+    const getDisplayedTimeSlots = () => {
+        const displayedSlots = [];
+        for (const slot of TIME_SLOTS) {
+            const hasEvents = hasEventsStartingInSlot(slot.hour);
+            // Show slots with events or during typical hours (6 AM - 11 PM for tech events)
+            if (hasEvents || (slot.hour >= 6 && slot.hour <= 23)) {
+                displayedSlots.push(slot);
+            }
+        }
+        return displayedSlots;
+    };
+
+    const displayedSlots = getDisplayedTimeSlots();
 
     const handleEventClick = (event: AppEvent) => {
         setSelectedEvent(event);
@@ -278,7 +325,7 @@ export function TechCalendarDayView({
                 <div className="flex-1 flex overflow-hidden">
                     {/* Main Calendar Grid */}
                     <div className="flex-1 overflow-auto">
-                        <div className="min-w-[800px]">
+                        <div className="min-w-[800px] calendar-grid-container">
                             {/* Column Headers */}
                             <div className="grid grid-cols-5 gap-0 bg-white border-b border-gray-200 sticky top-0 z-10">
                                 <div className="p-4 text-center font-medium text-gray-500 bg-gray-50">
@@ -303,16 +350,9 @@ export function TechCalendarDayView({
 
                             {/* Time Slots */}
                             <div className="divide-y divide-gray-200">
-                                {TIME_SLOTS.map(slot => {
-                                    const hasEvents = hasEventsStartingInSlot(slot.hour);
-
-                                    // Only show time slots that have events starting or are during typical event hours (8 AM - 11 PM)
-                                    if (!hasEvents && (slot.hour < 8 || slot.hour > 23)) {
-                                        return null;
-                                    }
-
+                                {displayedSlots.map(slot => {
                                     return (
-                                        <div key={slot.hour} className="grid grid-cols-5 gap-0 min-h-[80px]">
+                                        <div key={slot.hour} className="grid grid-cols-5 gap-0 min-h-[80px] time-slot-row">
                                             {/* Time Label */}
                                             <div className="p-4 bg-gray-50 flex items-center justify-center border-r border-gray-200">
                                                 <div className="text-center">
@@ -325,7 +365,7 @@ export function TechCalendarDayView({
                                             {EVENT_CATEGORIES.map(category => {
                                                 const slotEvents = getEventsStartingInSlot(slot.hour, category.id);
                                                 return (
-                                                    <div key={category.id} className="p-2 border-l border-gray-200 bg-white">
+                                                    <div key={category.id} className="p-2 border-l border-gray-200 bg-white relative">
                                                         <div className="space-y-2">
                                                             {slotEvents.map(event => {
                                                                 const spanHours = getEventSpanHours(event);
@@ -336,6 +376,7 @@ export function TechCalendarDayView({
                                                                         onClick={() => handleEventClick(event)}
                                                                         categoryColor={category.color}
                                                                         spanHours={spanHours}
+                                                                        slotHeight={80}
                                                                     />
                                                                 );
                                                             })}
