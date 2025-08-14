@@ -1,6 +1,4 @@
-// src/components/calendar/EventActions.tsx (No changes needed, but for confirmation)
-
-'use client';
+// src/components/calendar/EventActions.tsx
 import { FC } from 'react';
 import { Calendar as CalendarIcon, Share2 } from 'lucide-react';
 import { AppEvent } from '@/types';
