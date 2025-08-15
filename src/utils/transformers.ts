@@ -125,6 +125,7 @@ export const enrichEvent = (
     options: {
         eventType?: AppEventType;
         isTracked?: boolean;
+        
     } = {}
 ): AppEvent => ({
     ...event,

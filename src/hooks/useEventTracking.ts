@@ -9,6 +9,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/utils/supabase/client';
 
+// Import your existing server actions
+import { trackEventAction, untrackEventAction } from '@/app/calendar/actions';
+
 // Input types for the mutation hooks
 type TrackEventVariables = { eventId: string; status: EventStatus; notes?: string };
 type UntrackEventVariables = { eventId: string };
@@ -26,26 +29,28 @@ export function useEventTracking() {
     const queryClient = useQueryClient();
     const listQueryKey = ['trackedEvents', user?.id];
 
-    // trackEvent mutation using your existing UserEventService
+    // trackEvent mutation using your existing server action
     const { mutate: trackEvent, isPending: isTracking } = useMutation({
         mutationFn: async (variables: TrackEventVariables) => {
-            if (!user?.id) {
-                throw new Error('User not authenticated');
+            const formData = new FormData();
+            formData.append('eventId', variables.eventId);
+            formData.append('status', variables.status);
+            if (variables.notes) {
+                formData.append('notes', variables.notes);
             }
 
-            // Use your existing service method directly
-            await UserEventService.trackEvent(
-                user.id,
-                variables.eventId,
-                variables.status,
-                variables.notes,
-                supabase
-            );
-
-            return { success: true };
+            const result = await trackEventAction(formData);
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to track event.');
+            }
+            return result;
         },
         onSuccess: (_, variables) => {
-            toast.success(`Event ${variables.status}!`);
+            const statusText = variables.status === 'bookmarked' ? 'bookmarked' :
+                variables.status === 'attending' ? 'marked as attending' :
+                    variables.status === 'attended' ? 'marked as attended' : 'tracked';
+            toast.success(`Event ${statusText}!`);
+
             // Invalidate queries to refresh the UI
             queryClient.invalidateQueries({ queryKey: listQueryKey });
             queryClient.invalidateQueries({
@@ -58,24 +63,21 @@ export function useEventTracking() {
         },
     });
 
-    // untrackEvent mutation using your existing UserEventService
+    // untrackEvent mutation using your existing server action
     const { mutate: untrackEvent, isPending: isUntracking } = useMutation({
         mutationFn: async (variables: UntrackEventVariables) => {
-            if (!user?.id) {
-                throw new Error('User not authenticated');
+            const formData = new FormData();
+            formData.append('eventId', variables.eventId);
+
+            const result = await untrackEventAction(formData);
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to untrack event.');
             }
-
-            // Use your existing service method directly
-            await UserEventService.untrackEvent(
-                user.id,
-                variables.eventId,
-                supabase
-            );
-
-            return { success: true };
+            return result;
         },
         onSuccess: (_, variables) => {
             toast.success('Event untracked.');
+
             // Invalidate queries to refresh the UI
             queryClient.invalidateQueries({ queryKey: listQueryKey });
             queryClient.invalidateQueries({
@@ -88,7 +90,7 @@ export function useEventTracking() {
         },
     });
 
-    // bulkTrackEvents mutation using your existing service
+    // bulkTrackEvents mutation using direct service call (no server action for this yet)
     const { mutate: bulkTrackEvents, isPending: isBulkTracking } = useMutation({
         mutationFn: (variables: BulkTrackEventsVariables): Promise<BulkTrackResponse> => {
             if (!user) throw new Error('User not authenticated.');
@@ -123,7 +125,7 @@ export function useEventTracking() {
     };
 }
 
-// READ hooks - these should work fine as they use your existing services
+// READ hooks - these work with your existing services
 export function useTrackedEvents() {
     const [supabase] = useState(() => createClient());
     const { user } = useAuth();
