@@ -42,7 +42,7 @@ export class EventService {
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
 
-            // ✅ FIX: Sanitize the search term before using it in the query.
+            // Sanitize the search term before using it in the query.
             if (filters.searchTerm) {
                 const sanitizedSearchTerm = sanitizeFtsQuery(filters.searchTerm, ' & '); // Use AND logic
                 if (sanitizedSearchTerm) {
@@ -107,7 +107,7 @@ export class EventService {
         limit = 10
     ): Promise<SearchSuggestion[]> {
         try {
-            // ✅ FIX: Sanitize the search term for the suggestions search as well.
+            // Sanitize the search term for the suggestions search as well.
             const sanitizedTerm = sanitizeFtsQuery(term, ' | '); // Use OR logic for better suggestions
 
             // If the sanitized term is empty (e.g., user only typed '!'), return no results.
@@ -144,8 +144,6 @@ export class EventService {
             throw new Error('Search failed. Please try again.');
         }
     }
-
-    // ... (the rest of your file remains the same)
     static async getEventsByDateRange(
         startDate: Date,
         endDate: Date,

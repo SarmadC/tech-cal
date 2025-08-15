@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Users, Globe, Monitor, MapPin, Clock } from 
 import { AppEvent, AppEventType, AppProfile } from '@/types';
 import CalendarSidebar from './CalendarSidebar';
 import EventDetailPanel from './EventDetailPanel';
+import EventPreviewCard from './EventPreviewCard';
 
 export interface TechCalendarDayViewProps {
     events: AppEvent[];
@@ -37,12 +38,22 @@ const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
 interface EventCardProps {
     event: AppEvent;
     onClick: () => void;
+    onHover: (event: AppEvent, mouseEvent: React.MouseEvent) => void;
+    onLeave: () => void;
     categoryColor: string;
     spanHours?: number;
     slotHeight?: number;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor, spanHours = 1, slotHeight: _slotHeight = 80 }) => {
+const EventCard: React.FC<EventCardProps> = ({
+    event,
+    onClick,
+    onHover,
+    onLeave,
+    categoryColor,
+    spanHours = 1,
+    slotHeight: _slotHeight = 80
+}) => {
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
     const duration = endTime ?
@@ -80,6 +91,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor, sp
     return (
         <div
             onClick={onClick}
+            onMouseEnter={(e) => onHover(event, e)}
+            onMouseLeave={onLeave}
             style={cardStyle}
             className={`
                 relative p-3 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg
@@ -89,52 +102,54 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, categoryColor, sp
                 event-card
             `}
         >
-            {/* Event Header */}
-            <div className="flex items-start justify-between mb-2">
-                <h4 className={`font-semibold text-sm leading-tight ${isLive ? 'text-white' : 'text-gray-900'}`}>
-                    {event.title}
-                </h4>
-                {isVirtual && (
-                    <Globe className={`w-4 h-4 ${isLive ? 'text-blue-300' : 'text-blue-500'} flex-shrink-0 ml-2`} />
-                )}
-            </div>
+    {/* Event Header */ }
+    <div className="flex items-start justify-between mb-2">
+        <h4 className={`font-semibold text-sm leading-tight ${isLive ? 'text-white' : 'text-gray-900'}`}>
+            {event.title}
+        </h4>
+        {isVirtual && (
+            <Globe className={`w-4 h-4 ${isLive ? 'text-blue-300' : 'text-blue-500'} flex-shrink-0 ml-2`} />
+        )}
+    </div>
 
-            {/* Time and Duration */}
-            <div className={`flex items-center gap-1 mb-2 text-xs ${isLive ? 'text-gray-300' : 'text-gray-600'}`}>
-                <Clock className="w-3 h-3" />
-                <span>{duration}</span>
-                {spanHours > 1 && (
-                    <span className={`ml-1 px-1.5 py-0.5 rounded text-xs font-medium ${isLive ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>
-                        {spanHours}h
-                    </span>
-                )}
-            </div>
+    {/* Time and Duration */ }
+    <div className={`flex items-center gap-1 mb-2 text-xs ${isLive ? 'text-gray-300' : 'text-gray-600'}`}>
+        <Clock className="w-3 h-3" />
+        <span>{duration}</span>
+        {spanHours > 1 && (
+            <span className={`ml-1 px-1.5 py-0.5 rounded text-xs font-medium ${isLive ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>
+                {spanHours}h
+            </span>
+        )}
+    </div>
 
-            {/* Organizer */}
-            <div className={`text-xs ${isLive ? 'text-gray-400' : 'text-gray-500'} mb-2 ${isSpanning ? 'flex-shrink-0' : ''}`}>
-                {event.organizer}
-            </div>
+    {/* Organizer */ }
+    <div className={`text-xs ${isLive ? 'text-gray-400' : 'text-gray-500'} mb-2 ${isSpanning ? 'flex-shrink-0' : ''}`}>
+        {event.organizer}
+    </div>
 
-            {/* Tags/Categories */}
-            <div className="flex items-center gap-1 mt-auto">
-                <div className={`w-2 h-2 rounded-full ${categoryColor}`} />
-                {event.eventTypeId && (
-                    <span className={`text-xs px-2 py-1 rounded-full ${isLive ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-                        Tech
-                    </span>
-                )}
-                {isLive && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-green-500 text-white font-medium">
-                        LIVE
-                    </span>
-                )}
-            </div>
+    {/* Tags/Categories */ }
+    <div className="flex items-center gap-1 mt-auto">
+        <div className={`w-2 h-2 rounded-full ${categoryColor}`} />
+        {event.eventTypeId && (
+            <span className={`text-xs px-2 py-1 rounded-full ${isLive ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                Tech
+            </span>
+        )}
+        {isLive && (
+            <span className="text-xs px-2 py-1 rounded-full bg-green-500 text-white font-medium">
+                LIVE
+            </span>
+        )}
+    </div>
 
-            {/* Tracking indicator */}
-            {event.isTracked && (
-                <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full" />
-            )}
-        </div>
+    {/* Tracking indicator */ }
+    {
+        event.isTracked && (
+            <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full" />
+        )
+    }
+        </div >
     );
 };
 
@@ -147,6 +162,11 @@ export function TechCalendarDayView({
 }: TechCalendarDayViewProps) {
     const [currentDate, setCurrentDate] = useState(initialDate);
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
+
+    // Hover preview state
+    const [previewEvent, setPreviewEvent] = useState<AppEvent | null>(null);
+    const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+    const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
     // Filter events for the current date
     const dayEvents = useMemo(() => {
@@ -245,7 +265,28 @@ export function TechCalendarDayView({
 
     const handleEventClick = (event: AppEvent) => {
         setSelectedEvent(event);
+        setIsPreviewVisible(false); // Close preview when opening detail panel
         onEventSelect?.(event);
+    };
+
+    // Hover preview handlers
+    const handleEventHover = (event: AppEvent, mouseEvent: React.MouseEvent) => {
+        const rect = mouseEvent.currentTarget.getBoundingClientRect();
+        setPreviewEvent(event);
+        setPreviewPosition({
+            x: rect.right + 10, // Position to the right of the event card
+            y: rect.top
+        });
+        setIsPreviewVisible(true);
+    };
+
+    const handleEventLeave = () => {
+        setIsPreviewVisible(false);
+        setTimeout(() => {
+            if (!isPreviewVisible) {
+                setPreviewEvent(null);
+            }
+        }, 100); // Small delay to prevent flicker
     };
 
     const navigateDate = (direction: 'prev' | 'next' | 'today') => {
@@ -375,6 +416,8 @@ export function TechCalendarDayView({
                                                                         key={event.id}
                                                                         event={event}
                                                                         onClick={() => handleEventClick(event)}
+                                                                        onHover={handleEventHover}
+                                                                        onLeave={handleEventLeave}
                                                                         categoryColor={category.color}
                                                                         spanHours={spanHours}
                                                                         slotHeight={80}
@@ -402,6 +445,20 @@ export function TechCalendarDayView({
                     )}
                 </div>
             </div>
+
+            {/* Event Preview Card for Hover */}
+            {previewEvent && (
+                <EventPreviewCard
+                    event={previewEvent}
+                    isVisible={isPreviewVisible}
+                    position={previewPosition}
+                    onClose={() => setIsPreviewVisible(false)}
+                    onTrackingChange={(_isTracked) => {
+                        // Update the event in the events array if needed
+                        // This could trigger a re-render to show updated tracking status
+                    }}
+                />
+            )}
         </div>
     );
 }

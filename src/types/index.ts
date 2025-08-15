@@ -65,6 +65,7 @@ export type AppEvent = {
     organizer: string;
     location: string;
     status: string;
+    tags?: EventTag[]
     sourceUrl: string;
     livestreamUrl: string | null;
     eventTypeId: string;
@@ -324,3 +325,10 @@ export type SupabaseTrackedEventWithDetails = Omit<SupabaseTrackedEvent, 'events
     events: SupabaseEventWithDetails | null;
 };
 
+
+export interface EventTag {
+    id: string;
+    name: string;
+    color: string;
+    category: string;
+}

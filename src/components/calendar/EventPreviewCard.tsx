@@ -1,4 +1,4 @@
-// src/components/calendar/EventPreviewCard.tsx - FIXED with Dynamic Content
+// src/components/calendar/EventPreviewCard.tsx - Simplified & Robust
 import { FC, useState, useRef, useEffect } from 'react';
 import {
     Clock,
@@ -9,12 +9,10 @@ import {
     BookmarkCheck,
     Share2,
     Play,
-    DollarSign,
-    Star
+    Globe,
+    Calendar
 } from 'lucide-react';
 import { AppEvent, EventStatus } from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -39,60 +37,6 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     const [isTracked, setIsTracked] = useState(event.isTracked || false);
     const cardRef = useRef<HTMLDivElement>(null);
 
-    // FIXED: Use real event data instead of mock data
-    const getEventFormat = () => {
-        if (event.livestreamUrl) return 'virtual';
-        if (event.location?.toLowerCase().includes('virtual')) return 'virtual';
-        if (event.location?.toLowerCase().includes('online')) return 'virtual';
-        return 'in-person';
-    };
-
-    const getDifficulty = () => {
-        const title = event.title.toLowerCase();
-        const description = event.description.toLowerCase();
-
-        if (title.includes('beginner') || title.includes('intro') || title.includes('101')) {
-            return 'Beginner';
-        }
-        if (title.includes('advanced') || title.includes('expert') || description.includes('prerequisite')) {
-            return 'Advanced';
-        }
-        return 'Intermediate';
-    };
-
-    const getCostInfo = () => {
-        const title = event.title.toLowerCase();
-        const description = event.description.toLowerCase();
-
-        if (title.includes('free') || description.includes('free')) {
-            return { type: 'free' as const };
-        }
-        return { type: 'unknown' as const };
-    };
-
-    const getEventTags = () => {
-        const tags = [];
-        const eventType = event.category?.name;
-
-        if (eventType) tags.push(eventType);
-
-        // Extract potential tags from title and description
-        const content = `${event.title} ${event.description}`.toLowerCase();
-
-        if (content.includes('ai') || content.includes('artificial intelligence')) tags.push('AI');
-        if (content.includes('machine learning') || content.includes('ml')) tags.push('Machine Learning');
-        if (content.includes('blockchain')) tags.push('Blockchain');
-        if (content.includes('cloud')) tags.push('Cloud');
-        if (content.includes('devops')) tags.push('DevOps');
-        if (content.includes('frontend') || content.includes('react') || content.includes('vue')) tags.push('Frontend');
-        if (content.includes('backend') || content.includes('api')) tags.push('Backend');
-        if (content.includes('mobile')) tags.push('Mobile');
-        if (content.includes('data')) tags.push('Data Science');
-        if (content.includes('security')) tags.push('Security');
-
-        return [...new Set(tags)]; // Remove duplicates
-    };
-
     // Handle click outside to close
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -109,8 +53,8 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
     // Position the card to avoid going off-screen
     const getCardPosition = () => {
-        const cardWidth = 400;
-        const cardHeight = 500;
+        const cardWidth = 320;
+        const cardHeight = 400;
         const padding = 20;
 
         let x = position.x;
@@ -118,7 +62,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
         // Adjust horizontal position
         if (x + cardWidth > window.innerWidth - padding) {
-            x = window.innerWidth - cardWidth - padding;
+            x = position.x - cardWidth - 20; // Show on left side instead
         }
 
         // Adjust vertical position
@@ -131,45 +75,13 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
     const cardPosition = getCardPosition();
 
-    const handleTrackEvent = () => {
-        if (!user) {
-            toast.error('Please sign in to track events');
-            return;
-        }
-
-        if (isTracked) {
-            untrackEvent({ eventId: event.id });
-            setIsTracked(false);
-            toast.success('Event removed from your calendar');
-            onTrackingChange?.(false);
-        } else {
-            trackEvent({
-                eventId: event.id,
-                status: 'bookmarked' as EventStatus,
-                notes: ""
-            });
-            setIsTracked(true);
-            toast.success('Event added to your calendar');
-            onTrackingChange?.(true);
-        }
-    };
-
-    const handleShare = async () => {
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: event.title,
-                    text: `Check out this tech event: ${event.title}`,
-                    url: event.sourceUrl || window.location.href
-                });
-            } catch (_error) {
-                // User cancelled or error occurred
-            }
-        } else {
-            // Fallback to clipboard
-            await navigator.clipboard.writeText(event.sourceUrl || window.location.href);
-            toast.success('Event link copied to clipboard');
-        }
+    // Event helpers
+    const isVirtual = event.livestreamUrl || event.location?.toLowerCase().includes('virtual');
+    const isLive = () => {
+        const now = new Date();
+        const start = new Date(event.startTime);
+        const end = event.endTime ? new Date(event.endTime) : null;
+        return now >= start && (!end || now <= end);
     };
 
     const formatTime = (dateString: string) => {
@@ -182,210 +94,212 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
-            weekday: 'long',
+            weekday: 'short',
             month: 'short',
             day: 'numeric'
         });
     };
 
-    const isEventLive = () => {
-        const now = new Date();
+    const getDuration = () => {
+        if (!event.endTime) return 'Duration not specified';
         const start = new Date(event.startTime);
-        const end = event.endTime ? new Date(event.endTime) : null;
-        return now >= start && (!end || now <= end);
+        const end = new Date(event.endTime);
+        const hours = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60));
+        return `${hours} hour${hours !== 1 ? 's' : ''}`;
     };
 
-    const eventFormat = getEventFormat();
-    const difficulty = getDifficulty();
-    const costInfo = getCostInfo();
-    const tags = getEventTags();
+    // Actions
+    const handleTrackEvent = () => {
+        if (!user) {
+            toast.error('Please sign in to track events');
+            return;
+        }
+
+        if (isTracked) {
+            untrackEvent({ eventId: event.id });
+            setIsTracked(false);
+            onTrackingChange?.(false);
+        } else {
+            trackEvent({
+                eventId: event.id,
+                status: 'bookmarked' as EventStatus,
+            });
+            setIsTracked(true);
+            onTrackingChange?.(true);
+        }
+    };
+
+    const handleShare = async () => {
+        const shareUrl = event.sourceUrl || window.location.href;
+
+        if (navigator.share && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            try {
+                await navigator.share({
+                    title: event.title,
+                    text: `Check out this tech event: ${event.title}`,
+                    url: shareUrl
+                });
+                return;
+            } catch {
+                // Fallback to clipboard
+            }
+        }
+
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Event link copied to clipboard');
+    };
 
     if (!isVisible) return null;
 
     return (
         <div
             ref={cardRef}
-            className="fixed z-50 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl p-0 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
+            className="fixed z-50 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
             style={{
                 left: `${cardPosition.x}px`,
                 top: `${cardPosition.y}px`,
             }}
         >
             {/* Header */}
-            <div className="relative p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600">
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 border-b border-gray-200 dark:border-gray-600">
                 <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                        <Badge
-                            variant="secondary"
-                            className="bg-blue-500 text-white"
-                        >
-                            {event.category?.name || 'Event'}
-                        </Badge>
-                        {isEventLive() && (
-                            <Badge variant="outline" className="border-red-400 text-red-600">
-                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-1" />
+                    <div className="flex items-center space-x-2 flex-wrap gap-1">
+                        {/* Dynamic Event Tags */}
+                        {event.tags && event.tags.length > 0 ? (
+                            event.tags.slice(0, 2).map((tag, index) => (
+                                <span
+                                    key={index}
+                                    className="px-2 py-1 text-xs font-medium text-white rounded-full"
+                                    style={{ backgroundColor: tag.color || '#3b82f6' }}
+                                >
+                                    {tag.name}
+                                </span>
+                            ))
+                        ) : (
+                            // Fallback if no tags available
+                            event.eventTypeId && (
+                                <span className="px-2 py-1 text-xs font-medium bg-blue-500 text-white rounded-full">
+                                    Event
+                                </span>
+                            )
+                        )}
+                        {/* Show count if more than 2 tags */}
+                        {event.tags && event.tags.length > 2 && (
+                            <span className="px-2 py-1 text-xs font-medium bg-gray-500 text-white rounded-full">
+                                +{event.tags.length - 2}
+                            </span>
+                        )}
+                        {isLive() && (
+                            <span className="px-2 py-1 text-xs font-medium bg-red-500 text-white rounded-full flex items-center">
+                                <div className="w-2 h-2 bg-white rounded-full animate-pulse mr-1" />
                                 Live
-                            </Badge>
+                            </span>
                         )}
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors text-lg"
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors text-lg leading-none"
                     >
                         ×
                     </button>
                 </div>
 
-                <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-1 line-clamp-2">
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-2 leading-tight">
                     {event.title}
                 </h3>
-
-                <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-300">
-                    <div className="flex items-center space-x-1">
-                        <Clock className="w-4 h-4" />
-                        <span>{formatDate(event.startTime)} • {formatTime(event.startTime)}</span>
-                    </div>
-                </div>
             </div>
 
             {/* Content */}
-            <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
-                {/* Quick Info Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center space-x-2 text-sm">
+            <div className="p-4 space-y-3">
+                {/* Time & Date */}
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                    <Clock className="w-4 h-4 text-gray-500" />
+                    <span>{formatDate(event.startTime)} • {formatTime(event.startTime)}</span>
+                </div>
+
+                {/* Location */}
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                    {isVirtual ? (
+                        <Globe className="w-4 h-4 text-blue-500" />
+                    ) : (
                         <MapPin className="w-4 h-4 text-gray-500" />
-                        <div>
-                            <div className="text-gray-900 dark:text-white font-medium">{eventFormat}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                                {event.location || 'Location TBA'}
-                            </div>
-                        </div>
-                    </div>
+                    )}
+                    <span className="line-clamp-1">
+                        {isVirtual ? 'Virtual Event' : (event.location || 'Location TBA')}
+                    </span>
+                </div>
 
-                    <div className="flex items-center space-x-2 text-sm">
-                        <Star className="w-4 h-4 text-gray-500" />
-                        <div>
-                            <div className="text-gray-900 dark:text-white font-medium">{difficulty}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Level</div>
-                        </div>
-                    </div>
+                {/* Organizer */}
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                    <Users className="w-4 h-4 text-gray-500" />
+                    <span className="line-clamp-1">{event.organizer}</span>
+                </div>
 
-                    <div className="flex items-center space-x-2 text-sm">
-                        <Users className="w-4 h-4 text-gray-500" />
-                        <div>
-                            <div className="text-gray-900 dark:text-white font-medium">{event.organizer}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Organizer</div>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-sm">
-                        <DollarSign className="w-4 h-4 text-gray-500" />
-                        <div>
-                            <div className="text-gray-900 dark:text-white font-medium">
-                                {costInfo.type === 'free' ? 'Free' : 'Check Website'}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Registration</div>
-                        </div>
-                    </div>
+                {/* Duration */}
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span>{getDuration()}</span>
                 </div>
 
                 {/* Description */}
-                <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-4">
-                        {event.description || 'No description available for this event.'}
-                    </p>
-                </div>
-
-                {/* Tags */}
-                {tags.length > 0 && (
-                    <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Topics</h4>
-                        <div className="flex flex-wrap gap-1">
-                            {tags.slice(0, 5).map((tag, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                    {tag}
-                                </Badge>
-                            ))}
-                            {tags.length > 5 && (
-                                <Badge variant="outline" className="text-xs">
-                                    +{tags.length - 5} more
-                                </Badge>
-                            )}
-                        </div>
+                {event.description && (
+                    <div className="pt-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 leading-relaxed">
+                            {event.description}
+                        </p>
                     </div>
                 )}
-
-                {/* Time Info */}
-                <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Event Details</h4>
-                    <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                        <div>Duration: {event.endTime ?
-                            `${Math.round((new Date(event.endTime).getTime() - new Date(event.startTime).getTime()) / (1000 * 60 * 60))} hours`
-                            : 'Duration not specified'
-                        }</div>
-                        {event.livestreamUrl && (
-                            <div className="flex items-center space-x-1">
-                                <Play className="w-3 h-3" />
-                                <span>Live stream available</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
             </div>
 
             {/* Actions */}
             <div className="p-4 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50">
                 <div className="flex space-x-2">
-                    <Button
+                    <button
                         onClick={handleTrackEvent}
-                        className={`flex-1 ${isTracked
-                            ? 'bg-green-600 text-white hover:bg-green-700'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isTracked
+                                ? 'bg-green-600 text-white hover:bg-green-700'
+                                : 'bg-blue-600 text-white hover:bg-blue-700'
                             }`}
-                        size="sm"
                     >
                         {isTracked ? (
                             <>
-                                <BookmarkCheck className="w-4 h-4 mr-2" />
-                                Tracked
+                                <BookmarkCheck className="w-4 h-4" />
+                                <span>Tracked</span>
                             </>
                         ) : (
                             <>
-                                <Bookmark className="w-4 h-4 mr-2" />
-                                Track Event
+                                <Bookmark className="w-4 h-4" />
+                                <span>Track</span>
                             </>
                         )}
-                    </Button>
+                    </button>
 
-                    <Button
+                    <button
                         onClick={handleShare}
-                        variant="outline"
-                        size="sm"
-                        className="px-3"
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        title="Share event"
                     >
                         <Share2 className="w-4 h-4" />
-                    </Button>
+                    </button>
 
                     {event.sourceUrl && (
-                        <Button
+                        <button
                             onClick={() => window.open(event.sourceUrl, '_blank')}
-                            variant="outline"
-                            size="sm"
-                            className="px-3"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                            title="View event details"
                         >
                             <ExternalLink className="w-4 h-4" />
-                        </Button>
+                        </button>
                     )}
 
                     {event.livestreamUrl && (
-                        <Button
+                        <button
                             onClick={() => window.open(event.livestreamUrl!, '_blank')}
-                            variant="outline"
-                            size="sm"
-                            className="px-3"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                            title="Join live stream"
                         >
                             <Play className="w-4 h-4" />
-                        </Button>
+                        </button>
                     )}
                 </div>
             </div>
