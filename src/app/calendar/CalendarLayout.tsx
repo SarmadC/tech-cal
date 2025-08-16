@@ -4,6 +4,8 @@ import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
 import type { AppProfile, AppEventType, AppEvent } from '@/types';
+// 1. Import the new date utility functions
+import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -54,34 +56,21 @@ export function CalendarLayout({
 
     const dateParam = searchParams.get('date');
 
-    // --- FIX IS HERE: THIS IS THE TIMEZONE-SAFE PARSING LOGIC ---
-    const urlDate = dateParam ? (() => {
-        // The 'T00:00:00' part is crucial. It tells the constructor to treat
-        // the date as local time, not UTC. This avoids the "day behind" bug.
-        const [year, month, day] = dateParam.split('-').map(Number);
-        // We construct the date this way to ensure it's interpreted in the user's timezone.
-        // new Date(year, month - 1, day) creates a date at midnight local time.
-        return new Date(year, month - 1, day);
-    })() : null;
+    const urlDate = dateParam ? parseDateFromURL(dateParam) : null;
 
     const activeDate = currentDate || urlDate || new Date();
-
-    const formatDateForURL = (date: Date): string => {
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
 
     const handleViewChange = (newView: string) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set('view', newView);
+        // 4. Use the imported utility to format the date for the URL
         params.set('date', formatDateForURL(activeDate));
         router.push(`/calendar?${params.toString()}`, { scroll: false });
     };
 
     const handleDateChange = (newDate: Date) => {
         const params = new URLSearchParams(searchParams.toString());
+        // 4. Use the imported utility to format the date for the URL
         params.set('date', formatDateForURL(newDate));
         router.push(`/calendar?${params.toString()}`, { scroll: false });
         onDateChange?.(newDate);

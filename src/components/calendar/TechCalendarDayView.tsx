@@ -8,6 +8,8 @@ import EventPreviewCard from './EventPreviewCard';
 import '@/app/styles/tech-day-view.css';
 import { processEventsForDayView } from '@/utils/multiDayEventUtils';
 import type { EnhancedAppEvent } from '@/types';
+// 1. Import the new date utility functions
+import { formatTime, isEventLive } from '@/utils/dateUtils';
 
 
 export interface TechCalendarDayViewProps {
@@ -25,14 +27,15 @@ const EVENT_CATEGORIES = [
     { id: 'networking', name: 'Networking', icon: MapPin, color: 'bg-orange-500' },
 ];
 
+// 2. Update TIME_SLOTS to use the new formatTime utility for consistency
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
     const hour = i;
     const time24 = `${hour.toString().padStart(2, '0')}:00`;
-    const time12 = new Date(`2000-01-01 ${time24}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    // Use the new utility for consistent time formatting
+    const time12 = formatTime(`2000-01-01T${time24}:00`, { hour: 'numeric', minute: '2-digit' });
     return { hour, time24, time12 };
 });
 
-// This helper function must be defined outside the component, or wrapped in useCallback
 const getVisualEventInfo = (event: AppEvent, currentDate: Date) => {
     const start = new Date(event.startTime);
     const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 3600 * 1000);
@@ -71,11 +74,13 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave,
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
 
+    // 3. Update time formatting to use the new utility
     const timeText = isContinuingFromPreviousDay
         ? `Continues from yesterday`
-        : startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        : formatTime(startTime);
 
-    const isLive = new Date() >= startTime && (endTime ? new Date() <= endTime : false);
+    // 4. Update the isLive check to use the new utility
+    const live = isEventLive(startTime, endTime);
     const isSpanning = spanHours > 1;
 
     const continuationClasses = [
@@ -86,16 +91,15 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave,
     const cardStyle = isSpanning ? { height: `calc(${spanHours * 100}% - 0.5rem)`, position: 'absolute' as const, top: '0.5rem', left: '0.5rem', right: '0.5rem', zIndex: 10 } : {};
 
     return (
-        <div onClick={onClick} onMouseEnter={(e) => onHover(event, e)} onMouseLeave={onLeave} style={cardStyle} className={`relative p-3 rounded-lg cursor-pointer transition-all duration-200 ${continuationClasses} ${isLive ? 'bg-gray-800 text-white border-l-4 border-green-400' : 'bg-white hover:bg-gray-50 border border-gray-200'} ${event.isTracked ? 'ring-2 ring-blue-400' : ''} event-card`}>
+        <div onClick={onClick} onMouseEnter={(e) => onHover(event, e)} onMouseLeave={onLeave} style={cardStyle} className={`relative p-3 rounded-lg cursor-pointer transition-all duration-200 ${continuationClasses} ${live ? 'bg-gray-800 text-white border-l-4 border-green-400' : 'bg-white hover:bg-gray-50 border border-gray-200'} ${event.isTracked ? 'ring-2 ring-blue-400' : ''} event-card`}>
             <div className="flex items-start justify-between mb-2">
-                <h4 className={`font-semibold text-sm leading-tight ${isLive ? 'text-white' : 'text-gray-900'}`}>{event.title}</h4>
+                <h4 className={`font-semibold text-sm leading-tight ${live ? 'text-white' : 'text-gray-900'}`}>{event.title}</h4>
             </div>
-            <div className={`flex items-center gap-2 mb-2 text-xs ${isLive ? 'text-gray-300' : 'text-gray-600'}`}>
+            <div className={`flex items-center gap-2 mb-2 text-xs ${live ? 'text-gray-300' : 'text-gray-600'}`}>
                 <div className="flex items-center gap-1"><Clock className="w-3 h-3" /><span>{timeText}</span></div>
-                {totalDurationHours >= 24 && <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${isLive ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>Day {dayNumber}</span>}
+                {totalDurationHours >= 24 && <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${live ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>Day {dayNumber}</span>}
             </div>
-            {/* You had a comment here, I've re-added some of the other info for a complete card */}
-            <div className={`text-xs ${isLive ? 'text-gray-400' : 'text-gray-500'} mb-2`}>{event.organizer}</div>
+            <div className={`text-xs ${live ? 'text-gray-400' : 'text-gray-500'} mb-2`}>{event.organizer}</div>
             <div className="flex items-center gap-1 mt-auto">
                 <div className={`w-2 h-2 rounded-full ${categoryColor}`} />
             </div>
@@ -114,8 +118,6 @@ export function TechCalendarDayView({
     const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
     const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
-    // Replace your dayEvents useMemo in TechCalendarDayView.tsx with this clean version:
-
     const dayEvents = useMemo(() => {
         const enhancedEvents = events as EnhancedAppEvent[];
 
@@ -125,7 +127,6 @@ export function TechCalendarDayView({
         } catch (error) {
             console.error('Error in processEventsForDayView:', error);
 
-            // Fallback to original logic if processing fails
             const targetDate = new Date(initialDate);
             const targetYear = targetDate.getFullYear();
             const targetMonth = targetDate.getMonth();
@@ -159,7 +160,6 @@ export function TechCalendarDayView({
         return categorizedEvents[categoryId]?.filter((event: AppEvent) => new Date(event.startTime).getHours() === hour) || [];
     };
 
-    // --- FIX #1: RESTORE THE `displayedSlots` CALCULATION ---
     const displayedSlots = useMemo(() => {
         const slots = new Set<number>();
         dayEvents.forEach((event: AppEvent) => {
@@ -223,7 +223,6 @@ export function TechCalendarDayView({
                                     <div key={category.id} className="border-l border-gray-200 bg-white relative">
                                         <div className="absolute inset-0 p-2 space-y-2">
                                             {getEventsStartingInSlot(slot.hour, category.id).map(event => {
-                                                // --- FIX #2: CALL THE HELPER FUNCTION HERE ---
                                                 const visualInfo = getVisualEventInfo(event, initialDate);
                                                 return (
                                                     <EventCard
@@ -233,7 +232,7 @@ export function TechCalendarDayView({
                                                         onHover={handleEventHover}
                                                         onLeave={handleEventLeave}
                                                         categoryColor={category.color}
-                                                        visualInfo={visualInfo} // Pass the calculated info
+                                                        visualInfo={visualInfo}
                                                     />
                                                 );
                                             })}

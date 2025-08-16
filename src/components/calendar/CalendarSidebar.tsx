@@ -4,6 +4,8 @@ import { FC, useMemo } from 'react';
 import { AppEvent, AppEventType } from '@/types';
 import MiniCalendar from './MiniCalendar';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+// 1. Import the new date utility functions
+import { formatDate, formatTime } from '@/utils/dateUtils';
 
 interface SidebarProps {
     currentDate: Date;
@@ -27,15 +29,6 @@ const CalendarSidebar: FC<SidebarProps> = ({
     events,
     monthlyEventCounts // This prop is now correctly received.
 }) => {
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
 
     const upcomingEvents = useMemo(() => {
         const now = new Date();
@@ -69,8 +62,6 @@ const CalendarSidebar: FC<SidebarProps> = ({
                     <MiniCalendar
                         date={currentDate}
                         setDate={setCurrentDate}
-                        // --- FIX IS HERE ---
-                        // Remove the incorrect `events` prop and pass the correct `monthlyEventCounts` prop.
                         monthlyEventCounts={monthlyEventCounts}
                         currentDate={currentDate}
                     />
@@ -98,7 +89,8 @@ const CalendarSidebar: FC<SidebarProps> = ({
                                                 {event.title}
                                             </h4>
                                             <p className="text-gray-400 text-xs mb-1">
-                                                {formatDate(event.startTime)}
+                                                {/* 3. Use the new functions to achieve the same format */}
+                                                {`${formatDate(event.startTime, { month: 'short', day: 'numeric' })}, ${formatTime(event.startTime)}`}
                                             </p>
                                             <p className="text-gray-500 text-xs line-clamp-1">
                                                 {event.organizer}

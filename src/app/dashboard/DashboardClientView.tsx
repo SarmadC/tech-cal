@@ -14,6 +14,8 @@ import { ErrorState } from '@/components/Loading';
 import { Calendar, Clock, Star, Target, Users, Award, Sparkles, Plus } from 'lucide-react';
 import type { AppTrackedEvent, AppEventType, AppEvent } from '@/types';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+// 1. Import the new date utility function
+import { formatDateTime } from '@/utils/dateUtils';
 
 interface DashboardClientViewProps {
     initialTrackedEvents: AppTrackedEvent[];
@@ -42,18 +44,15 @@ export default function DashboardClientView({
     const [supabase] = useState(() => createClient());
     const { user, profile } = useAuth();
 
-    // CHANGE: The useQuery hook now calls our new lightweight function.
     const {
         data: trackedEvents,
         isError: isTrackedError,
         error: trackedError,
         refetch: refetchTracked,
     } = useQuery({
-        // Use a new query key to avoid conflicts with other queries for tracked events
         queryKey: ['lightweightTrackedEvents', user?.id],
         queryFn: () => {
             if (!user) return [];
-            // Call the new, optimized service method
             return UserEventService.getLightweightTrackedEvents(user.id, supabase);
         },
         enabled: !!user,
@@ -78,7 +77,6 @@ export default function DashboardClientView({
         refetch: refetchUpcoming,
     } = useQuery({
         queryKey: ['allUpcomingEvents'],
-        // Pass pagination params to getEvents
         queryFn: () => EventService.getEvents({ startDate: new Date() }, supabase, 1, 100),
         initialData: initialUpcomingEvents,
     });
@@ -104,8 +102,6 @@ export default function DashboardClientView({
         return `Good evening, ${name}!`;
     }, [profile]);
 
-    // The rest of the component's logic remains the same, as it now operates
-    // on the complete but lightweight list of tracked events.
     const insights = useMemo((): PersonalInsight[] => {
         if (!trackedEvents || !eventTypes) return [];
         const upcomingTracked = trackedEvents.filter((te: AppTrackedEvent) => te.event && new Date(te.event.startTime) > new Date()).length;
@@ -144,7 +140,7 @@ export default function DashboardClientView({
         );
     }
 
-    const formatDate = (dateString: string) => new Date(dateString).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    // 2. The local formatDate function is now removed.
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -193,7 +189,10 @@ export default function DashboardClientView({
                                     <div key={trackedEvent.trackingId} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
                                         <h3 className="font-semibold text-gray-900">{trackedEvent.event?.title}</h3>
                                         <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                                            <span><Clock className="w-4 h-4 inline mr-1" />{formatDate(trackedEvent.event?.startTime || '')}</span>
+                                            <span><Clock className="w-4 h-4 inline mr-1" />{formatDateTime(trackedEvent.event?.startTime || '', {
+                                                dateOptions: { weekday: 'short', month: 'short', day: 'numeric' },
+                                                timeOptions: { hour: 'numeric', minute: '2-digit' }
+                                            })}</span>
                                             <span><Users className="w-4 h-4 inline mr-1" />{trackedEvent.event?.organizer}</span>
                                         </div>
                                     </div>

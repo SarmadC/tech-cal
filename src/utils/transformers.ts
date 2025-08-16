@@ -1,4 +1,3 @@
-// src/utils/transformers.ts
 import type {
     SupabaseEvent,
     SupabaseEventType,
@@ -15,8 +14,13 @@ import type {
     DailySchedule,
     EnhancedAppEvent,
 } from '@/types';
-// [ADDED] Import the color utility library
 import { transparentize } from 'color2k';
+// 1. Import the new date utility functions
+import {
+    isEventLive as isEventLiveUtil,
+    isEventUpcoming as isEventUpcomingUtil,
+    getEventTimeStatus as getEventTimeStatusUtil
+} from '@/utils/dateUtils';
 
 // --- Event Transformers ---
 export const eventTransformer: EventTransformer = {
@@ -126,7 +130,7 @@ export const enrichEvent = (
     options: {
         eventType?: AppEventType;
         isTracked?: boolean;
-        
+
     } = {}
 ): AppEvent => ({
     ...event,
@@ -194,16 +198,10 @@ export const isValidSupabaseEvent = (obj: unknown): obj is SupabaseEvent => {
 };
 
 // ==========================================================
-// [MODIFIED] Helper for FullCalendar Events
-// This is the only function that has been changed.
+// Helper for FullCalendar Events
 // ==========================================================
 export const toFullCalendarEvent = (event: AppEvent) => {
-    // 1. Get the color from the event's category data, or use a neutral default.
-    //    Your `enrichEvent` function already adds this, so we just use it.
-    const eventColor = event.color || '#6B7280'; // Gray fallback
-
-    // 2. Use the color utility to create a light, transparent background color.
-    //    85% transparent (0.85) usually looks good for a light background.
+    const eventColor = event.color || '#6B7280';
     const backgroundColor = transparentize(eventColor, 0.85);
 
     return {
@@ -212,12 +210,9 @@ export const toFullCalendarEvent = (event: AppEvent) => {
         start: event.startTime,
         end: event.endTime || undefined,
         extendedProps: { ...event },
-
-        // 3. Directly assign the dynamic colors to the FullCalendar event object.
-        //    FullCalendar will use these to style the event automatically.
         backgroundColor: backgroundColor,
-        borderColor: eventColor, // A solid border using the main color
-        textColor: 'var(--foreground-primary)', // Ensures text is always readable against any background
+        borderColor: eventColor,
+        textColor: 'var(--foreground-primary)',
     };
 };
 
@@ -226,28 +221,18 @@ export const toFullCalendarEvents = (events: AppEvent[]) => {
 };
 
 // --- Date Utilities for Events ---
+
+// 2. The local functions are replaced with wrappers around the new utilities.
 export const isEventLive = (event: AppEvent): boolean => {
-    const now = new Date();
-    const start = new Date(event.startTime);
-    const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
-    return now >= start && now <= end;
+    return isEventLiveUtil(event.startTime, event.endTime);
 };
 
 export const isEventUpcoming = (event: AppEvent): boolean => {
-    const now = new Date();
-    const start = new Date(event.startTime);
-    const hoursUntilStart = (start.getTime() - now.getTime()) / (1000 * 60 * 60);
-    return hoursUntilStart > 0 && hoursUntilStart <= 24;
+    return isEventUpcomingUtil(event.startTime);
 };
 
 export const getEventTimeStatus = (event: AppEvent): 'past' | 'live' | 'upcoming' | 'future' => {
-    const now = new Date();
-    const start = new Date(event.startTime);
-    const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
-    if (now > end) return 'past';
-    if (now >= start && now <= end) return 'live';
-    if (isEventUpcoming(event)) return 'upcoming';
-    return 'future';
+    return getEventTimeStatusUtil(event.startTime, event.endTime);
 };
 
 export const enhancedEventTransformer = {
@@ -258,7 +243,6 @@ export const enhancedEventTransformer = {
     }): EnhancedAppEvent => {
         const baseEvent = eventTransformer.toApp(supabaseEvent);
 
-        // Fix: Properly validate and type the event_pattern
         const isValidPattern = (pattern: string): pattern is 'single' | 'multi_day' | 'all_day' | 'custom' => {
             return ['single', 'multi_day', 'all_day', 'custom'].includes(pattern);
         };
