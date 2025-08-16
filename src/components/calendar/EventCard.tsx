@@ -1,37 +1,27 @@
-// src/components/calendar/EventCard.tsx
 'use client';
 
 import { FC, memo } from 'react';
-// FIX: Import the new EnrichedAppEvent type
 import { EnrichedAppEvent } from '@/types';
 import { Clock, MapPin, Users, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+// 1. Import the new date utility function
+import { formatDate } from '@/utils/dateUtils';
 
 interface EventCardProps {
-    // FIX: Use the more specific type for the event prop
     event: EnrichedAppEvent;
-    categoryName?: string; // Add a prop for the category name
+    categoryName?: string;
     isSelected?: boolean;
     onCardClick?: (event: EnrichedAppEvent) => void;
     onTrackClick?: (event: EnrichedAppEvent, isCurrentlyTracked: boolean) => void;
 }
 
-// A helper to format dates concisely
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-    });
-};
-
 const EventCard: FC<EventCardProps> = ({
     event,
-    categoryName = "General", // Default to "General" if no name is provided
+    categoryName = "General",
     isSelected = false,
     onCardClick,
     onTrackClick,
 }) => {
-    // FIX: No more 'any'. We can safely access isTracked because of our new type.
     const { isTracked } = event;
 
     return (
@@ -83,7 +73,7 @@ const EventCard: FC<EventCardProps> = ({
                 <div className="flex items-center space-x-3">
                     <span className="flex items-center hover-lift">
                         <Clock className="w-3 h-3 mr-1" />
-                        {formatDate(event.startTime)}
+                        {formatDate(event.startTime, { month: 'short', day: 'numeric' })}
                     </span>
                     {event.location && (
                         <span className="flex items-center truncate hover-lift">
@@ -101,7 +91,6 @@ const EventCard: FC<EventCardProps> = ({
                         backgroundColor: `${event.color}1A`
                     }}
                 >
-                    {/* FIX: Use the categoryName prop */}
                     {categoryName}
                 </Badge>
             </div>

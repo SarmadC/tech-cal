@@ -1,4 +1,3 @@
-// src/components/calendar/EventPreviewCard.tsx - Simplified & Robust
 import { FC, useState, useRef, useEffect } from 'react';
 import {
     Clock,
@@ -16,6 +15,7 @@ import { AppEvent, EventStatus } from '@/types';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
 
 interface EventPreviewCardProps {
     event: AppEvent;
@@ -77,36 +77,8 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
     // Event helpers
     const isVirtual = event.livestreamUrl || event.location?.toLowerCase().includes('virtual');
-    const isLive = () => {
-        const now = new Date();
-        const start = new Date(event.startTime);
-        const end = event.endTime ? new Date(event.endTime) : null;
-        return now >= start && (!end || now <= end);
-    };
 
-    const formatTime = (dateString: string) => {
-        return new Date(dateString).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric'
-        });
-    };
-
-    const getDuration = () => {
-        if (!event.endTime) return 'Duration not specified';
-        const start = new Date(event.startTime);
-        const end = new Date(event.endTime);
-        const hours = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-        return `${hours} hour${hours !== 1 ? 's' : ''}`;
-    };
+    // 2. All local date/time helpers (isLive, formatTime, formatDate, getDuration) are now removed.
 
     // Actions
     const handleTrackEvent = () => {
@@ -164,7 +136,6 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
             <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 border-b border-gray-200 dark:border-gray-600">
                 <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2 flex-wrap gap-1">
-                        {/* Dynamic Event Tags */}
                         {event.tags && event.tags.length > 0 ? (
                             event.tags.slice(0, 2).map((tag, index) => (
                                 <span
@@ -176,20 +147,19 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                                 </span>
                             ))
                         ) : (
-                            // Fallback if no tags available
                             event.eventTypeId && (
                                 <span className="px-2 py-1 text-xs font-medium bg-blue-500 text-white rounded-full">
                                     Event
                                 </span>
                             )
                         )}
-                        {/* Show count if more than 2 tags */}
                         {event.tags && event.tags.length > 2 && (
                             <span className="px-2 py-1 text-xs font-medium bg-gray-500 text-white rounded-full">
                                 +{event.tags.length - 2}
                             </span>
                         )}
-                        {isLive() && (
+                        {/* 3. Call the imported isEventLive function */}
+                        {isEventLive(event.startTime, event.endTime) && (
                             <span className="px-2 py-1 text-xs font-medium bg-red-500 text-white rounded-full flex items-center">
                                 <div className="w-2 h-2 bg-white rounded-full animate-pulse mr-1" />
                                 Live
@@ -214,7 +184,8 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                 {/* Time & Date */}
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     <Clock className="w-4 h-4 text-gray-500" />
-                    <span>{formatDate(event.startTime)} • {formatTime(event.startTime)}</span>
+                    {/* 4. Use the imported formatting functions */}
+                    <span>{formatDate(event.startTime, { weekday: 'short', month: 'short', day: 'numeric' })} • {formatTime(event.startTime)}</span>
                 </div>
 
                 {/* Location */}
@@ -238,7 +209,8 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                 {/* Duration */}
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     <Calendar className="w-4 h-4 text-gray-500" />
-                    <span>{getDuration()}</span>
+                    {/* 5. Call the imported getEventDuration function */}
+                    <span>{getEventDuration(event.startTime, event.endTime)}</span>
                 </div>
 
                 {/* Description */}
@@ -257,8 +229,8 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     <button
                         onClick={handleTrackEvent}
                         className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isTracked
-                                ? 'bg-green-600 text-white hover:bg-green-700'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
                             }`}
                     >
                         {isTracked ? (
@@ -273,7 +245,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                             </>
                         )}
                     </button>
-
+                    {/* ... other buttons remain the same */}
                     <button
                         onClick={handleShare}
                         className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"

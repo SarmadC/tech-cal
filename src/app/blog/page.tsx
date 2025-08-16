@@ -3,6 +3,8 @@ import BlogFilters from './BlogFilters';
 import { createClient } from '@/utils/supabase/server';
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import SubscribeForm from './SubscribeForm';
+// 1. Import the new date utility function
+import { formatDate } from '@/utils/dateUtils';
 
 type PostWithDetails = {
     id: string;
@@ -15,15 +17,6 @@ type PostWithDetails = {
     author: { full_name: string | null } | null;
 };
 
-function formatDate(dateString: string | null) {
-    if (!dateString) return 'Date not available';
-    return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-    });
-}
-
 function getAuthorInitials(author: { full_name: string | null } | null): string {
     const name = author?.full_name;
     if (!name) return '??';
@@ -35,9 +28,8 @@ type BlogPageProps = {
 };
 
 export default async function BlogPage({ searchParams }: BlogPageProps) {
-    // Await the searchParams Promise
     const resolvedSearchParams = await searchParams;
-    
+
     const supabase = await createClient();
     const searchTerm = (resolvedSearchParams?.q as string) || '';
     const selectedCategory = (resolvedSearchParams?.category as string) || 'All';
@@ -126,7 +118,8 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                                     <div className="flex items-center space-x-4 text-sm">
                                         <span>{featuredPost.author?.full_name}</span>
                                         <span className="opacity-60">•</span>
-                                        <span>{formatDate(featuredPost.published_at)}</span>
+                                        {/* 3. Use the imported function with options to match original format */}
+                                        <span>{featuredPost.published_at ? formatDate(featuredPost.published_at, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Date not available'}</span>
                                         <span className="opacity-60">•</span>
                                         <span>{featuredPost.read_time_minutes} min read</span>
                                     </div>
@@ -163,7 +156,8 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                                             </div>
                                             <div className="text-sm">
                                                 <p className="font-medium text-foreground-primary">{post.author?.full_name}</p>
-                                                <p className="text-xs text-foreground-tertiary">{formatDate(post.published_at)}</p>
+                                                {/* 3. Use the imported function with options to match original format */}
+                                                <p className="text-xs text-foreground-tertiary">{post.published_at ? formatDate(post.published_at, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Date not available'}</p>
                                             </div>
                                         </div>
                                         <Link href={`/blog/${post.slug}`} className="text-accent-primary hover:text-accent-primary-hover transition-colors">
