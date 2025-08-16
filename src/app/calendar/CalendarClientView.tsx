@@ -5,6 +5,7 @@ import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 
 import { createClient } from '@/utils/supabase/client';
 import { CalendarLayout, type CalendarLayoutContext } from './CalendarLayout';
@@ -16,8 +17,8 @@ import { useSmartFilters } from '@/hooks/useSmartFilters';
 import { AppEvent, AppEventType, AppProfile } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth } from '@/contexts/AuthContext';
+import { TechCalendarDayView } from '@/components/calendar/TechCalendarDayView';
 
-// Dynamic import for heavy components
 const EventDetailPanelDynamic = dynamic(
     () => import('@/components/calendar/EventDetailPanel'),
     { loading: () => <Loading /> }
@@ -36,12 +37,11 @@ export default function CalendarClientView({
 }: CalendarClientViewProps) {
     const { user } = useAuth();
     const calendarRef = useRef<FullCalendar | null>(null);
+    const searchParams = useSearchParams();
 
-    // --- State Management ---
     const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
-    // --- Smart Filters ---
     const {
         filters,
         filteredEvents,
@@ -51,109 +51,105 @@ export default function CalendarClientView({
         activeFilterCount
     } = useSmartFilters(initialEvents, profile);
 
-    // --- Data Fetching & Processing ---
-    const { data: trackedEvents = [] } = useQuery({
-        queryKey: ['trackedEvents', user?.id],
+    const { data: trackedEventIds = [] } = useQuery({
+        queryKey: ['allTrackedEventIds', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
             const supabase = createClient();
-            return UserEventService.getTrackedEvents(user.id, supabase);
+            return UserEventService.getAllTrackedEventIds(user.id, supabase);
         },
         enabled: !!user?.id,
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 5 * 60 * 1000,
     });
 
     const enrichedEvents = useMemo(() => {
-        const trackedEventIds = new Set(trackedEvents.map(te => te.eventId));
+        const trackedSet = new Set(trackedEventIds);
         return filteredEvents.map(event => ({
             ...event,
-            isTracked: trackedEventIds.has(event.id)
+            isTracked: trackedSet.has(event.id)
         }));
-    }, [filteredEvents, trackedEvents]);
+    }, [filteredEvents, trackedEventIds]);
 
-    // --- Event Handlers ---
+    const dayEvents = useMemo(() => {
+        const view = searchParams.get('view') || 'month';
+        if (view !== 'day') return [];
+
+        const dateParam = searchParams.get('date');
+
+        // --- FIX IS HERE: Use the same timezone-safe parsing logic as CalendarLayout ---
+        const currentDate = dateParam ? (() => {
+            const [year, month, day] = dateParam.split('-').map(Number);
+            // This creates a date at midnight in the user's LOCAL timezone.
+            return new Date(year, month - 1, day);
+        })() : new Date();
+
+        const targetYear = currentDate.getFullYear();
+        const targetMonth = currentDate.getMonth();
+        const targetDay = currentDate.getDate();
+
+        return enrichedEvents.filter((event: AppEvent) => {
+            const eventDate = new Date(event.startTime);
+            return eventDate.getFullYear() === targetYear &&
+                eventDate.getMonth() === targetMonth &&
+                eventDate.getDate() === targetDay;
+        });
+    }, [enrichedEvents, searchParams]);
+
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
-        // The event object is nested in extendedProps in FullCalendar
         const eventData = clickInfo.event.extendedProps as AppEvent;
         setSelectedEvent(eventData);
     }, []);
 
-    const toggleFilterPanel = useCallback(() => {
-        setIsFilterPanelOpen(prev => !prev);
-    }, []);
-
-    const closeEventDetail = useCallback(() => {
-        setSelectedEvent(null);
-    }, []);
-
-    // --- Render Logic ---
-    const renderCalendarContent = (context: CalendarLayoutContext) => {
-        // Note: Day view is now handled directly in page.tsx with TechCalendarDayView
-        // This component only handles Month and Week views
-        if (context.view === 'day') {
-            return (
-                <div className="flex items-center justify-center h-full bg-gray-50">
-                    <div className="text-center">
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Day View</h3>
-                        <p className="text-gray-600">
-                            Day view is handled by a specialized component.
-                        </p>
-                        <p className="text-sm text-gray-500 mt-2">
-                            If you are seeing this, there might be a routing issue.
-                        </p>
-                    </div>
-                </div>
-            );
+    const monthlyEventCounts = useMemo(() => {
+        const counts = new Map<string, Map<number, number>>();
+        for (const event of enrichedEvents) {
+            const eventDate = new Date(event.startTime);
+            const year = eventDate.getFullYear();
+            const month = eventDate.getMonth();
+            const day = eventDate.getDate();
+            const key = `${year}-${month}`;
+            if (!counts.has(key)) {
+                counts.set(key, new Map<number, number>());
+            }
+            const monthMap = counts.get(key)!;
+            monthMap.set(day, (monthMap.get(day) || 0) + 1);
         }
+        return counts;
+    }, [enrichedEvents]);
 
-        return (
-            <CalendarWithPreview
-                events={enrichedEvents}
-                onEventClick={handleEventClick}
-                view={context.view}
-                calendarRef={context.calendarRef}
-            />
-        );
+    const toggleFilterPanel = useCallback(() => setIsFilterPanelOpen(prev => !prev), []);
+    const closeEventDetail = useCallback(() => setSelectedEvent(null), []);
+
+    const renderCalendarContent = (context: CalendarLayoutContext) => {
+        if (context.view === 'day') {
+            return <TechCalendarDayView events={dayEvents} initialDate={context.date} categories={initialCategories} profile={profile} />;
+        }
+        return <CalendarWithPreview events={enrichedEvents} onEventClick={handleEventClick} view={context.view} calendarRef={context.calendarRef} />;
     };
 
     return (
         <CalendarLayout
             profile={profile}
             categories={initialCategories}
+            events={enrichedEvents}
+            monthlyEventCounts={monthlyEventCounts}
             onToggleFilters={toggleFilterPanel}
             isFilterPanelOpen={isFilterPanelOpen}
             activeFilterCount={activeFilterCount}
             calendarRef={calendarRef}
             renderContent={(context) => (
                 <div className="flex h-full">
-                    {/* Main Calendar Content */}
                     <div className="flex-1 relative">
                         {renderCalendarContent(context)}
                     </div>
-
-                    {/* Smart Filter Panel (Sidebar) */}
                     {isFilterPanelOpen && (
                         <div className="w-80 border-l border-border-default bg-background-elevated">
-                            <SmartFilterPanel
-                                filters={filters}
-                                onUpdateFilter={updateFilter}
-                                onResetFilters={resetFilters}
-                                onApplyQuickFilter={applyQuickFilter}
-                                activeFilterCount={activeFilterCount}
-                                isOpen={isFilterPanelOpen}
-                                onClose={toggleFilterPanel}
-                            />
+                            <SmartFilterPanel filters={filters} onUpdateFilter={updateFilter} onResetFilters={resetFilters} onApplyQuickFilter={applyQuickFilter} activeFilterCount={activeFilterCount} isOpen={isFilterPanelOpen} onClose={toggleFilterPanel} />
                         </div>
                     )}
-
-                    {/* Event Detail Panel (Sidebar) */}
                     {selectedEvent && (
                         <div className="w-96 border-l border-border-default bg-background-elevated">
-                            <EventDetailPanelDynamic
-                                event={selectedEvent}
-                                onClose={closeEventDetail}
-                                categories={initialCategories}
-                            />
+                            <EventDetailPanelDynamic event={selectedEvent} onClose={closeEventDetail} categories={initialCategories} />
                         </div>
                     )}
                 </div>

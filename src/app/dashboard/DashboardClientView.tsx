@@ -1,6 +1,5 @@
 'use client';
 
-
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,8 +13,6 @@ import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/Loading';
 import { Calendar, Clock, Star, Target, Users, Award, Sparkles, Plus } from 'lucide-react';
 import type { AppTrackedEvent, AppEventType, AppEvent } from '@/types';
-
-// 1. Import the ErrorBoundary
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 interface DashboardClientViewProps {
@@ -45,17 +42,19 @@ export default function DashboardClientView({
     const [supabase] = useState(() => createClient());
     const { user, profile } = useAuth();
 
+    // CHANGE: The useQuery hook now calls our new lightweight function.
     const {
         data: trackedEvents,
         isError: isTrackedError,
         error: trackedError,
         refetch: refetchTracked,
     } = useQuery({
-        queryKey: ['trackedEvents', user?.id],
+        // Use a new query key to avoid conflicts with other queries for tracked events
+        queryKey: ['lightweightTrackedEvents', user?.id],
         queryFn: () => {
-             // CHANGED: Call service directly. Throws on error.
-            if (!user) return []; // Return empty array if no user, don't query
-            return UserEventService.getTrackedEvents(user.id, supabase);
+            if (!user) return [];
+            // Call the new, optimized service method
+            return UserEventService.getLightweightTrackedEvents(user.id, supabase);
         },
         enabled: !!user,
         initialData: initialTrackedEvents,
@@ -68,7 +67,6 @@ export default function DashboardClientView({
         refetch: refetchTypes,
     } = useQuery({
         queryKey: ['eventTypes'],
-        // CHANGED: Call service directly.
         queryFn: () => EventTypeService.getEventTypes(supabase),
         initialData: initialEventTypes,
     });
@@ -80,8 +78,8 @@ export default function DashboardClientView({
         refetch: refetchUpcoming,
     } = useQuery({
         queryKey: ['allUpcomingEvents'],
-        // CHANGED: Call service directly.
-        queryFn: () => EventService.getEvents({ startDate: new Date() }, supabase),
+        // Pass pagination params to getEvents
+        queryFn: () => EventService.getEvents({ startDate: new Date() }, supabase, 1, 100),
         initialData: initialUpcomingEvents,
     });
 
@@ -106,9 +104,10 @@ export default function DashboardClientView({
         return `Good evening, ${name}!`;
     }, [profile]);
 
+    // The rest of the component's logic remains the same, as it now operates
+    // on the complete but lightweight list of tracked events.
     const insights = useMemo((): PersonalInsight[] => {
         if (!trackedEvents || !eventTypes) return [];
-        // CHANGED: Added explicit types
         const upcomingTracked = trackedEvents.filter((te: AppTrackedEvent) => te.event && new Date(te.event.startTime) > new Date()).length;
         const attendedThisMonth = trackedEvents.filter((te: AppTrackedEvent) => te.status === 'attended' && new Date(te.trackedAt).getMonth() === new Date().getMonth()).length;
         const categoryCount = trackedEvents.reduce((acc: Record<string, number>, te: AppTrackedEvent) => {
@@ -127,15 +126,13 @@ export default function DashboardClientView({
 
     const nextTrackedEvents = useMemo(() => {
         return (trackedEvents || [])
-            // CHANGED: Added explicit types
             .filter((te: AppTrackedEvent) => te.event && new Date(te.event.startTime) > new Date())
             .sort((a: AppTrackedEvent, b: AppTrackedEvent) => new Date(a.event!.startTime).getTime() - new Date(b.event!.startTime).getTime())
             .slice(0, 5);
     }, [trackedEvents]);
-    
+
     const recommendedEvents = useMemo(() => {
         const trackedEventIds = new Set((trackedEvents || []).map((te: AppTrackedEvent) => te.eventId));
-        // CHANGED: Added explicit type
         return (allUpcomingEvents || []).filter((event: AppEvent) => !trackedEventIds.has(event.id)).slice(0, 6);
     }, [allUpcomingEvents, trackedEvents]);
 

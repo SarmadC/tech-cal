@@ -1,8 +1,4 @@
-// src/lib/schemas.ts
-
 import { z } from 'zod';
-
-// --- Auth Schemas ---
 
 export const LoginSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -14,14 +10,12 @@ export const SignupSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
     password: z.string().min(8, { message: "Password must be at least 8 characters long." }),
     confirmPassword: z.string(),
-    // HTML forms submit the value "on" for a checked checkbox.
-    // We validate that the 'on' value is present, meaning the box was checked.
-    acceptTerms: z.literal('on', { 
+    acceptTerms: z.literal('on', {
         errorMap: () => ({ message: "You must accept the Terms of Service." })
     })
 }).refine(data => data.password === data.confirmPassword, {
     message: "Passwords do not match.",
-    path: ["confirmPassword"], // Apply the error to the confirmPassword field
+    path: ["confirmPassword"],
 });
 
 export const ForgotPasswordSchema = z.object({
@@ -36,31 +30,27 @@ export const ResetPasswordSchema = z.object({
     path: ["confirmPassword"],
 });
 
-
-// --- Profile Schemas ---
-
 export const ProfileUpdateSchema = z.object({
-  fullName: z.string().min(2, "Full name must be at least 2 characters.").optional().or(z.literal('')),
-  timezone: z.string().optional(),
+    fullName: z.string().min(2, "Full name must be at least 2 characters.").optional().or(z.literal('')),
+    timezone: z.string().optional(),
 });
-
 
 // --- Event Schemas ---
 
 export const EventTrackingSchema = z.object({
-  eventId: z.string().uuid("Invalid event ID format."),
+    eventId: z.string().min(1, "Event ID cannot be empty."), // Changed for flexibility
 });
 
 export const EventStatusUpdateSchema = z.object({
-  eventId: z.string().uuid("Invalid event ID format."),
-  status: z.enum(['bookmarked', 'attending', 'attended', 'cancelled'], {
-    errorMap: () => ({ message: "Invalid status provided." })
-  }),
-  // Notes are optional
-  notes: z.string().optional(),
+    // --- FIX IS HERE ---
+    // We now validate that it's a non-empty string, not strictly a UUID.
+    // This makes the backend more robust against different ID formats in your database.
+    eventId: z.string().min(1, "Invalid event ID provided."),
+    status: z.enum(['bookmarked', 'attending', 'attended', 'cancelled'], {
+        errorMap: () => ({ message: "Invalid status provided." })
+    }),
+    notes: z.string().optional(),
 });
-
-// --- Other Schemas ---
 
 export const ContactFormSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters."),
@@ -70,9 +60,7 @@ export const ContactFormSchema = z.object({
     company: z.string().optional(),
 });
 
-
-// Use this for any action that just needs a valid event ID
 export const EventIdSchema = z.object({
-  eventId: z.string().uuid("Invalid event ID format."),
+    // Also updated this schema for consistency.
+    eventId: z.string().min(1, "Invalid event ID format."),
 });
-

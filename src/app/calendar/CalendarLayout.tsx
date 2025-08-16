@@ -1,4 +1,3 @@
-// src/app/calendar/CalendarLayout.tsx
 import React, { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
@@ -8,7 +7,6 @@ import type { AppProfile, AppEventType, AppEvent } from '@/types';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
-// Calendar context for passing data to children
 export interface CalendarLayoutContext {
     view: string;
     date: Date;
@@ -19,7 +17,7 @@ export interface CalendarLayoutContext {
 }
 
 export interface CalendarLayoutProps {
-    children?: ReactNode; // Make children optional
+    children?: ReactNode;
     profile: AppProfile | null;
     categories: AppEventType[];
     events?: AppEvent[];
@@ -30,8 +28,8 @@ export interface CalendarLayoutProps {
     isFilterPanelOpen?: boolean;
     activeFilterCount?: number;
     calendarRef?: React.RefObject<FullCalendar | null>;
-    // Optional render prop for type-safe children
     renderContent?: (context: CalendarLayoutContext) => ReactNode;
+    monthlyEventCounts?: Map<string, Map<number, number>>;
 }
 
 export function CalendarLayout({
@@ -47,20 +45,32 @@ export function CalendarLayout({
     activeFilterCount = 0,
     calendarRef,
     renderContent,
+    monthlyEventCounts,
 }: CalendarLayoutProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // Get current view from URL
     const view = (searchParams.get('view') as CalendarViewType) || 'month';
 
-    // Get current date from URL or use provided date or default to today
     const dateParam = searchParams.get('date');
-    const urlDate = dateParam ? new Date(dateParam) : null;
+
+    // --- FIX IS HERE: THIS IS THE TIMEZONE-SAFE PARSING LOGIC ---
+    const urlDate = dateParam ? (() => {
+        // The 'T00:00:00' part is crucial. It tells the constructor to treat
+        // the date as local time, not UTC. This avoids the "day behind" bug.
+        const [year, month, day] = dateParam.split('-').map(Number);
+        // We construct the date this way to ensure it's interpreted in the user's timezone.
+        // new Date(year, month - 1, day) creates a date at midnight local time.
+        return new Date(year, month - 1, day);
+    })() : null;
+
     const activeDate = currentDate || urlDate || new Date();
 
     const formatDateForURL = (date: Date): string => {
-        return date.toISOString().split('T')[0];
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
     };
 
     const handleViewChange = (newView: string) => {
@@ -80,7 +90,6 @@ export function CalendarLayout({
     const handleNavigation = (direction: 'prev' | 'next' | 'today') => {
         onNavigate?.(direction);
 
-        // Get the new date from the calendar after navigation
         if (calendarRef?.current) {
             const calendarApi = calendarRef.current.getApi();
             const newDate = calendarApi.getDate();
@@ -92,7 +101,6 @@ export function CalendarLayout({
         onToggleFilters?.();
     };
 
-    // Create context object for children
     const layoutContext: CalendarLayoutContext = {
         view,
         date: activeDate,
@@ -102,10 +110,8 @@ export function CalendarLayout({
         calendarRef,
     };
 
-    // Use render prop if provided, otherwise use children
     const content = renderContent ? renderContent(layoutContext) : children;
 
-    // If no sidebar data provided (like in Next.js layout), render simpler layout
     if (!profile && categories.length === 0) {
         return (
             <div className="flex h-screen bg-background-main">
@@ -120,7 +126,6 @@ export function CalendarLayout({
 
     return (
         <div className="flex h-screen bg-background-main">
-            {/* Sidebar */}
             <div className="w-80 border-r border-border-default bg-background-elevated">
                 <CalendarSidebar
                     currentDate={activeDate}
@@ -131,12 +136,11 @@ export function CalendarLayout({
                         role: 'Member'
                     }}
                     events={events}
+                    monthlyEventCounts={monthlyEventCounts}
                 />
             </div>
 
-            {/* Main Content */}
             <div className="flex-1 flex flex-col">
-                {/* Header */}
                 <CalendarHeader
                     currentDate={activeDate}
                     onNavigate={handleNavigation}
@@ -144,8 +148,6 @@ export function CalendarLayout({
                     isFilterPanelOpen={isFilterPanelOpen}
                     activeFilterCount={activeFilterCount}
                 />
-
-                {/* Calendar Content */}
                 <div className="flex-1 overflow-hidden">
                     {content}
                 </div>

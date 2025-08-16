@@ -1,60 +1,29 @@
-// src/app/calendar/page.tsx
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import CalendarClientView from './CalendarClientView';
-import { TechCalendarDayView } from '@/components/calendar/TechCalendarDayView';
 
-type CalendarViewType = 'month' | 'week' | 'day';
+// The 'CalendarViewType' and 'SearchParams' types are no longer needed here.
 
-interface SearchParams {
-    view?: string;
-    date?: string;
-    [key: string]: string | string[] | undefined;
-}
-
-export default async function CalendarPage({
-    searchParams,
-}: {
-    searchParams: Promise<SearchParams>;
-}) {
+export default async function CalendarPage() { // The 'searchParams' prop has been removed.
     const supabase = await createClient();
 
-    // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
         redirect('/login');
     }
 
-    // Await the searchParams Promise
-    const params = await searchParams;
-    const view = (params.view as CalendarViewType) || 'month';
-    const dateParam = params.date as string;
-    const currentDate = dateParam ? new Date(dateParam) : new Date();
-
     try {
-        // Fetch data in parallel
+        // Fetch all the necessary data on the server.
         const [events, categories, profile] = await Promise.all([
             EventService.getEvents({}, supabase),
             EventTypeService.getEventTypes(supabase),
             ProfileService.getProfile(user.id, supabase),
         ]);
 
-        // Special handling for day view with the new TechCalendarDayView
-        if (view === 'day') {
-            return (
-                <TechCalendarDayView
-                    events={events}
-                    initialDate={currentDate}
-                    categories={categories}
-                    profile={profile}
-                />
-            );
-        }
-
-        // Default calendar view for month/week
+        // Pass the initial data to the client component, which will handle all view logic.
         return (
             <CalendarClientView
                 initialEvents={events}
@@ -63,7 +32,8 @@ export default async function CalendarPage({
             />
         );
     } catch (error) {
-        console.error('Error loading calendar:', error);
-        redirect('/dashboard');
+        console.error('Error loading calendar data:', error);
+        // Redirect to a safe page if data fetching fails.
+        redirect('/dashboard?error=calendar-load-failed');
     }
 }

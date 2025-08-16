@@ -430,3 +430,26 @@
     display: flex;
     flex-direction: column;
 }
+
+.event-card.continuation-bottom {
+    /* Creates a mask that fades to transparent at the bottom */
+    -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.event-card.continuation-top {
+    /* Creates a mask that fades to transparent at the top */
+    -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
+    mask-image: linear-gradient(to top, black 85%, transparent 100%);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* For events that span the whole day */
+.event-card.continuation-top.continuation-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+    border-radius: 0;
+}
