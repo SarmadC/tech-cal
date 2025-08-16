@@ -6,48 +6,41 @@ import * as Sentry from "@sentry/nextjs";
 
 type SupabaseClientType = SupabaseClient<Database>;
 
-/**
- * Helper function to sanitize a string for a full-text search query.
- * This prevents FTS query injection by removing special operators.
- * @param query The raw search string from the user.
- * @param joiner The operator to join terms with ('&' for AND, '|' for OR).
- * @returns A sanitized query string safe for Supabase FTS.
- */
-function sanitizeFtsQuery(query: string, joiner: ' & ' | ' | ' = ' & '): string {
-    // 1. Remove special FTS operators: & | ! : ' ( ) < >
-    const sanitized = query.replace(/[&|!:'()<>]+/g, '');
-
-    // 2. Split into words, filter out empty strings, and join with the specified operator.
-    const terms = sanitized.trim().split(/\s+/).filter(Boolean);
-
-    if (terms.length === 0) {
-        return '';
-    }
-
-    return terms.join(joiner);
-}
+// REMOVED: The custom sanitizeFtsQuery function is no longer needed.
+// Supabase's 'websearch' type handles this more effectively and securely.
 
 export class EventService {
     static async getEvents(
         filters: EventFilters = {},
-        supabaseClient: SupabaseClientType
+        supabaseClient: SupabaseClientType,
+        // CHANGE 1: Added pagination parameters with reasonable defaults.
+        page: number = 1,
+        pageSize: number = 100
     ): Promise<AppEvent[]> {
         try {
+            // CHANGE 2: Calculate the query range for pagination.
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
             let query = supabaseClient
                 .from('events')
                 .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
-                .order('start_time', { ascending: true });
+                .order('start_time', { ascending: true })
+                // CHANGE 3: Apply the pagination range to the query.
+                .range(from, to);
 
             if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
 
-            // Sanitize the search term before using it in the query.
+            // CHANGE 4: Upgraded search logic.
             if (filters.searchTerm) {
-                const sanitizedSearchTerm = sanitizeFtsQuery(filters.searchTerm, ' & '); // Use AND logic
-                if (sanitizedSearchTerm) {
-                    query = query.textSearch('fts', sanitizedSearchTerm, { type: 'plain', config: 'english' });
-                }
+                // Use the more powerful 'websearch' type which understands search engine syntax
+                // (e.g., "quoted phrases", -negation) and handles sanitization.
+                query = query.textSearch('fts', filters.searchTerm, {
+                    type: 'websearch',
+                    config: 'english'
+                });
             }
 
             if (filters.status?.length) query = query.in('status', filters.status);
@@ -107,19 +100,18 @@ export class EventService {
         limit = 10
     ): Promise<SearchSuggestion[]> {
         try {
-            // Sanitize the search term for the suggestions search as well.
-            const sanitizedTerm = sanitizeFtsQuery(term, ' | '); // Use OR logic for better suggestions
-
-            // If the sanitized term is empty (e.g., user only typed '!'), return no results.
-            if (!sanitizedTerm) {
+            if (!term.trim()) {
                 return [];
             }
 
             const { data, error } = await supabaseClient
                 .from('events')
                 .select(`id, title, start_time, organizer:organizers (name)`)
-                // ⚠️ ATTENTION: Note the change from 'websearch' to 'plain'
-                .textSearch('fts', sanitizedTerm, { type: 'plain', config: 'english' })
+                // CHANGE 5: Upgraded search logic for suggestions as well.
+                .textSearch('fts', term, {
+                    type: 'websearch',
+                    config: 'english'
+                })
                 .order('start_time', { ascending: true })
                 .limit(limit);
 
@@ -144,6 +136,7 @@ export class EventService {
             throw new Error('Search failed. Please try again.');
         }
     }
+
     static async getEventsByDateRange(
         startDate: Date,
         endDate: Date,

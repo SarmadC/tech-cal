@@ -1,5 +1,6 @@
-// src/components/calendar/CalendarSidebar.tsx (Corrected & Refactored)
-import { FC } from 'react';
+'use client';
+
+import { FC, useMemo } from 'react';
 import { AppEvent, AppEventType } from '@/types';
 import MiniCalendar from './MiniCalendar';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -7,30 +8,25 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 interface SidebarProps {
     currentDate: Date;
     setCurrentDate: (date: Date) => void;
-    categories: AppEventType[]; // Keep for mini calendar event dots
+    categories: AppEventType[];
     user: { name: string; role: string };
     events: AppEvent[];
-    // These were unused in the JSX, so we can remove them if they aren't needed elsewhere
-    // selectedCategories: Set<string>;
-    // setSelectedCategories: (categories: Set<string>) => void;
-    // nextUpcomingEvent?: AppEvent;
+    monthlyEventCounts?: Map<string, Map<number, number>>;
 }
 
-// A small, custom fallback that matches your sidebar's theme
 const WidgetFallback = () => (
     <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-gray-700 bg-gray-800/50 text-xs text-gray-500">
         Could not load this widget
     </div>
 );
 
-
 const CalendarSidebar: FC<SidebarProps> = ({
     currentDate,
     setCurrentDate,
-    user, // This is now used
-    events
+    user,
+    events,
+    monthlyEventCounts // This prop is now correctly received.
 }) => {
-    // This function is now used
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             month: 'short',
@@ -41,15 +37,13 @@ const CalendarSidebar: FC<SidebarProps> = ({
         });
     };
 
-    const getUpcomingEvents = () => {
+    const upcomingEvents = useMemo(() => {
         const now = new Date();
         return events
             .filter(event => new Date(event.startTime) > now)
             .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
             .slice(0, 5);
-    };
-
-    const upcomingEvents = getUpcomingEvents();
+    }, [events]);
 
     return (
         <aside className="w-80 bg-[#1e1e1e] border-r border-gray-800 p-6 flex flex-col">
@@ -75,7 +69,9 @@ const CalendarSidebar: FC<SidebarProps> = ({
                     <MiniCalendar
                         date={currentDate}
                         setDate={setCurrentDate}
-                        events={events}
+                        // --- FIX IS HERE ---
+                        // Remove the incorrect `events` prop and pass the correct `monthlyEventCounts` prop.
+                        monthlyEventCounts={monthlyEventCounts}
                         currentDate={currentDate}
                     />
                 </ErrorBoundary>
@@ -101,7 +97,6 @@ const CalendarSidebar: FC<SidebarProps> = ({
                                             <h4 className="text-white text-sm font-medium line-clamp-2 mb-1">
                                                 {event.title}
                                             </h4>
-                                            {/* formatDate is now used here */}
                                             <p className="text-gray-400 text-xs mb-1">
                                                 {formatDate(event.startTime)}
                                             </p>
