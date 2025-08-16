@@ -6,9 +6,12 @@ import { AppEvent, AppEventType, AppProfile } from '@/types';
 import EventDetailPanel from './EventDetailPanel';
 import EventPreviewCard from './EventPreviewCard';
 import '@/app/styles/tech-day-view.css';
+import { processEventsForDayView } from '@/utils/multiDayEventUtils';
+import type { EnhancedAppEvent } from '@/types';
+
 
 export interface TechCalendarDayViewProps {
-    events: AppEvent[];
+    events: AppEvent[] | EnhancedAppEvent[];
     initialDate: Date;
     categories: AppEventType[];
     profile: AppProfile | null;
@@ -111,15 +114,30 @@ export function TechCalendarDayView({
     const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
     const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
+    // Replace your dayEvents useMemo in TechCalendarDayView.tsx with this clean version:
+
     const dayEvents = useMemo(() => {
-        const targetDate = new Date(initialDate);
-        const targetYear = targetDate.getFullYear();
-        const targetMonth = targetDate.getMonth();
-        const targetDay = targetDate.getDate();
-        return events.filter((event: AppEvent) => {
-            const eventDate = new Date(event.startTime);
-            return eventDate.getFullYear() === targetYear && eventDate.getMonth() === targetMonth && eventDate.getDate() === targetDay;
-        });
+        const enhancedEvents = events as EnhancedAppEvent[];
+
+        try {
+            const processedEvents = processEventsForDayView(enhancedEvents, initialDate);
+            return processedEvents;
+        } catch (error) {
+            console.error('Error in processEventsForDayView:', error);
+
+            // Fallback to original logic if processing fails
+            const targetDate = new Date(initialDate);
+            const targetYear = targetDate.getFullYear();
+            const targetMonth = targetDate.getMonth();
+            const targetDay = targetDate.getDate();
+
+            return events.filter((event: AppEvent) => {
+                const eventDate = new Date(event.startTime);
+                return eventDate.getFullYear() === targetYear &&
+                    eventDate.getMonth() === targetMonth &&
+                    eventDate.getDate() === targetDay;
+            });
+        }
     }, [events, initialDate]);
 
     const categorizedEvents = useMemo(() => {

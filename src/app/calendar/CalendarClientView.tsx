@@ -70,28 +70,35 @@ export default function CalendarClientView({
         }));
     }, [filteredEvents, trackedEventIds]);
 
+    // Replace the dayEvents useMemo in CalendarClientView.tsx
+
     const dayEvents = useMemo(() => {
         const view = searchParams.get('view') || 'month';
         if (view !== 'day') return [];
 
         const dateParam = searchParams.get('date');
 
-        // --- FIX IS HERE: Use the same timezone-safe parsing logic as CalendarLayout ---
+        // Use the same timezone-safe parsing logic as CalendarLayout
         const currentDate = dateParam ? (() => {
             const [year, month, day] = dateParam.split('-').map(Number);
             // This creates a date at midnight in the user's LOCAL timezone.
             return new Date(year, month - 1, day);
         })() : new Date();
 
-        const targetYear = currentDate.getFullYear();
-        const targetMonth = currentDate.getMonth();
-        const targetDay = currentDate.getDate();
+        // Create date boundaries for the current view day
+        const dayStart = new Date(currentDate);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(currentDate);
+        dayEnd.setHours(23, 59, 59, 999);
 
+        // FIXED: Filter for events that overlap with the current day
         return enrichedEvents.filter((event: AppEvent) => {
-            const eventDate = new Date(event.startTime);
-            return eventDate.getFullYear() === targetYear &&
-                eventDate.getMonth() === targetMonth &&
-                eventDate.getDate() === targetDay;
+            const eventStart = new Date(event.startTime);
+            const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
+
+            // Include event if it overlaps with the current day
+            // Event overlaps if: event starts before day ends AND event ends after day starts
+            return eventStart <= dayEnd && eventEnd >= dayStart;
         });
     }, [enrichedEvents, searchParams]);
 

@@ -1,13 +1,23 @@
+// Replace the imports section at the top of src/services/eventServices.ts
+
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
-import type { AppEvent, EventFilters, SearchSuggestion, SupabaseEventWithDetails } from '@/types';
-import { eventTransformer, eventTypeTransformer, enrichEvent } from '@/utils/transformers';
+import type {
+    AppEvent,
+    EventFilters,
+    SearchSuggestion,
+    SupabaseEventWithDetails,
+    EnhancedAppEvent,
+} from '@/types';
+import {
+    eventTransformer,
+    eventTypeTransformer,
+    enrichEvent,
+    enhancedEventTransformer  // ADD THIS
+} from '@/utils/transformers';
+import { sanitizeFtsQuery } from '@/lib/securityUtils';  // ADD THIS
 import * as Sentry from "@sentry/nextjs";
-
 type SupabaseClientType = SupabaseClient<Database>;
-
-// REMOVED: The custom sanitizeFtsQuery function is no longer needed.
-// Supabase's 'websearch' type handles this more effectively and securely.
 
 export class EventService {
     static async getEvents(
@@ -35,7 +45,7 @@ export class EventService {
 
             // CHANGE 4: Upgraded search logic.
             if (filters.searchTerm) {
-                // Use the more powerful 'websearch' type which understands search engine syntax
+                // Use the more powerful 'websearch' type which understands search engine synta 
                 // (e.g., "quoted phrases", -negation) and handles sanitization.
                 query = query.textSearch('fts', filters.searchTerm, {
                     type: 'websearch',
@@ -207,6 +217,72 @@ export class EventService {
                 extra: { function: 'getLiveEvents' }
             });
             throw new Error('Failed to fetch live events.');
+        }
+    }
+
+    // Replace the getEventsWithMultiDaySupport method in src/services/eventServices.ts
+
+    static async getEventsWithMultiDaySupport(
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<EnhancedAppEvent[]> {
+        try {
+            let query = supabaseClient
+                .from('events')
+                .select(`
+                *,
+                event_type:event_type_id(id, name, color, description),
+                organizer:organizer_id(id, name)
+            `);
+
+            // FIXED: Better date range filtering for multi-day events
+            if (filters.startDate && filters.endDate) {
+                // This query captures:
+                // 1. Events that start within the date range
+                // 2. Events that end within the date range  
+                // 3. Events that span the entire date range
+                query = query.or(
+                    `and(start_time.gte.${filters.startDate.toISOString()},start_time.lte.${filters.endDate.toISOString()}),` +
+                    `and(end_time.gte.${filters.startDate.toISOString()},end_time.lte.${filters.endDate.toISOString()}),` +
+                    `and(start_time.lte.${filters.startDate.toISOString()},end_time.gte.${filters.endDate.toISOString()})`
+                );
+            } else if (filters.startDate) {
+                // For single date, get events that either start on that date OR span across that date
+                const dayStart = new Date(filters.startDate);
+                dayStart.setHours(0, 0, 0, 0);
+                const dayEnd = new Date(filters.startDate);
+                dayEnd.setHours(23, 59, 59, 999);
+
+                query = query.or(
+                    `and(start_time.gte.${dayStart.toISOString()},start_time.lte.${dayEnd.toISOString()}),` +
+                    `and(start_time.lte.${dayStart.toISOString()},end_time.gte.${dayStart.toISOString()})`
+                );
+            }
+
+            if (filters.categories?.length) {
+                query = query.in('event_type_id', filters.categories);
+            }
+
+            if (filters.searchTerm) {
+                query = query.textSearch('fts', sanitizeFtsQuery(filters.searchTerm));
+            }
+
+            const { data, error } = await query
+                .order('start_time', { ascending: true })
+                .range((page - 1) * pageSize, page * pageSize - 1);
+
+            if (error) throw error;
+            if (!data) return [];
+
+            return data.map(enhancedEventTransformer.toApp);
+        } catch (error) {
+            console.error('Error fetching events with multi-day support:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventsWithMultiDaySupport', filters }
+            });
+            throw new Error('Failed to fetch events with multi-day support.');
         }
     }
 
