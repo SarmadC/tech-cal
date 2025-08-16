@@ -52,7 +52,6 @@ export type SupabaseProfile = {
 };
 
 
-
 // --- Application Types (camelCase) ---
 // These are the clean, idiomatic types we will use throughout the React app.
 export type AppEvent = {
@@ -331,4 +330,23 @@ export interface EventTag {
     name: string;
     color: string;
     category: string;
+}
+
+export interface DailySchedule {
+    type: 'daily_recurring' | 'all_day' | 'custom';
+    daily_start?: string;
+    daily_end?: string;
+    timezone?: string;
+    note?: string;
+    schedule?: Array<{
+        date: string;
+        start: string;
+        end: string;
+    }>;
+}
+
+export interface EnhancedAppEvent extends AppEvent {
+    isMultiDay: boolean;
+    dailySchedule?: DailySchedule;
+    eventPattern: 'single' | 'multi_day' | 'all_day' | 'custom';
 }

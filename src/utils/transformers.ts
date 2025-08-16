@@ -1,5 +1,4 @@
 // src/utils/transformers.ts
-
 import type {
     SupabaseEvent,
     SupabaseEventType,
@@ -13,6 +12,8 @@ import type {
     SupabaseEventWithDetails,
     SupabaseTrackedEventWithDetails,
     ProfileTransformer,
+    DailySchedule,
+    EnhancedAppEvent,
 } from '@/types';
 // [ADDED] Import the color utility library
 import { transparentize } from 'color2k';
@@ -247,4 +248,30 @@ export const getEventTimeStatus = (event: AppEvent): 'past' | 'live' | 'upcoming
     if (now >= start && now <= end) return 'live';
     if (isEventUpcoming(event)) return 'upcoming';
     return 'future';
+};
+
+export const enhancedEventTransformer = {
+    toApp: (supabaseEvent: SupabaseEventWithDetails & {
+        is_multi_day?: boolean;
+        daily_schedule?: DailySchedule;
+        event_pattern?: string;
+    }): EnhancedAppEvent => {
+        const baseEvent = eventTransformer.toApp(supabaseEvent);
+
+        // Fix: Properly validate and type the event_pattern
+        const isValidPattern = (pattern: string): pattern is 'single' | 'multi_day' | 'all_day' | 'custom' => {
+            return ['single', 'multi_day', 'all_day', 'custom'].includes(pattern);
+        };
+
+        const eventPattern = supabaseEvent.event_pattern && isValidPattern(supabaseEvent.event_pattern)
+            ? supabaseEvent.event_pattern
+            : 'single';
+
+        return {
+            ...baseEvent,
+            isMultiDay: supabaseEvent.is_multi_day || false,
+            dailySchedule: supabaseEvent.daily_schedule || undefined,
+            eventPattern: eventPattern
+        };
+    }
 };
