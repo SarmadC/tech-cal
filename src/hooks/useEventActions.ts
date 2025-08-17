@@ -1,24 +1,24 @@
-// src/hooks/useEventActions.ts
 'use client';
 
 import { useMemo } from 'react';
 import { toast } from 'sonner';
-import { AppEvent } from '@/types';
-import { formatToUTC } from '@/lib/calendarUtils';
+// 1. UPDATE IMPORT: Use the new, canonical `Event` type.
+import { Event } from '@/types';
+// Note: You might have moved formatToUTC to dateUtils.ts. If so, update this path.
+import { formatToUTC } from '@/utils/dateUtils';
 
 /**
  * A custom hook to manage event-related actions like sharing and adding to external calendars.
  * @param event - The event object to perform actions on.
  */
-export function useEventActions(event: AppEvent) {
+// 2. UPDATE SIGNATURE: The hook now accepts the `Event` type.
+export function useEventActions(event: Event) {
     /**
      * Copies a shareable link for the event to the user's clipboard and shows a confirmation toast.
      */
     const handleShare = () => {
-        // A placeholder link, as you don't have a dedicated `/event/[id]` page yet.
-        // When you build that page, this link will work correctly.
-        const link = `${window.location.origin}/calendar?eventId=${event.id}`; 
-        
+        const link = `${window.location.origin}/events/${event.id}`;
+
         navigator.clipboard.writeText(link)
             .then(() => {
                 toast.success('Share link copied to clipboard!');
@@ -52,7 +52,7 @@ export function useEventActions(event: AppEvent) {
         try {
             const utcStartTime = formatToUTC(event.startTime);
             const utcEndTime = formatToUTC(event.endTime || new Date(new Date(event.startTime).getTime() + 60 * 60 * 1000));
-    
+
             const icsContent = [
                 'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//KureCal//EN', 'BEGIN:VEVENT',
                 `UID:${event.id}@kurecal.app`, `DTSTAMP:${formatToUTC(new Date())}`,
@@ -60,7 +60,7 @@ export function useEventActions(event: AppEvent) {
                 `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}`, `LOCATION:${event.location}`,
                 'END:VEVENT', 'END:VCALENDAR'
             ].join('\r\n');
-    
+
             const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -68,7 +68,7 @@ export function useEventActions(event: AppEvent) {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             toast.success('Calendar file (.ics) download started.');
 
         } catch (error) {
@@ -76,7 +76,6 @@ export function useEventActions(event: AppEvent) {
             toast.error("Could not create calendar file.");
         }
     };
-
 
     return { handleShare, googleCalendarLink, handleIcsDownload };
 }

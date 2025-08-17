@@ -1,10 +1,12 @@
+// src/app/calendar/CalendarLayout.tsx
+
 import React, { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
-import type { AppProfile, AppEventType, AppEvent } from '@/types';
-// 1. Import the new date utility functions
+// 1. UPDATE IMPORTS: Use the new, canonical types.
+import type { AppProfile, EventType, Event } from '@/types';
 import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
 
 type CalendarViewType = 'month' | 'week' | 'day';
@@ -18,11 +20,12 @@ export interface CalendarLayoutContext {
     calendarRef?: React.RefObject<FullCalendar | null>;
 }
 
+// 2. UPDATE PROPS: The interface now uses the new types.
 export interface CalendarLayoutProps {
     children?: ReactNode;
     profile: AppProfile | null;
-    categories: AppEventType[];
-    events?: AppEvent[];
+    categories: EventType[];
+    events?: Event[]; // Changed from AppEvent[]
     currentDate?: Date;
     onDateChange?: (date: Date) => void;
     onNavigate?: (direction: 'prev' | 'next' | 'today') => void;
@@ -63,14 +66,12 @@ export function CalendarLayout({
     const handleViewChange = (newView: string) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set('view', newView);
-        // 4. Use the imported utility to format the date for the URL
         params.set('date', formatDateForURL(activeDate));
         router.push(`/calendar?${params.toString()}`, { scroll: false });
     };
 
     const handleDateChange = (newDate: Date) => {
         const params = new URLSearchParams(searchParams.toString());
-        // 4. Use the imported utility to format the date for the URL
         params.set('date', formatDateForURL(newDate));
         router.push(`/calendar?${params.toString()}`, { scroll: false });
         onDateChange?.(newDate);
@@ -116,6 +117,7 @@ export function CalendarLayout({
     return (
         <div className="flex h-screen bg-background-main">
             <div className="w-80 border-r border-border-default bg-background-elevated">
+                {/* This works because CalendarSidebar has been migrated */}
                 <CalendarSidebar
                     currentDate={activeDate}
                     setCurrentDate={handleDateChange}

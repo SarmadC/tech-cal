@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
-import type { AppEventType } from '@/types'; // Note: ApiResponse is no longer needed here
+// 1. UPDATE IMPORT: Use the new, canonical `EventType`.
+import type { EventType } from '@/types';
 import { eventTypeTransformer } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
 
@@ -11,23 +12,23 @@ export class EventTypeService {
      * Get all event types, sorted by name.
      * Throws an error on failure.
      */
+    // 2. UPDATE SIGNATURE: The function now returns a promise of `EventType[]`.
     static async getEventTypes(
         supabaseClient: SupabaseClientType
-    ): Promise<AppEventType[]> { // Return type is now Promise<AppEventType[]>
+    ): Promise<EventType[]> {
         try {
             const { data, error } = await supabaseClient
                 .from('event_type')
                 .select('*')
                 .order('name');
 
-            if (error) throw error; // Throw if Supabase returns an error
+            if (error) throw error;
 
-            // Directly return the transformed data on success
+            // This works because eventTypeTransformer was already migrated to return `EventType`.
             return (data || []).map(eventTypeTransformer.toApp);
         } catch (error) {
             console.error('Error fetching event types:', error);
             Sentry.captureException(error, { extra: { function: 'getEventTypes' } });
-            // Re-throw a generic error to the caller
             throw new Error('Failed to fetch event categories.');
         }
     }
@@ -36,9 +37,10 @@ export class EventTypeService {
      * Get event types along with a count of events for each type.
      * Throws an error on failure.
      */
+    // 3. UPDATE SIGNATURE: The function now returns a promise of `EventType[]`.
     static async getEventTypesWithCounts(
         supabaseClient: SupabaseClientType
-    ): Promise<AppEventType[]> { // Return type is now Promise<AppEventType[]>
+    ): Promise<EventType[]> {
         try {
             const { data, error } = await supabaseClient.rpc('get_event_types_with_counts');
             if (error) throw error;
@@ -61,10 +63,11 @@ export class EventTypeService {
      * Get a single event type by its unique ID.
      * Throws an error on failure.
      */
+    // 4. UPDATE SIGNATURE: The function now returns a promise of `EventType`.
     static async getEventTypeById(
         id: string,
         supabaseClient: SupabaseClientType
-    ): Promise<AppEventType> { // Return type is now Promise<AppEventType>
+    ): Promise<EventType> {
         try {
             const { data, error } = await supabaseClient
                 .from('event_type')

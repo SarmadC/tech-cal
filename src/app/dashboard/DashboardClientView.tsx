@@ -12,15 +12,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/Loading';
 import { Calendar, Clock, Star, Target, Users, Award, Sparkles, Plus } from 'lucide-react';
-import type { AppTrackedEvent, AppEventType, AppEvent } from '@/types';
+// 1. UPDATE IMPORTS: Use the new, canonical type names.
+import type { TrackedEventRecord, EventType, Event } from '@/types';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-// 1. Import the new date utility function
 import { formatDateTime } from '@/utils/dateUtils';
 
+// 2. UPDATE PROPS: The interface now uses the new types.
 interface DashboardClientViewProps {
-    initialTrackedEvents: AppTrackedEvent[];
-    initialEventTypes: AppEventType[];
-    initialUpcomingEvents: AppEvent[];
+    initialTrackedEvents: TrackedEventRecord[];
+    initialEventTypes: EventType[];
+    initialUpcomingEvents: Event[];
 }
 
 type PersonalInsight = {
@@ -49,7 +50,8 @@ export default function DashboardClientView({
         isError: isTrackedError,
         error: trackedError,
         refetch: refetchTracked,
-    } = useQuery({
+        // 3. UPDATE USEQUERY TYPE: The hook is now strongly typed to expect `TrackedEventRecord[]`.
+    } = useQuery<TrackedEventRecord[]>({
         queryKey: ['lightweightTrackedEvents', user?.id],
         queryFn: () => {
             if (!user) return [];
@@ -64,7 +66,7 @@ export default function DashboardClientView({
         isError: isTypesError,
         error: typesError,
         refetch: refetchTypes,
-    } = useQuery({
+    } = useQuery<EventType[]>({
         queryKey: ['eventTypes'],
         queryFn: () => EventTypeService.getEventTypes(supabase),
         initialData: initialEventTypes,
@@ -75,7 +77,7 @@ export default function DashboardClientView({
         isError: isUpcomingError,
         error: upcomingError,
         refetch: refetchUpcoming,
-    } = useQuery({
+    } = useQuery<Event[]>({
         queryKey: ['allUpcomingEvents'],
         queryFn: () => EventService.getEvents({ startDate: new Date() }, supabase, 1, 100),
         initialData: initialUpcomingEvents,
@@ -104,14 +106,15 @@ export default function DashboardClientView({
 
     const insights = useMemo((): PersonalInsight[] => {
         if (!trackedEvents || !eventTypes) return [];
-        const upcomingTracked = trackedEvents.filter((te: AppTrackedEvent) => te.event && new Date(te.event.startTime) > new Date()).length;
-        const attendedThisMonth = trackedEvents.filter((te: AppTrackedEvent) => te.status === 'attended' && new Date(te.trackedAt).getMonth() === new Date().getMonth()).length;
-        const categoryCount = trackedEvents.reduce((acc: Record<string, number>, te: AppTrackedEvent) => {
+        // 4. UPDATE TYPE ANNOTATIONS inside the memoized calculation.
+        const upcomingTracked = trackedEvents.filter((te: TrackedEventRecord) => te.event && new Date(te.event.startTime) > new Date()).length;
+        const attendedThisMonth = trackedEvents.filter((te: TrackedEventRecord) => te.status === 'attended' && new Date(te.trackedAt).getMonth() === new Date().getMonth()).length;
+        const categoryCount = trackedEvents.reduce((acc: Record<string, number>, te: TrackedEventRecord) => {
             if (te.event?.eventTypeId) acc[te.event.eventTypeId] = (acc[te.event.eventTypeId] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
         const topCategoryId = Object.keys(categoryCount).sort((a, b) => categoryCount[b] - categoryCount[a])[0];
-        const topCategory = eventTypes.find((et: AppEventType) => et.id === topCategoryId);
+        const topCategory = eventTypes.find((et: EventType) => et.id === topCategoryId);
         return [
             { title: 'Upcoming Events', value: upcomingTracked, description: "You're tracking", icon: <Calendar className="w-5 h-5" /> },
             { title: 'Events Attended', value: attendedThisMonth, description: 'This month', icon: <Award className="w-5 h-5" /> },
@@ -122,14 +125,14 @@ export default function DashboardClientView({
 
     const nextTrackedEvents = useMemo(() => {
         return (trackedEvents || [])
-            .filter((te: AppTrackedEvent) => te.event && new Date(te.event.startTime) > new Date())
-            .sort((a: AppTrackedEvent, b: AppTrackedEvent) => new Date(a.event!.startTime).getTime() - new Date(b.event!.startTime).getTime())
+            .filter((te: TrackedEventRecord) => te.event && new Date(te.event.startTime) > new Date())
+            .sort((a: TrackedEventRecord, b: TrackedEventRecord) => new Date(a.event!.startTime).getTime() - new Date(b.event!.startTime).getTime())
             .slice(0, 5);
     }, [trackedEvents]);
 
     const recommendedEvents = useMemo(() => {
-        const trackedEventIds = new Set((trackedEvents || []).map((te: AppTrackedEvent) => te.eventId));
-        return (allUpcomingEvents || []).filter((event: AppEvent) => !trackedEventIds.has(event.id)).slice(0, 6);
+        const trackedEventIds = new Set((trackedEvents || []).map((te: TrackedEventRecord) => te.eventId));
+        return (allUpcomingEvents || []).filter((event: Event) => !trackedEventIds.has(event.id)).slice(0, 6);
     }, [allUpcomingEvents, trackedEvents]);
 
     if (isError) {
@@ -139,8 +142,6 @@ export default function DashboardClientView({
             </div>
         );
     }
-
-    // 2. The local formatDate function is now removed.
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -185,14 +186,15 @@ export default function DashboardClientView({
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {nextTrackedEvents.length > 0 ? (
-                                nextTrackedEvents.map((trackedEvent: AppTrackedEvent) => (
+                                // 5. UPDATE MAPPING TYPE: Use `TrackedEventRecord` in the map callback.
+                                nextTrackedEvents.map((trackedEvent: TrackedEventRecord) => (
                                     <div key={trackedEvent.trackingId} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
                                         <h3 className="font-semibold text-gray-900">{trackedEvent.event?.title}</h3>
                                         <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                                            <span><Clock className="w-4 h-4 inline mr-1" />{formatDateTime(trackedEvent.event?.startTime || '', {
+                                            <span><Clock className="w-4 h-4 inline mr-1" />{trackedEvent.event ? formatDateTime(trackedEvent.event.startTime, {
                                                 dateOptions: { weekday: 'short', month: 'short', day: 'numeric' },
                                                 timeOptions: { hour: 'numeric', minute: '2-digit' }
-                                            })}</span>
+                                            }) : ''}</span>
                                             <span><Users className="w-4 h-4 inline mr-1" />{trackedEvent.event?.organizer}</span>
                                         </div>
                                     </div>
@@ -217,7 +219,7 @@ export default function DashboardClientView({
                                 <CardDescription>Based on your interests.</CardDescription>
                             </CardHeader>
                             <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                {recommendedEvents.map((event: AppEvent) => (
+                                {recommendedEvents.map((event: Event) => (
                                     <div key={event.id} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
                                         <h3 className="font-medium text-gray-900 mb-2">{event.title}</h3>
                                     </div>

@@ -1,9 +1,14 @@
+// src/app/events/[id]/page.tsx
 import { createClient } from '@/utils/supabase/server';
 import { EventService } from '@/services/eventServices';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, MapPin, Users, Tag, ArrowLeft } from 'lucide-react';
-import type { AppEvent } from '@/types';
+
+// 1. UPDATE IMPORTS:
+// Use the new `Event` type and import your date formatting utilities.
+import type { Event } from '@/types';
+import { formatDate, formatTime } from '@/utils/dateUtils';
 
 import EventTracking from '@/components/calendar/EventTracking';
 import EventActions from '@/components/calendar/EventActions';
@@ -16,23 +21,26 @@ type EventDetailPageProps = {
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
     const supabase = await createClient();
 
-    // Await the params Promise
     const { id: eventId } = await params;
 
-    let event: AppEvent;
+    // 2. UPDATE TYPE ANNOTATION:
+    // The `event` variable is now correctly typed as `Event`.
+    let event: Event;
     try {
+        // This works because EventService.getEventById now returns an `Event`.
         event = await EventService.getEventById(eventId, supabase);
     } catch (error) {
         console.error('Failed to fetch event:', eventId, error);
         notFound();
     }
 
-    const formattedStartTime = new Date(event.startTime).toLocaleString('en-US', {
-        dateStyle: 'full',
-        timeStyle: 'short',
-    });
+    // 3. UPDATE DATE FORMATTING:
+    // Replace the .toLocaleString() calls with your new, consistent utilities.
+    const datePart = formatDate(event.startTime, { dateStyle: 'full' }); // e.g., "Tuesday, August 19, 2025"
+    const timePart = formatTime(event.startTime, { timeStyle: 'short' }); // e.g., "5:30 PM"
+    const formattedStartTime = `${datePart} at ${timePart}`;
 
-    const formattedEndTime = event.endTime ? new Date(event.endTime).toLocaleString('en-US', {
+    const formattedEndTime = event.endTime ? formatTime(event.endTime, {
         timeStyle: 'short',
     }) : null;
 
@@ -83,6 +91,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                         <div className="border-t border-border-color my-8" />
 
                         <div className="space-y-4">
+                            {/* These components now correctly receive the `Event` type because you migrated them earlier */}
                             <EventTracking event={event} />
                             <EventActions event={event} />
                         </div>

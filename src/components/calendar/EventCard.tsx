@@ -1,18 +1,19 @@
 'use client';
 
 import { FC, memo } from 'react';
-import { EnrichedAppEvent } from '@/types';
+// 1. UPDATE IMPORTS: Use the new, canonical `TrackedEvent` type.
+import { TrackedEvent } from '@/types';
 import { Clock, MapPin, Users, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-// 1. Import the new date utility function
 import { formatDate } from '@/utils/dateUtils';
 
+// 2. UPDATE PROPS: The interface now uses the new types.
 interface EventCardProps {
-    event: EnrichedAppEvent;
+    event: TrackedEvent;
     categoryName?: string;
     isSelected?: boolean;
-    onCardClick?: (event: EnrichedAppEvent) => void;
-    onTrackClick?: (event: EnrichedAppEvent, isCurrentlyTracked: boolean) => void;
+    onCardClick?: (event: TrackedEvent) => void;
+    onTrackClick?: (event: TrackedEvent, isCurrentlyTracked: boolean) => void;
 }
 
 const EventCard: FC<EventCardProps> = ({
@@ -22,6 +23,7 @@ const EventCard: FC<EventCardProps> = ({
     onCardClick,
     onTrackClick,
 }) => {
+    // The `isTracked` property is guaranteed to exist on the `TrackedEvent` type.
     const { isTracked } = event;
 
     return (

@@ -298,18 +298,3 @@ export function toCalendarData(event: Event): CalendarEventData {
         },
     };
 }
-
-// ============================================
-// MIGRATION HELPERS
-// ============================================
-
-/**
- * Type aliases for gradual migration
- * @deprecated Use the new type names directly
- */
-export type AppEvent = Event;
-export type EnrichedAppEvent = TrackedEvent;
-export type EnhancedAppEvent = MultiDayEvent;
-export type CalendarEvent = CalendarEventData;
-export type AppEventType = EventType;
-export type AppTrackedEvent = TrackedEventRecord;

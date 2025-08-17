@@ -6,20 +6,18 @@ import React from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { type EventClickArg } from '@fullcalendar/core';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import { AppEvent } from '@/types';
+// 1. UPDATE IMPORT: Use the new, canonical `Event` type.
+import { Event } from '@/types';
 
+// 2. UPDATE PROPS: The interface now uses the `Event` type.
 export interface DynamicDayViewProps {
-    events: AppEvent[];
+    events: Event[];
     initialDate: Date;
-    onEventSelect?: (event: AppEvent) => void;
+    onEventSelect?: (event: Event) => void;
     calendarRef?: React.RefObject<FullCalendar | null>;
 }
 
-// --- THIS IS THE FIX ---
-// Add 'calendarRef' to the list of destructured props.
 export function DynamicDayView({ events, initialDate, onEventSelect, calendarRef }: DynamicDayViewProps) {
-    // --- END OF FIX ---
-
     const calendarEvents = events.map(event => ({
         id: event.id,
         title: event.title,
@@ -31,14 +29,15 @@ export function DynamicDayView({ events, initialDate, onEventSelect, calendarRef
 
     const handleEventClick = (clickInfo: EventClickArg) => {
         if (onEventSelect) {
-            onEventSelect(clickInfo.event.extendedProps as AppEvent);
+            // 3. UPDATE TYPE CAST: Use the new `Event` type here.
+            onEventSelect(clickInfo.event.extendedProps as Event);
         }
     };
 
     return (
         <div className="h-full w-full tech-day-view">
             <FullCalendar
-                ref={calendarRef} // Now this variable exists and can be used here.
+                ref={calendarRef}
                 plugins={[timeGridPlugin]}
                 initialView="timeGridDay"
                 initialDate={initialDate}

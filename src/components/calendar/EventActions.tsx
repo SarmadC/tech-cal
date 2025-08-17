@@ -1,15 +1,16 @@
 // src/components/calendar/EventActions.tsx
 import { FC } from 'react';
 import { Calendar as CalendarIcon, Share2 } from 'lucide-react';
-import { AppEvent } from '@/types';
+// 1. UPDATE IMPORT: Use the new, canonical `Event` type.
+import { Event } from '@/types';
 import { useEventActions } from '@/hooks/useEventActions';
 
+// 2. UPDATE PROPS: The interface now uses the `Event` type.
 interface EventActionsProps {
-    event: AppEvent;
+    event: Event;
 }
 
 const EventActions: FC<EventActionsProps> = ({ event }) => {
-    // The hook is now simpler to use. It doesn't return any state.
     const { handleShare, googleCalendarLink, handleIcsDownload } = useEventActions(event);
 
     return (
