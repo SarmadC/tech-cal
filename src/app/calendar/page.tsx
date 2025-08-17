@@ -1,68 +1,36 @@
 // src/app/calendar/page.tsx
+
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import CalendarClientView from './CalendarClientView';
-import { TechCalendarDayView } from '@/components/calendar/TechCalendarDayView';
+// No specific type imports are needed here because the types are inferred
+// from the service calls and passed directly to the client component.
 
-type CalendarViewType = 'month' | 'week' | 'day';
-
-interface SearchParams {
-    view?: string;
-    date?: string;
-    [key: string]: string | string[] | undefined;
-}
-
-export default async function CalendarPage({
-    searchParams,
-}: {
-    searchParams: Promise<SearchParams>;
-}) {
+export default async function CalendarPage() {
     const supabase = await createClient();
-
-    // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+
     if (authError || !user) {
         redirect('/login');
     }
 
-    // Await the searchParams Promise
-    const params = await searchParams;
-    const view = (params.view as CalendarViewType) || 'month';
-    const dateParam = params.date as string;
-    const currentDate = dateParam ? new Date(dateParam) : new Date();
-
     try {
-        // Fetch data in parallel
         const [events, categories, profile] = await Promise.all([
-            EventService.getEvents({}, supabase),
+            // Since EventService.getEventsWithMultiDaySupport now returns MultiDayEvent[],
+            // the `events` variable will be correctly typed automatically.
+            EventService.getEventsWithMultiDaySupport({}, supabase),
+
+            // The same applies here for EventType[] and AppProfile.
             EventTypeService.getEventTypes(supabase),
             ProfileService.getProfile(user.id, supabase),
         ]);
 
-        // Special handling for day view
-        if (view === 'day') {
-            const dayStart = new Date(currentDate);
-            dayStart.setHours(0, 0, 0, 0);
-            const dayEnd = new Date(currentDate);
-            dayEnd.setHours(23, 59, 59, 999);
-
-            const dayEvents = events.filter(event => {
-                const eventStart = new Date(event.startTime);
-                return eventStart >= dayStart && eventStart <= dayEnd;
-            });
-
-            return (
-                <TechCalendarDayView
-                    events={dayEvents}
-                    initialDate={currentDate}
-                />
-            );
-        }
-
-        // Default calendar view
+        // Pass the initial data to the client component.
+        // This works because `CalendarClientView` has already been migrated
+        // to accept the new `Event[] | MultiDayEvent[]` and `EventType[]` props.
         return (
             <CalendarClientView
                 initialEvents={events}
@@ -71,7 +39,7 @@ export default async function CalendarPage({
             />
         );
     } catch (error) {
-        console.error('Error loading calendar:', error);
-        redirect('/dashboard');
+        console.error('Error loading calendar data:', error);
+        redirect('/dashboard?error=calendar-load-failed');
     }
 }

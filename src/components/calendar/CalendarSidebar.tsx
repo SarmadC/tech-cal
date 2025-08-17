@@ -1,55 +1,43 @@
-// src/components/calendar/CalendarSidebar.tsx (Corrected & Refactored)
-import { FC } from 'react';
-import { AppEvent, AppEventType } from '@/types';
+'use client';
+
+import { FC, useMemo } from 'react';
+// 1. UPDATE IMPORTS: Use the new canonical types and the type guard from '@/types'
+import { Event, EventType, isTrackedEvent, TrackedEvent } from '@/types';
 import MiniCalendar from './MiniCalendar';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { formatDate, formatTime } from '@/utils/dateUtils';
 
+// 2. UPDATE PROPS: Use a flexible union type for the events prop.
 interface SidebarProps {
     currentDate: Date;
     setCurrentDate: (date: Date) => void;
-    categories: AppEventType[]; // Keep for mini calendar event dots
+    categories: EventType[];
     user: { name: string; role: string };
-    events: AppEvent[];
-    // These were unused in the JSX, so we can remove them if they aren't needed elsewhere
-    // selectedCategories: Set<string>;
-    // setSelectedCategories: (categories: Set<string>) => void;
-    // nextUpcomingEvent?: AppEvent;
+    events: (Event | TrackedEvent)[]; // Can accept both base and tracked events
+    monthlyEventCounts?: Map<string, Map<number, number>>;
 }
 
-// A small, custom fallback that matches your sidebar's theme
 const WidgetFallback = () => (
     <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-gray-700 bg-gray-800/50 text-xs text-gray-500">
         Could not load this widget
     </div>
 );
 
-
 const CalendarSidebar: FC<SidebarProps> = ({
     currentDate,
     setCurrentDate,
-    user, // This is now used
-    events
+    user,
+    events,
+    monthlyEventCounts
 }) => {
-    // This function is now used
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
 
-    const getUpcomingEvents = () => {
+    const upcomingEvents = useMemo(() => {
         const now = new Date();
         return events
             .filter(event => new Date(event.startTime) > now)
             .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
             .slice(0, 5);
-    };
-
-    const upcomingEvents = getUpcomingEvents();
+    }, [events]);
 
     return (
         <aside className="w-80 bg-[#1e1e1e] border-r border-gray-800 p-6 flex flex-col">
@@ -75,7 +63,7 @@ const CalendarSidebar: FC<SidebarProps> = ({
                     <MiniCalendar
                         date={currentDate}
                         setDate={setCurrentDate}
-                        events={events}
+                        monthlyEventCounts={monthlyEventCounts}
                         currentDate={currentDate}
                     />
                 </ErrorBoundary>
@@ -101,14 +89,14 @@ const CalendarSidebar: FC<SidebarProps> = ({
                                             <h4 className="text-white text-sm font-medium line-clamp-2 mb-1">
                                                 {event.title}
                                             </h4>
-                                            {/* formatDate is now used here */}
                                             <p className="text-gray-400 text-xs mb-1">
-                                                {formatDate(event.startTime)}
+                                                {`${formatDate(event.startTime, { month: 'short', day: 'numeric' })}, ${formatTime(event.startTime)}`}
                                             </p>
                                             <p className="text-gray-500 text-xs line-clamp-1">
                                                 {event.organizer}
                                             </p>
-                                            {event.isTracked && (
+                                            {/* 3. USE TYPE GUARD for safe property access */}
+                                            {isTrackedEvent(event) && event.isTracked && (
                                                 <div className="flex items-center space-x-1 mt-1">
                                                     <div className="w-3 h-3 bg-green-500 rounded-full" />
                                                     <span className="text-green-400 text-xs">Tracked</span>
@@ -133,7 +121,8 @@ const CalendarSidebar: FC<SidebarProps> = ({
                     <div className="grid grid-cols-2 gap-4 text-center">
                         <div>
                             <div className="text-white text-xl font-bold">
-                                {events.filter(e => e.isTracked).length}
+                                {/* 4. USE TYPE GUARD in the filter function */}
+                                {events.filter(e => isTrackedEvent(e) && e.isTracked).length}
                             </div>
                             <div className="text-gray-400 text-xs">Tracked</div>
                         </div>

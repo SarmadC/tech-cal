@@ -4,19 +4,17 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserEventService } from '@/services/userEventService';
-import type { AppTrackedEvent, EventStatus } from '@/types';
+import type { TrackedEventRecord, EventStatus } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/utils/supabase/client';
 
 import { trackEventAction, untrackEventAction } from '@/app/calendar/actions';
 
-// Input types for the mutation hooks
 type TrackEventVariables = { eventId: string; status: EventStatus; notes?: string };
 type UntrackEventVariables = { eventId: string };
 type BulkTrackEventsVariables = { eventIds: string[]; status: EventStatus };
 
-// ✅ DEFINE the return type for the bulk track mutation
 type BulkTrackResponse = {
     tracked: number;
     skipped: number;
@@ -28,7 +26,6 @@ export function useEventTracking() {
     const queryClient = useQueryClient();
     const listQueryKey = ['trackedEvents', user?.id];
 
-    // trackEvent mutation using the Server Action
     const { mutate: trackEvent, isPending: isTracking } = useMutation({
         mutationFn: async (variables: TrackEventVariables) => {
             const formData = new FormData();
@@ -45,16 +42,22 @@ export function useEventTracking() {
             return result;
         },
         onSuccess: (_, variables) => {
-            toast.success(`Event ${variables.status}!`);
+            const statusText = variables.status === 'bookmarked' ? 'bookmarked' :
+                variables.status === 'attending' ? 'marked as attending' :
+                    variables.status === 'attended' ? 'marked as attended' : 'tracked';
+            toast.success(`Event ${statusText}!`);
+
             queryClient.invalidateQueries({ queryKey: listQueryKey });
-            queryClient.invalidateQueries({ queryKey: ['eventTrackingStatus', variables.eventId, user?.id] });
+            queryClient.invalidateQueries({
+                queryKey: ['eventTrackingStatus', variables.eventId, user?.id]
+            });
         },
         onError: (err) => {
-            toast.error(err.message);
+            console.error('Track event error:', err);
+            toast.error(err.message || 'Failed to track event');
         },
     });
 
-    // untrackEvent mutation using the Server Action
     const { mutate: untrackEvent, isPending: isUntracking } = useMutation({
         mutationFn: async (variables: UntrackEventVariables) => {
             const formData = new FormData();
@@ -66,22 +69,29 @@ export function useEventTracking() {
             }
             return result;
         },
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             toast.success('Event untracked.');
+
             queryClient.invalidateQueries({ queryKey: listQueryKey });
-            queryClient.invalidateQueries({ queryKey: ['eventTrackingStatus'] });
+            queryClient.invalidateQueries({
+                queryKey: ['eventTrackingStatus', variables.eventId, user?.id]
+            });
         },
         onError: (err) => {
-            toast.error(err.message);
+            console.error('Untrack event error:', err);
+            toast.error(err.message || 'Failed to untrack event');
         },
     });
 
-    // bulkTrackEvents mutation (still client-side for now)
     const { mutate: bulkTrackEvents, isPending: isBulkTracking } = useMutation({
-        // The mutation function now returns our specific type
         mutationFn: (variables: BulkTrackEventsVariables): Promise<BulkTrackResponse> => {
             if (!user) throw new Error('User not authenticated.');
-            return UserEventService.bulkTrackEvents(user.id, variables.eventIds, variables.status, supabase);
+            return UserEventService.bulkTrackEvents(
+                user.id,
+                variables.eventIds,
+                variables.status,
+                supabase
+            );
         },
         onSuccess: (response: BulkTrackResponse) => {
             if (response.tracked > 0) {
@@ -92,6 +102,7 @@ export function useEventTracking() {
             }
         },
         onError: (error) => {
+            console.error('Bulk track error:', error);
             toast.error(error.message || 'Failed to bulk track events.');
         },
     });
@@ -106,19 +117,21 @@ export function useEventTracking() {
     };
 }
 
-// READ hooks remain unchanged
 export function useTrackedEvents() {
     const [supabase] = useState(() => createClient());
     const { user } = useAuth();
 
-    return useQuery<AppTrackedEvent[]>({
+    // 2. UPDATE HOOK SIGNATURE: The `useQuery` hook is now strongly typed to return `TrackedEventRecord[]`.
+    return useQuery<TrackedEventRecord[]>({
         queryKey: ['trackedEvents', user?.id],
         queryFn: async () => {
             if (!user) return [];
-            // Assuming getTrackedEvents from service returns AppTrackedEvent[]
+            // This works because `getTrackedEvents` was already migrated to return `TrackedEventRecord[]`.
             return UserEventService.getTrackedEvents(user.id, supabase);
         },
         enabled: !!user,
+        staleTime: 5 * 60 * 1000,
+        retry: 2,
     });
 }
 
@@ -130,8 +143,16 @@ export function useEventTrackingStatus(eventId: string | undefined) {
         queryKey: ['eventTrackingStatus', eventId, user?.id],
         queryFn: async () => {
             if (!user || !eventId) return { isTracked: false };
-            return UserEventService.isEventTracked(user.id, eventId, supabase);
+
+            try {
+                return await UserEventService.isEventTracked(user.id, eventId, supabase);
+            } catch (error) {
+                console.error('Error checking tracking status:', error);
+                return { isTracked: false };
+            }
         },
         enabled: !!user && !!eventId,
+        staleTime: 2 * 60 * 1000,
+        retry: 1,
     });
 }

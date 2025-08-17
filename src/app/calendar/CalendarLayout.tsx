@@ -1,14 +1,16 @@
 // src/app/calendar/CalendarLayout.tsx
+
 import React, { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
-import type { AppProfile, AppEventType, AppEvent } from '@/types';
+// 1. UPDATE IMPORTS: Use the new, canonical types.
+import type { AppProfile, EventType, Event } from '@/types';
+import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
-// Calendar context for passing data to children
 export interface CalendarLayoutContext {
     view: string;
     date: Date;
@@ -18,11 +20,12 @@ export interface CalendarLayoutContext {
     calendarRef?: React.RefObject<FullCalendar | null>;
 }
 
+// 2. UPDATE PROPS: The interface now uses the new types.
 export interface CalendarLayoutProps {
     children?: ReactNode;
     profile: AppProfile | null;
-    categories: AppEventType[];
-    events?: AppEvent[];
+    categories: EventType[];
+    events?: Event[]; // Changed from AppEvent[]
     currentDate?: Date;
     onDateChange?: (date: Date) => void;
     onNavigate?: (direction: 'prev' | 'next' | 'today') => void;
@@ -31,6 +34,7 @@ export interface CalendarLayoutProps {
     activeFilterCount?: number;
     calendarRef?: React.RefObject<FullCalendar | null>;
     renderContent?: (context: CalendarLayoutContext) => ReactNode;
+    monthlyEventCounts?: Map<string, Map<number, number>>;
 }
 
 export function CalendarLayout({
@@ -46,21 +50,18 @@ export function CalendarLayout({
     activeFilterCount = 0,
     calendarRef,
     renderContent,
+    monthlyEventCounts,
 }: CalendarLayoutProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // Get current view from URL
     const view = (searchParams.get('view') as CalendarViewType) || 'month';
 
-    // Get current date from URL or use provided date or default to today
     const dateParam = searchParams.get('date');
-    const urlDate = dateParam ? new Date(dateParam) : null;
-    const activeDate = currentDate || urlDate || new Date();
 
-    const formatDateForURL = (date: Date): string => {
-        return date.toISOString().split('T')[0];
-    };
+    const urlDate = dateParam ? parseDateFromURL(dateParam) : null;
+
+    const activeDate = currentDate || urlDate || new Date();
 
     const handleViewChange = (newView: string) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -79,7 +80,6 @@ export function CalendarLayout({
     const handleNavigation = (direction: 'prev' | 'next' | 'today') => {
         onNavigate?.(direction);
 
-        // Get the new date from the calendar after navigation
         if (calendarRef?.current) {
             const calendarApi = calendarRef.current.getApi();
             const newDate = calendarApi.getDate();
@@ -91,7 +91,6 @@ export function CalendarLayout({
         onToggleFilters?.();
     };
 
-    // Create context object to pass to children or render prop
     const layoutContext: CalendarLayoutContext = {
         view,
         date: activeDate,
@@ -101,10 +100,8 @@ export function CalendarLayout({
         calendarRef,
     };
 
-    // Use render prop if provided, otherwise use children
     const content = renderContent ? renderContent(layoutContext) : children;
 
-    // If no sidebar data provided (like in Next.js layout), render simpler layout
     if (!profile && categories.length === 0) {
         return (
             <div className="flex h-screen bg-background-main">
@@ -119,8 +116,8 @@ export function CalendarLayout({
 
     return (
         <div className="flex h-screen bg-background-main">
-            {/* Sidebar */}
             <div className="w-80 border-r border-border-default bg-background-elevated">
+                {/* This works because CalendarSidebar has been migrated */}
                 <CalendarSidebar
                     currentDate={activeDate}
                     setCurrentDate={handleDateChange}
@@ -130,12 +127,11 @@ export function CalendarLayout({
                         role: 'Member'
                     }}
                     events={events}
+                    monthlyEventCounts={monthlyEventCounts}
                 />
             </div>
 
-            {/* Main Content */}
             <div className="flex-1 flex flex-col">
-                {/* Header */}
                 <CalendarHeader
                     currentDate={activeDate}
                     onNavigate={handleNavigation}
@@ -143,8 +139,6 @@ export function CalendarLayout({
                     isFilterPanelOpen={isFilterPanelOpen}
                     activeFilterCount={activeFilterCount}
                 />
-
-                {/* Calendar Content */}
                 <div className="flex-1 overflow-hidden">
                     {content}
                 </div>

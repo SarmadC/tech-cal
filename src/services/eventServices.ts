@@ -1,53 +1,52 @@
+// src/services/eventServices.ts
+
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
-import type { AppEvent, EventFilters, SearchSuggestion, SupabaseEventWithDetails } from '@/types';
-import { eventTransformer, eventTypeTransformer, enrichEvent } from '@/utils/transformers';
+import type {
+    Event,
+    EventFilters,
+    SearchSuggestion,
+    SupabaseEventWithDetails,
+    MultiDayEvent,
+} from '@/types';
+import {
+    eventTransformer,
+    eventTypeTransformer,
+    enrichEvent,
+    enhancedEventTransformer
+} from '@/utils/transformers';
+import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import * as Sentry from "@sentry/nextjs";
 
 type SupabaseClientType = SupabaseClient<Database>;
 
-/**
- * Helper function to sanitize a string for a full-text search query.
- * This prevents FTS query injection by removing special operators.
- * @param query The raw search string from the user.
- * @param joiner The operator to join terms with ('&' for AND, '|' for OR).
- * @returns A sanitized query string safe for Supabase FTS.
- */
-function sanitizeFtsQuery(query: string, joiner: ' & ' | ' | ' = ' & '): string {
-    // 1. Remove special FTS operators: & | ! : ' ( ) < >
-    const sanitized = query.replace(/[&|!:'()<>]+/g, '');
-
-    // 2. Split into words, filter out empty strings, and join with the specified operator.
-    const terms = sanitized.trim().split(/\s+/).filter(Boolean);
-
-    if (terms.length === 0) {
-        return '';
-    }
-
-    return terms.join(joiner);
-}
-
 export class EventService {
+    // 2. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getEvents(
         filters: EventFilters = {},
-        supabaseClient: SupabaseClientType
-    ): Promise<AppEvent[]> {
+        supabaseClient: SupabaseClientType,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<Event[]> {
         try {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
             let query = supabaseClient
                 .from('events')
                 .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
-                .order('start_time', { ascending: true });
+                .order('start_time', { ascending: true })
+                .range(from, to);
 
             if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
 
-            // ✅ FIX: Sanitize the search term before using it in the query.
             if (filters.searchTerm) {
-                const sanitizedSearchTerm = sanitizeFtsQuery(filters.searchTerm, ' & '); // Use AND logic
-                if (sanitizedSearchTerm) {
-                    query = query.textSearch('fts', sanitizedSearchTerm, { type: 'plain', config: 'english' });
-                }
+                query = query.textSearch('fts', filters.searchTerm, {
+                    type: 'websearch',
+                    config: 'english'
+                });
             }
 
             if (filters.status?.length) query = query.in('status', filters.status);
@@ -56,7 +55,8 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            const events: AppEvent[] = (data || []).map((item) => {
+            // 3. UPDATE TYPE ANNOTATION: The local variable is now correctly typed.
+            const events: Event[] = (data || []).map((item) => {
                 const typedItem = item as SupabaseEventWithDetails;
                 const baseEvent = eventTransformer.toApp(typedItem);
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
@@ -73,10 +73,11 @@ export class EventService {
         }
     }
 
+    // 4. UPDATE SIGNATURE: The function now returns a promise of `Event`.
     static async getEventById(
         id: string,
         supabaseClient: SupabaseClientType
-    ): Promise<AppEvent> {
+    ): Promise<Event> {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
@@ -107,19 +108,17 @@ export class EventService {
         limit = 10
     ): Promise<SearchSuggestion[]> {
         try {
-            // ✅ FIX: Sanitize the search term for the suggestions search as well.
-            const sanitizedTerm = sanitizeFtsQuery(term, ' | '); // Use OR logic for better suggestions
-
-            // If the sanitized term is empty (e.g., user only typed '!'), return no results.
-            if (!sanitizedTerm) {
+            if (!term.trim()) {
                 return [];
             }
 
             const { data, error } = await supabaseClient
                 .from('events')
                 .select(`id, title, start_time, organizer:organizers (name)`)
-                // ⚠️ ATTENTION: Note the change from 'websearch' to 'plain'
-                .textSearch('fts', sanitizedTerm, { type: 'plain', config: 'english' })
+                .textSearch('fts', term, {
+                    type: 'websearch',
+                    config: 'english'
+                })
                 .order('start_time', { ascending: true })
                 .limit(limit);
 
@@ -145,14 +144,14 @@ export class EventService {
         }
     }
 
-    // ... (the rest of your file remains the same)
+    // 5. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getEventsByDateRange(
         startDate: Date,
         endDate: Date,
         supabaseClient: SupabaseClientType,
         categoryIds?: string[],
         limit?: number
-    ): Promise<AppEvent[]> {
+    ): Promise<Event[]> {
         try {
             let query = supabaseClient
                 .from('events')
@@ -181,19 +180,21 @@ export class EventService {
         }
     }
 
+    // 6. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getUpcomingEvents(
         supabaseClient: SupabaseClientType,
         limit = 50
-    ): Promise<AppEvent[]> {
+    ): Promise<Event[]> {
         const now = new Date();
         const futureDate = new Date();
         futureDate.setDate(now.getDate() + 30);
         return this.getEventsByDateRange(now, futureDate, supabaseClient, undefined, limit);
     }
 
+    // 7. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getLiveEvents(
         supabaseClient: SupabaseClientType
-    ): Promise<AppEvent[]> {
+    ): Promise<Event[]> {
         try {
             const now = new Date().toISOString();
             const { data, error } = await supabaseClient
@@ -219,11 +220,71 @@ export class EventService {
         }
     }
 
+    // 8. UPDATE SIGNATURE: The function now returns a promise of `MultiDayEvent[]`.
+    static async getEventsWithMultiDaySupport(
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<MultiDayEvent[]> {
+        try {
+            let query = supabaseClient
+                .from('events')
+                .select(`
+                *,
+                event_type:event_type_id(id, name, color, description),
+                organizer:organizer_id(id, name)
+            `);
+
+            if (filters.startDate && filters.endDate) {
+                query = query.or(
+                    `and(start_time.gte.${filters.startDate.toISOString()},start_time.lte.${filters.endDate.toISOString()}),` +
+                    `and(end_time.gte.${filters.startDate.toISOString()},end_time.lte.${filters.endDate.toISOString()}),` +
+                    `and(start_time.lte.${filters.startDate.toISOString()},end_time.gte.${filters.endDate.toISOString()})`
+                );
+            } else if (filters.startDate) {
+                const dayStart = new Date(filters.startDate);
+                dayStart.setHours(0, 0, 0, 0);
+                const dayEnd = new Date(filters.startDate);
+                dayEnd.setHours(23, 59, 59, 999);
+
+                query = query.or(
+                    `and(start_time.gte.${dayStart.toISOString()},start_time.lte.${dayEnd.toISOString()}),` +
+                    `and(start_time.lte.${dayStart.toISOString()},end_time.gte.${dayStart.toISOString()})`
+                );
+            }
+
+            if (filters.categories?.length) {
+                query = query.in('event_type_id', filters.categories);
+            }
+
+            if (filters.searchTerm) {
+                query = query.textSearch('fts', sanitizeFtsQuery(filters.searchTerm));
+            }
+
+            const { data, error } = await query
+                .order('start_time', { ascending: true })
+                .range((page - 1) * pageSize, page * pageSize - 1);
+
+            if (error) throw error;
+            if (!data) return [];
+
+            return data.map(enhancedEventTransformer.toApp);
+        } catch (error) {
+            console.error('Error fetching events with multi-day support:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventsWithMultiDaySupport', filters }
+            });
+            throw new Error('Failed to fetch events with multi-day support.');
+        }
+    }
+
+    // 9. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getRecommendedEvents(
         categoryNames: string[],
         excludedEventIds: string[],
         supabaseClient: SupabaseClientType
-    ): Promise<AppEvent[]> {
+    ): Promise<Event[]> {
         try {
             if (categoryNames.length === 0) return [];
 

@@ -1,12 +1,11 @@
-// src/app/signup/page.tsx (Refactored)
+// src/app/signup/page.tsx
 'use client';
 
 import Link from 'next/link';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { signupAction, oauthSignInAction } from '@/app/auth/actions';
-import { AuthForm } from '@/components/auth/AuthForm';
-import { AuthProviders } from '@/components/auth';
+import { AuthForm, AuthProviders } from '@/components/auth';
 import type { OAuthProvider } from '@/types';
 import type { AuthFormState } from '@/app/auth/actions';
 

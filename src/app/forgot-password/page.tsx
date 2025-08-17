@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
-import { SimpleForm } from '@/components/auth/SimpleForm';
+import { SimpleForm } from '@/components/auth/index';
 import { forgotPasswordAction } from '@/app/auth/actions';
 import type { AuthFormState } from '@/app/auth/actions';
 

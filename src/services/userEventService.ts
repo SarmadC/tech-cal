@@ -1,10 +1,11 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
+// 1. UPDATE IMPORTS: Use the new, specific type names.
 import type {
     EventStatus,
-    AppTrackedEvent,
+    TrackedEventRecord, // Replaces AppTrackedEvent
     SupabaseTrackedEventWithDetails,
-} from '@/types'; // ApiResponse removed
+} from '@/types';
 import { trackedEventTransformer } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
 
@@ -20,7 +21,7 @@ export class UserEventService {
         status: EventStatus,
         notes: string | undefined,
         supabaseClient: SupabaseClientType
-    ): Promise<void> { // Return type is now Promise<void>
+    ): Promise<void> {
         try {
             const { data: existing } = await supabaseClient
                 .from('user_events')
@@ -48,6 +49,94 @@ export class UserEventService {
         }
     }
 
+    static async getAllTrackedEventIds(
+        userId: string,
+        supabaseClient: SupabaseClientType
+    ): Promise<string[]> {
+        try {
+            const { data, error } = await supabaseClient
+                .from('user_events')
+                .select('event_id')
+                .eq('user_id', userId);
+
+            if (error) throw error;
+
+            return (data || []).map(item => item.event_id);
+        } catch (error) {
+            console.error('Error fetching all tracked event IDs:', error);
+            Sentry.captureException(error, { extra: { function: 'getAllTrackedEventIds', userId } });
+            throw new Error('Failed to fetch tracked event IDs.');
+        }
+    }
+
+    /**
+     * Gets all tracked events for a user with a lightweight version of the event data.
+     * Optimized for dashboard calculations. Throws on failure.
+     */
+    // 2. UPDATE SIGNATURE: The function now returns a promise of `TrackedEventRecord[]`.
+    static async getLightweightTrackedEvents(
+        userId: string,
+        supabaseClient: SupabaseClientType
+    ): Promise<TrackedEventRecord[]> {
+        try {
+            const { data, error } = await supabaseClient
+                .from('user_events')
+                .select(`
+                    id, user_id, event_id, status, notes, created_at,
+                    events (
+                        id,
+                        title,
+                        start_time,
+                        organizer_id,
+                        event_type_id,
+                        organizers ( name ) 
+                    )
+                `)
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // 3. UPDATE MAPPING: The returned object now perfectly matches the `TrackedEventRecord` type.
+            return (data || []).map((item): TrackedEventRecord => {
+                const partialEvent = item.events as {
+                    id: string;
+                    title: string;
+                    start_time: string;
+                    event_type_id: string;
+                    organizers: { name: string } | null;
+                } | null;
+
+                return {
+                    trackingId: item.id,
+                    userId: item.user_id,
+                    eventId: item.event_id,
+                    status: item.status as EventStatus,
+                    notes: item.notes,
+                    trackedAt: item.created_at || new Date().toISOString(),
+                    event: partialEvent ? {
+                        id: partialEvent.id,
+                        title: partialEvent.title,
+                        startTime: partialEvent.start_time,
+                        eventTypeId: partialEvent.event_type_id,
+                        organizer: partialEvent.organizers?.name || 'Unknown',
+                        createdAt: '',
+                        description: '',
+                        endTime: null,
+                        location: '',
+                        status: 'confirmed',
+                        sourceUrl: '',
+                        livestreamUrl: null,
+                    } : null
+                };
+            });
+        } catch (error) {
+            console.error('Error fetching lightweight tracked events:', error);
+            Sentry.captureException(error, { extra: { function: 'getLightweightTrackedEvents', userId } });
+            throw new Error('Failed to fetch dashboard event data.');
+        }
+    }
+
     /**
      * Untrack an event for a user. Throws on failure.
      */
@@ -55,7 +144,7 @@ export class UserEventService {
         userId: string,
         eventId: string,
         supabaseClient: SupabaseClientType
-    ): Promise<void> { // Return type is now Promise<void>
+    ): Promise<void> {
         try {
             const { error } = await supabaseClient
                 .from('user_events')
@@ -71,21 +160,32 @@ export class UserEventService {
     }
 
     /**
-     * Get a user's tracked events. Throws on failure.
+     * Get a user's tracked events with pagination. Throws on failure.
      */
+    // 4. UPDATE SIGNATURE: The function now returns a promise of `TrackedEventRecord[]`.
     static async getTrackedEvents(
         userId: string,
-        supabaseClient: SupabaseClientType
-    ): Promise<AppTrackedEvent[]> { // Return type is now Promise<AppTrackedEvent[]>
+        supabaseClient: SupabaseClientType,
+        page?: number,
+        pageSize?: number
+    ): Promise<TrackedEventRecord[]> {
         try {
-            const { data, error } = await supabaseClient
+            let query = supabaseClient
                 .from('user_events')
                 .select(`*, events (*, event_type:event_type_id (*), organizer:organizers (id, name))`)
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
+            if (page && pageSize) {
+                const from = (page - 1) * pageSize;
+                const to = from + pageSize - 1;
+                query = query.range(from, to);
+            }
+
+            const { data, error } = await query;
             if (error) throw error;
 
+            // This works because we already updated `trackedEventTransformer` to return `TrackedEventRecord`.
             return (data as SupabaseTrackedEventWithDetails[] || []).map(trackedEventTransformer.toApp);
         } catch (error) {
             console.error('Error fetching tracked events:', error);
@@ -101,7 +201,7 @@ export class UserEventService {
         userId: string,
         eventId: string,
         supabaseClient: SupabaseClientType
-    ): Promise<{ isTracked: boolean; status?: EventStatus }> { // Return type updated
+    ): Promise<{ isTracked: boolean; status?: EventStatus }> {
         try {
             const { data, error } = await supabaseClient
                 .from('user_events')
@@ -110,7 +210,6 @@ export class UserEventService {
                 .eq('event_id', eventId)
                 .single();
 
-            // 'PGRST116' means 0 rows found, which is a valid success case here (event is not tracked).
             if (error && error.code !== 'PGRST116') throw error;
 
             return { isTracked: !!data, status: data?.status as EventStatus | undefined };
@@ -129,7 +228,7 @@ export class UserEventService {
         eventIds: string[],
         status: EventStatus,
         supabaseClient: SupabaseClientType
-    ): Promise<{ tracked: number; skipped: number }> { // Return type updated
+    ): Promise<{ tracked: number; skipped: number }> {
         try {
             const { data: existing, error: fetchError } = await supabaseClient
                 .from('user_events')
@@ -143,7 +242,6 @@ export class UserEventService {
             const newEventIds = eventIds.filter(id => !existingEventIds.has(id));
 
             if (newEventIds.length === 0) {
-                // This is a success case, so we return directly.
                 return { tracked: 0, skipped: eventIds.length };
             }
 

@@ -6,49 +6,44 @@ import { EventService } from '@/services/eventServices';
 import { UserEventService } from '@/services/userEventService';
 import { EventTypeService } from '@/services/eventTypeService';
 import DashboardClientView from './DashboardClientView';
-import type { AppTrackedEvent, AppEventType, AppEvent } from '@/types'; // Import types
+// 1. UPDATE IMPORTS: Use the new, canonical type names.
+import type { TrackedEventRecord, EventType, Event } from '@/types';
 
 export default async function DashboardPage() {
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-        redirect('/login?redirect=/dashboard'); // Add redirect param for better UX
+        redirect('/login?redirect=/dashboard');
     }
 
-    // --- CHANGED SECTION START ---
-    let initialTrackedEvents: AppTrackedEvent[] = [];
-    let initialEventTypes: AppEventType[] = [];
-    let initialUpcomingEvents: AppEvent[] = [];
+    // 2. UPDATE TYPE ANNOTATIONS: The local variables are now correctly typed.
+    let initialTrackedEvents: TrackedEventRecord[] = [];
+    let initialEventTypes: EventType[] = [];
+    let initialUpcomingEvents: Event[] = [];
 
     try {
-        // Fetch all three data sources in parallel.
-        // If any fail, the catch block will execute.
         const [
             trackedEventsData,
             eventTypesData,
             upcomingEventsData
         ] = await Promise.all([
-            UserEventService.getTrackedEvents(user.id, supabase),
+            // These service calls now return the new types, so this works seamlessly.
+            UserEventService.getLightweightTrackedEvents(user.id, supabase),
             EventTypeService.getEventTypes(supabase),
-            EventService.getEvents({ startDate: new Date() }, supabase)
+            EventService.getEvents({ startDate: new Date() }, supabase, 1, 100)
         ]);
-        
-        // Assign data on success
+
         initialTrackedEvents = trackedEventsData;
         initialEventTypes = eventTypesData;
         initialUpcomingEvents = upcomingEventsData;
 
     } catch (error) {
         console.error("Failed to load initial dashboard data:", error);
-        // In case of a data fetching error on the server, we can still render the client component.
-        // We will pass it empty arrays, and it will show its own error or empty state.
-        // This is a graceful way to handle server-side data fetching failures.
     }
-    // --- CHANGED SECTION END ---
 
-    // --- Pass the fetched data as props to the client component ---
     return (
+        // The props passed here now match the updated `DashboardClientViewProps` interface.
         <DashboardClientView
             initialTrackedEvents={initialTrackedEvents}
             initialEventTypes={initialEventTypes}

@@ -1,44 +1,45 @@
-// src/components/calendar/MiniCalendar.tsx
 'use client';
 
 import { FC, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { AppEvent } from '@/types';
 
-// Props remain the same
+// The full AppEvent type is no longer needed here.
+
 interface MiniCalendarProps {
     date: Date;
     setDate: (d: Date) => void;
-    events: AppEvent[];
     currentDate: Date;
+    // We now accept the pre-computed map, which is much faster.
+    monthlyEventCounts?: Map<string, Map<number, number>>;
 }
 
-const MiniCalendar: FC<MiniCalendarProps> = ({ date, setDate, events, currentDate }) => {
-    // ... (All the code from the original MiniCalendar component)
+const MiniCalendar: FC<MiniCalendarProps> = ({ date, setDate, currentDate, monthlyEventCounts }) => {
     const monthNames = useMemo(() => ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], []);
     const weekDays = useMemo(() => ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'], []);
 
+    // This calculation is now extremely fast and timezone-correct.
     const eventCounts = useMemo(() => {
-        const counts = new Map<number, number>();
-        const currentMonth = date.getMonth();
-        const currentYear = date.getFullYear();
-
-        for (const event of events) {
-            const eventDate = new Date(event.startTime);
-            if (eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear) {
-                const day = eventDate.getDate();
-                counts.set(day, (counts.get(day) || 0) + 1);
-            }
+        if (!monthlyEventCounts) {
+            return new Map<number, number>();
         }
-        return counts;
-    }, [events, date]);
+
+        // Create the key for the currently displayed month (e.g., "2025-8" for September).
+        // This uses the local month, matching how the map was created in the parent component.
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const key = `${year}-${month}`;
+
+        // Perform a lightning-fast lookup instead of a slow, error-prone loop.
+        return monthlyEventCounts.get(key) || new Map<number, number>();
+    }, [monthlyEventCounts, date]);
 
     const maxEvents = useMemo(() => Math.max(1, ...eventCounts.values()), [eventCounts]);
 
     const getHeatmapStyle = (count: number) => {
         if (count === 0) return {};
         const intensity = Math.min(count / maxEvents, 1);
-        return { backgroundColor: `rgba(59, 130, 246, ${intensity * 0.8 + 0.1})` };
+        // Using a slightly more vibrant color for the heatmap
+        return { backgroundColor: `rgba(59, 130, 246, ${intensity * 0.7 + 0.2})` };
     };
 
     const daysInMonth = useMemo(() => {
@@ -70,7 +71,7 @@ const MiniCalendar: FC<MiniCalendarProps> = ({ date, setDate, events, currentDat
                     const count = day ? eventCounts.get(day) || 0 : 0;
                     const isSelected = day === currentDate.getDate() && date.getMonth() === currentDate.getMonth() && date.getFullYear() === currentDate.getFullYear();
                     const heatmapStyle = getHeatmapStyle(count);
-                    const textColor = count > (maxEvents / 2) ? 'text-white' : '';
+                    const textColor = count > (maxEvents / 2) ? 'text-white' : 'text-gray-300';
                     const hoverClass = count === 0 ? 'hover:bg-gray-700' : '';
                     const selectedClass = isSelected ? 'ring-2 ring-white' : '';
 

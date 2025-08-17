@@ -1,13 +1,16 @@
-// src/components/calendar/EventInfo.tsx
 'use client';
 
 import { FC } from 'react';
 import { Clock, MapPin, Users, Tag } from 'lucide-react';
-import { AppEvent, AppEventType } from '@/types';
+// 1. UPDATE IMPORTS: Use the new, specific type names.
+import { Event, EventType } from '@/types';
+// 2. IMPORT DATE UTILITY: Import the centralized formatting function.
+import { formatDateTime } from '@/utils/dateUtils';
 
+// 3. UPDATE PROPS: The interface now uses the new types.
 interface EventInfoProps {
-    event: AppEvent;
-    category?: AppEventType;
+    event: Event;
+    category?: EventType;
 }
 
 const EventInfo: FC<EventInfoProps> = ({ event, category }) => (
@@ -15,7 +18,8 @@ const EventInfo: FC<EventInfoProps> = ({ event, category }) => (
         <div className="space-y-4">
             <div className="flex items-center space-x-3 text-sm">
                 <Clock className="w-5 h-5 text-gray-400" />
-                <span>{new Date(event.startTime).toLocaleString()}</span>
+                {/* 4. UPDATE FORMATTING: Use the new utility for consistent date/time display. */}
+                <span>{formatDateTime(event.startTime)}</span>
             </div>
             <div className="flex items-center space-x-3 text-sm">
                 <MapPin className="w-5 h-5 text-gray-400" />
