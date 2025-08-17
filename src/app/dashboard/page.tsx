@@ -1,10 +1,13 @@
+// src/app/dashboard/page.tsx
+
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { EventService } from '@/services/eventServices';
 import { UserEventService } from '@/services/userEventService';
 import { EventTypeService } from '@/services/eventTypeService';
 import DashboardClientView from './DashboardClientView';
-import type { AppTrackedEvent, AppEventType, AppEvent } from '@/types';
+// 1. UPDATE IMPORTS: Use the new, canonical type names.
+import type { TrackedEventRecord, EventType, Event } from '@/types';
 
 export default async function DashboardPage() {
     const supabase = await createClient();
@@ -14,9 +17,10 @@ export default async function DashboardPage() {
         redirect('/login?redirect=/dashboard');
     }
 
-    let initialTrackedEvents: AppTrackedEvent[] = [];
-    let initialEventTypes: AppEventType[] = [];
-    let initialUpcomingEvents: AppEvent[] = [];
+    // 2. UPDATE TYPE ANNOTATIONS: The local variables are now correctly typed.
+    let initialTrackedEvents: TrackedEventRecord[] = [];
+    let initialEventTypes: EventType[] = [];
+    let initialUpcomingEvents: Event[] = [];
 
     try {
         const [
@@ -24,13 +28,9 @@ export default async function DashboardPage() {
             eventTypesData,
             upcomingEventsData
         ] = await Promise.all([
-            // FIX: Use the lightweight function to fetch ALL tracked events efficiently for the initial server render.
-            // This ensures calculations like "Total Tracked" are correct on page load.
+            // These service calls now return the new types, so this works seamlessly.
             UserEventService.getLightweightTrackedEvents(user.id, supabase),
-
             EventTypeService.getEventTypes(supabase),
-
-            // We can also apply pagination here for the initial load of upcoming events.
             EventService.getEvents({ startDate: new Date() }, supabase, 1, 100)
         ]);
 
@@ -40,11 +40,10 @@ export default async function DashboardPage() {
 
     } catch (error) {
         console.error("Failed to load initial dashboard data:", error);
-        // Gracefully handle server-side errors by passing empty arrays.
-        // The client component will then show its own error or empty state.
     }
 
     return (
+        // The props passed here now match the updated `DashboardClientViewProps` interface.
         <DashboardClientView
             initialTrackedEvents={initialTrackedEvents}
             initialEventTypes={initialEventTypes}

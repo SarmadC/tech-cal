@@ -1,9 +1,13 @@
+// src/app/calendar/page.tsx
+
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import CalendarClientView from './CalendarClientView';
+// No specific type imports are needed here because the types are inferred
+// from the service calls and passed directly to the client component.
 
 export default async function CalendarPage() {
     const supabase = await createClient();
@@ -15,12 +19,18 @@ export default async function CalendarPage() {
 
     try {
         const [events, categories, profile] = await Promise.all([
-            EventService.getEventsWithMultiDaySupport({}, supabase), // ← THIS EXACT LINE
+            // Since EventService.getEventsWithMultiDaySupport now returns MultiDayEvent[],
+            // the `events` variable will be correctly typed automatically.
+            EventService.getEventsWithMultiDaySupport({}, supabase),
+
+            // The same applies here for EventType[] and AppProfile.
             EventTypeService.getEventTypes(supabase),
             ProfileService.getProfile(user.id, supabase),
         ]);
 
-        // Pass the initial data to the client component
+        // Pass the initial data to the client component.
+        // This works because `CalendarClientView` has already been migrated
+        // to accept the new `Event[] | MultiDayEvent[]` and `EventType[]` props.
         return (
             <CalendarClientView
                 initialEvents={events}

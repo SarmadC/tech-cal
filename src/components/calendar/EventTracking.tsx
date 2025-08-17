@@ -1,36 +1,33 @@
-// src/components/calendar/EventTracking.tsx
 'use client';
 
 import { FC, useState } from 'react';
 import { Check, Star, UserCheck, AlertTriangle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEventTracking, useEventTrackingStatus } from '@/hooks/useEventTracking';
-import { AppEvent, EventStatus } from '@/types';
+// 1. UPDATE IMPORTS: Use the new, canonical `Event` type.
+import { Event, EventStatus } from '@/types';
 
+// 2. UPDATE PROPS: The interface now uses the `Event` type.
 interface EventTrackingProps {
-    event: AppEvent;
+    event: Event;
 }
 
 const EventTracking: FC<EventTrackingProps> = ({ event }) => {
     const { user } = useAuth();
 
-    // Optimistic update state for better UX
     const [optimisticStatus, setOptimisticStatus] = useState<{
         isTracked: boolean;
         status?: EventStatus;
     } | null>(null);
 
-    // Data fetching with reduced frequency
     const {
         data: trackingStatus,
         isLoading: isLoadingStatus,
         error: statusError
     } = useEventTrackingStatus(event.id);
 
-    // Mutation hooks
     const { trackEvent, untrackEvent, isLoading: isMutating } = useEventTracking();
 
-    // Use optimistic state if available, otherwise use server state
     const currentStatus = optimisticStatus || trackingStatus || { isTracked: false };
 
     const handleTrackEvent = (status: EventStatus) => {
@@ -38,13 +35,11 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
             return;
         }
 
-        // Optimistic update for immediate UI feedback
         setOptimisticStatus({
             isTracked: true,
             status: status
         });
 
-        // Call the mutation (removed notes parameter)
         trackEvent({
             eventId: event.id,
             status: status,
@@ -52,7 +47,6 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
     };
 
     const handleUntrackEvent = () => {
-        // Optimistic update
         setOptimisticStatus({
             isTracked: false
         });
@@ -60,8 +54,6 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
         untrackEvent({ eventId: event.id });
     };
 
-
-    // If there's no user, show a simple sign-in prompt
     if (!user) {
         return (
             <div className="text-center text-sm text-gray-400 p-3 bg-gray-800 rounded-lg">
@@ -73,7 +65,6 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
         );
     }
 
-    // Simple loading state
     if (isLoadingStatus && !optimisticStatus) {
         return (
             <div className="flex items-center justify-center p-4">
@@ -83,7 +74,6 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
         );
     }
 
-    // Error state
     if (statusError && !optimisticStatus) {
         return (
             <div className="bg-red-500/10 text-red-300 text-xs p-3 rounded-lg flex items-center space-x-2">
@@ -95,7 +85,6 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
 
     return (
         <div className="space-y-3">
-            {/* Display current tracking status */}
             {currentStatus.isTracked ? (
                 <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
                     <div className="flex items-center space-x-2">
@@ -120,9 +109,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                     </button>
                 </div>
             ) : (
-                // Quick tracking buttons without notes
                 <div className="grid grid-cols-3 gap-2">
-                    {/* Bookmark Button */}
                     <button
                         onClick={() => handleTrackEvent('bookmarked')}
                         disabled={isMutating}
@@ -135,8 +122,6 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                         )}
                         <span className="text-xs text-gray-300">Bookmark</span>
                     </button>
-
-                    {/* Attending Button */}
                     <button
                         onClick={() => handleTrackEvent('attending')}
                         disabled={isMutating}
@@ -149,8 +134,6 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                         )}
                         <span className="text-xs text-gray-300">Attending</span>
                     </button>
-
-                    {/* Attended Button */}
                     <button
                         onClick={() => handleTrackEvent('attended')}
                         disabled={isMutating}

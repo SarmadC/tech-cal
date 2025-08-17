@@ -1,12 +1,13 @@
-// src/components/calendar/CategoryFilter.tsx
 'use client';
 
 import { FC, useState } from 'react';
 import { Check, Filter, Eye, EyeOff } from 'lucide-react';
-import type { AppEventType } from '@/types';
+// 1. UPDATE IMPORT: Use the new, canonical `EventType`.
+import type { EventType } from '@/types';
 
+// 2. UPDATE PROPS: The interface now uses the `EventType` type.
 interface CategoryFilterProps {
-    categories: AppEventType[];
+    categories: EventType[];
     selectedCategories: Set<string>;
     onToggleCategory: (categoryId: string) => void;
 }
@@ -47,7 +48,6 @@ export const CategoryFilter: FC<CategoryFilterProps> = ({
 
     return (
         <div className="space-y-4">
-            {/* Header with bulk actions */}
             <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
                     Event Categories
@@ -67,14 +67,12 @@ export const CategoryFilter: FC<CategoryFilterProps> = ({
                 </div>
             </div>
 
-            {/* Selection status */}
             <div className="text-xs text-gray-500">
                 {noneSelected && 'No categories selected'}
                 {someSelected && `${selectedCategories.size} of ${categories.length} selected`}
                 {allSelected && 'All categories selected'}
             </div>
 
-            {/* Category list */}
             <div className="space-y-2">
                 {visibleCategories.map(category => {
                     const isSelected = selectedCategories.has(category.id);
@@ -90,13 +88,11 @@ export const CategoryFilter: FC<CategoryFilterProps> = ({
                                 }
               `}
                         >
-                            {/* Color indicator */}
                             <div
                                 className="w-3 h-3 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: category.color }}
                             />
 
-                            {/* Category info */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-medium text-white truncate">
@@ -115,7 +111,6 @@ export const CategoryFilter: FC<CategoryFilterProps> = ({
                                 )}
                             </div>
 
-                            {/* Checkbox */}
                             <div className="flex-shrink-0">
                                 <input
                                     type="checkbox"
@@ -140,7 +135,6 @@ export const CategoryFilter: FC<CategoryFilterProps> = ({
                 })}
             </div>
 
-            {/* Show more/less toggle */}
             {hasMoreCategories && (
                 <button
                     onClick={() => setShowAllCategories(!showAllCategories)}
@@ -153,11 +147,9 @@ export const CategoryFilter: FC<CategoryFilterProps> = ({
                 </button>
             )}
 
-            {/* Quick filter actions */}
             <div className="border-t border-gray-700 pt-4 space-y-2">
                 <button
                     onClick={() => {
-                        // Select only high-activity categories (if eventCount exists)
                         categories.forEach(category => {
                             const shouldSelect = (category.eventCount || 0) > 5;
                             const isSelected = selectedCategories.has(category.id);
