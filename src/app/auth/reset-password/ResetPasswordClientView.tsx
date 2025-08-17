@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
-import { SimpleForm } from '@/components/auth/SimpleForm'; // Use the same simple form
+import { SimpleForm } from '@/components/auth';  // Only import what you use
 import { updatePasswordAction } from '@/app/auth/actions';
 import type { AuthFormState } from '@/app/auth/actions';
 
@@ -16,11 +16,12 @@ const initialState: AuthFormState = {
     success: false,
 };
 
-// SuccessDisplay can remain as it is.
 const SuccessDisplay = () => (
     <div className="text-center space-y-6">
         <div className="w-16 h-16 bg-success-light rounded-full flex items-center justify-center mx-auto">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
         </div>
         <div className="bg-success-light border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
             Your password has been successfully updated!
@@ -32,7 +33,6 @@ const SuccessDisplay = () => (
     </div>
 );
 
-
 export default function ResetPasswordClientView() {
     const router = useRouter();
     const [state, formAction] = useActionState(updatePasswordAction, initialState);
@@ -43,9 +43,8 @@ export default function ResetPasswordClientView() {
             const timer = setTimeout(() => {
                 router.push('/dashboard');
             }, 2000);
-            return () => clearTimeout(timer); // Cleanup timer on unmount
+            return () => clearTimeout(timer);
         } else if (state.message) {
-            // Show toast for any error message
             toast.error(state.errors?._form?.[0] || state.message);
         }
     }, [state, router]);
@@ -56,7 +55,9 @@ export default function ResetPasswordClientView() {
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center space-x-2">
                         <div className="w-12 h-12 bg-accent-primary rounded-xl flex items-center justify-center">
-                            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
                         </div>
                         <span className="text-2xl font-bold text-foreground-primary">TechCalendar</span>
                     </Link>
@@ -74,7 +75,9 @@ export default function ResetPasswordClientView() {
                     ) : (
                         <SimpleForm action={formAction} submitButtonText="Update password">
                             <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-foreground-secondary mb-2">New Password</label>
+                                <label htmlFor="password" className="block text-sm font-medium text-foreground-secondary mb-2">
+                                    New Password
+                                </label>
                                 <input
                                     id="password"
                                     name="password"
@@ -83,10 +86,14 @@ export default function ResetPasswordClientView() {
                                     className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary"
                                     placeholder="••••••••"
                                 />
-                                {state.errors?.password && <p className="mt-2 text-sm text-red-500">{state.errors.password[0]}</p>}
+                                {state.errors?.password && (
+                                    <p className="mt-2 text-sm text-red-500">{state.errors.password[0]}</p>
+                                )}
                             </div>
                             <div>
-                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground-secondary mb-2">Confirm New Password</label>
+                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground-secondary mb-2">
+                                    Confirm New Password
+                                </label>
                                 <input
                                     id="confirmPassword"
                                     name="confirmPassword"
@@ -95,7 +102,9 @@ export default function ResetPasswordClientView() {
                                     className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary"
                                     placeholder="••••••••"
                                 />
-                                {state.errors?.confirmPassword && <p className="mt-2 text-sm text-red-500">{state.errors.confirmPassword[0]}</p>}
+                                {state.errors?.confirmPassword && (
+                                    <p className="mt-2 text-sm text-red-500">{state.errors.confirmPassword[0]}</p>
+                                )}
                             </div>
                         </SimpleForm>
                     )}

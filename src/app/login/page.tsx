@@ -7,8 +7,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 import { loginAction, oauthSignInAction } from '@/app/auth/actions';
-import { AuthForm } from '@/components/auth/AuthForm';
-import { AuthProviders } from '@/components/auth';
+import { AuthForm, AuthProviders } from '@/components/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
 import type { OAuthProvider } from '@/types';
