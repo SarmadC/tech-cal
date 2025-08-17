@@ -18,11 +18,9 @@ import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
 import type { Event } from '@/types';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-// --- (Step 1) Import the new service and type ---
 import { AnalyticsService, type GrowthAnalytics } from '@/services/analyticsService';
 
 interface GrowthClientViewProps {
-    // We no longer need initialTrackedEvents
     initialOpportunities: Event[];
 }
 
@@ -39,31 +37,26 @@ export default function GrowthClientView({
     const [selectedPeriod, setSelectedPeriod] = useState('Yearly');
     const [supabase] = useState(() => createClient());
 
-    // --- (Step 2) Replace the old useQuery and useMemo with a single, efficient query ---
     const { data: analytics, error: analyticsError } = useQuery<GrowthAnalytics | null>({
         queryKey: ['growthAnalytics', user?.id],
         queryFn: () => {
             if (!user) return null;
-            // Call our new RPC function via the service
             return AnalyticsService.getGrowthAnalytics(user.id, supabase);
         },
         enabled: !!user,
-        staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+        staleTime: 10 * 60 * 1000,
     });
 
-    // --- (Step 3) Derive topCategories from the new analytics object ---
     const topCategories = useMemo(() => {
         return analytics?.techStackCurrency?.map(tc => tc.category) || [];
     }, [analytics]);
 
-    // The upcoming opportunities query now depends on the result of our analytics query
     const { data: upcomingOpportunities, error: opportunitiesError } = useQuery<Event[]>({
         queryKey: ['upcomingOpportunities', topCategories],
         queryFn: () => {
             if (topCategories.length === 0) {
                 return [];
             }
-            // We can pass an empty array for excludedEventIds or adjust the service if needed
             return EventService.getRecommendedEvents(topCategories, [], supabase);
         },
         enabled: topCategories.length > 0,
@@ -77,7 +70,6 @@ export default function GrowthClientView({
     }
 
     if (!analytics) {
-        // This now serves as both a loading state and an empty state
         return (
             <div className="min-h-screen bg-gray-100 p-6">
                 <div className="max-w-7xl mx-auto text-center py-20">
@@ -89,7 +81,6 @@ export default function GrowthClientView({
         );
     }
 
-    // --- (Step 4) The rest of the component remains the same, as the data shape is identical ---
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <div className="max-w-7xl mx-auto">
@@ -101,7 +92,8 @@ export default function GrowthClientView({
                     <ErrorBoundary fallback={<CardFallback />}>
                         <UpcomingOpportunitiesCard opportunities={(upcomingOpportunities || []).map((o: Event) => ({
                             title: o.title,
-                            date: new Date(o.startTime).toLocaleDateDateString('en-US', { month: 'long', day: 'numeric' }),
+                            // --- FIX IS HERE ---
+                            date: new Date(o.startTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
                             category: o.category?.name || 'General'
                         }))} />
                     </ErrorBoundary>
