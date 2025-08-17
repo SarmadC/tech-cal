@@ -1,21 +1,22 @@
+// src/utils/transformers.ts
+
+// 1. UPDATE IMPORTS: Use the new, specific type names. The deprecated aliases are no longer needed here.
 import type {
     SupabaseEvent,
     SupabaseEventType,
     SupabaseTrackedEvent,
     SupabaseProfile,
-    AppEvent,
-    AppEventType,
-    AppTrackedEvent,
-    AppProfile,
-    EventTransformer,
+    Event, // Replaces AppEvent
+    EventType, // Replaces AppEventType
+    TrackedEventRecord, // Replaces AppTrackedEvent
+    AppProfile, // Assuming this will become `Profile` later, but keeping as-is for now
+    MultiDayEvent, // Replaces EnhancedAppEvent
     SupabaseEventWithDetails,
     SupabaseTrackedEventWithDetails,
     ProfileTransformer,
     DailySchedule,
-    EnhancedAppEvent,
 } from '@/types';
 import { transparentize } from 'color2k';
-// 1. Import the new date utility functions
 import {
     isEventLive as isEventLiveUtil,
     isEventUpcoming as isEventUpcomingUtil,
@@ -23,8 +24,9 @@ import {
 } from '@/utils/dateUtils';
 
 // --- Event Transformers ---
-export const eventTransformer: EventTransformer = {
-    toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): AppEvent => {
+// 2. UPDATE SIGNATURES: The transformer now correctly returns the base `Event` type.
+export const eventTransformer = {
+    toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): Event => {
         const organizerName = (supabaseEvent as SupabaseEventWithDetails).organizer?.name || 'Unknown Organizer';
         return {
             id: supabaseEvent.id,
@@ -41,7 +43,7 @@ export const eventTransformer: EventTransformer = {
             eventTypeId: supabaseEvent.event_type_id || '',
         };
     },
-    toSupabase: (appEvent: Partial<AppEvent>): Partial<SupabaseEvent> => ({
+    toSupabase: (appEvent: Partial<Event>): Partial<SupabaseEvent> => ({
         ...(appEvent.id && { id: appEvent.id }),
         ...(appEvent.title && { title: appEvent.title }),
         ...(appEvent.description && { description: appEvent.description }),
@@ -56,14 +58,15 @@ export const eventTransformer: EventTransformer = {
 };
 
 // --- Event Type Transformers ---
+// 3. UPDATE SIGNATURES: Using `EventType`.
 export const eventTypeTransformer = {
-    toApp: (supabaseEventType: SupabaseEventType): AppEventType => ({
+    toApp: (supabaseEventType: SupabaseEventType): EventType => ({
         id: supabaseEventType.id,
         name: supabaseEventType.name || 'Unnamed Category',
         color: supabaseEventType.color || '#808080',
         description: supabaseEventType.description,
     }),
-    toSupabase: (appEventType: Partial<AppEventType>): Partial<SupabaseEventType> => ({
+    toSupabase: (appEventType: Partial<EventType>): Partial<SupabaseEventType> => ({
         ...(appEventType.id && { id: appEventType.id }),
         ...(appEventType.name && { name: appEventType.name }),
         ...(appEventType.color && { color: appEventType.color }),
@@ -72,6 +75,7 @@ export const eventTypeTransformer = {
 };
 
 // --- Profile Transformers ---
+// (No changes here as Profile types were not in the new file, but signatures are ready for future migration)
 export const profileTransformer: ProfileTransformer = {
     toApp: (supabaseProfile: SupabaseProfile): AppProfile => ({
         id: supabaseProfile.id,
@@ -92,10 +96,11 @@ export const profileTransformer: ProfileTransformer = {
 };
 
 // --- Tracked Event Transformers ---
+// 4. UPDATE SIGNATURES: Using `TrackedEventRecord` and `Event`.
 export const trackedEventTransformer = {
-    toApp: (supabaseTrackedEvent: SupabaseTrackedEventWithDetails): AppTrackedEvent => {
+    toApp: (supabaseTrackedEvent: SupabaseTrackedEventWithDetails): TrackedEventRecord => {
         const joinedEventData = supabaseTrackedEvent.events;
-        let appEvent: AppEvent | null = null;
+        let appEvent: Event | null = null;
         if (joinedEventData) {
             const baseAppEvent = eventTransformer.toApp(joinedEventData);
             const joinedEventTypeData = joinedEventData.event_type;
@@ -114,7 +119,7 @@ export const trackedEventTransformer = {
             event: appEvent,
         };
     },
-    toSupabase: (appTrackedEvent: Partial<AppTrackedEvent>): Partial<SupabaseTrackedEvent> => ({
+    toSupabase: (appTrackedEvent: Partial<TrackedEventRecord>): Partial<SupabaseTrackedEvent> => ({
         ...(appTrackedEvent.trackingId && { id: appTrackedEvent.trackingId }),
         ...(appTrackedEvent.userId && { user_id: appTrackedEvent.userId }),
         ...(appTrackedEvent.eventId && { event_id: appTrackedEvent.eventId }),
@@ -125,14 +130,14 @@ export const trackedEventTransformer = {
 };
 
 // --- Enrichment Utilities ---
+// 5. UPDATE SIGNATURES: These now operate on the new base types.
 export const enrichEvent = (
-    event: AppEvent,
+    event: Event,
     options: {
-        eventType?: AppEventType;
+        eventType?: EventType;
         isTracked?: boolean;
-
     } = {}
-): AppEvent => ({
+): Event => ({
     ...event,
     ...(options.eventType && {
         color: options.eventType.color,
@@ -142,23 +147,24 @@ export const enrichEvent = (
 });
 
 export const enrichEventType = (
-    eventType: AppEventType,
+    eventType: EventType,
     count: number
-): AppEventType => ({
+): EventType => ({
     ...eventType,
     eventCount: count,
 });
 
 // --- Array Transformers ---
-export const transformEventsToApp = (supabaseEvents: SupabaseEvent[]): AppEvent[] => {
+// 6. UPDATE SIGNATURES: All array transformers now return arrays of the new types.
+export const transformEventsToApp = (supabaseEvents: SupabaseEvent[]): Event[] => {
     return supabaseEvents.map(eventTransformer.toApp);
 };
-export const transformEventTypesToApp = (supabaseEventTypes: SupabaseEventType[]): AppEventType[] => {
+export const transformEventTypesToApp = (supabaseEventTypes: SupabaseEventType[]): EventType[] => {
     return supabaseEventTypes.map(eventTypeTransformer.toApp);
 };
 export const transformSimpleTrackedEventsToApp = (
     supabaseTrackedEvents: SupabaseTrackedEvent[]
-): AppTrackedEvent[] => {
+): TrackedEventRecord[] => {
     return supabaseTrackedEvents.map(trackedEvent => ({
         trackingId: trackedEvent.id,
         userId: trackedEvent.user_id,
@@ -171,12 +177,13 @@ export const transformSimpleTrackedEventsToApp = (
 };
 export const transformTrackedEventsWithDetailsToApp = (
     supabaseTrackedEvents: SupabaseTrackedEventWithDetails[]
-): AppTrackedEvent[] => {
+): TrackedEventRecord[] => {
     return supabaseTrackedEvents.map(trackedEventTransformer.toApp);
 };
 
 // --- Validation Utilities ---
-export const isValidAppEvent = (obj: unknown): obj is AppEvent => {
+// 7. RENAME and UPDATE `isValidAppEvent` to `isValidEvent`
+export const isValidEvent = (obj: unknown): obj is Event => {
     if (typeof obj !== 'object' || obj === null) return false;
     const event = obj as Record<string, unknown>;
     return (
@@ -200,7 +207,8 @@ export const isValidSupabaseEvent = (obj: unknown): obj is SupabaseEvent => {
 // ==========================================================
 // Helper for FullCalendar Events
 // ==========================================================
-export const toFullCalendarEvent = (event: AppEvent) => {
+// 8. UPDATE SIGNATURES: Use the base `Event` type.
+export const toFullCalendarEvent = (event: Event) => {
     const eventColor = event.color || '#6B7280';
     const backgroundColor = transparentize(eventColor, 0.85);
 
@@ -216,35 +224,36 @@ export const toFullCalendarEvent = (event: AppEvent) => {
     };
 };
 
-export const toFullCalendarEvents = (events: AppEvent[]) => {
+export const toFullCalendarEvents = (events: Event[]) => {
     return events.map(toFullCalendarEvent);
 };
 
 // --- Date Utilities for Events ---
-
-// 2. The local functions are replaced with wrappers around the new utilities.
-export const isEventLive = (event: AppEvent): boolean => {
+// 9. UPDATE SIGNATURES: These now accept the base `Event` type.
+export const isEventLive = (event: Event): boolean => {
     return isEventLiveUtil(event.startTime, event.endTime);
 };
 
-export const isEventUpcoming = (event: AppEvent): boolean => {
+export const isEventUpcoming = (event: Event): boolean => {
     return isEventUpcomingUtil(event.startTime);
 };
 
-export const getEventTimeStatus = (event: AppEvent): 'past' | 'live' | 'upcoming' | 'future' => {
+export const getEventTimeStatus = (event: Event): 'past' | 'live' | 'upcoming' | 'future' => {
     return getEventTimeStatusUtil(event.startTime, event.endTime);
 };
 
+// --- Enhanced Event Transformer ---
+// 10. UPDATE SIGNATURES: Returns the new `MultiDayEvent` type.
 export const enhancedEventTransformer = {
     toApp: (supabaseEvent: SupabaseEventWithDetails & {
         is_multi_day?: boolean;
         daily_schedule?: DailySchedule;
         event_pattern?: string;
-    }): EnhancedAppEvent => {
+    }): MultiDayEvent => {
         const baseEvent = eventTransformer.toApp(supabaseEvent);
 
-        const isValidPattern = (pattern: string): pattern is 'single' | 'multi_day' | 'all_day' | 'custom' => {
-            return ['single', 'multi_day', 'all_day', 'custom'].includes(pattern);
+        const isValidPattern = (pattern: string): pattern is 'single' | 'multi_day' | 'all_day' | 'recurring' => {
+            return ['single', 'multi_day', 'all_day', 'recurring'].includes(pattern);
         };
 
         const eventPattern = supabaseEvent.event_pattern && isValidPattern(supabaseEvent.event_pattern)

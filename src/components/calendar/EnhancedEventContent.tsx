@@ -1,11 +1,12 @@
 // src/components/calendar/EnhancedEventContent.tsx
 import { FC, useRef } from 'react';
 import { EventContentArg } from '@fullcalendar/core';
-import { AppEvent } from '@/types';
+import { Event, isTrackedEvent } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { formatTime, isEventLive } from '@/utils/dateUtils';
 
 interface EnhancedEventContentProps extends EventContentArg {
-    onEventHover?: (event: AppEvent, position: { x: number; y: number }) => void;
+    onEventHover?: (event: Event, position: { x: number; y: number }) => void;
     onEventLeave?: () => void;
 }
 
@@ -16,8 +17,7 @@ const EnhancedEventContent: FC<EnhancedEventContentProps> = ({
     onEventLeave
 }) => {
     const elementRef = useRef<HTMLDivElement>(null);
-
-    const eventData = event.extendedProps as AppEvent;
+    const eventData = event.extendedProps as Event;
 
     const handleMouseEnter = (_e: React.MouseEvent) => {
         if (onEventHover && elementRef.current) {
@@ -32,22 +32,6 @@ const EnhancedEventContent: FC<EnhancedEventContentProps> = ({
     const handleMouseLeave = () => {
         onEventLeave?.();
     };
-
-    const formatTime = (time: string) => {
-        return new Date(time).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
-
-    const isLive = () => {
-        const now = new Date();
-        const start = new Date(eventData.startTime);
-        const end = eventData.endTime ? new Date(eventData.endTime) : null;
-        return start <= now && (!end || now <= end);
-    };
-
     return (
         <div
             ref={elementRef}
@@ -56,17 +40,19 @@ const EnhancedEventContent: FC<EnhancedEventContentProps> = ({
             onMouseLeave={handleMouseLeave}
         >
             <div className="fc-event-time">
+                {/* 6. USE UTILITY: Call the imported `formatTime` utility. */}
                 {timeText || formatTime(eventData.startTime)}
             </div>
             <div className="fc-event-title-container">
                 <div className="fc-event-title fc-sticky">
                     {event.title}
-                    {isLive() && (
+                    {/* 7. USE UTILITY: Call the imported `isEventLive` utility. */}
+                    {isEventLive(eventData.startTime, eventData.endTime) && (
                         <Badge variant="destructive" className="ml-1 text-xs">
                             LIVE
                         </Badge>
                     )}
-                    {eventData.isTracked && (
+                    {isTrackedEvent(eventData) && eventData.isTracked && (
                         <span className="ml-1 text-yellow-500">★</span>
                     )}
                 </div>

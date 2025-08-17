@@ -1,8 +1,9 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
+// 1. UPDATE IMPORTS: Use the new, specific type names.
 import type {
     EventStatus,
-    AppTrackedEvent,
+    TrackedEventRecord, // Replaces AppTrackedEvent
     SupabaseTrackedEventWithDetails,
 } from '@/types';
 import { trackedEventTransformer } from '@/utils/transformers';
@@ -72,10 +73,11 @@ export class UserEventService {
      * Gets all tracked events for a user with a lightweight version of the event data.
      * Optimized for dashboard calculations. Throws on failure.
      */
+    // 2. UPDATE SIGNATURE: The function now returns a promise of `TrackedEventRecord[]`.
     static async getLightweightTrackedEvents(
         userId: string,
         supabaseClient: SupabaseClientType
-    ): Promise<AppTrackedEvent[]> {
+    ): Promise<TrackedEventRecord[]> {
         try {
             const { data, error } = await supabaseClient
                 .from('user_events')
@@ -95,7 +97,8 @@ export class UserEventService {
 
             if (error) throw error;
 
-            return (data || []).map(item => {
+            // 3. UPDATE MAPPING: The returned object now perfectly matches the `TrackedEventRecord` type.
+            return (data || []).map((item): TrackedEventRecord => {
                 const partialEvent = item.events as {
                     id: string;
                     title: string;
@@ -110,7 +113,6 @@ export class UserEventService {
                     eventId: item.event_id,
                     status: item.status as EventStatus,
                     notes: item.notes,
-                    // FIX: Provide a fallback to ensure the type is always 'string'.
                     trackedAt: item.created_at || new Date().toISOString(),
                     event: partialEvent ? {
                         id: partialEvent.id,
@@ -160,13 +162,13 @@ export class UserEventService {
     /**
      * Get a user's tracked events with pagination. Throws on failure.
      */
+    // 4. UPDATE SIGNATURE: The function now returns a promise of `TrackedEventRecord[]`.
     static async getTrackedEvents(
         userId: string,
         supabaseClient: SupabaseClientType,
-        // CHANGE 1: Make pagination parameters optional by removing default values.
         page?: number,
         pageSize?: number
-    ): Promise<AppTrackedEvent[]> {
+    ): Promise<TrackedEventRecord[]> {
         try {
             let query = supabaseClient
                 .from('user_events')
@@ -174,7 +176,6 @@ export class UserEventService {
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
-            // CHANGE 2: Only apply the .range() filter if pagination is requested.
             if (page && pageSize) {
                 const from = (page - 1) * pageSize;
                 const to = from + pageSize - 1;
@@ -184,6 +185,7 @@ export class UserEventService {
             const { data, error } = await query;
             if (error) throw error;
 
+            // This works because we already updated `trackedEventTransformer` to return `TrackedEventRecord`.
             return (data as SupabaseTrackedEventWithDetails[] || []).map(trackedEventTransformer.toApp);
         } catch (error) {
             console.error('Error fetching tracked events:', error);

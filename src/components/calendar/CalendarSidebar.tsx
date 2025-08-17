@@ -1,18 +1,19 @@
 'use client';
 
 import { FC, useMemo } from 'react';
-import { AppEvent, AppEventType } from '@/types';
+// 1. UPDATE IMPORTS: Use the new canonical types and the type guard from '@/types'
+import { Event, EventType, isTrackedEvent, TrackedEvent } from '@/types';
 import MiniCalendar from './MiniCalendar';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-// 1. Import the new date utility functions
 import { formatDate, formatTime } from '@/utils/dateUtils';
 
+// 2. UPDATE PROPS: Use a flexible union type for the events prop.
 interface SidebarProps {
     currentDate: Date;
     setCurrentDate: (date: Date) => void;
-    categories: AppEventType[];
+    categories: EventType[];
     user: { name: string; role: string };
-    events: AppEvent[];
+    events: (Event | TrackedEvent)[]; // Can accept both base and tracked events
     monthlyEventCounts?: Map<string, Map<number, number>>;
 }
 
@@ -27,7 +28,7 @@ const CalendarSidebar: FC<SidebarProps> = ({
     setCurrentDate,
     user,
     events,
-    monthlyEventCounts // This prop is now correctly received.
+    monthlyEventCounts
 }) => {
 
     const upcomingEvents = useMemo(() => {
@@ -89,13 +90,13 @@ const CalendarSidebar: FC<SidebarProps> = ({
                                                 {event.title}
                                             </h4>
                                             <p className="text-gray-400 text-xs mb-1">
-                                                {/* 3. Use the new functions to achieve the same format */}
                                                 {`${formatDate(event.startTime, { month: 'short', day: 'numeric' })}, ${formatTime(event.startTime)}`}
                                             </p>
                                             <p className="text-gray-500 text-xs line-clamp-1">
                                                 {event.organizer}
                                             </p>
-                                            {event.isTracked && (
+                                            {/* 3. USE TYPE GUARD for safe property access */}
+                                            {isTrackedEvent(event) && event.isTracked && (
                                                 <div className="flex items-center space-x-1 mt-1">
                                                     <div className="w-3 h-3 bg-green-500 rounded-full" />
                                                     <span className="text-green-400 text-xs">Tracked</span>
@@ -120,7 +121,8 @@ const CalendarSidebar: FC<SidebarProps> = ({
                     <div className="grid grid-cols-2 gap-4 text-center">
                         <div>
                             <div className="text-white text-xl font-bold">
-                                {events.filter(e => e.isTracked).length}
+                                {/* 4. USE TYPE GUARD in the filter function */}
+                                {events.filter(e => isTrackedEvent(e) && e.isTracked).length}
                             </div>
                             <div className="text-gray-400 text-xs">Tracked</div>
                         </div>

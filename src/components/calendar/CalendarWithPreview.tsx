@@ -1,18 +1,18 @@
-// src/components/calendar/CalendarWithPreview.tsx
-import { FC, useMemo, useRef, useCallback, useEffect } from 'react'; // 1. Add useEffect to imports
+import { FC, useMemo, useRef, useCallback, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import listPlugin from '@fullcalendar/list';
-import { AppEvent } from '@/types';
+// 1. UPDATE IMPORTS: Use the new `Event` type and the `isTrackedEvent` type guard.
+import { Event, isTrackedEvent } from '@/types';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';
 import EnhancedEventContent from './EnhancedEventContent';
 
-
 export interface CalendarWithPreviewProps {
-    events: AppEvent[];
+    // 2. UPDATE PROPS: The component now accepts an array of the base `Event` type.
+    events: Event[];
     onEventClick?: (clickInfo: EventClickArg) => void;
     view?: string;
     date?: Date;
@@ -22,7 +22,6 @@ export interface CalendarWithPreviewProps {
     calendarRef?: React.RefObject<FullCalendar | null>;
     className?: string;
 }
-
 
 const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
     events,
@@ -67,11 +66,12 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
             id: event.id,
             title: event.title,
             start: event.startTime,
-            end: event.endTime || undefined, // Convert null to undefined for FullCalendar
+            end: event.endTime || undefined,
             color: event.color || '#3b82f6',
             extendedProps: {
                 ...event,
-                isTracked: event.isTracked || false,
+                // 3. SAFELY check for `isTracked` using the type guard.
+                isTracked: isTrackedEvent(event) ? event.isTracked : false,
             }
         }));
     }, [events]);
@@ -82,6 +82,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
             <EnhancedEventContent
                 {...eventInfo}
                 onEventHover={(event, position) => {
+                    // Note: The `event` here comes from extendedProps, which is already `Event`
                     showPreview(event, position);
                 }}
                 onEventLeave={hidePreview}
@@ -98,18 +99,19 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
 
     // Handle event mounting (for styling)
     const handleEventDidMount = useCallback((info: EventMountArg) => {
-        const eventData = info.event.extendedProps as AppEvent;
-        // Add tracking class for styling
-        if (eventData.isTracked) {
+        // 4. UPDATE TYPE CAST: Use the new `Event` type.
+        const eventData = info.event.extendedProps as Event;
+        // 5. SAFELY check for `isTracked` before adding the class.
+        if (isTrackedEvent(eventData) && eventData.isTracked) {
             info.el.classList.add('tracked-event');
         }
     }, []);
 
     // Handle event mouse enter
     const handleEventMouseEnter = useCallback((info: EventHoveringArg) => {
-        const event = info.event.extendedProps as AppEvent;
+        // 6. UPDATE TYPE CAST: Use the new `Event` type.
+        const event = info.event.extendedProps as Event;
         const rect = info.el.getBoundingClientRect();
-        // Create a position object that matches the expected interface
         const position = {
             x: rect.left + rect.width / 2,
             y: rect.top
