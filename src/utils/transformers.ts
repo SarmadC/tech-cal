@@ -15,6 +15,7 @@ import type {
     SupabaseTrackedEventWithDetails,
     ProfileTransformer,
     DailySchedule,
+    Json
 } from '@/types';
 import { transparentize } from 'color2k';
 import {
@@ -242,28 +243,86 @@ export const getEventTimeStatus = (event: Event): 'past' | 'live' | 'upcoming' |
     return getEventTimeStatusUtil(event.startTime, event.endTime);
 };
 
+const isDailySchedule = (data: unknown): data is DailySchedule => {
+    if (typeof data !== 'object' || data === null) {
+        return false;
+    }
+
+    // FIX: Use `unknown` instead of `any` to satisfy the linter and improve type safety.
+    const obj = data as Record<string, unknown>;
+
+    // Check for the required 'type' property after confirming it's a string.
+    if (typeof obj.type !== 'string' || !['daily_recurring', 'all_day', 'custom'].includes(obj.type)) {
+        return false;
+    }
+
+    // Check optional string properties
+    const optionalStringProps = ['dailyStart', 'dailyEnd', 'timezone', 'note'];
+    for (const prop of optionalStringProps) {
+        // We only care if the property exists and is *not* a string.
+        if (obj.hasOwnProperty(prop) && typeof obj[prop] !== 'string') {
+            return false;
+        }
+    }
+
+    // Check the optional 'schedule' array property
+    if (obj.hasOwnProperty('schedule')) {
+        if (!Array.isArray(obj.schedule)) {
+            return false;
+        }
+        // Check each item within the schedule array
+        for (const item of obj.schedule) {
+            // Each `item` from the array is `unknown`, so it must be validated.
+            if (typeof item !== 'object' || item === null) {
+                return false; // It's not an object.
+            }
+            // Cast the validated item to inspect its properties safely.
+            const scheduleItem = item as Record<string, unknown>;
+            if (
+                typeof scheduleItem.date !== 'string' ||
+                typeof scheduleItem.start !== 'string' ||
+                typeof scheduleItem.end !== 'string'
+            ) {
+                return false; // An item has invalid or missing properties.
+            }
+        }
+    }
+
+    // If all checks pass, we can be confident it's a valid DailySchedule.
+    return true;
+};
+
 // --- Enhanced Event Transformer ---
-// 10. UPDATE SIGNATURES: Returns the new `MultiDayEvent` type.
 export const enhancedEventTransformer = {
+    // 3. The signature remains the same, accepting `Json` for daily_schedule
     toApp: (supabaseEvent: SupabaseEventWithDetails & {
-        is_multi_day?: boolean;
-        daily_schedule?: DailySchedule;
-        event_pattern?: string;
+        is_multi_day?: boolean | null;
+        daily_schedule?: Json | null;
+        event_pattern?: string | null;
     }): MultiDayEvent => {
         const baseEvent = eventTransformer.toApp(supabaseEvent);
 
-        const isValidPattern = (pattern: string): pattern is 'single' | 'multi_day' | 'all_day' | 'recurring' => {
+        const isValidPattern = (pattern: unknown): pattern is 'single' | 'multi_day' | 'all_day' | 'recurring' => {
+            if (typeof pattern !== 'string') return false;
             return ['single', 'multi_day', 'all_day', 'recurring'].includes(pattern);
         };
 
-        const eventPattern = supabaseEvent.event_pattern && isValidPattern(supabaseEvent.event_pattern)
+        const eventPattern = isValidPattern(supabaseEvent.event_pattern)
             ? supabaseEvent.event_pattern
             : 'single';
+
+        // 4. Use the robust type guard to validate and cast the schedule
+        let parsedSchedule: DailySchedule | undefined = undefined;
+        if (supabaseEvent.daily_schedule && isDailySchedule(supabaseEvent.daily_schedule)) {
+            // Because isDailySchedule returns `true`, TypeScript now knows
+            // that supabaseEvent.daily_schedule is a valid DailySchedule.
+            parsedSchedule = supabaseEvent.daily_schedule;
+        }
 
         return {
             ...baseEvent,
             isMultiDay: supabaseEvent.is_multi_day || false,
-            dailySchedule: supabaseEvent.daily_schedule || undefined,
+            dailySchedule: parsedSchedule, // Assign the validated schedule
             eventPattern: eventPattern
         };
     }

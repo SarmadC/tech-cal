@@ -1,4 +1,4 @@
-// src/app/dashboard/growth/GrowthClientView.tsx 
+// src/app/dashboard/growth/GrowthClientView.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -15,22 +15,15 @@ import {
     IndustryPulseScoreCard
 } from '@/components/growth/GrowthComponents';
 import { EventService } from '@/services/eventServices';
-import { UserEventService } from '@/services/userEventService';
 import { createClient } from '@/utils/supabase/client';
-// 1. UPDATE IMPORTS: Use the new, canonical type names.
-import type { TrackedEventRecord, Event } from '@/types';
+import type { Event } from '@/types';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+// --- (Step 1) Import the new service and type ---
+import { AnalyticsService, type GrowthAnalytics } from '@/services/analyticsService';
 
-// 2. UPDATE PROPS: The interface now uses the new types.
 interface GrowthClientViewProps {
-    initialTrackedEvents: TrackedEventRecord[];
+    // We no longer need initialTrackedEvents
     initialOpportunities: Event[];
-}
-
-interface CategoryStats {
-    category: string;
-    attended: number;
-    color: string;
 }
 
 const CardFallback = () => (
@@ -40,98 +33,51 @@ const CardFallback = () => (
 );
 
 export default function GrowthClientView({
-    initialTrackedEvents,
     initialOpportunities
 }: GrowthClientViewProps) {
     const { user, profile } = useAuth();
     const [selectedPeriod, setSelectedPeriod] = useState('Yearly');
     const [supabase] = useState(() => createClient());
 
-    // 3. UPDATE USEQUERY TYPE: The hook is now strongly typed to expect `TrackedEventRecord[]`.
-    const { data: trackedEvents, error: trackedEventsError } = useQuery<TrackedEventRecord[]>({
-        queryKey: ['trackedEvents', user?.id],
+    // --- (Step 2) Replace the old useQuery and useMemo with a single, efficient query ---
+    const { data: analytics, error: analyticsError } = useQuery<GrowthAnalytics | null>({
+        queryKey: ['growthAnalytics', user?.id],
         queryFn: () => {
-            if (!user) return [];
-            return UserEventService.getTrackedEvents(user.id, supabase);
+            if (!user) return null;
+            // Call our new RPC function via the service
+            return AnalyticsService.getGrowthAnalytics(user.id, supabase);
         },
         enabled: !!user,
-        initialData: initialTrackedEvents,
+        staleTime: 10 * 60 * 1000, // Cache for 10 minutes
     });
 
-    const analytics = useMemo(() => {
-        if (!trackedEvents || trackedEvents.length === 0) {
-            return null;
-        }
-        // 4. UPDATE TYPE ANNOTATIONS inside the memoized calculation.
-        const attendedEvents = trackedEvents.filter((te: TrackedEventRecord) => te.status === 'attended');
-        const bookmarkedEvents = trackedEvents.filter((te: TrackedEventRecord) => te.status === 'bookmarked');
-        let followThroughRate = 0;
-        if (bookmarkedEvents.length > 0) {
-            const attendedFromBookmarks = bookmarkedEvents.filter((b: TrackedEventRecord) => attendedEvents.some((a: TrackedEventRecord) => a.eventId === b.eventId)).length;
-            followThroughRate = Math.round((attendedFromBookmarks / bookmarkedEvents.length) * 100);
-        } else if (attendedEvents.length > 0) {
-            followThroughRate = 100;
-        }
-        let learningStreak = { current: 0, longest: 0 };
-        if (attendedEvents.length > 0) {
-            const sortedEvents = attendedEvents.sort((a: TrackedEventRecord, b: TrackedEventRecord) => new Date(b.trackedAt).getTime() - new Date(a.trackedAt).getTime());
-            let current = 0, longest = 0, tempStreak = 1;
-            const now = new Date();
-            const daysSinceLastEvent = Math.floor((now.getTime() - new Date(sortedEvents[0].trackedAt).getTime()) / 86400000);
-            if (daysSinceLastEvent <= 30) current = 1;
-            for (let i = 1; i < sortedEvents.length; i++) {
-                const daysDiff = Math.floor((new Date(sortedEvents[i - 1].trackedAt).getTime() - new Date(sortedEvents[i].trackedAt).getTime()) / 86400000);
-                if (daysDiff <= 30) { tempStreak++; if (daysSinceLastEvent <= 30) current = tempStreak; }
-                else { longest = Math.max(longest, tempStreak); tempStreak = 1; if (daysSinceLastEvent > 30) current = 0; }
-            }
-            longest = Math.max(longest, tempStreak);
-            learningStreak = { current, longest };
-        }
-        const categoryColors = { 'AI & ML': '#a855f7', 'Web Dev': '#3b82f6', 'Cloud': '#f59e0b', 'Security': '#ef4444', 'Mobile': '#8b5cf6', 'DevOps': '#059669', 'AR/VR': '#f97316', 'Programming': '#8b5cf6', 'Data Science': '#ec4899', 'Blockchain': '#10b981' };
-        const categoryCount = attendedEvents.reduce((acc: Record<string, { attended: number; color: string }>, te: TrackedEventRecord) => {
-            if (!te.event?.category) return acc;
-            const categoryName = te.event.category.name;
-            if (!acc[categoryName]) { acc[categoryName] = { attended: 0, color: categoryColors[categoryName as keyof typeof categoryColors] || '#6B7280' }; }
-            acc[categoryName].attended++;
-            return acc;
-        }, {} as Record<string, { attended: number; color: string }>);
-        const statsArray: CategoryStats[] = Object.entries(categoryCount).map(([category, stats]) => ({ category, ...stats })).sort((a, b) => b.attended - a.attended);
-        const techStackCurrency = statsArray.slice(0, 3).map(stat => {
-            const recentEvent = attendedEvents.filter((te: TrackedEventRecord) => te.event?.category?.name === stat.category).sort((a: TrackedEventRecord, b: TrackedEventRecord) => new Date(b.trackedAt).getTime() - new Date(a.trackedAt).getTime())[0];
-            const daysSince = recentEvent ? (new Date().getTime() - new Date(recentEvent.trackedAt).getTime()) / (1000 * 3600 * 24) : 180;
-            const score = Math.max(0, Math.round(100 - (daysSince / 1.8)));
-            return { category: stat.category, score, color: stat.color };
-        });
-        const majorAnnouncers = ['apple', 'google', 'openai', 'microsoft', 'amazon', 'meta', 'nvidia'];
-        const quarterAgo = new Date(); quarterAgo.setMonth(quarterAgo.getMonth() - 3);
-        const recentAttended = attendedEvents.filter((te: TrackedEventRecord) => new Date(te.trackedAt) > quarterAgo);
-        const majorEventsAttended = recentAttended.filter((te: TrackedEventRecord) => te.event && majorAnnouncers.some(a => te.event!.organizer.toLowerCase().includes(a))).length;
-        const industryPulseScore = Math.min(100, Math.round((majorEventsAttended / 5) * 100));
-        const networkExpansion = new Set(recentAttended.map((te: TrackedEventRecord) => te.event?.organizer).filter(Boolean)).size;
-        const topCategories = statsArray.slice(0, 3).map(s => s.category);
-        const trackedEventIds = trackedEvents.map((e: TrackedEventRecord) => e.eventId);
-        return { followThroughRate, learningStreak, techStackCurrency, industryPulseScore, networkExpansion, topCategories, trackedEventIds };
-    }, [trackedEvents]);
+    // --- (Step 3) Derive topCategories from the new analytics object ---
+    const topCategories = useMemo(() => {
+        return analytics?.techStackCurrency?.map(tc => tc.category) || [];
+    }, [analytics]);
 
+    // The upcoming opportunities query now depends on the result of our analytics query
     const { data: upcomingOpportunities, error: opportunitiesError } = useQuery<Event[]>({
-        queryKey: ['upcomingOpportunities', analytics?.topCategories, analytics?.trackedEventIds],
+        queryKey: ['upcomingOpportunities', topCategories],
         queryFn: () => {
-            if (!analytics?.topCategories || analytics.topCategories.length === 0 || !analytics.trackedEventIds) {
+            if (topCategories.length === 0) {
                 return [];
             }
-            return EventService.getRecommendedEvents(analytics.topCategories, analytics.trackedEventIds, supabase);
+            // We can pass an empty array for excludedEventIds or adjust the service if needed
+            return EventService.getRecommendedEvents(topCategories, [], supabase);
         },
-        enabled: !!analytics && analytics.topCategories.length > 0,
+        enabled: topCategories.length > 0,
         initialData: initialOpportunities,
     });
 
-    const queryError = trackedEventsError || opportunitiesError;
+    const queryError = analyticsError || opportunitiesError;
 
     if (queryError) {
         return <div className="text-center text-red-500 p-8">Error: {(queryError as Error).message}</div>;
     }
 
     if (!analytics) {
+        // This now serves as both a loading state and an empty state
         return (
             <div className="min-h-screen bg-gray-100 p-6">
                 <div className="max-w-7xl mx-auto text-center py-20">
@@ -143,6 +89,7 @@ export default function GrowthClientView({
         );
     }
 
+    // --- (Step 4) The rest of the component remains the same, as the data shape is identical ---
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <div className="max-w-7xl mx-auto">
@@ -152,10 +99,9 @@ export default function GrowthClientView({
 
                 <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)] mt-6">
                     <ErrorBoundary fallback={<CardFallback />}>
-                        {/* 5. UPDATE MAPPING TYPE: Use `Event` in the map callback. */}
                         <UpcomingOpportunitiesCard opportunities={(upcomingOpportunities || []).map((o: Event) => ({
                             title: o.title,
-                            date: new Date(o.startTime).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+                            date: new Date(o.startTime).toLocaleDateDateString('en-US', { month: 'long', day: 'numeric' }),
                             category: o.category?.name || 'General'
                         }))} />
                     </ErrorBoundary>

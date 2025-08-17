@@ -7,35 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
   }
   public: {
     Tables: {
@@ -161,22 +136,22 @@ export type Database = {
           category: string | null
           color: string | null
           created_at: string | null
+          event_tag: string
           id: string
-          name: string
         }
         Insert: {
           category?: string | null
           color?: string | null
           created_at?: string | null
+          event_tag: string
           id?: string
-          name: string
         }
         Update: {
           category?: string | null
           color?: string | null
           created_at?: string | null
+          event_tag?: string
           id?: string
-          name?: string
         }
         Relationships: []
       }
@@ -266,13 +241,16 @@ export type Database = {
           capacity: number | null
           certificate_offered: boolean | null
           created_at: string
+          daily_schedule: Json | null
           description: string | null
           difficulty_level: string | null
           end_time: string | null
           event_image_url: string | null
+          event_pattern: string | null
           event_type_id: string | null
           fts: unknown | null
           id: string
+          is_multi_day: boolean | null
           language: string | null
           livestream_url: string | null
           location: string | null
@@ -303,13 +281,16 @@ export type Database = {
           capacity?: number | null
           certificate_offered?: boolean | null
           created_at?: string
+          daily_schedule?: Json | null
           description?: string | null
           difficulty_level?: string | null
           end_time?: string | null
           event_image_url?: string | null
+          event_pattern?: string | null
           event_type_id?: string | null
           fts?: unknown | null
           id?: string
+          is_multi_day?: boolean | null
           language?: string | null
           livestream_url?: string | null
           location?: string | null
@@ -340,13 +321,16 @@ export type Database = {
           capacity?: number | null
           certificate_offered?: boolean | null
           created_at?: string
+          daily_schedule?: Json | null
           description?: string | null
           difficulty_level?: string | null
           end_time?: string | null
           event_image_url?: string | null
+          event_pattern?: string | null
           event_type_id?: string | null
           fts?: unknown | null
           id?: string
+          is_multi_day?: boolean | null
           language?: string | null
           livestream_url?: string | null
           location?: string | null
@@ -834,16 +818,30 @@ export type Database = {
       get_event_types_with_counts: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          name: string
           color: string
           description: string
           event_count: number
+          id: string
+          name: string
         }[]
       }
       get_user_dashboard_data: {
         Args: { user_uuid: string }
         Returns: Json
+      }
+      get_user_growth_analytics: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      identify_multi_day_events: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          days_span: number
+          end_time: string
+          event_id: string
+          start_time: string
+          title: string
+        }[]
       }
       is_admin: {
         Args: Record<PropertyKey, never>
@@ -989,9 +987,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

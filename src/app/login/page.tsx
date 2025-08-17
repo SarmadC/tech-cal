@@ -1,4 +1,4 @@
-// src/app/login/page.tsx (Complete and Correct)
+// src/app/login/page.tsx
 'use client';
 
 import Link from 'next/link';
@@ -50,10 +50,22 @@ export default function LoginPage() {
         router.push(redirectTo);
     };
 
-    if (!initialized || user) {
+    // --- FIX STARTS HERE ---
+
+    // 1. If the auth state is still being determined, show a loader.
+    if (!initialized) {
         return <Loading />;
     }
 
+    // 2. If the user is logged in, the useEffect will handle the redirect.
+    //    Render a loader in the meantime to prevent the login form from flashing.
+    if (user) {
+        return <Loading />;
+    }
+
+    // --- FIX ENDS HERE ---
+
+    // 3. Only if initialization is complete AND there's no user, show the login form.
     return (
         <div className="min-h-screen flex items-center justify-center bg-background-main px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
@@ -99,7 +111,6 @@ export default function LoginPage() {
                         </>
                     )}
                 </AuthForm>
-                {/* --- END OF CORRECTED SECTION --- */}
 
                 <div className="text-center">
                     <p className="text-sm text-foreground-secondary">
