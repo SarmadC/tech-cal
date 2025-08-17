@@ -1,8 +1,8 @@
-// Update src/utils/multiDayEventUtils.ts
+// src/utils/multiDayEventUtils.ts
 
-import type { EnhancedAppEvent, AppEvent } from '@/types';
+import type { MultiDayEvent, Event } from '@/types';
 
-export interface MultiDayEventInstance extends AppEvent {
+export interface MultiDayEventInstance extends Event {
     isInstance: boolean;
     originalEventId: string;
     instanceDate: string;
@@ -16,11 +16,10 @@ export interface MultiDayEventInstance extends AppEvent {
 }
 
 export function generateDailyEventInstances(
-    event: EnhancedAppEvent,
+    event: MultiDayEvent,
     viewDate: Date
 ): MultiDayEventInstance[] {
 
-    // If not multi-day, return original event
     if (!event.isMultiDay || !event.dailySchedule) {
         return [{
             ...event,
@@ -40,22 +39,18 @@ export function generateDailyEventInstances(
     const startDate = new Date(event.startTime);
     const endDate = event.endTime ? new Date(event.endTime) : new Date(startDate);
 
-    // Calculate total days and current day
     const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const viewDateStr = viewDate.toISOString().split('T')[0];
     const eventStartDateStr = startDate.toISOString().split('T')[0];
     const eventEndDateStr = endDate.toISOString().split('T')[0];
 
-    // Check if view date falls within event date range
     if (viewDateStr < eventStartDateStr || viewDateStr > eventEndDateStr) {
         return [];
     }
 
-    // Calculate which day this is (1-based)
     const daysDiff = Math.floor((viewDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     const currentDay = Math.max(1, daysDiff + 1);
 
-    // Determine continuation type
     const isFirstDay = viewDateStr === eventStartDateStr;
     const isLastDay = viewDateStr === eventEndDateStr;
     let continuationType: 'start' | 'middle' | 'end' | 'single' = 'middle';
@@ -66,8 +61,6 @@ export function generateDailyEventInstances(
         continuationType = 'start';
     } else if (isLastDay) {
         continuationType = 'end';
-    } else {
-        continuationType = 'middle';
     }
 
     const dayInfo = {
@@ -82,10 +75,9 @@ export function generateDailyEventInstances(
 
     switch (event.dailySchedule.type) {
         case 'daily_recurring':
-            const dailyStart = event.dailySchedule.daily_start || '09:00';
-            const dailyEnd = event.dailySchedule.daily_end || '17:00';
+            const dailyStart = event.dailySchedule.dailyStart || '09:00';
+            const dailyEnd = event.dailySchedule.dailyEnd || '17:00';
 
-            // Create instance for the view date
             const instanceStart = new Date(viewDate);
             const [startHour, startMin] = dailyStart.split(':').map(Number);
             instanceStart.setHours(startHour, startMin, 0, 0);
@@ -155,8 +147,9 @@ export function generateDailyEventInstances(
     return instances;
 }
 
+// FIX: Replace `EnhancedAppEvent[]` with the new canonical type `MultiDayEvent[]`
 export function processEventsForDayView(
-    events: EnhancedAppEvent[],
+    events: MultiDayEvent[],
     viewDate: Date
 ): MultiDayEventInstance[] {
     const processedEvents: MultiDayEventInstance[] = [];

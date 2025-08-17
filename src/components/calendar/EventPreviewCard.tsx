@@ -1,24 +1,20 @@
+// src/components/calendar/EventPreviewCard.tsx
+
 import { FC, useState, useRef, useEffect } from 'react';
 import {
-    Clock,
-    MapPin,
-    Users,
-    ExternalLink,
-    Bookmark,
-    BookmarkCheck,
-    Share2,
-    Play,
-    Globe,
-    Calendar
+    Clock, MapPin, Users, ExternalLink, Bookmark, BookmarkCheck,
+    Share2, Play, Globe, Calendar
 } from 'lucide-react';
-import { AppEvent, EventStatus } from '@/types';
+// 1. UPDATE IMPORTS: Use the new types and the type guard.
+import { Event, EventStatus, isTrackedEvent, TrackedEvent } from '@/types';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
 
+// 2. UPDATE PROPS: The component can accept either a base Event or an enriched TrackedEvent.
 interface EventPreviewCardProps {
-    event: AppEvent;
+    event: Event | TrackedEvent;
     isVisible: boolean;
     position: { x: number; y: number };
     onClose: () => void;
@@ -34,8 +30,15 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 }) => {
     const { user } = useAuth();
     const { trackEvent, untrackEvent } = useEventTracking();
-    const [isTracked, setIsTracked] = useState(event.isTracked || false);
+
+    // 3. FIX: Use the type guard to safely initialize the state.
+    const [isTracked, setIsTracked] = useState(isTrackedEvent(event) ? event.isTracked : false);
     const cardRef = useRef<HTMLDivElement>(null);
+
+    // This useEffect is to synchronize state if the event prop itself changes (e.g., in a list)
+    useEffect(() => {
+        setIsTracked(isTrackedEvent(event) ? event.isTracked : false);
+    }, [event]);
 
     // Handle click outside to close
     useEffect(() => {
@@ -60,12 +63,10 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
         let x = position.x;
         let y = position.y;
 
-        // Adjust horizontal position
         if (x + cardWidth > window.innerWidth - padding) {
-            x = position.x - cardWidth - 20; // Show on left side instead
+            x = position.x - cardWidth - 20;
         }
 
-        // Adjust vertical position
         if (y + cardHeight > window.innerHeight - padding) {
             y = window.innerHeight - cardHeight - padding;
         }
@@ -75,10 +76,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
     const cardPosition = getCardPosition();
 
-    // Event helpers
     const isVirtual = event.livestreamUrl || event.location?.toLowerCase().includes('virtual');
-
-    // 2. All local date/time helpers (isLive, formatTime, formatDate, getDuration) are now removed.
 
     // Actions
     const handleTrackEvent = () => {
@@ -158,7 +156,6 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                                 +{event.tags.length - 2}
                             </span>
                         )}
-                        {/* 3. Call the imported isEventLive function */}
                         {isEventLive(event.startTime, event.endTime) && (
                             <span className="px-2 py-1 text-xs font-medium bg-red-500 text-white rounded-full flex items-center">
                                 <div className="w-2 h-2 bg-white rounded-full animate-pulse mr-1" />
@@ -181,14 +178,10 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
             {/* Content */}
             <div className="p-4 space-y-3">
-                {/* Time & Date */}
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     <Clock className="w-4 h-4 text-gray-500" />
-                    {/* 4. Use the imported formatting functions */}
                     <span>{formatDate(event.startTime, { weekday: 'short', month: 'short', day: 'numeric' })} • {formatTime(event.startTime)}</span>
                 </div>
-
-                {/* Location */}
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     {isVirtual ? (
                         <Globe className="w-4 h-4 text-blue-500" />
@@ -199,21 +192,14 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                         {isVirtual ? 'Virtual Event' : (event.location || 'Location TBA')}
                     </span>
                 </div>
-
-                {/* Organizer */}
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     <Users className="w-4 h-4 text-gray-500" />
                     <span className="line-clamp-1">{event.organizer}</span>
                 </div>
-
-                {/* Duration */}
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     <Calendar className="w-4 h-4 text-gray-500" />
-                    {/* 5. Call the imported getEventDuration function */}
                     <span>{getEventDuration(event.startTime, event.endTime)}</span>
                 </div>
-
-                {/* Description */}
                 {event.description && (
                     <div className="pt-2">
                         <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 leading-relaxed">
@@ -245,7 +231,6 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                             </>
                         )}
                     </button>
-                    {/* ... other buttons remain the same */}
                     <button
                         onClick={handleShare}
                         className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
@@ -253,7 +238,6 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     >
                         <Share2 className="w-4 h-4" />
                     </button>
-
                     {event.sourceUrl && (
                         <button
                             onClick={() => window.open(event.sourceUrl, '_blank')}
@@ -263,7 +247,6 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                             <ExternalLink className="w-4 h-4" />
                         </button>
                     )}
-
                     {event.livestreamUrl && (
                         <button
                             onClick={() => window.open(event.livestreamUrl!, '_blank')}

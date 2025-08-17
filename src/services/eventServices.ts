@@ -1,34 +1,34 @@
-// Replace the imports section at the top of src/services/eventServices.ts
+// src/services/eventServices.ts
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 import type {
-    AppEvent,
+    Event,
     EventFilters,
     SearchSuggestion,
     SupabaseEventWithDetails,
-    EnhancedAppEvent,
+    MultiDayEvent,
 } from '@/types';
 import {
     eventTransformer,
     eventTypeTransformer,
     enrichEvent,
-    enhancedEventTransformer  // ADD THIS
+    enhancedEventTransformer
 } from '@/utils/transformers';
-import { sanitizeFtsQuery } from '@/lib/securityUtils';  // ADD THIS
+import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import * as Sentry from "@sentry/nextjs";
+
 type SupabaseClientType = SupabaseClient<Database>;
 
 export class EventService {
+    // 2. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getEvents(
         filters: EventFilters = {},
         supabaseClient: SupabaseClientType,
-        // CHANGE 1: Added pagination parameters with reasonable defaults.
         page: number = 1,
         pageSize: number = 100
-    ): Promise<AppEvent[]> {
+    ): Promise<Event[]> {
         try {
-            // CHANGE 2: Calculate the query range for pagination.
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
 
@@ -36,17 +36,13 @@ export class EventService {
                 .from('events')
                 .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
                 .order('start_time', { ascending: true })
-                // CHANGE 3: Apply the pagination range to the query.
                 .range(from, to);
 
             if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
 
-            // CHANGE 4: Upgraded search logic.
             if (filters.searchTerm) {
-                // Use the more powerful 'websearch' type which understands search engine synta 
-                // (e.g., "quoted phrases", -negation) and handles sanitization.
                 query = query.textSearch('fts', filters.searchTerm, {
                     type: 'websearch',
                     config: 'english'
@@ -59,7 +55,8 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            const events: AppEvent[] = (data || []).map((item) => {
+            // 3. UPDATE TYPE ANNOTATION: The local variable is now correctly typed.
+            const events: Event[] = (data || []).map((item) => {
                 const typedItem = item as SupabaseEventWithDetails;
                 const baseEvent = eventTransformer.toApp(typedItem);
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
@@ -76,10 +73,11 @@ export class EventService {
         }
     }
 
+    // 4. UPDATE SIGNATURE: The function now returns a promise of `Event`.
     static async getEventById(
         id: string,
         supabaseClient: SupabaseClientType
-    ): Promise<AppEvent> {
+    ): Promise<Event> {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
@@ -117,7 +115,6 @@ export class EventService {
             const { data, error } = await supabaseClient
                 .from('events')
                 .select(`id, title, start_time, organizer:organizers (name)`)
-                // CHANGE 5: Upgraded search logic for suggestions as well.
                 .textSearch('fts', term, {
                     type: 'websearch',
                     config: 'english'
@@ -147,13 +144,14 @@ export class EventService {
         }
     }
 
+    // 5. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getEventsByDateRange(
         startDate: Date,
         endDate: Date,
         supabaseClient: SupabaseClientType,
         categoryIds?: string[],
         limit?: number
-    ): Promise<AppEvent[]> {
+    ): Promise<Event[]> {
         try {
             let query = supabaseClient
                 .from('events')
@@ -182,19 +180,21 @@ export class EventService {
         }
     }
 
+    // 6. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getUpcomingEvents(
         supabaseClient: SupabaseClientType,
         limit = 50
-    ): Promise<AppEvent[]> {
+    ): Promise<Event[]> {
         const now = new Date();
         const futureDate = new Date();
         futureDate.setDate(now.getDate() + 30);
         return this.getEventsByDateRange(now, futureDate, supabaseClient, undefined, limit);
     }
 
+    // 7. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getLiveEvents(
         supabaseClient: SupabaseClientType
-    ): Promise<AppEvent[]> {
+    ): Promise<Event[]> {
         try {
             const now = new Date().toISOString();
             const { data, error } = await supabaseClient
@@ -220,14 +220,13 @@ export class EventService {
         }
     }
 
-    // Replace the getEventsWithMultiDaySupport method in src/services/eventServices.ts
-
+    // 8. UPDATE SIGNATURE: The function now returns a promise of `MultiDayEvent[]`.
     static async getEventsWithMultiDaySupport(
         filters: EventFilters = {},
         supabaseClient: SupabaseClientType,
         page: number = 1,
         pageSize: number = 100
-    ): Promise<EnhancedAppEvent[]> {
+    ): Promise<MultiDayEvent[]> {
         try {
             let query = supabaseClient
                 .from('events')
@@ -237,19 +236,13 @@ export class EventService {
                 organizer:organizer_id(id, name)
             `);
 
-            // FIXED: Better date range filtering for multi-day events
             if (filters.startDate && filters.endDate) {
-                // This query captures:
-                // 1. Events that start within the date range
-                // 2. Events that end within the date range  
-                // 3. Events that span the entire date range
                 query = query.or(
                     `and(start_time.gte.${filters.startDate.toISOString()},start_time.lte.${filters.endDate.toISOString()}),` +
                     `and(end_time.gte.${filters.startDate.toISOString()},end_time.lte.${filters.endDate.toISOString()}),` +
                     `and(start_time.lte.${filters.startDate.toISOString()},end_time.gte.${filters.endDate.toISOString()})`
                 );
             } else if (filters.startDate) {
-                // For single date, get events that either start on that date OR span across that date
                 const dayStart = new Date(filters.startDate);
                 dayStart.setHours(0, 0, 0, 0);
                 const dayEnd = new Date(filters.startDate);
@@ -286,11 +279,12 @@ export class EventService {
         }
     }
 
+    // 9. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getRecommendedEvents(
         categoryNames: string[],
         excludedEventIds: string[],
         supabaseClient: SupabaseClientType
-    ): Promise<AppEvent[]> {
+    ): Promise<Event[]> {
         try {
             if (categoryNames.length === 0) return [];
 

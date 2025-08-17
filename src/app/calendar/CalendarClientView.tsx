@@ -14,7 +14,8 @@ import CalendarWithPreview from '@/components/calendar/CalendarWithPreview';
 import SmartFilterPanel from '@/components/calendar/SmartFilterPanel';
 
 import { useSmartFilters } from '@/hooks/useSmartFilters';
-import { AppEvent, AppEventType, AppProfile } from '@/types';
+// 1. UPDATE IMPORTS: Use the new, specific type names.
+import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth } from '@/contexts/AuthContext';
 import { TechCalendarDayView } from '@/components/calendar/TechCalendarDayView';
@@ -25,8 +26,9 @@ const EventDetailPanelDynamic = dynamic(
 );
 
 interface CalendarClientViewProps {
-    initialEvents: AppEvent[];
-    initialCategories: AppEventType[];
+    // 2. UPDATE PROPS: Use the new types for initial data.
+    initialEvents: Event[];
+    initialCategories: EventType[];
     profile: AppProfile | null;
 }
 
@@ -39,7 +41,8 @@ export default function CalendarClientView({
     const calendarRef = useRef<FullCalendar | null>(null);
     const searchParams = useSearchParams();
 
-    const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
+    // 3. UPDATE STATE: Use the new `Event` type.
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
     const {
@@ -62,48 +65,42 @@ export default function CalendarClientView({
         staleTime: 5 * 60 * 1000,
     });
 
-    const enrichedEvents = useMemo(() => {
+    // 4. REFACTOR `enrichedEvents`: Use the `enrichWithTracking` utility for type safety.
+    const enrichedEvents: TrackedEvent[] = useMemo(() => {
         const trackedSet = new Set(trackedEventIds);
-        return filteredEvents.map(event => ({
-            ...event,
-            isTracked: trackedSet.has(event.id)
-        }));
+        return filteredEvents.map(event =>
+            enrichWithTracking(event, trackedSet.has(event.id))
+        );
     }, [filteredEvents, trackedEventIds]);
 
-    // Replace the dayEvents useMemo in CalendarClientView.tsx
-
+    // 5. UPDATE `dayEvents`: The `event` parameter is now correctly typed as `TrackedEvent`.
     const dayEvents = useMemo(() => {
         const view = searchParams.get('view') || 'month';
         if (view !== 'day') return [];
 
         const dateParam = searchParams.get('date');
 
-        // Use the same timezone-safe parsing logic as CalendarLayout
         const currentDate = dateParam ? (() => {
             const [year, month, day] = dateParam.split('-').map(Number);
-            // This creates a date at midnight in the user's LOCAL timezone.
             return new Date(year, month - 1, day);
         })() : new Date();
 
-        // Create date boundaries for the current view day
         const dayStart = new Date(currentDate);
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(currentDate);
         dayEnd.setHours(23, 59, 59, 999);
 
-        // FIXED: Filter for events that overlap with the current day
-        return enrichedEvents.filter((event: AppEvent) => {
+        return enrichedEvents.filter((event: TrackedEvent) => {
             const eventStart = new Date(event.startTime);
             const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
 
-            // Include event if it overlaps with the current day
-            // Event overlaps if: event starts before day ends AND event ends after day starts
             return eventStart <= dayEnd && eventEnd >= dayStart;
         });
     }, [enrichedEvents, searchParams]);
 
+    // 6. UPDATE CALLBACK: The type cast now uses the new `Event` type.
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
-        const eventData = clickInfo.event.extendedProps as AppEvent;
+        const eventData = clickInfo.event.extendedProps as Event;
         setSelectedEvent(eventData);
     }, []);
 
@@ -131,6 +128,7 @@ export default function CalendarClientView({
         if (context.view === 'day') {
             return <TechCalendarDayView events={dayEvents} initialDate={context.date} categories={initialCategories} profile={profile} />;
         }
+        // `enrichedEvents` is `TrackedEvent[]`, which is compatible with the `Event[]` prop
         return <CalendarWithPreview events={enrichedEvents} onEventClick={handleEventClick} view={context.view} calendarRef={context.calendarRef} />;
     };
 

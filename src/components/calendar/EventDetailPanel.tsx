@@ -1,19 +1,20 @@
-// src/components/calendar/EventDetailPanel.tsx
 'use client';
 
 import { FC } from 'react';
 import Link from 'next/link';
 import { X, ArrowUpRight } from 'lucide-react';
 
-import { AppEvent, AppEventType } from '@/types';
+// 1. UPDATE IMPORTS: Use the new, specific type names.
+import { Event, EventType } from '@/types';
 import EventInfo from './EventInfo';
 import EventActions from './EventActions';
 import EventTracking from './EventTracking';
 
+// 2. UPDATE PROPS: The interface now uses the new types.
 interface EventDetailPanelProps {
-    event: AppEvent;
+    event: Event;
     onClose: () => void;
-    categories: AppEventType[];
+    categories: EventType[];
 }
 
 const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categories }) => {

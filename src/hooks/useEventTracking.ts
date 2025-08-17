@@ -4,20 +4,17 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserEventService } from '@/services/userEventService';
-import type { AppTrackedEvent, EventStatus } from '@/types';
+import type { TrackedEventRecord, EventStatus } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/utils/supabase/client';
 
-// Import your existing server actions
 import { trackEventAction, untrackEventAction } from '@/app/calendar/actions';
 
-// Input types for the mutation hooks
 type TrackEventVariables = { eventId: string; status: EventStatus; notes?: string };
 type UntrackEventVariables = { eventId: string };
 type BulkTrackEventsVariables = { eventIds: string[]; status: EventStatus };
 
-// Return type for the bulk track mutation
 type BulkTrackResponse = {
     tracked: number;
     skipped: number;
@@ -29,7 +26,6 @@ export function useEventTracking() {
     const queryClient = useQueryClient();
     const listQueryKey = ['trackedEvents', user?.id];
 
-    // trackEvent mutation using your existing server action
     const { mutate: trackEvent, isPending: isTracking } = useMutation({
         mutationFn: async (variables: TrackEventVariables) => {
             const formData = new FormData();
@@ -51,7 +47,6 @@ export function useEventTracking() {
                     variables.status === 'attended' ? 'marked as attended' : 'tracked';
             toast.success(`Event ${statusText}!`);
 
-            // Invalidate queries to refresh the UI
             queryClient.invalidateQueries({ queryKey: listQueryKey });
             queryClient.invalidateQueries({
                 queryKey: ['eventTrackingStatus', variables.eventId, user?.id]
@@ -63,7 +58,6 @@ export function useEventTracking() {
         },
     });
 
-    // untrackEvent mutation using your existing server action
     const { mutate: untrackEvent, isPending: isUntracking } = useMutation({
         mutationFn: async (variables: UntrackEventVariables) => {
             const formData = new FormData();
@@ -78,7 +72,6 @@ export function useEventTracking() {
         onSuccess: (_, variables) => {
             toast.success('Event untracked.');
 
-            // Invalidate queries to refresh the UI
             queryClient.invalidateQueries({ queryKey: listQueryKey });
             queryClient.invalidateQueries({
                 queryKey: ['eventTrackingStatus', variables.eventId, user?.id]
@@ -90,7 +83,6 @@ export function useEventTracking() {
         },
     });
 
-    // bulkTrackEvents mutation using direct service call (no server action for this yet)
     const { mutate: bulkTrackEvents, isPending: isBulkTracking } = useMutation({
         mutationFn: (variables: BulkTrackEventsVariables): Promise<BulkTrackResponse> => {
             if (!user) throw new Error('User not authenticated.');
@@ -125,19 +117,20 @@ export function useEventTracking() {
     };
 }
 
-// READ hooks - these work with your existing services
 export function useTrackedEvents() {
     const [supabase] = useState(() => createClient());
     const { user } = useAuth();
 
-    return useQuery<AppTrackedEvent[]>({
+    // 2. UPDATE HOOK SIGNATURE: The `useQuery` hook is now strongly typed to return `TrackedEventRecord[]`.
+    return useQuery<TrackedEventRecord[]>({
         queryKey: ['trackedEvents', user?.id],
         queryFn: async () => {
             if (!user) return [];
+            // This works because `getTrackedEvents` was already migrated to return `TrackedEventRecord[]`.
             return UserEventService.getTrackedEvents(user.id, supabase);
         },
         enabled: !!user,
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 5 * 60 * 1000,
         retry: 2,
     });
 }
@@ -155,12 +148,11 @@ export function useEventTrackingStatus(eventId: string | undefined) {
                 return await UserEventService.isEventTracked(user.id, eventId, supabase);
             } catch (error) {
                 console.error('Error checking tracking status:', error);
-                // Return default state instead of throwing
                 return { isTracked: false };
             }
         },
         enabled: !!user && !!eventId,
-        staleTime: 2 * 60 * 1000, // 2 minutes
+        staleTime: 2 * 60 * 1000,
         retry: 1,
     });
 }

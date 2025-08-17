@@ -2,22 +2,20 @@
 
 import React, { useState, useMemo } from 'react';
 import { Users, Globe, Monitor, MapPin, Clock } from 'lucide-react';
-import { AppEvent, AppEventType, AppProfile } from '@/types';
+import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
 import EventDetailPanel from './EventDetailPanel';
 import EventPreviewCard from './EventPreviewCard';
 import '@/app/styles/tech-day-view.css';
 import { processEventsForDayView } from '@/utils/multiDayEventUtils';
-import type { EnhancedAppEvent } from '@/types';
-// 1. Import the new date utility functions
 import { formatTime, isEventLive } from '@/utils/dateUtils';
 
-
+// 2. UPDATE PROPS: Use the new types for component props.
 export interface TechCalendarDayViewProps {
-    events: AppEvent[] | EnhancedAppEvent[];
+    events: Event[] | MultiDayEvent[];
     initialDate: Date;
-    categories: AppEventType[];
+    categories: EventType[];
     profile: AppProfile | null;
-    onEventSelect?: (event: AppEvent) => void;
+    onEventSelect?: (event: Event) => void;
 }
 
 const EVENT_CATEGORIES = [
@@ -27,16 +25,15 @@ const EVENT_CATEGORIES = [
     { id: 'networking', name: 'Networking', icon: MapPin, color: 'bg-orange-500' },
 ];
 
-// 2. Update TIME_SLOTS to use the new formatTime utility for consistency
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
     const hour = i;
     const time24 = `${hour.toString().padStart(2, '0')}:00`;
-    // Use the new utility for consistent time formatting
     const time12 = formatTime(`2000-01-01T${time24}:00`, { hour: 'numeric', minute: '2-digit' });
     return { hour, time24, time12 };
 });
 
-const getVisualEventInfo = (event: AppEvent, currentDate: Date) => {
+// 3. UPDATE SIGNATURES: Helper functions now use the base `Event` type.
+const getVisualEventInfo = (event: Event, currentDate: Date) => {
     const start = new Date(event.startTime);
     const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 3600 * 1000);
 
@@ -60,9 +57,9 @@ const getVisualEventInfo = (event: AppEvent, currentDate: Date) => {
 };
 
 interface EventCardProps {
-    event: AppEvent;
+    event: Event;
     onClick: () => void;
-    onHover: (event: AppEvent, mouseEvent: React.MouseEvent) => void;
+    onHover: (event: Event, mouseEvent: React.MouseEvent) => void;
     onLeave: () => void;
     categoryColor: string;
     visualInfo: ReturnType<typeof getVisualEventInfo>;
@@ -73,13 +70,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave,
 
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
-
-    // 3. Update time formatting to use the new utility
-    const timeText = isContinuingFromPreviousDay
-        ? `Continues from yesterday`
-        : formatTime(startTime);
-
-    // 4. Update the isLive check to use the new utility
+    const timeText = isContinuingFromPreviousDay ? `Continues from yesterday` : formatTime(startTime);
     const live = isEventLive(startTime, endTime);
     const isSpanning = spanHours > 1;
 
@@ -91,7 +82,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave,
     const cardStyle = isSpanning ? { height: `calc(${spanHours * 100}% - 0.5rem)`, position: 'absolute' as const, top: '0.5rem', left: '0.5rem', right: '0.5rem', zIndex: 10 } : {};
 
     return (
-        <div onClick={onClick} onMouseEnter={(e) => onHover(event, e)} onMouseLeave={onLeave} style={cardStyle} className={`relative p-3 rounded-lg cursor-pointer transition-all duration-200 ${continuationClasses} ${live ? 'bg-gray-800 text-white border-l-4 border-green-400' : 'bg-white hover:bg-gray-50 border border-gray-200'} ${event.isTracked ? 'ring-2 ring-blue-400' : ''} event-card`}>
+        <div onClick={onClick} onMouseEnter={(e) => onHover(event, e)} onMouseLeave={onLeave} style={cardStyle} className={`relative p-3 rounded-lg cursor-pointer transition-all duration-200 ${continuationClasses} ${live ? 'bg-gray-800 text-white border-l-4 border-green-400' : 'bg-white hover:bg-gray-50 border border-gray-200'} ${isEventTracked(event) ? 'ring-2 ring-blue-400' : ''} event-card`}>
             <div className="flex items-start justify-between mb-2">
                 <h4 className={`font-semibold text-sm leading-tight ${live ? 'text-white' : 'text-gray-900'}`}>{event.title}</h4>
             </div>
@@ -106,6 +97,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave,
         </div>
     );
 };
+// 4. Import and use the `isEventTracked` type guard
+import { isEventTracked } from '@/types';
+
 
 export function TechCalendarDayView({
     events,
@@ -113,16 +107,18 @@ export function TechCalendarDayView({
     onEventSelect,
     categories,
 }: TechCalendarDayViewProps) {
-    const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
-    const [previewEvent, setPreviewEvent] = useState<AppEvent | null>(null);
+    // 5. UPDATE STATE: Use the new `Event` type.
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
     const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
     const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
     const dayEvents = useMemo(() => {
-        const enhancedEvents = events as EnhancedAppEvent[];
+        // The type cast here is now to `MultiDayEvent[]`
+        const multiDayEvents = events as MultiDayEvent[];
 
         try {
-            const processedEvents = processEventsForDayView(enhancedEvents, initialDate);
+            const processedEvents = processEventsForDayView(multiDayEvents, initialDate);
             return processedEvents;
         } catch (error) {
             console.error('Error in processEventsForDayView:', error);
@@ -132,7 +128,7 @@ export function TechCalendarDayView({
             const targetMonth = targetDate.getMonth();
             const targetDay = targetDate.getDate();
 
-            return events.filter((event: AppEvent) => {
+            return events.filter((event: Event) => {
                 const eventDate = new Date(event.startTime);
                 return eventDate.getFullYear() === targetYear &&
                     eventDate.getMonth() === targetMonth &&
@@ -141,12 +137,13 @@ export function TechCalendarDayView({
         }
     }, [events, initialDate]);
 
+    // 6. UPDATE TYPE ANNOTATIONS: Use the `Event` type throughout.
     const categorizedEvents = useMemo(() => {
-        const categorized: Record<string, AppEvent[]> = {};
+        const categorized: Record<string, Event[]> = {};
         EVENT_CATEGORIES.forEach(category => { categorized[category.id] = []; });
-        dayEvents.forEach((event: AppEvent) => {
+        dayEvents.forEach((event: Event) => {
             const title = event.title.toLowerCase();
-            const description = event.description.toLowerCase();
+            const description = (event.description || '').toLowerCase();
             if (title.includes('conference') || title.includes('summit')) categorized.conferences.push(event);
             else if (title.includes('workshop') || title.includes('training') || description.includes('hands-on')) categorized.workshops.push(event);
             else if (title.includes('webinar') || title.includes('online') || event.livestreamUrl) categorized.webinars.push(event);
@@ -157,12 +154,12 @@ export function TechCalendarDayView({
     }, [dayEvents]);
 
     const getEventsStartingInSlot = (hour: number, categoryId: string) => {
-        return categorizedEvents[categoryId]?.filter((event: AppEvent) => new Date(event.startTime).getHours() === hour) || [];
+        return categorizedEvents[categoryId]?.filter((event: Event) => new Date(event.startTime).getHours() === hour) || [];
     };
 
     const displayedSlots = useMemo(() => {
         const slots = new Set<number>();
-        dayEvents.forEach((event: AppEvent) => {
+        dayEvents.forEach((event: Event) => {
             const startHour = new Date(event.startTime).getHours();
             const endHour = event.endTime ? new Date(event.endTime).getHours() : startHour;
             for (let i = startHour; i <= endHour; i++) slots.add(i);
@@ -171,13 +168,13 @@ export function TechCalendarDayView({
         return TIME_SLOTS.filter((slot: { hour: number }) => slots.has(slot.hour)).sort((a, b) => a.hour - b.hour);
     }, [dayEvents]);
 
-    const handleEventClick = (event: AppEvent) => {
+    const handleEventClick = (event: Event) => {
         setSelectedEvent(event);
         setIsPreviewVisible(false);
         onEventSelect?.(event);
     };
 
-    const handleEventHover = (event: AppEvent, mouseEvent: React.MouseEvent) => {
+    const handleEventHover = (event: Event, mouseEvent: React.MouseEvent) => {
         const rect = mouseEvent.currentTarget.getBoundingClientRect();
         setPreviewEvent(event);
         setPreviewPosition({ x: rect.right + 10, y: rect.top });
