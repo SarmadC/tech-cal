@@ -6,8 +6,7 @@ import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import CalendarClientView from './CalendarClientView';
-// No specific type imports are needed here because the types are inferred
-// from the service calls and passed directly to the client component.
+
 
 export default async function CalendarPage() {
     const supabase = await createClient();

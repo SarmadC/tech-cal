@@ -85,10 +85,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 if (event === 'SIGNED_OUT') {
                     toast.info('You have been signed out.');
                 }
-                
+
                 const currentUser = session?.user ?? null;
                 let profile: AppProfile | null = null;
-                
+
                 if (currentUser) {
                     profile = await loadProfile(currentUser.id);
                 }
@@ -162,7 +162,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
 
             const profile = await ProfileService.updateProfile(authState.user.id, data, supabase);
-            
+
             setAuthState(prev => ({ ...prev, profile }));
             return { success: true };
         } catch (error: unknown) {
@@ -174,7 +174,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const refreshProfile = useCallback(async (): Promise<void> => {
         try {
             if (!authState.user) return;
-            
+
             const profile = await ProfileService.getProfile(authState.user.id, supabase);
             setAuthState(prev => ({ ...prev, profile }));
         } catch (error: unknown) {

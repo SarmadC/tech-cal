@@ -1,13 +1,12 @@
+
+
 'use server'
 
 import { redirect } from 'next/navigation'
-// 1. REMOVED the 'headers' import as it's unreliable for this purpose
-// import { headers } from 'next/headers' 
 import { createClient } from '@/utils/supabase/server'
 import { AuthService } from '@/services/authService'
 import { OAuthProvider } from '@/types'
 
-// Correctly import all schemas from the new central location
 import {
     LoginSchema,
     SignupSchema,
@@ -15,7 +14,6 @@ import {
     ResetPasswordSchema
 } from '@/lib/schemas'
 
-// A reusable FormState type for all auth actions
 export type AuthFormState = {
     message: string;
     errors?: {
@@ -31,35 +29,79 @@ export type AuthFormState = {
 
 // --- Actions ---
 
+// Fixed version with proper unused variable handling
 export async function loginAction(
     prevState: AuthFormState,
     formData: FormData
 ): Promise<AuthFormState> {
-    const validatedFields = LoginSchema.safeParse(
-        Object.fromEntries(formData.entries())
-    );
+    console.log('=== LOGIN ACTION START ===');
 
-    if (!validatedFields.success) {
-        return {
-            success: false,
-            message: 'Invalid data provided.',
-            errors: validatedFields.error.flatten().fieldErrors,
-        };
-    }
-
-    const supabase = await createClient();
     try {
-        await AuthService.signIn(validatedFields.data, supabase);
+        const validatedFields = LoginSchema.safeParse(
+            Object.fromEntries(formData.entries())
+        );
+
+        if (!validatedFields.success) {
+            console.log('❌ Validation failed:', validatedFields.error);
+            return {
+                success: false,
+                message: 'Invalid data provided.',
+                errors: validatedFields.error.flatten().fieldErrors,
+            };
+        }
+
+        console.log('✅ Validation passed');
+
+        const supabase = await createClient();
+        console.log('✅ Supabase client created');
+
+        // Test database connection
+        try {
+            const { data: _test, error: testError } = await supabase
+                .from('profiles')
+                .select('count')
+                .limit(1);
+            console.log('🔍 Database test:', { success: !testError, error: testError?.message });
+        } catch (dbError) {
+            console.log('🔍 Database test failed:', dbError);
+        }
+
+        console.log('🔄 Calling AuthService.signIn...');
+        const response = await AuthService.signIn(validatedFields.data, supabase);
+        console.log('📨 AuthService response:', response);
+
+        // Check the response structure
+        if (response && response.success) {
+            console.log('✅ Login successful! Redirecting to /calendar...');
+            redirect('/calendar'); // Changed from /dashboard to /calendar
+        } else if (response && response.error) {
+            console.log('❌ Login failed with error:', response.error);
+            return {
+                success: false,
+                message: response.error,
+                errors: { _form: [response.error] },
+            };
+        } else {
+            console.log('❌ Unexpected response format:', response);
+            return {
+                success: false,
+                message: 'Unexpected response from authentication service.',
+                errors: { _form: ['Authentication failed with unexpected response.'] },
+            };
+        }
     } catch (error) {
-        console.error("Login Action Error:", error);
+        console.error('💥 LOGIN ACTION ERROR:', error);
+        console.error('Error details:', {
+            name: (error as Error).name,
+            message: (error as Error).message,
+            stack: (error as Error).stack
+        });
         return {
             success: false,
             message: 'Authentication failed.',
             errors: { _form: [(error as Error).message] },
         };
     }
-
-    return redirect('/dashboard');
 }
 
 export async function signupAction(
@@ -86,7 +128,17 @@ export async function signupAction(
 
     const supabase = await createClient();
     try {
-        await AuthService.signUp(serviceData, supabase);
+        const response = await AuthService.signUp(serviceData, supabase);
+        if (response.success) {
+            // FIXED: Redirect to /calendar instead of /dashboard
+            redirect('/calendar');
+        } else {
+            return {
+                success: false,
+                message: response.error || 'Signup failed.',
+                errors: { _form: [response.error || 'Signup failed.'] },
+            };
+        }
     } catch (error) {
         console.error("Signup Action Error:", error);
         return {
@@ -95,8 +147,6 @@ export async function signupAction(
             errors: { _form: [(error as Error).message] },
         };
     }
-
-    return redirect('/dashboard');
 }
 
 export async function forgotPasswordAction(
