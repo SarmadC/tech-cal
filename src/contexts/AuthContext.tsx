@@ -71,23 +71,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 const currentUser = session?.user ?? null;
-                const profile = currentUser ? await loadProfile(currentUser.id) : null;
+                // Ensure profile is loaded, but don't block `initialized` if it fails
+                let profileData: AppProfile | null = null;
+                if (currentUser) {
+                    try {
+                        profileData = await ProfileService.getProfile(currentUser.id, supabase);
+                    } catch (profileError) {
+                        console.error("AuthContext: Error loading profile for user during initial session fetch:", profileError);
+                    }
+                }
+
                 if (!isActive) return;
                 setAuthState({
                     user: currentUser,
                     session,
-                    profile,
+                    profile: profileData,
                     loading: false,
                     initialized: true,
                 });
             } catch (error) {
-                console.error("AuthContext: Error during initial session fetch or profile load:", error);
+                console.error("AuthContext: Error during initial session fetch (getSession):", error);
                 if (!isActive) return;
+                // Always initialize to true, even on errors, to prevent infinite loading
                 setAuthState((prev: AuthState) => ({ ...prev, loading: false, initialized: true }));
-            } finally {
-                if (isActive && !authState.initialized) { // Ensure it's not already initialized by a race condition
-                    setAuthState(prev => ({ ...prev, initialized: true, loading: false }));
-                }
             }
         })();
         return () => { isActive = false; };
