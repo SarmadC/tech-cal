@@ -4,8 +4,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { AuthService } from '@/services/authService'
 import { OAuthProvider } from '@/types'
-
-// Correctly import all schemas from the new central location
 import {
     LoginSchema,
     SignupSchema,
@@ -13,7 +11,6 @@ import {
     ResetPasswordSchema
 } from '@/lib/schemas'
 
-// A reusable FormState type for all auth actions
 export type AuthFormState = {
     message: string;
     errors?: {
@@ -26,8 +23,6 @@ export type AuthFormState = {
     };
     success: boolean;
 }
-
-// --- Actions ---
 
 export async function loginAction(
     prevState: AuthFormState,
@@ -48,13 +43,6 @@ export async function loginAction(
     const supabase = await createClient();
     try {
         await AuthService.signIn(validatedFields.data, supabase);
-
-        // Return success state instead of redirecting directly
-        // The client will handle the redirect
-        return {
-            success: true,
-            message: 'Login successful! Redirecting...',
-        };
     } catch (error) {
         console.error("Login Action Error:", error);
         return {
@@ -63,6 +51,12 @@ export async function loginAction(
             errors: { _form: [(error as Error).message] },
         };
     }
+
+    // **CHANGE**: Instead of redirecting, return a success state.
+    return {
+        success: true,
+        message: 'Login successful!',
+    };
 }
 
 export async function signupAction(

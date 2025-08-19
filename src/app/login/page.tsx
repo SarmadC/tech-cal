@@ -16,12 +16,20 @@ export default function LoginPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+    // **CHANGE**: Use the useAuth hook to monitor the user's state.
     const { user, initialized } = useAuth();
 
+    // **CHANGE**: This useEffect now handles the redirect for ALL login types (email/OAuth).
     useEffect(() => {
+        // Once the context is initialized and a user object exists, we can redirect.
         if (initialized && user) {
             const redirectTo = searchParams.get('redirect') || '/calendar';
-            router.push(redirectTo);
+            toast.success("Redirecting to your calendar...");
+
+            // A small delay can help ensure all state has propagated.
+            setTimeout(() => {
+                router.push(redirectTo);
+            }, 100);
         }
     }, [initialized, user, router, searchParams]);
 
@@ -39,24 +47,17 @@ export default function LoginPage() {
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         setIsOAuthLoading(true);
-        toast.loading(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
+        toast.loading(`Redirecting to ${provider}...`);
         await oauthSignInAction(provider);
-        setTimeout(() => setIsOAuthLoading(false), 5000);
     };
 
-    const handleLoginSuccess = () => {
-        const redirectTo = searchParams.get('redirect') || '/calendar';
-        router.push(redirectTo);
-    };
+    // **REMOVED**: The handleLoginSuccess function is no longer needed
+    // as the useEffect hook now handles the redirect.
 
-    if (!initialized) {
+    if (!initialized || user) {
+        // Show loading screen while initializing or before the redirect effect runs.
         return <Loading />;
     }
-
-    // This block was removed as it was causing the issue.
-    // if (user) {
-    //     return <Loading />;
-    // }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background-main px-4 sm:px-6 lg:px-8">
@@ -73,7 +74,8 @@ export default function LoginPage() {
                     <div className="relative flex justify-center text-sm"><span className="px-2 bg-background-main text-foreground-secondary">Or continue with email</span></div>
                 </div>
 
-                <AuthForm action={loginAction} initialState={initialState} submitButtonText="Sign In" onSuccess={handleLoginSuccess}>
+                {/* **CHANGE**: Removed the onSuccess prop */}
+                <AuthForm action={loginAction} initialState={initialState} submitButtonText="Sign In">
                     {(state) => (
                         <>
                             <div className="space-y-2">
