@@ -26,15 +26,37 @@ export async function middleware(request: NextRequest) {
         }
     )
 
+    // This refreshes the session cookie
     const { data: { user } } = await supabase.auth.getUser();
 
-    console.log(`[MIDDLEWARE] Path: ${request.nextUrl.pathname} | User Authenticated: ${!!user}`);
+    const { pathname } = request.nextUrl
 
+    // RULE 1: If user is not logged in, and they are trying to access a protected route, redirect to /login
+    if (!user && (pathname.startsWith('/calendar') || pathname.startsWith('/dashboard'))) {
+        console.log('[MIDDLEWARE] User not found, redirecting to /login');
+        return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    // RULE 2: If user is logged in, and they are trying to access a public-only route, redirect to /calendar
+    if (user && (pathname === '/login' || pathname === '/signup')) {
+        console.log('[MIDDLEWARE] User is logged in, redirecting to /calendar');
+        return NextResponse.redirect(new URL('/calendar', request.url))
+    }
+
+    console.log(`[MIDDLEWARE] Path: ${pathname} | User Authenticated: ${!!user}`);
     return response
 }
 
 export const config = {
     matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - api (API routes)
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - All image assets
+         */
         '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }
