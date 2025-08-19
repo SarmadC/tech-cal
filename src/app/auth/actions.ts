@@ -30,6 +30,12 @@ export type AuthFormState = {
 // --- Actions ---
 
 // Fixed version with proper unused variable handling
+// OPTION 1: Fix loginAction - Remove server redirect, let client handle it
+// Replace your loginAction in src/app/auth/actions.ts
+
+// Fix the loginAction in src/app/auth/actions.ts
+// Replace JUST the loginAction function:
+
 export async function loginAction(
     prevState: AuthFormState,
     formData: FormData
@@ -55,25 +61,17 @@ export async function loginAction(
         const supabase = await createClient();
         console.log('✅ Supabase client created');
 
-        // Test database connection
-        try {
-            const { data: _test, error: testError } = await supabase
-                .from('profiles')
-                .select('count')
-                .limit(1);
-            console.log('🔍 Database test:', { success: !testError, error: testError?.message });
-        } catch (dbError) {
-            console.log('🔍 Database test failed:', dbError);
-        }
-
         console.log('🔄 Calling AuthService.signIn...');
         const response = await AuthService.signIn(validatedFields.data, supabase);
         console.log('📨 AuthService response:', response);
 
-        // Check the response structure
         if (response && response.success) {
-            console.log('✅ Login successful! Redirecting to /calendar...');
-            redirect('/calendar'); // Changed from /dashboard to /calendar
+            console.log('✅ Login successful! Returning success state for client redirect');
+            // REMOVED the server-side redirect - let client handle it
+            return {
+                success: true,
+                message: response.message || 'Login successful!',
+            };
         } else if (response && response.error) {
             console.log('❌ Login failed with error:', response.error);
             return {
@@ -94,7 +92,6 @@ export async function loginAction(
         console.error('Error details:', {
             name: (error as Error).name,
             message: (error as Error).message,
-            stack: (error as Error).stack
         });
         return {
             success: false,
@@ -103,6 +100,7 @@ export async function loginAction(
         };
     }
 }
+
 
 export async function signupAction(
     prevState: AuthFormState,
