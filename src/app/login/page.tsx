@@ -1,4 +1,4 @@
-// src/app/login/page.tsx
+// src/app/login/page.tsx - FINAL FIX
 'use client';
 
 import Link from 'next/link';
@@ -22,9 +22,12 @@ export default function LoginPage() {
     useEffect(() => {
         if (initialized && user) {
             const redirectTo = searchParams.get('redirect') || '/calendar';
-            router.push(redirectTo);
+            console.log('🚀 User authenticated, redirecting to:', redirectTo);
+
+            // Use window.location.href for reliable navigation
+            window.location.href = redirectTo;
         }
-    }, [initialized, user, router, searchParams]);
+    }, [initialized, user, searchParams]); // Removed router from dependencies
 
     useEffect(() => {
         const error = searchParams.get('error');
@@ -47,23 +50,34 @@ export default function LoginPage() {
 
     const handleLoginSuccess = () => {
         const redirectTo = searchParams.get('redirect') || '/calendar';
-        router.push(redirectTo);
+        console.log('✅ Login success, redirecting to:', redirectTo);
+        window.location.href = redirectTo; // Use window.location.href for reliability
     };
-
-    // --- FIX STARTS HERE ---
 
     // 1. If the auth state is still being determined, show a loader.
     if (!initialized) {
         return <Loading />;
     }
 
-    // 2. If the user is logged in, the useEffect will handle the redirect.
-    //    Render a loader in the meantime to prevent the login form from flashing.
+    // 2. If the user is logged in, show a redirect message
     if (user) {
-        return <Loading />;
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <Loading />
+                    <p className="mt-4 text-sm text-gray-600">
+                        Welcome back, {user.email}! Redirecting you to the calendar...
+                    </p>
+                    <button
+                        onClick={() => window.location.href = '/calendar'}
+                        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                        Go to Calendar
+                    </button>
+                </div>
+            </div>
+        );
     }
-
-    // --- FIX ENDS HERE ---
 
     // 3. Only if initialization is complete AND there's no user, show the login form.
     return (
