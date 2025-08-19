@@ -71,7 +71,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 const currentUser = session?.user ?? null;
-                const profile = currentUser ? await ProfileService.getProfile(currentUser.id, supabase) : null;
+                const profile = currentUser ? await loadProfile(currentUser.id) : null;
                 if (!isActive) return;
                 setAuthState({
                     user: currentUser,
@@ -80,9 +80,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     loading: false,
                     initialized: true,
                 });
-            } catch (_error) {
+            } catch (error) {
+                console.error("AuthContext: Error during initial session fetch or profile load:", error);
                 if (!isActive) return;
                 setAuthState((prev: AuthState) => ({ ...prev, loading: false, initialized: true }));
+            } finally {
+                if (isActive && !authState.initialized) { // Ensure it's not already initialized by a race condition
+                    setAuthState(prev => ({ ...prev, initialized: true, loading: false }));
+                }
             }
         })();
         return () => { isActive = false; };

@@ -187,6 +187,7 @@ export async function oauthSignInAction(provider: OAuthProvider) {
     // 4. (Optional but Recommended) DEBUGGING LOG
     // Check your terminal where `npm run dev` is running to see this output.
     console.log('Constructed Redirect URL for OAuth:', redirectTo);
+    console.log('OAuth action - rawOrigin:', rawOrigin, 'origin:', origin, 'redirectTo:', redirectTo);
 
     // 5. ADD A CHECK to ensure the environment variable is set.
     if (!origin) {
