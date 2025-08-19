@@ -8,12 +8,12 @@ export async function GET(request: Request) {
     const code = searchParams.get('code')
     const next = searchParams.get('next') ?? '/calendar'
 
-    // --- START DEBUG LOGS ---
     console.log(`[AUTH CALLBACK] Received request for URL: ${request.url}`);
 
     if (code) {
         console.log(`[AUTH CALLBACK] Authorization code found. Exchanging for session...`);
-        const supabase = createClient()
+        // **CHANGE**: Added 'await' before createClient()
+        const supabase = await createClient()
         const { error } = await supabase.auth.exchangeCodeForSession(code)
 
         if (!error) {
@@ -27,7 +27,6 @@ export async function GET(request: Request) {
     }
 
     console.error('[AUTH CALLBACK] Redirecting to login page with error.');
-    // --- END DEBUG LOGS ---
 
     return NextResponse.redirect(`${origin}/login?error=auth-failed`)
 }

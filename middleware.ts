@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-    let response = NextResponse.next({
+    const response = NextResponse.next({
         request: {
             headers: request.headers,
         },
@@ -26,12 +26,9 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // **CHANGE**: Replaced getSession() with getUser() for a more direct check
     const { data: { user } } = await supabase.auth.getUser();
 
-    // --- START DEBUG LOGS ---
     console.log(`[MIDDLEWARE] Path: ${request.nextUrl.pathname} | User Authenticated: ${!!user}`);
-    // --- END DEBUG LOGS ---
 
     return response
 }
