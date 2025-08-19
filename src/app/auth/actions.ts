@@ -171,21 +171,25 @@ export async function updatePasswordAction(
 // --- OAuth Action (Keep as is - this one can redirect directly) ---
 
 export async function oauthSignInAction(provider: OAuthProvider) {
-    // OAuth flow handles redirects differently, so this can stay the same
+    // --- START DEBUG LOGS ---
+    console.log(`[oauthSignInAction] Initiating OAuth sign-in for provider: ${provider}`);
+
     const origin =
         process.env.NODE_ENV === 'development'
             ? process.env.NEXT_PUBLIC_SITE_URL
             : process.env.NEXT_PUBLIC_VERCEL_URL;
 
-    const redirectTo = `${origin}/auth/callback`;
-
-    console.log('Constructed Redirect URL for OAuth:', redirectTo);
+    console.log(`[oauthSignInAction] Determined origin: ${origin}`);
 
     if (!origin) {
         const errorMessage = 'Server configuration error: Site URL environment variable is not set.';
-        console.error(errorMessage);
+        console.error(`[oauthSignInAction] CRITICAL ERROR: ${errorMessage}`);
         return redirect(`/login?message=${encodeURIComponent(errorMessage)}`);
     }
+
+    const redirectTo = `${origin}/auth/callback`;
+    console.log(`[oauthSignInAction] Constructed Redirect URL for Supabase: ${redirectTo}`);
+    // --- END DEBUG LOGS ---
 
     const supabase = await createClient();
 
@@ -197,13 +201,15 @@ export async function oauthSignInAction(provider: OAuthProvider) {
     });
 
     if (error) {
-        console.error('OAuth Error:', error.message);
+        console.error(`[oauthSignInAction] Supabase OAuth Error: ${error.message}`);
         return redirect(`/login?message=Could not authenticate with ${provider}.`);
     }
 
     if (data.url) {
+        console.log(`[oauthSignInAction] Redirecting user to Supabase OAuth URL.`);
         return redirect(data.url);
     }
 
+    console.warn('[oauthSignInAction] No data.url from Supabase, redirecting to login with an error message.');
     return redirect('/login?message=An unexpected error occurred.');
 }

@@ -1,4 +1,3 @@
-// src/contexts/AuthContext.tsx
 'use client';
 
 import {
@@ -62,86 +61,53 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const supabase = createClient();
 
-    // Helper to load profile
     const loadProfile = useCallback(async (userId: string): Promise<AppProfile | null> => {
         try {
-            return await ProfileService.getProfile(userId, supabase);
+            console.log(`[AuthContext] 🧑‍💻 Loading profile for user: ${userId}`);
+            const profile = await ProfileService.getProfile(userId, supabase);
+            console.log(`[AuthContext] ✅ Profile loaded successfully for user: ${userId}`);
+            return profile;
         } catch (error) {
-            console.warn('Profile not found, user might be new:', error);
+            console.warn(`[AuthContext] ⚠️ Profile not found for user: ${userId}`, error);
             return null;
         }
     }, [supabase]);
 
-    // Helper to update auth state
-    const updateAuthState = useCallback(async (session: Session | null) => {
-        console.log('🔄 Updating auth state:', { hasSession: !!session, userId: session?.user?.id });
-
-        const currentUser = session?.user ?? null;
-        let profile: AppProfile | null = null;
-
-        if (currentUser) {
-            profile = await loadProfile(currentUser.id);
-        }
-
-        setAuthState({
-            user: currentUser,
-            session,
-            profile,
-            loading: false,
-            initialized: true,
-        });
-    }, [loadProfile]);
-
-    // MAIN FIX: Check for existing session on mount + listen for changes
     useEffect(() => {
-        console.log('🚀 AuthContext initializing...');
+        console.log("🚀 [AuthContext] Setting up auth state listener...");
 
-        // 1. FIRST: Check for existing session immediately
-        const checkInitialSession = async () => {
-            try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                console.log('📋 Initial session check:', {
-                    hasSession: !!session,
-                    userId: session?.user?.id,
-                    error: error?.message
-                });
-
-                if (error) {
-                    console.error('Session check error:', error);
-                }
-
-                await updateAuthState(session);
-            } catch (error) {
-                console.error('Failed to check initial session:', error);
-                setAuthState(prev => ({ ...prev, loading: false, initialized: true }));
-            }
-        };
-
-        // 2. SECOND: Set up the auth state change listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event: AuthChangeEvent, session: Session | null) => {
-                console.log('🔔 Auth state change:', event, { hasSession: !!session, userId: session?.user?.id });
+                console.log(`🔔 [AuthContext] Auth state change event received: ${event}`, { userId: session?.user?.id });
 
-                if (event === 'SIGNED_IN') {
-                    toast.success('Successfully signed in! Welcome back.', { duration: 4000 });
-                }
-                if (event === 'SIGNED_OUT') {
-                    toast.info('You have been signed out.');
+                const currentUser = session?.user ?? null;
+                let profile: AppProfile | null = null;
+
+                if (currentUser) {
+                    profile = await loadProfile(currentUser.id);
                 }
 
-                await updateAuthState(session);
+                console.log("📊 [AuthContext] Setting new auth state:", {
+                    hasUser: !!currentUser,
+                    hasProfile: !!profile,
+                    event: event
+                });
+
+                setAuthState({
+                    user: currentUser,
+                    session,
+                    profile,
+                    loading: false,
+                    initialized: true,
+                });
             }
         );
 
-        // Check initial session first
-        checkInitialSession();
-
-        // Cleanup
         return () => {
-            console.log('🧹 Cleaning up auth subscription');
+            console.log("🧹 [AuthContext] Cleaning up auth subscription.");
             subscription.unsubscribe();
         };
-    }, [supabase, updateAuthState]);
+    }, [supabase, loadProfile]);
 
     const signIn = useCallback(async (credentials: LoginForm): Promise<AuthResponse> => {
         try {
@@ -173,7 +139,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const signOut = useCallback(async (): Promise<void> => {
         try {
             await AuthService.signOut(supabase);
-            // The onAuthStateChange listener will handle updating the state
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown sign out error';
             console.error('Sign out error:', errorMessage);
@@ -195,9 +160,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (!authState.user) {
                 return { success: false, error: 'No user logged in' };
             }
-
             const profile = await ProfileService.updateProfile(authState.user.id, data, supabase);
-
             setAuthState(prev => ({ ...prev, profile }));
             return { success: true };
         } catch (error: unknown) {
@@ -209,7 +172,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const refreshProfile = useCallback(async (): Promise<void> => {
         try {
             if (!authState.user) return;
-
             const profile = await ProfileService.getProfile(authState.user.id, supabase);
             setAuthState(prev => ({ ...prev, profile }));
         } catch (error: unknown) {
@@ -218,18 +180,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }, [authState.user, supabase]);
 
-    // Debug logging for state changes
-    useEffect(() => {
-        console.log('📊 Auth state updated:', {
-            hasUser: !!authState.user,
-            userEmail: authState.user?.email,
-            hasProfile: !!authState.profile,
-            loading: authState.loading,
-            initialized: authState.initialized
-        });
-    }, [authState]);
-
-    // Memoize the context value
     const contextValue = useMemo((): AuthContextType => ({
         ...authState,
         signIn,
@@ -248,7 +198,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
 }
 
-// Convenience hooks (unchanged)
+// Convenience hooks
 export function useAuth(): AuthContextType {
     const context = useContext(AuthContext);
     if (context === undefined) {

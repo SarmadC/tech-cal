@@ -2,8 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-    // **CHANGE**: Changed 'let' to 'const'
-    const response = NextResponse.next({
+    let response = NextResponse.next({
         request: {
             headers: request.headers,
         },
@@ -27,22 +26,18 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    await supabase.auth.getSession()
+    // **CHANGE**: Replaced getSession() with getUser() for a more direct check
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // --- START DEBUG LOGS ---
+    console.log(`[MIDDLEWARE] Path: ${request.nextUrl.pathname} | User Authenticated: ${!!user}`);
+    // --- END DEBUG LOGS ---
 
     return response
 }
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - All image assets
-         * This prevents the middleware from running on requests where it's not needed.
-         */
         '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

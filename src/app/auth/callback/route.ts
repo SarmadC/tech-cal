@@ -1,33 +1,33 @@
-// src/app/auth/callback/route.ts (Refined & Simplified)
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
-    // The `origin` is the only URL piece we need, it's reliable.
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    
-    // The 'next' param is used for redirecting after sign-in.
     const next = searchParams.get('next') ?? '/calendar'
 
-    // If a code is present, exchange it for a session.
+    // --- START DEBUG LOGS ---
+    console.log(`[AUTH CALLBACK] Received request for URL: ${request.url}`);
+
     if (code) {
-        const supabase = await createClient()
+        console.log(`[AUTH CALLBACK] Authorization code found. Exchanging for session...`);
+        const supabase = createClient()
         const { error } = await supabase.auth.exchangeCodeForSession(code)
-        
+
         if (!error) {
-            // A successful exchange automatically sets the auth cookie.
-            // Redirecting to the 'next' page is all we need to do.
-            // The client-side AuthContext will pick up the session from the cookie.
-            console.log('Auth successful. Redirecting to:', `${origin}${next}`);
+            console.log(`[AUTH CALLBACK] Session exchange successful. Redirecting to: ${origin}${next}`);
             return NextResponse.redirect(`${origin}${next}`)
+        } else {
+            console.error(`[AUTH CALLBACK] Session exchange error: ${error.message}`);
         }
+    } else {
+        console.warn(`[AUTH CALLBACK] No authorization code found in the request.`);
     }
 
-    // --- Error Handling ---
-    // If we are here, it means the code was missing or the exchange failed.
-    // Redirect back to the login page with a generic error message.
-    // This is more secure than reflecting specific errors from the server.
-    console.error('Auth callback error or invalid code. Redirecting to login.');
+    console.error('[AUTH CALLBACK] Redirecting to login page with error.');
+    // --- END DEBUG LOGS ---
+
     return NextResponse.redirect(`${origin}/login?error=auth-failed`)
 }
