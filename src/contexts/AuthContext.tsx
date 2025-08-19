@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.tsx - FIXED VERSION
+// src/contexts/AuthContext.tsx
 'use client';
 
 import {
