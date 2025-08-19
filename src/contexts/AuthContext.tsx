@@ -1,3 +1,6 @@
+
+// src/contexts/AuthContext.tsx
+
 'use client';
 
 import {
@@ -61,24 +64,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const supabase = createClient();
 
+    // Load the initial session on first mount so `initialized` is set promptly
+    useEffect(() => {
+        let isActive = true;
+        (async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const currentUser = session?.user ?? null;
+                const profile = currentUser ? await ProfileService.getProfile(currentUser.id, supabase) : null;
+                if (!isActive) return;
+                setAuthState({
+                    user: currentUser,
+                    session,
+                    profile,
+                    loading: false,
+                    initialized: true,
+                });
+            } catch (_error) {
+                if (!isActive) return;
+                setAuthState((prev: AuthState) => ({ ...prev, loading: false, initialized: true }));
+            }
+        })();
+        return () => { isActive = false; };
+    }, [supabase]);
+
+    // Helper to load profile (this is good, keep it)
     const loadProfile = useCallback(async (userId: string): Promise<AppProfile | null> => {
         try {
-            console.log(`[AuthContext] 🧑‍💻 Loading profile for user: ${userId}`);
-            const profile = await ProfileService.getProfile(userId, supabase);
-            console.log(`[AuthContext] ✅ Profile loaded successfully for user: ${userId}`);
-            return profile;
+            return await ProfileService.getProfile(userId, supabase);
         } catch (error) {
-            console.warn(`[AuthContext] ⚠️ Profile not found for user: ${userId}`, error);
+            console.warn('Profile not found, user might be new:', error);
             return null;
         }
     }, [supabase]);
 
+    // Listen for subsequent auth state changes after initial session load
     useEffect(() => {
-        console.log("🚀 [AuthContext] Setting up auth state listener...");
-
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event: AuthChangeEvent, session: Session | null) => {
-                console.log(`🔔 [AuthContext] Auth state change event received: ${event}`, { userId: session?.user?.id });
+
+                if (event === 'SIGNED_IN') {
+                    toast.success('Successfully signed in! Welcome back.', { duration: 4000 });
+                }
+                if (event === 'SIGNED_OUT') {
+                    toast.info('You have been signed out.');
+                }
 
                 const currentUser = session?.user ?? null;
                 let profile: AppProfile | null = null;
@@ -86,12 +116,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 if (currentUser) {
                     profile = await loadProfile(currentUser.id);
                 }
-
-                console.log("📊 [AuthContext] Setting new auth state:", {
-                    hasUser: !!currentUser,
-                    hasProfile: !!profile,
-                    event: event
-                });
 
                 setAuthState({
                     user: currentUser,
@@ -104,10 +128,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         );
 
         return () => {
-            console.log("🧹 [AuthContext] Cleaning up auth subscription.");
             subscription.unsubscribe();
         };
-    }, [supabase, loadProfile]);
+    }, [supabase, loadProfile]); // Dependencies are correct
+
 
     const signIn = useCallback(async (credentials: LoginForm): Promise<AuthResponse> => {
         try {
@@ -160,8 +184,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (!authState.user) {
                 return { success: false, error: 'No user logged in' };
             }
+
             const profile = await ProfileService.updateProfile(authState.user.id, data, supabase);
-            setAuthState(prev => ({ ...prev, profile }));
+
+            setAuthState((prev: AuthState) => ({ ...prev, profile }));
             return { success: true };
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown profile update error';
@@ -172,14 +198,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const refreshProfile = useCallback(async (): Promise<void> => {
         try {
             if (!authState.user) return;
+
             const profile = await ProfileService.getProfile(authState.user.id, supabase);
-            setAuthState(prev => ({ ...prev, profile }));
+            setAuthState((prev: AuthState) => ({ ...prev, profile }));
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown profile refresh error';
             console.error('Failed to refresh profile:', errorMessage);
         }
     }, [authState.user, supabase]);
 
+    // Memoize the context value to prevent unnecessary re-renders
     const contextValue = useMemo((): AuthContextType => ({
         ...authState,
         signIn,
@@ -198,7 +226,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
 }
 
-// Convenience hooks
+// Convenience hooks (unchanged)
 export function useAuth(): AuthContextType {
     const context = useContext(AuthContext);
     if (context === undefined) {

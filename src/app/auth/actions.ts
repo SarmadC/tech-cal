@@ -1,29 +1,19 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+// 1. REMOVED the 'headers' import as it's unreliable for this purpose
+// import { headers } from 'next/headers' 
 import { createClient } from '@/utils/supabase/server'
 import { AuthService } from '@/services/authService'
 import { OAuthProvider } from '@/types'
 
+// Correctly import all schemas from the new central location
 import {
     LoginSchema,
     SignupSchema,
     ForgotPasswordSchema,
     ResetPasswordSchema
 } from '@/lib/schemas'
-
-// Type for debug details
-interface DebugDetails {
-    vercelEnv?: string;
-    hasSupabaseUrl: boolean;
-    hasSupabaseKey: boolean;
-    siteUrl?: string;
-    vercelUrl?: string;
-    error?: string;
-    email?: string;
-    userId?: string;
-    [key: string]: unknown; // Allow additional properties but with typed values
-}
 
 // A reusable FormState type for all auth actions
 export type AuthFormState = {
@@ -37,30 +27,6 @@ export type AuthFormState = {
         _form?: string[];
     };
     success: boolean;
-    debug?: {
-        timestamp: string;
-        environment: string;
-        action: string;
-        step: string;
-        details?: DebugDetails;
-    };
-}
-// Helper function to get debug info
-function getDebugInfo(action: string, step: string, details?: Partial<DebugDetails>): AuthFormState['debug'] {
-    return {
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'unknown',
-        action,
-        step,
-        details: {
-            ...details,
-            vercelEnv: process.env.VERCEL_ENV,
-            hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-            hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
-            vercelUrl: process.env.NEXT_PUBLIC_VERCEL_URL,
-        }
-    };
 }
 
 // --- Actions ---
@@ -69,111 +35,46 @@ export async function loginAction(
     prevState: AuthFormState,
     formData: FormData
 ): Promise<AuthFormState> {
-    console.log('🔍 DEBUG: loginAction started', {
-        environment: process.env.NODE_ENV,
-        timestamp: new Date().toISOString()
-    });
-
     const validatedFields = LoginSchema.safeParse(
         Object.fromEntries(formData.entries())
     );
 
     if (!validatedFields.success) {
-        console.log('🔍 DEBUG: Validation failed', validatedFields.error);
         return {
             success: false,
             message: 'Invalid data provided.',
             errors: validatedFields.error.flatten().fieldErrors,
-            debug: getDebugInfo('login', 'validation_failed', { 
-                errors: validatedFields.error.flatten() 
-            })
         };
     }
 
-    console.log('🔍 DEBUG: Creating Supabase client...');
     const supabase = await createClient();
-    
-    // Check if Supabase client was created successfully
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    console.log('🔍 DEBUG: Current session before login:', {
-        hasSession: !!currentSession,
-        userId: currentSession?.user?.id
-    });
-
     try {
-        console.log('🔍 DEBUG: Calling AuthService.signIn...');
-        const result = await AuthService.signIn(validatedFields.data, supabase);
-        
-        console.log('🔍 DEBUG: AuthService.signIn result:', {
-            success: result.success,
-            hasError: !!result.error,
-            error: result.error
-        });
-
-        if (!result.success) {
-            return {
-                success: false,
-                message: result.error || 'Authentication failed.',
-                errors: { _form: [result.error || 'Authentication failed'] },
-                debug: getDebugInfo('login', 'auth_failed', { 
-                    error: result.error 
-                })
-            };
-        }
-        
-        // Check session after login
-        const { data: { session: newSession } } = await supabase.auth.getSession();
-        console.log('🔍 DEBUG: Session after login:', {
-            hasSession: !!newSession,
-            userId: newSession?.user?.id,
-            email: newSession?.user?.email
-        });
-
-        // Return success state - the client will handle the redirect
-        return {
-            success: true,
-            message: 'Login successful! Redirecting...',
-            debug: getDebugInfo('login', 'success', {
-                hasNewSession: !!newSession,
-                userId: newSession?.user?.id
-            })
-        };
+        await AuthService.signIn(validatedFields.data, supabase);
     } catch (error) {
-        console.error("🔍 DEBUG: Login Action Error:", error);
+        console.error("Login Action Error:", error);
         return {
             success: false,
             message: 'Authentication failed.',
             errors: { _form: [(error as Error).message] },
-            debug: getDebugInfo('login', 'exception', {
-                error: (error as Error).message,
-                stack: (error as Error).stack
-            })
         };
     }
+
+    return redirect('/dashboard');
 }
 
 export async function signupAction(
     prevState: AuthFormState,
     formData: FormData
 ): Promise<AuthFormState> {
-    console.log('🔍 DEBUG: signupAction started', {
-        environment: process.env.NODE_ENV,
-        timestamp: new Date().toISOString()
-    });
-
     const validatedFields = SignupSchema.safeParse(
         Object.fromEntries(formData.entries())
     );
 
     if (!validatedFields.success) {
-        console.log('🔍 DEBUG: Signup validation failed', validatedFields.error);
         return {
             success: false,
             message: 'Invalid data provided.',
             errors: validatedFields.error.flatten().fieldErrors,
-            debug: getDebugInfo('signup', 'validation_failed', {
-                errors: validatedFields.error.flatten()
-            })
         };
     }
 
@@ -183,48 +84,19 @@ export async function signupAction(
         acceptTerms: acceptTerms === 'on',
     };
 
-    console.log('🔍 DEBUG: Creating Supabase client for signup...');
     const supabase = await createClient();
-    
     try {
-        console.log('🔍 DEBUG: Calling AuthService.signUp...');
-        const result = await AuthService.signUp(serviceData, supabase);
-        
-        console.log('🔍 DEBUG: AuthService.signUp result:', {
-            success: result.success,
-            hasError: !!result.error,
-            message: result.message
-        });
-
-        if (!result.success) {
-            return {
-                success: false,
-                message: result.error || 'Signup failed.',
-                errors: { _form: [result.error || 'Signup failed'] },
-                debug: getDebugInfo('signup', 'signup_failed', {
-                    error: result.error
-                })
-            };
-        }
-        
-        // Return success state for client to handle
-        return {
-            success: true,
-            message: result.message || 'Account created successfully! Please check your email to verify your account.',
-            debug: getDebugInfo('signup', 'success')
-        };
+        await AuthService.signUp(serviceData, supabase);
     } catch (error) {
-        console.error("🔍 DEBUG: Signup Action Error:", error);
+        console.error("Signup Action Error:", error);
         return {
             success: false,
             message: 'Signup failed.',
             errors: { _form: [(error as Error).message] },
-            debug: getDebugInfo('signup', 'exception', {
-                error: (error as Error).message,
-                stack: (error as Error).stack
-            })
         };
     }
+
+    return redirect('/dashboard');
 }
 
 export async function forgotPasswordAction(
@@ -295,44 +167,31 @@ export async function updatePasswordAction(
     };
 }
 
-// --- OAuth Action (Modified with debugging) ---
+
+// --- OAuth Action (Modified) ---
 
 export async function oauthSignInAction(provider: OAuthProvider) {
-    console.log('🔍 DEBUG: oauthSignInAction started', {
-        provider,
-        environment: process.env.NODE_ENV,
-        vercelEnv: process.env.VERCEL_ENV,
-        timestamp: new Date().toISOString()
-    });
-
-    // ROBUST ORIGIN DETECTION LOGIC
-    const origin =
+    // 2. ROBUST ORIGIN DETECTION LOGIC
+    // This reliably determines the correct URL for local dev vs. production.
+    const rawOrigin =
         process.env.NODE_ENV === 'development'
-            ? process.env.NEXT_PUBLIC_SITE_URL
-            : process.env.NEXT_PUBLIC_VERCEL_URL;
+            ? process.env.NEXT_PUBLIC_SITE_URL // From your .env.local file
+            : process.env.NEXT_PUBLIC_VERCEL_URL; // Automatically set by Vercel in production
 
-    // CONSTRUCT THE FULL REDIRECT URL
+    // Ensure we have a full URL with protocol
+    const origin = rawOrigin && /^https?:\/\//.test(rawOrigin) ? rawOrigin : (rawOrigin ? `https://${rawOrigin}` : '');
+
+    // 3. CONSTRUCT THE FULL REDIRECT URL
     const redirectTo = `${origin}/auth/callback`;
 
-    // CRITICAL DEBUG LOG
-    console.log('🔍 DEBUG: OAuth Configuration:', {
-        provider,
-        origin,
-        redirectTo,
-        hasOrigin: !!origin,
-        nodeEnv: process.env.NODE_ENV,
-        vercelEnv: process.env.VERCEL_ENV,
-        siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
-        vercelUrl: process.env.NEXT_PUBLIC_VERCEL_URL
-    });
+    // 4. (Optional but Recommended) DEBUGGING LOG
+    // Check your terminal where `npm run dev` is running to see this output.
+    console.log('Constructed Redirect URL for OAuth:', redirectTo);
 
+    // 5. ADD A CHECK to ensure the environment variable is set.
     if (!origin) {
         const errorMessage = 'Server configuration error: Site URL environment variable is not set.';
-        console.error('🔍 DEBUG: OAuth Error - No origin:', {
-            nodeEnv: process.env.NODE_ENV,
-            siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
-            vercelUrl: process.env.NEXT_PUBLIC_VERCEL_URL
-        });
+        console.error(errorMessage);
         return redirect(`/login?message=${encodeURIComponent(errorMessage)}`);
     }
 
@@ -341,24 +200,17 @@ export async function oauthSignInAction(provider: OAuthProvider) {
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
+            // 6. USE THE NEW, RELIABLE URL
             redirectTo: redirectTo,
         },
     });
 
-    console.log('🔍 DEBUG: OAuth result:', {
-        hasData: !!data,
-        hasUrl: !!data?.url,
-        hasError: !!error,
-        error: error?.message
-    });
-
     if (error) {
-        console.error('🔍 DEBUG: OAuth Error:', error.message);
+        console.error('OAuth Error:', error.message);
         return redirect(`/login?message=Could not authenticate with ${provider}.`);
     }
 
     if (data.url) {
-        console.log('🔍 DEBUG: Redirecting to OAuth provider:', data.url);
         return redirect(data.url);
     }
 
