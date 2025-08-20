@@ -80,19 +80,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         let hasInitialized = false;
         let initializationPromise: Promise<void> | null = null;
 
-        console.log('[AuthContext] Setting up auth state management');
-
         // Function to update auth state consistently
         const updateAuthState = async (event: AuthChangeEvent | 'INITIAL', session: Session | null) => {
             if (!isActive) return;
 
             // Don't process auth changes until initial load is complete
             if (event !== 'INITIAL' && !hasInitialized) {
-                console.log('[AuthContext] Skipping auth change event until initialized:', event);
                 return;
             }
-
-            console.log('[AuthContext] Auth state change:', { event, hasUser: !!session?.user, initialized: hasInitialized });
 
             // Show appropriate toasts for auth events (but not on initial load)
             if (hasInitialized && event !== 'INITIAL') {
@@ -100,8 +95,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     toast.success('Successfully signed in! Welcome back.', { duration: 4000 });
                 } else if (event === 'SIGNED_OUT') {
                     toast.info('You have been signed out.');
-                } else if (event === 'TOKEN_REFRESHED') {
-                    console.log('[AuthContext] Token refreshed successfully');
                 }
             }
 
@@ -129,7 +122,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
             if (event === 'INITIAL') {
                 hasInitialized = true;
-                console.log('[AuthContext] Initialization complete');
             }
         };
 
@@ -176,7 +168,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return () => {
             isActive = false;
             subscription.unsubscribe();
-            console.log('[AuthContext] Auth context cleanup');
         };
     }, [supabase, loadProfile]);
 

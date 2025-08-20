@@ -8,9 +8,6 @@ import { signupAction, oauthSignInAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
 import type { OAuthProvider } from '@/types';
 import type { AuthFormState } from '@/app/auth/actions';
-import { useAuth } from '@/contexts/AuthContext';
-import { useEffect } from 'react';
-
 // The initial state for our form, matching the AuthFormState type
 const initialState: AuthFormState = {
     message: '',
@@ -19,13 +16,8 @@ const initialState: AuthFormState = {
 };
 
 export default function SignupPage() {
-    const { user, initialized } = useAuth();
-    useEffect(() => {
-        console.log("SignupPage Auth State:", { user, initialized });
-    }, [user, initialized]);
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
-        console.log('[SignupPage] Starting OAuth sign-in with', provider);
         try {
             await oauthSignInAction(provider);
         } catch (error) {

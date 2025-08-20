@@ -26,7 +26,6 @@ export default function LoginPage() {
     useEffect(() => {
         if (initialized && user && !hasRedirected && !loading) {
             const redirectTo = searchParams.get('redirect') || '/calendar';
-            console.log('[LoginPage] User authenticated, redirecting to:', redirectTo);
             setHasRedirected(true);
             
             // Small delay to ensure auth state has fully settled
@@ -37,7 +36,6 @@ export default function LoginPage() {
     }, [initialized, user, router, searchParams, hasRedirected, loading]);
 
     useEffect(() => {
-        console.log('[LoginPage] Auth state:', { user: !!user, initialized, loading });
         
         const error = searchParams.get('error');
         const message = searchParams.get('message');
@@ -85,7 +83,7 @@ export default function LoginPage() {
             // Clean up URL
             router.replace('/login', { scroll: false });
         }
-    }, [searchParams, router]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [searchParams, router]);
 
     // OAuth timeout handler
     useEffect(() => {
@@ -111,7 +109,6 @@ export default function LoginPage() {
     // Monitor auth state changes to clear OAuth loading
     useEffect(() => {
         if (isOAuthLoading && (user || (!loading && initialized))) {
-            console.log('[LoginPage] Auth state changed, clearing OAuth loading');
             setIsOAuthLoading(false);
             setOauthStartTime(null);
             setPendingProvider(null);
@@ -122,7 +119,6 @@ export default function LoginPage() {
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         try {
-            console.log('[LoginPage] Starting OAuth sign-in with', provider);
             
             setIsOAuthLoading(true);
             setOauthStartTime(Date.now());

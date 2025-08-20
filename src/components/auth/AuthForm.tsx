@@ -30,14 +30,12 @@ export function AuthForm({
         // Only process success once to avoid multiple calls
         if (state.success && !hasHandledSuccess.current) {
             hasHandledSuccess.current = true;
-            console.log('AuthForm: Success detected, showing toast and calling onSuccess');
             toast.success(state.message || 'Success!');
             
             // Give the auth context a brief moment to update before calling onSuccess
             // Reduced delay to improve perceived performance
             setTimeout(() => {
                 if (onSuccess) {
-                    console.log('[AuthForm] Calling onSuccess callback');
                     onSuccess();
                 }
             }, 100); // Reduced from 500ms to 100ms
