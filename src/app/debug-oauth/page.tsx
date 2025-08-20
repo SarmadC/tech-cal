@@ -7,7 +7,15 @@ import { createClient } from '@/utils/supabase/client';
 export default function DebugOAuthPage() {
     const searchParams = useSearchParams();
     const [logs, setLogs] = useState<string[]>([]);
-    const [authState, setAuthState] = useState<any>(null);
+    const [authState, setAuthState] = useState<{
+        session: 'exists' | 'none';
+        user: {
+            id: string;
+            email: string | undefined;
+            provider: string | undefined;
+        } | null;
+        error?: string;
+    } | null>(null);
 
     const addLog = (message: string) => {
         const timestamp = new Date().toLocaleTimeString();
