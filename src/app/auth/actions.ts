@@ -168,52 +168,49 @@ export async function updatePasswordAction(
 }
 
 
-// --- OAuth Action (Modified) ---
+// --- OAuth Action (Refactored) ---
 
 export async function oauthSignInAction(provider: OAuthProvider) {
-    // 2. ROBUST ORIGIN DETECTION LOGIC
-    // This reliably determines the correct URL for local dev vs. production.
-    const rawOrigin =
-        process.env.NODE_ENV === 'development'
-            ? process.env.NEXT_PUBLIC_SITE_URL // From your .env.local file
-            : process.env.NEXT_PUBLIC_VERCEL_URL; // Automatically set by Vercel in production
+    const { getOAuthRedirectUrl, logAuthUrls } = await import('@/utils/authUtils');
+    
+    logAuthUrls('oauthSignInAction');
+    
+    const redirectTo = getOAuthRedirectUrl();
 
-    // Ensure we have a full URL with protocol
-    const origin = rawOrigin && /^https?:\/\//.test(rawOrigin) ? rawOrigin : (rawOrigin ? `https://${rawOrigin}` : '');
-
-    // 3. CONSTRUCT THE FULL REDIRECT URL
-    const redirectTo = `${origin}/auth/callback`;
-
-    // 4. (Optional but Recommended) DEBUGGING LOG
-    // Check your terminal where `npm run dev` is running to see this output.
-    console.log('Constructed Redirect URL for OAuth:', redirectTo);
-    console.log('OAuth action - rawOrigin:', rawOrigin, 'origin:', origin, 'redirectTo:', redirectTo);
-
-    // 5. ADD A CHECK to ensure the environment variable is set.
-    if (!origin) {
-        const errorMessage = 'Server configuration error: Site URL environment variable is not set.';
+    if (!redirectTo || redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production') {
+        const errorMessage = 'Server configuration error: Unable to determine OAuth redirect URL.';
         console.error(errorMessage);
-        return redirect(`/login?message=${encodeURIComponent(errorMessage)}`);
+        return redirect(`/login?error=config-error&message=${encodeURIComponent(errorMessage)}`);
     }
 
     const supabase = await createClient();
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-            // 6. USE THE NEW, RELIABLE URL
-            redirectTo: redirectTo,
-        },
-    });
+    try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider,
+            options: {
+                redirectTo,
+                queryParams: {
+                    access_type: 'offline',
+                    prompt: 'consent',
+                }
+            },
+        });
 
-    if (error) {
-        console.error('OAuth Error:', error.message);
-        return redirect(`/login?message=Could not authenticate with ${provider}.`);
+        if (error) {
+            console.error('[OAuth Action] Supabase OAuth Error:', error.message);
+            return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`Failed to authenticate with ${provider}: ${error.message}`)}`);
+        }
+
+        if (data.url) {
+            console.log('[OAuth Action] Redirecting to OAuth provider:', data.url);
+            return redirect(data.url);
+        }
+
+        return redirect('/login?error=oauth-failed&message=No authentication URL received from provider.');
+    } catch (error) {
+        console.error('[OAuth Action] Unexpected error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(errorMessage)}`);
     }
-
-    if (data.url) {
-        return redirect(data.url);
-    }
-
-    return redirect('/login?message=An unexpected error occurred.');
 }

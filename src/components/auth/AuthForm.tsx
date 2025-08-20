@@ -33,14 +33,14 @@ export function AuthForm({
             console.log('AuthForm: Success detected, showing toast and calling onSuccess');
             toast.success(state.message || 'Success!');
             
-            // Give the auth context time to update before calling onSuccess
-            // This ensures the auth state change has propagated
+            // Give the auth context a brief moment to update before calling onSuccess
+            // Reduced delay to improve perceived performance
             setTimeout(() => {
                 if (onSuccess) {
-                    console.log('AuthForm: Calling onSuccess callback');
+                    console.log('[AuthForm] Calling onSuccess callback');
                     onSuccess();
                 }
-            }, 500); // 500ms delay to ensure auth context has updated
+            }, 100); // Reduced from 500ms to 100ms
         } else if (state.message && !state.success && (state.errors?._form || Object.keys(state.errors ?? {}).length === 0)) {
             // Show error toast only for general form errors
             toast.error(state.message);

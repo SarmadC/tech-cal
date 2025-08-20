@@ -64,84 +64,121 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const supabase = createClient();
 
-    // Load the initial session on first mount so `initialized` is set promptly
-    useEffect(() => {
-        let isActive = true;
-        (async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                const currentUser = session?.user ?? null;
-                // Ensure profile is loaded, but don't block `initialized` if it fails
-                let profileData: AppProfile | null = null;
-                if (currentUser) {
-                    try {
-                        profileData = await ProfileService.getProfile(currentUser.id, supabase);
-                    } catch (profileError) {
-                        console.error("AuthContext: Error loading profile for user during initial session fetch:", profileError);
-                    }
-                }
-
-                if (!isActive) return;
-                setAuthState({
-                    user: currentUser,
-                    session,
-                    profile: profileData,
-                    loading: false,
-                    initialized: true,
-                });
-            } catch (error) {
-                console.error("AuthContext: Error during initial session fetch (getSession):", error);
-                if (!isActive) return;
-                // Always initialize to true, even on errors, to prevent infinite loading
-                setAuthState((prev: AuthState) => ({ ...prev, loading: false, initialized: true }));
-            }
-        })();
-        return () => { isActive = false; };
-    }, [supabase]);
-
-    // Helper to load profile (this is good, keep it)
+    // Helper to load profile
     const loadProfile = useCallback(async (userId: string): Promise<AppProfile | null> => {
         try {
             return await ProfileService.getProfile(userId, supabase);
         } catch (error) {
-            console.warn('Profile not found, user might be new:', error);
+            console.warn('[AuthContext] Profile not found, user might be new:', error);
             return null;
         }
     }, [supabase]);
 
-    // Listen for subsequent auth state changes after initial session load
+    // Unified auth state management - handles both initial load and subsequent changes
     useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event: AuthChangeEvent, session: Session | null) => {
+        let isActive = true;
+        let hasInitialized = false;
+        let initializationPromise: Promise<void> | null = null;
 
+        console.log('[AuthContext] Setting up auth state management');
+
+        // Function to update auth state consistently
+        const updateAuthState = async (event: AuthChangeEvent | 'INITIAL', session: Session | null) => {
+            if (!isActive) return;
+
+            // Don't process auth changes until initial load is complete
+            if (event !== 'INITIAL' && !hasInitialized) {
+                console.log('[AuthContext] Skipping auth change event until initialized:', event);
+                return;
+            }
+
+            console.log('[AuthContext] Auth state change:', { event, hasUser: !!session?.user, initialized: hasInitialized });
+
+            // Show appropriate toasts for auth events (but not on initial load)
+            if (hasInitialized && event !== 'INITIAL') {
                 if (event === 'SIGNED_IN') {
                     toast.success('Successfully signed in! Welcome back.', { duration: 4000 });
-                }
-                if (event === 'SIGNED_OUT') {
+                } else if (event === 'SIGNED_OUT') {
                     toast.info('You have been signed out.');
+                } else if (event === 'TOKEN_REFRESHED') {
+                    console.log('[AuthContext] Token refreshed successfully');
                 }
-
-                const currentUser = session?.user ?? null;
-                let profile: AppProfile | null = null;
-
-                if (currentUser) {
-                    profile = await loadProfile(currentUser.id);
-                }
-
-                setAuthState({
-                    user: currentUser,
-                    session,
-                    profile,
-                    loading: false,
-                    initialized: true,
-                });
             }
-        );
+
+            const currentUser = session?.user ?? null;
+            let profile: AppProfile | null = null;
+
+            // Load profile if user exists
+            if (currentUser) {
+                try {
+                    profile = await loadProfile(currentUser.id);
+                } catch (profileError) {
+                    console.error('[AuthContext] Error loading profile:', profileError);
+                }
+            }
+
+            if (!isActive) return;
+
+            setAuthState({
+                user: currentUser,
+                session,
+                profile,
+                loading: false,
+                initialized: true,
+            });
+
+            if (event === 'INITIAL') {
+                hasInitialized = true;
+                console.log('[AuthContext] Initialization complete');
+            }
+        };
+
+        // Load initial session
+        const initializeAuth = async () => {
+            if (initializationPromise) return initializationPromise;
+            
+            initializationPromise = (async () => {
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    
+                    if (error) {
+                        console.error('[AuthContext] Error getting initial session:', error);
+                    }
+                    
+                    await updateAuthState('INITIAL', session);
+                } catch (error) {
+                    console.error('[AuthContext] Exception during initial session fetch:', error);
+                    if (!isActive) return;
+                    
+                    // Ensure we always initialize, even on error
+                    setAuthState(prev => ({ 
+                        ...prev, 
+                        loading: false, 
+                        initialized: true 
+                    }));
+                    hasInitialized = true;
+                }
+            })();
+
+            return initializationPromise;
+        };
+
+        // Set up auth state change listener - but only process after initialization
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (hasInitialized) {
+                updateAuthState(event, session);
+            }
+        });
+
+        // Initialize immediately
+        initializeAuth();
 
         return () => {
+            isActive = false;
             subscription.unsubscribe();
+            console.log('[AuthContext] Auth context cleanup');
         };
-    }, [supabase, loadProfile]); // Dependencies are correct
+    }, [supabase, loadProfile]);
 
 
     const signIn = useCallback(async (credentials: LoginForm): Promise<AuthResponse> => {

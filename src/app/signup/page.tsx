@@ -25,8 +25,12 @@ export default function SignupPage() {
     }, [user, initialized]);
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
-        // We can show a loading state here if desired
-        await oauthSignInAction(provider);
+        console.log('[SignupPage] Starting OAuth sign-in with', provider);
+        try {
+            await oauthSignInAction(provider);
+        } catch (error) {
+            console.error('[SignupPage] OAuth sign-in error:', error);
+        }
     };
 
     // The AuthForm component now handles showing the success toast automatically.
