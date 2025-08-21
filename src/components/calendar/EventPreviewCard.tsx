@@ -85,13 +85,16 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
             return;
         }
 
+        // Use originalEventId for multi-day event instances, otherwise use the regular id
+        const trackingEventId = (event as any).originalEventId || event.id;
+
         if (isTracked) {
-            untrackEvent({ eventId: event.id });
+            untrackEvent({ eventId: trackingEventId });
             setIsTracked(false);
             onTrackingChange?.(false);
         } else {
             trackEvent({
-                eventId: event.id,
+                eventId: trackingEventId,
                 status: 'bookmarked' as EventStatus,
             });
             setIsTracked(true);

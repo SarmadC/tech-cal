@@ -48,8 +48,12 @@ export function generateDailyEventInstances(
         return [];
     }
 
-    const daysDiff = Math.floor((viewDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    // Calculate day difference using calendar dates, not timestamps
+    const viewDateOnly = new Date(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate());
+    const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const daysDiff = Math.floor((viewDateOnly.getTime() - startDateOnly.getTime()) / (1000 * 60 * 60 * 24));
     const currentDay = Math.max(1, daysDiff + 1);
+
 
     const isFirstDay = viewDateStr === eventStartDateStr;
     const isLastDay = viewDateStr === eventEndDateStr;

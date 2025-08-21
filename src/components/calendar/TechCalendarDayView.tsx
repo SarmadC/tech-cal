@@ -6,7 +6,7 @@ import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
 import EventDetailPanel from './EventDetailPanel';
 import EventPreviewCard from './EventPreviewCard';
 import '@/app/styles/tech-day-view.css';
-import { processEventsForDayView } from '@/utils/multiDayEventUtils';
+import { processEventsForDayView, MultiDayEventInstance } from '@/utils/multiDayEventUtils';
 import { formatTime, isEventLive } from '@/utils/dateUtils';
 
 // 2. UPDATE PROPS: Use the new types for component props.
@@ -51,9 +51,27 @@ const getVisualEventInfo = (event: Event, currentDate: Date) => {
     const spanHours = Math.max(1, visualEndHour - visualStartHour);
 
     const totalDurationHours = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-    const dayNumber = Math.floor((todayStart.getTime() - new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Check if this is a multi-day event instance or a regular multi-day event
+    const isMultiDayInstance = 'isInstance' in event && 'dayInfo' in event;
+    let isActuallyMultiDay = false;
+    let dayNumber = 1;
 
-    return { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, totalDurationHours, dayNumber };
+    if (isMultiDayInstance) {
+        // For multi-day event instances, use the dayInfo
+        const instance = event as MultiDayEventInstance;
+        isActuallyMultiDay = instance.dayInfo ? instance.dayInfo.totalDays > 1 : false;
+        dayNumber = instance.dayInfo ? instance.dayInfo.currentDay : 1;
+
+    } else {
+        // For regular events, check if they span multiple calendar days
+        const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        isActuallyMultiDay = startDate.getTime() !== endDate.getTime();
+        dayNumber = Math.floor((todayStart.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+
+    return { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, totalDurationHours, dayNumber, isActuallyMultiDay };
 };
 
 interface EventCardProps {
@@ -66,7 +84,7 @@ interface EventCardProps {
 }
 
 const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave, categoryColor, visualInfo }) => {
-    const { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, totalDurationHours, dayNumber } = visualInfo;
+    const { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, totalDurationHours, dayNumber, isActuallyMultiDay } = visualInfo;
 
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
@@ -88,7 +106,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave,
             </div>
             <div className={`flex items-center gap-2 mb-2 text-xs ${live ? 'text-gray-300' : 'text-gray-600'}`}>
                 <div className="flex items-center gap-1"><Clock className="w-3 h-3" /><span>{timeText}</span></div>
-                {totalDurationHours >= 24 && <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${live ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>Day {dayNumber}</span>}
+                {isActuallyMultiDay && <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${live ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>Day {dayNumber}</span>}
             </div>
             <div className={`text-xs ${live ? 'text-gray-400' : 'text-gray-500'} mb-2`}>{event.organizer}</div>
             <div className="flex items-center gap-1 mt-auto">

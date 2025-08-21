@@ -20,11 +20,14 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
         status?: EventStatus;
     } | null>(null);
 
+    // Use originalEventId for multi-day event instances, otherwise use the regular id
+    const trackingEventId = (event as any).originalEventId || event.id;
+    
     const {
         data: trackingStatus,
         isLoading: isLoadingStatus,
         error: statusError
-    } = useEventTrackingStatus(event.id);
+    } = useEventTrackingStatus(trackingEventId);
 
     const { trackEvent, untrackEvent, isLoading: isMutating } = useEventTracking();
 
@@ -40,8 +43,11 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
             status: status
         });
 
+        // Use originalEventId for multi-day event instances, otherwise use the regular id
+        const trackingEventId = (event as any).originalEventId || event.id;
+
         trackEvent({
-            eventId: event.id,
+            eventId: trackingEventId,
             status: status,
         });
     };
@@ -51,7 +57,10 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
             isTracked: false
         });
 
-        untrackEvent({ eventId: event.id });
+        // Use originalEventId for multi-day event instances, otherwise use the regular id
+        const trackingEventId = (event as any).originalEventId || event.id;
+
+        untrackEvent({ eventId: trackingEventId });
     };
 
     if (!user) {
