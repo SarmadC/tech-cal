@@ -176,8 +176,9 @@ export async function oauthSignInAction(provider: OAuthProvider) {
     logAuthUrls('oauthSignInAction');
     
     const redirectTo = getOAuthRedirectUrl();
+    console.log('[OAuth Action] Redirect URL:', redirectTo);
 
-    if (!redirectTo || redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production') {
+    if (!redirectTo || (redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production')) {
         const errorMessage = 'Server configuration error: Unable to determine OAuth redirect URL.';
         console.error(errorMessage);
         return redirect(`/login?error=config-error&message=${encodeURIComponent(errorMessage)}`);
@@ -186,6 +187,8 @@ export async function oauthSignInAction(provider: OAuthProvider) {
     const supabase = await createClient();
 
     try {
+        console.log(`[OAuth Action] Initiating ${provider} OAuth with redirect:`, redirectTo);
+        
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider,
             options: {
@@ -197,16 +200,19 @@ export async function oauthSignInAction(provider: OAuthProvider) {
             },
         });
 
+        console.log('[OAuth Action] Supabase response:', { data: !!data, error: error?.message, url: data?.url });
+
         if (error) {
-            console.error('[OAuth Action] Supabase OAuth Error:', error.message);
+            console.error('[OAuth Action] Supabase OAuth Error:', error);
             return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`Failed to authenticate with ${provider}: ${error.message}`)}`);
         }
 
-        if (data.url) {
+        if (data?.url) {
             console.log('[OAuth Action] Redirecting to OAuth provider:', data.url);
             return redirect(data.url);
         }
 
+        console.error('[OAuth Action] No authentication URL received from provider');
         return redirect('/login?error=oauth-failed&message=No authentication URL received from provider.');
     } catch (error) {
         console.error('[OAuth Action] Unexpected error:', error);
