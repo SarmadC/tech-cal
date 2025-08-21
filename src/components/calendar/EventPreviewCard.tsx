@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 // 1. UPDATE IMPORTS: Use the new types and the type guard.
 import { Event, EventStatus, isTrackedEvent, TrackedEvent } from '@/types';
+import { MultiDayEventInstance } from '@/utils/multiDayEventUtils';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -14,7 +15,7 @@ import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/d
 
 // 2. UPDATE PROPS: The component can accept either a base Event or an enriched TrackedEvent.
 interface EventPreviewCardProps {
-    event: Event | TrackedEvent;
+    event: Event | TrackedEvent | MultiDayEventInstance;
     isVisible: boolean;
     position: { x: number; y: number };
     onClose: () => void;
@@ -86,7 +87,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
         }
 
         // Use originalEventId for multi-day event instances, otherwise use the regular id
-        const trackingEventId = (event as any).originalEventId || event.id;
+        const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
 
         if (isTracked) {
             untrackEvent({ eventId: trackingEventId });

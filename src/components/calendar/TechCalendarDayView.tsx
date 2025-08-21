@@ -50,7 +50,7 @@ const getVisualEventInfo = (event: Event, currentDate: Date) => {
 
     const spanHours = Math.max(1, visualEndHour - visualStartHour);
 
-    const totalDurationHours = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60));
+    const _totalDurationHours = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60));
     
     // Check if this is a multi-day event instance or a regular multi-day event
     const isMultiDayInstance = 'isInstance' in event && 'dayInfo' in event;
@@ -71,7 +71,7 @@ const getVisualEventInfo = (event: Event, currentDate: Date) => {
         dayNumber = Math.floor((todayStart.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     }
 
-    return { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, totalDurationHours, dayNumber, isActuallyMultiDay };
+    return { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, dayNumber, isActuallyMultiDay };
 };
 
 interface EventCardProps {
@@ -84,7 +84,7 @@ interface EventCardProps {
 }
 
 const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave, categoryColor, visualInfo }) => {
-    const { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, totalDurationHours, dayNumber, isActuallyMultiDay } = visualInfo;
+    const { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, dayNumber, isActuallyMultiDay } = visualInfo;
 
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;

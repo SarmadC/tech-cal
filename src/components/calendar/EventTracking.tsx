@@ -6,10 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEventTracking, useEventTrackingStatus } from '@/hooks/useEventTracking';
 // 1. UPDATE IMPORTS: Use the new, canonical `Event` type.
 import { Event, EventStatus } from '@/types';
+import { MultiDayEventInstance } from '@/utils/multiDayEventUtils';
 
 // 2. UPDATE PROPS: The interface now uses the `Event` type.
 interface EventTrackingProps {
-    event: Event;
+    event: Event | MultiDayEventInstance;
 }
 
 const EventTracking: FC<EventTrackingProps> = ({ event }) => {
@@ -21,7 +22,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
     } | null>(null);
 
     // Use originalEventId for multi-day event instances, otherwise use the regular id
-    const trackingEventId = (event as any).originalEventId || event.id;
+    const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
     
     const {
         data: trackingStatus,
@@ -44,7 +45,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
         });
 
         // Use originalEventId for multi-day event instances, otherwise use the regular id
-        const trackingEventId = (event as any).originalEventId || event.id;
+        const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
 
         trackEvent({
             eventId: trackingEventId,
@@ -58,7 +59,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
         });
 
         // Use originalEventId for multi-day event instances, otherwise use the regular id
-        const trackingEventId = (event as any).originalEventId || event.id;
+        const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
 
         untrackEvent({ eventId: trackingEventId });
     };
