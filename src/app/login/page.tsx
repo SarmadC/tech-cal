@@ -140,8 +140,10 @@ export default function LoginPage() {
             }, 1000);
         } catch (error) {
             // Check if this is a Next.js redirect (which is expected)
-            if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+            if (error instanceof Error && (error.message === 'NEXT_REDIRECT' || error.message.includes('NEXT_REDIRECT'))) {
                 // This is expected - the user is being redirected to OAuth provider
+                console.log('[LoginPage] OAuth redirect successful, user being redirected to provider');
+                toast.dismiss(toastId);
                 return;
             }
             
