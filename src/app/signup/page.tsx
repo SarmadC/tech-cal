@@ -21,6 +21,13 @@ export default function SignupPage() {
         try {
             await oauthSignInAction(provider);
         } catch (error) {
+            // Check if this is a Next.js redirect (which is expected)
+            if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+                // This is expected - the user is being redirected to OAuth provider
+                return;
+            }
+            
+            // This is an actual error
             console.error('[SignupPage] OAuth sign-in error:', error);
         }
     };

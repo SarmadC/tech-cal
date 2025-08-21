@@ -118,20 +118,17 @@ export default function LoginPage() {
     const initialState: AuthFormState = { message: '', success: false };
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
+        setIsOAuthLoading(true);
+        setOauthStartTime(Date.now());
+        setPendingProvider(provider);
+        
+        const toastId = toast.loading(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`, {
+            duration: 30000,
+        });
+
         try {
-            
-            setIsOAuthLoading(true);
-            setOauthStartTime(Date.now());
-            setPendingProvider(provider);
-            
-            const toastId = toast.loading(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`, {
-                duration: 30000,
-            });
-            
             await oauthSignInAction(provider);
-            
-            // If we reach this point, something went wrong (should have redirected)
-            console.warn('[LoginPage] OAuth action completed without redirect');
+            // If we reach this point without a redirect, something is wrong
             setTimeout(() => {
                 setIsOAuthLoading(false);
                 setOauthStartTime(null);
@@ -142,11 +139,18 @@ export default function LoginPage() {
                 });
             }, 1000);
         } catch (error) {
+            // Check if this is a Next.js redirect (which is expected)
+            if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+                // This is expected - the user is being redirected to OAuth provider
+                return;
+            }
+            
+            // This is an actual error
             console.error('[LoginPage] OAuth sign-in error:', error);
             setIsOAuthLoading(false);
             setOauthStartTime(null);
             setPendingProvider(null);
-            setPendingProvider(null);
+            toast.dismiss(toastId);
             toast.error("Sign-in Error", {
                 description: "Failed to start the sign-in process. Please try again.",
             });

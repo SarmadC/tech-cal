@@ -5,6 +5,11 @@ import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import CalendarClientView from './CalendarClientView';
+<<<<<<< HEAD
+=======
+// No specific type imports are needed here because the types are inferred
+// from the service calls and passed directly to the client component.
+>>>>>>> parent of 2aaba165 (Added debugging to login)
 
 export default async function CalendarPage() {
     console.log('🏗️ Calendar page loading...');

@@ -96,6 +96,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 } else if (event === 'SIGNED_OUT') {
                     toast.info('You have been signed out.');
                 }
+<<<<<<< HEAD
+=======
+                
+                const currentUser = session?.user ?? null;
+                let profile: AppProfile | null = null;
+                
+                if (currentUser) {
+                    profile = await loadProfile(currentUser.id);
+                }
+
+                setAuthState({
+                    user: currentUser,
+                    session,
+                    profile,
+                    loading: false,
+                    initialized: true,
+                });
+>>>>>>> parent of 2aaba165 (Added debugging to login)
             }
 
             const currentUser = session?.user ?? null;
@@ -225,8 +243,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
 
             const profile = await ProfileService.updateProfile(authState.user.id, data, supabase);
+<<<<<<< HEAD
 
             setAuthState((prev: AuthState) => ({ ...prev, profile }));
+=======
+            
+            setAuthState(prev => ({ ...prev, profile }));
+>>>>>>> parent of 2aaba165 (Added debugging to login)
             return { success: true };
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown profile update error';
@@ -237,7 +260,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const refreshProfile = useCallback(async (): Promise<void> => {
         try {
             if (!authState.user) return;
-
+            
             const profile = await ProfileService.getProfile(authState.user.id, supabase);
             setAuthState((prev: AuthState) => ({ ...prev, profile }));
         } catch (error: unknown) {
