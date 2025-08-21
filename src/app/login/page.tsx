@@ -53,6 +53,12 @@ export default function LoginPage() {
             
             switch (error) {
                 case 'oauth-failed':
+                    // Don't show error if it's just NEXT_REDIRECT (which is normal)
+                    if (message === 'NEXT_REDIRECT') {
+                        console.log('[LoginPage] Ignoring NEXT_REDIRECT error - this is expected OAuth behavior');
+                        router.replace('/login', { scroll: false });
+                        return;
+                    }
                     errorTitle = "OAuth Sign-In Failed";
                     break;
                 case 'config-error':
