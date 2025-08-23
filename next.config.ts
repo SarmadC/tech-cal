@@ -29,6 +29,18 @@ const securityHeaders = [
   {
     key: 'Referrer-Policy',
     value: 'origin-when-cross-origin' // A good balance of privacy and usability
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: `
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.sentry-cdn.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: blob: https:;
+        connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co;
+        frame-ancestors 'none';
+        `.replace(/\s+/g, ' ').trim()
   }
 ];
 

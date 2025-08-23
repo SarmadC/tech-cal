@@ -1,4 +1,3 @@
-// src/hooks/useEventTracking.ts
 'use client';
 
 import { useState } from 'react';
@@ -29,7 +28,7 @@ export function useEventTracking() {
     const { mutate: trackEvent, isPending: isTracking } = useMutation({
         mutationFn: async (variables: TrackEventVariables) => {
             console.log('[useEventTracking] trackEvent mutationFn called with:', variables);
-            
+
             const formData = new FormData();
             formData.append('eventId', variables.eventId);
             formData.append('status', variables.status);
@@ -40,7 +39,7 @@ export function useEventTracking() {
             console.log('[useEventTracking] Calling trackEventAction with formData');
             const result = await trackEventAction(formData);
             console.log('[useEventTracking] trackEventAction result:', result);
-            
+
             if (!result.success) {
                 throw new Error(result.error || 'Failed to track event.');
             }
@@ -53,6 +52,10 @@ export function useEventTracking() {
             toast.success(`Event ${statusText}!`);
 
             queryClient.invalidateQueries({ queryKey: listQueryKey });
+            // --- FIX START ---
+            // Invalidate the query used by the main calendar view to update the UI
+            queryClient.invalidateQueries({ queryKey: ['allTrackedEventIds', user?.id] });
+            // --- FIX END ---
             queryClient.invalidateQueries({
                 queryKey: ['eventTrackingStatus', variables.eventId, user?.id]
             });
@@ -66,14 +69,14 @@ export function useEventTracking() {
     const { mutate: untrackEvent, isPending: isUntracking } = useMutation({
         mutationFn: async (variables: UntrackEventVariables) => {
             console.log('[useEventTracking] untrackEvent mutationFn called with:', variables);
-            
+
             const formData = new FormData();
             formData.append('eventId', variables.eventId);
 
             console.log('[useEventTracking] Calling untrackEventAction with formData');
             const result = await untrackEventAction(formData);
             console.log('[useEventTracking] untrackEventAction result:', result);
-            
+
             if (!result.success) {
                 throw new Error(result.error || 'Failed to untrack event.');
             }
@@ -83,6 +86,10 @@ export function useEventTracking() {
             toast.success('Event untracked.');
 
             queryClient.invalidateQueries({ queryKey: listQueryKey });
+            // --- FIX START ---
+            // Also invalidate the query for the main calendar view upon untracking
+            queryClient.invalidateQueries({ queryKey: ['allTrackedEventIds', user?.id] });
+            // --- FIX END ---
             queryClient.invalidateQueries({
                 queryKey: ['eventTrackingStatus', variables.eventId, user?.id]
             });
@@ -131,12 +138,12 @@ export function useTrackedEvents() {
     const [supabase] = useState(() => createClient());
     const { user } = useAuth();
 
-    // 2. UPDATE HOOK SIGNATURE: The `useQuery` hook is now strongly typed to return `TrackedEventRecord[]`.
+
     return useQuery<TrackedEventRecord[]>({
         queryKey: ['trackedEvents', user?.id],
         queryFn: async () => {
             if (!user) return [];
-            // This works because `getTrackedEvents` was already migrated to return `TrackedEventRecord[]`.
+
             return UserEventService.getTrackedEvents(user.id, supabase);
         },
         enabled: !!user,
