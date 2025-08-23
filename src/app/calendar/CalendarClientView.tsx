@@ -19,6 +19,7 @@ import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking } from '
 import { UserEventService } from '@/services/userEventService';
 import { useAuth } from '@/contexts/AuthContext';
 import { TechCalendarDayView } from '@/components/calendar/TechCalendarDayView';
+import TechCalendarWeekView from '@/components/calendar/TechCalendarWeekView';
 
 const EventDetailPanelDynamic = dynamic(
     () => import('@/components/calendar/EventDetailPanel'),
@@ -115,6 +116,36 @@ export default function CalendarClientView({
         });
     }, [enrichedEvents, searchParams]);
 
+    const weekEvents = useMemo(() => {
+        const view = searchParams.get('view') || 'month';
+        if (view !== 'week') return [];
+
+        const dateParam = searchParams.get('date');
+        const currentDate = dateParam ? (() => {
+            const [year, month, day] = dateParam.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        })() : new Date();
+
+        // Get start of week (Monday)
+        const weekStart = new Date(currentDate);
+        const dayOfWeek = weekStart.getDay();
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        weekStart.setDate(weekStart.getDate() - daysToMonday);
+        weekStart.setHours(0, 0, 0, 0);
+
+        // Get end of week (Sunday)
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+
+        return enrichedEvents.filter((event: TrackedEvent) => {
+            const eventStart = new Date(event.startTime);
+            const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
+
+            return eventStart <= weekEnd && eventEnd >= weekStart;
+        });
+    }, [enrichedEvents, searchParams]);
+
 
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
         const eventData = clickInfo.event.extendedProps as Event;
@@ -150,7 +181,23 @@ export default function CalendarClientView({
 
     const renderCalendarContent = (context: CalendarLayoutContext) => {
         if (context.view === 'day') {
-            return <TechCalendarDayView events={dayEvents} initialDate={context.date} categories={initialCategories} profile={profile} />;
+            return <TechCalendarDayView 
+                events={dayEvents} 
+                initialDate={context.date} 
+                categories={initialCategories} 
+                profile={profile}
+                onEventSelect={handleSelectEvent}
+            />;
+        }
+
+        if (context.view === 'week') {
+            return <TechCalendarWeekView 
+                events={weekEvents} 
+                initialDate={context.date} 
+                categories={initialCategories} 
+                profile={profile}
+                onEventSelect={handleSelectEvent}
+            />;
         }
 
         return <CalendarWithPreview events={enrichedEvents} onEventClick={handleEventClick} view={context.view} calendarRef={context.calendarRef} />;

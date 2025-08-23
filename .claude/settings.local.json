@@ -23,7 +23,9 @@
       "mcp__puppeteer__puppeteer_evaluate",
       "mcp__puppeteer__puppeteer_click",
       "Bash(curl:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_evaluate"
     ],
     "deny": [],
     "ask": []

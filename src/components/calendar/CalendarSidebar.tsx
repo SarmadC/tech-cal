@@ -1,25 +1,19 @@
-//CalendarSidebar.tsx
-
 'use client';
 
-import { FC, useMemo } from 'react';
+//CalendarSidebar.tsx
 
+import { FC, useMemo } from 'react';
 import { Event, EventType, isTrackedEvent, TrackedEvent } from '@/types';
 import MiniCalendar from './MiniCalendar';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { formatDate, formatTime } from '@/utils/dateUtils';
-
-
 interface SidebarProps {
     currentDate: Date;
     setCurrentDate: (date: Date) => void;
     categories: EventType[];
     user: { name: string; role: string };
     events: (Event | TrackedEvent)[];
-    // --- FIX START ---
-    // Add the onSelectEvent prop to the interface.
     onSelectEvent?: (event: Event) => void;
-    // --- FIX END ---
     monthlyEventCounts?: Map<string, Map<number, number>>;
 }
 
@@ -34,7 +28,7 @@ const CalendarSidebar: FC<SidebarProps> = ({
     setCurrentDate,
     user,
     events,
-    onSelectEvent, // --- FIX: Receive the new prop ---
+    onSelectEvent,
     monthlyEventCounts
 }) => {
 
@@ -83,8 +77,6 @@ const CalendarSidebar: FC<SidebarProps> = ({
                     <div className="space-y-3">
                         {upcomingEvents.length > 0 ? (
                             upcomingEvents.map((event) => (
-                                // --- FIX START ---
-                                // Changed div to button and added the onClick handler.
                                 <button
                                     key={event.id}
                                     onClick={() => onSelectEvent?.(event)}
@@ -115,7 +107,6 @@ const CalendarSidebar: FC<SidebarProps> = ({
                                         </div>
                                     </div>
                                 </button>
-                                // --- FIX END ---
                             ))
                         ) : (
                             <div className="text-gray-500 text-sm text-center py-8">
