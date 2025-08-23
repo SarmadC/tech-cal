@@ -6,10 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEventTracking, useEventTrackingStatus } from '@/hooks/useEventTracking';
 // 1. UPDATE IMPORTS: Use the new, canonical `Event` type.
 import { Event, EventStatus } from '@/types';
+import { MultiDayEventInstance } from '@/utils/multiDayEventUtils';
 
 // 2. UPDATE PROPS: The interface now uses the `Event` type.
 interface EventTrackingProps {
-    event: Event;
+    event: Event | MultiDayEventInstance;
 }
 
 const EventTracking: FC<EventTrackingProps> = ({ event }) => {
@@ -20,11 +21,14 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
         status?: EventStatus;
     } | null>(null);
 
+    // Use originalEventId for multi-day event instances, otherwise use the regular id
+    const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
+    
     const {
         data: trackingStatus,
         isLoading: isLoadingStatus,
         error: statusError
-    } = useEventTrackingStatus(event.id);
+    } = useEventTrackingStatus(trackingEventId);
 
     const { trackEvent, untrackEvent, isLoading: isMutating } = useEventTracking();
 
@@ -40,8 +44,11 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
             status: status
         });
 
+        // Use originalEventId for multi-day event instances, otherwise use the regular id
+        const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
+
         trackEvent({
-            eventId: event.id,
+            eventId: trackingEventId,
             status: status,
         });
     };
@@ -51,7 +58,10 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
             isTracked: false
         });
 
-        untrackEvent({ eventId: event.id });
+        // Use originalEventId for multi-day event instances, otherwise use the regular id
+        const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
+
+        untrackEvent({ eventId: trackingEventId });
     };
 
     if (!user) {

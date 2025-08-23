@@ -8,7 +8,6 @@ import { signupAction, oauthSignInAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
 import type { OAuthProvider } from '@/types';
 import type { AuthFormState } from '@/app/auth/actions';
-
 // The initial state for our form, matching the AuthFormState type
 const initialState: AuthFormState = {
     message: '',
@@ -17,9 +16,20 @@ const initialState: AuthFormState = {
 };
 
 export default function SignupPage() {
+
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
-        // We can show a loading state here if desired
-        await oauthSignInAction(provider);
+        try {
+            await oauthSignInAction(provider);
+        } catch (error) {
+            // Check if this is a Next.js redirect (which is expected)
+            if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+                // This is expected - the user is being redirected to OAuth provider
+                return;
+            }
+            
+            // This is an actual error
+            console.error('[SignupPage] OAuth sign-in error:', error);
+        }
     };
 
     // The AuthForm component now handles showing the success toast automatically.

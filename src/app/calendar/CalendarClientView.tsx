@@ -14,7 +14,7 @@ import CalendarWithPreview from '@/components/calendar/CalendarWithPreview';
 import SmartFilterPanel from '@/components/calendar/SmartFilterPanel';
 
 import { useSmartFilters } from '@/hooks/useSmartFilters';
-// 1. UPDATE IMPORTS: Use the new, specific type names.
+
 import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,7 +26,7 @@ const EventDetailPanelDynamic = dynamic(
 );
 
 interface CalendarClientViewProps {
-    // 2. UPDATE PROPS: Use the new types for initial data.
+
     initialEvents: Event[];
     initialCategories: EventType[];
     profile: AppProfile | null;
@@ -41,7 +41,7 @@ export default function CalendarClientView({
     const calendarRef = useRef<FullCalendar | null>(null);
     const searchParams = useSearchParams();
 
-    // 3. UPDATE STATE: Use the new `Event` type.
+
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
@@ -58,22 +58,39 @@ export default function CalendarClientView({
         queryKey: ['allTrackedEventIds', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
+            console.log('[CalendarClientView] Fetching tracked event IDs for user:', user.id);
             const supabase = createClient();
-            return UserEventService.getAllTrackedEventIds(user.id, supabase);
+            const result = await UserEventService.getAllTrackedEventIds(user.id, supabase);
+            console.log('[CalendarClientView] Tracked event IDs:', result);
+            return result;
         },
         enabled: !!user?.id,
         staleTime: 5 * 60 * 1000,
     });
 
-    // 4. REFACTOR `enrichedEvents`: Use the `enrichWithTracking` utility for type safety.
+
     const enrichedEvents: TrackedEvent[] = useMemo(() => {
         const trackedSet = new Set(trackedEventIds);
-        return filteredEvents.map(event =>
-            enrichWithTracking(event, trackedSet.has(event.id))
-        );
+        console.log('[CalendarClientView] Enriching events with tracking data:', {
+            totalEvents: filteredEvents.length,
+            trackedEventIds: trackedEventIds,
+            trackedSet: Array.from(trackedSet)
+        });
+
+        const result = filteredEvents.map(event => {
+            const isTracked = trackedSet.has(event.id);
+            const enriched = enrichWithTracking(event, isTracked);
+            if (isTracked) {
+                console.log('[CalendarClientView] Event is tracked:', event.id, event.title);
+            }
+            return enriched;
+        });
+
+        console.log('[CalendarClientView] Total enriched events:', result.length, 'Tracked events:', result.filter(e => e.isTracked).length);
+        return result;
     }, [filteredEvents, trackedEventIds]);
 
-    // 5. UPDATE `dayEvents`: The `event` parameter is now correctly typed as `TrackedEvent`.
+
     const dayEvents = useMemo(() => {
         const view = searchParams.get('view') || 'month';
         if (view !== 'day') return [];
@@ -98,11 +115,18 @@ export default function CalendarClientView({
         });
     }, [enrichedEvents, searchParams]);
 
-    // 6. UPDATE CALLBACK: The type cast now uses the new `Event` type.
+
     const handleEventClick = useCallback((clickInfo: EventClickArg) => {
         const eventData = clickInfo.event.extendedProps as Event;
         setSelectedEvent(eventData);
     }, []);
+
+    // --- FIX START ---
+    // Create a new handler to select an event directly.
+    const handleSelectEvent = useCallback((event: Event) => {
+        setSelectedEvent(event);
+    }, []);
+    // --- FIX END ---
 
     const monthlyEventCounts = useMemo(() => {
         const counts = new Map<string, Map<number, number>>();
@@ -128,7 +152,7 @@ export default function CalendarClientView({
         if (context.view === 'day') {
             return <TechCalendarDayView events={dayEvents} initialDate={context.date} categories={initialCategories} profile={profile} />;
         }
-        // `enrichedEvents` is `TrackedEvent[]`, which is compatible with the `Event[]` prop
+
         return <CalendarWithPreview events={enrichedEvents} onEventClick={handleEventClick} view={context.view} calendarRef={context.calendarRef} />;
     };
 
@@ -139,6 +163,10 @@ export default function CalendarClientView({
             events={enrichedEvents}
             monthlyEventCounts={monthlyEventCounts}
             onToggleFilters={toggleFilterPanel}
+            // --- FIX START ---
+            // Pass the new handler down to the layout component.
+            onSelectEvent={handleSelectEvent}
+            // --- FIX END ---
             isFilterPanelOpen={isFilterPanelOpen}
             activeFilterCount={activeFilterCount}
             calendarRef={calendarRef}

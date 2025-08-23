@@ -1,19 +1,25 @@
+//CalendarSidebar.tsx
+
 'use client';
 
 import { FC, useMemo } from 'react';
-// 1. UPDATE IMPORTS: Use the new canonical types and the type guard from '@/types'
+
 import { Event, EventType, isTrackedEvent, TrackedEvent } from '@/types';
 import MiniCalendar from './MiniCalendar';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { formatDate, formatTime } from '@/utils/dateUtils';
 
-// 2. UPDATE PROPS: Use a flexible union type for the events prop.
+
 interface SidebarProps {
     currentDate: Date;
     setCurrentDate: (date: Date) => void;
     categories: EventType[];
     user: { name: string; role: string };
-    events: (Event | TrackedEvent)[]; // Can accept both base and tracked events
+    events: (Event | TrackedEvent)[];
+    // --- FIX START ---
+    // Add the onSelectEvent prop to the interface.
+    onSelectEvent?: (event: Event) => void;
+    // --- FIX END ---
     monthlyEventCounts?: Map<string, Map<number, number>>;
 }
 
@@ -28,6 +34,7 @@ const CalendarSidebar: FC<SidebarProps> = ({
     setCurrentDate,
     user,
     events,
+    onSelectEvent, // --- FIX: Receive the new prop ---
     monthlyEventCounts
 }) => {
 
@@ -41,7 +48,7 @@ const CalendarSidebar: FC<SidebarProps> = ({
 
     return (
         <aside className="w-80 bg-[#1e1e1e] border-r border-gray-800 p-6 flex flex-col">
-            {/* User Info */}
+            { }
             <div className="mb-8">
                 <div className="flex items-center space-x-3 mb-2">
                     <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
@@ -76,9 +83,12 @@ const CalendarSidebar: FC<SidebarProps> = ({
                     <div className="space-y-3">
                         {upcomingEvents.length > 0 ? (
                             upcomingEvents.map((event) => (
-                                <div
+                                // --- FIX START ---
+                                // Changed div to button and added the onClick handler.
+                                <button
                                     key={event.id}
-                                    className="bg-gray-800/50 rounded-lg p-3 hover:bg-gray-700/50 transition-colors cursor-pointer"
+                                    onClick={() => onSelectEvent?.(event)}
+                                    className="w-full text-left bg-gray-800/50 rounded-lg p-3 hover:bg-gray-700/50 transition-colors cursor-pointer"
                                 >
                                     <div className="flex items-start space-x-3">
                                         <div
@@ -95,7 +105,7 @@ const CalendarSidebar: FC<SidebarProps> = ({
                                             <p className="text-gray-500 text-xs line-clamp-1">
                                                 {event.organizer}
                                             </p>
-                                            {/* 3. USE TYPE GUARD for safe property access */}
+                                            { }
                                             {isTrackedEvent(event) && event.isTracked && (
                                                 <div className="flex items-center space-x-1 mt-1">
                                                     <div className="w-3 h-3 bg-green-500 rounded-full" />
@@ -104,7 +114,8 @@ const CalendarSidebar: FC<SidebarProps> = ({
                                             )}
                                         </div>
                                     </div>
-                                </div>
+                                </button>
+                                // --- FIX END ---
                             ))
                         ) : (
                             <div className="text-gray-500 text-sm text-center py-8">
@@ -115,13 +126,13 @@ const CalendarSidebar: FC<SidebarProps> = ({
                 </ErrorBoundary>
             </div>
 
-            {/* Quick Stats */}
+            { }
             <div className="mt-6 pt-6 border-t border-gray-800">
                 <ErrorBoundary fallback={<WidgetFallback />}>
                     <div className="grid grid-cols-2 gap-4 text-center">
                         <div>
                             <div className="text-white text-xl font-bold">
-                                {/* 4. USE TYPE GUARD in the filter function */}
+                                { }
                                 {events.filter(e => isTrackedEvent(e) && e.isTracked).length}
                             </div>
                             <div className="text-gray-400 text-xs">Tracked</div>
@@ -136,7 +147,7 @@ const CalendarSidebar: FC<SidebarProps> = ({
                 </ErrorBoundary>
             </div>
 
-            {/* Help Text */}
+            { }
             <div className="mt-6 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg">
                 <p className="text-blue-300 text-xs text-center">
                     💡 Use <strong>Smart Filters</strong> to find events by format, cost, difficulty, and more!

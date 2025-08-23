@@ -17,32 +17,152 @@ export default function LoginPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isOAuthLoading, setIsOAuthLoading] = useState(false);
-    const { user, initialized } = useAuth();
+    const [oauthStartTime, setOauthStartTime] = useState<number | null>(null);
+    const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(null);
+    const [hasRedirected, setHasRedirected] = useState(false);
+    const { user, initialized, loading } = useAuth();
 
+    // Debounced redirect to prevent multiple rapid redirects
     useEffect(() => {
-        if (initialized && user) {
+        if (initialized && user && !hasRedirected && !loading) {
             const redirectTo = searchParams.get('redirect') || '/calendar';
-            router.push(redirectTo);
+            setHasRedirected(true);
+            
+            // Small delay to ensure auth state has fully settled
+            setTimeout(() => {
+                router.push(redirectTo);
+            }, 50);
         }
-    }, [initialized, user, router, searchParams]);
+    }, [initialized, user, router, searchParams, hasRedirected, loading]);
 
     useEffect(() => {
+        
         const error = searchParams.get('error');
+        const message = searchParams.get('message');
+        
         if (error) {
-            toast.error("Authentication Failed", {
-                description: "There was a problem signing you in. Please try again.",
+            console.error('[LoginPage] Authentication error:', { error, message });
+            
+            // Clear OAuth loading state on error
+            setIsOAuthLoading(false);
+            setOauthStartTime(null);
+            setPendingProvider(null);
+            
+            let errorTitle = "Authentication Failed";
+            const errorDescription = message || "There was a problem signing you in. Please try again.";
+            
+            switch (error) {
+                case 'oauth-failed':
+                    // Don't show error if it's just NEXT_REDIRECT (which is normal)
+                    if (message === 'NEXT_REDIRECT') {
+                        console.log('[LoginPage] Ignoring NEXT_REDIRECT error - this is expected OAuth behavior');
+                        router.replace('/login', { scroll: false });
+                        return;
+                    }
+                    errorTitle = "OAuth Sign-In Failed";
+                    break;
+                case 'config-error':
+                    errorTitle = "Configuration Error";
+                    break;
+                case 'oauth-provider-error':
+                    errorTitle = "OAuth Provider Error";
+                    break;
+                case 'session-exchange-failed':
+                    errorTitle = "Session Exchange Failed";
+                    break;
+                case 'oauth-no-code':
+                    errorTitle = "OAuth Authorization Failed";
+                    break;
+                case 'no-session':
+                    errorTitle = "Session Creation Failed";
+                    break;
+                case 'callback-exception':
+                    errorTitle = "Authentication Callback Error";
+                    break;
+            }
+            
+            toast.error(errorTitle, {
+                description: errorDescription,
+                duration: 6000,
             });
+            
+            // Clean up URL
             router.replace('/login', { scroll: false });
         }
     }, [searchParams, router]);
+
+    // OAuth timeout handler
+    useEffect(() => {
+        if (!oauthStartTime || !isOAuthLoading) return;
+
+        const timeoutId = setTimeout(() => {
+            const elapsed = Date.now() - oauthStartTime;
+            console.warn('[LoginPage] OAuth timeout after', elapsed, 'ms');
+            
+            setIsOAuthLoading(false);
+            setOauthStartTime(null);
+            setPendingProvider(null);
+            
+            toast.error("Sign-in Timeout", {
+                description: "The sign-in process is taking longer than expected. Please try again.",
+                duration: 5000,
+            });
+        }, 30000); // 30 second timeout
+
+        return () => clearTimeout(timeoutId);
+    }, [oauthStartTime, isOAuthLoading]);
+
+    // Monitor auth state changes to clear OAuth loading
+    useEffect(() => {
+        if (isOAuthLoading && (user || (!loading && initialized))) {
+            setIsOAuthLoading(false);
+            setOauthStartTime(null);
+            setPendingProvider(null);
+        }
+    }, [user, loading, initialized, isOAuthLoading]);
 
     const initialState: AuthFormState = { message: '', success: false };
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         setIsOAuthLoading(true);
-        toast.loading(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
-        await oauthSignInAction(provider);
-        setTimeout(() => setIsOAuthLoading(false), 5000);
+        setOauthStartTime(Date.now());
+        setPendingProvider(provider);
+        
+        const toastId = toast.loading(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`, {
+            duration: 30000,
+        });
+
+        try {
+            await oauthSignInAction(provider);
+            // If we reach this point without a redirect, something is wrong
+            setTimeout(() => {
+                setIsOAuthLoading(false);
+                setOauthStartTime(null);
+                setPendingProvider(null);
+                toast.dismiss(toastId);
+                toast.error("Sign-in Error", {
+                    description: "The sign-in process didn't complete as expected. Please try again.",
+                });
+            }, 1000);
+        } catch (error) {
+            // Check if this is a Next.js redirect (which is expected)
+            if (error instanceof Error && (error.message === 'NEXT_REDIRECT' || error.message.includes('NEXT_REDIRECT'))) {
+                // This is expected - the user is being redirected to OAuth provider
+                console.log('[LoginPage] OAuth redirect successful, user being redirected to provider');
+                toast.dismiss(toastId);
+                return;
+            }
+            
+            // This is an actual error
+            console.error('[LoginPage] OAuth sign-in error:', error);
+            setIsOAuthLoading(false);
+            setOauthStartTime(null);
+            setPendingProvider(null);
+            toast.dismiss(toastId);
+            toast.error("Sign-in Error", {
+                description: "Failed to start the sign-in process. Please try again.",
+            });
+        }
     };
 
     const handleLoginSuccess = () => {
@@ -50,20 +170,20 @@ export default function LoginPage() {
         router.push(redirectTo);
     };
 
-    // --- FIX STARTS HERE ---
+    // --- IMPROVED FIX ---
 
     // 1. If the auth state is still being determined, show a loader.
-    if (!initialized) {
+    if (!initialized || loading) {
         return <Loading />;
     }
 
-    // 2. If the user is logged in, the useEffect will handle the redirect.
-    //    Render a loader in the meantime to prevent the login form from flashing.
-    if (user) {
+    // 2. If the user is logged in or we've started a redirect, show a loader
+    //    to prevent the login form from flashing during redirect.
+    if (user || hasRedirected) {
         return <Loading />;
     }
 
-    // --- FIX ENDS HERE ---
+    // --- END IMPROVED FIX ---
 
     // 3. Only if initialization is complete AND there's no user, show the login form.
     return (
@@ -74,7 +194,12 @@ export default function LoginPage() {
                     <p className="mt-2 text-sm text-foreground-secondary">Sign in to your account to continue</p>
                 </div>
 
-                <AuthProviders onSelectProvider={handleOAuthSignIn} isPending={isOAuthLoading} actionText="Continue" />
+                <AuthProviders 
+                    onSelectProvider={handleOAuthSignIn} 
+                    isPending={isOAuthLoading} 
+                    pendingProvider={pendingProvider}
+                    actionText="Continue" 
+                />
 
                 <div className="relative my-6">
                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-default" /></div>

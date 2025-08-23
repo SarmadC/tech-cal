@@ -1,3 +1,5 @@
+// profileService.ts
+
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 import type { AppProfile, ProfileUpdateForm, Json } from '@/types'; // ApiResponse is removed

@@ -9,12 +9,16 @@ interface AuthProvidersProps {
     onSelectProvider: (provider: OAuthProvider) => void;
     isPending: boolean;
     actionText?: 'Continue' | 'Sign up';
+    disabled?: boolean;
+    pendingProvider?: OAuthProvider | null;
 }
 
 export default function AuthProviders({
     onSelectProvider,
     isPending,
-    actionText = 'Continue'
+    actionText = 'Continue',
+    disabled = false,
+    pendingProvider = null
 }: AuthProvidersProps) {
     const providers: { provider: OAuthProvider; name: string; icon: React.ReactNode }[] = [
         {
@@ -57,28 +61,38 @@ export default function AuthProviders({
 
     return (
         <div className="space-y-3">
-            {providers.map(({ provider, name, icon }) => (
-                <Button
-                    key={provider}
-                    type="button"
-                    variant="outline"
-                    className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-border-default bg-background-secondary hover:bg-background-tertiary text-foreground-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => onSelectProvider(provider)}
-                    disabled={isPending}
-                >
-                    {isPending ? (
-                        <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>Redirecting to OAuth...</span>
-                        </>
-                    ) : (
-                        <>
-                            {icon}
-                            <span>{actionText} with {name}</span>
-                        </>
-                    )}
-                </Button>
-            ))}
+            {providers.map(({ provider, name, icon }) => {
+                const isThisProviderPending = isPending && pendingProvider === provider;
+                const isDisabled = disabled || isPending;
+
+                return (
+                    <Button
+                        key={provider}
+                        type="button"
+                        variant="outline"
+                        className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-border-default bg-background-secondary hover:bg-background-tertiary text-foreground-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                        onClick={() => onSelectProvider(provider)}
+                        disabled={isDisabled}
+                    >
+                        {isThisProviderPending ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Redirecting to {name}...</span>
+                            </>
+                        ) : isPending ? (
+                            <>
+                                {icon}
+                                <span>{actionText} with {name}</span>
+                            </>
+                        ) : (
+                            <>
+                                {icon}
+                                <span>{actionText} with {name}</span>
+                            </>
+                        )}
+                    </Button>
+                );
+            })}
         </div>
     );
 }

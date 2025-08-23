@@ -49,7 +49,8 @@ export const EventStatusUpdateSchema = z.object({
     status: z.enum(['bookmarked', 'attending', 'attended', 'cancelled'], {
         errorMap: () => ({ message: "Invalid status provided." })
     }),
-    notes: z.string().optional(),
+    // Fix: Allow null, undefined, or string for notes - convert null to undefined
+    notes: z.union([z.string(), z.null()]).optional().transform(val => val === null ? undefined : val),
 });
 
 export const ContactFormSchema = z.object({

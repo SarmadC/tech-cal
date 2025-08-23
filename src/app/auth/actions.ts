@@ -168,48 +168,65 @@ export async function updatePasswordAction(
 }
 
 
-// --- OAuth Action (Modified) ---
+// --- OAuth Action (Refactored) ---
 
 export async function oauthSignInAction(provider: OAuthProvider) {
-    // 2. ROBUST ORIGIN DETECTION LOGIC
-    // This reliably determines the correct URL for local dev vs. production.
-    const origin =
-        process.env.NODE_ENV === 'development'
-            ? process.env.NEXT_PUBLIC_SITE_URL // From your .env.local file
-            : process.env.NEXT_PUBLIC_VERCEL_URL; // Automatically set by Vercel in production
+    const { getOAuthRedirectUrl } = await import('@/utils/authUtils');
+    
+    const redirectTo = getOAuthRedirectUrl();
+    console.log(`[OAuth Action] Starting ${provider} OAuth with redirect URL:`, redirectTo);
 
-    // 3. CONSTRUCT THE FULL REDIRECT URL
-    const redirectTo = `${origin}/auth/callback`;
-
-    // 4. (Optional but Recommended) DEBUGGING LOG
-    // Check your terminal where `npm run dev` is running to see this output.
-    console.log('Constructed Redirect URL for OAuth:', redirectTo);
-
-    // 5. ADD A CHECK to ensure the environment variable is set.
-    if (!origin) {
-        const errorMessage = 'Server configuration error: Site URL environment variable is not set.';
+    if (!redirectTo || (redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production')) {
+        const errorMessage = `Server configuration error: Unable to determine OAuth redirect URL. Got: ${redirectTo}`;
         console.error(errorMessage);
-        return redirect(`/login?message=${encodeURIComponent(errorMessage)}`);
+        return redirect(`/login?error=config-error&message=${encodeURIComponent(errorMessage)}`);
     }
 
     const supabase = await createClient();
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-            // 6. USE THE NEW, RELIABLE URL
-            redirectTo: redirectTo,
-        },
-    });
+    try {
+        console.log(`[OAuth Action] Calling Supabase auth.signInWithOAuth for ${provider}`);
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider,
+            options: {
+                redirectTo,
+                queryParams: {
+                    access_type: 'offline',
+                    prompt: 'consent',
+                }
+            },
+        });
 
-    if (error) {
-        console.error('OAuth Error:', error.message);
-        return redirect(`/login?message=Could not authenticate with ${provider}.`);
+        console.log(`[OAuth Action] Supabase response:`, { 
+            hasData: !!data, 
+            hasUrl: !!data?.url, 
+            hasError: !!error,
+            errorMessage: error?.message 
+        });
+
+        if (error) {
+            console.error(`[OAuth Action] Supabase OAuth Error for ${provider}:`, error);
+            return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`Failed to authenticate with ${provider}: ${error.message}`)}`);
+        }
+
+        if (data?.url) {
+            console.log(`[OAuth Action] Redirecting to ${provider} OAuth provider:`, data.url);
+            return redirect(data.url);
+        }
+
+        console.error(`[OAuth Action] No authentication URL received from ${provider} provider`);
+        return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`No authentication URL received from ${provider} provider.`)}`);
+    } catch (error) {
+        // Check if this is a Next.js redirect (which is expected when redirecting to OAuth provider)
+        if (error instanceof Error && (error.message === 'NEXT_REDIRECT' || error.message.includes('NEXT_REDIRECT'))) {
+            // This is expected - the redirect is working correctly
+            console.log(`[OAuth Action] NEXT_REDIRECT caught - redirect to ${provider} OAuth provider is working correctly`);
+            throw error; // Re-throw to allow the redirect to proceed
+        }
+        
+        // This is an actual error
+        console.error(`[OAuth Action] Unexpected error during ${provider} OAuth:`, error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`OAuth error: ${errorMessage}`)}`);
     }
-
-    if (data.url) {
-        return redirect(data.url);
-    }
-
-    return redirect('/login?message=An unexpected error occurred.');
 }

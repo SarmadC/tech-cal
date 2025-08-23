@@ -89,13 +89,32 @@ export class AuthService {
         supabaseClient: SupabaseClientType
     ): Promise<AuthResponse> {
         try {
-            // NOTE: window.location.origin is only available in the browser.
-            // This method should only be called from a Client Component.
-            const redirectTo = `${window.location.origin}/auth/callback`;
-            const { error } = await supabaseClient.auth.signInWithOAuth({ provider, options: { redirectTo } });
-            if (error) return { success: false, error: this.getReadableErrorMessage(error.message) };
+            // Use the consistent redirect URL utility
+            const { getOAuthRedirectUrl, logAuthUrls } = await import('@/utils/authUtils');
+            
+            logAuthUrls(`signInWithOAuth-${provider}`);
+            
+            const redirectTo = getOAuthRedirectUrl();
+            
+            const { error } = await supabaseClient.auth.signInWithOAuth({ 
+                provider, 
+                options: { 
+                    redirectTo,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    }
+                } 
+            });
+            
+            if (error) {
+                console.error('[AuthService] OAuth error:', error);
+                return { success: false, error: this.getReadableErrorMessage(error.message) };
+            }
+            
             return { success: true, message: `Redirecting to ${provider}...` };
         } catch (error) {
+            console.error('[AuthService] OAuth exception:', error);
             Sentry.captureException(error, { extra: { function: 'signInWithOAuth', provider } });
             return { success: false, error: `Failed to sign in with ${provider}` };
         }
@@ -124,7 +143,9 @@ export class AuthService {
         supabaseClient: SupabaseClientType
     ): Promise<AuthResponse> {
         try {
-            const redirectTo = `${window.location.origin}/auth/reset-password`;
+            const { getPasswordResetUrl } = await import('@/utils/authUtils');
+            const redirectTo = getPasswordResetUrl();
+            
             const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
             if (error) return { success: false, error: this.getReadableErrorMessage(error.message) };
             return { success: true, message: 'If an account with that email exists, a reset link has been sent.' };

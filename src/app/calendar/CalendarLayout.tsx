@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
-// 1. UPDATE IMPORTS: Use the new, canonical types.
+
 import type { AppProfile, EventType, Event } from '@/types';
 import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
 
@@ -20,14 +20,18 @@ export interface CalendarLayoutContext {
     calendarRef?: React.RefObject<FullCalendar | null>;
 }
 
-// 2. UPDATE PROPS: The interface now uses the new types.
+
 export interface CalendarLayoutProps {
     children?: ReactNode;
     profile: AppProfile | null;
     categories: EventType[];
-    events?: Event[]; // Changed from AppEvent[]
+    events?: Event[];
     currentDate?: Date;
     onDateChange?: (date: Date) => void;
+    // --- FIX START ---
+    // Add the onSelectEvent prop to the interface.
+    onSelectEvent?: (event: Event) => void;
+    // --- FIX END ---
     onNavigate?: (direction: 'prev' | 'next' | 'today') => void;
     onToggleFilters?: () => void;
     isFilterPanelOpen?: boolean;
@@ -44,6 +48,7 @@ export function CalendarLayout({
     events = [],
     currentDate,
     onDateChange,
+    onSelectEvent, // --- FIX: Receive the new prop ---
     onNavigate,
     onToggleFilters,
     isFilterPanelOpen = false,
@@ -117,7 +122,7 @@ export function CalendarLayout({
     return (
         <div className="flex h-screen bg-background-main">
             <div className="w-80 border-r border-border-default bg-background-elevated">
-                {/* This works because CalendarSidebar has been migrated */}
+                { }
                 <CalendarSidebar
                     currentDate={activeDate}
                     setCurrentDate={handleDateChange}
@@ -127,6 +132,10 @@ export function CalendarLayout({
                         role: 'Member'
                     }}
                     events={events}
+                    // --- FIX START ---
+                    // Pass the prop down to the CalendarSidebar.
+                    onSelectEvent={onSelectEvent}
+                    // --- FIX END ---
                     monthlyEventCounts={monthlyEventCounts}
                 />
             </div>
@@ -139,7 +148,7 @@ export function CalendarLayout({
                     isFilterPanelOpen={isFilterPanelOpen}
                     activeFilterCount={activeFilterCount}
                 />
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 flex flex-col min-h-0">
                     {content}
                 </div>
             </div>

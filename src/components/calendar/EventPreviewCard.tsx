@@ -1,12 +1,13 @@
 // src/components/calendar/EventPreviewCard.tsx
 
-import { FC, useState, useRef, useEffect } from 'react';
+import { FC, useRef, useEffect } from 'react';
 import {
     Clock, MapPin, Users, ExternalLink, Bookmark, BookmarkCheck,
     Share2, Play, Globe, Calendar
 } from 'lucide-react';
 // 1. UPDATE IMPORTS: Use the new types and the type guard.
 import { Event, EventStatus, isTrackedEvent, TrackedEvent } from '@/types';
+import { MultiDayEventInstance } from '@/utils/multiDayEventUtils';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -14,11 +15,13 @@ import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/d
 
 // 2. UPDATE PROPS: The component can accept either a base Event or an enriched TrackedEvent.
 interface EventPreviewCardProps {
-    event: Event | TrackedEvent;
+    event: Event | TrackedEvent | MultiDayEventInstance;
     isVisible: boolean;
     position: { x: number; y: number };
     onClose: () => void;
-    onTrackingChange?: (isTracked: boolean) => void;
+    onHover?: () => void;
+    onLeave?: () => void;
+    isPinned?: boolean;
 }
 
 const EventPreviewCard: FC<EventPreviewCardProps> = ({
@@ -26,19 +29,16 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     isVisible,
     position,
     onClose,
-    onTrackingChange
+    onHover,
+    onLeave,
+    isPinned = false
 }) => {
     const { user } = useAuth();
-    const { trackEvent, untrackEvent } = useEventTracking();
+    const { trackEvent, untrackEvent, isLoading } = useEventTracking();
 
-    // 3. FIX: Use the type guard to safely initialize the state.
-    const [isTracked, setIsTracked] = useState(isTrackedEvent(event) ? event.isTracked : false);
+    // Use the tracking status directly from the event prop instead of local state
+    const isTracked = isTrackedEvent(event) ? event.isTracked : false;
     const cardRef = useRef<HTMLDivElement>(null);
-
-    // This useEffect is to synchronize state if the event prop itself changes (e.g., in a list)
-    useEffect(() => {
-        setIsTracked(isTrackedEvent(event) ? event.isTracked : false);
-    }, [event]);
 
     // Handle click outside to close
     useEffect(() => {
@@ -80,22 +80,28 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
     // Actions
     const handleTrackEvent = () => {
+        console.log('[EventPreviewCard] handleTrackEvent called', { user: !!user, isTracked, eventId: event.id });
+        
         if (!user) {
+            console.log('[EventPreviewCard] No user authenticated');
             toast.error('Please sign in to track events');
             return;
         }
 
+        // Use originalEventId for multi-day event instances, otherwise use the regular id
+        const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
+        
+        console.log('[EventPreviewCard] Using eventId for tracking:', trackingEventId);
+
         if (isTracked) {
-            untrackEvent({ eventId: event.id });
-            setIsTracked(false);
-            onTrackingChange?.(false);
+            console.log('[EventPreviewCard] Untracking event');
+            untrackEvent({ eventId: trackingEventId });
         } else {
+            console.log('[EventPreviewCard] Tracking event');
             trackEvent({
-                eventId: event.id,
+                eventId: trackingEventId,
                 status: 'bookmarked' as EventStatus,
             });
-            setIsTracked(true);
-            onTrackingChange?.(true);
         }
     };
 
@@ -124,11 +130,17 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     return (
         <div
             ref={cardRef}
-            className="fixed z-50 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
+            className={`fixed z-50 w-80 bg-white dark:bg-gray-800 border rounded-lg shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 ${
+                isPinned 
+                    ? 'border-blue-400 dark:border-blue-500 shadow-blue-200 dark:shadow-blue-900' 
+                    : 'border-gray-200 dark:border-gray-600'
+            }`}
             style={{
                 left: `${cardPosition.x}px`,
                 top: `${cardPosition.y}px`,
             }}
+            onMouseEnter={onHover}
+            onMouseLeave={onLeave}
         >
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 border-b border-gray-200 dark:border-gray-600">
@@ -160,6 +172,11 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                             <span className="px-2 py-1 text-xs font-medium bg-red-500 text-white rounded-full flex items-center">
                                 <div className="w-2 h-2 bg-white rounded-full animate-pulse mr-1" />
                                 Live
+                            </span>
+                        )}
+                        {isPinned && (
+                            <span className="px-2 py-1 text-xs font-medium bg-blue-500 text-white rounded-full">
+                                📌 Pinned
                             </span>
                         )}
                     </div>
@@ -214,9 +231,13 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                 <div className="flex space-x-2">
                     <button
                         onClick={handleTrackEvent}
-                        className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isTracked
-                            ? 'bg-green-600 text-white hover:bg-green-700'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        disabled={isLoading}
+                        className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isLoading 
+                                ? 'bg-gray-400 text-white cursor-not-allowed'
+                                : isTracked
+                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
                             }`}
                     >
                         {isTracked ? (
