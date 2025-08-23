@@ -1,13 +1,13 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-// 1. REMOVED the 'headers' import as it's unreliable for this purpose
-// import { headers } from 'next/headers' 
+
+
 import { createClient } from '@/utils/supabase/server'
 import { AuthService } from '@/services/authService'
 import { OAuthProvider } from '@/types'
 
-// Correctly import all schemas from the new central location
+
 import {
     LoginSchema,
     SignupSchema,
@@ -15,7 +15,7 @@ import {
     ResetPasswordSchema
 } from '@/lib/schemas'
 
-// A reusable FormState type for all auth actions
+
 export type AuthFormState = {
     message: string;
     errors?: {
@@ -29,7 +29,7 @@ export type AuthFormState = {
     success: boolean;
 }
 
-// --- Actions ---
+
 
 export async function loginAction(
     prevState: AuthFormState,
@@ -168,11 +168,11 @@ export async function updatePasswordAction(
 }
 
 
-// --- OAuth Action (Refactored) ---
+
 
 export async function oauthSignInAction(provider: OAuthProvider) {
     const { getOAuthRedirectUrl } = await import('@/utils/authUtils');
-    
+
     const redirectTo = getOAuthRedirectUrl();
     console.log(`[OAuth Action] Starting ${provider} OAuth with redirect URL:`, redirectTo);
 
@@ -197,11 +197,11 @@ export async function oauthSignInAction(provider: OAuthProvider) {
             },
         });
 
-        console.log(`[OAuth Action] Supabase response:`, { 
-            hasData: !!data, 
-            hasUrl: !!data?.url, 
+        console.log(`[OAuth Action] Supabase response:`, {
+            hasData: !!data,
+            hasUrl: !!data?.url,
             hasError: !!error,
-            errorMessage: error?.message 
+            errorMessage: error?.message
         });
 
         if (error) {
@@ -217,15 +217,20 @@ export async function oauthSignInAction(provider: OAuthProvider) {
         console.error(`[OAuth Action] No authentication URL received from ${provider} provider`);
         return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`No authentication URL received from ${provider} provider.`)}`);
     } catch (error) {
-        // Check if this is a Next.js redirect (which is expected when redirecting to OAuth provider)
+
         if (error instanceof Error && (error.message === 'NEXT_REDIRECT' || error.message.includes('NEXT_REDIRECT'))) {
-            // This is expected - the redirect is working correctly
+
             console.log(`[OAuth Action] NEXT_REDIRECT caught - redirect to ${provider} OAuth provider is working correctly`);
-            throw error; // Re-throw to allow the redirect to proceed
+            throw error;
         }
-        
-        // This is an actual error
-        console.error(`[OAuth Action] Unexpected error during ${provider} OAuth:`, error);
+
+        // --- FIX START ---
+        // Use structured logging to prevent log injection.
+        console.error("[OAuth Action] Unexpected error during OAuth", {
+            provider: provider,
+            error: error
+        });
+        // --- FIX END ---
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`OAuth error: ${errorMessage}`)}`);
     }
