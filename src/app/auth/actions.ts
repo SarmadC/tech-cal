@@ -174,7 +174,8 @@ export async function oauthSignInAction(provider: OAuthProvider) {
     const { getOAuthRedirectUrl } = await import('@/utils/authUtils');
 
     const redirectTo = getOAuthRedirectUrl();
-    console.log(`[OAuth Action] Starting ${provider} OAuth with redirect URL:`, redirectTo);
+    // --- FIX 3: USE STRUCTURED LOGGING ---
+    console.log("[OAuth Action] Starting OAuth", { provider, redirectTo });
 
     if (!redirectTo || (redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production')) {
         const errorMessage = `Server configuration error: Unable to determine OAuth redirect URL. Got: ${redirectTo}`;
@@ -185,7 +186,8 @@ export async function oauthSignInAction(provider: OAuthProvider) {
     const supabase = await createClient();
 
     try {
-        console.log(`[OAuth Action] Calling Supabase auth.signInWithOAuth for ${provider}`);
+        // I've also updated this line for consistency and security
+        console.log("[OAuth Action] Calling Supabase auth.signInWithOAuth", { provider });
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider,
             options: {
@@ -205,12 +207,14 @@ export async function oauthSignInAction(provider: OAuthProvider) {
         });
 
         if (error) {
-            console.error(`[OAuth Action] Supabase OAuth Error for ${provider}:`, error);
+            // --- FIX 2: USE STRUCTURED LOGGING ---
+            console.error("[OAuth Action] Supabase OAuth Error", { provider, error });
             return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`Failed to authenticate with ${provider}: ${error.message}`)}`);
         }
 
         if (data?.url) {
-            console.log(`[OAuth Action] Redirecting to ${provider} OAuth provider:`, data.url);
+            // --- FIX 1: USE STRUCTURED LOGGING ---
+            console.log("[OAuth Action] Redirecting to OAuth provider", { provider, url: data.url });
             return redirect(data.url);
         }
 
@@ -224,13 +228,11 @@ export async function oauthSignInAction(provider: OAuthProvider) {
             throw error;
         }
 
-        // --- FIX START ---
-        // Use structured logging to prevent log injection.
+
         console.error("[OAuth Action] Unexpected error during OAuth", {
             provider: provider,
             error: error
         });
-        // --- FIX END ---
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`OAuth error: ${errorMessage}`)}`);
     }

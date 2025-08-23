@@ -9,6 +9,11 @@ on:
 
 jobs:
   security:
+    # --- FIX START ---
+    # Restrict the permissions of the GITHUB_TOKEN for this job
+    permissions:
+      contents: read
+    # --- FIX END ---
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
