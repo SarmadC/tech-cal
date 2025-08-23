@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Users, Globe, Monitor, MapPin, Clock } from 'lucide-react';
 import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
 import EventDetailPanel from './EventDetailPanel';
@@ -130,6 +130,16 @@ export function TechCalendarDayView({
     const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
     const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
     const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+    const [hideTimer, setHideTimer] = useState<NodeJS.Timeout | null>(null);
+
+    // Clean up timer on unmount
+    useEffect(() => {
+        return () => {
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+            }
+        };
+    }, [hideTimer]);
 
     const dayEvents = useMemo(() => {
         // The type cast here is now to `MultiDayEvent[]`
@@ -193,6 +203,12 @@ export function TechCalendarDayView({
     };
 
     const handleEventHover = (event: Event, mouseEvent: React.MouseEvent) => {
+        // Clear any existing hide timer
+        if (hideTimer) {
+            clearTimeout(hideTimer);
+            setHideTimer(null);
+        }
+        
         const rect = mouseEvent.currentTarget.getBoundingClientRect();
         setPreviewEvent(event);
         setPreviewPosition({ x: rect.right + 10, y: rect.top });
@@ -200,12 +216,31 @@ export function TechCalendarDayView({
     };
 
     const handleEventLeave = () => {
+        // Don't hide immediately, set a timer to allow user to move to preview card
+        const timer = setTimeout(() => {
+            setIsPreviewVisible(false);
+            setPreviewEvent(null);
+        }, 300); // 300ms delay
+        setHideTimer(timer);
+    };
+
+    const handlePreviewHover = () => {
+        // Clear hide timer when hovering over preview card
+        if (hideTimer) {
+            clearTimeout(hideTimer);
+            setHideTimer(null);
+        }
+    };
+
+    const handlePreviewLeave = () => {
+        // Hide preview when leaving the preview card
         setIsPreviewVisible(false);
+        setPreviewEvent(null);
     };
 
     return (
         <div className="flex h-full bg-gray-50">
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
                 <div className="min-w-[800px]">
                     <div className="grid grid-cols-[100px_repeat(4,1fr)] gap-0 bg-white border-b border-gray-200 sticky top-0 z-20">
                         <div className="p-4 text-center font-medium text-gray-500 bg-gray-50 category-header">Time</div>
@@ -265,7 +300,14 @@ export function TechCalendarDayView({
                 </div>
             )}
             {previewEvent && (
-                <EventPreviewCard event={previewEvent} isVisible={isPreviewVisible} position={previewPosition} onClose={handleEventLeave} />
+                <EventPreviewCard 
+                    event={previewEvent} 
+                    isVisible={isPreviewVisible} 
+                    position={previewPosition} 
+                    onClose={handlePreviewLeave}
+                    onHover={handlePreviewHover}
+                    onLeave={handlePreviewLeave}
+                />
             )}
         </div>
     );

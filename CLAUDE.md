@@ -1,3 +1,7 @@
+## ESLint Compliance
+- Make sure every change is ESLint compliant
+
+
 ## Visual Development
 
 ### Design Principles

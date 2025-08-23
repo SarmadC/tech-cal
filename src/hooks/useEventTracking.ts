@@ -28,6 +28,8 @@ export function useEventTracking() {
 
     const { mutate: trackEvent, isPending: isTracking } = useMutation({
         mutationFn: async (variables: TrackEventVariables) => {
+            console.log('[useEventTracking] trackEvent mutationFn called with:', variables);
+            
             const formData = new FormData();
             formData.append('eventId', variables.eventId);
             formData.append('status', variables.status);
@@ -35,7 +37,10 @@ export function useEventTracking() {
                 formData.append('notes', variables.notes);
             }
 
+            console.log('[useEventTracking] Calling trackEventAction with formData');
             const result = await trackEventAction(formData);
+            console.log('[useEventTracking] trackEventAction result:', result);
+            
             if (!result.success) {
                 throw new Error(result.error || 'Failed to track event.');
             }
@@ -60,10 +65,15 @@ export function useEventTracking() {
 
     const { mutate: untrackEvent, isPending: isUntracking } = useMutation({
         mutationFn: async (variables: UntrackEventVariables) => {
+            console.log('[useEventTracking] untrackEvent mutationFn called with:', variables);
+            
             const formData = new FormData();
             formData.append('eventId', variables.eventId);
 
+            console.log('[useEventTracking] Calling untrackEventAction with formData');
             const result = await untrackEventAction(formData);
+            console.log('[useEventTracking] untrackEventAction result:', result);
+            
             if (!result.success) {
                 throw new Error(result.error || 'Failed to untrack event.');
             }

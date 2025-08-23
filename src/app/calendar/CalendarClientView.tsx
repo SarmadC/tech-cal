@@ -58,8 +58,11 @@ export default function CalendarClientView({
         queryKey: ['allTrackedEventIds', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
+            console.log('[CalendarClientView] Fetching tracked event IDs for user:', user.id);
             const supabase = createClient();
-            return UserEventService.getAllTrackedEventIds(user.id, supabase);
+            const result = await UserEventService.getAllTrackedEventIds(user.id, supabase);
+            console.log('[CalendarClientView] Tracked event IDs:', result);
+            return result;
         },
         enabled: !!user?.id,
         staleTime: 5 * 60 * 1000,
@@ -68,9 +71,23 @@ export default function CalendarClientView({
     // 4. REFACTOR `enrichedEvents`: Use the `enrichWithTracking` utility for type safety.
     const enrichedEvents: TrackedEvent[] = useMemo(() => {
         const trackedSet = new Set(trackedEventIds);
-        return filteredEvents.map(event =>
-            enrichWithTracking(event, trackedSet.has(event.id))
-        );
+        console.log('[CalendarClientView] Enriching events with tracking data:', {
+            totalEvents: filteredEvents.length,
+            trackedEventIds: trackedEventIds,
+            trackedSet: Array.from(trackedSet)
+        });
+        
+        const result = filteredEvents.map(event => {
+            const isTracked = trackedSet.has(event.id);
+            const enriched = enrichWithTracking(event, isTracked);
+            if (isTracked) {
+                console.log('[CalendarClientView] Event is tracked:', event.id, event.title);
+            }
+            return enriched;
+        });
+        
+        console.log('[CalendarClientView] Total enriched events:', result.length, 'Tracked events:', result.filter(e => e.isTracked).length);
+        return result;
     }, [filteredEvents, trackedEventIds]);
 
     // 5. UPDATE `dayEvents`: The `event` parameter is now correctly typed as `TrackedEvent`.

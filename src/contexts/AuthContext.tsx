@@ -202,6 +202,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const signOut = useCallback(async (): Promise<void> => {
         try {
             await AuthService.signOut(supabase);
+            // Redirect to home page after successful signout
+            window.location.href = '/';
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown sign out error';
             console.error('Sign out error:', errorMessage);
