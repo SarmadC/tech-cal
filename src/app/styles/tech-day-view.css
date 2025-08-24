@@ -12,7 +12,7 @@
     gap: 0;
     max-height: calc(18 * 80px);
     overflow-y: auto;
-
+}
 
 .tech-day-grid > * {
     min-width: 0 !important;
@@ -98,7 +98,7 @@
     min-width: 0 !important;
     max-width: 100% !important;
     min-height: 0 !important;
-    max-height: 68px !important;
+    max-height: 68px; /* Default height for single-hour events */
     overflow: hidden !important;
     box-sizing: border-box !important;
     word-wrap: break-word !important;
@@ -118,6 +118,11 @@
     background: var(--background-inverse, #1e293b);
     color: var(--foreground-inverse, #ffffff);
     border-left: 4px solid var(--success, #10b981);
+    z-index: 3;
+}
+
+.event-card.live:hover {
+    z-index: 12;
 }
 
 .event-card p,
@@ -137,15 +142,33 @@
 
 /* Multi-hour event cards */
 .event-card.spanning {
-    position: relative;
-    z-index: 5;
-  
+    position: absolute !important;
+    z-index: 2;
+    max-height: none !important;
     overflow: hidden !important;
-    max-height: 70px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Ensure the grid cells can contain absolute positioned elements */
+.tech-day-grid > div > div:not(:first-child) {
+    position: relative !important;
+    min-height: 100px;
+}
+
+/* For spanning events, show more content since we have more space */
+.event-card.spanning .event-title {
+    -webkit-line-clamp: 3; /* Allow more lines for longer events */
+    max-height: 3.3rem;
+}
+
+.event-card.spanning .event-organizer {
+    display: block; /* Ensure organizer shows in spanning events */
+}
+
+
 .event-card.spanning:hover {
-    z-index: 15;
+    z-index: 11;
+    box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
 }
 
 /* Event grid cell positioning */
@@ -164,6 +187,12 @@
 .time-slot-row {
     position: relative;
     z-index: 1;
+}
+
+.time-slot-container {
+    position: relative;
+    width: 100%;
+    min-height: 100px;
 }
 
 .spanning-event-container {
@@ -494,19 +523,15 @@
 }
 
 .event-card.continuation-bottom {
-    /* Creates a mask that fades to transparent at the bottom */
-    -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
+    border-bottom: 2px dashed var(--border-subtle, #e2e8f0);
 }
 
 .event-card.continuation-top {
-    /* Creates a mask that fades to transparent at the top */
-    -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
-    mask-image: linear-gradient(to top, black 85%, transparent 100%);
     border-top-left-radius: 0;
     border-top-right-radius: 0;
+    border-top: 2px dashed var(--border-subtle, #e2e8f0);
 }
 
 /* For events that span the whole day */
@@ -515,4 +540,32 @@
     mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
     border-radius: 0;
 }
+
+/* Add these additional category indicator classes to your tech-day-view.css */
+/* These map to the color classes used in the components */
+
+.category-indicator.blue {
+    background: #3b82f6;
+}
+
+.category-indicator.green {
+    background: #10b981;
+}
+
+.category-indicator.purple {
+    background: #8b5cf6;
+}
+
+.category-indicator.orange {
+    background: #f59e0b;
+}
+
+/* Update the event-meta to position the indicator properly */
+.event-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: auto;
+    overflow: hidden !important;
+    max-width: 100% !important;
 }

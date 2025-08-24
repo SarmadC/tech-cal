@@ -25,7 +25,8 @@
       "Bash(curl:*)",
       "Bash(git push:*)",
       "mcp__playwright__browser_snapshot",
-      "mcp__playwright__browser_evaluate"
+      "mcp__playwright__browser_evaluate",
+      "mcp__browser-tools__takeScreenshot"
     ],
     "deny": [],
     "ask": []

@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import { Users, Globe, Monitor, MapPin, Clock } from 'lucide-react';
 import { Event, EventType, AppProfile, MultiDayEvent, isEventTracked } from '@/types';
-// EventDetailPanel is handled by parent CalendarClientView
 import EventPreviewCard from './EventPreviewCard';
 import { formatTime, isEventLive } from '@/utils/dateUtils';
 
@@ -81,35 +80,47 @@ interface WeekEventCardProps {
     categoryColor: string;
 }
 
-const WeekEventCard: React.FC<WeekEventCardProps> = ({ event, onClick, onHover, onLeave, categoryColor }) => {
+const WeekEventCard: React.FC<WeekEventCardProps> = ({
+    event,
+    onClick,
+    onHover,
+    onLeave,
+    categoryColor
+}) => {
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
     const timeText = formatTime(startTime);
     const live = isEventLive(startTime, endTime);
 
+    // Build class names based on event state
+    const cardClasses = [
+        'event-card',
+        live ? 'live' : '',
+        isEventTracked(event) ? 'tracked' : '',
+    ].filter(Boolean).join(' ');
+
     return (
-        <div 
-            onClick={onClick} 
-            onMouseEnter={(e) => onHover(event, e)} 
+        <div
+            onClick={onClick}
+            onMouseEnter={(e) => onHover(event, e)}
             onMouseLeave={onLeave}
-            className={`p-2 mb-1 rounded cursor-pointer transition-all duration-200 text-xs ${
-                live 
-                    ? 'bg-gray-800 text-white border-l-2 border-green-400' 
-                    : 'bg-white hover:bg-gray-50 border border-gray-200'
-            } ${isEventTracked(event) ? 'ring-1 ring-blue-400' : ''}`}
+            className={cardClasses}
         >
-            <div className={`font-medium truncate ${live ? 'text-white' : 'text-gray-900'}`}>
+            <div className="event-title">
                 {event.title}
             </div>
-            <div className={`flex items-center gap-1 mt-1 ${live ? 'text-gray-300' : 'text-gray-600'}`}>
+
+            <div className="event-time">
                 <Clock className="w-3 h-3" />
                 <span>{timeText}</span>
             </div>
-            <div className={`truncate ${live ? 'text-gray-400' : 'text-gray-500'}`}>
+
+            <div className="event-organizer">
                 {event.organizer}
             </div>
-            <div className="flex items-center gap-1 mt-1">
-                <div className={`w-2 h-2 rounded-full ${categoryColor}`} />
+
+            <div className="event-meta">
+                <div className={`category-indicator ${categoryColor.replace('bg-', '').replace('-500', '')}`} />
             </div>
         </div>
     );

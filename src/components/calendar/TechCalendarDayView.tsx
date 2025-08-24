@@ -3,13 +3,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Users, Globe, Monitor, MapPin, Clock } from 'lucide-react';
 import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
-import EventDetailPanel from './EventDetailPanel';
 import EventPreviewCard from './EventPreviewCard';
 import '@/app/styles/tech-day-view.css';
 import { processEventsForDayView, MultiDayEventInstance } from '@/utils/multiDayEventUtils';
 import { formatTime, isEventLive } from '@/utils/dateUtils';
+import { isEventTracked } from '@/types';
 
-// 2. UPDATE PROPS: Use the new types for component props.
 export interface TechCalendarDayViewProps {
     events: Event[] | MultiDayEvent[];
     initialDate: Date;
@@ -83,50 +82,90 @@ interface EventCardProps {
     visualInfo: ReturnType<typeof getVisualEventInfo>;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave, categoryColor, visualInfo }) => {
+const EventCard: React.FC<EventCardProps> = ({
+    event,
+    onClick,
+    onHover,
+    onLeave,
+    categoryColor,
+    visualInfo
+}) => {
     const { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, dayNumber, isActuallyMultiDay } = visualInfo;
 
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
-    const timeText = isContinuingFromPreviousDay ? `Continues from yesterday` : formatTime(startTime);
+    const timeText = isContinuingFromPreviousDay ? 'Continues from yesterday' : formatTime(startTime);
     const live = isEventLive(startTime, endTime);
     const isSpanning = spanHours > 1;
 
-    const continuationClasses = [
+    // Build class names based on event state
+    const cardClasses = [
+        'event-card',
+        live ? 'live' : '',
+        isEventTracked(event) ? 'tracked' : '',
+        isSpanning ? 'spanning' : '',
         isContinuingFromPreviousDay ? 'continuation-top' : '',
         isContinuingToNextDay ? 'continuation-bottom' : '',
-    ].join(' ');
+    ].filter(Boolean).join(' ');
 
-    const cardStyle = isSpanning ? { height: `calc(${spanHours * 100}% - 0.5rem)`, position: 'absolute' as const, top: '0.5rem', left: '0.5rem', right: '0.5rem', zIndex: 10 } : {};
+    // For spanning events, calculate the height based on number of hours
+    // Each hour slot is 100px in your grid
+    const cardStyle = isSpanning
+        ? {
+            height: `${spanHours * 100 - 8}px`, // 100px per hour minus padding
+            position: 'absolute' as const,
+            top: '4px',
+            left: '4px',
+            right: '4px',
+            zIndex: 5,
+            maxHeight: 'none', // Override the CSS max-height for spanning events
+        }
+        : {};
 
     return (
-        <div onClick={onClick} onMouseEnter={(e) => onHover(event, e)} onMouseLeave={onLeave} style={cardStyle} className={`relative p-3 rounded-lg cursor-pointer transition-all duration-200 ${continuationClasses} ${live ? 'bg-gray-800 text-white border-l-4 border-green-400' : 'bg-white hover:bg-gray-50 border border-gray-200'} ${isEventTracked(event) ? 'ring-2 ring-blue-400' : ''} event-card`}>
-            <div className="flex items-start justify-between mb-2">
-                <h4 className={`font-semibold text-sm leading-tight ${live ? 'text-white' : 'text-gray-900'}`}>{event.title}</h4>
+        <div
+            onClick={onClick}
+            onMouseEnter={(e) => onHover(event, e)}
+            onMouseLeave={onLeave}
+            style={cardStyle}
+            className={cardClasses}
+        >
+            <div className="event-title">
+                {event.title}
             </div>
-            <div className={`flex items-center gap-2 mb-2 text-xs ${live ? 'text-gray-300' : 'text-gray-600'}`}>
-                <div className="flex items-center gap-1"><Clock className="w-3 h-3" /><span>{timeText}</span></div>
-                {isActuallyMultiDay && <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${live ? 'bg-gray-700 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>Day {dayNumber}</span>}
+
+            <div className="event-time">
+                <Clock className="w-3 h-3" />
+                <span>{timeText}</span>
+                {isActuallyMultiDay && (
+                    <span className="event-tag duration">
+                        Day {dayNumber}
+                    </span>
+                )}
             </div>
-            <div className={`text-xs ${live ? 'text-gray-400' : 'text-gray-500'} mb-2`}>{event.organizer}</div>
-            <div className="flex items-center gap-1 mt-auto">
-                <div className={`w-2 h-2 rounded-full ${categoryColor}`} />
+
+            {/* Only show organizer if there's room (for spanning events) */}
+            {(isSpanning || !live) && (
+                <div className="event-organizer">
+                    {event.organizer}
+                </div>
+            )}
+
+            <div className="event-meta">
+                <div className={`category-indicator ${categoryColor.replace('bg-', '').replace('-500', '')}`} />
             </div>
         </div>
     );
 };
-// 4. Import and use the `isEventTracked` type guard
-import { isEventTracked } from '@/types';
+
 
 
 export function TechCalendarDayView({
     events,
     initialDate,
     onEventSelect,
-    categories,
 }: TechCalendarDayViewProps) {
     // 5. UPDATE STATE: Use the new `Event` type.
-    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
     const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
     const [isPreviewVisible, setIsPreviewVisible] = useState(false);
@@ -197,7 +236,6 @@ export function TechCalendarDayView({
     }, [dayEvents]);
 
     const handleEventClick = (event: Event) => {
-        setSelectedEvent(event);
         setIsPreviewVisible(false);
         onEventSelect?.(event);
     };
@@ -263,16 +301,25 @@ export function TechCalendarDayView({
                     <div className="relative">
                         {displayedSlots.map(slot => (
                             <div key={slot.hour} className="grid grid-cols-[100px_repeat(4,1fr)] gap-0 min-h-[100px] border-b border-gray-200">
+                                {/* Time label */}
                                 <div className="p-4 bg-gray-50 flex items-center justify-center border-r border-gray-200">
                                     <div className="text-center">
                                         <div className="font-medium text-gray-900">{slot.time12.split(' ')[0]}</div>
                                         <div className="text-xs text-gray-500">{slot.time12.split(' ')[1]}</div>
                                     </div>
                                 </div>
-                                {EVENT_CATEGORIES.map(category => (
-                                    <div key={category.id} className="border-l border-gray-200 bg-white relative">
-                                        <div className="absolute inset-0 p-2 space-y-2">
-                                            {getEventsStartingInSlot(slot.hour, category.id).map(event => {
+
+                                {/* Event columns - with relative positioning for spanning events */}
+                                {EVENT_CATEGORIES.map(category => {
+                                    const slotEvents = getEventsStartingInSlot(slot.hour, category.id);
+
+                                    return (
+                                        <div
+                                            key={category.id}
+                                            className="border-l border-gray-200 bg-white relative"
+                                            style={{ position: 'relative' }}
+                                        >
+                                            {slotEvents.map(event => {
                                                 const visualInfo = getVisualEventInfo(event, initialDate);
                                                 return (
                                                     <EventCard
@@ -287,23 +334,18 @@ export function TechCalendarDayView({
                                                 );
                                             })}
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ))}
                     </div>
                 </div>
             </div>
-            {selectedEvent && (
-                <div className="w-96 border-l border-border-default bg-background-elevated shrink-0">
-                    <EventDetailPanel event={selectedEvent} onClose={() => setSelectedEvent(null)} categories={categories} />
-                </div>
-            )}
             {previewEvent && (
-                <EventPreviewCard 
-                    event={previewEvent} 
-                    isVisible={isPreviewVisible} 
-                    position={previewPosition} 
+                <EventPreviewCard
+                    event={previewEvent}
+                    isVisible={isPreviewVisible}
+                    position={previewPosition}
                     onClose={handlePreviewLeave}
                     onHover={handlePreviewHover}
                     onLeave={handlePreviewLeave}
