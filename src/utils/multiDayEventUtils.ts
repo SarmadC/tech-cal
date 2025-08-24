@@ -48,7 +48,6 @@ export function generateDailyEventInstances(
         return [];
     }
 
-    // Calculate day difference using calendar dates, not timestamps
     const viewDateOnly = new Date(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate());
     const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
     const daysDiff = Math.floor((viewDateOnly.getTime() - startDateOnly.getTime()) / (1000 * 60 * 60 * 24));
@@ -77,24 +76,26 @@ export function generateDailyEventInstances(
 
     const instances: MultiDayEventInstance[] = [];
 
+    // Get date parts from the viewDate to construct local time strings
+    const year = viewDate.getFullYear();
+    const month = String(viewDate.getMonth() + 1).padStart(2, '0');
+    const day = String(viewDate.getDate()).padStart(2, '0');
+
     switch (event.dailySchedule.type) {
         case 'daily_recurring':
             const dailyStart = event.dailySchedule.dailyStart || '09:00';
             const dailyEnd = event.dailySchedule.dailyEnd || '17:00';
 
-            const instanceStart = new Date(viewDate);
-            const [startHour, startMin] = dailyStart.split(':').map(Number);
-            instanceStart.setHours(startHour, startMin, 0, 0);
-
-            const instanceEnd = new Date(viewDate);
-            const [endHour, endMin] = dailyEnd.split(':').map(Number);
-            instanceEnd.setHours(endHour, endMin, 0, 0);
+            // --- FIX: Construct local ISO strings (without 'Z') ---
+            // This ensures the browser interprets the time in the user's local timezone.
+            const instanceStartTimeStr = `${year}-${month}-${day}T${dailyStart}:00`;
+            const instanceEndTimeStr = `${year}-${month}-${day}T${dailyEnd}:00`;
 
             instances.push({
                 ...event,
                 id: `${event.id}-${viewDateStr}`,
-                startTime: instanceStart.toISOString(),
-                endTime: instanceEnd.toISOString(),
+                startTime: instanceStartTimeStr,
+                endTime: instanceEndTimeStr,
                 isInstance: true,
                 originalEventId: event.id,
                 instanceDate: viewDateStr,
@@ -103,6 +104,7 @@ export function generateDailyEventInstances(
             break;
 
         case 'all_day':
+            // This logic is correct for all-day events as it should span the user's full day.
             const allDayStart = new Date(viewDate);
             allDayStart.setHours(0, 0, 0, 0);
             const allDayEnd = new Date(viewDate);
@@ -126,19 +128,15 @@ export function generateDailyEventInstances(
             );
 
             if (customSchedule) {
-                const customStart = new Date(viewDate);
-                const [customStartHour, customStartMin] = customSchedule.start.split(':').map(Number);
-                customStart.setHours(customStartHour, customStartMin, 0, 0);
-
-                const customEnd = new Date(viewDate);
-                const [customEndHour, customEndMin] = customSchedule.end.split(':').map(Number);
-                customEnd.setHours(customEndHour, customEndMin, 0, 0);
+                // --- FIX: Construct local ISO strings for custom schedules ---
+                const customStartTimeStr = `${year}-${month}-${day}T${customSchedule.start}:00`;
+                const customEndTimeStr = `${year}-${month}-${day}T${customSchedule.end}:00`;
 
                 instances.push({
                     ...event,
                     id: `${event.id}-${viewDateStr}`,
-                    startTime: customStart.toISOString(),
-                    endTime: customEnd.toISOString(),
+                    startTime: customStartTimeStr,
+                    endTime: customEndTimeStr,
                     isInstance: true,
                     originalEventId: event.id,
                     instanceDate: viewDateStr,
@@ -151,7 +149,6 @@ export function generateDailyEventInstances(
     return instances;
 }
 
-// FIX: Replace `EnhancedAppEvent[]` with the new canonical type `MultiDayEvent[]`
 export function processEventsForDayView(
     events: MultiDayEvent[],
     viewDate: Date
