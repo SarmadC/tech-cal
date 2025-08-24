@@ -41,7 +41,7 @@ const EnhancedEventContent: FC<EnhancedEventContentProps> = ({
         >
             <div className="fc-event-time">
                 {/* 6. USE UTILITY: Call the imported `formatTime` utility. */}
-                {timeText || formatTime(eventData.startTime)}
+                {timeText || formatTime(eventData.startTime, eventData.timezone)}
             </div>
             <div className="fc-event-title-container">
                 <div className="fc-event-title fc-sticky">

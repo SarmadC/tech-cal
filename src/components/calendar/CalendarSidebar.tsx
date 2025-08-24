@@ -92,7 +92,7 @@ const CalendarSidebar: FC<SidebarProps> = ({
                                                 {event.title}
                                             </h4>
                                             <p className="text-gray-400 text-xs mb-1">
-                                                {`${formatDate(event.startTime, { month: 'short', day: 'numeric' })}, ${formatTime(event.startTime)}`}
+                                                {`${formatDate(event.startTime, event.timezone)}, ${formatTime(event.startTime, event.timezone)}`}
                                             </p>
                                             <p className="text-gray-500 text-xs line-clamp-1">
                                                 {event.organizer}

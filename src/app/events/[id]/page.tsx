@@ -36,13 +36,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
     // 3. UPDATE DATE FORMATTING:
     // Replace the .toLocaleString() calls with your new, consistent utilities.
-    const datePart = formatDate(event.startTime, { dateStyle: 'full' }); // e.g., "Tuesday, August 19, 2025"
-    const timePart = formatTime(event.startTime, { timeStyle: 'short' }); // e.g., "5:30 PM"
+    const datePart = formatDate(event.startTime, event.timezone); // e.g., "Sep 17, 2025"
+    const timePart = formatTime(event.startTime, event.timezone); // e.g., "5:30 PM (PDT)"
     const formattedStartTime = `${datePart} at ${timePart}`;
 
-    const formattedEndTime = event.endTime ? formatTime(event.endTime, {
-        timeStyle: 'short',
-    }) : null;
+    const formattedEndTime = event.endTime ? formatTime(event.endTime, event.timezone) : null;
 
     return (
         <div className="min-h-screen bg-background-main pt-20">

@@ -197,7 +197,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
             <div className="p-4 space-y-3">
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     <Clock className="w-4 h-4 text-gray-500" />
-                    <span>{formatDate(event.startTime, { weekday: 'short', month: 'short', day: 'numeric' })} • {formatTime(event.startTime)}</span>
+                    <span>{formatDate(event.startTime, event.timezone)} • {formatTime(event.startTime, event.timezone)}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     {isVirtual ? (

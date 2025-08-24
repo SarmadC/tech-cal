@@ -24,7 +24,7 @@ const EVENT_CATEGORIES = [
 const TIME_SLOTS = Array.from({ length: 18 }, (_, i) => {
     const hour = i + 6; // Start from 6 AM
     const time24 = `${hour.toString().padStart(2, '0')}:00`;
-    const time12 = formatTime(`2000-01-01T${time24}:00`, { hour: 'numeric', minute: '2-digit' });
+    const time12 = formatTime(`2000-01-01T${time24}:00`);
     return { hour, time24, time12 };
 });
 
@@ -89,7 +89,7 @@ const WeekEventCard: React.FC<WeekEventCardProps> = ({
 }) => {
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
-    const timeText = formatTime(startTime);
+    const timeText = formatTime(startTime, event.timezone);
     const live = isEventLive(startTime, endTime);
 
     // Build class names based on event state
@@ -99,12 +99,29 @@ const WeekEventCard: React.FC<WeekEventCardProps> = ({
         isEventTracked(event) ? 'tracked' : '',
     ].filter(Boolean).join(' ');
 
+    // Convert categoryColor from Tailwind class to hex color
+    const getHexColor = (bgClass: string) => {
+        switch(bgClass) {
+            case 'bg-blue-500': return '#3b82f6';
+            case 'bg-green-500': return '#10b981';
+            case 'bg-purple-500': return '#8b5cf6';
+            case 'bg-orange-500': return '#f59e0b';
+            default: return '#6b7280';
+        }
+    };
+
+    const cardStyle = {
+        background: getHexColor(categoryColor),
+        color: 'white',
+    };
+
     return (
         <div
             onClick={onClick}
             onMouseEnter={(e) => onHover(event, e)}
             onMouseLeave={onLeave}
             className={cardClasses}
+            style={cardStyle}
         >
             <div className="event-title">
                 {event.title}
@@ -117,10 +134,6 @@ const WeekEventCard: React.FC<WeekEventCardProps> = ({
 
             <div className="event-organizer">
                 {event.organizer}
-            </div>
-
-            <div className="event-meta">
-                <div className={`category-indicator ${categoryColor.replace('bg-', '').replace('-500', '')}`} />
             </div>
         </div>
     );

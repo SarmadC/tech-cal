@@ -30,21 +30,39 @@ export interface TechCalendarDayViewProps {
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
     const hour = i;
     const time24 = `${hour.toString().padStart(2, '0')}:00`;
-    const time12 = formatTime(`2000-01-01T${time24}:00`, { hour: 'numeric', minute: '2-digit' });
+    const time12 = formatTime(`2000-01-01T${time24}:00`);
     return { hour, time24, time12 };
 });
 
 const getVisualEventInfo = (event: Event | MultiDayEventInstance, _currentDate: Date) => {
     const isInstance = 'isInstance' in event && event.isInstance;
     const dayInfo = isInstance ? (event as MultiDayEventInstance).dayInfo : undefined;
+
     const start = new Date(event.startTime);
     const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 3600 * 1000);
+
+    // These flags are now only for visual styling (e.g., dashed borders)
     const isContinuingFromPreviousDay = dayInfo ? !dayInfo.isFirstDay : false;
     const isContinuingToNextDay = dayInfo ? !dayInfo.isLastDay : false;
-    const visualStartHour = isContinuingFromPreviousDay ? 0 : start.getHours() + start.getMinutes() / 60;
-    const visualEndHour = isContinuingToNextDay ? 24 : end.getHours() + end.getMinutes() / 60;
+
+    // The visual start and end hours are ALWAYS derived from the instance's own times.
+    const visualStartHour = start.getHours() + start.getMinutes() / 60;
+    
+    // Handle edge case where an event ends exactly at midnight (00:00 of the next day)
+    let visualEndHour = end.getHours() + end.getMinutes() / 60;
+    if (visualEndHour === 0 && start.getDate() !== end.getDate()) {
+        visualEndHour = 24;
+    }
+
     const spanHours = Math.max(1, visualEndHour - visualStartHour);
-    return { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, dayNumber: dayInfo?.currentDay || 1, isActuallyMultiDay: dayInfo ? dayInfo.totalDays > 1 : false };
+
+    return {
+        spanHours,
+        isContinuingFromPreviousDay,
+        isContinuingToNextDay,
+        dayNumber: dayInfo?.currentDay || 1,
+        isActuallyMultiDay: dayInfo ? dayInfo.totalDays > 1 : false,
+    };
 };
 
 interface EventCardProps {
@@ -60,7 +78,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave,
     const { spanHours, isContinuingFromPreviousDay, isContinuingToNextDay, dayNumber, isActuallyMultiDay } = visualInfo;
     const startTime = new Date(event.startTime);
     const endTime = event.endTime ? new Date(event.endTime) : null;
-    const timeText = isContinuingFromPreviousDay ? 'Continues' : formatTime(startTime);
+    const timeText = isContinuingFromPreviousDay ? 'Continues' : formatTime(startTime, event.timezone);
     const live = isEventLive(startTime, endTime);
     const isSpanning = spanHours > 1;
 

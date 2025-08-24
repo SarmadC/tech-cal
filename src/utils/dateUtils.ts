@@ -1,6 +1,6 @@
 // src/utils/dateUtils.ts
 
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone as formatInTimeZoneFns } from 'date-fns-tz';
 
 /**
  * Core date formatting utilities for Kure-Cal
@@ -8,89 +8,119 @@ import { formatInTimeZone } from 'date-fns-tz';
  */
 
 // ============================================
-// TIMEZONE UTILITIES
+// PRIMARY TIMEZONE FORMATTING FUNCTION
 // ============================================
 
 /**
- * Get the user's timezone from their profile or browser
+ * The single source of truth for timezone-aware date formatting in the application.
+ * Formats a date into a specified format, correctly handling the event's own timezone.
+ * Defaults to the user's browser timezone if the event's timezone is not provided.
+ * @param date The date string or object to format.
+ * @param formatString The desired output format string (e.g., 'p', 'PP zzz'). See date-fns-tz docs.
+ * @param eventTimezone The IANA timezone of the event (e.g., 'America/New_York').
+ * @returns The formatted date string.
  */
+function formatInTimeZone(
+    date: string | Date,
+    formatString: string,
+    eventTimezone?: string | null
+): string {
+    try {
+        const dateObj = typeof date === 'string' ? new Date(date) : date;
+        // Default to the user's browser timezone if the event's is missing. This is a safe fallback.
+        const timeZone = eventTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return formatInTimeZoneFns(dateObj, timeZone, formatString);
+    } catch (error) {
+        console.error("Error in formatInTimeZone:", { date, eventTimezone }, error);
+        // Provide a graceful fallback if formatting fails.
+        return new Date(date).toLocaleTimeString();
+    }
+}
+
+// ============================================
+// EXPORTED HELPER FUNCTIONS (Used throughout the UI)
+// ============================================
+
+/**
+ * Formats only the time part of a date, including the timezone abbreviation.
+ * Example: "2:30 PM (PDT)"
+ */
+export function formatTime(
+    dateString: string | Date,
+    eventTimezone?: string | null
+): string {
+    // 'p' = short time, 'zzz' = timezone abbreviation (e.g., PDT)
+    return formatInTimeZone(dateString, 'p zzz', eventTimezone);
+}
+
+/**
+ * Formats only the date part of a date.
+ * Example: "Sep 17, 2025"
+ */
+export function formatDate(
+    dateString: string | Date,
+    eventTimezone?: string | null
+): string {
+    // 'PP' = long date format
+    return formatInTimeZone(dateString, 'PP', eventTimezone);
+}
+
+/**
+ * Formats both date and time, including the timezone abbreviation.
+ * Example: "Sep 17, 2025 at 2:30 PM (PDT)"
+ */
+export function formatDateTime(
+    dateString: string | Date,
+    eventTimezone?: string | null
+): string {
+    return formatInTimeZone(dateString, "PP 'at' p zzz", eventTimezone);
+}
+
+// ============================================
+// OTHER DATE UTILITIES (Unchanged)
+// ============================================
+
 export function getUserTimezone(profileTimezone?: string | null): string {
     return profileTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-/**
- * Convert a date to a specific timezone
- */
-export function convertToTimezone(date: string | Date, timezone: string): Date {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return new Date(formatInTimeZone(dateObj, timezone, "yyyy-MM-dd'T'HH:mm:ssXXX"));
-}
-
-// ============================================
-// FORMATTING FUNCTIONS
-// ============================================
-
-/**
- * Format date for display (e.g., "Jan 15, 2025")
- */
-export function formatDate(
-    dateString: string | Date,
-    options?: Intl.DateTimeFormatOptions
-): string {
-    const defaultOptions: Intl.DateTimeFormatOptions = {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-    };
-
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleDateString('en-US', options || defaultOptions);
-}
-
-/**
- * Format time for display (e.g., "2:30 PM")
- */
-export function formatTime(
-    dateString: string | Date,
-    options?: Intl.DateTimeFormatOptions
-): string {
-    const defaultOptions: Intl.DateTimeFormatOptions = {
-        hour: 'numeric',
-        minute: '2-digit'
-    };
-
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleTimeString('en-US', options || defaultOptions);
-}
-
-/**
- * Format date and time together (e.g., "Jan 15, 2025 at 2:30 PM")
- */
-export function formatDateTime(
-    dateString: string | Date,
-    options?: {
-        dateOptions?: Intl.DateTimeFormatOptions;
-        timeOptions?: Intl.DateTimeFormatOptions;
+export function isEventLive(startTime: string | Date, endTime?: string | Date | null): boolean {
+    const now = new Date();
+    const start = new Date(startTime);
+    if (!endTime) {
+        const twoHoursAfterStart = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+        return now >= start && now <= twoHoursAfterStart;
     }
-): string {
-    const date = formatDate(dateString, options?.dateOptions);
-    const time = formatTime(dateString, options?.timeOptions);
-    return `${date} at ${time}`;
+    const end = new Date(endTime);
+    return now >= start && now <= end;
 }
 
-/**
- * Format date for calendar headers (e.g., "January 2025")
- */
-export function formatMonthYear(date: Date): string {
-    return date.toLocaleDateString('en-US', {
-        month: 'long',
-        year: 'numeric'
-    });
+export function getEventDuration(startTime: string | Date, endTime?: string | Date | null): string {
+    if (!endTime) return 'All day';
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs <= 0) return '';
+    
+    const diffMin = Math.round(diffMs / (1000 * 60));
+    const diffHour = Math.floor(diffMin / 60);
+    const remainingMin = diffMin % 60;
+
+    if (diffHour === 0) return `${diffMin} min`;
+    if (remainingMin === 0) return `${diffHour} hr`;
+    return `${diffHour} hr ${remainingMin} min`;
 }
 
-/**
- * Format relative time (e.g., "2 hours ago", "in 3 days")
- */
+export function formatToUTC(date: string | Date | null): string {
+    if (!date) return '';
+    const dateObj = new Date(date);
+    return dateObj.toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
+}
+
+// ============================================
+// REMAINING LEGACY UTILITIES FOR COMPLETENESS
+// ============================================
+
 export function formatRelativeTime(dateString: string | Date): string {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
     const now = new Date();
@@ -114,30 +144,6 @@ export function formatRelativeTime(dateString: string | Date): string {
     return formatDate(date);
 }
 
-// ============================================
-// EVENT-SPECIFIC UTILITIES
-// ============================================
-
-/**
- * Check if an event is currently live
- */
-export function isEventLive(startTime: string | Date, endTime?: string | Date | null): boolean {
-    const now = new Date();
-    const start = typeof startTime === 'string' ? new Date(startTime) : startTime;
-
-    if (!endTime) {
-        // If no end time, consider live for 2 hours after start
-        const twoHoursAfterStart = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-        return now >= start && now <= twoHoursAfterStart;
-    }
-
-    const end = typeof endTime === 'string' ? new Date(endTime) : endTime;
-    return now >= start && now <= end;
-}
-
-/**
- * Check if an event is upcoming (within next 24 hours)
- */
 export function isEventUpcoming(startTime: string | Date): boolean {
     const now = new Date();
     const start = typeof startTime === 'string' ? new Date(startTime) : startTime;
@@ -146,9 +152,6 @@ export function isEventUpcoming(startTime: string | Date): boolean {
     return start > now && start <= tomorrow;
 }
 
-/**
- * Check if an event has ended
- */
 export function isEventPast(startTime: string | Date, endTime?: string | Date | null): boolean {
     const now = new Date();
 
@@ -157,15 +160,11 @@ export function isEventPast(startTime: string | Date, endTime?: string | Date | 
         return now > end;
     }
 
-    // If no end time, consider past if more than 2 hours after start
     const start = typeof startTime === 'string' ? new Date(startTime) : startTime;
     const twoHoursAfterStart = new Date(start.getTime() + 2 * 60 * 60 * 1000);
     return now > twoHoursAfterStart;
 }
 
-/**
- * Get event time status
- */
 export function getEventTimeStatus(
     startTime: string | Date,
     endTime?: string | Date | null
@@ -176,28 +175,6 @@ export function getEventTimeStatus(
     return 'future';
 }
 
-/**
- * Calculate event duration in human-readable format
- */
-export function getEventDuration(startTime: string | Date, endTime?: string | Date | null): string {
-    if (!endTime) return '';
-
-    const start = typeof startTime === 'string' ? new Date(startTime) : startTime;
-    const end = typeof endTime === 'string' ? new Date(endTime) : endTime;
-
-    const diffMs = end.getTime() - start.getTime();
-    const diffMin = Math.round(diffMs / (1000 * 60));
-    const diffHour = Math.floor(diffMin / 60);
-    const remainingMin = diffMin % 60;
-
-    if (diffHour === 0) return `${diffMin} min`;
-    if (remainingMin === 0) return `${diffHour} hr`;
-    return `${diffHour} hr ${remainingMin} min`;
-}
-
-/**
- * Check if two dates are on the same day
- */
 export function isSameDay(date1: string | Date, date2: string | Date): boolean {
     const d1 = typeof date1 === 'string' ? new Date(date1) : date1;
     const d2 = typeof date2 === 'string' ? new Date(date2) : date2;
@@ -207,30 +184,17 @@ export function isSameDay(date1: string | Date, date2: string | Date): boolean {
         d1.getDate() === d2.getDate();
 }
 
-/**
- * Check if event spans multiple days
- */
 export function isMultiDayEvent(startTime: string | Date, endTime?: string | Date | null): boolean {
     if (!endTime) return false;
     return !isSameDay(startTime, endTime);
 }
 
-// ============================================
-// CALENDAR UTILITIES
-// ============================================
-
-/**
- * Get the start and end of a month
- */
 export function getMonthBounds(date: Date): { start: Date; end: Date } {
     const start = new Date(date.getFullYear(), date.getMonth(), 1);
     const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
     return { start, end };
 }
 
-/**
- * Get the start and end of a week (Sunday to Saturday)
- */
 export function getWeekBounds(date: Date): { start: Date; end: Date } {
     const day = date.getDay();
     const start = new Date(date);
@@ -244,9 +208,6 @@ export function getWeekBounds(date: Date): { start: Date; end: Date } {
     return { start, end };
 }
 
-/**
- * Format date for URL parameters (YYYY-MM-DD)
- */
 export function formatDateForURL(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -254,9 +215,6 @@ export function formatDateForURL(date: Date): string {
     return `${year}-${month}-${day}`;
 }
 
-/**
- * Parse date from URL parameter
- */
 export function parseDateFromURL(dateString: string): Date | null {
     const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!match) return null;
@@ -264,42 +222,17 @@ export function parseDateFromURL(dateString: string): Date | null {
     const [, year, month, day] = match;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 
-    // Validate the date
     if (isNaN(date.getTime())) return null;
     return date;
 }
 
-// ============================================
-// UTC CONVERSION (for iCal exports)
-// ============================================
-
-/**
- * Format date to UTC string for iCal files
- */
-export function formatToUTC(date: string | Date | null): string {
-    if (!date) return '';
-
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-
-    const pad = (num: number) => String(num).padStart(2, '0');
-
-    const year = dateObj.getUTCFullYear();
-    const month = pad(dateObj.getUTCMonth() + 1);
-    const day = pad(dateObj.getUTCDate());
-    const hours = pad(dateObj.getUTCHours());
-    const minutes = pad(dateObj.getUTCMinutes());
-    const seconds = pad(dateObj.getUTCSeconds());
-
-    return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
+export function formatMonthYear(date: Date): string {
+    return date.toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric'
+    });
 }
 
-// ============================================
-// COUNTDOWN UTILITIES
-// ============================================
-
-/**
- * Calculate time remaining until an event
- */
 export function getTimeUntilEvent(startTime: string | Date): {
     days: number;
     hours: number;
@@ -313,7 +246,6 @@ export function getTimeUntilEvent(startTime: string | Date): {
     const diff = start.getTime() - now.getTime();
 
     if (diff <= 0) {
-        // Event has started or passed
         return {
             days: 0,
             hours: 0,
@@ -339,21 +271,11 @@ export function getTimeUntilEvent(startTime: string | Date): {
     };
 }
 
-// ============================================
-// TYPE GUARDS
-// ============================================
-
-/**
- * Check if a date string is valid
- */
 export function isValidDateString(dateString: string): boolean {
     const date = new Date(dateString);
     return !isNaN(date.getTime());
 }
 
-/**
- * Get a safe date object (returns null if invalid)
- */
 export function getSafeDate(date: string | Date | null | undefined): Date | null {
     if (!date) return null;
 
