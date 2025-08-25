@@ -26,12 +26,8 @@ export function generateDailyEventInstances(
     event: MultiDayEvent,
     viewDate: Date
 ): MultiDayEventInstance[] {
-
-    // --- Entry Guard ---
-    // If the event is not marked as multi-day or lacks a schedule, treat it as a single event.
-    // This ensures regular, single-day events are handled correctly.
+    // This top part for single-day events is correct and can stay
     if (!event.isMultiDay || !event.dailySchedule) {
-        // We only return it if it actually occurs on the viewDate.
         const eventDate = new Date(event.startTime);
         if (eventDate.toDateString() === viewDate.toDateString()) {
             return [{
@@ -48,18 +44,14 @@ export function generateDailyEventInstances(
     const startDate = new Date(event.startTime);
     const endDate = event.endTime ? new Date(event.endTime) : startDate;
 
-    // --- Robust Date Comparison ---
-    // Use Date.UTC to compare dates without being affected by local timezones.
     const viewDateOnly = new Date(Date.UTC(viewDate.getUTCFullYear(), viewDate.getUTCMonth(), viewDate.getUTCDate()));
     const startDateOnly = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
     const endDateOnly = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
 
-    // If the view date is outside the event's overall range, it has no instance on this day.
     if (viewDateOnly < startDateOnly || viewDateOnly > endDateOnly) {
         return [];
     }
 
-    // --- Day Information Calculation ---
     const totalDays = Math.ceil((endDateOnly.getTime() - startDateOnly.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const daysDiff = Math.floor((viewDateOnly.getTime() - startDateOnly.getTime()) / (1000 * 60 * 60 * 24));
     const currentDay = Math.max(1, daysDiff + 1);
@@ -74,40 +66,39 @@ export function generateDailyEventInstances(
     const dayInfo = { currentDay, totalDays, isFirstDay, isLastDay, continuationType };
 
     const instances: MultiDayEventInstance[] = [];
-    const year = viewDate.getFullYear();
-    const month = String(viewDate.getMonth() + 1).padStart(2, '0');
-    const day = String(viewDate.getDate()).padStart(2, '0');
+    const year = viewDate.getUTCFullYear(); // Use UTC methods for consistency
+    const month = String(viewDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(viewDate.getUTCDate()).padStart(2, '0');
     const viewDateStr = `${year}-${month}-${day}`;
 
-    // --- Instance Generation from dailySchedule (The Core Fix) ---
     switch (event.dailySchedule.type) {
         case 'daily_recurring':
-            // Prioritize the daily schedule for start and end times.
             const dailyStart = event.dailySchedule.dailyStart || '09:00';
             const dailyEnd = event.dailySchedule.dailyEnd || '17:00';
 
-            // Construct local time strings (without 'Z') so the browser displays them as "wall clock" time.
-            const instanceStartTimeStr = `${year}-${month}-${day}T${dailyStart}:00`;
-            const instanceEndTimeStr = `${year}-${month}-${day}T${dailyEnd}:00`;
+            const instanceStartTimeStr = `${viewDateStr}T${dailyStart}:00Z`;
+            const instanceEndTimeStr = `${viewDateStr}T${dailyEnd}:00Z`;
+
+            // --- THE CRITICAL FIX IS HERE ---
+            // We destructure the original event to explicitly exclude its start and end times,
+            // preventing them from polluting our new instance object.
+            const { startTime: _startTime, endTime: _endTime, id, ...restOfEvent } = event;
 
             instances.push({
-                ...event,
-                id: `${event.id}-${viewDateStr}`,
-                startTime: instanceStartTimeStr,
-                endTime: instanceEndTimeStr,
+                ...restOfEvent,               // Spread the original event's OTHER properties
+                id: `${id}-${viewDateStr}`,   // Create a new, unique ID for this instance
+                startTime: instanceStartTimeStr, // Set the NEW daily start time
+                endTime: instanceEndTimeStr,     // Set the NEW daily end time
                 isInstance: true,
-                originalEventId: event.id,
+                originalEventId: id,          // Keep a reference to the original event ID
                 instanceDate: viewDateStr,
                 dayInfo
             });
             break;
-
-        // Note: 'all_day' and 'custom' cases can be added here following the same pattern if needed.
     }
 
     return instances;
 }
-
 /**
  * Processes a list of events, generating daily instances for any multi-day events
  * that fall on the specified view date.
