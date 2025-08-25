@@ -32,12 +32,11 @@ const getVisualEventInfo = (event: Event | MultiDayEventInstance) => {
     const start = new Date(event.startTime);
     const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 60 * 60 * 1000);
 
-    // --- DYNAMIC TIMEZONE FIX ---
     // Use local time (getHours/getMinutes) so grid positioning matches local time display
     const startDecimal = start.getHours() + start.getMinutes() / 60;
     let endDecimal = end.getHours() + end.getMinutes() / 60;
 
-    // Handle events spanning midnight correctly (logic remains the same)
+    // Handle events spanning midnight correctly
     if (endDecimal < startDecimal) {
         endDecimal += 24;
     }
@@ -45,11 +44,11 @@ const getVisualEventInfo = (event: Event | MultiDayEventInstance) => {
         endDecimal = 24;
     }
 
-    // This calculation is now based on local time values
-    // Removed +1 offset to align events directly with time grid lines
-    const startRow = Math.round(startDecimal * 2);
-    const endRow = Math.round(endDecimal * 2) + 1; // +1 for end to include the final time slot
-    // --- END OF FIX ---
+    // Calculate grid rows with +1 offset to align with visual time positions
+    // Time labels are at row (hour * 2 + 2) but are visually transformed up by 50%
+    // So events need to start one row earlier to align with the visual time line
+    const startRow = Math.round(startDecimal * 2) + 1;
+    const endRow = Math.round(endDecimal * 2) + 1;
 
     const span = endRow - startRow;
 
