@@ -75,7 +75,7 @@ const EventCard: FC<EventCardProps> = ({
                 <div className="flex items-center space-x-3">
                     <span className="flex items-center hover-lift">
                         <Clock className="w-3 h-3 mr-1" />
-                        {formatDate(event.startTime, { month: 'short', day: 'numeric' })}
+                        {formatDate(event.startTime, event.timezone)}
                     </span>
                     {event.location && (
                         <span className="flex items-center truncate hover-lift">

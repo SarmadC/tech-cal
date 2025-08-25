@@ -119,7 +119,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                                         <span>{featuredPost.author?.full_name}</span>
                                         <span className="opacity-60">•</span>
                                         {/* 3. Use the imported function with options to match original format */}
-                                        <span>{featuredPost.published_at ? formatDate(featuredPost.published_at, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Date not available'}</span>
+                                        <span>{featuredPost.published_at ? formatDate(featuredPost.published_at) : 'Date not available'}</span>
                                         <span className="opacity-60">•</span>
                                         <span>{featuredPost.read_time_minutes} min read</span>
                                     </div>
@@ -157,7 +157,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                                             <div className="text-sm">
                                                 <p className="font-medium text-foreground-primary">{post.author?.full_name}</p>
                                                 {/* 3. Use the imported function with options to match original format */}
-                                                <p className="text-xs text-foreground-tertiary">{post.published_at ? formatDate(post.published_at, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Date not available'}</p>
+                                                <p className="text-xs text-foreground-tertiary">{post.published_at ? formatDate(post.published_at) : 'Date not available'}</p>
                                             </div>
                                         </div>
                                         <Link href={`/blog/${post.slug}`} className="text-accent-primary hover:text-accent-primary-hover transition-colors">

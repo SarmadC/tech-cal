@@ -50,7 +50,10 @@ export function formatTime(
     eventTimezone?: string | null
 ): string {
     // 'p' = short time, 'zzz' = timezone abbreviation (e.g., PDT)
-    return formatInTimeZone(dateString, 'p zzz', eventTimezone);
+    const result = formatInTimeZone(dateString, 'p zzz', eventTimezone);
+    
+    
+    return result;
 }
 
 /**

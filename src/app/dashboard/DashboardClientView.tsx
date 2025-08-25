@@ -191,10 +191,7 @@ export default function DashboardClientView({
                                     <div key={trackedEvent.trackingId} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
                                         <h3 className="font-semibold text-gray-900">{trackedEvent.event?.title}</h3>
                                         <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                                            <span><Clock className="w-4 h-4 inline mr-1" />{trackedEvent.event ? formatDateTime(trackedEvent.event.startTime, {
-                                                dateOptions: { weekday: 'short', month: 'short', day: 'numeric' },
-                                                timeOptions: { hour: 'numeric', minute: '2-digit' }
-                                            }) : ''}</span>
+                                            <span><Clock className="w-4 h-4 inline mr-1" />{trackedEvent.event ? formatDateTime(trackedEvent.event.startTime, trackedEvent.event.timezone) : ''}</span>
                                             <span><Users className="w-4 h-4 inline mr-1" />{trackedEvent.event?.organizer}</span>
                                         </div>
                                     </div>

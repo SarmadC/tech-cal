@@ -56,6 +56,7 @@ const getVisualEventInfo = (event: Event | MultiDayEventInstance, _currentDate: 
 
     const spanHours = Math.max(1, visualEndHour - visualStartHour);
 
+
     return {
         spanHours,
         isContinuingFromPreviousDay,
@@ -88,7 +89,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onHover, onLeave,
         background: categoryColor,
         color: 'white',
         ...(isSpanning && {
-            height: `${spanHours * 80 - 8}px`,
+            height: `${spanHours * 80 + 20}px`,
             position: 'absolute' as const,
             top: '4px',
             left: '4px',
