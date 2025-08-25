@@ -17,7 +17,7 @@
 .tech-day-view-grid-container {
     position: relative;
     display: grid;
-    grid-template-rows: repeat(48, 30px); /* 48 half-hour slots */
+    grid-template-rows: repeat(49, 30px); /* 49 half-hour slots to accommodate final time label */
     min-width: 800px;
 }
 

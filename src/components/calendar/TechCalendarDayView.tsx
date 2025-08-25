@@ -32,22 +32,23 @@ const getVisualEventInfo = (event: Event | MultiDayEventInstance) => {
     const start = new Date(event.startTime);
     const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 60 * 60 * 1000);
 
-    // --- THE FIX IS HERE ---
-    // Use getUTCHours() and getUTCMinutes() to be consistent with our UTC date strings.
-    const startDecimal = start.getUTCHours() + start.getUTCMinutes() / 60;
-    let endDecimal = end.getUTCHours() + end.getUTCMinutes() / 60;
+    // --- DYNAMIC TIMEZONE FIX ---
+    // Use local time (getHours/getMinutes) so grid positioning matches local time display
+    const startDecimal = start.getHours() + start.getMinutes() / 60;
+    let endDecimal = end.getHours() + end.getMinutes() / 60;
 
     // Handle events spanning midnight correctly (logic remains the same)
     if (endDecimal < startDecimal) {
         endDecimal += 24;
     }
-    if (endDecimal === 0 && end.getUTCDate() !== start.getUTCDate()) {
+    if (endDecimal === 0 && end.getDate() !== start.getDate()) {
         endDecimal = 24;
     }
 
-    // This calculation is now based on consistent UTC values
-    const startRow = Math.round(startDecimal * 2) + 1;
-    const endRow = Math.round(endDecimal * 2) + 1;
+    // This calculation is now based on local time values
+    // Removed +1 offset to align events directly with time grid lines
+    const startRow = Math.round(startDecimal * 2);
+    const endRow = Math.round(endDecimal * 2) + 1; // +1 for end to include the final time slot
     // --- END OF FIX ---
 
     const span = endRow - startRow;
@@ -85,7 +86,7 @@ const EventCard: React.FC<{
     return (
         <div style={cardStyle} className={cardClasses} onClick={onClick} onMouseEnter={onHover} onMouseLeave={onLeave} >
             <div className="event-title">{event.title}</div>
-            <div className="event-time"><Clock size={12} /><span>{visualInfo.isContinuingFromPreviousDay ? "Continues" : formatTime(event.startTime, event.timezone)}</span></div>
+            <div className="event-time"><Clock size={12} /><span>{visualInfo.isContinuingFromPreviousDay ? "Continues" : new Date(event.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span></div>
             {visualInfo.span > 4 && <div className="event-organizer">{event.organizer}</div>}
         </div>
     );
@@ -146,13 +147,13 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                 {/* THE FINAL UNIFIED GRID STRUCTURE */}
                 <div className="tech-day-view-grid-container" style={gridColsStyle}>
                     {/* Render horizontal lines first (background) */}
-                    {Array.from({ length: 48 }).map((_, i) => (
+                    {Array.from({ length: 49 }).map((_, i) => (
                         <div key={`line-${i}`} className="time-grid-line" style={{ gridRow: i + 1 }} />
                     ))}
 
                     {/* Render time labels on top of the lines */}
                     {TIME_SLOTS.map(slot => (
-                        <div key={slot.hour} className="time-label" style={{ gridRow: `${slot.hour * 2 + 1}` }}>
+                        <div key={slot.hour} className="time-label" style={{ gridRow: `${slot.hour * 2 + 2}` }}>
                             <div>
                                 <div className="font-medium">{formatTime(`2000-01-01T${slot.hour.toString().padStart(2, '0')}:00:00`).split(' ')[0]}</div>
                                 <div>{formatTime(`2000-01-01T${slot.hour.toString().padStart(2, '0')}:00:00`).split(' ')[1]}</div>
@@ -160,7 +161,7 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                         </div>
                     ))}
                     {/* Add the final 12:00 AM label for the end of the day */}
-                    <div className="time-label" style={{ gridRow: 49 }}>
+                    <div className="time-label" style={{ gridRow: 50 }}>
                         <div>
                             <div className="font-medium">12:00</div>
                             <div>AM</div>
