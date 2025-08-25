@@ -2,10 +2,11 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { Users, Globe, Monitor, MapPin, Clock, HelpCircle } from 'lucide-react';
-import { Event, EventType, AppProfile, MultiDayEvent, isEventTracked } from '@/types';
+import { Event, EventType, AppProfile, MultiDayEvent, isEventTracked, MultiDayEventInstance } from '@/types';
 import EventPreviewCard from './EventPreviewCard';
 import '@/app/styles/tech-day-view.css';
-import { processEventsForDayView, MultiDayEventInstance } from '@/utils/multiDayEventUtils';
+import { processEventsForDayView } from '@/utils/multiDayEventUtils';
+
 import { formatTime, isEventLive } from '@/utils/dateUtils';
 
 const getIconForCategory = (categoryName: string) => {

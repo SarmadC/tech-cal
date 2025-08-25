@@ -1,19 +1,7 @@
 // src/utils/multiDayEventUtils.ts
 
-import type { MultiDayEvent, Event } from '@/types';
+import type { MultiDayEvent, MultiDayEventInstance } from '@/types';
 
-export interface MultiDayEventInstance extends Event {
-    isInstance: boolean;
-    originalEventId: string;
-    instanceDate: string;
-    dayInfo?: {
-        currentDay: number;
-        totalDays: number;
-        isFirstDay: boolean;
-        isLastDay: boolean;
-        continuationType: 'start' | 'middle' | 'end' | 'single';
-    };
-}
 
 /**
  * Generates specific daily instances for a given multi-day event on a specific view date.

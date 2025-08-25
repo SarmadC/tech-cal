@@ -298,3 +298,16 @@ export function toCalendarData(event: Event): CalendarEventData {
         },
     };
 }
+
+export interface MultiDayEventInstance extends Event {
+    isInstance: boolean;
+    originalEventId: string;
+    instanceDate: string;
+    dayInfo?: {
+        currentDay: number;
+        totalDays: number;
+        isFirstDay: boolean;
+        isLastDay: boolean;
+        continuationType: 'start' | 'middle' | 'end' | 'single';
+    };
+}
