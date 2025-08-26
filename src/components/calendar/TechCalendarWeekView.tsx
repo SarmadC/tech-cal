@@ -1,10 +1,16 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Users, Globe, Monitor, MapPin, Clock } from 'lucide-react';
-import { Event, EventType, AppProfile, MultiDayEvent, isEventTracked } from '@/types';
+import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
 import EventPreviewCard from './EventPreviewCard';
-import { formatTime, isEventLive } from '@/utils/dateUtils';
+import { WeekHeader } from './shared/WeekHeader';
+import { TimeSlotGrid } from './shared/TimeSlotGrid';
+import '@/app/styles/TechWeekView.css';
+import { 
+    getEventsForWeekDay,
+    getWeekDays,
+    generateWeekTimeSlots 
+} from '@/utils/eventViewUtils';
 
 export interface TechCalendarWeekViewProps {
     events: Event[] | MultiDayEvent[];
@@ -13,131 +19,6 @@ export interface TechCalendarWeekViewProps {
     profile: AppProfile | null;
     onEventSelect?: (event: Event) => void;
 }
-
-const EVENT_CATEGORIES = [
-    { id: 'conferences', name: 'Conferences', icon: Users, color: 'bg-blue-500' },
-    { id: 'workshops', name: 'Workshops', icon: Monitor, color: 'bg-green-500' },
-    { id: 'webinars', name: 'Webinars', icon: Globe, color: 'bg-purple-500' },
-    { id: 'networking', name: 'Networking', icon: MapPin, color: 'bg-orange-500' },
-];
-
-const TIME_SLOTS = Array.from({ length: 18 }, (_, i) => {
-    const hour = i + 6; // Start from 6 AM
-    const time24 = `${hour.toString().padStart(2, '0')}:00`;
-    const time12 = formatTime(`2000-01-01T${time24}:00`);
-    return { hour, time24, time12 };
-});
-
-// Get the week days starting from Monday
-const getWeekDays = (startDate: Date): Date[] => {
-    const weekStart = new Date(startDate);
-    const dayOfWeek = weekStart.getDay();
-    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    weekStart.setDate(weekStart.getDate() - daysToMonday);
-    
-    return Array.from({ length: 7 }, (_, i) => {
-        const day = new Date(weekStart);
-        day.setDate(weekStart.getDate() + i);
-        return day;
-    });
-};
-
-// Format day header (e.g., "17 Mon", "18 Tue")
-const formatDayHeader = (date: Date): { dayNumber: string; dayName: string } => {
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return {
-        dayNumber: date.getDate().toString(),
-        dayName: dayNames[date.getDay()]
-    };
-};
-
-// Check if event falls on specific day
-const isEventOnDay = (event: Event, day: Date): boolean => {
-    const eventStart = new Date(event.startTime);
-    const eventDateStr = eventStart.toDateString();
-    const dayDateStr = day.toDateString();
-    return eventDateStr === dayDateStr;
-};
-
-// This function is kept for potential future use but currently unused
-// const getEventsForDayAndTime = (events: Event[], day: Date, timeSlot: { hour: number }): Event[] => {
-//     return events.filter(event => {
-//         if (!isEventOnDay(event, day)) return false;
-//         
-//         const eventStart = new Date(event.startTime);
-//         const eventHour = eventStart.getHours();
-//         
-//         return eventHour === timeSlot.hour;
-//     });
-// };
-
-// Reuse the EventCard component from day view
-interface WeekEventCardProps {
-    event: Event;
-    onClick: () => void;
-    onHover: (event: Event, mouseEvent: React.MouseEvent) => void;
-    onLeave: () => void;
-    categoryColor: string;
-}
-
-const WeekEventCard: React.FC<WeekEventCardProps> = ({
-    event,
-    onClick,
-    onHover,
-    onLeave,
-    categoryColor
-}) => {
-    const startTime = new Date(event.startTime);
-    const endTime = event.endTime ? new Date(event.endTime) : null;
-    const timeText = formatTime(startTime, event.timezone);
-    const live = isEventLive(startTime, endTime);
-
-    // Build class names based on event state
-    const cardClasses = [
-        'event-card',
-        live ? 'live' : '',
-        isEventTracked(event) ? 'tracked' : '',
-    ].filter(Boolean).join(' ');
-
-    // Convert categoryColor from Tailwind class to hex color
-    const getHexColor = (bgClass: string) => {
-        switch(bgClass) {
-            case 'bg-blue-500': return '#3b82f6';
-            case 'bg-green-500': return '#10b981';
-            case 'bg-purple-500': return '#8b5cf6';
-            case 'bg-orange-500': return '#f59e0b';
-            default: return '#6b7280';
-        }
-    };
-
-    const cardStyle = {
-        background: getHexColor(categoryColor),
-        color: 'white',
-    };
-
-    return (
-        <div
-            onClick={onClick}
-            onMouseEnter={(e) => onHover(event, e)}
-            onMouseLeave={onLeave}
-            className={cardClasses}
-            style={cardStyle}
-        >
-            <div className="event-title">
-                {event.title}
-            </div>
-
-            <div className="event-time">
-                <Clock className="w-3 h-3" />
-                <span>{timeText}</span>
-            </div>
-
-            <div className="event-organizer">
-                {event.organizer}
-            </div>
-        </div>
-    );
-};
 
 export default function TechCalendarWeekView({
     events,
@@ -157,35 +38,27 @@ export default function TechCalendarWeekView({
         return (events as Event[]).filter(event => event && event.startTime);
     }, [events]);
 
-    // Get week days
+    // Get week days and time slots
     const weekDays = useMemo(() => {
         return getWeekDays(initialDate);
     }, [initialDate]);
     
-    // Event categorization is now done inline where needed
-    // const categorizedEvents = useMemo(() => {
-    //     const categorized: Record<string, Event[]> = {};
-    //     EVENT_CATEGORIES.forEach(category => { 
-    //         categorized[category.id] = []; 
-    //     });
-    //     
-    //     processedEvents.forEach((event: Event) => {
-    //         const title = event.title.toLowerCase();
-    //         const description = (event.description || '').toLowerCase();
-    //         if (title.includes('conference') || title.includes('summit')) {
-    //             categorized.conferences.push(event);
-    //         } else if (title.includes('workshop') || title.includes('training') || description.includes('hands-on')) {
-    //             categorized.workshops.push(event);
-    //         } else if (title.includes('webinar') || title.includes('online') || event.livestreamUrl) {
-    //             categorized.webinars.push(event);
-    //         } else if (title.includes('networking') || title.includes('meetup') || title.includes('social')) {
-    //             categorized.networking.push(event);
-    //         } else {
-    //             categorized.webinars.push(event);
-    //         }
-    //     });
-    //     return categorized;
-    // }, [processedEvents]);
+    const START_HOUR = 6;
+    const END_HOUR = 23;
+    
+    const timeSlots = useMemo(() => {
+        return generateWeekTimeSlots(START_HOUR, END_HOUR);
+    }, []);
+    
+    // Group events by day for positioning
+    const eventsByDay = useMemo(() => {
+        const grouped = new Map<number, Event[]>();
+        weekDays.forEach((day, dayIndex) => {
+            const dayEvents = getEventsForWeekDay(processedEvents, day, START_HOUR, END_HOUR);
+            grouped.set(dayIndex, dayEvents);
+        });
+        return grouped;
+    }, [processedEvents, weekDays]);
 
     const handleEventClick = (event: Event) => {
         setIsPreviewVisible(false);
@@ -224,95 +97,26 @@ export default function TechCalendarWeekView({
         setPreviewEvent(null);
     };
 
-    const getCategoryColor = (categoryId: string) => {
-        return EVENT_CATEGORIES.find(cat => cat.id === categoryId)?.color || 'bg-gray-500';
-    };
-
     return (
-        <div className="flex h-full bg-gray-50">
+        <div className="tech-calendar-week-view week-view">
+            {/* Header with days */}
+            <WeekHeader weekDays={weekDays} />
+            
+            {/* Time slots with events */}
             <div className="flex-1 overflow-auto">
-                <div className="min-w-[1200px]">
-                    {/* Header with days */}
-                    <div className="grid grid-cols-[80px_repeat(7,1fr)] gap-0 bg-white border-b border-gray-200 sticky top-0 z-20">
-                        <div className="p-4 text-center font-medium text-gray-500 bg-gray-50">Time</div>
-                        {weekDays.map((day, index) => {
-                            const { dayNumber, dayName } = formatDayHeader(day);
-                            const today = new Date();
-                            const isToday = day.toDateString() === today.toDateString();
-                            
-                            return (
-                                <div key={index} className={`p-4 text-center border-l border-gray-200 ${isToday ? 'bg-blue-50' : 'bg-white'}`}>
-                                    <div className={`font-medium ${isToday ? 'text-blue-900' : 'text-gray-900'}`}>
-                                        {dayName}
-                                    </div>
-                                    <div className={`text-sm ${isToday ? 'text-blue-700' : 'text-gray-500'} mt-1`}>
-                                        {dayNumber}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    
-                    {/* Time slots and events */}
-                    <div className="relative">
-                        {TIME_SLOTS.map((timeSlot) => (
-                            <div key={timeSlot.hour} className="grid grid-cols-[80px_repeat(7,1fr)] gap-0 min-h-[80px] border-b border-gray-200">
-                                {/* Time label */}
-                                <div className="p-4 bg-gray-50 flex items-center justify-center border-r border-gray-200">
-                                    <div className="text-center">
-                                        <div className="font-medium text-gray-900 text-sm">{timeSlot.time12.split(' ')[0]}</div>
-                                        <div className="text-xs text-gray-500">{timeSlot.time12.split(' ')[1]}</div>
-                                    </div>
-                                </div>
-                                
-                                {/* Day columns for this time slot */}
-                                {weekDays.map((day, dayIndex) => {
-                                    const dayEvents = processedEvents.filter(event => 
-                                        isEventOnDay(event, day) && 
-                                        new Date(event.startTime).getHours() === timeSlot.hour
-                                    );
-                                    
-                                    return (
-                                        <div key={`${timeSlot.hour}-${dayIndex}`} className="border-l border-gray-200 bg-white relative p-1">
-                                            {dayEvents.map((event) => {
-                                                // Determine category for color
-                                                const title = event.title.toLowerCase();
-                                                const description = (event.description || '').toLowerCase();
-                                                let categoryId = 'webinars'; // default
-                                                
-                                                if (title.includes('conference') || title.includes('summit')) {
-                                                    categoryId = 'conferences';
-                                                } else if (title.includes('workshop') || title.includes('training') || description.includes('hands-on')) {
-                                                    categoryId = 'workshops';
-                                                } else if (title.includes('webinar') || title.includes('online') || event.livestreamUrl) {
-                                                    categoryId = 'webinars';
-                                                } else if (title.includes('networking') || title.includes('meetup') || title.includes('social')) {
-                                                    categoryId = 'networking';
-                                                }
-                                                
-                                                return (
-                                                    <WeekEventCard
-                                                        key={event.id}
-                                                        event={event}
-                                                        onClick={() => handleEventClick(event)}
-                                                        onHover={handleEventHover}
-                                                        onLeave={handleEventLeave}
-                                                        categoryColor={getCategoryColor(categoryId)}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <TimeSlotGrid 
+                    timeSlots={timeSlots}
+                    weekDays={weekDays}
+                    eventsByDay={eventsByDay}
+                    startHour={START_HOUR}
+                    endHour={END_HOUR}
+                    onEventClick={handleEventClick}
+                    onEventHover={handleEventHover}
+                    onEventLeave={handleEventLeave}
+                />
             </div>
             
-            {/* Event Detail Sidebar is handled by parent CalendarClientView */}
-            
-            {/* Event Preview Card - reuse existing component */}
+            {/* Event Preview Card */}
             {previewEvent && (
                 <EventPreviewCard 
                     event={previewEvent} 

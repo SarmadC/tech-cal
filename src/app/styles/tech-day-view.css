@@ -1,5 +1,5 @@
 /* ===================================
-   TECH DAY VIEW - CALENDAR STYLES
+   SHARED CALENDAR VIEWS - DAY & WEEK VIEW STYLES
    =================================== */
 
 /* ===================================
@@ -138,6 +138,7 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
     margin-bottom: 0.25rem;
     font-size: 0.8rem;
@@ -146,8 +147,8 @@
 }
 
 
-.event-card[data-span-gt-4] .event-title { -webkit-line-clamp: 4; }
-.event-card[data-span-gt-8] .event-title { -webkit-line-clamp: 6; }
+.event-card[data-span-gt-4] .event-title { -webkit-line-clamp: 4; line-clamp: 4; }
+.event-card[data-span-gt-8] .event-title { -webkit-line-clamp: 6; line-clamp: 6; }
 
 .event-card.live .event-title {
     color: var(--foreground-inverse, #ffffff);
@@ -408,6 +409,59 @@
 }
 
 /* ===================================
+   10. WEEK VIEW SPECIFIC STYLES
+   =================================== */
+
+/* Week view grid container */
+.tech-week-view-grid-container {
+    position: relative;
+    min-width: 1200px;
+}
+
+.tech-week-view-grid-container .time-grid-line {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--border-subtle);
+    pointer-events: none;
+}
+
+.tech-week-view-grid-container .time-grid-line:nth-of-type(2n) {
+    border-bottom-style: dashed; /* Dashed line for the half-hour mark */
+}
+
+/* Week view event cards - smaller, more compact */
+.tech-calendar-week-view .event-card {
+    padding: 0.25rem 0.5rem;
+    margin: 1px 2px;
+    min-height: 30px;
+    font-size: 0.7rem;
+}
+
+.tech-calendar-week-view .event-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    font-size: 0.7rem;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    overflow: hidden;
+    margin-bottom: 0.125rem;
+}
+
+.tech-calendar-week-view .event-time {
+    font-size: 0.65rem;
+}
+
+.tech-calendar-week-view .event-organizer {
+    font-size: 0.6rem;
+    margin-top: 0.125rem;
+    display: none; /* Hide in week view by default */
+}
+
+/* Week view day columns */
+.tech-calendar-week-view .day-column {
+    min-width: 120px;
+}
+
+/* ===================================
    11. RESPONSIVE DESIGN
    =================================== */
 
@@ -415,7 +469,7 @@
 @media (max-width: 1024px) {
     .tech-day-view-grid-container { min-width: 600px; grid-template-rows: repeat(48, 25px); }
     .event-card { padding: 0.375rem 0.5rem; margin: 1px 2px; }
-    .event-title { font-size: 0.75rem; -webkit-line-clamp: 1; }
+    .event-title { font-size: 0.75rem; -webkit-line-clamp: 1; line-clamp: 1; }
     .event-time, .event-organizer { font-size: 0.65rem; }
 }
 
@@ -425,6 +479,6 @@
     .category-header { padding: 0.75rem; }
     .category-title { font-size: 0.8rem; flex-direction: column; gap: 0.125rem; }
     .event-card { padding: 0.25rem 0.375rem; margin: 1px; }
-    .event-title { font-size: 0.7rem; margin-bottom: 0.125rem; }
+    .event-title { font-size: 0.7rem; margin-bottom: 0.125rem; line-clamp: 1; -webkit-line-clamp: 1; }
     .event-time, .event-organizer { display: none; }
 }

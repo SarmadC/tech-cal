@@ -6,8 +6,7 @@ import {
     Share2, Play, Globe, Calendar
 } from 'lucide-react';
 // 1. UPDATE IMPORTS: Use the new types and the type guard.
-import { Event, EventStatus, isTrackedEvent, TrackedEvent } from '@/types';
-import { MultiDayEventInstance } from '@/utils/multiDayEventUtils';
+import { Event, EventStatus, isTrackedEvent, TrackedEvent, MultiDayEventInstance } from '@/types';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';

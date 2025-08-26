@@ -5,8 +5,7 @@ import { Check, Star, UserCheck, AlertTriangle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEventTracking, useEventTrackingStatus } from '@/hooks/useEventTracking';
 // 1. UPDATE IMPORTS: Use the new, canonical `Event` type.
-import { Event, EventStatus } from '@/types';
-import { MultiDayEventInstance } from '@/utils/multiDayEventUtils';
+import { Event, EventStatus, MultiDayEventInstance } from '@/types';
 
 // 2. UPDATE PROPS: The interface now uses the `Event` type.
 interface EventTrackingProps {

@@ -265,6 +265,10 @@ export const enhancedEventTransformer = {
         event_pattern?: string | null;
     }): MultiDayEvent => {
         const baseEvent = eventTransformer.toApp(supabaseEvent);
+        
+        // Enrich with category information
+        const eventType = supabaseEvent.event_type ? eventTypeTransformer.toApp(supabaseEvent.event_type) : undefined;
+        const enrichedEvent = enrichEvent(baseEvent, { eventType });
 
         const isValidPattern = (pattern: unknown): pattern is 'single' | 'multi_day' | 'all_day' | 'recurring' => {
             if (typeof pattern !== 'string') return false;
@@ -295,7 +299,7 @@ export const enhancedEventTransformer = {
         }
 
         return {
-            ...baseEvent,
+            ...enrichedEvent,
             isMultiDay: supabaseEvent.is_multi_day || false,
             dailySchedule: parsedSchedule,
             eventPattern: eventPattern

@@ -1,22 +1,14 @@
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
-import { Users, Globe, Monitor, MapPin, Clock, HelpCircle } from 'lucide-react';
-import { Event, EventType, AppProfile, MultiDayEvent, isEventTracked, MultiDayEventInstance } from '@/types';
+import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
 import EventPreviewCard from './EventPreviewCard';
+import { EventCard } from './shared/EventCard';
 import '@/app/styles/tech-day-view.css';
 import { processEventsForDayView } from '@/utils/multiDayEventUtils';
+import { getIconForCategory, getEventVisualInfo, createCategoryColumnMap } from '@/utils/eventViewUtils';
+import { formatTime } from '@/utils/dateUtils';
 
-import { formatTime, isEventLive } from '@/utils/dateUtils';
-
-const getIconForCategory = (categoryName: string) => {
-    const name = (categoryName || '').toLowerCase();
-    if (name.includes('conference')) return Users;
-    if (name.includes('workshop') || name.includes('training')) return Monitor;
-    if (name.includes('webinar')) return Globe;
-    if (name.includes('networking') || name.includes('meetup')) return MapPin;
-    return HelpCircle;
-};
 
 export interface TechCalendarDayViewProps {
     events: Event[] | MultiDayEvent[];
@@ -28,68 +20,7 @@ export interface TechCalendarDayViewProps {
 
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => ({ hour: i }));
 
-const getVisualEventInfo = (event: Event | MultiDayEventInstance) => {
-    const start = new Date(event.startTime);
-    const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 60 * 60 * 1000);
 
-    // Use local time (getHours/getMinutes) so grid positioning matches local time display
-    const startDecimal = start.getHours() + start.getMinutes() / 60;
-    let endDecimal = end.getHours() + end.getMinutes() / 60;
-
-    // Handle events spanning midnight correctly
-    if (endDecimal < startDecimal) {
-        endDecimal += 24;
-    }
-    if (endDecimal === 0 && end.getDate() !== start.getDate()) {
-        endDecimal = 24;
-    }
-
-    // Calculate grid rows with +1 offset to align with visual time positions
-    // Time labels are at row (hour * 2 + 2) but are visually transformed up by 50%
-    // So events need to start one row earlier to align with the visual time line
-    const startRow = Math.round(startDecimal * 2) + 1;
-    const endRow = Math.round(endDecimal * 2) + 1;
-
-    const span = endRow - startRow;
-
-    const isInstance = 'isInstance' in event && event.isInstance;
-    const dayInfo = isInstance ? (event as MultiDayEventInstance).dayInfo : undefined;
-
-    return {
-        startRow,
-        endRow,
-        span,
-        isContinuingFromPreviousDay: dayInfo ? !dayInfo.isFirstDay : false,
-        isContinuingToNextDay: dayInfo ? !dayInfo.isLastDay : false,
-        dayNumber: dayInfo?.currentDay || 1,
-        isActuallyMultiDay: dayInfo ? dayInfo.totalDays > 1 : false,
-    };
-};
-
-const EventCard: React.FC<{
-    event: Event;
-    onClick: () => void;
-    onHover: (e: React.MouseEvent) => void;
-    onLeave: () => void;
-}> = ({ event, onClick, onHover, onLeave }) => {
-    const visualInfo = getVisualEventInfo(event);
-    const live = isEventLive(event.startTime, event.endTime);
-
-    // Pass the color to the CSS file via a variable
-    const cardStyle: React.CSSProperties = {
-        ['--event-color' as string]: event.category?.color || '#6B7280',
-    };
-
-    const cardClasses = ['event-card', live ? 'live' : '', isEventTracked(event) ? 'tracked' : ''].filter(Boolean).join(' ');
-
-    return (
-        <div style={cardStyle} className={cardClasses} onClick={onClick} onMouseEnter={onHover} onMouseLeave={onLeave} >
-            <div className="event-title">{event.title}</div>
-            <div className="event-time"><Clock size={12} /><span>{visualInfo.isContinuingFromPreviousDay ? "Continues" : new Date(event.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span></div>
-            {visualInfo.span > 4 && <div className="event-organizer">{event.organizer}</div>}
-        </div>
-    );
-};
 
 export function TechCalendarDayView({ events, initialDate, categories, onEventSelect }: TechCalendarDayViewProps) {
     const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
@@ -100,9 +31,7 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
     const dayEvents = useMemo(() => processEventsForDayView(events as MultiDayEvent[], initialDate), [events, initialDate]);
 
     const categoryColumnMap = useMemo(() => {
-        const map = new Map<string, number>();
-        categories.forEach((cat, index) => map.set(cat.id, index + 2));
-        return map;
+        return createCategoryColumnMap(categories);
     }, [categories]);
 
     // Handlers can remain the same
@@ -172,7 +101,8 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                         const gridColumn = categoryColumnMap.get(event.eventTypeId);
                         if (!gridColumn) return null;
 
-                        const { startRow, endRow } = getVisualEventInfo(event);
+                        const visualInfo = getEventVisualInfo(event);
+                        const { startRow, endRow } = visualInfo;
 
                         return (
                             <div
@@ -188,6 +118,8 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                     onClick={() => handleEventClick(event)}
                                     onHover={(e) => handleEventHover(event, e)}
                                     onLeave={handleEventLeave}
+                                    viewType="day"
+                                    visualInfo={visualInfo}
                                 />
                             </div>
                         );
