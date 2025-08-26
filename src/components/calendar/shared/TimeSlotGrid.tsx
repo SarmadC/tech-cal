@@ -1,20 +1,25 @@
+// src/components/calendar/shared/TimeSlotGrid.tsx
 'use client';
 
 import React from 'react';
-import { Event } from '@/types';
-import { TimeSlot } from './WeekTimeColumn';
-import { WeekEventRenderer } from './WeekEventRenderer';
+import { Event, MultiDayEventInstance } from '@/types';
+import { EventCard } from './EventCard';
+
+export interface TimeSlot {
+    hour: number;
+    time24: string;
+    time12: string;
+}
 
 export interface TimeSlotGridProps {
     timeSlots: TimeSlot[];
     weekDays: Date[];
-    eventsByDay: Map<number, Event[]>;
+    eventsByDay: Map<number, (Event | MultiDayEventInstance)[]>;
     startHour: number;
     endHour: number;
-    onEventClick: (event: Event) => void;
-    onEventHover: (event: Event, mouseEvent: React.MouseEvent) => void;
+    onEventClick: (event: Event | MultiDayEventInstance) => void;
+    onEventHover: (event: Event | MultiDayEventInstance, mouseEvent: React.MouseEvent) => void;
     onEventLeave: () => void;
-    className?: string;
 }
 
 export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
@@ -25,78 +30,194 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
     endHour,
     onEventClick,
     onEventHover,
-    onEventLeave,
-    className = ''
+    onEventLeave
 }) => {
-    // Calculate total rows needed: 2 per hour (30-minute slots)
-    const totalRows = (endHour - startHour + 1) * 2;
-    
-    const gridColsStyle = { 
+    // Calculate the number of half-hour slots needed
+    const totalHours = endHour - startHour + 1;
+    const totalSlots = totalHours * 2 + 1; // +1 for the final time label
+
+    // Generate the grid template columns (time column + 7 day columns)
+    const gridColsStyle = {
         gridTemplateColumns: `80px repeat(7, 1fr)`,
-        gridTemplateRows: `repeat(${totalRows}, 30px)` // Same as day view: 30px per half-hour
+        gridTemplateRows: `repeat(${totalSlots}, 30px)`, // Match day view: 30px per half-hour
+        minWidth: '1200px'
+    };
+
+    // Helper function to calculate grid row positions for an event
+    const getEventGridPosition = (event: Event | MultiDayEventInstance, currentDay: Date) => {
+        // Use the event's actual times (which for multi-day instances are already the daily schedule times)
+        const eventStart = new Date(event.startTime);
+        const eventEnd = event.endTime ? new Date(event.endTime) : new Date(eventStart.getTime() + 60 * 60 * 1000);
+
+        // Get day boundaries
+        const dayStart = new Date(currentDay);
+        dayStart.setHours(startHour, 0, 0, 0);
+        const dayEnd = new Date(currentDay);
+        dayEnd.setHours(endHour, 59, 59, 999);
+
+        // Clamp event times to visible grid boundaries (6 AM to 11 PM)
+        const clampedStart = eventStart < dayStart ? dayStart : eventStart;
+        const clampedEnd = eventEnd > dayEnd ? dayEnd : eventEnd;
+
+        // If the event is completely outside the visible range, skip it
+        if (clampedStart >= clampedEnd) {
+            return { startRow: -1, endRow: -1, span: 0 };
+        }
+
+        // Calculate grid positions (2 slots per hour)
+        const startMinutes = (clampedStart.getHours() - startHour) * 60 + clampedStart.getMinutes();
+        const endMinutes = (clampedEnd.getHours() - startHour) * 60 + clampedEnd.getMinutes();
+
+        // Convert to grid rows (each 30 min = 1 row, +1 for 1-based grid)
+        const startRow = Math.max(1, Math.floor(startMinutes / 30) + 1);
+        const endRow = Math.min(totalSlots, Math.ceil(endMinutes / 30) + 1);
+
+        // Calculate span for data attributes
+        const span = endRow - startRow;
+
+        return { startRow, endRow, span };
+    };
+
+    // Type definition for event visual info
+    interface EventVisualInfo {
+        isContinuingFromPreviousDay?: boolean;
+        isContinuingToNextDay?: boolean;
+        dayNumber?: number;
+        totalDays?: number;
+    }
+
+    // Helper to get visual info for an event
+    const getEventVisualInfo = (event: Event | MultiDayEventInstance): EventVisualInfo => {
+        const info: EventVisualInfo = {};
+
+        // Check if this is a multi-day event instance
+        if ('isInstance' in event && event.isInstance) {
+            const instance = event as MultiDayEventInstance;
+            if (instance.dayInfo) {
+                info.isContinuingFromPreviousDay = !instance.dayInfo.isFirstDay;
+                info.isContinuingToNextDay = !instance.dayInfo.isLastDay;
+                info.dayNumber = instance.dayInfo.currentDay;
+                info.totalDays = instance.dayInfo.totalDays;
+            }
+        }
+
+        return info;
     };
 
     return (
-        <div className={`week-grid-container ${className}`} style={gridColsStyle}>
-            {/* Render horizontal grid lines first (background) */}
-            {Array.from({ length: totalRows }).map((_, i) => (
-                <div 
-                    key={`line-${i}`} 
-                    className="week-grid-line" 
-                    style={{ 
+        <div className="week-grid-container" style={gridColsStyle}>
+            {/* Render grid lines for all slots (background layer) */}
+            {Array.from({ length: totalSlots }).map((_, i) => (
+                <div
+                    key={`line-${i}`}
+                    className="week-grid-line"
+                    style={{
                         gridRow: i + 1,
                         gridColumn: '1 / -1' // Span all columns
-                    }} 
+                    }}
                 />
             ))}
 
-            {/* Render time labels */}
-            {timeSlots.map((timeSlot, index) => (
-                <div 
-                    key={timeSlot.hour} 
+            {/* Render time labels (positioned on the hour) */}
+            {timeSlots.map((slot, index) => (
+                <div
+                    key={`time-${slot.hour}`}
                     className="week-time-label"
-                    style={{ 
+                    style={{
                         gridColumn: 1,
-                        gridRow: `${index * 2 + 1} / ${index * 2 + 3}` // Span 2 rows (1 hour)
+                        gridRow: `${(index * 2) + 2}`, // Start at row 2, each hour is 2 rows
+                        transform: 'translateY(-50%)', // Center on the grid line like day view
+                        zIndex: 2
                     }}
                 >
                     <div className="time-content">
-                        <div className="font-medium time-hour">
-                            {timeSlot.time12.split(' ')[0]}
+                        <div className="time-hour">
+                            {slot.time12.split(' ')[0]}
                         </div>
                         <div className="time-period">
-                            {timeSlot.time12.split(' ')[1]}
+                            {slot.time12.split(' ')[1]}
                         </div>
                     </div>
                 </div>
             ))}
-            
-            {/* Render event cards for each day column */}
+
+            {/* Add final time label for the end of the period */}
+            <div
+                className="week-time-label"
+                style={{
+                    gridColumn: 1,
+                    gridRow: totalSlots + 1,
+                    transform: 'translateY(-50%)',
+                    zIndex: 2
+                }}
+            >
+                <div className="time-content">
+                    <div className="time-hour">
+                        {endHour + 1 > 12 ? ((endHour + 1) % 12 || 12) : endHour + 1}:00
+                    </div>
+                    <div className="time-period">
+                        {endHour + 1 >= 12 ? 'PM' : 'AM'}
+                    </div>
+                </div>
+            </div>
+
+            {/* Render events directly in the grid */}
             {weekDays.map((day, dayIndex) => {
                 const dayEvents = eventsByDay.get(dayIndex) || [];
-                
-                return (
-                    <div 
-                        key={`day-${dayIndex}`} 
-                        className="week-day-column"
-                        style={{
-                            gridColumn: dayIndex + 2, // +2 because time column is first
-                            gridRow: `1 / ${totalRows + 1}`, // Span all time rows
-                            position: 'relative'
-                        }}
-                    >
-                        <WeekEventRenderer
-                            events={dayEvents}
-                            dayIndex={dayIndex}
-                            currentDay={day}
-                            startHour={startHour}
-                            endHour={endHour}
-                            onEventClick={onEventClick}
-                            onEventHover={onEventHover}
-                            onEventLeave={onEventLeave}
-                        />
-                    </div>
-                );
+                const columnIndex = dayIndex + 2; // +2 because first column is time
+
+                return dayEvents.map((event, eventIndex) => {
+                    const { startRow, endRow, span } = getEventGridPosition(event, day);
+
+                    // Skip events that don't have a valid position
+                    if (startRow < 1 || endRow <= startRow) {
+                        return null;
+                    }
+
+                    // Get visual info for multi-day events
+                    const visualInfo = getEventVisualInfo(event);
+
+                    // Determine CSS classes based on span and multi-day status
+                    const spanClasses = [
+                        span > 2 ? 'data-span-gt-2' : '',
+                        span > 4 ? 'data-span-gt-4' : '',
+                        span > 6 ? 'data-span-gt-6' : '',
+                        visualInfo.isContinuingFromPreviousDay ? 'continuation-top' : '',
+                        visualInfo.isContinuingToNextDay ? 'continuation-bottom' : '',
+                        visualInfo.dayNumber ? `day-${visualInfo.dayNumber}` : ''
+                    ].filter(Boolean).join(' ');
+
+                    // Create a unique key for the event
+                    const eventKey = 'originalEventId' in event
+                        ? `${event.originalEventId}-day${dayIndex}-${eventIndex}`
+                        : `${event.id}-${dayIndex}-${eventIndex}`;
+
+                    return (
+                        <div
+                            key={eventKey}
+                            className="week-event-positioned"
+                            style={{
+                                gridColumn: columnIndex,
+                                gridRow: `${startRow} / ${endRow}`,
+                                zIndex: 10 + eventIndex,
+                                padding: '1px 2px'
+                            }}
+                        >
+                            <EventCard
+                                event={event}
+                                onClick={() => onEventClick(event)}
+                                onHover={(e) => onEventHover(event, e)}
+                                onLeave={onEventLeave}
+                                viewType="week"
+                                visualInfo={{ span, ...visualInfo }}
+                                className={spanClasses}
+                                style={{
+                                    height: '100%'
+                                }}
+                            />
+                        </div>
+                    );
+                });
             })}
         </div>
     );

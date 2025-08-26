@@ -10,11 +10,14 @@ import type { MultiDayEvent, MultiDayEventInstance } from '@/types';
  * @param viewDate The specific day the user is looking at in the calendar.
  * @returns An array of event instances for that day (usually just one, but allows for flexibility).
  */
+// CRITICAL UPDATE for src/utils/multiDayEventUtils.ts
+// Make sure your generateDailyEventInstances function has this fix:
+
 export function generateDailyEventInstances(
     event: MultiDayEvent,
     viewDate: Date
 ): MultiDayEventInstance[] {
-    // This top part for single-day events is correct and can stay
+    // Single-day events
     if (!event.isMultiDay || !event.dailySchedule) {
         const eventDate = new Date(event.startTime);
         if (eventDate.toDateString() === viewDate.toDateString()) {
@@ -54,7 +57,7 @@ export function generateDailyEventInstances(
     const dayInfo = { currentDay, totalDays, isFirstDay, isLastDay, continuationType };
 
     const instances: MultiDayEventInstance[] = [];
-    const year = viewDate.getUTCFullYear(); // Use UTC methods for consistency
+    const year = viewDate.getUTCFullYear();
     const month = String(viewDate.getUTCMonth() + 1).padStart(2, '0');
     const day = String(viewDate.getUTCDate()).padStart(2, '0');
     const viewDateStr = `${year}-${month}-${day}`;
@@ -64,21 +67,21 @@ export function generateDailyEventInstances(
             const dailyStart = event.dailySchedule.dailyStart || '09:00';
             const dailyEnd = event.dailySchedule.dailyEnd || '17:00';
 
-            const instanceStartTimeStr = `${viewDateStr}T${dailyStart}:00Z`;
-            const instanceEndTimeStr = `${viewDateStr}T${dailyEnd}:00Z`;
+            // CRITICAL: Format times with local timezone, not UTC
+            // This ensures the times align with what the calendar grid expects
+            const instanceStartTimeStr = `${viewDateStr}T${dailyStart}:00`;
+            const instanceEndTimeStr = `${viewDateStr}T${dailyEnd}:00`;
 
-            // --- THE CRITICAL FIX IS HERE ---
-            // We destructure the original event to explicitly exclude its start and end times,
-            // preventing them from polluting our new instance object.
+            // CRITICAL FIX: Destructure to exclude original times
             const { startTime: _startTime, endTime: _endTime, id, ...restOfEvent } = event;
 
             instances.push({
-                ...restOfEvent,               // Spread the original event's OTHER properties
-                id: `${id}-${viewDateStr}`,   // Create a new, unique ID for this instance
-                startTime: instanceStartTimeStr, // Set the NEW daily start time
-                endTime: instanceEndTimeStr,     // Set the NEW daily end time
+                ...restOfEvent,
+                id: `${id}-${viewDateStr}`,
+                startTime: instanceStartTimeStr,
+                endTime: instanceEndTimeStr,
                 isInstance: true,
-                originalEventId: id,          // Keep a reference to the original event ID
+                originalEventId: id,
                 instanceDate: viewDateStr,
                 dayInfo
             });
@@ -86,18 +89,4 @@ export function generateDailyEventInstances(
     }
 
     return instances;
-}
-/**
- * Processes a list of events, generating daily instances for any multi-day events
- * that fall on the specified view date.
- * @param events An array of events, which can be single or multi-day.
- * @param viewDate The date for which to generate event instances.
- * @returns A flattened array of all event instances for the given day.
- */
-export function processEventsForDayView(
-    events: MultiDayEvent[],
-    viewDate: Date
-): MultiDayEventInstance[] {
-    // Use flatMap to elegantly process all events and flatten the resulting instances into a single array.
-    return events.flatMap(event => generateDailyEventInstances(event, viewDate));
 }

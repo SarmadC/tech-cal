@@ -38,27 +38,34 @@ export interface EventVisualInfo {
 /**
  * Calculate visual positioning information for events in day view grid
  */
-export const getEventVisualInfo = (event: Event | MultiDayEventInstance): EventVisualInfo => {
-    const start = new Date(event.startTime);
-    const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 60 * 60 * 1000);
+export const getEventVisualInfo = (
+    event: Event | MultiDayEventInstance,
+    startHour: number = 0,  // Add startHour parameter
+    endHour: number = 24     // Add endHour parameter
+): EventVisualInfo => {
+    const eventStart = new Date(event.startTime);
+    const eventEnd = event.endTime ? new Date(event.endTime) : new Date(eventStart.getTime() + 60 * 60 * 1000);
 
-    // Use local time (getHours/getMinutes) so grid positioning matches local time display
-    const startDecimal = start.getHours() + start.getMinutes() / 60;
-    let endDecimal = end.getHours() + end.getMinutes() / 60;
+    // Get day boundaries (for clamping)
+    const dayStart = new Date(eventStart);
+    dayStart.setHours(startHour, 0, 0, 0);
+    const dayEnd = new Date(eventStart);
+    dayEnd.setHours(endHour, 59, 59, 999);
 
-    // Handle events spanning midnight correctly
-    if (endDecimal < startDecimal) {
-        endDecimal += 24;
-    }
-    if (endDecimal === 0 && end.getDate() !== start.getDate()) {
-        endDecimal = 24;
-    }
+    // Clamp to visible time range
+    const clampedStart = eventStart < dayStart ? dayStart : eventStart;
+    const clampedEnd = eventEnd > dayEnd ? dayEnd : eventEnd;
 
-    // Calculate grid rows with +1 offset to align with visual time positions
-    const startRow = Math.round(startDecimal * 2) + 1;
-    const endRow = Math.round(endDecimal * 2) + 1;
+    // Calculate minutes from startHour (consistent with week view)
+    const startMinutes = Math.max(0, (clampedStart.getHours() - startHour) * 60 + clampedStart.getMinutes());
+    const endMinutes = Math.max(0, (clampedEnd.getHours() - startHour) * 60 + clampedEnd.getMinutes());
+
+    // Convert to grid rows (30 min = 1 row, +1 for 1-based grid)
+    const startRow = Math.floor(startMinutes / 30) + 1;
+    const endRow = Math.ceil(endMinutes / 30) + 1;
     const span = endRow - startRow;
 
+    // Rest remains the same...
     const isInstance = 'isInstance' in event && event.isInstance;
     const dayInfo = isInstance ? (event as MultiDayEventInstance).dayInfo : undefined;
 
@@ -77,58 +84,52 @@ export const getEventVisualInfo = (event: Event | MultiDayEventInstance): EventV
  * Calculate visual positioning information for events in week view grid
  * Uses the same timezone logic as day view but adapted for week view time slots
  */
-export const getWeekEventVisualInfo = (event: Event, startHour: number = 6, endHour: number = 23, currentDay: Date): EventVisualInfo => {
-    const start = new Date(event.startTime);
-    const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 60 * 60 * 1000);
+// ============================================
+// src/utils/getWeekEventVisualInfo.ts
+// Add this function to your eventViewUtils.ts file
+// ============================================
+export function getWeekEventVisualInfo(
+    event: Event,
+    startHour: number,
+    endHour: number,
+    currentDay: Date
+) {
+    const eventStart = new Date(event.startTime);
+    const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
 
-    // Use local time (getHours/getMinutes) - same as day view
-    const startDecimal = start.getHours() + start.getMinutes() / 60;
-    let endDecimal = end.getHours() + end.getMinutes() / 60;
-
-    // Handle events spanning midnight correctly
-    if (endDecimal < startDecimal) {
-        endDecimal += 24;
-    }
-    if (endDecimal === 0 && end.getDate() !== start.getDate()) {
-        endDecimal = 24;
-    }
-
-    // For week view, constrain to the current day and visible time range
+    // Get day boundaries
     const dayStart = new Date(currentDay);
-    dayStart.setHours(0, 0, 0, 0);
+    dayStart.setHours(startHour, 0, 0, 0);
     const dayEnd = new Date(currentDay);
-    dayEnd.setHours(23, 59, 59, 999);
+    dayEnd.setHours(endHour, 59, 59, 999);
 
-    // Only include the portion of the event that occurs on the current day
-    const effectiveStart = new Date(Math.max(start.getTime(), dayStart.getTime()));
-    const effectiveEnd = new Date(Math.min(end.getTime(), dayEnd.getTime()));
+    // Clamp event times to day boundaries
+    const clampedStart = eventStart < dayStart ? dayStart : eventStart;
+    const clampedEnd = eventEnd > dayEnd ? dayEnd : eventEnd;
 
-    // Convert back to decimal hours for the current day
-    const constrainedStartDecimal = effectiveStart.getHours() + effectiveStart.getMinutes() / 60;
-    const constrainedEndDecimal = effectiveEnd.getHours() + effectiveEnd.getMinutes() / 60;
+    // Calculate grid positions (2 slots per hour)
+    const startMinutes = (clampedStart.getHours() - startHour) * 60 + clampedStart.getMinutes();
+    const endMinutes = (clampedEnd.getHours() - startHour) * 60 + clampedEnd.getMinutes();
 
-    // Constrain to visible time range (startHour to endHour)
-    const visibleStartDecimal = Math.max(constrainedStartDecimal, startHour);
-    const visibleEndDecimal = Math.min(constrainedEndDecimal, endHour);
+    // Convert to grid rows (each 30 min = 1 row, +1 for 1-based grid)
+    const startRow = Math.floor(startMinutes / 30) + 1;
+    const endRow = Math.ceil(endMinutes / 30) + 1;
 
-    // Calculate grid positions - using same formula as day view but offset for week view start
-    const startRow = Math.round((visibleStartDecimal - startHour) * 2) + 1;
-    const endRow = Math.round((visibleEndDecimal - startHour) * 2) + 1;
-    const span = Math.max(1, endRow - startRow); // Minimum 1 row span
+    // Calculate span for visual adjustments
+    const span = endRow - startRow;
 
-    const isInstance = 'isInstance' in event && event.isInstance;
-    const dayInfo = isInstance ? (event as MultiDayEventInstance).dayInfo : undefined;
+    // Check if event continues from previous or to next day
+    const isContinuingFromPreviousDay = eventStart < dayStart;
+    const isContinuingToNextDay = eventEnd > dayEnd;
 
     return {
         startRow,
         endRow,
         span,
-        isContinuingFromPreviousDay: dayInfo ? !dayInfo.isFirstDay : false,
-        isContinuingToNextDay: dayInfo ? !dayInfo.isLastDay : false,
-        dayNumber: dayInfo?.currentDay || 1,
-        isActuallyMultiDay: dayInfo ? dayInfo.totalDays > 1 : false,
+        isContinuingFromPreviousDay,
+        isContinuingToNextDay
     };
-};
+}
 
 /**
  * Calculate event height for week view based on duration (legacy)
@@ -297,3 +298,5 @@ export const createCategoryColumnMap = (categories: EventType[]): Map<string, nu
 export const getCategoryById = (categories: EventType[], eventTypeId: string): EventType | undefined => {
     return categories.find(cat => cat.id === eventTypeId);
 };
+
+
