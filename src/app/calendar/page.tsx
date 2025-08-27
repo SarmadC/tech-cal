@@ -1,6 +1,6 @@
 // src/app/calendar/page.tsx
 import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
+// import { redirect } from 'next/navigation';  // Commented out but kept for easy re-enabling
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
@@ -10,10 +10,10 @@ export default async function CalendarPage() {
     console.log('🏗️ Calendar page loading...');
 
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user }, error: _authError } = await supabase.auth.getUser();
 
     // Temporarily disable auth for debugging
-    // if (authError || !user) {
+    // if (_authError || !user) {
     //     console.log('❌ Auth failed, redirecting to login');
     //     redirect('/login');
     // }

@@ -90,3 +90,20 @@ export function generateDailyEventInstances(
 
     return instances;
 }
+
+// Add this function to your src/utils/multiDayEventUtils.ts file
+
+/**
+ * Processes a list of events, generating daily instances for any multi-day events
+ * that fall on the specified view date.
+ * @param events An array of events, which can be single or multi-day.
+ * @param viewDate The date for which to generate event instances.
+ * @returns A flattened array of all event instances for the given day.
+ */
+export function processEventsForDayView(
+    events: MultiDayEvent[],
+    viewDate: Date
+): MultiDayEventInstance[] {
+    // Use flatMap to process all events and flatten the resulting instances into a single array
+    return events.flatMap(event => generateDailyEventInstances(event, viewDate));
+}

@@ -11,7 +11,7 @@ import {
     getWeekDays,
     generateWeekTimeSlots
 } from '@/utils/eventViewUtils';
-import { processEventsForDayView } from '@/utils/multiDayEventUtils';
+import { generateDailyEventInstances } from '@/utils/multiDayEventUtils';
 
 export interface TechCalendarWeekViewProps {
     events: Event[] | MultiDayEvent[];
@@ -50,55 +50,69 @@ export default function TechCalendarWeekView({
     // Process events and generate proper instances for multi-day events
     const processedEvents = useMemo(() => {
         console.log('[TechCalendarWeekView] Processing events:', events.length, 'events total');
-        
+
         const allProcessedEvents: (Event | MultiDayEventInstance)[] = [];
+        const processedMultiDayIds = new Set<string>();
 
         // Debug: Check what types of events we have
         const multiDayEvents = (events as MultiDayEvent[]).filter(event => event.isMultiDay && event.dailySchedule);
         console.log('[TechCalendarWeekView] Multi-day events found:', multiDayEvents.length);
+
+        // Process multi-day events for each day in the week
         multiDayEvents.forEach(event => {
-            console.log('[TechCalendarWeekView] Multi-day event:', {
+            console.log('[TechCalendarWeekView] Processing multi-day event:', {
                 id: event.id,
                 title: event.title,
                 startTime: event.startTime,
                 endTime: event.endTime,
-                isMultiDay: event.isMultiDay,
                 dailySchedule: event.dailySchedule
+            });
+
+            processedMultiDayIds.add(event.id);
+
+            // Generate instances for each day of the week
+            weekDays.forEach(day => {
+                const instances = generateDailyEventInstances(event, day);
+                if (instances.length > 0) {
+                    console.log(`[TechCalendarWeekView] Generated ${instances.length} instance(s) for ${day.toDateString()}:`,
+                        instances.map(i => ({
+                            id: i.id,
+                            startTime: i.startTime,
+                            endTime: i.endTime,
+                            instanceDate: i.instanceDate
+                        }))
+                    );
+                    allProcessedEvents.push(...instances);
+                }
             });
         });
 
-        // For each day in the week, process multi-day events
-        weekDays.forEach(day => {
-            console.log('[TechCalendarWeekView] Processing day:', day.toDateString());
-            // Process events for this specific day (handles multi-day event instances)
-            const dayInstances = processEventsForDayView(events as MultiDayEvent[], day);
-            console.log('[TechCalendarWeekView] Generated instances for', day.toDateString(), ':', dayInstances.length);
+        // Add single-day events that aren't multi-day
+        const weekStart = new Date(weekDays[0]);
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekDays[6]);
+        weekEnd.setHours(23, 59, 59, 999);
 
-            // Add all instances to our collection
-            allProcessedEvents.push(...dayInstances);
-        });
-
-        // Also add single-day events that aren't multi-day
         const singleDayEvents = (events as MultiDayEvent[]).filter(event => {
-            // Skip if it's a multi-day event (will be handled by processEventsForDayView)
-            if (event.isMultiDay && event.dailySchedule) {
+            // Skip if it's a multi-day event (already processed)
+            if (processedMultiDayIds.has(event.id)) {
                 return false;
             }
 
             // Include single-day events that fall within this week
             const eventStart = new Date(event.startTime);
-            const weekStart = new Date(weekDays[0]);
-            weekStart.setHours(0, 0, 0, 0);
-            const weekEnd = new Date(weekDays[6]);
-            weekEnd.setHours(23, 59, 59, 999);
-
             return eventStart >= weekStart && eventStart <= weekEnd;
         });
 
         console.log('[TechCalendarWeekView] Single-day events in week range:', singleDayEvents.length);
         allProcessedEvents.push(...singleDayEvents);
 
-        console.log('[TechCalendarWeekView] Total processed events:', allProcessedEvents.length);
+        console.log('[TechCalendarWeekView] Total processed events:', {
+            total: allProcessedEvents.length,
+            multiDayInstances: allProcessedEvents.filter(e => 'isInstance' in e && e.isInstance).length,
+            singleDayEvents: allProcessedEvents.filter(e => !('isInstance' in e && e.isInstance)).length
+        });
+
         return allProcessedEvents;
     }, [events, weekDays]);
 
@@ -108,38 +122,43 @@ export default function TechCalendarWeekView({
         const grouped = new Map<number, (Event | MultiDayEventInstance)[]>();
 
         weekDays.forEach((day, dayIndex) => {
-            const dayStart = new Date(day);
-            dayStart.setHours(0, 0, 0, 0);
-            const dayEnd = new Date(day);
-            dayEnd.setHours(23, 59, 59, 999);
-
-            console.log(`[TechCalendarWeekView] Processing day ${dayIndex} (${day.toDateString()})`);
-
-            // Filter events that occur on this specific day
             const dayEvents = processedEvents.filter(event => {
-                const eventStart = new Date(event.startTime);
-                const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
-
-                // For multi-day instances, check the instance date
+                // For multi-day instances, match by instanceDate
                 if ('isInstance' in event && event.isInstance) {
                     const instance = event as MultiDayEventInstance;
-                    const instanceDate = new Date(instance.instanceDate);
+                    // Parse the instanceDate correctly (it's in YYYY-MM-DD format)
+                    const [year, month, dayNum] = instance.instanceDate.split('-').map(Number);
+                    const instanceDate = new Date(year, month - 1, dayNum);
                     const matches = instanceDate.toDateString() === day.toDateString();
-                    console.log(`[TechCalendarWeekView] Multi-day instance ${instance.id} (${instance.title}) on ${instance.instanceDate} matches ${day.toDateString()}: ${matches}`);
+
+                    if (matches) {
+                        console.log(`[TechCalendarWeekView] Multi-day instance matched for day ${dayIndex}:`, {
+                            instanceDate: instance.instanceDate,
+                            dayString: day.toDateString(),
+                            title: instance.title
+                        });
+                    }
                     return matches;
                 }
 
-                // For regular events, check if they overlap with this day
-                const overlaps = eventStart <= dayEnd && eventEnd >= dayStart;
-                console.log(`[TechCalendarWeekView] Regular event ${event.id} (${event.title}) overlaps ${day.toDateString()}: ${overlaps}`);
-                return overlaps;
+                // For regular events, check if they occur on this day
+                const eventStart = new Date(event.startTime);
+                return eventStart.toDateString() === day.toDateString();
             });
 
-            console.log(`[TechCalendarWeekView] Day ${dayIndex} has ${dayEvents.length} events`);
+            if (dayEvents.length > 0) {
+                console.log(`[TechCalendarWeekView] Day ${dayIndex} (${day.toDateString()}) has ${dayEvents.length} events`);
+            }
+
             grouped.set(dayIndex, dayEvents);
         });
 
-        console.log('[TechCalendarWeekView] Final eventsByDay map:', Array.from(grouped.entries()).map(([day, events]) => `Day ${day}: ${events.length} events`));
+        console.log('[TechCalendarWeekView] Final eventsByDay map:',
+            Array.from(grouped.entries()).map(([day, events]) =>
+                `Day ${day}: ${events.length} events`
+            )
+        );
+
         return grouped;
     }, [processedEvents, weekDays]);
 
