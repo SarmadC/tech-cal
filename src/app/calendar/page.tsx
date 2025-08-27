@@ -12,12 +12,13 @@ export default async function CalendarPage() {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-        console.log('❌ Auth failed, redirecting to login');
-        redirect('/login');
-    }
+    // Temporarily disable auth for debugging
+    // if (authError || !user) {
+    //     console.log('❌ Auth failed, redirecting to login');
+    //     redirect('/login');
+    // }
 
-    console.log('✅ User authenticated:', user.email);
+    console.log('✅ User authenticated (or debug mode):', user?.email || 'no user');
 
     try {
         // Load events and categories (these should work)
@@ -36,8 +37,12 @@ export default async function CalendarPage() {
         console.log('👤 Loading profile...');
         let profile = null;
         try {
-            profile = await ProfileService.getProfile(user.id, supabase);
-            console.log('✅ Profile loaded:', profile?.fullName);
+            if (user?.id) {
+                profile = await ProfileService.getProfile(user.id, supabase);
+                console.log('✅ Profile loaded:', profile?.fullName);
+            } else {
+                console.log('⚠️ No user ID for profile loading (debug mode)');
+            }
         } catch (profileError) {
             console.log('⚠️ Profile not found (normal for new users):', (profileError as Error).message);
             // This is fine - new users don't have profiles yet

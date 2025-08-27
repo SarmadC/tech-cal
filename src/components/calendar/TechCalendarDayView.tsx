@@ -6,8 +6,9 @@ import EventPreviewCard from './EventPreviewCard';
 import { EventCard } from './shared/EventCard';
 import '@/app/styles/tech-day-view.css';
 import { processEventsForDayView } from '@/utils/multiDayEventUtils';
-import { getIconForCategory, getEventVisualInfo, createCategoryColumnMap } from '@/utils/eventViewUtils';
+import { getIconForCategory, getEventVisualInfo, createCategoryColumnMap, detectOverlappingEvents } from '@/utils/eventViewUtils';
 import { formatTime } from '@/utils/dateUtils';
+
 
 
 export interface TechCalendarDayViewProps {
@@ -33,6 +34,11 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
     const categoryColumnMap = useMemo(() => {
         return createCategoryColumnMap(categories);
     }, [categories]);
+
+    // Detect overlapping events for blur effect
+    const overlapMap = useMemo(() => {
+        return detectOverlappingEvents(dayEvents);
+    }, [dayEvents]);
 
     // Handlers can remain the same
     const handleEventClick = (event: Event) => {
@@ -120,6 +126,7 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                     onLeave={handleEventLeave}
                                     viewType="day"
                                     visualInfo={visualInfo}
+                                    isOverlapping={overlapMap.get(event.id) || false}
                                 />
                             </div>
                         );

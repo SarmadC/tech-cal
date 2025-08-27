@@ -166,11 +166,18 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                 const dayEvents = eventsByDay.get(dayIndex) || [];
                 const columnIndex = dayIndex + 2; // +2 because first column is time
 
+                console.log(`[TimeSlotGrid] Day ${dayIndex} (${day.toDateString()}): ${dayEvents.length} events`);
+                dayEvents.forEach(event => {
+                    console.log(`[TimeSlotGrid] Event: ${event.title} from ${event.startTime} to ${event.endTime}`);
+                });
+
                 return dayEvents.map((event, eventIndex) => {
                     const { startRow, endRow, span } = getEventGridPosition(event, day);
+                    console.log(`[TimeSlotGrid] Event ${event.title} positioned at rows ${startRow}-${endRow}, span: ${span}`);
 
                     // Skip events that don't have a valid position
                     if (startRow < 1 || endRow <= startRow) {
+                        console.log(`[TimeSlotGrid] Skipping event ${event.title} - invalid position`);
                         return null;
                     }
 

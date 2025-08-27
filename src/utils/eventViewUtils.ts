@@ -299,4 +299,63 @@ export const getCategoryById = (categories: EventType[], eventTypeId: string): E
     return categories.find(cat => cat.id === eventTypeId);
 };
 
+// ============================================
+// OVERLAP DETECTION UTILITIES
+// ============================================
+
+/**
+ * Check if two events overlap in time
+ */
+export const doEventsOverlap = (event1: Event | MultiDayEventInstance, event2: Event | MultiDayEventInstance): boolean => {
+    const start1 = new Date(event1.startTime);
+    const end1 = event1.endTime ? new Date(event1.endTime) : new Date(start1.getTime() + 60 * 60 * 1000);
+    
+    const start2 = new Date(event2.startTime);
+    const end2 = event2.endTime ? new Date(event2.endTime) : new Date(start2.getTime() + 60 * 60 * 1000);
+    
+    // Events overlap if one starts before the other ends and vice versa
+    return start1 < end2 && start2 < end1;
+};
+
+/**
+ * Detects overlapping events for visual purposes (e.g., applying blur effects)
+ * Returns a Map where each event ID is mapped to whether it overlaps with any other events
+ */
+export function detectOverlappingEvents(
+    events: (Event | MultiDayEventInstance)[]
+): Map<string, boolean> {
+    const overlapMap = new Map<string, boolean>();
+
+    // Initialize all events as non-overlapping
+    events.forEach(event => {
+        overlapMap.set(event.id, false);
+    });
+
+    // Check each pair of events for overlaps
+    for (let i = 0; i < events.length; i++) {
+        for (let j = i + 1; j < events.length; j++) {
+            const event1 = events[i];
+            const event2 = events[j];
+
+            // Skip if they're in different categories
+            if (event1.eventTypeId !== event2.eventTypeId) {
+                continue;
+            }
+
+            const start1 = new Date(event1.startTime);
+            const end1 = event1.endTime ? new Date(event1.endTime) : new Date(start1.getTime() + 60 * 60 * 1000);
+            const start2 = new Date(event2.startTime);
+            const end2 = event2.endTime ? new Date(event2.endTime) : new Date(start2.getTime() + 60 * 60 * 1000);
+
+            // Check if events overlap in time
+            if (start1 < end2 && start2 < end1) {
+                overlapMap.set(event1.id, true);
+                overlapMap.set(event2.id, true);
+            }
+        }
+    }
+
+    return overlapMap;
+}
+
 

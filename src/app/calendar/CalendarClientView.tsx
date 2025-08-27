@@ -118,6 +118,7 @@ export default function CalendarClientView({
 
     const weekEvents = useMemo(() => {
         const view = searchParams.get('view') || 'month';
+        console.log('[CalendarClientView] View:', view);
         if (view !== 'week') return [];
 
         const dateParam = searchParams.get('date');
@@ -125,6 +126,8 @@ export default function CalendarClientView({
             const [year, month, day] = dateParam.split('-').map(Number);
             return new Date(year, month - 1, day);
         })() : new Date();
+
+        console.log('[CalendarClientView] Current date:', currentDate);
 
         // Get start of week (Monday)
         const weekStart = new Date(currentDate);
@@ -138,12 +141,21 @@ export default function CalendarClientView({
         weekEnd.setDate(weekEnd.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
 
-        return enrichedEvents.filter((event: TrackedEvent) => {
+        console.log('[CalendarClientView] Week range:', weekStart, 'to', weekEnd);
+        console.log('[CalendarClientView] Total enriched events to filter:', enrichedEvents.length);
+
+        const filtered = enrichedEvents.filter((event: TrackedEvent) => {
             const eventStart = new Date(event.startTime);
             const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
 
-            return eventStart <= weekEnd && eventEnd >= weekStart;
+            const inRange = eventStart <= weekEnd && eventEnd >= weekStart;
+            console.log('[CalendarClientView] Event:', event.title, 'from', eventStart, 'to', eventEnd, 'in range:', inRange);
+            
+            return inRange;
         });
+
+        console.log('[CalendarClientView] Filtered week events:', filtered.length);
+        return filtered;
     }, [enrichedEvents, searchParams]);
 
 
