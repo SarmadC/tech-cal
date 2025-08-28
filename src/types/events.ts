@@ -41,6 +41,13 @@ export interface Event {
     category?: EventType;
     tags?: EventTag[];
 
+    // Organization information
+    organization?: {
+        id: string;
+        name: string;
+        logo?: string;
+    };
+
     // Visual
     color?: string;
     eventImageUrl?: string | null;
@@ -310,4 +317,9 @@ export interface MultiDayEventInstance extends Event {
         isLastDay: boolean;
         continuationType: 'start' | 'middle' | 'end' | 'single';
     };
+    // Multi-day specific properties for single-card display
+    isMultiDay?: boolean;
+    multiDaySpan?: number;
+    multiDayStart?: Date;
+    multiDayEnd?: Date;
 }

@@ -181,7 +181,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
 
                 return dayEvents.map((event, eventIndex) => {
                     const { startRow, endRow, span } = getEventGridPosition(event, day);
-
+                    
                     // Skip events that don't have a valid position
                     if (startRow < 1 || endRow <= startRow) {
                         return null;
@@ -190,7 +190,71 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                     // Get visual info for multi-day events
                     const visualInfo = getEventVisualInfo(event);
 
-                    // Determine CSS classes based on span and multi-day status
+                    // Check if this is a multi-day event that should span multiple columns
+                    const isMultiDayEvent = 'isMultiDay' in event && event.isMultiDay && event.multiDaySpan && event.multiDaySpan > 1;
+                    
+                    if (isMultiDayEvent) {
+                        // For multi-day events, only render on the first day and span multiple columns
+                        const multiDayStart = event.multiDayStart;
+                        const multiDayEnd = event.multiDayEnd;
+                        
+                        if (multiDayStart && multiDayEnd) {
+                            const startDayIndex = weekDays.findIndex(d => 
+                                d.toDateString() === multiDayStart.toDateString()
+                            );
+                            
+                            // Only render on the start day
+                            if (dayIndex !== startDayIndex) {
+                                return null;
+                            }
+                            
+                            // Calculate how many columns to span
+                            const endDayIndex = weekDays.findIndex(d => 
+                                d.toDateString() === multiDayEnd.toDateString()
+                            );
+                            
+                            if (startDayIndex === -1 || endDayIndex === -1) {
+                                return null;
+                            }
+                            
+                            const columnSpan = Math.min(endDayIndex - startDayIndex + 1, 7 - startDayIndex);
+                            
+                            // Determine CSS classes for multi-day events
+                            const multiDayClasses = [
+                                'multi-day-event',
+                                `span-${columnSpan}`,
+                                visualInfo.isActuallyMultiDay ? 'is-multi-day' : ''
+                            ].filter(Boolean).join(' ');
+
+                            return (
+                                <div
+                                    key={`${event.id}-multi-day`}
+                                    className="week-event-positioned multi-day-span"
+                                    style={{
+                                        gridColumn: `${columnIndex} / span ${columnSpan}`,
+                                        gridRow: `${startRow} / ${endRow}`,
+                                        zIndex: 10 + eventIndex,
+                                        padding: '1px 2px'
+                                    }}
+                                >
+                                    <EventCard
+                                        event={event}
+                                        onClick={() => onEventClick(event)}
+                                        onHover={(e) => onEventHover(event, e)}
+                                        onLeave={onEventLeave}
+                                        viewType="week"
+                                        visualInfo={{ span, ...visualInfo }}
+                                        className={multiDayClasses}
+                                        style={{
+                                            height: '100%'
+                                        }}
+                                    />
+                                </div>
+                            );
+                        }
+                    }
+
+                    // Regular single-day event rendering
                     const spanClasses = [
                         span > 2 ? 'data-span-gt-2' : '',
                         span > 4 ? 'data-span-gt-4' : '',
@@ -199,8 +263,6 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                         visualInfo.isContinuingToNextDay ? 'continuation-bottom' : '',
                         visualInfo.dayNumber ? `day-${visualInfo.dayNumber}` : ''
                     ].filter(Boolean).join(' ');
-
-
 
                     // Create a unique key for the event
                     const eventKey = 'originalEventId' in event

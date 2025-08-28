@@ -59,7 +59,7 @@ export default function TechCalendarWeekView({
         const multiDayEvents = (events as MultiDayEvent[]).filter(event => event.isMultiDay && event.dailySchedule);
         console.log('[TechCalendarWeekView] Multi-day events found:', multiDayEvents.length);
 
-        // Process multi-day events for each day in the week
+        // Process multi-day events as single cards spanning multiple days
         multiDayEvents.forEach(event => {
             console.log('[TechCalendarWeekView] Processing multi-day event:', {
                 id: event.id,
@@ -71,21 +71,35 @@ export default function TechCalendarWeekView({
 
             processedMultiDayIds.add(event.id);
 
-            // Generate instances for each day of the week
-            weekDays.forEach(day => {
-                const instances = generateDailyEventInstances(event, day);
-                if (instances.length > 0) {
-                    console.log(`[TechCalendarWeekView] Generated ${instances.length} instance(s) for ${day.toDateString()}:`,
-                        instances.map(i => ({
-                            id: i.id,
-                            startTime: i.startTime,
-                            endTime: i.endTime,
-                            instanceDate: i.instanceDate
-                        }))
-                    );
-                    allProcessedEvents.push(...instances);
-                }
-            });
+            // Create a single multi-day event instance that spans the entire duration
+            const startDate = new Date(event.startTime);
+            const endDate = event.endTime ? new Date(event.endTime) : startDate;
+            const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+            // Create a special multi-day instance that spans the full duration
+            const multiDayInstance: MultiDayEventInstance = {
+                ...event,
+                id: `${event.id}-multi-day`,
+                startTime: event.startTime,
+                endTime: event.endTime,
+                isInstance: true,
+                originalEventId: event.id,
+                instanceDate: startDate.toISOString().split('T')[0],
+                dayInfo: {
+                    currentDay: 1,
+                    totalDays: totalDays,
+                    isFirstDay: true,
+                    isLastDay: true,
+                    continuationType: 'single'
+                },
+                // Add multi-day specific properties
+                isMultiDay: true,
+                multiDaySpan: totalDays,
+                multiDayStart: startDate,
+                multiDayEnd: endDate
+            };
+
+            allProcessedEvents.push(multiDayInstance);
         });
 
         // Add single-day events that aren't multi-day
@@ -94,26 +108,17 @@ export default function TechCalendarWeekView({
         const weekEnd = new Date(weekDays[6]);
         weekEnd.setHours(23, 59, 59, 999);
 
-        const singleDayEvents = (events as MultiDayEvent[]).filter(event => {
-            // Skip if it's a multi-day event (already processed)
-            if (processedMultiDayIds.has(event.id)) {
-                return false;
+        events.forEach(event => {
+            if (!processedMultiDayIds.has(event.id)) {
+                // Check if this single event falls within the week
+                const eventStart = new Date(event.startTime);
+                if (eventStart >= weekStart && eventStart <= weekEnd) {
+                    allProcessedEvents.push(event);
+                }
             }
-
-            // Include single-day events that fall within this week
-            const eventStart = new Date(event.startTime);
-            return eventStart >= weekStart && eventStart <= weekEnd;
         });
 
-        console.log('[TechCalendarWeekView] Single-day events in week range:', singleDayEvents.length);
-        allProcessedEvents.push(...singleDayEvents);
-
-        console.log('[TechCalendarWeekView] Total processed events:', {
-            total: allProcessedEvents.length,
-            multiDayInstances: allProcessedEvents.filter(e => 'isInstance' in e && e.isInstance).length,
-            singleDayEvents: allProcessedEvents.filter(e => !('isInstance' in e && e.isInstance)).length
-        });
-
+        console.log('[TechCalendarWeekView] Final processed events:', allProcessedEvents.length);
         return allProcessedEvents;
     }, [events, weekDays]);
 

@@ -240,7 +240,7 @@
 .event-card-v8.mini,
 .event-card.mini {
     padding: var(--v8-space-sm) var(--v8-space-md) !important;
-    border-radius: var(--v8-radius-md) !important;
+    border-radius: var(--v8-radius-lg) !important; /* Consistent with week view */
     gap: var(--v8-space-xs) !important;
 }
 
@@ -273,6 +273,28 @@
 .event-card.mini .event-time svg {
     width: 12px !important;
     height: 12px !important;
+}
+
+/* Week view specific styling */
+.tech-calendar-week-view .event-card {
+    border-radius: var(--v8-radius-lg) !important; /* Consistent rounded corners */
+    padding: var(--v8-space-sm) var(--v8-space-md) !important;
+    gap: var(--v8-space-xs) !important;
+}
+
+.tech-calendar-week-view .event-card .event-title {
+    font-size: 0.8125rem !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    margin-bottom: var(--v8-space-xs) !important;
+}
+
+.tech-calendar-week-view .event-card .event-time,
+.tech-calendar-week-view .event-card .event-location,
+.tech-calendar-week-view .event-card .event-organizer {
+    font-size: 0.7rem !important;
+    line-height: 1.2 !important;
+    margin-top: var(--v8-space-xs) !important;
 }
 
 /* Enhanced hover effects */

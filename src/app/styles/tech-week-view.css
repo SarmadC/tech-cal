@@ -323,6 +323,19 @@
     .tech-calendar-week-view .event-card .event-time {
         font-size: 0.55rem !important;
     }
+
+    /* Show less content on tablet */
+    .tech-calendar-week-view .event-card .event-location,
+    .tech-calendar-week-view .event-card .event-organizer {
+        display: none !important;
+    }
+
+    /* Hide advanced content on tablet */
+    .tech-calendar-week-view .event-card .event-description,
+    .tech-calendar-week-view .event-card .event-tags,
+    .tech-calendar-week-view .event-card .event-full-details {
+        display: none !important;
+    }
 }
 
 /* Mobile breakpoint */
@@ -352,9 +365,472 @@
         line-clamp: 1 !important;
     }
     
-    /* Hide all secondary content on mobile */
+    /* Hide all secondary content on mobile for space */
     .tech-calendar-week-view .event-card .event-time,
+    .tech-calendar-week-view .event-card .event-location,
     .tech-calendar-week-view .event-card .event-organizer {
         display: none !important;
     }
+
+    /* Hide all advanced content on mobile */
+    .tech-calendar-week-view .event-card .event-description,
+    .tech-calendar-week-view .event-card .event-tags,
+    .tech-calendar-week-view .event-card .event-full-details,
+    .tech-calendar-week-view .event-card .multi-day-progress {
+        display: none !important;
+    }
+
+    /* Hide day indicators on mobile to save space */
+    .tech-calendar-week-view .event-card[class*="day-"]::before {
+        display: none !important;
+    }
+
+    .tech-calendar-week-view .event-card[class*="day-"] .event-title,
+    .tech-calendar-week-view .event-card[class*="day-"] .event-header {
+        margin-top: 0 !important;
+    }
+}
+
+/* Ensure consistent rounded corners for all event cards */
+.tech-calendar-week-view .event-card {
+    border-radius: var(--v8-radius-lg) !important; /* Consistent rounded corners */
+}
+
+/* Adjust event header positioning to not overlap with day indicator */
+.tech-calendar-week-view .event-card[class*="day-"] .event-header {
+    margin-top: 12px !important; /* Make room for day indicator */
+}
+
+/* Week view event card content styling */
+.tech-calendar-week-view .event-card .event-time,
+.tech-calendar-week-view .event-card .event-location,
+.tech-calendar-week-view .event-card .event-organizer {
+    display: flex;
+    align-items: center;
+    gap: var(--v8-space-xs);
+    font-size: 0.7rem;
+    color: var(--text-secondary-on-pastel);
+    margin-top: var(--v8-space-xs);
+}
+
+.tech-calendar-week-view .event-card .event-time svg,
+.tech-calendar-week-view .event-card .event-location svg {
+    color: var(--text-tertiary-on-pastel);
+    flex-shrink: 0;
+}
+
+/* Multi-day event progress indicators */
+.multi-day-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--v8-space-sm);
+    margin-top: var(--v8-space-xs);
+    margin-bottom: var(--v8-space-xs);
+}
+
+.multi-day-progress .progress-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.multi-day-progress .progress-fill {
+    height: 100%;
+    background: var(--text-on-pastel);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.multi-day-progress .day-counter {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-secondary-on-pastel);
+    white-space: nowrap;
+}
+
+/* Multi-day event spanning across columns */
+.multi-day-span {
+    position: relative;
+}
+
+.multi-day-span .event-card {
+    border-radius: var(--v8-radius-lg) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Visual connection for multi-day events */
+.multi-day-span .event-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, transparent, var(--text-on-pastel), transparent);
+    opacity: 0.3;
+}
+
+/* Multi-day event specific styling */
+.multi-day-event {
+    position: relative;
+}
+
+.multi-day-event.is-multi-day {
+    background: linear-gradient(90deg, var(--category-bg), color-mix(in srgb, var(--category-bg) 95%, white)) !important;
+}
+/* Dynamic content styling based on card size */
+.event-description {
+    margin-top: var(--v8-space-sm);
+    font-size: 0.7rem;
+    line-height: 1.3;
+    color: var(--text-secondary-on-pastel);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.event-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--v8-space-xs);
+    margin-top: var(--v8-space-sm);
+}
+
+.event-tag {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--text-on-pastel);
+    padding: 2px var(--v8-space-xs);
+    border-radius: var(--v8-radius-sm);
+    font-size: 0.6rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    white-space: nowrap;
+}
+
+.event-tag-more {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-tertiary-on-pastel);
+    padding: 2px var(--v8-space-xs);
+    border-radius: var(--v8-radius-sm);
+    font-size: 0.6rem;
+    font-weight: 400;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.event-full-details {
+    margin-top: var(--v8-space-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--v8-space-xs);
+}
+
+.event-full-details > div {
+    display: flex;
+    align-items: center;
+    gap: var(--v8-space-xs);
+    font-size: 0.65rem;
+    color: var(--text-secondary-on-pastel);
+}
+
+.event-full-details span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Responsive adjustments for different card sizes */
+.tech-calendar-week-view .event-card[data-span-gt-8] .event-description {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+}
+
+.tech-calendar-week-view .event-card[data-span-gt-10] .event-tags {
+    margin-top: var(--v8-space-md);
+}
+
+.tech-calendar-week-view .event-card[data-span-gt-12] .event-full-details {
+    margin-top: var(--v8-space-md);
+    padding-top: var(--v8-space-sm);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* NEW: Job Card-Inspired Event Card Design */
+.tech-calendar-week-view .event-card {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--v8-space-xs) !important;
+    min-height: 60px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    border: 2px solid rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    background-clip: padding-box !important;
+}
+
+/* Top section: Category badge and time */
+.event-top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--v8-space-xs);
+}
+
+.event-category-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: var(--text-on-pastel);
+    padding: 3px var(--v8-space-xs);
+    border-radius: var(--v8-radius-sm);
+    font-size: 0.6rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    white-space: nowrap;
+    flex-shrink: 0;
+    backdrop-filter: blur(4px);
+}
+
+.event-time-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--text-secondary-on-pastel);
+    padding: 3px var(--v8-space-xs);
+    border-radius: var(--v8-radius-sm);
+    font-size: 0.6rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    white-space: nowrap;
+    flex-shrink: 0;
+    backdrop-filter: blur(4px);
+}
+
+/* Main title section */
+.event-title-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--v8-space-sm);
+    flex: 1;
+}
+
+.event-title {
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    color: var(--text-on-pastel) !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    flex: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.event-arrow {
+    color: var(--text-on-pastel);
+    opacity: 0.8;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    padding: 4px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.event-arrow:hover {
+    opacity: 1;
+    transform: translateX(2px);
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Progress dots for multi-day events */
+.event-progress-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    margin: var(--v8-space-xs) 0;
+}
+
+.progress-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.progress-dot.active {
+    transform: scale(1.2);
+}
+
+.progress-dot-more {
+    font-size: 0.5rem;
+    color: var(--text-tertiary-on-pastel);
+    font-weight: 500;
+}
+
+/* Bottom section: Location, organizer, and logo */
+.event-bottom-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--v8-space-sm);
+    margin-top: auto;
+}
+
+.event-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+}
+
+.event-location-text,
+.event-organizer-text {
+    font-size: 0.6rem;
+    color: var(--text-secondary-on-pastel);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+}
+
+.event-location-text svg,
+.event-organizer-text svg {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    opacity: 0.8;
+}
+
+.event-organization-logo {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--v8-radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+}
+
+.org-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: var(--v8-radius-sm);
+}
+
+/* Additional content for larger cards */
+.event-description {
+    margin-top: var(--v8-space-xs);
+    font-size: 0.65rem;
+    line-height: 1.3;
+    color: var(--text-secondary-on-pastel);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    font-weight: 400;
+}
+
+.event-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: var(--v8-space-xs);
+}
+
+.event-tag {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--text-on-pastel);
+    padding: 2px 6px;
+    border-radius: var(--v8-radius-sm);
+    font-size: 0.55rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    white-space: nowrap;
+}
+
+.event-tag-more {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--text-tertiary-on-pastel);
+    padding: 2px 6px;
+    border-radius: var(--v8-radius-sm);
+    font-size: 0.55rem;
+    font-weight: 400;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.event-full-details {
+    margin-top: var(--v8-space-xs);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.event-full-details > div {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6rem;
+    color: var(--text-secondary-on-pastel);
+}
+
+.event-full-details span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Dynamic text sizing based on card span */
+.tech-calendar-week-view .event-card[data-span-gt-4] .event-title {
+    font-size: 0.85rem !important;
+}
+
+.tech-calendar-week-view .event-card[data-span-gt-6] .event-title {
+    font-size: 0.9rem !important;
+}
+
+.tech-calendar-week-view .event-card[data-span-gt-8] .event-title {
+    font-size: 0.95rem !important;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+}
+
+.tech-calendar-week-view .event-card[data-span-gt-10] .event-title {
+    font-size: 1rem !important;
+}
+
+.tech-calendar-week-view .event-card[data-span-gt-12] .event-title {
+    font-size: 1.05rem !important;
+}
+
+/* Enhanced hover effects */
+.tech-calendar-week-view .event-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+    border-color: rgba(255, 255, 255, 1) !important;
+}
+
+.tech-calendar-week-view .event-card:hover .event-arrow {
+    opacity: 1;
+    transform: translateX(3px);
+    background: rgba(255, 255, 255, 0.3);
 }

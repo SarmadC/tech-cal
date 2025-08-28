@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Clock, MapPin } from 'lucide-react';
+import { Clock, MapPin, User } from 'lucide-react';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { isEventLive, formatTime } from '@/utils/dateUtils';
 
@@ -108,10 +108,28 @@ export const EventCard: React.FC<EventCardProps> = ({
         });
     };
 
-    // Determine if organizer should be shown (for longer events in day view)
+    // Determine what content to show based on view type and event span
     const showOrganizer = viewType === 'day' && visualInfo?.span && visualInfo.span > 4;
     const showLocation = viewType === 'day' && visualInfo?.span && visualInfo.span > 6;
     const showCategory = viewType === 'week' || (viewType === 'day' && visualInfo?.span && visualInfo.span > 2);
+    
+    // Week view specific content display - DYNAMIC based on card size
+    const cardSize = visualInfo?.span || 1;
+    
+    // Small cards: Basic info only
+    const showWeekTime = viewType === 'week' && cardSize >= 2;
+    const showWeekLocation = viewType === 'week' && cardSize >= 4;
+    const showWeekOrganizer = viewType === 'week' && cardSize >= 6;
+    
+    // Medium cards: Add progress indicators
+    const showWeekProgress = viewType === 'week' && cardSize >= 3;
+    
+    // Large cards: Add description and tags
+    const showWeekDescription = viewType === 'week' && cardSize >= 8;
+    const showWeekTags = viewType === 'week' && cardSize >= 10;
+    
+    // Extra large cards: Show full event details
+    const showWeekFullDetails = viewType === 'week' && cardSize >= 12;
 
     return (
         <div
@@ -121,43 +139,135 @@ export const EventCard: React.FC<EventCardProps> = ({
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
         >
-            {/* Header with category and live indicator */}
-            {showCategory && (
-                <div className="event-header">
-                    <div className="event-badges">
-                        {event.category?.name && (
-                            <span className="event-category">{event.category.name}</span>
-                        )}
-                        {live && (
-                            <span className="event-live-indicator">Live</span>
-                        )}
-                    </div>
+            {/* Top section: Category badge and time */}
+            <div className="event-top-section">
+                {showCategory && event.category?.name && (
+                    <span className="event-category-badge">{event.category.name}</span>
+                )}
+                {showWeekTime && (
+                    <span className="event-time-badge">{getTimeDisplay()}</span>
+                )}
+            </div>
+
+            {/* Main title section */}
+            <div className="event-title-section">
+                <h3 className="event-title">{event.title}</h3>
+                <div className="event-arrow" title="Learn More">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            </div>
+
+            {/* Progress indicators for multi-day events */}
+            {showWeekProgress && ('isMultiDay' in event && event.isMultiDay && event.multiDaySpan && event.multiDaySpan > 1) && (
+                <div className="event-progress-dots">
+                    {Array.from({ length: Math.min(event.multiDaySpan, 5) }, (_, i) => (
+                        <span 
+                            key={i} 
+                            className={`progress-dot ${i === 0 ? 'active' : ''}`}
+                            style={{ 
+                                backgroundColor: i === 0 ? 'var(--text-on-pastel)' : 'rgba(255, 255, 255, 0.3)'
+                            }}
+                        />
+                    ))}
+                    {event.multiDaySpan > 5 && (
+                        <span className="progress-dot-more">+{event.multiDaySpan - 5}</span>
+                    )}
                 </div>
             )}
 
-            {/* Event title */}
-            <div className="event-title">{event.title}</div>
-
-            {/* Event meta information */}
-            <div className="event-meta">
-                <div className="event-time">
-                    <Clock size={14} />
-                    <span>{getTimeDisplay()}</span>
+            {/* Bottom section: Location, organizer, and logo */}
+            <div className="event-bottom-section">
+                <div className="event-info">
+                    {showWeekLocation && event.location && (
+                        <span className="event-location-text">
+                            <MapPin size={10} />
+                            {event.location}
+                        </span>
+                    )}
+                    {showWeekOrganizer && event.organizer && (
+                        <span className="event-organizer-text">
+                            <User size={10} />
+                            {event.organizer}
+                        </span>
+                    )}
                 </div>
-
-                {showLocation && event.location && (
-                    <div className="event-location">
-                        <MapPin size={14} />
-                        <span>{event.location}</span>
-                    </div>
-                )}
-
-                {showOrganizer && event.organizer && (
-                    <div className="event-organizer">
-                        <span>{event.organizer}</span>
+                
+                {/* Organization logo */}
+                {event.organization?.logo && (
+                    <div className="event-organization-logo">
+                        <img 
+                            src={event.organization.logo} 
+                            alt={event.organization.name || 'Organization'} 
+                            className="org-logo"
+                        />
                     </div>
                 )}
             </div>
+
+            {/* Additional content for larger cards */}
+            {showWeekDescription && event.description && (
+                <div className="event-description">
+                    <span>{event.description.length > 80 ? `${event.description.substring(0, 80)}...` : event.description}</span>
+                </div>
+            )}
+
+            {showWeekTags && event.tags && event.tags.length > 0 && (
+                <div className="event-tags">
+                    {event.tags.slice(0, 2).map((tag, index) => (
+                        <span key={index} className="event-tag">
+                            {tag.name}
+                        </span>
+                    ))}
+                    {event.tags.length > 2 && (
+                        <span className="event-tag-more">+{event.tags.length - 2}</span>
+                    )}
+                </div>
+            )}
+
+            {showWeekFullDetails && (
+                <div className="event-full-details">
+                    {event.priceRange && (
+                        <div className="event-price">
+                            <span>💰 {event.priceRange}</span>
+                        </div>
+                    )}
+                    {event.capacity && (
+                        <div className="event-capacity">
+                            <span>👥 {event.capacity}</span>
+                        </div>
+                    )}
+                    {event.difficulty && (
+                        <div className="event-difficulty">
+                            <span>📚 {event.difficulty}</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Day view content (existing logic) */}
+            {viewType === 'day' && (
+                <div className="event-meta">
+                    <div className="event-time">
+                        <Clock size={14} />
+                        <span>{getTimeDisplay()}</span>
+                    </div>
+
+                    {showLocation && event.location && (
+                        <div className="event-location">
+                            <MapPin size={14} />
+                            <span>{event.location}</span>
+                        </div>
+                    )}
+
+                    {showOrganizer && event.organizer && (
+                        <div className="event-organizer">
+                            <span>{event.organizer}</span>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
