@@ -231,7 +231,7 @@ export default function CalendarClientView({
             calendarRef={calendarRef}
             renderContent={(context) => (
                 <div className="flex h-full">
-                    <div className="flex-1 relative overflow-x-auto">
+                    <div className="flex-1 relative">
                         {renderCalendarContent(context)}
                     </div>
                     {isFilterPanelOpen && (

@@ -120,7 +120,7 @@ export function CalendarLayout({
     }
 
     return (
-        <div className="flex h-screen bg-background-main">
+        <div className="flex h-screen bg-background-main overflow-hidden">
             <div className="w-80 border-r border-border-default bg-background-elevated">
                 { }
                 <CalendarSidebar
@@ -140,7 +140,7 @@ export function CalendarLayout({
                 />
             </div>
 
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col overflow-hidden">
                 <CalendarHeader
                     currentDate={activeDate}
                     onNavigate={handleNavigation}
@@ -148,7 +148,7 @@ export function CalendarLayout({
                     isFilterPanelOpen={isFilterPanelOpen}
                     activeFilterCount={activeFilterCount}
                 />
-                <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     {content}
                 </div>
             </div>

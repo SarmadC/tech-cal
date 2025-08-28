@@ -93,7 +93,6 @@
 }
 
 html {
-  scroll-behavior: smooth;
   font-family: var(--font-sans);
 }
 
@@ -118,10 +117,17 @@ p { line-height: 1.6; color: var(--foreground-secondary); }
 
 /* Focus States & Scrollbar */
 :focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; border-radius: 4px; }
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-strong); opacity: 0.8; }
+
+/* Global scrollbar styles - only for body/html */
+html::-webkit-scrollbar { width: 8px; height: 8px; }
+html::-webkit-scrollbar-track { background: transparent; }
+html::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+html::-webkit-scrollbar-thumb:hover { background: var(--border-strong); opacity: 0.8; }
+
+body::-webkit-scrollbar { width: 8px; height: 8px; }
+body::-webkit-scrollbar-track { background: transparent; }
+body::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+body::-webkit-scrollbar-thumb:hover { background: var(--border-strong); opacity: 0.8; }
 
 /* ============================================== */
 /* 3. GLOBAL COMPONENT STYLES                     */
