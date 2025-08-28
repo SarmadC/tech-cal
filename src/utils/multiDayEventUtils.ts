@@ -35,9 +35,10 @@ export function generateDailyEventInstances(
     const startDate = new Date(event.startTime);
     const endDate = event.endTime ? new Date(event.endTime) : startDate;
 
-    const viewDateOnly = new Date(Date.UTC(viewDate.getUTCFullYear(), viewDate.getUTCMonth(), viewDate.getUTCDate()));
-    const startDateOnly = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
-    const endDateOnly = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
+    // Use local dates for comparison (consistent with viewDate)
+    const viewDateOnly = new Date(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate());
+    const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
     if (viewDateOnly < startDateOnly || viewDateOnly > endDateOnly) {
         return [];
@@ -57,9 +58,9 @@ export function generateDailyEventInstances(
     const dayInfo = { currentDay, totalDays, isFirstDay, isLastDay, continuationType };
 
     const instances: MultiDayEventInstance[] = [];
-    const year = viewDate.getUTCFullYear();
-    const month = String(viewDate.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(viewDate.getUTCDate()).padStart(2, '0');
+    const year = viewDate.getFullYear();
+    const month = String(viewDate.getMonth() + 1).padStart(2, '0');
+    const day = String(viewDate.getDate()).padStart(2, '0');
     const viewDateStr = `${year}-${month}-${day}`;
 
     switch (event.dailySchedule.type) {
@@ -67,12 +68,11 @@ export function generateDailyEventInstances(
             const dailyStart = event.dailySchedule.dailyStart || '09:00';
             const dailyEnd = event.dailySchedule.dailyEnd || '17:00';
 
-            // CRITICAL: Format times with local timezone, not UTC
-            // This ensures the times align with what the calendar grid expects
+            // Format times with local timezone
             const instanceStartTimeStr = `${viewDateStr}T${dailyStart}:00`;
             const instanceEndTimeStr = `${viewDateStr}T${dailyEnd}:00`;
 
-            // CRITICAL FIX: Destructure to exclude original times
+            // Create instance with day information
             const { startTime: _startTime, endTime: _endTime, id, ...restOfEvent } = event;
 
             instances.push({

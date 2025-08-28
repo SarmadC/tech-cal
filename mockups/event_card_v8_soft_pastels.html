@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Card V8 - Soft Pastel Colors</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            
+            /* Soft pastel category colors */
+            --tech-summit: #bfdbfe;
+            --workshop: #e9d7ff;
+            --networking: #b8ffcc;
+            --conference: #a7f3d0;
+            --webinar: #fed8ae;
+            --startup: #fecaca;
+            --live-special: #f9c2d4;
+            
+            /* Text colors for pastel backgrounds */
+            --text-on-pastel: #1e293b;
+            --text-secondary-on-pastel: #475569;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-tertiary: #94a3b8;
+            
+            /* UI colors */
+            --white: #ffffff;
+            --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+            --border-radius: 16px;
+            --transition-speed: 0.25s;
+            --transition-curve: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            padding: 40px 20px;
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+        }
+
+        .page-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 48px;
+            font-weight: 400;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 28px;
+        }
+
+        /* Base Event Card */
+        .event-card {
+            border-radius: var(--border-radius);
+            padding: 24px;
+            position: relative;
+            box-shadow: var(--shadow-card);
+            transition: all var(--transition-speed) var(--transition-curve);
+            cursor: pointer;
+            color: var(--text-on-pastel);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .event-card:active {
+            transform: translateY(-1px);
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .event-category {
+            background: rgba(255, 255, 255, 0.6);
+            color: var(--text-on-pastel);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 16px;
+            white-space: nowrap;
+            letter-spacing: 0.025em;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+
+        .event-live-indicator {
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--text-on-pastel);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 16px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.025em;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+        }
+
+        .event-live-indicator::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .event-title {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: var(--text-on-pastel);
+            margin-bottom: 18px;
+            line-height: 1.3;
+            letter-spacing: -0.02em;
+        }
+
+        .event-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .event-time, .event-location {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: var(--text-secondary-on-pastel);
+            font-weight: 500;
+        }
+
+        .event-icon {
+            width: 18px;
+            height: 18px;
+            color: var(--text-secondary-on-pastel);
+            flex-shrink: 0;
+        }
+
+        .event-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-top: auto;
+        }
+
+        .event-button {
+            background: var(--white);
+            color: var(--text-on-pastel);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 12px 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            letter-spacing: 0.01em;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .event-button:hover {
+            background: #f8fafc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-color: rgba(0, 0, 0, 0.15);
+        }
+
+        .event-button:active {
+            transform: translateY(0);
+        }
+
+        .event-more {
+            color: var(--text-secondary-on-pastel);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all var(--transition-speed);
+            position: relative;
+            letter-spacing: 0.01em;
+        }
+
+        .event-more::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--text-on-pastel);
+            transition: width var(--transition-speed);
+        }
+
+        .event-more:hover {
+            color: var(--text-on-pastel);
+        }
+
+        .event-more:hover::after {
+            width: 100%;
+        }
+
+        /* Category Color Variants */
+        .event-card.tech-summit {
+            background: var(--tech-summit);
+        }
+
+        .event-card.workshop {
+            background: var(--workshop);
+        }
+
+        .event-card.networking {
+            background: var(--networking);
+        }
+
+        .event-card.conference {
+            background: var(--conference);
+        }
+
+        .event-card.webinar {
+            background: var(--webinar);
+        }
+
+        .event-card.startup {
+            background: var(--startup);
+        }
+
+        .event-card.live {
+            background: var(--live-special);
+            position: relative;
+        }
+
+        .event-card.live::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            bottom: -1px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a6f, #ce4993);
+            z-index: -1;
+            border-radius: var(--border-radius);
+            opacity: 0.3;
+            animation: live-border 3s infinite ease-in-out;
+        }
+
+        @keyframes live-border {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Compact View */
+        .compact-section {
+            margin-top: 60px;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .compact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .event-card.compact {
+            padding: 18px 20px;
+            border-radius: 14px;
+        }
+
+        .event-card.compact .event-title {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+        }
+
+        .event-card.compact .event-category {
+            font-size: 0.7rem;
+            padding: 4px 8px;
+        }
+
+        .event-card.compact .event-meta {
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .event-card.compact .event-time,
+        .event-card.compact .event-location {
+            font-size: 0.825rem;
+        }
+
+        .event-card.compact .event-button {
+            padding: 8px 14px;
+            font-size: 0.8rem;
+        }
+
+        .event-card.compact .event-more {
+            font-size: 0.8rem;
+        }
+
+        /* Category Legend */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .legend-color.tech-summit { background: var(--tech-summit); }
+        .legend-color.workshop { background: var(--workshop); }
+        .legend-color.networking { background: var(--networking); }
+        .legend-color.conference { background: var(--conference); }
+        .legend-color.webinar { background: var(--webinar); }
+        .legend-color.startup { background: var(--startup); }
+        .legend-color.live { background: var(--live-special); }
+
+        /* Extra small cards for calendar grid simulation */
+        .mini-section {
+            margin-top: 60px;
+        }
+
+        .mini-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .event-card.mini {
+            padding: 12px 14px;
+            border-radius: 10px;
+        }
+
+        .event-card.mini .event-header {
+            margin-bottom: 8px;
+        }
+
+        .event-card.mini .event-category {
+            font-size: 0.65rem;
+            padding: 3px 6px;
+        }
+
+        .event-card.mini .event-title {
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            line-height: 1.2;
+        }
+
+        .event-card.mini .event-time {
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+        }
+
+        .event-card.mini .event-button {
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            border-radius: 6px;
+        }
+
+        .event-card.mini .event-more {
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="page-title">Event Card V8 - Soft Pastel Colors</h1>
+        <p class="page-subtitle">Clean flat design with soft, gentle pastel backgrounds</p>
+
+        <!-- Category Legend -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color tech-summit"></div>
+                <span>Tech Summit</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color workshop"></div>
+                <span>Workshop</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color networking"></div>
+                <span>Networking</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color conference"></div>
+                <span>Conference</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color webinar"></div>
+                <span>Webinar</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color startup"></div>
+                <span>Startup</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color live"></div>
+                <span>Live Events</span>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- Live Event Card -->
+            <div class="event-card live">
+                <div class="event-header">
+                    <span class="event-category">Live Event</span>
+                    <span class="event-live-indicator">Live</span>
+                </div>
+                <h3 class="event-title">Annual Innovation Conference</h3>
+                <div class="event-meta">
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>9:00 AM - 5:00 PM</span>
+                    </div>
+                    <div class="event-location">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path d="m21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        <span>San Francisco, CA</span>
+                    </div>
+                </div>
+                <div class="event-actions">
+                    <button class="event-button">Join Live Stream</button>
+                    <a href="#" class="event-more">Details</a>
+                </div>
+            </div>
+
+            <!-- Tech Summit -->
+            <div class="event-card tech-summit">
+                <div class="event-header">
+                    <span class="event-category">Tech Summit</span>
+                </div>
+                <h3 class="event-title">Future of AI Development</h3>
+                <div class="event-meta">
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>Tomorrow at 10:00 AM</span>
+                    </div>
+                    <div class="event-location">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path d="m21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        <span>Convention Center</span>
+                    </div>
+                </div>
+                <div class="event-actions">
+                    <button class="event-button">Register Now</button>
+                    <a href="#" class="event-more">Learn More</a>
+                </div>
+            </div>
+
+            <!-- Workshop -->
+            <div class="event-card workshop">
+                <div class="event-header">
+                    <span class="event-category">Workshop</span>
+                </div>
+                <h3 class="event-title">React Performance Optimization</h3>
+                <div class="event-meta">
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>Friday at 2:00 PM</span>
+                    </div>
+                    <div class="event-location">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                            <line x1="8" x2="16" y1="21" y2="21"></line>
+                            <line x1="12" x2="12" y1="17" y2="21"></line>
+                        </svg>
+                        <span>Virtual Workshop</span>
+                    </div>
+                </div>
+                <div class="event-actions">
+                    <button class="event-button">Join Workshop</button>
+                    <a href="#" class="event-more">Details</a>
+                </div>
+            </div>
+
+            <!-- Networking -->
+            <div class="event-card networking">
+                <div class="event-header">
+                    <span class="event-category">Networking</span>
+                </div>
+                <h3 class="event-title">Tech Leaders Happy Hour</h3>
+                <div class="event-meta">
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>Thursday at 6:00 PM</span>
+                    </div>
+                    <div class="event-location">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path d="m21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        <span>Rooftop Bar NYC</span>
+                    </div>
+                </div>
+                <div class="event-actions">
+                    <button class="event-button">RSVP</button>
+                    <a href="#" class="event-more">Details</a>
+                </div>
+            </div>
+
+            <!-- Webinar -->
+            <div class="event-card webinar">
+                <div class="event-header">
+                    <span class="event-category">Webinar</span>
+                </div>
+                <h3 class="event-title">Microservices Best Practices</h3>
+                <div class="event-meta">
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>Monday at 1:00 PM</span>
+                    </div>
+                    <div class="event-location">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                            <line x1="8" x2="16" y1="21" y2="21"></line>
+                            <line x1="12" x2="12" y1="17" y2="21"></line>
+                        </svg>
+                        <span>Online Webinar</span>
+                    </div>
+                </div>
+                <div class="event-actions">
+                    <button class="event-button">Register Free</button>
+                    <a href="#" class="event-more">Details</a>
+                </div>
+            </div>
+
+            <!-- Conference -->
+            <div class="event-card conference">
+                <div class="event-header">
+                    <span class="event-category">Conference</span>
+                </div>
+                <h3 class="event-title">Cloud Computing Summit</h3>
+                <div class="event-meta">
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>Next Week - 3 Days</span>
+                    </div>
+                    <div class="event-location">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path d="m21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        <span>Seattle Convention Center</span>
+                    </div>
+                </div>
+                <div class="event-actions">
+                    <button class="event-button">Get Tickets</button>
+                    <a href="#" class="event-more">Details</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact View -->
+        <div class="compact-section">
+            <h2 class="section-title">Medium Calendar Grid</h2>
+            <div class="compact-grid">
+                <div class="event-card compact startup">
+                    <div class="event-header">
+                        <span class="event-category">Startup</span>
+                    </div>
+                    <h3 class="event-title">Pitch Night</h3>
+                    <div class="event-meta">
+                        <div class="event-time">
+                            <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12,6 12,12 16,14"></polyline>
+                            </svg>
+                            <span>7:00 PM</span>
+                        </div>
+                    </div>
+                    <div class="event-actions">
+                        <button class="event-button">Attend</button>
+                        <a href="#" class="event-more">Info</a>
+                    </div>
+                </div>
+
+                <div class="event-card compact tech-summit">
+                    <div class="event-header">
+                        <span class="event-category">Tech Summit</span>
+                    </div>
+                    <h3 class="event-title">DevOps Day</h3>
+                    <div class="event-meta">
+                        <div class="event-time">
+                            <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12,6 12,12 16,14"></polyline>
+                            </svg>
+                            <span>All Day</span>
+                        </div>
+                    </div>
+                    <div class="event-actions">
+                        <button class="event-button">Join</button>
+                        <a href="#" class="event-more">Info</a>
+                    </div>
+                </div>
+
+                <div class="event-card compact webinar">
+                    <div class="event-header">
+                        <span class="event-category">Webinar</span>
+                    </div>
+                    <h3 class="event-title">Security Fundamentals</h3>
+                    <div class="event-meta">
+                        <div class="event-time">
+                            <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12,6 12,12 16,14"></polyline>
+                            </svg>
+                            <span>3:00 PM</span>
+                        </div>
+                    </div>
+                    <div class="event-actions">
+                        <button class="event-button">Watch</button>
+                        <a href="#" class="event-more">Info</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mini Calendar View -->
+        <div class="mini-section">
+            <h2 class="section-title">Small Calendar Grid (Like Your Current View)</h2>
+            <div class="mini-grid">
+                <div class="event-card mini live">
+                    <div class="event-header">
+                        <span class="event-live-indicator">Live</span>
+                    </div>
+                    <h3 class="event-title">Meta Connect 2025</h3>
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>12:00 PM MDT</span>
+                    </div>
+                    <div class="event-actions">
+                        <button class="event-button">Join</button>
+                    </div>
+                </div>
+
+                <div class="event-card mini workshop">
+                    <div class="event-header">
+                        <span class="event-category">Workshop</span>
+                    </div>
+                    <h3 class="event-title">React Hooks Deep Dive</h3>
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>2:00 PM</span>
+                    </div>
+                    <div class="event-actions">
+                        <button class="event-button">Join</button>
+                    </div>
+                </div>
+
+                <div class="event-card mini networking">
+                    <div class="event-header">
+                        <span class="event-category">Networking</span>
+                    </div>
+                    <h3 class="event-title">Coffee & Code</h3>
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>9:00 AM</span>
+                    </div>
+                    <div class="event-actions">
+                        <button class="event-button">RSVP</button>
+                    </div>
+                </div>
+
+                <div class="event-card mini webinar">
+                    <div class="event-header">
+                        <span class="event-category">Webinar</span>
+                    </div>
+                    <h3 class="event-title">Docker Fundamentals</h3>
+                    <div class="event-time">
+                        <svg class="event-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span>4:00 PM</span>
+                    </div>
+                    <div class="event-actions">
+                        <button class="event-button">Watch</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

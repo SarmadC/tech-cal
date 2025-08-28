@@ -5,6 +5,7 @@ import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
 import EventPreviewCard from './EventPreviewCard';
 import { EventCard } from './shared/EventCard';
 import '@/app/styles/tech-day-view.css';
+import '@/app/styles/event-card.css';
 import { processEventsForDayView } from '@/utils/multiDayEventUtils';
 import { getIconForCategory, getEventVisualInfo, createCategoryColumnMap, detectOverlappingEvents } from '@/utils/eventViewUtils';
 import { formatTime } from '@/utils/dateUtils';

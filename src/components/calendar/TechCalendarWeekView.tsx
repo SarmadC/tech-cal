@@ -7,6 +7,7 @@ import EventPreviewCard from './EventPreviewCard';
 import { WeekHeader } from './shared/WeekHeader';
 import { TimeSlotGrid } from './shared/TimeSlotGrid';
 import '@/app/styles/tech-week-view.css';
+import '@/app/styles/event-card.css';
 import {
     getWeekDays,
     generateWeekTimeSlots
@@ -146,18 +147,12 @@ export default function TechCalendarWeekView({
                 return eventStart.toDateString() === day.toDateString();
             });
 
-            if (dayEvents.length > 0) {
-                console.log(`[TechCalendarWeekView] Day ${dayIndex} (${day.toDateString()}) has ${dayEvents.length} events`);
-            }
+
 
             grouped.set(dayIndex, dayEvents);
         });
 
-        console.log('[TechCalendarWeekView] Final eventsByDay map:',
-            Array.from(grouped.entries()).map(([day, events]) =>
-                `Day ${day}: ${events.length} events`
-            )
-        );
+
 
         return grouped;
     }, [processedEvents, weekDays]);
@@ -201,7 +196,7 @@ export default function TechCalendarWeekView({
     };
 
     return (
-        <div className="tech-calendar-week-view week-view">
+        <div className="tech-calendar-week-view flex-shrink-0 w-full">
             {/* Header with days */}
             <WeekHeader weekDays={weekDays} />
 

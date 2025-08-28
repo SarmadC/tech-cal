@@ -84,6 +84,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
         isContinuingToNextDay?: boolean;
         dayNumber?: number;
         totalDays?: number;
+        isActuallyMultiDay?: boolean; // Added for debugging
     }
 
     // Helper to get visual info for an event
@@ -98,6 +99,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                 info.isContinuingToNextDay = !instance.dayInfo.isLastDay;
                 info.dayNumber = instance.dayInfo.currentDay;
                 info.totalDays = instance.dayInfo.totalDays;
+                info.isActuallyMultiDay = true; // Indicate it's a multi-day event
             }
         }
 
@@ -105,7 +107,16 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
     };
 
     return (
-        <div className="week-grid-container" style={gridColsStyle}>
+        <div
+            className="week-grid-container"
+            style={{
+                ...gridColsStyle,
+                position: 'relative',
+                display: 'grid',
+                minWidth: '1200px',
+                background: 'var(--background-main, #0a0a0b)'
+            }}
+        >
             {/* Render grid lines for all slots (background layer) */}
             {Array.from({ length: totalSlots }).map((_, i) => (
                 <div
@@ -166,18 +177,13 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                 const dayEvents = eventsByDay.get(dayIndex) || [];
                 const columnIndex = dayIndex + 2; // +2 because first column is time
 
-                console.log(`[TimeSlotGrid] Day ${dayIndex} (${day.toDateString()}): ${dayEvents.length} events`);
-                dayEvents.forEach(event => {
-                    console.log(`[TimeSlotGrid] Event: ${event.title} from ${event.startTime} to ${event.endTime}`);
-                });
+
 
                 return dayEvents.map((event, eventIndex) => {
                     const { startRow, endRow, span } = getEventGridPosition(event, day);
-                    console.log(`[TimeSlotGrid] Event ${event.title} positioned at rows ${startRow}-${endRow}, span: ${span}`);
 
                     // Skip events that don't have a valid position
                     if (startRow < 1 || endRow <= startRow) {
-                        console.log(`[TimeSlotGrid] Skipping event ${event.title} - invalid position`);
                         return null;
                     }
 
@@ -193,6 +199,8 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                         visualInfo.isContinuingToNextDay ? 'continuation-bottom' : '',
                         visualInfo.dayNumber ? `day-${visualInfo.dayNumber}` : ''
                     ].filter(Boolean).join(' ');
+
+
 
                     // Create a unique key for the event
                     const eventKey = 'originalEventId' in event

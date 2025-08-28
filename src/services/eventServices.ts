@@ -232,8 +232,8 @@ export class EventService {
                 .from('events')
                 .select(`
                 *,
-                event_type:event_type_id(id, name, color, description),
-                organizer:organizer_id(id, name)
+                event_type:event_type_id(*),
+                organizer:organizers (id, name)
             `);
 
             if (filters.startDate && filters.endDate) {

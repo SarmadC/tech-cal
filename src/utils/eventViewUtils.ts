@@ -69,6 +69,8 @@ export const getEventVisualInfo = (
     const isInstance = 'isInstance' in event && event.isInstance;
     const dayInfo = isInstance ? (event as MultiDayEventInstance).dayInfo : undefined;
 
+
+
     return {
         startRow,
         endRow,
