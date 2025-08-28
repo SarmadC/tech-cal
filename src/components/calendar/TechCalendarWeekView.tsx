@@ -12,7 +12,6 @@ import {
     getWeekDays,
     generateWeekTimeSlots
 } from '@/utils/eventViewUtils';
-import { generateDailyEventInstances } from '@/utils/multiDayEventUtils';
 
 export interface TechCalendarWeekViewProps {
     events: Event[] | MultiDayEvent[];
@@ -76,12 +75,48 @@ export default function TechCalendarWeekView({
             const endDate = event.endTime ? new Date(event.endTime) : startDate;
             const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
+            // Parse daily schedule to get the actual daily duration
+            let dailyStartTime = event.startTime;
+            let dailyEndTime = event.endTime;
+            
+            if (event.dailySchedule) {
+                try {
+                    const dailySchedule = typeof event.dailySchedule === 'string' 
+                        ? JSON.parse(event.dailySchedule) 
+                        : event.dailySchedule;
+                    
+                    if (dailySchedule.dailyStart && dailySchedule.dailyEnd) {
+                        // Create daily times for the start date
+                        const [startHour, startMinute] = dailySchedule.dailyStart.split(':').map(Number);
+                        const [endHour, endMinute] = dailySchedule.dailyEnd.split(':').map(Number);
+                        
+                        const dailyStart = new Date(startDate);
+                        dailyStart.setHours(startHour, startMinute, 0, 0);
+                        
+                        const dailyEnd = new Date(startDate);
+                        dailyEnd.setHours(endHour, endMinute, 0, 0);
+                        
+                        dailyStartTime = dailyStart.toISOString();
+                        dailyEndTime = dailyEnd.toISOString();
+                        
+                        console.log(`[TechCalendarWeekView] Daily schedule parsed for ${event.title}:`, {
+                            dailyStart: dailySchedule.dailyStart,
+                            dailyEnd: dailySchedule.dailyEnd,
+                            dailyStartTime,
+                            dailyEndTime
+                        });
+                    }
+                } catch (error) {
+                    console.warn(`[TechCalendarWeekView] Failed to parse daily schedule for ${event.title}:`, error);
+                }
+            }
+
             // Create a special multi-day instance that spans the full duration
             const multiDayInstance: MultiDayEventInstance = {
                 ...event,
                 id: `${event.id}-multi-day`,
-                startTime: event.startTime,
-                endTime: event.endTime,
+                startTime: dailyStartTime,
+                endTime: dailyEndTime,
                 isInstance: true,
                 originalEventId: event.id,
                 instanceDate: startDate.toISOString().split('T')[0],
