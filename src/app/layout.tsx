@@ -11,7 +11,7 @@ import './styles/premium-colors.css';
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
 import ClientLayout from "@/components/layout/ClientLayout";
-import SmoothScrollProvider from "@/components/providers/SmoothScrollProvier";
+
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -37,12 +37,13 @@ export default function RootLayout({
                     {/* 2. QueryProvider is next, it might need auth context for queries */}
                     <QueryProvider>
                         {/* 3. UI/UX providers can go inside */}
-                        <SmoothScrollProvider>
+                        {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
+                        {/* <SmoothScrollProvider> */}
                             {/* 4. ClientLayout contains the Navbar, which needs auth context */}
                             <ClientLayout>
                                 {children}
                             </ClientLayout>
-                        </SmoothScrollProvider>
+                        {/* </SmoothScrollProvider> */}
                     </QueryProvider>
                 </AuthProvider>
             </body>

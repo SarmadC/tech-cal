@@ -10,8 +10,10 @@
 /* Main week view container */
 .tech-calendar-week-view {
   height: 100%;
+  /* Allow scrolling in the week view */
   overflow: auto;
   background-color: var(--background-main);
+  position: relative;
 }
 
 /* Week view grid container - Now matches day view structure */
@@ -20,6 +22,8 @@
     display: grid;
     min-width: 1200px;
     /* Grid template is set inline via style prop to be dynamic based on time range */
+    /* Ensure no overflow scrolling */
+    overflow: visible;
 }
 
 /* ===================================
@@ -82,6 +86,8 @@
     padding: 0;
     height: 100%;
     pointer-events: auto;
+    /* Ensure no overflow scrolling */
+    overflow: visible;
 }
 
 /* ===================================
@@ -90,11 +96,133 @@
 
 /* Week View Event Card Base Styles */
 .tech-calendar-week-view .event-card {
-    padding: var(--v8-space-sm) var(--v8-space-md) !important;
+    padding: var(--v8-space-xs) var(--v8-space-sm) !important;
     border-radius: var(--v8-radius-lg) !important;
-    gap: var(--v8-space-xs) !important;
-    min-height: 24px !important;
-    margin: 1px 2px !important;
+    gap: 2px !important;
+    min-height: 20px !important;
+    margin: 1px 1px !important;
+    /* Ensure no overflow scrolling */
+    overflow: visible !important;
+}
+
+/* Layout container so the left rail doesn't overlap content */
+.tech-calendar-week-view .event-card .event-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 10px; /* space for left rail */
+    /* Ensure no overflow scrolling */
+    overflow: visible;
+}
+
+/* Left timeline rail */
+.event-left-rail {
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 6px;
+    width: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.event-left-rail .rail-track {
+    position: relative;
+    width: 2px;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.event-left-rail .rail-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: color-mix(in srgb, var(--text-on-pastel) 18%, transparent);
+}
+
+.event-left-rail.live .rail-fill {
+    background: color-mix(in srgb, var(--text-on-pastel) 28%, transparent);
+}
+
+.event-left-rail .rail-dot {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    background: var(--text-on-pastel);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+    animation: pulse-live-glow 2.2s ease-in-out infinite;
+}
+
+/* Facts row chips */
+.event-facts {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.event-facts .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6rem;
+    line-height: 1;
+    padding: 3px 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.25);
+    color: var(--text-on-pastel);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(4px);
+}
+
+.event-facts .chip-muted {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.event-facts .chip-accent {
+    background: rgba(34, 197, 94, 0.25);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+/* Avatars / brand logos */
+.event-avatars {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.event-avatars .avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: rgba(255,255,255,0.6);
+}
+
+/* Corner ribbon for large cards */
+.event-corner-ribbon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-28%, 8%) rotate(-45deg);
+    transform-origin: left top;
+    padding: 2px 24px;
+    font-size: 0.55rem;
+    font-weight: 700;
+    color: rgba(0,0,0,0.55);
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 2px;
+    pointer-events: none;
 }
 
 .tech-calendar-week-view .event-card .event-title {
@@ -105,7 +233,7 @@
     overflow: hidden !important;
     font-size: 0.8125rem !important;
     font-weight: 600 !important;
-    margin-bottom: var(--v8-space-xs) !important;
+    margin-bottom: 2px !important;
     color: var(--text-on-pastel) !important;
 }
 
@@ -134,6 +262,34 @@
     display: block !important;
     font-size: 0.7rem !important;
     color: var(--text-tertiary-on-pastel) !important;
+}
+
+/* Compact and dense variants for tighter layouts */
+.tech-calendar-week-view .event-card.compact {
+    padding: 2px 4px !important;
+    gap: 1px !important;
+    min-height: 16px !important;
+    /* Ensure no overflow scrolling */
+    overflow: visible !important;
+}
+
+.tech-calendar-week-view .event-card.dense {
+    padding: 3px 6px !important;
+    gap: 2px !important;
+    min-height: 18px !important;
+    /* Ensure no overflow scrolling */
+    overflow: visible !important;
+}
+
+.tech-calendar-week-view .event-card.compact .event-title,
+.tech-calendar-week-view .event-card.dense .event-title {
+    margin-bottom: 0 !important;
+}
+
+.tech-calendar-week-view .event-card.compact .event-time,
+.tech-calendar-week-view .event-card.compact .event-location,
+.tech-calendar-week-view .event-card.compact .event-organizer {
+    display: none !important;
 }
 
 /* Multi-day event continuation styles */
@@ -278,21 +434,23 @@
    6. CUSTOM SCROLLBAR (matches day view)
    =================================== */
 
-.tech-calendar-week-view *::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+/* Custom scrollbar styles for the week view */
+.tech-calendar-week-view::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-.tech-calendar-week-view *::-webkit-scrollbar-track {
+.tech-calendar-week-view::-webkit-scrollbar-track {
     background: var(--background-tertiary, #f8fafc);
+    border-radius: 4px;
 }
 
-.tech-calendar-week-view *::-webkit-scrollbar-thumb {
+.tech-calendar-week-view::-webkit-scrollbar-thumb {
     background: var(--border-strong, #9ca3af);
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
-.tech-calendar-week-view *::-webkit-scrollbar-thumb:hover {
+.tech-calendar-week-view::-webkit-scrollbar-thumb:hover {
     background: var(--foreground-tertiary, #64748b);
 }
 
@@ -547,6 +705,8 @@
 .tech-calendar-week-view .event-card[data-span-gt-8] .event-description {
     -webkit-line-clamp: 3;
     line-clamp: 3;
+    /* Ensure no overflow scrolling */
+    overflow: visible;
 }
 
 .tech-calendar-week-view .event-card[data-span-gt-10] .event-tags {
@@ -563,13 +723,15 @@
 .tech-calendar-week-view .event-card {
     display: flex !important;
     flex-direction: column !important;
-    gap: var(--v8-space-xs) !important;
-    min-height: 60px !important;
+    gap: 2px !important;
+    min-height: 36px !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     border: 2px solid rgba(255, 255, 255, 0.8) !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
     background-clip: padding-box !important;
+    /* Ensure no overflow scrolling */
+    overflow: visible !important;
 }
 
 /* Top section: Category badge and time */
@@ -616,7 +778,7 @@
 }
 
 .event-title {
-    font-size: 0.8rem !important;
+    font-size: 0.78rem !important;
     font-weight: 700 !important;
     color: var(--text-on-pastel) !important;
     margin: 0 !important;
@@ -683,7 +845,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: var(--v8-space-sm);
+    gap: 6px;
     margin-top: auto;
 }
 
@@ -718,8 +880,8 @@
 
 .event-organization-logo {
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -727,6 +889,19 @@
     border-radius: var(--v8-radius-sm);
     border: 1px solid rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(4px);
+}
+
+/* Subtle watermark for larger week cards */
+.event-watermark {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.18);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    white-space: nowrap;
 }
 
 .org-logo {

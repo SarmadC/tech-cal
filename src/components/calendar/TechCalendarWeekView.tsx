@@ -241,7 +241,7 @@ export default function TechCalendarWeekView({
             <WeekHeader weekDays={weekDays} />
 
             {/* Time slots grid with events */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1">
                 <TimeSlotGrid
                     timeSlots={timeSlots}
                     weekDays={weekDays}

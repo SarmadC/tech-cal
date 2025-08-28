@@ -2,7 +2,8 @@
 'use client';
 
 import React from 'react';
-import { Clock, MapPin, User } from 'lucide-react';
+import Image from 'next/image';
+import { Clock, MapPin, User, Globe, Ticket } from 'lucide-react';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { isEventLive, formatTime } from '@/utils/dateUtils';
 
@@ -36,6 +37,14 @@ export const EventCard: React.FC<EventCardProps> = ({
     isOverlapping = false
 }) => {
     const live = isEventLive(event.startTime, event.endTime);
+
+    // Timeline/progress helpers
+    const startDate = new Date(event.startTime);
+    const assumedEndDate = event.endTime ? new Date(event.endTime) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+    const now = new Date();
+    const totalMs = Math.max(assumedEndDate.getTime() - startDate.getTime(), 1);
+    const elapsedMs = Math.min(Math.max(now.getTime() - startDate.getTime(), 0), totalMs);
+    const progressPercent = Math.round((elapsedMs / totalMs) * 100);
 
     // Get category-based background color from the event type
     const getCategoryColor = () => {
@@ -115,6 +124,19 @@ export const EventCard: React.FC<EventCardProps> = ({
     
     // Week view specific content display - DYNAMIC based on card size
     const cardSize = visualInfo?.span || 1;
+    const isWeekView = viewType === 'week';
+    const isCompact = isWeekView && cardSize <= 2;
+    const isDense = isWeekView && cardSize <= 4;
+
+    const showTimelineRail = isWeekView && cardSize >= 3;
+    const showFactsRow = isWeekView && cardSize >= 4;
+    const showAvatars = isWeekView && cardSize >= 10;
+    const showRibbon = isWeekView && cardSize >= 12;
+
+    const isOnline = Boolean(event.livestreamUrl) || /online|virtual|remote/i.test(event.location || '');
+    const priceLabel = event.priceRange
+        ? (/free|\$?0(\b|\s|\.|,)/i.test(event.priceRange) ? 'Free' : event.priceRange)
+        : undefined;
     
     // Small cards: Basic info only
     const showWeekTime = viewType === 'week' && cardSize >= 2;
@@ -134,11 +156,33 @@ export const EventCard: React.FC<EventCardProps> = ({
     return (
         <div
             style={cardStyle}
-            className={cardClasses}
+            className={`${cardClasses} ${isCompact ? 'compact' : ''} ${isDense ? 'dense' : ''}`}
             onClick={onClick}
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
+            data-span={cardSize}
+            data-span-gt-2={cardSize > 2 || undefined}
+            data-span-gt-4={cardSize > 4 || undefined}
+            data-span-gt-6={cardSize > 6 || undefined}
+            data-span-gt-8={cardSize > 8 || undefined}
+            data-span-gt-10={cardSize > 10 || undefined}
+            data-span-gt-12={cardSize > 12 || undefined}
         >
+            {showRibbon && event.category?.name && (
+                <div className="event-corner-ribbon" aria-hidden="true">{event.category.name}</div>
+            )}
+
+            {/* Left timeline rail */}
+            {showTimelineRail && (
+                <div className={`event-left-rail ${live ? 'live' : ''}`} aria-hidden="true">
+                    <div className="rail-track">
+                        <div className="rail-fill" style={{ height: `${progressPercent}%` }} />
+                        {live && <div className="rail-dot" style={{ bottom: `${100 - progressPercent}%` }} />}
+                    </div>
+                </div>
+            )}
+
+            <div className="event-content">
             {/* Top section: Category badge and time */}
             <div className="event-top-section">
                 {showCategory && event.category?.name && (
@@ -159,6 +203,11 @@ export const EventCard: React.FC<EventCardProps> = ({
                 </div>
             </div>
 
+            {/* Subtle watermark for larger week cards to reduce empty space visually */}
+            {isWeekView && cardSize >= 8 && event.organization?.name && (
+                <div className="event-watermark" aria-hidden="true">{event.organization.name}</div>
+            )}
+
             {/* Progress indicators for multi-day events */}
             {showWeekProgress && ('isMultiDay' in event && event.isMultiDay && event.multiDaySpan && event.multiDaySpan > 1) && (
                 <div className="event-progress-dots">
@@ -177,7 +226,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                 </div>
             )}
 
-            {/* Bottom section: Location, organizer, and logo */}
+            {/* Bottom section: Location, organizer, avatars/logo, facts */}
             <div className="event-bottom-section">
                 <div className="event-info">
                     {showWeekLocation && event.location && (
@@ -193,18 +242,36 @@ export const EventCard: React.FC<EventCardProps> = ({
                         </span>
                     )}
                 </div>
-                
-                {/* Organization logo */}
-                {event.organization?.logo && (
-                    <div className="event-organization-logo">
-                        <img 
-                            src={event.organization.logo} 
-                            alt={event.organization.name || 'Organization'} 
-                            className="org-logo"
-                        />
+
+                {showAvatars && (
+                    <div className="event-avatars">
+                        {event.organization?.logo && (
+                            <Image
+                                src={event.organization.logo}
+                                alt={event.organization.name || 'Organization'}
+                                width={24}
+                                height={24}
+                                className="avatar"
+                            />
+                        )}
                     </div>
                 )}
             </div>
+
+            {showFactsRow && (
+                <div className="event-facts">
+                    <span className="chip">
+                        {isOnline ? <Globe size={10} /> : <MapPin size={10} />}
+                        {isOnline ? 'Online' : 'In‑Person'}
+                    </span>
+                    {priceLabel && (
+                        <span className={`chip ${/free/i.test(priceLabel) ? 'chip-accent' : 'chip-muted'}`}>
+                            <Ticket size={10} />
+                            {priceLabel}
+                        </span>
+                    )}
+                </div>
+            )}
 
             {/* Additional content for larger cards */}
             {showWeekDescription && event.description && (
@@ -268,6 +335,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                     )}
                 </div>
             )}
+            </div>
         </div>
     );
 };
