@@ -8,6 +8,7 @@
     --text-secondary-on-pastel: #6b7280;
     --v8-space-xs: 0.25rem;
     --v8-space-sm: 0.5rem;
+    --v8-space-md: 0.75rem;
     --v8-radius-lg: 0.5rem;
     --space-xs: 0.25rem;
     --space-sm: 0.5rem;
@@ -108,7 +109,7 @@
 
 /* Week View Event Card Base Styles */
 .tech-calendar-week-view .event-card {
-    padding: var(--v8-space-xs) var(--v8-space-sm) !important;
+    padding: var(--v8-space-sm) var(--v8-space-md) !important;
     gap: 2px !important;
     min-height: 20px !important;
     margin: 1px 1px !important;
@@ -146,13 +147,41 @@
     display: inline-block;
     padding: 2px 8px;
     background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: none;
     border-radius: 12px;
     font-size: 0.6rem;
     font-weight: 600;
     color: var(--text-on-pastel);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Event top section with session type and logo */
+.event-top-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--v8-space-xs);
+    margin-bottom: var(--v8-space-xs);
+}
+
+.event-organizer-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
+}
+
+.organizer-logo-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
 }
 
 /* Event info container for location and organizer */
@@ -243,17 +272,7 @@
     overflow: hidden;
 }
 
-/* Visual connection for multi-day events */
-.multi-day-span .event-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(to bottom, transparent, var(--text-on-pastel), transparent);
-    opacity: 0.3;
-}
+/* Visual connection for multi-day events - removed accent line */
 
 /* Day indicators for multi-day events */
 .tech-calendar-week-view .event-card[class*="day-"]::before {
@@ -494,16 +513,7 @@
     overflow: hidden;
 }
 
-.tech-calendar-week-view .multi-day-span .event-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(to bottom, transparent, var(--text-on-pastel), transparent);
-    opacity: 0.3;
-}
+/* Multi-day span accent removed */
 
 .tech-calendar-week-view .multi-day-event {
     position: relative;
@@ -539,7 +549,7 @@
     border-radius: var(--radius-sm);
     font-size: 0.6rem;
     font-weight: 500;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: none;
     white-space: nowrap;
 }
 
@@ -571,7 +581,7 @@
 .tech-calendar-week-view .event-card[data-span-gt-12] .event-full-details {
     margin-top: var(--space-md);
     padding-top: var(--space-sm);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: none;
 }
 
 
@@ -629,7 +639,7 @@
     transform: scale(1.1);
 }
 
-.learn-more-button:hover .arrow-icon {
+.learn-more-button:hover .arrow-icon:not(.arrow-hovered) {
     opacity: 0.8;
     transform: scale(1.1);
 }
@@ -660,8 +670,8 @@
 
 .arrow-icon.arrow-hovered {
     opacity: 0;
-    transform: scale(0.7);
-    visibility: hidden;
+    transform: scale(0.8);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .learn-more-shiny {
@@ -671,60 +681,46 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) scale(0.7);
+    transform: translate(-50%, -50%) scale(0.8);
     z-index: 10;
     color: var(--text-on-pastel);
     min-width: max-content;
     opacity: 0;
-    visibility: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s;
 }
 
 .learn-more-shiny.text-visible {
     opacity: 1;
-    visibility: visible;
     transform: translate(-50%, -50%) scale(1);
 }
 
 .learn-more-shiny .shiny-text {
-    color: #000000 !important;
+    color: #2d3748 !important;
     font-weight: 600;
     line-height: 1;
     word-break: keep-all;
     overflow-wrap: normal;
     white-space: nowrap;
-    /* Text shine effect - gradient shows through the text */
-    -webkit-text-fill-color: transparent !important;
+    position: relative;
     background: linear-gradient(
         120deg,
-        rgba(255, 255, 255, 0) 15%,
-        rgba(255, 255, 255, 1) 50%,
-        rgba(255, 255, 255, 0) 85%
-    ) !important;
-    background-size: 100% 100% !important;
-    -webkit-background-clip: text !important;
-    background-clip: text !important;
-    animation: shine 2s ease-in-out infinite !important;
+        #2d3748 40%,
+        #e2e8f0 50%,
+        #2d3748 60%
+    );
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shine 2.5s ease-in-out infinite;
 }
 
-/* Custom enhanced shine animation */
 @keyframes shine {
     0% {
-        background-position: 200%;
-    }
-    50% {
-        background-position: -200%;
+        background-position: 100%;
     }
     100% {
-        background-position: 200%;
+        background-position: -100%;
     }
 }
 
-/* Enhanced shine class for more prominent effect */
-.enhanced-shine {
-    animation: shine 1.5s ease-in-out infinite !important;
-}
-
-/* Enhanced shine class removed to prevent conflicts */
-
-/* Shine effect - removed as it was causing issues on the card */

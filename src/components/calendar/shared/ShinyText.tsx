@@ -19,6 +19,7 @@ const ShinyText: React.FC<ShinyTextProps> = ({
         <div
             className={`shiny-text ${disabled ? 'disabled' : ''} ${className}`}
             style={{ animationDuration }}
+            data-text={text}
         >
             {text}
         </div>

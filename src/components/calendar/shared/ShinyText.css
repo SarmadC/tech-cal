@@ -1,17 +1,17 @@
 .shiny-text {
-  color: #000000; /* Black text for better visibility */
+  color: #2d3748; /* Dark grey text for better visibility */
   background: linear-gradient(
     120deg,
-    rgba(255, 255, 255, 0) 30%,
-    rgba(255, 255, 255, 1) 50%,
-    rgba(255, 255, 255, 0) 70%
+    #2d3748 30%,
+    #e2e8f0 50%,
+    #2d3748 70%
   );
-  background-size: 150% 100%;
+  background-size: 200% 100%;
   -webkit-text-fill-color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
   display: inline-block;
-  animation: shine 3s ease-in-out infinite;
+  animation: shine 2.5s ease-in-out infinite;
   font-weight: 600;
 }
 

@@ -29,6 +29,7 @@ import {
 export const eventTransformer = {
     toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): Event => {
         const organizerName = (supabaseEvent as SupabaseEventWithDetails).organizer?.name || 'Unknown Organizer';
+        const organizerLogo = (supabaseEvent as SupabaseEventWithDetails).organizer?.logo_url || undefined;
         return {
             id: supabaseEvent.id,
             createdAt: supabaseEvent.created_at,
@@ -42,6 +43,11 @@ export const eventTransformer = {
             sourceUrl: supabaseEvent.source_url || '#',
             livestreamUrl: supabaseEvent.livestream_url,
             eventTypeId: supabaseEvent.event_type_id || '',
+            organization: {
+                id: (supabaseEvent as SupabaseEventWithDetails).organizer?.id || '',
+                name: organizerName,
+                logo: organizerLogo
+            }
         };
     },
     toSupabase: (appEvent: Partial<Event>): Partial<SupabaseEvent> => ({

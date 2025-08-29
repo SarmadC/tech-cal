@@ -45,7 +45,7 @@
 .event-card {
     background: var(--category-bg) !important;
     color: var(--text-on-pastel) !important;
-    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    border: none !important;
     border-radius: var(--radius-lg) !important;
     box-shadow: var(--shadow-card) !important;
     transition: all var(--transition-normal) !important;
@@ -88,7 +88,7 @@
     font-weight: 600;
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-lg);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: none;
     backdrop-filter: blur(8px);
     white-space: nowrap;
     letter-spacing: 0.025em;
@@ -101,7 +101,7 @@
     font-weight: 600;
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-lg);
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: none;
     backdrop-filter: blur(8px);
     white-space: nowrap;
     display: flex;
@@ -294,7 +294,7 @@
     backdrop-filter: blur(4px) saturate(1.2);
     -webkit-backdrop-filter: blur(4px) saturate(1.2);
     background: color-mix(in srgb, var(--category-bg, #f1f5f9) 85%, transparent) !important;
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: none;
 }
 
 .event-card.overlapping:hover {

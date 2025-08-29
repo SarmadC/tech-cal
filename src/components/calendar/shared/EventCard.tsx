@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Clock, MapPin, User, Globe, Ticket } from 'lucide-react';
+import { Clock, MapPin, User } from 'lucide-react';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { isEventLive, formatTime } from '@/utils/dateUtils';
 import { LearnMoreButton } from './LearnMoreButton';
@@ -118,11 +118,6 @@ export const EventCard: React.FC<EventCardProps> = ({
         });
     };
 
-    // Determine what content to show based on view type and event span
-    const showOrganizer = viewType === 'day' && visualInfo?.span && visualInfo.span > 4;
-    const showLocation = viewType === 'day' && visualInfo?.span && visualInfo.span > 6;
-    const showCategory = viewType === 'week' || (viewType === 'day' && visualInfo?.span && visualInfo.span > 2);
-    
     // Week view specific content display - DYNAMIC based on card size
     const cardSize = visualInfo?.span || 1;
     const isWeekView = viewType === 'week';
@@ -130,17 +125,10 @@ export const EventCard: React.FC<EventCardProps> = ({
     const isDense = isWeekView && cardSize <= 4;
 
     const showTimelineRail = isWeekView && cardSize >= 3;
-    const showFactsRow = isWeekView && cardSize >= 4;
-    const showAvatars = isWeekView && cardSize >= 10;
     const showRibbon = isWeekView && cardSize >= 12;
 
-    const isOnline = Boolean(event.livestreamUrl) || /online|virtual|remote/i.test(event.location || '');
-    const priceLabel = event.priceRange
-        ? (/free|\$?0(\b|\s|\.|,)/i.test(event.priceRange) ? 'Free' : event.priceRange)
-        : undefined;
     
     // Small cards: Basic info only
-    const showWeekTime = viewType === 'week' && cardSize >= 2;
     const showWeekLocation = viewType === 'week' && cardSize >= 4;
     const showWeekOrganizer = viewType === 'week' && cardSize >= 6;
     
@@ -149,10 +137,6 @@ export const EventCard: React.FC<EventCardProps> = ({
     
     // Large cards: Add description and tags
     const showWeekDescription = viewType === 'week' && cardSize >= 8;
-    const showWeekTags = viewType === 'week' && cardSize >= 10;
-    
-    // Extra large cards: Show full event details
-    const showWeekFullDetails = viewType === 'week' && cardSize >= 12;
 
     return (
         <div
@@ -187,9 +171,20 @@ export const EventCard: React.FC<EventCardProps> = ({
                 {/* Enhanced Content Tiers */}
                             {/* Tier 1: Basic Info (Always Visible) */}
             <div className="event-card-basic-info">
-                {/* Top section: Session type instead of redundant category/time */}
+                {/* Top section: Session type and organizer logo */}
                 <div className="event-top-section">
                     <span className="event-session-type">Keynote</span>
+                    {event.organization?.logo && (
+                        <div className="event-organizer-logo">
+                            <Image
+                                src={event.organization.logo}
+                                alt={`${event.organization.name} logo`}
+                                width={20}
+                                height={20}
+                                className="organizer-logo-image"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Main title section */}

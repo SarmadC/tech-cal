@@ -29,7 +29,8 @@
       "mcp__browser-tools__takeScreenshot",
       "mcp__playwright__browser_tabs",
       "Bash(sed:*)",
-      "Bash(npx postcss:*)"
+      "Bash(npx postcss:*)",
+      "mcp__playwright__browser_press_key"
     ],
     "deny": [],
     "ask": []

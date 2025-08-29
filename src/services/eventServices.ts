@@ -34,7 +34,7 @@ export class EventService {
 
             let query = supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
+                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name, logo_url)`)
                 .order('start_time', { ascending: true })
                 .range(from, to);
 
@@ -81,7 +81,7 @@ export class EventService {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
+                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name, logo_url)`)
                 .eq('id', id)
                 .single();
 

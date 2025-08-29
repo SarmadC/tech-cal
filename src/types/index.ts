@@ -50,7 +50,7 @@ export type SupabaseTrackedEvent = {
 
 export type SupabaseEventWithDetails = Omit<SupabaseEvent, 'organizer'> & {
     event_type: SupabaseEventType | null;
-    organizer: { id: string, name: string } | null;
+    organizer: { id: string, name: string, logo_url?: string | null } | null;
 };
 
 export type SupabaseTrackedEventWithDetails = Omit<SupabaseTrackedEvent, 'events'> & {
