@@ -141,6 +141,15 @@ export default function CalendarClientView({
         weekEnd.setDate(weekEnd.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
 
+        // Debug: Log the actual dates being used
+        console.log('[CalendarClientView] Week calculation:', {
+            currentDate: currentDate.toISOString(),
+            dayOfWeek,
+            daysToMonday,
+            weekStart: weekStart.toISOString(),
+            weekEnd: weekEnd.toISOString()
+        });
+
         console.log('[CalendarClientView] Week range:', weekStart, 'to', weekEnd);
         console.log('[CalendarClientView] Total enriched events to filter:', enrichedEvents.length);
 
@@ -149,7 +158,7 @@ export default function CalendarClientView({
             const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
 
             const inRange = eventStart <= weekEnd && eventEnd >= weekStart;
-            console.log('[CalendarClientView] Event:', event.title, 'from', eventStart, 'to', eventEnd, 'in range:', inRange);
+            console.log('[CalendarClientView] Event:', event.title, 'from', eventStart.toISOString(), 'to', eventEnd.toISOString(), 'in range:', inRange, 'weekStart:', weekStart.toISOString(), 'weekEnd:', weekEnd.toISOString());
             
             return inRange;
         });

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Clock, MapPin, User, Globe, Ticket } from 'lucide-react';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { isEventLive, formatTime } from '@/utils/dateUtils';
+import { LearnMoreButton } from './LearnMoreButton';
 
 export interface EventCardProps {
     event: Event | MultiDayEventInstance;
@@ -183,51 +184,24 @@ export const EventCard: React.FC<EventCardProps> = ({
             )}
 
             <div className="event-content">
-            {/* Top section: Category badge and time */}
-            <div className="event-top-section">
-                {showCategory && event.category?.name && (
-                    <span className="event-category-badge">{event.category.name}</span>
-                )}
-                {showWeekTime && (
-                    <span className="event-time-badge">{getTimeDisplay()}</span>
-                )}
-            </div>
-
-            {/* Main title section */}
-            <div className="event-title-section">
-                <h3 className="event-title">{event.title}</h3>
-                <div className="event-arrow" title="Learn More">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
+                {/* Enhanced Content Tiers */}
+                            {/* Tier 1: Basic Info (Always Visible) */}
+            <div className="event-card-basic-info">
+                {/* Top section: Session type instead of redundant category/time */}
+                <div className="event-top-section">
+                    <span className="event-session-type">Keynote</span>
                 </div>
-            </div>
 
-            {/* Subtle watermark for larger week cards to reduce empty space visually */}
-            {isWeekView && cardSize >= 8 && event.organization?.name && (
-                <div className="event-watermark" aria-hidden="true">{event.organization.name}</div>
-            )}
-
-            {/* Progress indicators for multi-day events */}
-            {showWeekProgress && ('isMultiDay' in event && event.isMultiDay && event.multiDaySpan && event.multiDaySpan > 1) && (
-                <div className="event-progress-dots">
-                    {Array.from({ length: Math.min(event.multiDaySpan, 5) }, (_, i) => (
-                        <span 
-                            key={i} 
-                            className={`progress-dot ${i === 0 ? 'active' : ''}`}
-                            style={{ 
-                                backgroundColor: i === 0 ? 'var(--text-on-pastel)' : 'rgba(255, 255, 255, 0.3)'
-                            }}
-                        />
-                    ))}
-                    {event.multiDaySpan > 5 && (
-                        <span className="progress-dot-more">+{event.multiDaySpan - 5}</span>
-                    )}
+                {/* Main title section */}
+                <div className="event-title-section">
+                    <h3 className="event-title">{event.title}</h3>
+                    <LearnMoreButton 
+                        onClick={onClick} 
+                        showForLargeEvents={cardSize >= 4}
+                    />
                 </div>
-            )}
 
-            {/* Bottom section: Location, organizer, avatars/logo, facts */}
-            <div className="event-bottom-section">
+                {/* Basic location and organizer */}
                 <div className="event-info">
                     {showWeekLocation && event.location && (
                         <span className="event-location-text">
@@ -242,97 +216,69 @@ export const EventCard: React.FC<EventCardProps> = ({
                         </span>
                     )}
                 </div>
+            </div>
 
-                {showAvatars && (
-                    <div className="event-avatars">
-                        {event.organization?.logo && (
-                            <Image
-                                src={event.organization.logo}
-                                alt={event.organization.name || 'Organization'}
-                                width={24}
-                                height={24}
-                                className="avatar"
-                            />
-                        )}
+            {/* Tier 2: Extended Info (2+ hour events) - Multi-day progress only */}
+            <div className="event-card-extended-info">
+                {showWeekProgress && ('isMultiDay' in event && event.isMultiDay && event.multiDaySpan && event.multiDaySpan > 1) && (
+                    <div className="multi-day-progress">
+                        <div className="progress-bar">
+                            <div className="progress-fill" style={{ width: '20%' }} />
+                        </div>
+                        <div className="day-counter">Day 1 of {event.multiDaySpan}</div>
                     </div>
                 )}
             </div>
 
-            {showFactsRow && (
-                <div className="event-facts">
-                    <span className="chip">
-                        {isOnline ? <Globe size={10} /> : <MapPin size={10} />}
-                        {isOnline ? 'Online' : 'In‑Person'}
-                    </span>
-                    {priceLabel && (
-                        <span className={`chip ${/free/i.test(priceLabel) ? 'chip-accent' : 'chip-muted'}`}>
-                            <Ticket size={10} />
-                            {priceLabel}
-                        </span>
-                    )}
-                </div>
-            )}
+            {/* Tier 3: Rich Content (4+ hour events) */}
+            <div className="event-card-rich-content">
+                {/* Session Tracks - only if we have tags */}
+                {event.tags && event.tags.length > 0 && (
+                    <div className="session-tracks">
+                        {event.tags.slice(0, 2).map((tag, index) => (
+                            <span key={index} className="session-track">
+                                <span className="track-icon">●</span>
+                                {tag.name}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
 
-            {/* Additional content for larger cards */}
+            {/* Tier 4: Premium Content (6+ hour events) - only show if we have rich data */}
+            <div className="event-card-premium-content">
+                {/* Venue Section - only if location is meaningful */}
+                {event.location && event.location !== 'Remote' && event.location !== 'Online' && (
+                    <div className="venue-section">
+                        <div className="venue-photo">
+                            <span className="venue-icon">🏢</span>
+                        </div>
+                        <div className="venue-info">
+                            <div className="venue-name">Event Venue</div>
+                            <div className="venue-location">{event.location}</div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Removed duplicate bottom section - location and organizer already shown above */}
+
+            {/* Removed redundant facts row - location and organizer already shown above */}
+
+            {/* Additional content for larger cards - cleaned up */}
             {showWeekDescription && event.description && (
                 <div className="event-description">
                     <span>{event.description.length > 80 ? `${event.description.substring(0, 80)}...` : event.description}</span>
                 </div>
             )}
 
-            {showWeekTags && event.tags && event.tags.length > 0 && (
-                <div className="event-tags">
-                    {event.tags.slice(0, 2).map((tag, index) => (
-                        <span key={index} className="event-tag">
-                            {tag.name}
-                        </span>
-                    ))}
-                    {event.tags.length > 2 && (
-                        <span className="event-tag-more">+{event.tags.length - 2}</span>
-                    )}
-                </div>
-            )}
-
-            {showWeekFullDetails && (
-                <div className="event-full-details">
-                    {event.priceRange && (
-                        <div className="event-price">
-                            <span>💰 {event.priceRange}</span>
-                        </div>
-                    )}
-                    {event.capacity && (
-                        <div className="event-capacity">
-                            <span>👥 {event.capacity}</span>
-                        </div>
-                    )}
-                    {event.difficulty && (
-                        <div className="event-difficulty">
-                            <span>📚 {event.difficulty}</span>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Day view content (existing logic) */}
+            {/* Day view content - only show time for day view */}
             {viewType === 'day' && (
                 <div className="event-meta">
                     <div className="event-time">
                         <Clock size={14} />
                         <span>{getTimeDisplay()}</span>
                     </div>
-
-                    {showLocation && event.location && (
-                        <div className="event-location">
-                            <MapPin size={14} />
-                            <span>{event.location}</span>
-                        </div>
-                    )}
-
-                    {showOrganizer && event.organizer && (
-                        <div className="event-organizer">
-                            <span>{event.organizer}</span>
-                        </div>
-                    )}
                 </div>
             )}
             </div>
