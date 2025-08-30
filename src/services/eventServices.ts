@@ -21,6 +21,53 @@ import * as Sentry from "@sentry/nextjs";
 type SupabaseClientType = SupabaseClient<Database>;
 
 export class EventService {
+    // Helper function to fetch and attach tags to events
+    private static async attachTagsToEvents<T extends Record<string, unknown>>(
+        events: T[],
+        supabaseClient: SupabaseClientType
+    ): Promise<(T & { tags: Array<{ id: string; name: string; color: string; category: string }> })[]> {
+        if (!events || events.length === 0) return events.map(event => ({ ...event, tags: [] }));
+
+        const eventIds = events.map(event => event.id as string).filter(Boolean);
+        if (eventIds.length === 0) return events.map(event => ({ ...event, tags: [] }));
+
+        const { data: tagRelations } = await supabaseClient
+            .from('event_tag_relations')
+            .select('event_id, tag_id')
+            .in('event_id', eventIds);
+
+        if (!tagRelations || tagRelations.length === 0) return events.map(event => ({ ...event, tags: [] }));
+
+        const tagIds = tagRelations.map(rel => rel.tag_id);
+        const { data: tags } = await supabaseClient
+            .from('event_tags')
+            .select('id, event_tag, color, category')
+            .in('id', tagIds);
+
+        // Create a map of event_id to tags
+        const eventTagsMap = new Map();
+        tagRelations.forEach(rel => {
+            const tag = tags?.find(t => t.id === rel.tag_id);
+            if (tag) {
+                if (!eventTagsMap.has(rel.event_id)) {
+                    eventTagsMap.set(rel.event_id, []);
+                }
+                eventTagsMap.get(rel.event_id).push({
+                    id: tag.id,
+                    name: tag.event_tag,
+                    color: tag.color || '#6b7280',
+                    category: tag.category || 'General'
+                });
+            }
+        });
+
+        // Attach tags to events
+        return events.map(event => ({
+            ...event,
+            tags: eventTagsMap.get(event.id as string) || []
+        })) as (T & { tags: Array<{ id: string; name: string; color: string; category: string }> })[];
+    }
+
     // 2. UPDATE SIGNATURE: The function now returns a promise of `Event[]`.
     static async getEvents(
         filters: EventFilters = {},
@@ -34,7 +81,11 @@ export class EventService {
 
             let query = supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name, logo_url)`)
+                .select(`
+                    *, 
+                    event_type:event_type_id (*), 
+                    organizer:organizers (id, name, logo_url)
+                `)
                 .order('start_time', { ascending: true })
                 .range(from, to);
 
@@ -55,8 +106,11 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
+            // Fetch tags for all events
+            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
+
             // 3. UPDATE TYPE ANNOTATION: The local variable is now correctly typed.
-            const events: Event[] = (data || []).map((item) => {
+            const events: Event[] = eventsWithTags.map((item) => {
                 const typedItem = item as SupabaseEventWithDetails;
                 const baseEvent = eventTransformer.toApp(typedItem);
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
@@ -81,14 +135,22 @@ export class EventService {
         try {
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name, logo_url)`)
+                .select(`
+                    *, 
+                    event_type:event_type_id (*), 
+                    organizer:organizers (id, name, logo_url)
+                `)
                 .eq('id', id)
                 .single();
 
             if (error) throw error;
             if (!data) throw new Error('Event not found');
 
-            const item = data as SupabaseEventWithDetails;
+            // Fetch tags for this event
+            const eventsWithTags = await this.attachTagsToEvents([data], supabaseClient);
+            const eventWithTags = eventsWithTags[0];
+
+            const item = eventWithTags as SupabaseEventWithDetails;
             const baseEvent = eventTransformer.toApp(item);
             const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
 
@@ -155,7 +217,11 @@ export class EventService {
         try {
             let query = supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
+                .select(`
+                    *, 
+                    event_type:event_type_id (*), 
+                    organizer:organizers (id, name, logo_url)
+                `)
                 .gte('start_time', startDate.toISOString())
                 .lte('start_time', endDate.toISOString())
                 .order('start_time', { ascending: true });
@@ -166,7 +232,10 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            return (data as SupabaseEventWithDetails[] || []).map((item) => {
+            // Fetch tags for all events in this date range
+            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
+
+            return (eventsWithTags as SupabaseEventWithDetails[] || []).map((item) => {
                 const baseEvent = eventTransformer.toApp(item);
                 const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });
@@ -199,7 +268,11 @@ export class EventService {
             const now = new Date().toISOString();
             const { data, error } = await supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
+                .select(`
+                    *, 
+                    event_type:event_type_id (*), 
+                    organizer:organizers (id, name, logo_url)
+                `)
                 .lte('start_time', now)
                 .or(`end_time.gte.${now},end_time.is.null`)
                 .order('start_time', { ascending: true });
@@ -269,7 +342,10 @@ export class EventService {
             if (error) throw error;
             if (!data) return [];
 
-            return data.map(enhancedEventTransformer.toApp);
+            // Fetch tags for all events with multi-day support
+            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
+
+            return eventsWithTags.map(enhancedEventTransformer.toApp);
         } catch (error) {
             console.error('Error fetching events with multi-day support:', error);
             Sentry.captureException(error, {
@@ -299,7 +375,11 @@ export class EventService {
 
             let query = supabaseClient
                 .from('events')
-                .select(`*, event_type:event_type_id (*), organizer:organizers (id, name)`)
+                .select(`
+                    *, 
+                    event_type:event_type_id (*), 
+                    organizer:organizers (id, name, logo_url)
+                `)
                 .in('event_type_id', categoryIds)
                 .gte('start_time', new Date().toISOString())
                 .limit(3);
@@ -311,7 +391,10 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            return (data as SupabaseEventWithDetails[] || []).map((item) => {
+            // Fetch tags for all live events
+            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
+
+            return (eventsWithTags as SupabaseEventWithDetails[] || []).map((item) => {
                 const baseEvent = eventTransformer.toApp(item);
                 const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });

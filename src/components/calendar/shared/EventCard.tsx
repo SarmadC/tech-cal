@@ -127,6 +127,15 @@ export const EventCard: React.FC<EventCardProps> = ({
     const showTimelineRail = isWeekView && cardSize >= 3;
     const showRibbon = isWeekView && cardSize >= 12;
 
+    // Debug: Check if tags are loading for visible events
+    if (event.title?.includes('Meta') || event.title?.includes('Product')) {
+        console.log('DEBUG - Event with tags:', {
+            title: event.title,
+            tags: event.tags,
+            tagsLength: event.tags?.length || 0
+        });
+    }
+
     
     // Small cards: Basic info only
     const showWeekLocation = viewType === 'week' && cardSize >= 4;
@@ -173,7 +182,17 @@ export const EventCard: React.FC<EventCardProps> = ({
             <div className="event-card-basic-info">
                 {/* Top section: Session type and organizer logo */}
                 <div className="event-top-section">
-                    <span className="event-session-type">Keynote</span>
+                    {event.tags && event.tags.length > 0 && (
+                        <span 
+                            className="event-session-type"
+                            style={{ backgroundColor: event.tags[0].color }}
+                        >
+                            {/* Get the first unique tag name */}
+                            {event.tags.find((tag, index, self) => 
+                                index === self.findIndex(t => t.name === tag.name)
+                            )?.name || event.tags[0].name}
+                        </span>
+                    )}
                     {event.organization?.logo && (
                         <div className="event-organizer-logo">
                             <Image
@@ -195,6 +214,29 @@ export const EventCard: React.FC<EventCardProps> = ({
                         showForLargeEvents={cardSize >= 4}
                     />
                 </div>
+
+                {/* Category and Event Tag Display - show on all cards with tags */}
+                {event.tags && event.tags.length > 0 && (
+                    <div className="event-tags-section">
+                        {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
+                        {event.tags
+                            .filter((tag, index, self) => 
+                                index === self.findIndex(t => t.name === tag.name)
+                            )
+                            .slice(0, 2)
+                            .map((tag) => (
+                                <div key={tag.id} className="event-tags-row">
+                                    {/* Category as a separate pill (similar to top session type) */}
+                                    <span 
+                                        className="event-category-pill"
+                                        style={{ backgroundColor: tag.color }}
+                                    >
+                                        {tag.category.toUpperCase()}
+                                    </span>
+                                </div>
+                            ))}
+                    </div>
+                )}
 
                 {/* Basic location and organizer */}
                 <div className="event-info">
@@ -227,17 +269,7 @@ export const EventCard: React.FC<EventCardProps> = ({
 
             {/* Tier 3: Rich Content (4+ hour events) */}
             <div className="event-card-rich-content">
-                {/* Session Tracks - only if we have tags */}
-                {event.tags && event.tags.length > 0 && (
-                    <div className="session-tracks">
-                        {event.tags.slice(0, 2).map((tag, index) => (
-                            <span key={index} className="session-track">
-                                <span className="track-icon">●</span>
-                                {tag.name}
-                            </span>
-                        ))}
-                    </div>
-                )}
+                {/* Additional content for larger cards can go here */}
             </div>
 
             {/* Tier 4: Premium Content (6+ hour events) - only show if we have rich data */}

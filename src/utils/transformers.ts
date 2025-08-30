@@ -8,6 +8,7 @@ import type {
     SupabaseProfile,
     Event, // Replaces AppEvent
     EventType, // Replaces AppEventType
+    EventTag, // For event tags
     TrackedEventRecord, // Replaces AppTrackedEvent
     AppProfile, // Assuming this will become `Profile` later, but keeping as-is for now
     MultiDayEvent, // Replaces EnhancedAppEvent
@@ -29,7 +30,12 @@ import {
 export const eventTransformer = {
     toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): Event => {
         const organizerName = (supabaseEvent as SupabaseEventWithDetails).organizer?.name || 'Unknown Organizer';
-        const organizerLogo = (supabaseEvent as SupabaseEventWithDetails).organizer?.logo_url || undefined;
+        const organizerLogo = (supabaseEvent as SupabaseEventWithDetails).organizer?.logo_url ?? undefined;
+        
+        // Transform event tags from database format to app format
+        // Tags are now directly attached to the event object
+        const eventTags: EventTag[] = (supabaseEvent as SupabaseEventWithDetails).tags || [];
+
         return {
             id: supabaseEvent.id,
             createdAt: supabaseEvent.created_at,
@@ -43,10 +49,11 @@ export const eventTransformer = {
             sourceUrl: supabaseEvent.source_url || '#',
             livestreamUrl: supabaseEvent.livestream_url,
             eventTypeId: supabaseEvent.event_type_id || '',
+            ...(eventTags.length > 0 && { tags: eventTags }),
             organization: {
                 id: (supabaseEvent as SupabaseEventWithDetails).organizer?.id || '',
                 name: organizerName,
-                logo: organizerLogo
+                ...(organizerLogo && { logo: organizerLogo })
             }
         };
     },
