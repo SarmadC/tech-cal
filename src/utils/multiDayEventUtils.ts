@@ -86,6 +86,36 @@ export function generateDailyEventInstances(
                 dayInfo
             });
             break;
+            
+        case 'custom':
+            // Handle custom schedules with different times per day
+            if (event.dailySchedule.custom_schedule) {
+                const customDay = event.dailySchedule.custom_schedule.find(
+                    schedule => schedule.day === currentDay
+                );
+                
+                if (customDay) {
+                    // Use custom times for this specific day
+                    const customStartTimeStr = `${viewDateStr}T${customDay.start}:00`;
+                    const customEndTimeStr = `${viewDateStr}T${customDay.end}:00`;
+                    
+                    const { startTime: _startTime, endTime: _endTime, id, ...restOfEvent } = event;
+                    
+                    instances.push({
+                        ...restOfEvent,
+                        id: `${id}-day-${currentDay}-${viewDateStr}`,
+                        startTime: customStartTimeStr,
+                        endTime: customEndTimeStr,
+                        isInstance: true,
+                        originalEventId: id,
+                        instanceDate: viewDateStr,
+                        dayInfo: {
+                            ...dayInfo
+                        }
+                    });
+                }
+            }
+            break;
     }
 
     return instances;
@@ -106,4 +136,162 @@ export function processEventsForDayView(
 ): MultiDayEventInstance[] {
     // Use flatMap to process all events and flatten the resulting instances into a single array
     return events.flatMap(event => generateDailyEventInstances(event, viewDate));
+}
+
+/**
+ * Processes events for week view, splitting multi-day events with custom schedules
+ * into individual day cards when they have different time slots.
+ * @param events An array of events to process
+ * @returns Processed events with custom schedules split into individual day cards
+ */
+export function processEventsForWeekView(
+    events: (MultiDayEvent | Event)[]
+): (MultiDayEventInstance | Event)[] {
+    const processedEvents: (MultiDayEventInstance | Event)[] = [];
+    
+    events.forEach(event => {
+        if ('isMultiDay' in event && event.isMultiDay && event.dailySchedule) {
+            // Debug: Log the full dailySchedule structure
+            console.log(`[processEventsForWeekView] Event ${event.title} dailySchedule:`, JSON.stringify(event.dailySchedule, null, 2));
+            // Handle both custom_schedule and daily_recurring multi-day events
+            // Prioritize custom_schedule if it exists, even if type is daily_recurring
+            if ('custom_schedule' in event.dailySchedule && event.dailySchedule.custom_schedule && event.dailySchedule.custom_schedule.length > 0) {
+            // This is a multi-day event with custom schedule - split into individual day cards
+            console.log(`[processEventsForWeekView] Processing multi-day event with custom schedule:`, {
+                title: event.title,
+                startTime: event.startTime,
+                dailySchedule: event.dailySchedule,
+                customSchedule: event.dailySchedule.custom_schedule,
+                scheduleLength: event.dailySchedule.custom_schedule.length
+            });
+            
+            const startDate = new Date(event.startTime);
+            const _endDate = event.endTime ? new Date(event.endTime) : startDate;
+            const customSchedule = event.dailySchedule.custom_schedule!;
+            
+            customSchedule.forEach((daySchedule) => {
+                // Calculate the actual date for this day
+                // For Meta Connect: Day 1 = Sept 17, Day 2 = Sept 18
+                const dayDate = new Date(startDate);
+                dayDate.setDate(startDate.getDate() + (daySchedule.day - 1)); // Adjust for 1-based day numbering
+                
+                const year = dayDate.getFullYear();
+                const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+                const day = String(dayDate.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                
+                // Create proper ISO datetime strings with timezone
+                const dayStartTime = `${dateStr}T${daySchedule.start}:00`;
+                const dayEndTime = `${dateStr}T${daySchedule.end}:00`;
+                
+                const dayInstance: MultiDayEventInstance = {
+                    ...event,
+                    id: `${event.id}-day-${daySchedule.day}`,
+                    startTime: dayStartTime,
+                    endTime: dayEndTime,
+                    isInstance: true,
+                    originalEventId: event.id,
+                    instanceDate: dateStr,
+                    dayInfo: {
+                        currentDay: daySchedule.day,
+                        totalDays: customSchedule.length,
+                        isFirstDay: daySchedule.day === 1,
+                        isLastDay: daySchedule.day === customSchedule.length,
+                        continuationType: daySchedule.day === 1 ? 'start' : 
+                                        daySchedule.day === customSchedule.length ? 'end' : 'middle'
+                    },
+                    // Add custom schedule info for display
+                    multiDayStart: dayDate,
+                    multiDayEnd: dayDate,
+                    multiDaySpan: 1
+                };
+                
+                console.log(`[processEventsForWeekView] Created instance for day ${daySchedule.day}:`, {
+                    title: event.title,
+                    dayDate: dateStr,
+                    startTime: dayStartTime,
+                    endTime: dayEndTime,
+                    instanceId: dayInstance.id,
+                    customStart: daySchedule.start,
+                    customEnd: daySchedule.end,
+                    dayInfo: dayInstance.dayInfo
+                });
+                
+                processedEvents.push(dayInstance);
+            });
+        } else if (event.dailySchedule.type === 'daily_recurring') {
+                // This is a multi-day event with daily recurring schedule - split into individual day cards
+                console.log(`[processEventsForWeekView] Processing multi-day event with daily recurring schedule:`, {
+                    title: event.title,
+                    startTime: event.startTime,
+                    endTime: event.endTime,
+                    dailySchedule: event.dailySchedule
+                });
+                
+                const startDate = new Date(event.startTime);
+                const endDate = event.endTime ? new Date(event.endTime) : startDate;
+                
+                // Calculate how many days this event spans
+                const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                const totalDays = daysDiff + 1; // Include both start and end days
+                
+                // Create individual day instances
+                for (let dayOffset = 0; dayOffset < totalDays; dayOffset++) {
+                    const dayDate = new Date(startDate);
+                    dayDate.setDate(startDate.getDate() + dayOffset);
+                    
+                    const year = dayDate.getFullYear();
+                    const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(dayDate.getDate()).padStart(2, '0');
+                    const dateStr = `${year}-${month}-${day}`;
+                    
+                    // Use the daily recurring schedule times
+                    const dailyStart = event.dailySchedule.dailyStart || '09:00';
+                    const dailyEnd = event.dailySchedule.dailyEnd || '17:00';
+                    const dayStartTime = `${dateStr}T${dailyStart}:00`;
+                    const dayEndTime = `${dateStr}T${dailyEnd}:00`;
+                    
+                    const dayInstance: MultiDayEventInstance = {
+                        ...event,
+                        id: `${event.id}-day-${dayOffset + 1}`,
+                        startTime: dayStartTime,
+                        endTime: dayEndTime,
+                        isInstance: true,
+                        originalEventId: event.id,
+                        instanceDate: dateStr,
+                        dayInfo: {
+                            currentDay: dayOffset + 1,
+                            totalDays: totalDays,
+                            isFirstDay: dayOffset === 0,
+                            isLastDay: dayOffset === totalDays - 1,
+                            continuationType: dayOffset === 0 ? 'start' : 
+                                            dayOffset === totalDays - 1 ? 'end' : 'middle'
+                        },
+                        // Add multi-day info for display  
+                        multiDayStart: dayDate,
+                        multiDayEnd: dayDate,
+                        multiDaySpan: 1
+                    };
+                    
+                    console.log(`[processEventsForWeekView] Created daily recurring instance for day ${dayOffset + 1}:`, {
+                        title: event.title,
+                        dayDate: dateStr,
+                        startTime: dayStartTime,
+                        endTime: dayEndTime,
+                        instanceId: dayInstance.id
+                    });
+                    
+                    processedEvents.push(dayInstance);
+                }
+            } else {
+                // Multi-day event with unknown schedule type, treat as regular event
+                processedEvents.push(event as Event | MultiDayEventInstance);
+            }
+        } else {
+            // Regular single-day event
+            processedEvents.push(event as Event | MultiDayEventInstance);
+        }
+    });
+    
+    return processedEvents;
 }

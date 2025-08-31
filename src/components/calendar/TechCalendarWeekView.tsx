@@ -12,13 +12,14 @@ import {
     getWeekDays,
     generateWeekTimeSlots
 } from '@/utils/eventViewUtils';
+import { processEventsForWeekView } from '@/utils/multiDayEventUtils';
 
 export interface TechCalendarWeekViewProps {
-    events: Event[] | MultiDayEvent[];
+    events: (Event | MultiDayEvent)[];
     initialDate: Date;
     categories: EventType[];
     profile: AppProfile | null;
-    onEventSelect?: (event: Event) => void;
+    onEventSelect?: (event: MultiDayEventInstance | Event) => void;
 }
 
 export default function TechCalendarWeekView({
@@ -51,110 +52,23 @@ export default function TechCalendarWeekView({
     const processedEvents = useMemo(() => {
         console.log('[TechCalendarWeekView] Processing events:', events.length, 'events total');
 
-        const allProcessedEvents: (Event | MultiDayEventInstance)[] = [];
-        const processedMultiDayIds = new Set<string>();
-
-        // Debug: Check what types of events we have
-        const multiDayEvents = (events as MultiDayEvent[]).filter(event => event.isMultiDay && event.dailySchedule);
-        console.log('[TechCalendarWeekView] Multi-day events found:', multiDayEvents.length);
-
-        // Process multi-day events as single cards spanning multiple days
-        multiDayEvents.forEach(event => {
-            console.log('[TechCalendarWeekView] Processing multi-day event:', {
-                id: event.id,
-                title: event.title,
-                startTime: event.startTime,
-                endTime: event.endTime,
-                dailySchedule: event.dailySchedule
-            });
-
-            processedMultiDayIds.add(event.id);
-
-            // Create a single multi-day event instance that spans the entire duration
-            const startDate = new Date(event.startTime);
-            const endDate = event.endTime ? new Date(event.endTime) : startDate;
-            const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-            // Parse daily schedule to get the actual daily duration
-            let dailyStartTime = event.startTime;
-            let dailyEndTime = event.endTime;
-            
-            if (event.dailySchedule) {
-                try {
-                    const dailySchedule = typeof event.dailySchedule === 'string' 
-                        ? JSON.parse(event.dailySchedule) 
-                        : event.dailySchedule;
-                    
-                    if (dailySchedule.dailyStart && dailySchedule.dailyEnd) {
-                        // Create daily times for the start date
-                        const [startHour, startMinute] = dailySchedule.dailyStart.split(':').map(Number);
-                        const [endHour, endMinute] = dailySchedule.dailyEnd.split(':').map(Number);
-                        
-                        const dailyStart = new Date(startDate);
-                        dailyStart.setHours(startHour, startMinute, 0, 0);
-                        
-                        const dailyEnd = new Date(startDate);
-                        dailyEnd.setHours(endHour, endMinute, 0, 0);
-                        
-                        dailyStartTime = dailyStart.toISOString();
-                        dailyEndTime = dailyEnd.toISOString();
-                        
-                        console.log(`[TechCalendarWeekView] Daily schedule parsed for ${event.title}:`, {
-                            dailyStart: dailySchedule.dailyStart,
-                            dailyEnd: dailySchedule.dailyEnd,
-                            dailyStartTime,
-                            dailyEndTime
-                        });
-                    }
-                } catch (error) {
-                    console.warn(`[TechCalendarWeekView] Failed to parse daily schedule for ${event.title}:`, error);
-                }
-            }
-
-            // Create a special multi-day instance that spans the full duration
-            const multiDayInstance: MultiDayEventInstance = {
-                ...event,
-                id: `${event.id}-multi-day`,
-                startTime: dailyStartTime,
-                endTime: dailyEndTime,
-                isInstance: true,
-                originalEventId: event.id,
-                instanceDate: startDate.toISOString().split('T')[0],
-                dayInfo: {
-                    currentDay: 1,
-                    totalDays: totalDays,
-                    isFirstDay: true,
-                    isLastDay: true,
-                    continuationType: 'single'
-                },
-                // Add multi-day specific properties
-                isMultiDay: true,
-                multiDaySpan: totalDays,
-                multiDayStart: startDate,
-                multiDayEnd: endDate
-            };
-
-            allProcessedEvents.push(multiDayInstance);
-        });
-
-        // Add single-day events that aren't multi-day
+        // Use the new processing function that handles custom schedules
+        // @ts-expect-error - Type compatibility issue with union types
+        const processed = processEventsForWeekView(events);
+        
+        // Filter events to only show those within the current week
         const weekStart = new Date(weekDays[0]);
         weekStart.setHours(0, 0, 0, 0);
         const weekEnd = new Date(weekDays[6]);
         weekEnd.setHours(23, 59, 59, 999);
 
-        events.forEach(event => {
-            if (!processedMultiDayIds.has(event.id)) {
-                // Check if this single event falls within the week
-                const eventStart = new Date(event.startTime);
-                if (eventStart >= weekStart && eventStart <= weekEnd) {
-                    allProcessedEvents.push(event);
-                }
-            }
+        const weekEvents = processed.filter(event => {
+            const eventStart = new Date((event as Event | MultiDayEventInstance).startTime);
+            return eventStart >= weekStart && eventStart <= weekEnd;
         });
 
-        console.log('[TechCalendarWeekView] Final processed events:', allProcessedEvents.length);
-        return allProcessedEvents;
+        console.log('[TechCalendarWeekView] Final processed events:', weekEvents.length);
+        return weekEvents;
     }, [events, weekDays]);
 
     // Group processed events by day for the grid
@@ -183,12 +97,13 @@ export default function TechCalendarWeekView({
                 }
 
                 // For regular events, check if they occur on this day
-                const eventStart = new Date(event.startTime);
+                const eventStart = new Date((event as Event | MultiDayEventInstance).startTime);
                 return eventStart.toDateString() === day.toDateString();
             });
 
 
 
+            // @ts-expect-error - Type compatibility issue with union types
             grouped.set(dayIndex, dayEvents);
         });
 
@@ -245,7 +160,7 @@ export default function TechCalendarWeekView({
                 <TimeSlotGrid
                     timeSlots={timeSlots}
                     weekDays={weekDays}
-                    eventsByDay={eventsByDay as Map<number, Event[]>}
+                    eventsByDay={eventsByDay}
                     startHour={START_HOUR}
                     endHour={END_HOUR}
                     onEventClick={handleEventClick}

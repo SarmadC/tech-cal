@@ -268,6 +268,12 @@ interface DbDailySchedule {
         start: string;
         end: string;
     }>;
+    custom_schedule?: Array<{
+        day: number;
+        start: string;
+        end: string;
+        note?: string;
+    }>;
 }
 
 // --- Enhanced Event Transformer ---
@@ -308,6 +314,7 @@ export const enhancedEventTransformer = {
                 timezone: dbSchedule.timezone,
                 note: dbSchedule.note,
                 schedule: dbSchedule.schedule,
+                custom_schedule: dbSchedule.custom_schedule, // Include custom_schedule for multi-day events
             };
         }
 

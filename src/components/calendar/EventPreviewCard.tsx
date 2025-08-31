@@ -149,8 +149,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                             event.tags.slice(0, 2).map((tag, index) => (
                                 <span
                                     key={index}
-                                    className="px-2 py-1 text-xs font-medium text-white rounded-full"
-                                    style={{ backgroundColor: tag.color || '#3b82f6' }}
+                                    className="px-2 py-1 text-xs font-medium text-white rounded-full bg-blue-500"
                                 >
                                     {tag.name}
                                 </span>

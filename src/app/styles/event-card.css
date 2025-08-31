@@ -3,8 +3,6 @@
 :root {
     /* Dynamic category colors - set via JavaScript */
     --category-bg: #f1f5f9;
-    --category-color: #6b7280;
-    --event-color: #6b7280;
     
     /* Pastel category colors */
     --pastel-tech-summit: #bfdbfe;

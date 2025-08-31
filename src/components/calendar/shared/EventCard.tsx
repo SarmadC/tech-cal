@@ -109,7 +109,6 @@ export const EventCard: React.FC<EventCardProps> = ({
 
     // Set up CSS variables for the new design
     const cardStyle: React.CSSProperties = {
-        ['--event-color' as string]: event.category?.color || '#6B7280',
         ['--category-bg' as string]: getCategoryColor(),
         backgroundColor: getCategoryColor(),
         ...style
