@@ -141,14 +141,6 @@ export const EventCard: React.FC<EventCardProps> = ({
     const showTimelineRail = isWeekView && cardSize >= 3;
     const showRibbon = isWeekView && cardSize >= 12;
 
-    // Debug: Check if tags are loading for visible events
-    if (event.title?.includes('Meta') || event.title?.includes('Product')) {
-        console.log('DEBUG - Event with tags:', {
-            title: event.title,
-            tags: event.tags,
-            tagsLength: event.tags?.length || 0
-        });
-    }
 
     
     // Small cards: Basic info only
@@ -194,29 +186,55 @@ export const EventCard: React.FC<EventCardProps> = ({
                 {/* Enhanced Content Tiers */}
                             {/* Tier 1: Basic Info (Always Visible) */}
             <div className="event-card-basic-info">
-                {/* Top section: Organizer logo only */}
-                <div className="event-top-section">
-                    {event.organization?.logo && (
-                        <div className="event-organizer-logo">
-                            <Image
-                                src={event.organization.logo}
-                                alt={`${event.organization.name} logo`}
-                                width={20}
-                                height={20}
-                                className="organizer-logo-image"
-                            />
-                        </div>
-                    )}
-                </div>
+                {/* Top section: No longer needed since logo moved to bottom-left corner */}
 
                 {/* Main title section */}
                 <div className="event-title-section">
                     <h3 className="event-title">{event.title}</h3>
+                </div>
+                
+                {/* Arrow icon in top-right corner */}
+                <div className="event-arrow-corner">
                     <LearnMoreButton 
                         onClick={onClick} 
                         showForLargeEvents={cardSize >= 4}
                     />
                 </div>
+
+                {/* Multi-day day indicator - subtle dots */}
+                {'dayInfo' in event && event.dayInfo && (
+                    <div className="event-day-dots">
+                        {Array.from({ length: event.dayInfo.totalDays }, (_, i) => (
+                            <div 
+                                key={i}
+                                className={`day-dot ${i + 1 === event.dayInfo!.currentDay ? 'active' : ''}`}
+                                style={{ 
+                                    backgroundColor: i + 1 === event.dayInfo!.currentDay 
+                                        ? getDarkerShade(getCategoryColor(), 0.4)
+                                        : getDarkerShade(getCategoryColor(), 0.15)
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
+
+                {/* Organizer logo in bottom-left corner */}
+                {event.organization?.logo && (
+                    <div className="event-organizer-logo-corner">
+                        <Image
+                            src={event.organization.logo}
+                            alt={`${event.organization.name} logo`}
+                            width={24}
+                            height={24}
+                            className="organizer-logo-corner-image"
+                            onError={(e) => {
+                                console.error('Failed to load organizer logo:', event.organization?.logo);
+                                e.currentTarget.style.display = 'none';
+                            }}
+                        />
+                    </div>
+                )}
+
 
                 {/* Tag Name and Category Display - show both on same line */}
                 {event.tags && event.tags.length > 0 && (

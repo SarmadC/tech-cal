@@ -134,12 +134,9 @@
     white-space: nowrap !important;
 }
 
-/* Event title section with arrow */
+/* Event title section - no longer needs flex layout */
 .event-title-section {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
+    display: block;
 }
 
 /* Event tags section */
@@ -662,6 +659,103 @@
 }
 
 
+
+/* ===================================
+   SMART CONTENT HIERARCHY BY EVENT DURATION
+   =================================== */
+
+/* Very Short Events (< 1 hour / span ≤ 2): Title + Arrow only */
+.tech-calendar-week-view .event-card[data-span="1"],
+.tech-calendar-week-view .event-card[data-span="2"] {
+    padding: var(--v8-space-xs) var(--v8-space-sm) !important;
+}
+
+.tech-calendar-week-view .event-card[data-span="1"] .event-tags-section,
+.tech-calendar-week-view .event-card[data-span="2"] .event-tags-section,
+.tech-calendar-week-view .event-card[data-span="1"] .event-info,
+.tech-calendar-week-view .event-card[data-span="2"] .event-info,
+.tech-calendar-week-view .event-card[data-span="1"] .event-top-section,
+.tech-calendar-week-view .event-card[data-span="2"] .event-top-section,
+.tech-calendar-week-view .event-card[data-span="1"] .venue-section,
+.tech-calendar-week-view .event-card[data-span="2"] .venue-section,
+.tech-calendar-week-view .event-card[data-span="1"] .event-card-premium-content,
+.tech-calendar-week-view .event-card[data-span="2"] .event-card-premium-content,
+.tech-calendar-week-view .event-card[data-span="1"] .event-card-extended-info,
+.tech-calendar-week-view .event-card[data-span="2"] .event-card-extended-info,
+.tech-calendar-week-view .event-card[data-span="1"] .event-card-rich-content,
+.tech-calendar-week-view .event-card[data-span="2"] .event-card-rich-content {
+    display: none !important;
+}
+
+.tech-calendar-week-view .event-card[data-span="1"] .event-title,
+.tech-calendar-week-view .event-card[data-span="2"] .event-title {
+    font-size: 0.7rem !important;
+    -webkit-line-clamp: 1 !important;
+    line-clamp: 1 !important;
+    white-space: nowrap !important;
+}
+
+/* Short Events (1-2 hours / span 3-4): Title + Arrow + 1 key tag */
+.tech-calendar-week-view .event-card[data-span="3"] .event-tags-section .event-tags-row,
+.tech-calendar-week-view .event-card[data-span="4"] .event-tags-section .event-tags-row {
+    display: flex !important;
+    gap: 4px !important;
+}
+
+.tech-calendar-week-view .event-card[data-span="3"] .event-tags-section .event-tags-row > *:nth-child(n+2),
+.tech-calendar-week-view .event-card[data-span="4"] .event-tags-section .event-tags-row > *:nth-child(n+2) {
+    display: none !important;
+}
+
+.tech-calendar-week-view .event-card[data-span="3"] .event-info,
+.tech-calendar-week-view .event-card[data-span="4"] .event-info,
+.tech-calendar-week-view .event-card[data-span="3"] .event-top-section,
+.tech-calendar-week-view .event-card[data-span="4"] .event-top-section,
+.tech-calendar-week-view .event-card[data-span="3"] .venue-section,
+.tech-calendar-week-view .event-card[data-span="4"] .venue-section,
+.tech-calendar-week-view .event-card[data-span="3"] .event-card-premium-content,
+.tech-calendar-week-view .event-card[data-span="4"] .event-card-premium-content,
+.tech-calendar-week-view .event-card[data-span="3"] .event-card-extended-info,
+.tech-calendar-week-view .event-card[data-span="4"] .event-card-extended-info,
+.tech-calendar-week-view .event-card[data-span="3"] .event-card-rich-content,
+.tech-calendar-week-view .event-card[data-span="4"] .event-card-rich-content {
+    display: none !important;
+}
+
+.tech-calendar-week-view .event-card[data-span="3"] .event-title,
+.tech-calendar-week-view .event-card[data-span="4"] .event-title {
+    font-size: 0.75rem !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+}
+
+/* Medium Events (2+ hours / span 5-6): Title + Arrow + 2 tags */
+.tech-calendar-week-view .event-card[data-span="5"] .event-tags-section .event-tags-row > *:nth-child(n+3),
+.tech-calendar-week-view .event-card[data-span="6"] .event-tags-section .event-tags-row > *:nth-child(n+3) {
+    display: none !important;
+}
+
+.tech-calendar-week-view .event-card[data-span="5"] .event-info,
+.tech-calendar-week-view .event-card[data-span="6"] .event-info {
+    display: none !important;
+}
+
+.tech-calendar-week-view .event-card[data-span="5"] .event-title,
+.tech-calendar-week-view .event-card[data-span="6"] .event-title {
+    font-size: 0.8rem !important;
+}
+
+/* Compact and Dense cards should hide premium content regardless of span */
+.tech-calendar-week-view .event-card.compact .venue-section,
+.tech-calendar-week-view .event-card.compact .event-card-premium-content,
+.tech-calendar-week-view .event-card.compact .event-card-extended-info,
+.tech-calendar-week-view .event-card.compact .event-card-rich-content,
+.tech-calendar-week-view .event-card.dense .venue-section,
+.tech-calendar-week-view .event-card.dense .event-card-premium-content,
+.tech-calendar-week-view .event-card.dense .event-card-extended-info,
+.tech-calendar-week-view .event-card.dense .event-card-rich-content {
+    display: none !important;
+}
 
 /* Dynamic Text Scaling by Event Duration */
 .tech-calendar-week-view .event-card[data-span-gt-4] .event-title {

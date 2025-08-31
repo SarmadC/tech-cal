@@ -53,7 +53,6 @@ export default function TechCalendarWeekView({
         console.log('[TechCalendarWeekView] Processing events:', events.length, 'events total');
 
         // Use the new processing function that handles custom schedules
-        // @ts-expect-error - Type compatibility issue with union types
         const processed = processEventsForWeekView(events);
         
         // Filter events to only show those within the current week
@@ -103,7 +102,6 @@ export default function TechCalendarWeekView({
 
 
 
-            // @ts-expect-error - Type compatibility issue with union types
             grouped.set(dayIndex, dayEvents);
         });
 

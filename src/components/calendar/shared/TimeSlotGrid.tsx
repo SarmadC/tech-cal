@@ -39,7 +39,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
     // Generate the grid template columns (time column + 7 day columns)
     const gridColsStyle = {
         gridTemplateColumns: `80px repeat(7, 1fr)`,
-        gridTemplateRows: `repeat(${totalSlots}, 30px)`, // Match day view: 30px per half-hour
+        gridTemplateRows: `repeat(${totalSlots}, 40px)`, // Increased from 30px to 40px per half-hour
         minWidth: '1200px'
     };
 
@@ -195,6 +195,9 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                         span > 2 ? 'data-span-gt-2' : '',
                         span > 4 ? 'data-span-gt-4' : '',
                         span > 6 ? 'data-span-gt-6' : '',
+                        span > 8 ? 'data-span-gt-8' : '',
+                        span > 10 ? 'data-span-gt-10' : '',
+                        span > 12 ? 'data-span-gt-12' : '',
                         visualInfo.isContinuingFromPreviousDay ? 'continuation-top' : '',
                         visualInfo.isContinuingToNextDay ? 'continuation-bottom' : '',
                         visualInfo.dayNumber ? `day-${visualInfo.dayNumber}` : ''

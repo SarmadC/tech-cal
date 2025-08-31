@@ -27,10 +27,45 @@ import {
 
 // --- Event Transformers ---
 // 2. UPDATE SIGNATURES: The transformer now correctly returns the base `Event` type.
+// Helper function to convert logo URL to appropriate format
+const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, supabaseUrl?: string): string | undefined => {
+    if (!logoUrl) return undefined;
+    
+    // If it's already a full URL (starts with http), return as-is
+    if (logoUrl.startsWith('http')) {
+        return logoUrl;
+    }
+    
+    // If it's a domain name (contains a dot but no file extension), use Logo.dev API
+    if (logoUrl.includes('.') && !logoUrl.includes('/') && !logoUrl.match(/\.(png|jpg|jpeg|svg|webp)$/i)) {
+        // Special handling for known companies with better transparent logos
+        const specialLogos: Record<string, string> = {
+            'meta.com': 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg',
+            'facebook.com': 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg',
+        };
+        
+        if (specialLogos[logoUrl]) {
+            return specialLogos[logoUrl];
+        }
+        
+        // Logo.dev API with transparent PNG, retina, and proper size for event cards
+        return `https://img.logo.dev/${logoUrl}?token=pk_GQL0xmfkStGE1eRKNPXh4A&format=png&size=24&retina=true`;
+    }
+    
+    // If it's a filename only, construct Supabase storage URL
+    const baseUrl = supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (baseUrl) {
+        return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
+    }
+    
+    return logoUrl;
+};
+
 export const eventTransformer = {
     toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): Event => {
         const organizerName = (supabaseEvent as SupabaseEventWithDetails).organizer?.name || 'Unknown Organizer';
-        const organizerLogo = (supabaseEvent as SupabaseEventWithDetails).organizer?.logo_url ?? undefined;
+        const rawLogoUrl = (supabaseEvent as SupabaseEventWithDetails).organizer?.logo_url ?? undefined;
+        const organizerLogo = getLogoUrl(rawLogoUrl);
         
         // Transform event tags from database format to app format
         // Tags are now directly attached to the event object

@@ -30,7 +30,10 @@
       "mcp__playwright__browser_tabs",
       "Bash(sed:*)",
       "Bash(npx postcss:*)",
-      "mcp__playwright__browser_press_key"
+      "mcp__playwright__browser_press_key",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run:*)",
+      "WebFetch(domain:img.logo.dev)"
     ],
     "deny": [],
     "ask": []
