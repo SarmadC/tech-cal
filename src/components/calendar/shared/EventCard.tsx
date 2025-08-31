@@ -81,6 +81,21 @@ export const EventCard: React.FC<EventCardProps> = ({
         }
     };
 
+    // Helper function to create a darker shade of the event color for tags
+    const getDarkerShade = (color: string, factor: number = 0.3) => {
+        // Handle hex colors
+        if (color.startsWith('#')) {
+            const hex = color.slice(1);
+            const num = parseInt(hex, 16);
+            const r = Math.floor((num >> 16) * (1 - factor));
+            const g = Math.floor(((num >> 8) & 0x00FF) * (1 - factor));
+            const b = Math.floor((num & 0x0000FF) * (1 - factor));
+            return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+        }
+        // For other color formats, use CSS color-mix as fallback
+        return `color-mix(in srgb, ${color} 70%, black)`;
+    };
+
     // Generate CSS classes for event state
     const cardClasses = [
         'event-card',
@@ -180,19 +195,8 @@ export const EventCard: React.FC<EventCardProps> = ({
                 {/* Enhanced Content Tiers */}
                             {/* Tier 1: Basic Info (Always Visible) */}
             <div className="event-card-basic-info">
-                {/* Top section: Session type and organizer logo */}
+                {/* Top section: Organizer logo only */}
                 <div className="event-top-section">
-                    {event.tags && event.tags.length > 0 && (
-                        <span 
-                            className="event-session-type"
-                            style={{ backgroundColor: event.tags[0].color }}
-                        >
-                            {/* Get the first unique tag name */}
-                            {event.tags.find((tag, index, self) => 
-                                index === self.findIndex(t => t.name === tag.name)
-                            )?.name || event.tags[0].name}
-                        </span>
-                    )}
                     {event.organization?.logo && (
                         <div className="event-organizer-logo">
                             <Image
@@ -215,26 +219,35 @@ export const EventCard: React.FC<EventCardProps> = ({
                     />
                 </div>
 
-                {/* Category and Event Tag Display - show on all cards with tags */}
+                {/* Tag Name and Category Display - show both on same line */}
                 {event.tags && event.tags.length > 0 && (
                     <div className="event-tags-section">
-                        {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
-                        {event.tags
-                            .filter((tag, index, self) => 
-                                index === self.findIndex(t => t.name === tag.name)
-                            )
-                            .slice(0, 2)
-                            .map((tag) => (
-                                <div key={tag.id} className="event-tags-row">
-                                    {/* Category as a separate pill (similar to top session type) */}
-                                    <span 
-                                        className="event-category-pill"
-                                        style={{ backgroundColor: tag.color }}
-                                    >
-                                        {tag.category.toUpperCase()}
-                                    </span>
-                                </div>
-                            ))}
+                        <div className="event-tags-row">
+                            {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
+                            {event.tags
+                                .filter((tag, index, self) => 
+                                    index === self.findIndex(t => t.name === tag.name)
+                                )
+                                .slice(0, 2)
+                                .map((tag) => (
+                                    <React.Fragment key={tag.id}>
+                                        {/* Tag Name (Session Type) */}
+                                        <span 
+                                            className="event-session-type"
+                                            style={{ backgroundColor: getDarkerShade(getCategoryColor(), 0.25) }}
+                                        >
+                                            {tag.name}
+                                        </span>
+                                        {/* Category */}
+                                        <span 
+                                            className="event-category-pill"
+                                            style={{ backgroundColor: getDarkerShade(getCategoryColor(), 0.25) }}
+                                        >
+                                            {tag.category.toUpperCase()}
+                                        </span>
+                                    </React.Fragment>
+                                ))}
+                        </div>
                     </div>
                 )}
 
