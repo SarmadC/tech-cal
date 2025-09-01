@@ -21,11 +21,11 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const category = categories.find(c => c.id === event.eventTypeId);
 
     return (
-        <aside className="w-96 bg-[#1e1e1e] border-l border-gray-800 p-6 flex flex-col relative">
+        <div className="h-full bg-[#1e1e1e] border-l border-gray-800 shadow-2xl p-6 flex flex-col relative">
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-white">Event Details</h2>
-                <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded-full">
-                    <X className="w-5 h-5" />
+                <button onClick={onClose} className="p-2 hover:bg-gray-700 rounded-full transition-colors">
+                    <X className="w-5 h-5 text-gray-400" />
                 </button>
             </div>
 
@@ -49,7 +49,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 <EventTracking event={event} />
                 <EventActions event={event} />
             </div>
-        </aside>
+        </div>
     );
 };
 

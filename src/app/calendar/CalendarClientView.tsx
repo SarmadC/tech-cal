@@ -239,7 +239,7 @@ export default function CalendarClientView({
             activeFilterCount={activeFilterCount}
             calendarRef={calendarRef}
             renderContent={(context) => (
-                <div className="flex h-full">
+                <div className="flex h-full relative">
                     <div className="flex-1 relative">
                         {renderCalendarContent(context)}
                     </div>
@@ -249,8 +249,16 @@ export default function CalendarClientView({
                         </div>
                     )}
                     {selectedEvent && (
-                        <div className="w-96 border-l border-border-default bg-background-elevated">
-                            <EventDetailPanelDynamic event={selectedEvent} onClose={closeEventDetail} categories={initialCategories} />
+                        <div 
+                            className="fixed inset-0 z-50 bg-black bg-opacity-50"
+                            onClick={closeEventDetail}
+                        >
+                            <div 
+                                className="absolute right-0 top-0 h-full w-96 transform transition-transform duration-300 ease-in-out"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <EventDetailPanelDynamic event={selectedEvent} onClose={closeEventDetail} categories={initialCategories} />
+                            </div>
                         </div>
                     )}
                 </div>
