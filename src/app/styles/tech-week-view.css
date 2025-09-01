@@ -109,8 +109,8 @@
 
 /* Week View Event Card Base Styles */
 .tech-calendar-week-view .event-card {
-    padding: var(--v8-space-sm) var(--v8-space-md) !important;
-    gap: 2px !important;
+    padding: var(--space-lg) !important; /* Use consistent padding with base event card */
+    gap: var(--space-sm) !important; /* Use consistent gap spacing */
     min-height: 20px !important;
     margin: 1px 1px !important;
     border-radius: var(--v8-radius-lg) !important;
@@ -129,9 +129,18 @@
     color: var(--text-on-pastel) !important;
     margin: 0 !important;
     line-height: 1.2 !important;
+    /* Allow text wrapping for long titles */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    /* Allow up to 3 lines for week view */
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
     overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
 }
 
 /* Event title section - no longer needs flex layout */
@@ -484,12 +493,22 @@
     }
     
     .tech-calendar-week-view .event-card {
-        padding: 0.2rem 0.3rem !important;
+        padding: var(--space-md) !important; /* Consistent smaller padding for mobile */
         font-size: 0.65rem !important;
     }
     
     .tech-calendar-week-view .event-card .event-title {
         font-size: 0.6rem !important;
+        /* Allow text wrapping for small screens */
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
     }
 }
 
@@ -508,12 +527,22 @@
     }
     
     .tech-calendar-week-view .event-card {
-        padding: 0.15rem 0.25rem !important;
+        padding: var(--space-sm) !important; /* Consistent smallest padding for very small screens */
         font-size: 0.6rem !important;
     }
     
     .tech-calendar-week-view .event-card .event-title {
         font-size: 0.55rem !important;
+        /* Allow text wrapping for very small screens */
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
     }
     
     .tech-calendar-week-view .event-card .event-time,
@@ -667,7 +696,7 @@
 /* Very Short Events (< 1 hour / span ≤ 2): Title + Arrow only */
 .tech-calendar-week-view .event-card[data-span="1"],
 .tech-calendar-week-view .event-card[data-span="2"] {
-    padding: var(--v8-space-xs) var(--v8-space-sm) !important;
+    padding: var(--space-md) !important; /* Use consistent but smaller padding for compact cards */
 }
 
 .tech-calendar-week-view .event-card[data-span="1"] .event-tags-section,
@@ -690,9 +719,16 @@
 .tech-calendar-week-view .event-card[data-span="1"] .event-title,
 .tech-calendar-week-view .event-card[data-span="2"] .event-title {
     font-size: 0.7rem !important;
-    -webkit-line-clamp: 1 !important;
-    line-clamp: 1 !important;
-    white-space: nowrap !important;
+    /* Allow natural text wrapping for very small cards */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
 /* Short Events (1-2 hours / span 3-4): Title + Arrow + 1 key tag */
@@ -725,8 +761,16 @@
 .tech-calendar-week-view .event-card[data-span="3"] .event-title,
 .tech-calendar-week-view .event-card[data-span="4"] .event-title {
     font-size: 0.75rem !important;
-    -webkit-line-clamp: 2 !important;
-    line-clamp: 2 !important;
+    /* Allow natural text wrapping */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
 /* Medium Events (2+ hours / span 5-6): Title + Arrow + 2 tags */
@@ -743,6 +787,16 @@
 .tech-calendar-week-view .event-card[data-span="5"] .event-title,
 .tech-calendar-week-view .event-card[data-span="6"] .event-title {
     font-size: 0.8rem !important;
+    /* Allow text wrapping for medium cards */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
 /* Compact and Dense cards should hide premium content regardless of span */
@@ -760,24 +814,72 @@
 /* Dynamic Text Scaling by Event Duration */
 .tech-calendar-week-view .event-card[data-span-gt-4] .event-title {
     font-size: 0.85rem !important;
+    /* Allow text wrapping for larger cards */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 4 !important;
+    line-clamp: 4 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
 .tech-calendar-week-view .event-card[data-span-gt-6] .event-title {
     font-size: 0.9rem !important;
+    /* Allow text wrapping for very large cards */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 5 !important;
+    line-clamp: 5 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
 .tech-calendar-week-view .event-card[data-span-gt-8] .event-title {
     font-size: 0.95rem !important;
-    -webkit-line-clamp: 3 !important;
-    line-clamp: 3 !important;
+    /* Allow natural text wrapping for large cards */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 6 !important;
+    line-clamp: 6 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
 .tech-calendar-week-view .event-card[data-span-gt-10] .event-title {
     font-size: 1rem !important;
+    /* Allow text wrapping for extra large cards */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 6 !important;
+    line-clamp: 6 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
 .tech-calendar-week-view .event-card[data-span-gt-12] .event-title {
     font-size: 1.05rem !important;
+    /* Allow text wrapping for maximum size cards */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 6 !important;
+    line-clamp: 6 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
 /* Hide SVG on hover to show text */
@@ -837,6 +939,7 @@
     transform: scale(1);
     visibility: visible;
     font-size: 20px;
+    padding-top:5px;
 }
 
 .arrow-icon.arrow-hovered {

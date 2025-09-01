@@ -81,9 +81,9 @@ export const EventCard: React.FC<EventCardProps> = ({
         }
     };
 
-    // Helper function to create a darker shade of the event color for tags
-    const getDarkerShade = (color: string, factor: number = 0.3) => {
-        // Handle hex colors
+    // Helper function to create a moderately darker shade of the event color for tags
+    const getPillColor = (color: string, factor: number = 0.15) => {
+        // Handle hex colors - make them slightly darker but not too dark
         if (color.startsWith('#')) {
             const hex = color.slice(1);
             const num = parseInt(hex, 16);
@@ -92,8 +92,8 @@ export const EventCard: React.FC<EventCardProps> = ({
             const b = Math.floor((num & 0x0000FF) * (1 - factor));
             return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
         }
-        // For other color formats, use CSS color-mix as fallback
-        return `color-mix(in srgb, ${color} 70%, black)`;
+        // For other color formats, use CSS color-mix to make slightly darker
+        return `color-mix(in srgb, ${color} 85%, black)`;
     };
 
     // Generate CSS classes for event state
@@ -139,7 +139,6 @@ export const EventCard: React.FC<EventCardProps> = ({
     const isDense = isWeekView && cardSize <= 4;
 
     const showTimelineRail = isWeekView && cardSize >= 3;
-    const showRibbon = isWeekView && cardSize >= 12;
 
 
     
@@ -168,9 +167,6 @@ export const EventCard: React.FC<EventCardProps> = ({
             data-span-gt-10={cardSize > 10 || undefined}
             data-span-gt-12={cardSize > 12 || undefined}
         >
-            {showRibbon && event.category?.name && (
-                <div className="event-corner-ribbon" aria-hidden="true">{event.category.name}</div>
-            )}
 
             {/* Left timeline rail */}
             {showTimelineRail && (
@@ -210,8 +206,8 @@ export const EventCard: React.FC<EventCardProps> = ({
                                 className={`day-dot ${i + 1 === event.dayInfo!.currentDay ? 'active' : ''}`}
                                 style={{ 
                                     backgroundColor: i + 1 === event.dayInfo!.currentDay 
-                                        ? getDarkerShade(getCategoryColor(), 0.4)
-                                        : getDarkerShade(getCategoryColor(), 0.15)
+                                        ? getPillColor(getCategoryColor(), 0.4)
+                                        : getPillColor(getCategoryColor(), 0.15)
                                 }}
                             />
                         ))}
@@ -251,14 +247,20 @@ export const EventCard: React.FC<EventCardProps> = ({
                                         {/* Tag Name (Session Type) */}
                                         <span 
                                             className="event-session-type"
-                                            style={{ backgroundColor: getDarkerShade(getCategoryColor(), 0.25) }}
+                                            style={{ 
+                                                backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                                color: 'white'
+                                            }}
                                         >
                                             {tag.name}
                                         </span>
                                         {/* Category */}
                                         <span 
                                             className="event-category-pill"
-                                            style={{ backgroundColor: getDarkerShade(getCategoryColor(), 0.25) }}
+                                            style={{ 
+                                                backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                                color: 'white'
+                                            }}
                                         >
                                             {tag.category.toUpperCase()}
                                         </span>

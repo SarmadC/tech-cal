@@ -115,19 +115,23 @@
 
 /* Day view specific event card content adjustments */
 .tech-day-view .event-card .event-title {
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
     margin-bottom: 0.25rem;
+    /* Allow natural text wrapping in day view */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
 }
 
 .tech-day-view .event-card[data-span-gt-4] .event-title { 
-    -webkit-line-clamp: 4; 
-    line-clamp: 4; 
+    /* Allow more generous wrapping for larger cards */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .tech-day-view .event-card[data-span-gt-8] .event-title { 
-    -webkit-line-clamp: 6; 
-    line-clamp: 6; 
+    /* Allow maximum text display for very large cards */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 /* Day view event time display */
