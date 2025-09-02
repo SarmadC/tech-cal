@@ -705,8 +705,7 @@
 .tech-calendar-week-view .event-card[data-span="2"] .event-info,
 .tech-calendar-week-view .event-card[data-span="1"] .event-top-section,
 .tech-calendar-week-view .event-card[data-span="2"] .event-top-section,
-.tech-calendar-week-view .event-card[data-span="1"] .venue-section,
-.tech-calendar-week-view .event-card[data-span="2"] .venue-section,
+
 .tech-calendar-week-view .event-card[data-span="1"] .event-card-premium-content,
 .tech-calendar-week-view .event-card[data-span="2"] .event-card-premium-content,
 .tech-calendar-week-view .event-card[data-span="1"] .event-card-extended-info,
@@ -747,8 +746,7 @@
 .tech-calendar-week-view .event-card[data-span="4"] .event-info,
 .tech-calendar-week-view .event-card[data-span="3"] .event-top-section,
 .tech-calendar-week-view .event-card[data-span="4"] .event-top-section,
-.tech-calendar-week-view .event-card[data-span="3"] .venue-section,
-.tech-calendar-week-view .event-card[data-span="4"] .venue-section,
+
 .tech-calendar-week-view .event-card[data-span="3"] .event-card-premium-content,
 .tech-calendar-week-view .event-card[data-span="4"] .event-card-premium-content,
 .tech-calendar-week-view .event-card[data-span="3"] .event-card-extended-info,
@@ -800,11 +798,9 @@
 }
 
 /* Compact and Dense cards should hide premium content regardless of span */
-.tech-calendar-week-view .event-card.compact .venue-section,
 .tech-calendar-week-view .event-card.compact .event-card-premium-content,
 .tech-calendar-week-view .event-card.compact .event-card-extended-info,
 .tech-calendar-week-view .event-card.compact .event-card-rich-content,
-.tech-calendar-week-view .event-card.dense .venue-section,
 .tech-calendar-week-view .event-card.dense .event-card-premium-content,
 .tech-calendar-week-view .event-card.dense .event-card-extended-info,
 .tech-calendar-week-view .event-card.dense .event-card-rich-content {

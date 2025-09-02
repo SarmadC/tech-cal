@@ -157,7 +157,6 @@ export function processEventsForWeekView(
             // This is a multi-day event with custom schedule - split into individual day cards
             
             const startDate = new Date(event.startTime);
-            const _endDate = event.endTime ? new Date(event.endTime) : startDate;
             const customSchedule = event.dailySchedule.custom_schedule!;
             
             customSchedule.forEach((daySchedule) => {
@@ -171,8 +170,11 @@ export function processEventsForWeekView(
                 const dateStr = `${year}-${month}-${day}`;
                 
                 // Create proper ISO datetime strings with timezone
-                const dayStartTime = `${dateStr}T${daySchedule.start}:00`;
-                const dayEndTime = `${dateStr}T${daySchedule.end}:00`;
+                // Ensure proper HH:MM format by padding single digits
+                const startHour = daySchedule.start.padStart(5, '0'); // Convert "9:00" to "09:00"
+                const endHour = daySchedule.end.padStart(5, '0'); // Convert "16:00" to "16:00" (no change)
+                const dayStartTime = `${dateStr}T${startHour}:00`;
+                const dayEndTime = `${dateStr}T${endHour}:00`;
                 
                 const dayInstance: MultiDayEventInstance = {
                     ...event,
@@ -220,8 +222,8 @@ export function processEventsForWeekView(
                     const dateStr = `${year}-${month}-${day}`;
                     
                     // Use the daily recurring schedule times
-                    const dailyStart = event.dailySchedule.dailyStart || '09:00';
-                    const dailyEnd = event.dailySchedule.dailyEnd || '17:00';
+                    const dailyStart = (event.dailySchedule.dailyStart || '09:00').padStart(5, '0');
+                    const dailyEnd = (event.dailySchedule.dailyEnd || '17:00').padStart(5, '0');
                     const dayStartTime = `${dateStr}T${dailyStart}:00`;
                     const dayEndTime = `${dateStr}T${dailyEnd}:00`;
                     

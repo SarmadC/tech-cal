@@ -270,6 +270,13 @@ export const EventCard: React.FC<EventCardProps> = ({
                     </div>
                 )}
 
+                {/* Event description - moved to top for better hierarchy */}
+                {showWeekDescription && event.description && (
+                    <div className="event-description">
+                        <span>{event.description.length > 80 ? `${event.description.substring(0, 80)}...` : event.description}</span>
+                    </div>
+                )}
+
                 {/* Basic location and organizer */}
                 <div className="event-info">
                     {showWeekLocation && event.location && (
@@ -306,18 +313,7 @@ export const EventCard: React.FC<EventCardProps> = ({
 
             {/* Tier 4: Premium Content (6+ hour events) - only show if we have rich data */}
             <div className="event-card-premium-content">
-                {/* Venue Section - only if location is meaningful */}
-                {event.location && event.location !== 'Remote' && event.location !== 'Online' && (
-                    <div className="venue-section">
-                        <div className="venue-photo">
-                            <span className="venue-icon">🏢</span>
-                        </div>
-                        <div className="venue-info">
-                            <div className="venue-name">Event Venue</div>
-                            <div className="venue-location">{event.location}</div>
-                        </div>
-                    </div>
-                )}
+                {/* Additional premium content can go here */}
             </div>
 
             {/* Removed duplicate bottom section - location and organizer already shown above */}
@@ -325,11 +321,6 @@ export const EventCard: React.FC<EventCardProps> = ({
             {/* Removed redundant facts row - location and organizer already shown above */}
 
             {/* Additional content for larger cards - cleaned up */}
-            {showWeekDescription && event.description && (
-                <div className="event-description">
-                    <span>{event.description.length > 80 ? `${event.description.substring(0, 80)}...` : event.description}</span>
-                </div>
-            )}
 
             {/* Day view content - only show time for day view */}
             {viewType === 'day' && (
