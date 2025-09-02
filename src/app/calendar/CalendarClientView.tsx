@@ -244,8 +244,16 @@ export default function CalendarClientView({
                         {renderCalendarContent(context)}
                     </div>
                     {isFilterPanelOpen && (
-                        <div className="w-80 border-l border-border-default bg-background-elevated">
-                            <SmartFilterPanel filters={filters} onUpdateFilter={updateFilter} onResetFilters={resetFilters} onApplyQuickFilter={applyQuickFilter} activeFilterCount={activeFilterCount} isOpen={isFilterPanelOpen} onClose={toggleFilterPanel} />
+                        <div 
+                            className="fixed inset-0 z-40 bg-black bg-opacity-50"
+                            onClick={toggleFilterPanel}
+                        >
+                            <div 
+                                className="absolute right-0 top-0 h-full w-80 transform transition-transform duration-300 ease-in-out"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <SmartFilterPanel filters={filters} onUpdateFilter={updateFilter} onResetFilters={resetFilters} onApplyQuickFilter={applyQuickFilter} activeFilterCount={activeFilterCount} isOpen={isFilterPanelOpen} onClose={toggleFilterPanel} />
+                            </div>
                         </div>
                     )}
                     {selectedEvent && (

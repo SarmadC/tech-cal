@@ -3,7 +3,7 @@
 import { FC } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation'; // 1. IMPORT ROUTER HOOKS
-import { ChevronLeft, ChevronRight, LayoutDashboard, Filter } from 'lucide-react';
+import { LayoutDashboard, Filter } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/common/UserMenu';
 
@@ -20,7 +20,7 @@ export interface CalendarHeaderProps {
 }
 
 const CalendarHeader: FC<CalendarHeaderProps> = ({
-    currentDate,
+    currentDate: _currentDate,
     onNavigate,
     onToggleFilters,
     isFilterPanelOpen,
@@ -42,22 +42,18 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
 
     return (
         <header className="h-20 flex-shrink-0 px-4 md:px-6 flex items-center justify-between border-b border-border-subtle">
-            {/* Left Section: Branding and Title (No changes here) */}
+            {/* Left Section: Branding */}
             <div className="flex items-center space-x-4">
                 <Link href="/dashboard" className="p-2 text-foreground-secondary hover:text-foreground-primary hover:bg-background-tertiary rounded-lg transition-colors" title="Go to Dashboard">
                     <LayoutDashboard className="w-5 h-5" />
                 </Link>
-                <h1 className="text-xl font-semibold text-foreground-primary hidden sm:block">
-                    {currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                </h1>
             </div>
 
             {/* Center Section: Calendar Controls */}
             <div className="flex items-center space-x-2 md:space-x-4">
+                {/* Keep only the Today button */}
                 <div className="flex items-center space-x-1">
-                    <button onClick={() => onNavigate('prev')} className="p-2 text-foreground-secondary hover:bg-background-tertiary rounded-lg transition-colors"><ChevronLeft className="w-5 h-5" /></button>
                     <button onClick={() => onNavigate('today')} className="text-sm px-3 py-1.5 border border-border-default rounded-lg hover:bg-background-tertiary transition-colors">Today</button>
-                    <button onClick={() => onNavigate('next')} className="p-2 text-foreground-secondary hover:bg-background-tertiary rounded-lg transition-colors"><ChevronRight className="w-5 h-5" /></button>
                 </div>
 
                 {/* [MODIFIED] View Switcher Buttons */}
@@ -85,7 +81,6 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                     aria-label="Toggle smart filters"
                 >
                     <Filter className="w-4 h-4" />
-                    <span className="hidden sm:inline">Smart Filters</span>
                     {activeFilterCount > 0 && (
                         <div className="filter-count-badge">
                             {activeFilterCount}
