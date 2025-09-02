@@ -48,12 +48,12 @@ const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, 
             return specialLogos[logoUrl];
         }
         
-        // Logo.dev API with transparent PNG, retina, and proper size for event cards
-        return `https://img.logo.dev/${logoUrl}?token=pk_GQL0xmfkStGE1eRKNPXh4A&format=png&size=24&retina=true`;
+        // Logo.dev API with SVG format for better scalability
+        return `https://img.logo.dev/${logoUrl}?token=pk_GQL0xmfkStGE1eRKNPXh4A&format=svg&size=24`;
     }
     
-    // If it's a filename only, construct Supabase storage URL
-    const baseUrl = supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    // If it's a filename (including SVG), construct Supabase storage URL
+    const baseUrl = supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mddgtexrnnlctttbcpsy.supabase.co';
     if (baseUrl) {
         return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
     }
@@ -63,9 +63,10 @@ const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, 
 
 export const eventTransformer = {
     toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): Event => {
-        const organizerName = (supabaseEvent as SupabaseEventWithDetails).organizer?.name || 'Unknown Organizer';
-        const rawLogoUrl = (supabaseEvent as SupabaseEventWithDetails).organizer?.logo_url ?? undefined;
-        const organizerLogo = getLogoUrl(rawLogoUrl);
+        const organizerData = (supabaseEvent as SupabaseEventWithDetails).organizer;
+        const organizerName = organizerData?.name || 'Unknown Organizer';
+        const rawLogoUrl = organizerData?.logo_url ?? undefined;
+        const organizerLogo = getLogoUrl(rawLogoUrl, organizerName);
         
         // Transform event tags from database format to app format
         // Tags are now directly attached to the event object

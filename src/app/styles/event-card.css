@@ -3,6 +3,7 @@
 :root {
     /* Dynamic category colors - set via JavaScript */
     --category-bg: #f1f5f9;
+    --category-title-color: #1e293b; /* Dynamic darker shade for titles */
     
     /* Pastel category colors */
     --pastel-tech-summit: #bfdbfe;
@@ -198,7 +199,7 @@
 .event-card .event-title {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--text-on-pastel);
+    color: var(--category-title-color, var(--text-on-pastel)); /* Use darker shade of category color */
     line-height: 1.3;
     letter-spacing: -0.015em;
     margin-bottom: var(--space-xs);
@@ -214,6 +215,7 @@
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 3; /* Allow up to 3 lines */
+    line-clamp: 3;
     -webkit-box-orient: vertical;
 }
 
@@ -239,12 +241,25 @@
     border-radius: var(--radius-lg);
     letter-spacing: 0.025em;
     line-height: 1.2;
-    /* For long text, allow wrapping but prefer keeping on one line */
+    /* Allow natural wrapping based on content */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: calc(50% - var(--space-xs)); /* Allow two pills per row with gap */
     flex-shrink: 1;
+    flex-basis: auto; /* Allow natural sizing */
+    min-width: 0; /* Allow shrinking if needed */
+}
+
+/* For smaller cards, constrain pill width */
+.event-card:not([data-span-gt-4]) .event-session-type,
+.event-card:not([data-span-gt-4]) .event-category-pill {
+    max-width: calc(50% - var(--space-xs)); /* Allow two pills per row with gap for small cards */
+}
+
+/* For medium cards, allow more flexible sizing */
+.event-card[data-span-gt-4]:not([data-span-gt-6]) .event-session-type,
+.event-card[data-span-gt-4]:not([data-span-gt-6]) .event-category-pill {
+    max-width: calc(60% - var(--space-xs)); /* More space for medium cards */
 }
 
 /* For larger event cards, allow full text display */
@@ -306,8 +321,8 @@
     bottom: var(--space-md);
     left: var(--space-md);
     z-index: 10;
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     border-radius: var(--radius-sm);
     overflow: hidden;
     background: transparent; /* Remove glass background */
@@ -322,10 +337,21 @@
     height: 100%;
     object-fit: contain;
     border-radius: var(--radius-sm);
+    /* Optimize rendering for both PNG and SVG */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated; /* Fallback for PNGs */
 }
 
-/* For external images that might have backgrounds */
-.event-card .organizer-logo-corner-image[src] {
+/* SVG logos - perfect scalability */
+.event-card .organizer-logo-corner-image[src$=".svg"] {
+    image-rendering: auto; /* Let browser handle SVG scaling */
+    mix-blend-mode: normal;
+    filter: none;
+}
+
+/* PNG logos - apply filters for better appearance */
+.event-card .organizer-logo-corner-image[src$=".png"] {
     /* Use CSS to create transparency effect for logos with light backgrounds */
     background: transparent;
     /* Try different blend modes for transparency */
@@ -426,8 +452,22 @@
 
 /* Compact View */
 .event-card.compact {
-    padding: var(--space-md) !important;
+    padding: var(--space-xs) var(--space-md) !important;
+    padding-top: var(--space-xs) !important;
     gap: var(--space-xs) !important;
+    /* Add bottom padding to create space for the logo */
+    padding-bottom: calc(var(--space-md) + 32px) !important;
+}
+
+/* Reduce gap between title and logo for compact cards */
+.event-card.compact .event-card-basic-info {
+    gap: 2px !important;
+}
+
+.event-card.compact .event-arrow-corner {
+    top: var(--space-xs) !important;
+    right: calc(var(--space-md) - 20px) !important;
+
 }
 
 .event-card.compact .event-title {
@@ -456,8 +496,20 @@
 
 /* Mini View */
 .event-card.mini {
-    padding: var(--space-sm) var(--space-md) !important;
+    padding: var(--space-xs) var(--space-md) !important;
     gap: var(--space-xs) !important;
+    /* Add bottom padding to create space for the logo */
+    padding-bottom: calc(var(--space-sm) + 32px) !important;
+}
+
+/* Reduce gap between title and logo for mini cards */
+.event-card.mini .event-card-basic-info {
+    gap: 2px !important;
+}
+
+/* Fix arrow positioning for mini cards */
+.event-card.mini .event-arrow-corner {
+    top: calc(var(--space-xs) + 2px) !important;
 }
 
 .event-card.mini .event-header {
@@ -496,8 +548,20 @@
 
 /* Week View Specific Styling */
 .tech-calendar-week-view .event-card {
-    padding: var(--space-sm) var(--space-md) !important;
+    padding: var(--space-xs) var(--space-md) !important;
     gap: var(--space-xs) !important;
+    /* Add bottom padding to create space for the logo */
+    padding-bottom: calc(var(--space-sm) + 32px) !important;
+}
+
+/* Reduce gap between title and logo for week view cards */
+.tech-calendar-week-view .event-card .event-card-basic-info {
+    gap: 2px !important;
+}
+
+/* Fix arrow positioning for week view cards */
+.tech-calendar-week-view .event-card .event-arrow-corner {
+    top: calc(var(--space-xs) + 2px) !important;
 }
 
 .tech-calendar-week-view .event-card .event-title {

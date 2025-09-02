@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Clock, MapPin, User } from 'lucide-react';
+import { Clock, MapPin, User, Video, Headphones, Building2, Globe } from 'lucide-react';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { isEventLive, formatTime } from '@/utils/dateUtils';
 import { LearnMoreButton } from './LearnMoreButton';
@@ -47,6 +47,34 @@ export const EventCard: React.FC<EventCardProps> = ({
     const elapsedMs = Math.min(Math.max(now.getTime() - startDate.getTime(), 0), totalMs);
     const progressPercent = Math.round((elapsedMs / totalMs) * 100);
 
+    // Get appropriate location icon based on venue type
+    const getLocationIcon = (location: string) => {
+        const loc = location.toLowerCase();
+        
+        // Virtual/Remote events
+        if (loc.includes('remote') || loc.includes('virtual') || loc.includes('online')) {
+            return <Video size={10} />;
+        }
+        
+        // VR/AR/Metaverse events
+        if (loc.includes('vr') || loc.includes('ar') || loc.includes('metaverse') || loc.includes('virtual reality')) {
+            return <Headphones size={10} />;
+        }
+        
+        // Conference centers, convention halls, specific venues
+        if (loc.includes('conference') || loc.includes('convention') || loc.includes('center') || loc.includes('hall') || loc.includes('expo')) {
+            return <Building2 size={10} />;
+        }
+        
+        // Global/worldwide events
+        if (loc.includes('worldwide') || loc.includes('global') || loc.includes('international')) {
+            return <Globe size={10} />;
+        }
+        
+        // Default to map pin for physical locations
+        return <MapPin size={10} />;
+    };
+
     // Get category-based background color from the event type
     const getCategoryColor = () => {
         // If we have a category with a color, use it directly
@@ -81,19 +109,57 @@ export const EventCard: React.FC<EventCardProps> = ({
         }
     };
 
-    // Helper function to create a moderately darker shade of the event color for tags
-    const getPillColor = (color: string, factor: number = 0.15) => {
-        // Handle hex colors - make them slightly darker but not too dark
+    // Helper function to create vibrant "pop" colors from pastel backgrounds
+    const getPillColor = (color: string, _factor: number = 0.15) => {
         if (color.startsWith('#')) {
             const hex = color.slice(1);
             const num = parseInt(hex, 16);
-            const r = Math.floor((num >> 16) * (1 - factor));
-            const g = Math.floor(((num >> 8) & 0x00FF) * (1 - factor));
-            const b = Math.floor((num & 0x0000FF) * (1 - factor));
-            return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+            const r = (num >> 16) & 0xFF;
+            const g = (num >> 8) & 0xFF;
+            const b = num & 0xFF;
+            
+            // Convert to HSL for better color manipulation
+            const max = Math.max(r, g, b) / 255;
+            const min = Math.min(r, g, b) / 255;
+            const delta = max - min;
+            
+            let h = 0;
+            if (delta !== 0) {
+                if (max === r/255) h = ((g/255 - b/255) / delta) % 6;
+                else if (max === g/255) h = (b/255 - r/255) / delta + 2;
+                else h = (r/255 - g/255) / delta + 4;
+            }
+            h = Math.round(h * 60);
+            if (h < 0) h += 360;
+            
+            const l = (max + min) / 2;
+            const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+            
+            // Create vibrant pop color: increase saturation dramatically and adjust lightness
+            const newS = Math.min(0.45, s * 2.5); // Much higher saturation
+            const newL = Math.max(0.10, Math.min(0.55, l * 0.5)); // Darker but not too dark
+            
+            // Convert back to RGB
+            const c = (1 - Math.abs(2 * newL - 1)) * newS;
+            const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+            const m = newL - c / 2;
+            
+            let rNew = 0, gNew = 0, bNew = 0;
+            if (h >= 0 && h < 60) { rNew = c; gNew = x; bNew = 0; }
+            else if (h >= 60 && h < 120) { rNew = x; gNew = c; bNew = 0; }
+            else if (h >= 120 && h < 180) { rNew = 0; gNew = c; bNew = x; }
+            else if (h >= 180 && h < 240) { rNew = 0; gNew = x; bNew = c; }
+            else if (h >= 240 && h < 300) { rNew = x; gNew = 0; bNew = c; }
+            else if (h >= 300 && h < 360) { rNew = c; gNew = 0; bNew = x; }
+            
+            const finalR = Math.round((rNew + m) * 255);
+            const finalG = Math.round((gNew + m) * 255);
+            const finalB = Math.round((bNew + m) * 255);
+            
+            return `#${finalR.toString(16).padStart(2, '0')}${finalG.toString(16).padStart(2, '0')}${finalB.toString(16).padStart(2, '0')}`;
         }
-        // For other color formats, use CSS color-mix to make slightly darker
-        return `color-mix(in srgb, ${color} 85%, black)`;
+        // For other color formats, create a more vibrant version
+        return `color-mix(in srgb, ${color} 40%, hsl(var(--hue, 220) 85% 45%))`;
     };
 
     // Generate CSS classes for event state
@@ -110,6 +176,7 @@ export const EventCard: React.FC<EventCardProps> = ({
     // Set up CSS variables for the new design
     const cardStyle: React.CSSProperties = {
         ['--category-bg' as string]: getCategoryColor(),
+        ['--category-title-color' as string]: getPillColor(getCategoryColor(), 0.5),    
         backgroundColor: getCategoryColor(),
         ...style
     };
@@ -143,7 +210,8 @@ export const EventCard: React.FC<EventCardProps> = ({
 
     
     // Small cards: Basic info only
-    const showWeekLocation = viewType === 'week' && cardSize >= 4;
+    // Show location for medium and larger cards (span > 4)
+    const showWeekLocation = viewType === 'week' && cardSize > 4;
     const showWeekOrganizer = viewType === 'week' && cardSize >= 6;
     
     // Medium cards: Add progress indicators
@@ -193,7 +261,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                 <div className="event-arrow-corner">
                     <LearnMoreButton 
                         onClick={onClick} 
-                        showForLargeEvents={cardSize >= 4}
+                        showForLargeEvents={true}
                     />
                 </div>
 
@@ -220,8 +288,8 @@ export const EventCard: React.FC<EventCardProps> = ({
                         <Image
                             src={event.organization.logo}
                             alt={`${event.organization.name} logo`}
-                            width={24}
-                            height={24}
+                            width={18}
+                            height={18}
                             className="organizer-logo-corner-image"
                             onError={(e) => {
                                 console.error('Failed to load organizer logo:', event.organization?.logo);
@@ -281,7 +349,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                 <div className="event-info">
                     {showWeekLocation && event.location && (
                         <span className="event-location-text">
-                            <MapPin size={10} />
+                            {getLocationIcon(event.location)}
                             {event.location}
                         </span>
                     )}
@@ -316,11 +384,6 @@ export const EventCard: React.FC<EventCardProps> = ({
                 {/* Additional premium content can go here */}
             </div>
 
-            {/* Removed duplicate bottom section - location and organizer already shown above */}
-
-            {/* Removed redundant facts row - location and organizer already shown above */}
-
-            {/* Additional content for larger cards - cleaned up */}
 
             {/* Day view content - only show time for day view */}
             {viewType === 'day' && (

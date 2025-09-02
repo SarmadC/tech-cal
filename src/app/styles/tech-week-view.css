@@ -126,7 +126,7 @@
 .tech-calendar-week-view .event-card .event-title {
     font-size: 0.75rem !important;
     font-weight: 600 !important;
-    color: var(--text-on-pastel) !important;
+    color: var(--category-title-color, var(--text-on-pastel)) !important; /* Use dynamic category color */
     margin: 0 !important;
     line-height: 1.2 !important;
     /* Allow text wrapping for long titles */
@@ -137,7 +137,6 @@
     /* Allow up to 3 lines for week view */
     display: -webkit-box !important;
     -webkit-line-clamp: 3 !important;
-    line-clamp: 3 !important;
     line-clamp: 3 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
@@ -208,6 +207,7 @@
 /* New separated category and tag pills */
 .event-tags-row {
     display: flex;
+    flex-wrap: wrap; /* Allow wrapping to new line */
     align-items: center;
     gap: 6px;
     margin-bottom: 4px;
@@ -373,6 +373,11 @@
 
 .tech-calendar-week-view .event-card[class*="day-"] .event-title {
     margin-top: 14px !important;
+}
+
+/* Remove top margin for compact cards only */
+.tech-calendar-week-view .event-card.compact[class*="day-"] .event-title {
+    margin-top: 0 !important;
 }
 
 /* Hover effects */
@@ -717,7 +722,7 @@
 
 .tech-calendar-week-view .event-card[data-span="1"] .event-title,
 .tech-calendar-week-view .event-card[data-span="2"] .event-title {
-    font-size: 0.7rem !important;
+    font-size: 0.6rem !important;
     /* Allow natural text wrapping for very small cards */
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
@@ -771,15 +776,24 @@
     overflow: hidden !important;
 }
 
-/* Medium Events (2+ hours / span 5-6): Title + Arrow + 2 tags */
+/* Medium Events (2+ hours / span 5-6): Title + Arrow + 2 tags + venue + description */
 .tech-calendar-week-view .event-card[data-span="5"] .event-tags-section .event-tags-row > *:nth-child(n+3),
 .tech-calendar-week-view .event-card[data-span="6"] .event-tags-section .event-tags-row > *:nth-child(n+3) {
     display: none !important;
 }
 
+/* Show venue information for medium cards */
 .tech-calendar-week-view .event-card[data-span="5"] .event-info,
 .tech-calendar-week-view .event-card[data-span="6"] .event-info {
-    display: none !important;
+    display: flex !important;
+}
+
+/* Show description for medium cards */
+.tech-calendar-week-view .event-card[data-span="5"] .event-description,
+.tech-calendar-week-view .event-card[data-span="6"] .event-description {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
 }
 
 .tech-calendar-week-view .event-card[data-span="5"] .event-title,
@@ -936,6 +950,17 @@
     visibility: visible;
     font-size: 20px;
     padding-top:5px;
+}
+
+/* Add margin-top for compact cards only */
+.event-card.compact .arrow-icon {
+    margin-top: 3px;
+}
+
+/* Add margin-top and margin-right for medium cards (span > 4 but <= 6) - applied to button-content instead of arrow-icon */
+.event-card[data-span-gt-4]:not([data-span-gt-6]) .button-content {
+    margin-top: 49px;
+    margin-right: -13px; /* Shift 13px right to align with event dots */
 }
 
 .arrow-icon.arrow-hovered {
