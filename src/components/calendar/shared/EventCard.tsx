@@ -5,7 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 import { MapPin, User, Video, Headphones, Building2, Globe } from 'lucide-react';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
-import { isEventLive, formatTime } from '@/utils/dateUtils';
+import { isEventLive } from '@/utils/dateUtils';
 import { LearnMoreButton } from './LearnMoreButton';
 
 export interface EventCardProps {
