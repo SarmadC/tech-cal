@@ -229,7 +229,10 @@
     display: flex;
     flex-wrap: wrap; /* Allow wrapping to new line */
     gap: var(--space-xs);
-    align-items: center;
+    align-items: flex-start; /* Align to top for better multi-line appearance */
+    align-content: flex-start; /* Pack items to the start */
+    /* Ensure proper spacing when items wrap */
+    row-gap: var(--space-xs);
 }
 
 /* Event Tag Pills */
@@ -250,16 +253,19 @@
     min-width: 0; /* Allow shrinking if needed */
 }
 
-/* For smaller cards, constrain pill width */
+/* For smaller cards, constrain pill width and allow wrapping */
 .event-card:not([data-span-gt-4]) .event-session-type,
 .event-card:not([data-span-gt-4]) .event-category-pill {
     max-width: calc(50% - var(--space-xs)); /* Allow two pills per row with gap for small cards */
+    flex-shrink: 1;
 }
 
-/* For medium cards, allow more flexible sizing */
+/* For medium cards, allow more flexible sizing and better wrapping */
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-session-type,
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-category-pill {
-    max-width: calc(60% - var(--space-xs)); /* More space for medium cards */
+    max-width: calc(65% - var(--space-xs)); /* Allow both pills to fit on same line when possible */
+    flex-shrink: 1;
+    flex-basis: auto; /* Allow natural sizing */
 }
 
 /* For larger event cards, allow full text display */
@@ -269,6 +275,7 @@
     overflow: visible;
     text-overflow: unset;
     max-width: none;
+    flex-shrink: 0;
 }
 
 /* Enhanced title wrapping for different card sizes */
@@ -301,6 +308,40 @@
 .event-card .event-category-pill {
     order: 2;
     font-size: 0.7rem;
+}
+
+/* Smart wrapping for medium cards - allow natural wrapping based on content */
+.event-card[data-span-gt-4]:not([data-span-gt-6]) .event-tags-row {
+    /* Allow natural wrapping when content is too long */
+    flex-wrap: wrap;
+}
+
+/* For medium cards, allow category pill to wrap naturally when needed */
+.event-card[data-span-gt-4]:not([data-span-gt-6]) .event-category-pill {
+    /* Allow natural wrapping - only wrap when content is too long */
+    flex-basis: auto;
+    max-width: calc(65% - var(--space-xs)); /* Same as above, but allow wrapping when needed */
+    margin-top: 0; /* No forced margin */
+}
+
+/* When category pill wraps to new line, give it full width */
+.event-card[data-span-gt-4]:not([data-span-gt-6]) .event-category-pill {
+    /* Use a more flexible approach - allow wrapping when needed */
+    flex-grow: 0;
+    flex-shrink: 1;
+}
+
+/* Alternative approach: Use CSS to detect when wrapping occurs */
+.event-card[data-span-gt-4]:not([data-span-gt-6]) .event-tags-row {
+    /* Ensure proper spacing when items wrap */
+    row-gap: var(--space-xs);
+}
+
+/* Reset for larger cards */
+.event-card[data-span-gt-6] .event-category-pill {
+    flex-basis: auto;
+    max-width: none;
+    margin-top: 0;
 }
 
 /* Arrow in top-right corner */

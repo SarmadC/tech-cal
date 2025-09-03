@@ -17,7 +17,7 @@
 .tech-day-view-grid-container {
     position: relative;
     display: grid;
-    grid-template-rows: repeat(49, 30px); /* 49 half-hour slots to accommodate final time label */
+    grid-template-rows: repeat(49, 40px); /* 49 half-hour slots to accommodate final time label - match week view height */
     min-width: 800px;
 }
 
@@ -122,6 +122,17 @@
     hyphens: auto;
 }
 
+/* Optimize spacing for daily view without tags */
+.tech-day-view .event-card .event-content {
+    /* Reduce gap since tags are removed */
+    gap: 0.25rem;
+}
+
+/* Adjust title spacing for cleaner daily view */
+.tech-day-view .event-card .event-title-section {
+    margin-bottom: 0.125rem;
+}
+
 .tech-day-view .event-card[data-span-gt-4] .event-title { 
     /* Allow more generous wrapping for larger cards */
     word-wrap: break-word;
@@ -160,15 +171,21 @@
     max-width: 100% !important;
 }
 
-/* Day view event tags */
+/* Day view event tags - hide tags section for cleaner daily view */
+.tech-day-view .event-card .event-tags-section {
+    display: none !important;
+}
+
+/* Day view event tags - fallback styling if tags are shown */
 .tech-day-view .event-card .event-tags {
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* Align to top for better multi-line appearance */
     gap: 0.125rem;
     margin-top: auto;
     overflow: hidden;
-    max-height: 1.5em !important;
+    max-height: 3em !important; /* Allow more height for wrapped content */
     flex-wrap: wrap;
+    align-content: flex-start; /* Pack items to the start */
 }
 
 .tech-day-view .event-card .event-tag {
@@ -180,9 +197,10 @@
     font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 80px;
+    max-width: 100px; /* Slightly increased for better readability */
     border-radius: 9999px;
     flex-shrink: 1;
+    flex-basis: auto; /* Allow natural sizing */
 }
 
 /* Tag variations for day view */
@@ -383,7 +401,7 @@
 @media (max-width: 1024px) {
     .tech-day-view-grid-container { 
         min-width: 600px; 
-        grid-template-rows: repeat(48, 25px); 
+        grid-template-rows: repeat(48, 35px); /* Increased proportionally */
     }
 }
 
@@ -391,7 +409,7 @@
 @media (max-width: 768px) {
     .tech-day-view-grid-container { 
         min-width: 400px; 
-        grid-template-rows: repeat(48, 20px); 
+        grid-template-rows: repeat(48, 30px); /* Increased proportionally */
     }
     
     .category-header { 

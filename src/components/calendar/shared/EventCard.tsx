@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Clock, MapPin, User, Video, Headphones, Building2, Globe } from 'lucide-react';
+import { MapPin, User, Video, Headphones, Building2, Globe } from 'lucide-react';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { isEventLive, formatTime } from '@/utils/dateUtils';
 import { LearnMoreButton } from './LearnMoreButton';
@@ -181,23 +181,7 @@ export const EventCard: React.FC<EventCardProps> = ({
         ...style
     };
 
-    // Format time display based on view type and continuation
-    const getTimeDisplay = () => {
-        if (viewType === 'day' && visualInfo?.isContinuingFromPreviousDay) {
-            return "Continues";
-        }
 
-        const startTime = new Date(event.startTime);
-        if (viewType === 'week') {
-            return formatTime(event.startTime, event.timezone);
-        }
-
-        return startTime.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
 
     // Week view specific content display - DYNAMIC based on card size
     const cardSize = visualInfo?.span || 1;
@@ -265,8 +249,8 @@ export const EventCard: React.FC<EventCardProps> = ({
                     />
                 </div>
 
-                {/* Multi-day day indicator - subtle dots */}
-                {'dayInfo' in event && event.dayInfo && (
+                {/* Multi-day day indicator - subtle dots - only show for multi-day events */}
+                {'dayInfo' in event && event.dayInfo && event.dayInfo.totalDays > 1 && (
                     <div className="event-day-dots">
                         {Array.from({ length: event.dayInfo.totalDays }, (_, i) => (
                             <div 
@@ -300,8 +284,8 @@ export const EventCard: React.FC<EventCardProps> = ({
                 )}
 
 
-                {/* Tag Name and Category Display - show both on same line */}
-                {event.tags && event.tags.length > 0 && (
+                {/* Tag Name and Category Display - show both on same line - hide for daily view */}
+                {event.tags && event.tags.length > 0 && viewType !== 'day' && (
                     <div className="event-tags-section">
                         <div className="event-tags-row">
                             {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
@@ -385,15 +369,7 @@ export const EventCard: React.FC<EventCardProps> = ({
             </div>
 
 
-            {/* Day view content - only show time for day view */}
-            {viewType === 'day' && (
-                <div className="event-meta">
-                    <div className="event-time">
-                        <Clock size={14} />
-                        <span>{getTimeDisplay()}</span>
-                    </div>
-                </div>
-            )}
+            {/* Day view content - time removed since calendar grid already shows time slots */}
             </div>
         </div>
     );
