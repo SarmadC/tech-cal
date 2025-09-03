@@ -5,7 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 import { MapPin, User, Video, Headphones, Building2, Globe } from 'lucide-react';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
-import { isEventLive } from '@/utils/dateUtils';
+import { isEventLive, getEventDuration, formatTime } from '@/utils/dateUtils';
 import { LearnMoreButton } from './LearnMoreButton';
 
 export interface EventCardProps {
@@ -186,12 +186,17 @@ export const EventCard: React.FC<EventCardProps> = ({
     // Week view specific content display - DYNAMIC based on card size
     const cardSize = visualInfo?.span || 1;
     const isWeekView = viewType === 'week';
+    const isDayView = viewType === 'day';
     const isCompact = isWeekView && cardSize <= 2;
     const isDense = isWeekView && cardSize <= 4;
 
     const showTimelineRail = isWeekView && cardSize >= 3;
 
-
+    // Day view specific content display
+    const showDayTime = isDayView;
+    const showDayDuration = isDayView;
+    const showDayLocation = isDayView && event.location;
+    const showDayOrganizer = isDayView && event.organizer;
     
     // Small cards: Basic info only
     // Show location for medium and larger cards (span > 4)
@@ -248,6 +253,59 @@ export const EventCard: React.FC<EventCardProps> = ({
                         showForLargeEvents={true}
                     />
                 </div>
+
+                {/* Day view specific content - Time, Duration, Location */}
+                {isDayView && (
+                    <div className="event-day-meta">
+                        {/* Category Badge */}
+                        {event.category && (
+                            <div className="event-category-badge">
+                                <span 
+                                    className="event-category-pill"
+                                    style={{ 
+                                        backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                        color: 'white'
+                                    }}
+                                >
+                                    {event.category.name.toUpperCase()}
+                                </span>
+                            </div>
+                        )}
+                        
+                        {/* Time and Duration */}
+                        <div className="event-time-duration">
+                            {showDayTime && (
+                                <span className="event-time">
+                                    {formatTime(event.startTime, event.timezone)}
+                                    {event.endTime && ` - ${formatTime(event.endTime, event.timezone)}`}
+                                </span>
+                            )}
+                            {showDayDuration && (
+                                <span className="event-duration">
+                                    • {getEventDuration(event.startTime, event.endTime)}
+                                </span>
+                            )}
+                        </div>
+                        
+                        {/* Location and Organizer */}
+                        {(showDayLocation || showDayOrganizer) && (
+                            <div className="event-location-organizer">
+                                {showDayLocation && (
+                                    <span className="event-location">
+                                        {getLocationIcon(event.location)}
+                                        {event.location}
+                                    </span>
+                                )}
+                                {showDayOrganizer && (
+                                    <span className="event-organizer">
+                                        <User size={10} />
+                                        {event.organizer}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Multi-day day indicator - subtle dots - only show for multi-day events */}
                 {'dayInfo' in event && event.dayInfo && event.dayInfo.totalDays > 1 && (
