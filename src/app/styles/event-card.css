@@ -131,7 +131,7 @@
     color: #475569 !important; /* Maintain medium color for contrast */
     letter-spacing: 0.005em !important; /* Subtle spacing */
     line-height: 1.3 !important; /* Match time line height */
-    transform: translateY(-1px) !important; /* Move up 1px to center align with time */
+    transform: translateY(-3px) !important; /* Move up 3px to center align with time */
 }
 
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-location-organizer {
@@ -181,7 +181,7 @@
     font-size: 0.85rem !important;
     font-weight: 600 !important;
     color: #475569 !important; /* Maintain medium color for contrast */
-    transform: translateY(-1px) !important; /* Move up 1px to center align with time */
+    transform: translateY(-3px) !important; /* Move up 3px to center align with time */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-location-organizer {
@@ -222,7 +222,7 @@
     font-size: 0.9rem !important;
     font-weight: 600 !important;
     color: #475569 !important; /* Maintain medium color for contrast */
-    transform: translateY(-1px) !important; /* Move up 1px to center align with time */
+    transform: translateY(-3px) !important; /* Move up 3px to center align with time */
 }
 
 .event-card[data-span-gt-8] .event-location-organizer {
@@ -280,7 +280,7 @@
     font-weight: 500;
     letter-spacing: 0.005em; /* Subtle spacing */
     line-height: 1.3; /* Match time line height */
-    transform: translateY(-1px); /* Move up 1px to center align with time */
+    transform: translateY(-3px); /* Move up 3px to center align with time */
 }
 
 .event-card .event-location-organizer {
@@ -614,6 +614,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Day view specific arrow positioning for large cards (span > 6) */
+/* Target day view container with large event cards */
+.tech-day-view-grid-container .event-card[data-span-gt-6] .event-arrow-corner {
+    margin-top: -37px !important; /* Fine-tune vertical alignment with title */
+    margin-right: -23px !important; /* Fine-tune horizontal alignment with event dots */
 }
 
 /* Organizer logo in bottom-left corner */

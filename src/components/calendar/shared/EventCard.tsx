@@ -5,7 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 import { MapPin, User, Video, Headphones, Building2, Globe } from 'lucide-react';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
-import { isEventLive, getEventDuration, formatTime } from '@/utils/dateUtils';
+import { isEventLive, getEventDuration } from '@/utils/dateUtils';
 import { LearnMoreButton } from './LearnMoreButton';
 
 export interface EventCardProps {
@@ -197,6 +197,7 @@ export const EventCard: React.FC<EventCardProps> = ({
     const showDayDuration = isDayView;
     const showDayLocation = isDayView && event.location;
     const showDayOrganizer = isDayView && event.organizer;
+    const showDayDescription = isDayView && cardSize >= 6 && event.description; // Show description for medium+ day cards
     
     // Small cards: Basic info only
     // Show location for medium and larger cards (span > 4)
@@ -272,14 +273,22 @@ export const EventCard: React.FC<EventCardProps> = ({
                             </div>
                         )}
                         
-                        {/* Time and Duration */}
-                        <div className="event-time-duration">
-                            {showDayTime && (
-                                <span className="event-time">
-                                    {formatTime(event.startTime, event.timezone)}
-                                    {event.endTime && ` - ${formatTime(event.endTime, event.timezone)}`}
-                                </span>
-                            )}
+                                                 {/* Time and Duration */}
+                         <div className="event-time-duration">
+                             {showDayTime && (
+                                 <span className="event-time">
+                                     {new Date(event.startTime).toLocaleTimeString('en-US', { 
+                                         hour: 'numeric', 
+                                         minute: '2-digit', 
+                                         hour12: true 
+                                     })}
+                                     {event.endTime && ` - ${new Date(event.endTime).toLocaleTimeString('en-US', { 
+                                         hour: 'numeric', 
+                                         minute: '2-digit', 
+                                         hour12: true 
+                                     })}`}
+                                 </span>
+                             )}
                             {showDayDuration && (
                                 <span className="event-duration">
                                     • {getEventDuration(event.startTime, event.endTime)}
@@ -380,10 +389,10 @@ export const EventCard: React.FC<EventCardProps> = ({
                     </div>
                 )}
 
-                {/* Event description - moved to top for better hierarchy */}
-                {showWeekDescription && event.description && (
+                {/* Event description - show for both week and day views when appropriate */}
+                {(showWeekDescription || showDayDescription) && event.description && (
                     <div className="event-description">
-                        <span>{event.description.length > 80 ? `${event.description.substring(0, 80)}...` : event.description}</span>
+                        <span>{event.description.length > 120 ? `${event.description.substring(0, 120)}...` : event.description}</span>
                     </div>
                 )}
 
