@@ -3,6 +3,141 @@
   Clean, professional design without glassmorphism
   =================================== */
 
+/* ===================================
+   WEEK VIEW SPECIFIC ORGANIZER LOGO POSITIONING
+   =================================== */
+
+/* ===================================
+   COMPACT CARDS (span 1-2) - Week View
+   =================================== */
+.tech-calendar-week-view .event-card[data-span="1"] .event-organizer-logo-corner,
+.tech-calendar-week-view .event-card[data-span="2"] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--v8-space-xs);
+    left: var(--v8-space-xs);
+    z-index: 10;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===================================
+   SMALL CARDS (span 3-4) - Week View
+   =================================== */
+.tech-calendar-week-view .event-card[data-span="3"] .event-organizer-logo-corner,
+.tech-calendar-week-view .event-card[data-span="4"] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--v8-space-sm);
+    left: var(--v8-space-sm);
+    z-index: 10;
+    width: 14px;
+    height: 14px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===================================
+   MEDIUM CARDS (span 5-6) - Week View
+   =================================== */
+.tech-calendar-week-view .event-card[data-span="5"] .event-organizer-logo-corner,
+.tech-calendar-week-view .event-card[data-span="6"] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--v8-space-md);
+    left: var(--v8-space-md);
+    z-index: 10;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===================================
+   LARGE CARDS (span 7-8) - Week View
+   =================================== */
+.tech-calendar-week-view .event-card[data-span="7"] .event-organizer-logo-corner,
+.tech-calendar-week-view .event-card[data-span="8"] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--v8-space-md);
+    left: var(--v8-space-md);
+    z-index: 10;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===================================
+   EXTRA LARGE CARDS (span > 8) - Week View
+   =================================== */
+.tech-calendar-week-view .event-card[data-span-gt-8] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--v8-space-md);
+    left: var(--v8-space-md);
+    z-index: 10;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===================================
+   IMAGE STYLES - Week View (All Sizes)
+   =================================== */
+.tech-calendar-week-view .event-card .organizer-logo-corner-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+}
+
+/* SVG logos in week view */
+.tech-calendar-week-view .event-card .organizer-logo-corner-image[src$=".svg"] {
+    image-rendering: auto;
+    mix-blend-mode: normal;
+    filter: none;
+}
+
+/* PNG logos in week view */
+.tech-calendar-week-view .event-card .organizer-logo-corner-image[src$=".png"] {
+    background: transparent;
+    mix-blend-mode: multiply;
+    filter: 
+        contrast(1.3) 
+        brightness(0.8) 
+        saturate(1.2)
+        drop-shadow(0 0 1px rgba(0,0,0,0.1));
+}
+
+/* SVG elements in week view */
+.tech-calendar-week-view .event-card svg.organizer-logo-corner-image {
+    mix-blend-mode: normal;
+    filter: none;
+}
+
 /* CSS Variables for Enhanced Content System */
 :root {
     --text-secondary-on-pastel: #6b7280;

@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
-import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
+import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import EventPreviewCard from './EventPreviewCard';
 import { EventCard } from './shared/EventCard';
 import '@/app/styles/tech-day-view.css';
 import '@/app/styles/event-card.css';
-import { processEventsForDayView } from '@/utils/multiDayEventUtils';
+import { processEventsForWeekView } from '@/utils/multiDayEventUtils';
 import { getIconForCategory, getEventVisualInfo, createCategoryColumnMap, detectOverlappingEvents } from '@/utils/eventViewUtils';
 import { formatTime } from '@/utils/dateUtils';
 
@@ -30,7 +30,26 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
     const [isPreviewVisible, setIsPreviewVisible] = useState(false);
     const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const dayEvents = useMemo(() => processEventsForDayView(events as MultiDayEvent[], initialDate), [events, initialDate]);
+    const dayEvents = useMemo(() => {
+        // Use the same processing logic as week view to ensure consistent multi-day event handling
+        const processedEvents = processEventsForWeekView(events);
+        
+        // Filter events for the specific day
+        return processedEvents.filter(event => {
+            // For multi-day instances, match by instanceDate
+            if ('isInstance' in event && event.isInstance) {
+                const instance = event as MultiDayEventInstance;
+                // Parse the instanceDate correctly (it's in YYYY-MM-DD format)
+                const [year, month, dayNum] = instance.instanceDate.split('-').map(Number);
+                const instanceDate = new Date(year, month - 1, dayNum);
+                return instanceDate.toDateString() === initialDate.toDateString();
+            }
+            
+            // For regular events, check if they occur on this day
+            const eventStart = new Date(event.startTime);
+            return eventStart.toDateString() === initialDate.toDateString();
+        });
+    }, [events, initialDate]);
 
     const categoryColumnMap = useMemo(() => {
         return createCategoryColumnMap(categories);

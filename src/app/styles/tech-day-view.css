@@ -3,6 +3,240 @@
    =================================== */
 
 /* ===================================
+   DAY VIEW SPECIFIC ORGANIZER LOGO POSITIONING
+   =================================== */
+
+/* ===================================
+   COMPACT CARDS (span 1-2) - Day View
+   =================================== */
+.tech-day-view .event-card[data-span="1"] .event-organizer-logo-corner,
+.tech-day-view .event-card[data-span="2"] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--space-sm); /* Use same spacing as week view */
+    left: var(--space-sm); /* Use same spacing as week view */
+    z-index: 10;
+    width: 20px; /* Larger for better visibility */
+    height: 20px; /* Larger for better visibility */
+    border-radius: 4px; /* Subtle rounded corners, not circular */
+    overflow: hidden;
+    background: transparent; /* Transparent background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none; /* No border */
+    transform: translate(-8px, 17px); /* Move the entire container */
+}
+
+/* Align event dots with logo for compact cards */
+.tech-day-view .event-card[data-span="1"] .event-day-dots,
+.tech-day-view .event-card[data-span="2"] .event-day-dots {
+    position: absolute;
+    bottom: var(--space-sm); /* Same as logo position */
+    right: var(--space-sm);
+    display: flex;
+    gap: 3px;
+    z-index: 10;
+    transform: translate(0, 13px); /* Move dots down to align with logo */
+}
+
+/* Move arrow to top-right for compact day view cards */
+.tech-day-view .event-card[data-span="1"] .event-arrow-corner,
+.tech-day-view .event-card[data-span="2"] .event-arrow-corner {
+    position: absolute !important;
+    top: var(--space-sm) !important;
+    right: var(--space-sm) !important;
+    z-index: 10;
+    transform: translate(15px, -12px) !important;
+}
+
+/* Hide category pills for compact cards in day view */
+.tech-day-view .event-card[data-span="1"] .event-tags-section,
+.tech-day-view .event-card[data-span="2"] .event-tags-section {
+    display: none !important;
+}
+
+/* Hide event day meta for compact cards in day view */
+.tech-day-view .event-card[data-span="1"] .event-day-meta,
+.tech-day-view .event-card[data-span="2"] .event-day-meta {
+    display: none !important;
+}
+
+/* ===================================
+   SMALL CARDS (span 3-4) - Day View
+   =================================== */
+.tech-day-view .event-card[data-span="3"] .event-organizer-logo-corner,
+.tech-day-view .event-card[data-span="4"] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--space-md);
+    left: var(--space-md);
+    z-index: 10;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Align event dots with logo for small cards */
+.tech-day-view .event-card[data-span="3"] .event-day-dots,
+.tech-day-view .event-card[data-span="4"] .event-day-dots {
+    position: absolute;
+    bottom: var(--space-md); /* Same as logo position */
+    right: var(--space-md);
+    display: flex;
+    gap: 3px;
+    z-index: 10;
+}
+
+/* ===================================
+   MEDIUM CARDS (span 5-6) - Day View
+   =================================== */
+.tech-day-view .event-card[data-span="5"] .event-organizer-logo-corner,
+.tech-day-view .event-card[data-span="6"] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--space-md);
+    left: var(--space-md);
+    z-index: 10;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Align event dots with logo for medium cards */
+.tech-day-view .event-card[data-span="5"] .event-day-dots,
+.tech-day-view .event-card[data-span="6"] .event-day-dots {
+    position: absolute;
+    bottom: var(--space-md); /* Same as logo position */
+    right: var(--space-md);
+    display: flex;
+    gap: 3px;
+    z-index: 10;
+}
+
+/* ===================================
+   LARGE CARDS (span 7-8) - Day View
+   =================================== */
+.tech-day-view .event-card[data-span="7"] .event-organizer-logo-corner,
+.tech-day-view .event-card[data-span="8"] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--space-lg);
+    left: var(--space-lg);
+    z-index: 10;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Align event dots with logo for large cards */
+.tech-day-view .event-card[data-span="7"] .event-day-dots,
+.tech-day-view .event-card[data-span="8"] .event-day-dots {
+    position: absolute;
+    bottom: var(--space-lg); /* Same as logo position */
+    right: var(--space-lg);
+    display: flex;
+    gap: 3px;
+    z-index: 10;
+}
+
+/* ===================================
+   EXTRA LARGE CARDS (span > 8) - Day View
+   =================================== */
+.tech-day-view .event-card[data-span-gt-8] .event-organizer-logo-corner {
+    position: absolute;
+    bottom: var(--space-lg);
+    left: var(--space-lg);
+    z-index: 10;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Align event dots with logo for extra large cards */
+.tech-day-view .event-card[data-span-gt-8] .event-day-dots {
+    position: absolute;
+    bottom: var(--space-lg); /* Same as logo position */
+    right: var(--space-lg);
+    display: flex;
+    gap: 3px;
+    z-index: 10;
+}
+
+/* ===================================
+   IMAGE STYLES - Day View (All Sizes)
+   =================================== */
+.tech-day-view .event-card .organizer-logo-corner-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+}
+
+/* SVG logos in day view */
+.tech-day-view .event-card .organizer-logo-corner-image[src$=".svg"] {
+    image-rendering: auto;
+    mix-blend-mode: normal;
+    filter: none;
+}
+
+/* SVG logos in compact day view cards - higher specificity to override container rules */
+.tech-day-view .event-card[data-span="1"] .organizer-logo-corner-image[src$=".svg"],
+.tech-day-view .event-card[data-span="2"] .organizer-logo-corner-image[src$=".svg"] {
+    image-rendering: auto;
+    mix-blend-mode: normal;
+    filter: none;
+
+}
+
+/* PNG logos in day view */
+.tech-day-view .event-card .organizer-logo-corner-image[src$=".png"] {
+    background: transparent;
+    mix-blend-mode: multiply;
+    filter: 
+        contrast(1.3) 
+        brightness(0.8) 
+        saturate(1.2)
+        drop-shadow(0 0 1px rgba(0,0,0,0.1));
+}
+
+/* SVG elements in day view */
+.tech-day-view .event-card svg.organizer-logo-corner-image {
+    mix-blend-mode: normal;
+    filter: none;
+}
+
+/* Ensure logo image fills the container properly */
+.tech-day-view .event-card[data-span="1"] .organizer-logo-corner-image,
+.tech-day-view .event-card[data-span="2"] .organizer-logo-corner-image {
+    width: 100% !important; /* Force override of inline styles */
+    height: 100% !important; /* Force override of inline styles */
+    object-fit: contain; /* Preserve aspect ratio, don't crop */
+    border-radius: 4px; /* Match container's subtle rounded corners */
+    image-rendering: auto; /* Override pixelated rendering for crisp logos */
+    display: block !important; /* Ensure it's visible */
+}
+
+/* ===================================
    1. BASE CONTAINERS & LAYOUT
    =================================== */
 

@@ -623,48 +623,45 @@
     margin-right: -23px !important; /* Fine-tune horizontal alignment with event dots */
 }
 
-/* Organizer logo in bottom-left corner */
+/* Organizer logo positioning - now handled by view-specific classes */
+/* See tech-day-view.css and tech-week-view.css for specific positioning */
+
+/* Fallback organizer logo styles - basic container */
 .event-card .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--space-md);
-    left: var(--space-md);
     z-index: 10;
     width: 18px;
     height: 18px;
     border-radius: var(--radius-sm);
     overflow: hidden;
-    background: transparent; /* Remove glass background */
-    /* Remove backdrop-filter: blur(4px); */
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
+/* Fallback image styles */
 .event-card .organizer-logo-corner-image {
     width: 100%;
     height: 100%;
     object-fit: contain;
     border-radius: var(--radius-sm);
-    /* Optimize rendering for both PNG and SVG */
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
-    image-rendering: pixelated; /* Fallback for PNGs */
+    image-rendering: pixelated;
 }
 
 /* SVG logos - perfect scalability */
 .event-card .organizer-logo-corner-image[src$=".svg"] {
-    image-rendering: auto; /* Let browser handle SVG scaling */
+    image-rendering: auto;
     mix-blend-mode: normal;
     filter: none;
 }
 
 /* PNG logos - apply filters for better appearance */
 .event-card .organizer-logo-corner-image[src$=".png"] {
-    /* Use CSS to create transparency effect for logos with light backgrounds */
     background: transparent;
-    /* Try different blend modes for transparency */
     mix-blend-mode: multiply;
-    /* More aggressive approach - remove light pixels */
     filter: 
         contrast(1.3) 
         brightness(0.8) 

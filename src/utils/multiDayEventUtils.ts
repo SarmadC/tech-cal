@@ -96,8 +96,8 @@ export function generateDailyEventInstances(
                 
                 if (customDay) {
                     // Use custom times for this specific day
-                    const customStartTimeStr = `${viewDateStr}T${customDay.start}:00`;
-                    const customEndTimeStr = `${viewDateStr}T${customDay.end}:00`;
+                    const customStartTimeStr = `${viewDateStr}T${customDay.start.padStart(5, '0')}:00`;
+                    const customEndTimeStr = `${viewDateStr}T${customDay.end.padStart(5, '0')}:00`;
                     
                     const { startTime: _startTime, endTime: _endTime, id, ...restOfEvent } = event;
                     
