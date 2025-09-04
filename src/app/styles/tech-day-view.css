@@ -61,6 +61,20 @@
     display: none !important;
 }
 
+/* Hide event description for medium cards in day view */
+.tech-day-view .event-card[data-span="5"] .event-description,
+.tech-day-view .event-card[data-span="6"] .event-description {
+    display: none !important;
+}
+
+/* Hide event tags for compact and small cards in day view */
+.tech-day-view .event-card[data-span="1"] .event-tags-section,
+.tech-day-view .event-card[data-span="2"] .event-tags-section,
+.tech-day-view .event-card[data-span="3"] .event-tags-section,
+.tech-day-view .event-card[data-span="4"] .event-tags-section {
+    display: none !important;
+}
+
 /* ===================================
    SMALL CARDS (span 3-4) - Day View
    =================================== */
@@ -108,6 +122,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: translate(-15px, 15px); /* Align with event dots horizontally and icons vertically */
 }
 
 /* Align event dots with logo for medium cards */
@@ -119,6 +134,17 @@
     display: flex;
     gap: 3px;
     z-index: 10;
+    transform: translate(0, 15px); /* Align with logo vertically */
+}
+
+/* Move arrow to top-right for medium day view cards */
+.tech-day-view .event-card[data-span="5"] .event-arrow-corner,
+.tech-day-view .event-card[data-span="6"] .event-arrow-corner {
+    position: absolute !important;
+    top: var(--space-md) !important; /* Align with event name */
+    right: var(--space-md) !important; /* Right edge alignment */
+    z-index: 10;
+    transform: translate(10px, -45px) !important; /* Fine-tune position */
 }
 
 /* ===================================
@@ -405,9 +431,19 @@
     max-width: 100% !important;
 }
 
-/* Day view event tags - hide tags section for cleaner daily view */
+/* Day view event tags - hide tags section for cleaner daily view (overridden by specific rules below) */
 .tech-day-view .event-card .event-tags-section {
     display: none !important;
+}
+
+/* Show event tags for medium+ cards in day view */
+.tech-day-view .event-card[data-span="5"] .event-tags-section,
+.tech-day-view .event-card[data-span="6"] .event-tags-section,
+.tech-day-view .event-card[data-span="7"] .event-tags-section,
+.tech-day-view .event-card[data-span="8"] .event-tags-section,
+.tech-day-view .event-card[data-span-gt-8] .event-tags-section {
+    display: flex !important;
+    margin-top: 0.25rem !important; /* Reduce gap between title and tags */
 }
 
 /* Day view event tags - fallback styling if tags are shown */

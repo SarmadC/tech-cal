@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { MapPin, User, Video, Headphones, Building2, Globe } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { isEventLive, getEventDuration } from '@/utils/dateUtils';
 import { LearnMoreButton } from './LearnMoreButton';
@@ -50,29 +50,30 @@ export const EventCard: React.FC<EventCardProps> = ({
     // Get appropriate location icon based on venue type
     const getLocationIcon = (location: string) => {
         const loc = location.toLowerCase();
+        const iconColor = getPillColor(getCategoryColor(), 0.5); // Same as category title color
         
         // Virtual/Remote events
         if (loc.includes('remote') || loc.includes('virtual') || loc.includes('online')) {
-            return <Video size={10} />;
+            return <Icon name="devices" size={10} color={iconColor} />;
         }
         
         // VR/AR/Metaverse events
         if (loc.includes('vr') || loc.includes('ar') || loc.includes('metaverse') || loc.includes('virtual reality')) {
-            return <Headphones size={10} />;
+            return <Icon name="event" size={10} color={iconColor} />;
         }
         
         // Conference centers, convention halls, specific venues
         if (loc.includes('conference') || loc.includes('convention') || loc.includes('center') || loc.includes('hall') || loc.includes('expo')) {
-            return <Building2 size={10} />;
+            return <Icon name="event" size={10} color={iconColor} />;
         }
         
         // Global/worldwide events
         if (loc.includes('worldwide') || loc.includes('global') || loc.includes('international')) {
-            return <Globe size={10} />;
+            return <Icon name="location" size={10} color={iconColor} />;
         }
         
         // Default to map pin for physical locations
-        return <MapPin size={10} />;
+        return <Icon name="location" size={10} color={iconColor} />;
     };
 
     // Get category-based background color from the event type
@@ -258,18 +259,31 @@ export const EventCard: React.FC<EventCardProps> = ({
                 {/* Day view specific content - Time, Duration, Location */}
                 {isDayView && (
                     <div className="event-day-meta">
-                        {/* Category Badge */}
-                        {event.category && (
-                            <div className="event-category-badge">
-                                <span 
-                                    className="event-category-pill"
-                                    style={{ 
-                                        backgroundColor: getPillColor(getCategoryColor(), 0.3),
-                                        color: 'white'
-                                    }}
-                                >
-                                    {event.category.name.toUpperCase()}
-                                </span>
+                        {/* Event Tags - show only for medium+ cards (span 5+) in day view */}
+                        {event.tags && event.tags.length > 0 && (
+                            <div className="event-tags-section">
+                                <div className="event-tags-row">
+                                    {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
+                                    {event.tags
+                                        .filter((tag, index, self) => 
+                                            index === self.findIndex(t => t.name === tag.name)
+                                        )
+                                        .slice(0, 3) // Limit to 3 tags for day view
+                                        .map((tag, index) => (
+                                            <React.Fragment key={index}>
+                                                {/* Tag Name */}
+                                                <span 
+                                                    className="event-session-type"
+                                                    style={{ 
+                                                        backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                                        color: 'white'
+                                                    }}
+                                                >
+                                                    {tag.name}
+                                                </span>
+                                            </React.Fragment>
+                                        ))}
+                                </div>
                             </div>
                         )}
                         
@@ -307,7 +321,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                                 )}
                                 {showDayOrganizer && (
                                     <span className="event-organizer">
-                                        <User size={10} />
+                                        <Icon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
                                         {event.organizer}
                                     </span>
                                 )}
@@ -351,8 +365,8 @@ export const EventCard: React.FC<EventCardProps> = ({
                 )}
 
 
-                {/* Tag Name and Category Display - show both on same line - hide for daily view */}
-                {event.tags && event.tags.length > 0 && viewType !== 'day' && (
+                {/* Tag Name and Category Display - show both on same line - only for week view */}
+                {event.tags && event.tags.length > 0 && viewType === 'week' && (
                     <div className="event-tags-section">
                         <div className="event-tags-row">
                             {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
@@ -406,7 +420,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                     )}
                     {showWeekOrganizer && event.organizer && (
                         <span className="event-organizer-text">
-                            <User size={10} />
+                            <Icon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
                             {event.organizer}
                         </span>
                     )}
