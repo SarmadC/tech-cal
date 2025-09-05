@@ -206,7 +206,9 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
           const eventsText = day.weight === 1 ? 'event' : 'events';
           const selectedText = isSelected ? ' (Selected)' : '';
           const todayText = day.isToday ? ' (Today)' : '';
-          const ariaLabel = `${day.date.toLocaleDateString()}: ${day.weight} ${eventsText}${selectedText}${todayText}`;
+          // Use consistent date format to prevent hydration mismatch
+          const dateString = day.date.toISOString().split('T')[0]; // YYYY-MM-DD format
+          const ariaLabel = `${dateString}: ${day.weight} ${eventsText}${selectedText}${todayText}`;
           
           return (
             <button

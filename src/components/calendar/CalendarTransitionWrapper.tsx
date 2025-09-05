@@ -17,8 +17,8 @@ const CalendarTransitionWrapper: FC<CalendarTransitionWrapperProps> = ({
 }) => {
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [direction, setDirection] = useState<'prev' | 'next' | null>(null);
-    const [currentView, setCurrentView] = useState(view);
-    const [currentDate, setCurrentDate] = useState(date);
+    const [_currentView, setCurrentView] = useState(view);
+    const [_currentDate, setCurrentDate] = useState(date);
     const prevViewRef = useRef(view);
     const prevDateRef = useRef(date);
 

@@ -8,6 +8,7 @@ import EventPreviewCard from '../EventPreviewCard';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, MonthViewSkeleton } from '@/components/ui/SkeletonLoader';
+import { isSameDay, getTodayDate } from '@/utils/dateUtils';
 import './mobile-calendar.css';
 
 export interface MobileCalendarMonthViewProps {
@@ -66,7 +67,7 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
     for (let i = 0; i < 42; i++) {
       const date = new Date(currentDate);
       const isCurrentMonth = date.getMonth() === month;
-      const isToday = date.toDateString() === new Date().toDateString();
+      const isToday = isSameDay(date, getTodayDate());
       const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
       
       // Get events for this day

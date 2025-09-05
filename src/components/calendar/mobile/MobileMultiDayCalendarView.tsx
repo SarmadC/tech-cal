@@ -1,0 +1,205 @@
+'use client';
+
+import React, { useMemo } from 'react';
+import { Event, EventType, AppProfile } from '@/types';
+import { MaterialIcon } from '@/components/ui/Icon';
+
+export interface MobileMultiDayCalendarViewProps {
+  events: Event[];
+  currentDate: Date;
+  categories: EventType[];
+  profile: AppProfile | null;
+  onEventSelect?: (event: Event) => void;
+  onDateChange?: (date: Date) => void;
+  className?: string;
+}
+
+const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
+  events,
+  currentDate,
+  categories: _categories,
+  profile: _profile,
+  onEventSelect,
+  onDateChange,
+  className = ''
+}) => {
+
+  // Generate array of days to display (current week)
+  const displayDays = useMemo(() => {
+    const days = [];
+    const startOfWeek = new Date(currentDate);
+    const currentDay = startOfWeek.getDay(); // 0 = Sunday
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // Adjust to make Monday the first day
+    startOfWeek.setDate(startOfWeek.getDate() + mondayOffset);
+
+    // Generate 7 days starting from Monday
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      days.push(day);
+    }
+
+    return days;
+  }, [currentDate]);
+
+  // Navigation handlers
+  const handlePreviousMonth = () => {
+    const prevMonth = new Date(currentDate);
+    prevMonth.setMonth(prevMonth.getMonth() - 1);
+    onDateChange?.(prevMonth);
+  };
+
+  const handleNextMonth = () => {
+    const nextMonth = new Date(currentDate);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    onDateChange?.(nextMonth);
+  };
+
+  // Format month names for navigation
+  const getMonthNames = () => {
+    const current = currentDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    
+    const prev = new Date(currentDate);
+    prev.setMonth(prev.getMonth() - 1);
+    const prevName = prev.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    
+    const next = new Date(currentDate);
+    next.setMonth(next.getMonth() + 1);
+    const nextName = next.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    
+    return { prev: prevName, current, next: nextName };
+  };
+
+  const monthNames = getMonthNames();
+
+  return (
+    <div className={`mobile-multi-day-calendar ${className}`} role="main" aria-label="Weekly calendar view">
+      {/* Tech events calendar view */}
+      <div className="calendar-view-header">
+        <h2 className="view-title">Browse Tech Events</h2>
+        <p className="view-description">Discover conferences, workshops, and networking events by date</p>
+      </div>
+
+      {/* Month Navigation */}
+      <div className="month-navigation" role="navigation" aria-label="Month navigation">
+        <button className="month-nav-button" onClick={handlePreviousMonth} aria-label={`Go to ${monthNames.prev}`}>
+          {monthNames.prev}
+        </button>
+        
+        <div className="current-month-section">
+          <button className="nav-arrow" onClick={handlePreviousMonth} aria-label="Previous month">
+            <MaterialIcon name="arrow_back" size={20} />
+          </button>
+          
+          <div className="current-month">{monthNames.current}</div>
+          
+          <button className="nav-arrow" onClick={handleNextMonth} aria-label="Next month">
+            <MaterialIcon name="chevron_right" size={20} />
+          </button>
+        </div>
+        
+        <button className="month-nav-button" onClick={handleNextMonth} aria-label={`Go to ${monthNames.next}`}>
+          {monthNames.next}
+        </button>
+      </div>
+
+      {/* Week Date Picker */}
+      <div className="week-date-picker" role="grid" aria-label="Week navigation">
+        <div className="week-header">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((dayLetter, index) => (
+            <div key={index} className="day-header">{dayLetter}</div>
+          ))}
+        </div>
+        <div className="week-dates">
+          {displayDays.map((day, _index) => {
+            const isToday = day.toDateString() === new Date().toDateString();
+            const isSelected = day.toDateString() === currentDate.toDateString();
+            const dayEvents = events.filter(event => {
+              const eventDate = new Date(event.startTime);
+              return eventDate.toDateString() === day.toDateString();
+            });
+            
+            return (
+              <button
+                key={day.toISOString()}
+                className={`date-button ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${dayEvents.length > 0 ? 'has-events' : ''}`}
+                onClick={() => onDateChange?.(day)}
+                aria-label={`${day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
+              >
+                <span className="date-number">{day.getDate()}</span>
+                {dayEvents.length > 0 && (
+                  <div className="event-indicators">
+                    {dayEvents.slice(0, 3).map((event, _eventIndex) => (
+                      <div
+                        key={event.id}
+                        className="event-dot"
+                        style={{ backgroundColor: event.category?.color || '#3b82f6' }}
+                      />
+                    ))}
+                    {dayEvents.length > 3 && (
+                      <div className="event-count">+{dayEvents.length - 3}</div>
+                    )}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Selected Day Tech Events */}
+      <div className="selected-day-events">
+        <h3 className="selected-day-title">
+          <MaterialIcon name="event" size={20} />
+          {currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        </h3>
+        <div className="day-events-list">
+          {events
+            .filter(event => {
+              const eventDate = new Date(event.startTime);
+              return eventDate.toDateString() === currentDate.toDateString();
+            })
+            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+            .map((event, index) => (
+              <div
+                key={`${event.id}-${index}`}
+                className="day-event-item"
+                onClick={() => onEventSelect?.(event)}
+                style={{
+                  backgroundColor: event.category?.color || '#f1f5f9',
+                  borderLeft: `4px solid ${event.category?.color ? event.category.color.replace(/[^,)]*/, m => Math.max(0, parseInt(m) - 40).toString()) : '#3b82f6'}`
+                }}
+              >
+                <div className="event-time">
+                  {new Date(event.startTime).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </div>
+                <div className="event-details">
+                  <div className="event-title">{event.title}</div>
+                  {event.location && (
+                    <div className="event-location">{event.location}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          
+          {events.filter(event => {
+            const eventDate = new Date(event.startTime);
+            return eventDate.toDateString() === currentDate.toDateString();
+          }).length === 0 && (
+            <div className="no-events-today">
+              <MaterialIcon name="search" size={32} />
+              <span className="no-events-text">No tech events found</span>
+              <span className="no-events-subtext">Events are added regularly - check back soon</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MobileMultiDayCalendarView;

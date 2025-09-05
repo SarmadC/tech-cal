@@ -77,7 +77,7 @@ export default function SearchBar({
                     {suggestion.title || 'Untitled Event'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {suggestion.organizer || 'Unknown Organizer'} • {new Date(suggestion.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {suggestion.organizer || 'Unknown Organizer'} • {new Date(suggestion.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </p>
                 </button>
               </li>

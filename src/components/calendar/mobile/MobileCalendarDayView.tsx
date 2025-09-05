@@ -7,6 +7,7 @@ import EventPreviewCard from '../EventPreviewCard';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, DayViewSkeleton } from '@/components/ui/SkeletonLoader';
+import { isSameDay, getTodayDate } from '@/utils/dateUtils';
 import './mobile-calendar.css';
 
 export interface MobileCalendarDayViewProps {
@@ -331,7 +332,7 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
             <MaterialIcon name="event_available" size={64} />
             <div className="no-events-text">No events today</div>
             <div className="no-events-subtext">
-              {initialDate.toDateString() === new Date().toDateString() 
+              {isSameDay(initialDate, getTodayDate())
                 ? "Enjoy your free day!" 
                 : "Nothing scheduled for this day"}
             </div>

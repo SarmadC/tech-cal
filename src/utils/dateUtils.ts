@@ -285,3 +285,13 @@ export function getSafeDate(date: string | Date | null | undefined): Date | null
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return isNaN(dateObj.getTime()) ? null : dateObj;
 }
+
+/**
+ * Gets today's date in a consistent format for server/client rendering
+ * This prevents hydration mismatches by using a stable date reference
+ */
+export function getTodayDate(): Date {
+    const now = new Date();
+    // Return a date with time set to midnight to ensure consistency
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}

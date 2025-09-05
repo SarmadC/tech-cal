@@ -33,7 +33,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
     const [searchTerm, setSearchTerm] = useState(filters.searchTerm);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [activeTab, setActiveTab] = useState<'search' | 'filters'>('search');
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [_isSearchFocused, setIsSearchFocused] = useState(false);
     
     const searchInputRef = useRef<HTMLInputElement>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -206,7 +206,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                             className="mobile-search-suggestion"
                                         >
                                             <MaterialIcon 
-                                                name={suggestion.type === 'event' ? 'event' : suggestion.type === 'organizer' ? 'people' : 'category'} 
+                                                name={suggestion.type === 'event' ? 'event' : suggestion.type === 'organizer' ? 'people' : 'label'} 
                                                 size={16} 
                                             />
                                             <span className="mobile-suggestion-text">{suggestion.title}</span>
@@ -319,7 +319,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                             className="mobile-filter-checkbox"
                                         />
                                         <div className="mobile-filter-option-content">
-                                            <MaterialIcon name="bookmark" size={16} />
+                                            <MaterialIcon name="star" size={16} />
                                             <span>My Tracked Events</span>
                                         </div>
                                     </label>

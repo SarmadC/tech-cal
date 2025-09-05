@@ -5,14 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
-import MobileCalendarNavigation from '@/components/calendar/MobileCalendarNavigation';
 import MobileBottomTabNavigation from '@/components/calendar/MobileBottomTabNavigation';
+import MobileCalendarApp from '@/components/calendar/mobile/MobileCalendarApp';
 import CalendarTransitionWrapper from '@/components/calendar/CalendarTransitionWrapper';
 import '@/app/styles/calendar-sidebar.css';
 
 // Removed unused type imports
 import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
 import { useCalendar } from '@/contexts';
+import { Event } from '@/types';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -38,6 +39,9 @@ export interface CalendarLayoutProps {
     // Sidebar toggle props
     isSidebarOpen?: boolean;
     onToggleSidebar?: () => void;
+    // Mobile app props
+    onEventSelect?: (event: Event) => void;
+    onAddEvent?: (date?: Date, hour?: number) => void;
 }
 
 export function CalendarLayout({
@@ -51,11 +55,29 @@ export function CalendarLayout({
     renderContent,
     isSidebarOpen = true,
     onToggleSidebar,
+    onEventSelect,
+    onAddEvent,
 }: CalendarLayoutProps) {
     // Get data from context instead of props
-    const { currentDate, profile, categories } = useCalendar();
+    const { currentDate, profile, categories, events } = useCalendar();
     const router = useRouter();
     const searchParams = useSearchParams();
+    
+    // Check if we should use the new mobile views - use React state for client-side detection
+    const [useNewMobileViews, setUseNewMobileViews] = React.useState(false);
+    
+    React.useEffect(() => {
+        const checkMobile = () => {
+            setUseNewMobileViews(window.innerWidth < 768);
+        };
+        
+        // Check initially
+        checkMobile();
+        
+        // Listen for resize events
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const view = (searchParams.get('view') as CalendarViewType) || 'month';
 
@@ -105,6 +127,7 @@ export function CalendarLayout({
 
     const content = renderContent ? renderContent(layoutContext) : children;
 
+    // Handle loading states
     if (!profile && categories.length === 0) {
         return (
             <div className="flex h-screen bg-background-main">
@@ -113,6 +136,22 @@ export function CalendarLayout({
                         {content}
                     </div>
                 </div>
+            </div>
+        );
+    }
+
+    // Render new mobile app for mobile devices
+    if (useNewMobileViews) {
+        return (
+            <div className="flex h-screen bg-background-main">
+                <MobileCalendarApp
+                    events={events || []}
+                    currentDate={activeDate}
+                    categories={categories}
+                    profile={profile}
+                    onEventSelect={onEventSelect}
+                    onDateChange={handleDateChange}
+                />
             </div>
         );
     }
@@ -162,7 +201,20 @@ export function CalendarLayout({
                         activeFilterCount={activeFilterCount}
                         isSidebarOpen={isSidebarOpen}
                         currentDate={activeDate}
-                        filters={{}}
+                        filters={{
+                            searchTerm: '',
+                            format: 'all',
+                            cost: 'all',
+                            difficulty: 'all',
+                            myTracked: false,
+                            myNetwork: false,
+                            recommended: false,
+                            categories: [],
+                            dateRange: { start: null, end: null },
+                            timePreference: 'all',
+                            availability: 'all',
+                            location: 'all'
+                        }}
                         onUpdateFilter={() => {}}
                         onResetFilters={() => {}}
                         onApplyQuickFilter={() => {}}

@@ -4,7 +4,7 @@ import { screen } from '@/utils/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import EventTracking from './EventTracking';
-import { AppEvent } from '@/types';
+import { Event } from '@/types';
 import * as UserEventService from '@/services/userEventService';
 import { createMockUser, render } from '@/utils/test-utils';
 
@@ -12,7 +12,7 @@ import { createMockUser, render } from '@/utils/test-utils';
 vi.mock('@/services/userEventService');
 
 // Create a mock AppEvent object for our tests to use
-const mockEvent: AppEvent = {
+const mockEvent: Event = {
     id: 'event-abc',
     title: 'Test Event',
     createdAt: new Date().toISOString(),
@@ -54,7 +54,7 @@ describe('EventTracking Component', () => {
     it('should show tracking options if the user is logged in and the event is not tracked', async () => {
         // Arrange: Tell our mock service to simulate a successful API call
         vi.spyOn(UserEventService.UserEventService, 'isEventTracked')
-            .mockResolvedValue({ success: true, data: { isTracked: false } });
+            .mockResolvedValue({ isTracked: false });
 
         // Act: Render with a logged-in user
         render(<EventTracking event={mockEvent} />, { mockUser });
@@ -68,7 +68,7 @@ describe('EventTracking Component', () => {
     it('should call the trackEvent service when the user clicks "Bookmark"', async () => {
         // Arrange
         vi.spyOn(UserEventService.UserEventService, 'isEventTracked')
-            .mockResolvedValue({ success: true, data: { isTracked: false } });
+            .mockResolvedValue({ isTracked: false });
 
         // This is a mock implementation of the hook's mutation function
         const mockTrackEventMutation = vi.fn();
@@ -90,7 +90,7 @@ describe('EventTracking Component', () => {
 
         // Re-creating the spy for the service call itself to check the arguments.
         const trackEventSpy = vi.spyOn(UserEventService.UserEventService, 'trackEvent')
-            .mockResolvedValue({ success: true });
+            .mockResolvedValue(undefined);
 
         // Need to re-render and click after re-spying to capture the call
         render(<EventTracking event={mockEvent} />, { mockUser });
@@ -111,7 +111,7 @@ describe('EventTracking Component', () => {
     it('should show the current status and a "Remove" button if the event is already tracked', async () => {
         // Arrange
         vi.spyOn(UserEventService.UserEventService, 'isEventTracked')
-            .mockResolvedValue({ success: true, data: { isTracked: true, status: 'attending' } });
+            .mockResolvedValue({ isTracked: true, status: 'attending' });
 
         render(<EventTracking event={mockEvent} />, { mockUser });
 
@@ -123,9 +123,9 @@ describe('EventTracking Component', () => {
     it('should call the untrackEvent service when the user clicks "Remove"', async () => {
         // Arrange
         vi.spyOn(UserEventService.UserEventService, 'isEventTracked')
-            .mockResolvedValue({ success: true, data: { isTracked: true, status: 'attending' } });
+            .mockResolvedValue({ isTracked: true, status: 'attending' });
         const untrackEventSpy = vi.spyOn(UserEventService.UserEventService, 'untrackEvent')
-            .mockResolvedValue({ success: true });
+            .mockResolvedValue(undefined);
 
         render(<EventTracking event={mockEvent} />, { mockUser });
 

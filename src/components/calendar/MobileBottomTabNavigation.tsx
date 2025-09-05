@@ -17,7 +17,7 @@ export interface MobileBottomTabNavigationProps {
     isSidebarOpen: boolean;
     currentDate: Date;
     // Enhanced search/filter props
-    filters: any; // SmartFilterOptions
+    filters: any; // SmartFilterOptions - using any for now to avoid complex type issues
     onUpdateFilter: (key: string, value: any) => void;
     onResetFilters: () => void;
     onApplyQuickFilter: (filterType: string) => void;
@@ -29,7 +29,7 @@ const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
     currentView,
     onViewChange,
     onToggleSidebar,
-    onToggleFilters,
+    onToggleFilters: _onToggleFilters,
     onDateChange,
     activeFilterCount,
     isSidebarOpen,
@@ -68,7 +68,7 @@ const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
                             aria-label="Open date picker"
                         >
                             <h1 className="mobile-header-title">Calendar</h1>
-                            <MaterialIcon name="calendar_today" size={16} />
+                            <MaterialIcon name="calendar" size={16} />
                         </button>
                     </div>
                     

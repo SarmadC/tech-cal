@@ -15,7 +15,7 @@ vi.mock('@/components/ui/Icon', () => ({
 
 // Mock the Button component
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, className, variant }: any) => (
+  Button: ({ children, onClick, className, variant }: { children: React.ReactNode; onClick: () => void; className: string; variant: string }) => (
     <button onClick={onClick} className={className} data-variant={variant}>
       {children}
     </button>
@@ -24,7 +24,7 @@ vi.mock('@/components/ui/button', () => ({
 
 // Mock the Badge component
 vi.mock('@/components/ui/badge', () => ({
-  Badge: ({ children, variant, className }: any) => (
+  Badge: ({ children, variant, className }: { children: React.ReactNode; variant: string; className: string }) => (
     <span className={className} data-variant={variant}>
       {children}
     </span>
@@ -33,19 +33,25 @@ vi.mock('@/components/ui/badge', () => ({
 
 // Mock the useDebounce hook
 vi.mock('@/hooks/useDebounce', () => ({
-  useDebounce: (value: any) => value,
+  useDebounce: (value: unknown) => value,
 }));
 
 describe('MobileSearchFilter', () => {
   const defaultProps = {
     filters: {
       searchTerm: '',
-      format: 'all',
-      cost: 'all',
-      difficulty: 'all',
+      format: 'all' as const,
+      cost: 'all' as const,
+      difficulty: 'all' as const,
       myTracked: false,
       myNetwork: false,
       recommended: false,
+      categories: [],
+      dateRange: { start: null, end: null },
+      timePreference: 'all' as const,
+      availability: 'all' as const,
+      popularity: 'all' as const,
+      duration: 'all' as const,
     },
     onUpdateFilter: vi.fn(),
     onResetFilters: vi.fn(),

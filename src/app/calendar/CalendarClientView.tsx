@@ -245,6 +245,7 @@ export default function CalendarClientView({
     }, [actions]);
 
     const handleSelectEvent = useCallback((event: Event) => {
+        console.log('handleSelectEvent called with:', event);
         actions.selectEvent(event);
     }, [actions]);
     
@@ -294,6 +295,11 @@ export default function CalendarClientView({
                 calendarRef={calendarRef}
                 isSidebarOpen={state.isSidebarOpen}
                 onToggleSidebar={actions.toggleSidebar}
+                onEventSelect={handleSelectEvent}
+                onAddEvent={(date, hour) => {
+                    // Handle add event - could open a modal or navigate to create event page
+                    console.log('Add event:', { date, hour });
+                }}
                 renderContent={(context) => (
                     <div className="flex h-full relative">
                         <div className="flex-1 relative">

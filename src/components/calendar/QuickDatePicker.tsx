@@ -122,7 +122,7 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                     year: 'numeric'
                 });
             default:
-                return date.toLocaleDateString();
+                return date.toLocaleDateString('en-US');
         }
     };
 
@@ -192,7 +192,7 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                             disabled={isAnimating}
                             aria-label={`Previous ${view}`}
                         >
-                            <MaterialIcon name="chevron_left" size={24} />
+                            <MaterialIcon name="arrow_back" size={24} />
                         </button>
                         
                         <button

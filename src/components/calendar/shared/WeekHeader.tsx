@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { formatDayHeader } from '@/utils/eventViewUtils';
+import { isSameDay } from '@/utils/dateUtils';
 
 export interface WeekHeaderProps {
     weekDays: Date[];
@@ -40,7 +41,7 @@ export const WeekHeader: React.FC<WeekHeaderProps> = ({
             {/* Day headers */}
             {weekDays.map((day, index) => {
                 const { dayNumber, dayName } = formatDayHeader(day);
-                const isToday = day.toDateString() === today.toDateString();
+                const isToday = isSameDay(day, today);
 
                 return (
                     <div

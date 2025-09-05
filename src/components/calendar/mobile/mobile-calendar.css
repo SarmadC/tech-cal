@@ -2,6 +2,9 @@
    MOBILE CALENDAR COMPONENTS STYLES - ENHANCED VERSION
    ========================================================================== */
 
+/* Import new mobile today and calendar styles */
+@import './mobile-today-calendar.css';
+
 /* ========== ENHANCED ANIMATIONS & INTERACTIONS ========== */
 
 /* Pull to Refresh Indicator */
