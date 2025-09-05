@@ -134,6 +134,8 @@
   background: var(--background-main);
   color: var(--foreground-primary);
   overflow: hidden;
+  /* Add bottom padding for bottom tab navigation */
+  padding-bottom: 80px;
 }
 
 /* ==========================================================================
@@ -816,6 +818,30 @@
   padding: var(--space-8);
   color: var(--foreground-tertiary);
   font-size: 0.875rem;
+}
+
+/* ==========================================================================
+   BOTTOM TAB NAVIGATION INTEGRATION
+   ========================================================================== */
+
+/* Ensure mobile calendar views work with bottom tab navigation */
+@media (max-width: 768px) {
+  .mobile-calendar-week-view,
+  .mobile-calendar-day-view,
+  .mobile-calendar-month-view {
+    /* Account for bottom tab bar height */
+    margin-bottom: 80px;
+    /* Ensure content doesn't get hidden behind tabs */
+    min-height: calc(100vh - 80px);
+  }
+  
+  /* Adjust scrollable content areas */
+  .mobile-day-content,
+  .mobile-timeline-container,
+  .events-list {
+    /* Add extra padding at bottom for better scrolling */
+    padding-bottom: 20px;
+  }
 }
 
 /* ==========================================================================

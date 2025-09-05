@@ -6,6 +6,8 @@ import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
 import MobileCalendarNavigation from '@/components/calendar/MobileCalendarNavigation';
+import MobileBottomTabNavigation from '@/components/calendar/MobileBottomTabNavigation';
+import CalendarTransitionWrapper from '@/components/calendar/CalendarTransitionWrapper';
 import '@/app/styles/calendar-sidebar.css';
 
 // Removed unused type imports
@@ -149,20 +151,30 @@ export function CalendarLayout({
                     />
                 </div>
 
-                {/* Mobile Navigation */}
+                {/* Mobile Navigation - Bottom Tab Style */}
                 <div className="md:hidden">
-                    <MobileCalendarNavigation
+                    <MobileBottomTabNavigation
                         currentView={view}
                         onViewChange={handleViewChange}
                         onToggleSidebar={onToggleSidebar || (() => {})}
                         onToggleFilters={handleToggleFilters}
+                        onDateChange={handleDateChange}
                         activeFilterCount={activeFilterCount}
                         isSidebarOpen={isSidebarOpen}
+                        currentDate={activeDate}
+                        filters={{}}
+                        onUpdateFilter={() => {}}
+                        onResetFilters={() => {}}
+                        onApplyQuickFilter={() => {}}
+                        searchSuggestions={[]}
+                        onSearchSuggestionSelect={() => {}}
                     />
                 </div>
 
-                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                    {content}
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden calendar-content-with-bottom-tabs">
+                    <CalendarTransitionWrapper view={view} date={activeDate}>
+                        {content}
+                    </CalendarTransitionWrapper>
                 </div>
             </div>
         </div>
