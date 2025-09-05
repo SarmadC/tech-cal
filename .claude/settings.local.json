@@ -34,7 +34,8 @@
       "Bash(npm run typecheck:*)",
       "Bash(npm run:*)",
       "WebFetch(domain:img.logo.dev)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "mcp__playwright__browser_resize"
     ],
     "deny": [],
     "ask": []

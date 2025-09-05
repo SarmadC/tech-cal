@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
+import MobileCalendarNavigation from '@/components/calendar/MobileCalendarNavigation';
 import '@/app/styles/calendar-sidebar.css';
 
-import type { AppProfile, EventType, Event } from '@/types';
+// Removed unused type imports
 import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
+import { useCalendar } from '@/contexts';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -24,22 +26,13 @@ export interface CalendarLayoutContext {
 
 export interface CalendarLayoutProps {
     children?: ReactNode;
-    profile: AppProfile | null;
-    categories: EventType[];
-    events?: Event[];
-    currentDate?: Date;
-    onDateChange?: (date: Date) => void;
-    // --- FIX START ---
-    // Add the onSelectEvent prop to the interface.
-    onSelectEvent?: (event: Event) => void;
-    // --- FIX END ---
     onNavigate?: (direction: 'prev' | 'next' | 'today') => void;
+    onDateChange?: (date: Date) => void;
     onToggleFilters?: () => void;
     isFilterPanelOpen?: boolean;
     activeFilterCount?: number;
     calendarRef?: React.RefObject<FullCalendar | null>;
     renderContent?: (context: CalendarLayoutContext) => ReactNode;
-    monthlyEventCounts?: Map<string, Map<number, number>>;
     // Sidebar toggle props
     isSidebarOpen?: boolean;
     onToggleSidebar?: () => void;
@@ -47,22 +40,18 @@ export interface CalendarLayoutProps {
 
 export function CalendarLayout({
     children,
-    profile,
-    categories,
-    events = [],
-    currentDate,
-    onDateChange,
-    onSelectEvent, // --- FIX: Receive the new prop ---
     onNavigate,
+    onDateChange,
     onToggleFilters,
     isFilterPanelOpen = false,
     activeFilterCount = 0,
     calendarRef,
     renderContent,
-    monthlyEventCounts,
     isSidebarOpen = true,
     onToggleSidebar,
 }: CalendarLayoutProps) {
+    // Get data from context instead of props
+    const { currentDate, profile, categories } = useCalendar();
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -102,6 +91,7 @@ export function CalendarLayout({
         onToggleFilters?.();
     };
 
+
     const layoutContext: CalendarLayoutContext = {
         view,
         date: activeDate,
@@ -137,18 +127,8 @@ export function CalendarLayout({
                     />
                     
                     {/* Sidebar */}
-                    <div className="fixed md:relative z-50 w-80 h-full border-r border-border-default bg-background-elevated transform transition-transform duration-300 ease-in-out md:transform-none">
+                    <div className={`calendar-sidebar ${isSidebarOpen ? 'open' : ''}`}>
                         <CalendarSidebar
-                            currentDate={activeDate}
-                            setCurrentDate={handleDateChange}
-                            categories={categories}
-                            user={{
-                                name: profile?.fullName || 'User',
-                                role: 'Member'
-                            }}
-                            events={events}
-                            onSelectEvent={onSelectEvent}
-                            monthlyEventCounts={monthlyEventCounts}
                             onClose={onToggleSidebar}
                         />
                     </div>
@@ -156,15 +136,31 @@ export function CalendarLayout({
             )}
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <CalendarHeader
-                    currentDate={activeDate}
-                    onNavigate={handleNavigation}
-                    onToggleFilters={handleToggleFilters}
-                    isFilterPanelOpen={isFilterPanelOpen}
-                    activeFilterCount={activeFilterCount}
-                    onToggleSidebar={onToggleSidebar}
-                    isSidebarOpen={isSidebarOpen}
-                />
+                {/* Desktop Header */}
+                <div className="hidden md:block">
+                    <CalendarHeader
+                        currentDate={activeDate}
+                        onNavigate={handleNavigation}
+                        onToggleFilters={handleToggleFilters}
+                        isFilterPanelOpen={isFilterPanelOpen}
+                        activeFilterCount={activeFilterCount}
+                        onToggleSidebar={onToggleSidebar || (() => {})}
+                        isSidebarOpen={isSidebarOpen}
+                    />
+                </div>
+
+                {/* Mobile Navigation */}
+                <div className="md:hidden">
+                    <MobileCalendarNavigation
+                        currentView={view}
+                        onViewChange={handleViewChange}
+                        onToggleSidebar={onToggleSidebar || (() => {})}
+                        onToggleFilters={handleToggleFilters}
+                        activeFilterCount={activeFilterCount}
+                        isSidebarOpen={isSidebarOpen}
+                    />
+                </div>
+
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     {content}
                 </div>

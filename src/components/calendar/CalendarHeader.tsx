@@ -40,9 +40,10 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
 
     // 5. NEW HANDLER to change the view by navigating to a new URL
     const handleViewChange = (newView: CalendarViewType) => {
-        // This pushes a new URL to the browser history, triggering a re-render
-        // of the server component (`calendar/page.tsx`) with the new search param.
-        router.push(`/calendar?view=${newView}`);
+        // Preserve existing URL parameters and update the view
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('view', newView);
+        router.push(`/calendar?${params.toString()}`, { scroll: false });
     };
 
     return (
@@ -73,7 +74,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                     <button onClick={() => onNavigate('today')} className="text-sm px-3 py-1.5 border border-border-default rounded-lg hover:bg-background-tertiary transition-colors">Today</button>
                 </div>
 
-                {/* [MODIFIED] View Switcher Buttons */}
+                {/* Desktop View Switcher Buttons */}
                 <div className="hidden md:flex items-center bg-background-tertiary p-1 rounded-lg">
                     {(['month', 'week', 'day'] as CalendarViewType[]).map(v => (
                         <button

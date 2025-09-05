@@ -1,6 +1,6 @@
 // src/contexts/index.ts
 
-// We only export things from AuthContext for now.
+// Auth Context exports
 export {
     AuthProvider,
     useAuth,
@@ -11,6 +11,14 @@ export {
     useAuthLoading,
 } from './AuthContext';
 
+// Calendar Context exports
+export {
+    CalendarProvider,
+    useCalendar,
+    useCalendarData,
+    useCalendarActions,
+    useCalendarState,
+} from './CalendarContext';
 
 // Export types that components might need
 export type { AuthContextType } from './AuthContext';
