@@ -3,7 +3,7 @@
 import { FC } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation'; // 1. IMPORT ROUTER HOOKS
-import { LayoutDashboard, Filter } from 'lucide-react';
+import { MaterialIcon } from '@/components/ui/Icon';
 import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/common/UserMenu';
 
@@ -45,7 +45,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
             {/* Left Section: Branding */}
             <div className="flex items-center space-x-4">
                 <Link href="/dashboard" className="p-2 text-foreground-secondary hover:text-foreground-primary hover:bg-background-tertiary rounded-lg transition-colors" title="Go to Dashboard">
-                    <LayoutDashboard className="w-5 h-5" />
+                    <MaterialIcon name="dashboard" size={20} />
                 </Link>
             </div>
 
@@ -80,7 +80,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                     className={`filter-toggle-button ${isFilterPanelOpen ? 'active' : ''}`}
                     aria-label="Toggle smart filters"
                 >
-                    <Filter className="w-4 h-4" />
+                    <MaterialIcon name="filter" size={16} />
                     {activeFilterCount > 0 && (
                         <div className="filter-count-badge">
                             {activeFilterCount}

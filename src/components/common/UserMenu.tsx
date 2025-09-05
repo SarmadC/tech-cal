@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Settings, LogOut, Calendar, BarChart3, ChevronDown, CreditCard, TrendingUp } from 'lucide-react';
+import { MaterialIcon } from '@/components/ui/Icon';
 
 export default function UserMenu() {
     const [isOpen, setIsOpen] = useState(false);
@@ -97,8 +97,10 @@ export default function UserMenu() {
                     </p>
                 </div>
 
-                <ChevronDown
-                    className={`w-4 h-4 text-foreground-tertiary transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                <MaterialIcon
+                    name="expand-more"
+                    size={16}
+                    className={`text-foreground-tertiary transition-transform ${isOpen ? 'rotate-180' : ''}`}
                 />
             </button>
 
@@ -141,7 +143,7 @@ export default function UserMenu() {
                             onClick={() => setIsOpen(false)}
                             className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
                         >
-                            <BarChart3 className="w-4 h-4 text-foreground-tertiary" />
+                            <MaterialIcon name="bar-chart" size={16} className="text-foreground-tertiary" />
                             <span className="text-sm text-foreground-primary">Dashboard</span>
                         </Link>
 
@@ -150,7 +152,7 @@ export default function UserMenu() {
                             onClick={() => setIsOpen(false)}
                             className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
                         >
-                            <TrendingUp className="w-4 h-4 text-foreground-tertiary" />
+                            <MaterialIcon name="trending-up" size={16} className="text-foreground-tertiary" />
                             <span className="text-sm text-foreground-primary">Growth</span>
                         </Link>
 
@@ -161,7 +163,7 @@ export default function UserMenu() {
                             onClick={() => setIsOpen(false)}
                             className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
                         >
-                            <Calendar className="w-4 h-4 text-foreground-tertiary" />
+                            <MaterialIcon name="calendar" size={16} className="text-foreground-tertiary" />
                             <span className="text-sm text-foreground-primary">Calendar</span>
                         </Link>
                     </div>
@@ -174,7 +176,7 @@ export default function UserMenu() {
                             onClick={() => setIsOpen(false)}
                             className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
                         >
-                            <User className="w-4 h-4 text-foreground-tertiary" />
+                            <MaterialIcon name="person" size={16} className="text-foreground-tertiary" />
                             <span className="text-sm text-foreground-primary">Profile</span>
                         </Link>
 
@@ -186,7 +188,7 @@ export default function UserMenu() {
                             className="flex items-center justify-between px-4 py-2 hover:bg-background-secondary transition-colors"
                         >
                             <div className="flex items-center space-x-3">
-                                <CreditCard className="w-4 h-4 text-foreground-tertiary" />
+                                <MaterialIcon name="credit-card" size={16} className="text-foreground-tertiary" />
                                 <span className="text-sm text-foreground-primary">Billing</span>
                             </div>
                             <span className="text-xs bg-accent-primary/10 text-accent-primary px-2 py-0.5 rounded-full font-medium">
@@ -200,7 +202,7 @@ export default function UserMenu() {
                             onClick={() => setIsOpen(false)}
                             className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
                         >
-                            <Settings className="w-4 h-4 text-foreground-tertiary" />
+                            <MaterialIcon name="settings" size={16} className="text-foreground-tertiary" />
                             <span className="text-sm text-foreground-primary">Settings</span>
                         </Link>
                     </div>
@@ -211,7 +213,7 @@ export default function UserMenu() {
                             onClick={handleSignOut}
                             className="flex items-center space-x-3 px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left"
                         >
-                            <LogOut className="w-4 h-4 text-red-500" />
+                            <MaterialIcon name="logout" size={16} className="text-red-500" />
                             <span className="text-sm text-red-600 dark:text-red-400">Sign Out</span>
                         </button>
                     </div>

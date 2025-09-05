@@ -1,20 +1,11 @@
 // src/components/auth/index.tsx
-/**
- * Consolidated Authentication Components
- * Preserves your existing AuthForm and SimpleForm logic
- */
 
 'use client';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
-// ============================================
-// AUTHFORM - Your existing logic preserved
-// ============================================
 
-export * from './AuthForm'; // <-- Add this line
-// ============================================
-// SIMPLEFORM - Your existing logic preserved
-// ============================================
+
+export * from './AuthForm';
 
 interface SimpleFormProps {
     action: (payload: FormData) => void;
@@ -39,9 +30,6 @@ export function SimpleForm({
     );
 }
 
-// ============================================
-// RE-EXPORT AuthProviders
-// ============================================
 
 export { default as AuthProviders } from './AuthProviders';
 
@@ -91,9 +79,5 @@ export function FormInput({ error, className = "", ...props }: FormInputProps) {
         />
     );
 }
-
-// ============================================
-// EXPORT TYPE
-// ============================================
 
 export type { AuthFormState } from '@/app/auth/actions';

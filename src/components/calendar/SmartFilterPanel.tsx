@@ -1,16 +1,6 @@
 // src/components/calendar/SmartFilterPanel.tsx
 import React, { FC } from 'react';
-import {
-    X,
-    Filter,
-    DollarSign,
-    Users,
-    TrendingUp,
-    Calendar,
-    Wifi,
-    Star,
-    CheckCircle
-} from 'lucide-react';
+import { MaterialIcon, IconName } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SmartFilterOptions } from '@/hooks/useSmartFilters';
@@ -36,13 +26,13 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
 }) => {
     if (!isOpen) return null;
 
-    const quickFilters = [
-        { id: 'this-week', label: 'This Week', icon: Calendar },
-        { id: 'free-events', label: 'Free Events', icon: DollarSign },
-        { id: 'virtual-only', label: 'Virtual Only', icon: Wifi },
-        { id: 'no-conflicts', label: 'No Conflicts', icon: CheckCircle },
-        { id: 'trending', label: 'Trending', icon: TrendingUp },
-        { id: 'my-level', label: 'My Level', icon: Star },
+    const quickFilters: Array<{ id: string; label: string; icon: IconName }> = [
+        { id: 'this-week', label: 'This Week', icon: 'calendar' },
+        { id: 'free-events', label: 'Free Events', icon: 'money' },
+        { id: 'virtual-only', label: 'Virtual Only', icon: 'wifi' },
+        { id: 'no-conflicts', label: 'No Conflicts', icon: 'check-circle' },
+        { id: 'trending', label: 'Trending', icon: 'trending-up' },
+        { id: 'my-level', label: 'My Level', icon: 'star' },
     ];
 
     return (
@@ -55,7 +45,7 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border-subtle">
                     <div className="flex items-center space-x-2">
-                        <Filter className="w-5 h-5 text-accent-primary" />
+                        <MaterialIcon name="filter" size={20} className="text-accent-primary" />
                         <h3 className="font-semibold text-foreground-primary">Smart Filters</h3>
                         {activeFilterCount > 0 && (
                             <Badge variant="secondary" className="bg-accent-primary text-white">
@@ -64,7 +54,7 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                         )}
                     </div>
                     <Button variant="ghost" size="sm" onClick={onClose} className="lg:hidden">
-                        <X className="w-4 h-4" />
+                        <MaterialIcon name="close" size={16} />
                     </Button>
                 </div>
 
@@ -73,21 +63,18 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                     <div>
                         <h4 className="text-sm font-medium text-foreground-primary mb-3">Quick Filters</h4>
                         <div className="grid grid-cols-2 gap-2">
-                            {quickFilters.map(filter => {
-                                const Icon = filter.icon;
-                                return (
-                                    <Button
-                                        key={filter.id}
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => onApplyQuickFilter(filter.id)}
-                                        className="flex items-center space-x-2 justify-start"
-                                    >
-                                        <Icon className="w-4 h-4" />
-                                        <span className="text-xs">{filter.label}</span>
-                                    </Button>
-                                );
-                            })}
+                            {quickFilters.map(filter => (
+                                <Button
+                                    key={filter.id}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => onApplyQuickFilter(filter.id)}
+                                    className="flex items-center space-x-2 justify-start"
+                                >
+                                    <MaterialIcon name={filter.icon} size={16} />
+                                    <span className="text-xs">{filter.label}</span>
+                                </Button>
+                            ))}
                         </div>
                     </div>
 
@@ -95,12 +82,12 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                     <div>
                         <h4 className="text-sm font-medium text-foreground-primary mb-3">Format</h4>
                         <div className="space-y-2">
-                            {[
-                                { value: 'all', label: 'All Formats', icon: Calendar },
-                                { value: 'virtual', label: 'Virtual', icon: Wifi },
-                                { value: 'in-person', label: 'In-Person', icon: Users },
-                                { value: 'hybrid', label: 'Hybrid', icon: Star }
-                            ].map(option => (
+                            {([
+                                { value: 'all', label: 'All Formats', icon: 'calendar' as const },
+                                { value: 'virtual', label: 'Virtual', icon: 'wifi' as const },
+                                { value: 'in-person', label: 'In-Person', icon: 'people' as const },
+                                { value: 'hybrid', label: 'Hybrid', icon: 'star' as const }
+                            ] as const).map(option => (
                                 <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
                                     <input
                                         type="radio"
@@ -110,7 +97,7 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                                         onChange={(e) => onUpdateFilter('format', e.target.value as SmartFilterOptions['format'])}
                                         className="text-accent-primary"
                                     />
-                                    <option.icon className="w-4 h-4 text-foreground-tertiary" />
+                                    <MaterialIcon name={option.icon} size={16} className="text-foreground-tertiary" />
                                     <span className="text-sm text-foreground-secondary">{option.label}</span>
                                 </label>
                             ))}

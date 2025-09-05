@@ -1,6 +1,6 @@
 // src/components/SearchBar.tsx
 
-import { Search } from 'lucide-react';
+import { MaterialIcon } from '@/components/ui/Icon';
 
 type Suggestion = {
   id: string;
@@ -27,7 +27,7 @@ export default function SearchBar({
   return (
     <div className="relative">
       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <Search className="w-5 h-5 text-gray-400" />
+        <MaterialIcon name="search" size={20} className="text-gray-400" />
       </div>
       <input
         type="text"

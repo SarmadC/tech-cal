@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Icon } from '@/components/ui/Icon';
+import { MaterialIcon } from '@/components/ui/Icon';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { isEventLive, getEventDuration } from '@/utils/dateUtils';
 import { LearnMoreButton } from './LearnMoreButton';
@@ -54,26 +54,26 @@ export const EventCard: React.FC<EventCardProps> = ({
         
         // Virtual/Remote events
         if (loc.includes('remote') || loc.includes('virtual') || loc.includes('online')) {
-            return <Icon name="devices" size={10} color={iconColor} />;
+            return <MaterialIcon name="devices" size={10} color={iconColor} />;
         }
         
         // VR/AR/Metaverse events
         if (loc.includes('vr') || loc.includes('ar') || loc.includes('metaverse') || loc.includes('virtual reality')) {
-            return <Icon name="event" size={10} color={iconColor} />;
+            return <MaterialIcon name="event" size={10} color={iconColor} />;
         }
         
         // Conference centers, convention halls, specific venues
         if (loc.includes('conference') || loc.includes('convention') || loc.includes('center') || loc.includes('hall') || loc.includes('expo')) {
-            return <Icon name="event" size={10} color={iconColor} />;
+            return <MaterialIcon name="event" size={10} color={iconColor} />;
         }
         
         // Global/worldwide events
         if (loc.includes('worldwide') || loc.includes('global') || loc.includes('international')) {
-            return <Icon name="location" size={10} color={iconColor} />;
+            return <MaterialIcon name="location" size={10} color={iconColor} />;
         }
         
         // Default to map pin for physical locations
-        return <Icon name="location" size={10} color={iconColor} />;
+        return <MaterialIcon name="location" size={10} color={iconColor} />;
     };
 
     // Get category-based background color from the event type
@@ -321,7 +321,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                                 )}
                                 {showDayOrganizer && (
                                     <span className="event-organizer">
-                                        <Icon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
+                                        <MaterialIcon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
                                         {event.organizer}
                                     </span>
                                 )}
@@ -420,7 +420,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                     )}
                     {showWeekOrganizer && event.organizer && (
                         <span className="event-organizer-text">
-                            <Icon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
+                            <MaterialIcon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
                             {event.organizer}
                         </span>
                     )}

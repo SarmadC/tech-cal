@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Icon } from '@/components/ui/Icon';
+import { MaterialIcon } from '@/components/ui/Icon';
 import ShinyText from './ShinyText';
 import './ShinyText.css';
 
@@ -33,7 +33,7 @@ export const LearnMoreButton: React.FC<LearnMoreButtonProps> = ({
             type="button"
         >
                                                     <div className="button-content">
-                        <Icon 
+                        <MaterialIcon 
                             name="arrow-forward"
                             className={`arrow-icon ${isHovered ? 'arrow-hovered' : ''}`}
                             size="1em"

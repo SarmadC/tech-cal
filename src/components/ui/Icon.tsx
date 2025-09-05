@@ -21,7 +21,18 @@ import {
   MdWarning,
   MdError,
   MdDevices,
-  MdBusiness
+  MdBusiness,
+  MdLogout,
+  MdBarChart,
+  MdExpandMore,
+  MdCreditCard,
+  MdTrendingUp,
+  MdDashboard,
+  MdAttachMoney,
+  MdPeople,
+  MdWifi,
+  MdStar,
+  MdCheckCircle
 } from 'react-icons/md';
 
 export type IconName = 
@@ -46,7 +57,20 @@ export type IconName =
   | 'warning'
   | 'error'
   | 'devices'
-  | 'building';
+  | 'building'
+  | 'logout'
+  | 'bar-chart'
+  | 'expand-more'
+  | 'credit-card'
+  | 'trending-up'
+  | 'dashboard'
+  | 'filter'
+  | 'close'
+  | 'money'
+  | 'people'
+  | 'wifi'
+  | 'star'
+  | 'check-circle';
 
 interface IconProps {
   name: IconName;
@@ -78,9 +102,20 @@ const iconMap = {
   'error': MdError,
   'devices': MdDevices,
   'building': MdBusiness,
+  'logout': MdLogout,
+  'bar-chart': MdBarChart,
+  'expand-more': MdExpandMore,
+  'credit-card': MdCreditCard,
+  'trending-up': MdTrendingUp,
+  'dashboard': MdDashboard,
+  'money': MdAttachMoney,
+  'people': MdPeople,
+  'wifi': MdWifi,
+  'star': MdStar,
+  'check-circle': MdCheckCircle,
 };
 
-export const Icon: React.FC<IconProps> = ({ 
+export const MaterialIcon: React.FC<IconProps> = ({ 
   name, 
   size = 16, 
   className = '', 
@@ -102,4 +137,4 @@ export const Icon: React.FC<IconProps> = ({
   );
 };
 
-export default Icon;
+export default MaterialIcon;

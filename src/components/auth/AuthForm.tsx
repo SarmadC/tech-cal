@@ -1,5 +1,4 @@
 // src/components/auth/AuthForm.tsx
-// Extract this from your index.tsx file if needed
 
 'use client';
 
@@ -38,7 +37,7 @@ export function AuthForm({
                 if (onSuccess) {
                     onSuccess();
                 }
-            }, 100); // Reduced from 500ms to 100ms
+            }, 100);
         } else if (state.message && !state.success && (state.errors?._form || Object.keys(state.errors ?? {}).length === 0)) {
             // Show error toast only for general form errors
             toast.error(state.message);

@@ -1,4 +1,4 @@
-// src/components/auth/AuthProviders.tsx (Streamlined)
+// src/components/auth/AuthProviders.tsx
 'use client';
 
 import { Loader2 } from 'lucide-react';
