@@ -37,10 +37,15 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
     const totalSlots = totalHours * 2 + 1; // +1 for the final time label
 
     // Generate the grid template columns (time column + 7 day columns)
+    // Make responsive for mobile
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const minWidth = isMobile ? '600px' : '1200px';
+    const timeColumnWidth = isMobile ? '60px' : '80px';
+    
     const gridColsStyle = {
-        gridTemplateColumns: `80px repeat(7, 1fr)`,
+        gridTemplateColumns: `${timeColumnWidth} repeat(7, 1fr)`,
         gridTemplateRows: `repeat(${totalSlots}, 40px)`, // Increased from 30px to 40px per half-hour
-        minWidth: '1200px'
+        minWidth
     };
 
     // Helper function to calculate grid row positions for an event
@@ -113,7 +118,6 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                 ...gridColsStyle,
                 position: 'relative',
                 display: 'grid',
-                minWidth: '1200px',
                 background: 'var(--background-main, #0a0a0b)'
             }}
         >

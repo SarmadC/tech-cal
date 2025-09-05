@@ -11,16 +11,14 @@ import { createClient } from '@/utils/supabase/client';
 import { formatDateForURL } from '@/utils/dateUtils';
 import { CalendarLayout, type CalendarLayoutContext } from './CalendarLayout';
 import Loading from '@/components/Loading';
-import CalendarWithPreview from '@/components/calendar/CalendarWithPreview';
 import SmartFilterPanel from '@/components/calendar/SmartFilterPanel';
+import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCalendarRenderer';
 
 import { useSmartFilters } from '@/hooks/useSmartFilters';
 
 import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth, CalendarProvider } from '@/contexts';
-import { TechCalendarDayView } from '@/components/calendar/TechCalendarDayView';
-import TechCalendarWeekView from '@/components/calendar/TechCalendarWeekView';
 
 const EventDetailPanelDynamic = dynamic(
     () => import('@/components/calendar/EventDetailPanel'),
@@ -258,27 +256,20 @@ export default function CalendarClientView({
     }, [searchParams, router, actions]);
 
     const renderCalendarContent = (context: CalendarLayoutContext) => {
-        if (context.view === 'day') {
-            return <TechCalendarDayView 
-                events={dayEvents} 
-                initialDate={context.date} 
-                categories={initialCategories} 
+        return (
+            <AdaptiveCalendarRenderer
+                view={context.view}
+                events={eventData.enrichedEvents}
+                weekEvents={weekEvents}
+                dayEvents={dayEvents}
+                initialDate={context.date}
+                categories={initialCategories}
                 profile={profile}
                 onEventSelect={handleSelectEvent}
-            />;
-        }
-
-        if (context.view === 'week') {
-            return <TechCalendarWeekView 
-                events={weekEvents} 
-                initialDate={context.date} 
-                categories={initialCategories} 
-                profile={profile}
-                onEventSelect={handleSelectEvent}
-            />;
-        }
-
-        return <CalendarWithPreview events={eventData.enrichedEvents} onEventClick={handleEventClick} view={context.view} calendarRef={context.calendarRef} />;
+                onEventClick={handleEventClick}
+                calendarRef={context.calendarRef}
+            />
+        );
     };
 
     return (

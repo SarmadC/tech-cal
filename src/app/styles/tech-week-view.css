@@ -159,9 +159,11 @@
 .tech-calendar-week-view {
   height: 100%;
   /* Allow scrolling in the week view */
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   background-color: var(--background-main);
   position: relative;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 /* Week view grid container - Now matches day view structure */
@@ -538,6 +540,14 @@
     min-width: 1200px;
 }
 
+/* Mobile week header */
+@media (max-width: 768px) {
+    .tech-calendar-week-view .week-header {
+        min-width: 600px;
+        grid-template-columns: 60px repeat(7, 1fr);
+    }
+}
+
 .week-header-cell {
     padding: 1rem;
     text-align: center;
@@ -654,11 +664,11 @@
 
 @media (max-width: 768px) {
     .week-grid-container {
-        min-width: 700px;
+        min-width: 600px;
     }
     
     .week-header {
-        min-width: 700px;
+        min-width: 600px;
         grid-template-columns: 60px repeat(7, 1fr);
     }
     

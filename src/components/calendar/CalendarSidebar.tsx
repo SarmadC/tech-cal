@@ -23,10 +23,8 @@ const CalendarSidebar: FC<SidebarProps> = ({ onClose }) => {
     const { events, profile, selectEvent } = useCalendar();
 
     const [isMobile, setIsMobile] = useState(false);
-    const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
-        setIsMounted(true);
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 640);
         };
@@ -37,25 +35,16 @@ const CalendarSidebar: FC<SidebarProps> = ({ onClose }) => {
     }, []);
 
     const upcomingEvents = useMemo(() => {
-        if (!isMounted) return [];
         const now = new Date();
         return events
             .filter(event => new Date(event.startTime) > now)
             .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
             .slice(0, 5);
-    }, [events, isMounted]);
+    }, [events]);
 
     return (
         <aside className="sidebar-content">
-            {!isMounted ? (
-                <div className="animate-pulse">
-                    <div className="h-16 bg-gray-700 rounded mb-4"></div>
-                    <div className="h-32 bg-gray-700 rounded mb-4"></div>
-                    <div className="h-48 bg-gray-700 rounded"></div>
-                </div>
-            ) : (
-                <>
-                    {/* Header with close button for mobile */}
+            {/* Header with close button for mobile */}
             <div className="sidebar-header">
                 <div className="sidebar-user-info">
                     <div className="sidebar-user-avatar">
@@ -171,8 +160,6 @@ const CalendarSidebar: FC<SidebarProps> = ({ onClose }) => {
                     </div>
                 </ErrorBoundary>
             </div>
-            </>
-            )}
         </aside>
     );
 };

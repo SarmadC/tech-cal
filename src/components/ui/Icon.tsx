@@ -32,7 +32,13 @@ import {
   MdPeople,
   MdWifi,
   MdStar,
-  MdCheckCircle
+  MdCheckCircle,
+  MdRefresh,
+  MdLabel,
+  MdEventAvailable,
+  MdClear,
+  MdChevronRight,
+  MdArrowBack
 } from 'react-icons/md';
 
 export type IconName = 
@@ -70,7 +76,13 @@ export type IconName =
   | 'people'
   | 'wifi'
   | 'star'
-  | 'check-circle';
+  | 'check-circle'
+  | 'refresh'
+  | 'label'
+  | 'event_available'
+  | 'clear'
+  | 'chevron_right'
+  | 'arrow_back';
 
 interface IconProps {
   name: IconName;
@@ -113,6 +125,12 @@ const iconMap = {
   'wifi': MdWifi,
   'star': MdStar,
   'check-circle': MdCheckCircle,
+  'refresh': MdRefresh,
+  'label': MdLabel,
+  'event_available': MdEventAvailable,
+  'clear': MdClear,
+  'chevron_right': MdChevronRight,
+  'arrow_back': MdArrowBack,
 };
 
 export const MaterialIcon: React.FC<IconProps> = ({ 

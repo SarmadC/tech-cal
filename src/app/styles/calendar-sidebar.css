@@ -537,6 +537,9 @@
 .mobile-calendar-nav {
     background: var(--background-main, #ffffff);
     border-bottom: 1px solid var(--border-subtle, #e5e7eb);
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
 }
 
 .mobile-nav-header {
@@ -544,6 +547,28 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 1rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ensure mobile nav doesn't cause horizontal scroll */
+@media (max-width: 768px) {
+    .mobile-nav-header {
+        padding: 0.75rem 0.5rem;
+        min-width: 0; /* Allow flex items to shrink */
+    }
+    
+    .mobile-nav-title {
+        font-size: 1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 200px;
+    }
+    
+    .mobile-nav-actions {
+        flex-shrink: 0;
+    }
 }
 
 .mobile-nav-title {
@@ -580,6 +605,14 @@
 
 .mobile-view-switcher {
     padding: 0 1rem 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    .mobile-view-switcher {
+        padding: 0 0.5rem 0.75rem;
+    }
 }
 
 .mobile-view-switcher .view-switcher-container {
@@ -603,6 +636,48 @@
     font-weight: 500;
     touch-action: manipulation;
     min-height: 44px; /* iOS touch target minimum */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Mobile-specific button adjustments */
+@media (max-width: 480px) {
+    .mobile-view-button {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.8rem;
+        gap: 0.25rem;
+    }
+    
+    .mobile-view-button span {
+        display: none; /* Hide text on very small screens, show only icons */
+    }
+}
+
+/* iPhone specific optimizations */
+@media (max-width: 414px) {
+    .mobile-nav-header {
+        padding: 0.5rem 0.25rem;
+    }
+    
+    .mobile-nav-title {
+        font-size: 0.9rem;
+        max-width: 150px;
+    }
+    
+    .mobile-view-switcher {
+        padding: 0 0.25rem 0.5rem;
+    }
+    
+    .mobile-view-button {
+        padding: 0.4rem 0.1rem;
+        font-size: 0.75rem;
+        min-height: 40px;
+    }
+    
+    .mobile-nav-button {
+        padding: 0.4rem;
+    }
 }
 
 .mobile-view-button:active {

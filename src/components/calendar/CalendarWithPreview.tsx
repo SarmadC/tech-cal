@@ -1,4 +1,4 @@
-import { FC, useMemo, useRef, useCallback, useEffect } from 'react';
+import { FC, useMemo, useRef, useCallback, useEffect, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -34,12 +34,24 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
 }) => {
     const internalCalendarRef = useRef<FullCalendar | null>(null);
     const activeCalendarRef = calendarRef || internalCalendarRef;
+    const [isMobile, setIsMobile] = useState(false);
 
     const {
         previewState,
         showPreview,
         hidePreview
     } = useEventPreview();
+
+    // Check if mobile on mount and resize
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const fullCalendarView = useMemo(() => {
         switch (view) {
@@ -140,16 +152,30 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
                 datesSet={handleDatesSet}
                 headerToolbar={false}
                 height="auto"
-                dayMaxEvents={3}
+                dayMaxEvents={isMobile ? 1 : 3}
                 moreLinkClick="popover"
                 eventDisplay="block"
-                displayEventTime={true}
+                displayEventTime={!isMobile}
                 allDaySlot={false}
                 slotMinTime="06:00:00"
                 slotMaxTime="22:00:00"
                 expandRows={true}
                 stickyHeaderDates={true}
                 nowIndicator={true}
+                dayMaxEventRows={isMobile ? 1 : 3}
+                moreLinkContent={(arg) => {
+                    return isMobile ? `+${arg.num}` : `+${arg.num} more`;
+                }}
+                // Mobile viewport optimizations - remove restrictive aspectRatio
+                aspectRatio={isMobile ? (fullCalendarView === 'dayGridMonth' ? 0.8 : undefined) : 1.2}
+                // Mobile scrolling improvements
+                scrollTime={isMobile ? "06:00:00" : "08:00:00"}
+                scrollTimeReset={false}
+                // Enable horizontal scrolling for mobile week/day views
+                {...(isMobile && fullCalendarView !== 'dayGridMonth' && {
+                    contentHeight: 'auto',
+                    aspectRatio: undefined
+                })}
             />
 
             {/* Event Preview Card */}
