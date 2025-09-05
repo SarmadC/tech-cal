@@ -45,6 +45,7 @@ export default function CalendarClientView({
 
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const {
         filters,
@@ -198,6 +199,7 @@ export default function CalendarClientView({
     }, [enrichedEvents]);
 
     const toggleFilterPanel = useCallback(() => setIsFilterPanelOpen(prev => !prev), []);
+    const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
     const closeEventDetail = useCallback(() => setSelectedEvent(null), []);
 
     const renderCalendarContent = (context: CalendarLayoutContext) => {
@@ -238,6 +240,8 @@ export default function CalendarClientView({
             isFilterPanelOpen={isFilterPanelOpen}
             activeFilterCount={activeFilterCount}
             calendarRef={calendarRef}
+            isSidebarOpen={isSidebarOpen}
+            onToggleSidebar={toggleSidebar}
             renderContent={(context) => (
                 <div className="flex h-full relative">
                     <div className="flex-1 relative">

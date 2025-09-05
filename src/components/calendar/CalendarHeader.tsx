@@ -17,6 +17,9 @@ export interface CalendarHeaderProps {
     onToggleFilters: () => void;
     isFilterPanelOpen: boolean;
     activeFilterCount: number;
+    // Sidebar toggle props
+    onToggleSidebar?: () => void;
+    isSidebarOpen?: boolean;
 }
 
 const CalendarHeader: FC<CalendarHeaderProps> = ({
@@ -24,7 +27,9 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
     onNavigate,
     onToggleFilters,
     isFilterPanelOpen,
-    activeFilterCount
+    activeFilterCount,
+    onToggleSidebar,
+    isSidebarOpen = true
 }) => {
     const { user } = useAuth();
     const router = useRouter(); // 2. INITIALIZE THE ROUTER
@@ -42,8 +47,20 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
 
     return (
         <header className="h-20 flex-shrink-0 px-4 md:px-6 flex items-center justify-between border-b border-border-subtle">
-            {/* Left Section: Branding */}
+            {/* Left Section: Branding and Sidebar Toggle */}
             <div className="flex items-center space-x-4">
+                {/* Sidebar Toggle Button */}
+                {onToggleSidebar && (
+                    <button
+                        onClick={onToggleSidebar}
+                        className="sidebar-toggle-button"
+                        aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+                        title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+                    >
+                        <MaterialIcon name={isSidebarOpen ? "close" : "menu"} size={20} />
+                    </button>
+                )}
+                
                 <Link href="/dashboard" className="p-2 text-foreground-secondary hover:text-foreground-primary hover:bg-background-tertiary rounded-lg transition-colors" title="Go to Dashboard">
                     <MaterialIcon name="dashboard" size={20} />
                 </Link>

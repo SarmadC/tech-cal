@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import CalendarSidebar from '@/components/calendar/CalendarSidebar';
+import '@/app/styles/calendar-sidebar.css';
 
 import type { AppProfile, EventType, Event } from '@/types';
 import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
@@ -39,6 +40,9 @@ export interface CalendarLayoutProps {
     calendarRef?: React.RefObject<FullCalendar | null>;
     renderContent?: (context: CalendarLayoutContext) => ReactNode;
     monthlyEventCounts?: Map<string, Map<number, number>>;
+    // Sidebar toggle props
+    isSidebarOpen?: boolean;
+    onToggleSidebar?: () => void;
 }
 
 export function CalendarLayout({
@@ -56,6 +60,8 @@ export function CalendarLayout({
     calendarRef,
     renderContent,
     monthlyEventCounts,
+    isSidebarOpen = true,
+    onToggleSidebar,
 }: CalendarLayoutProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -121,24 +127,33 @@ export function CalendarLayout({
 
     return (
         <div className="flex h-screen bg-background-main overflow-hidden">
-            <div className="w-80 border-r border-border-default bg-background-elevated">
-                { }
-                <CalendarSidebar
-                    currentDate={activeDate}
-                    setCurrentDate={handleDateChange}
-                    categories={categories}
-                    user={{
-                        name: profile?.fullName || 'User',
-                        role: 'Member'
-                    }}
-                    events={events}
-                    // --- FIX START ---
-                    // Pass the prop down to the CalendarSidebar.
-                    onSelectEvent={onSelectEvent}
-                    // --- FIX END ---
-                    monthlyEventCounts={monthlyEventCounts}
-                />
-            </div>
+            {/* Sidebar - Different behavior for mobile vs desktop */}
+            {isSidebarOpen && (
+                <>
+                    {/* Mobile overlay - only on mobile */}
+                    <div 
+                        className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
+                        onClick={onToggleSidebar}
+                    />
+                    
+                    {/* Sidebar */}
+                    <div className="fixed md:relative z-50 w-80 h-full border-r border-border-default bg-background-elevated transform transition-transform duration-300 ease-in-out md:transform-none">
+                        <CalendarSidebar
+                            currentDate={activeDate}
+                            setCurrentDate={handleDateChange}
+                            categories={categories}
+                            user={{
+                                name: profile?.fullName || 'User',
+                                role: 'Member'
+                            }}
+                            events={events}
+                            onSelectEvent={onSelectEvent}
+                            monthlyEventCounts={monthlyEventCounts}
+                            onClose={onToggleSidebar}
+                        />
+                    </div>
+                </>
+            )}
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 <CalendarHeader
@@ -147,6 +162,8 @@ export function CalendarLayout({
                     onToggleFilters={handleToggleFilters}
                     isFilterPanelOpen={isFilterPanelOpen}
                     activeFilterCount={activeFilterCount}
+                    onToggleSidebar={onToggleSidebar}
+                    isSidebarOpen={isSidebarOpen}
                 />
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     {content}

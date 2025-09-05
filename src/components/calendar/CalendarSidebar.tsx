@@ -15,6 +15,7 @@ interface SidebarProps {
     events: (Event | TrackedEvent)[];
     onSelectEvent?: (event: Event) => void;
     monthlyEventCounts?: Map<string, Map<number, number>>;
+    onClose?: () => void;
 }
 
 const WidgetFallback = () => (
@@ -29,7 +30,8 @@ const CalendarSidebar: FC<SidebarProps> = ({
     user,
     events,
     onSelectEvent,
-    monthlyEventCounts
+    monthlyEventCounts,
+    onClose
 }) => {
 
     const upcomingEvents = useMemo(() => {
@@ -41,25 +43,37 @@ const CalendarSidebar: FC<SidebarProps> = ({
     }, [events]);
 
     return (
-        <aside className="w-80 bg-[#1e1e1e] border-r border-gray-800 p-6 flex flex-col">
-            { }
-            <div className="mb-8">
-                <div className="flex items-center space-x-3 mb-2">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+        <aside className="w-80 bg-[#1e1e1e] border-r border-gray-800 p-6 flex flex-col calendar-sidebar sidebar-content">
+            {/* Header with close button for mobile */}
+            <div className="sidebar-header">
+                <div className="sidebar-user-info">
+                    <div className="sidebar-user-avatar">
                         <span className="text-white font-medium text-sm">
                             {user.name.split(' ').map(n => n[0]).join('')}
                         </span>
                     </div>
-                    <div>
+                    <div className="sidebar-user-details">
                         <h2 className="text-white font-semibold">{user.name}</h2>
                         <p className="text-gray-400 text-sm">{user.role}</p>
                     </div>
                 </div>
+                {/* Close button - only show on mobile */}
+                {onClose && (
+                    <button
+                        onClick={onClose}
+                        className="sidebar-close-button md:hidden"
+                        aria-label="Close sidebar"
+                        title="Close sidebar"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                )}
             </div>
 
             {/* Mini Calendar */}
-            <div className="mb-8">
-                <h3 className="text-white text-lg font-semibold mb-4">Calendar</h3>
+            <div className="sidebar-section">
                 <ErrorBoundary fallback={<WidgetFallback />}>
                     <MiniCalendar
                         date={currentDate}
@@ -71,8 +85,8 @@ const CalendarSidebar: FC<SidebarProps> = ({
             </div>
 
             {/* Upcoming Events */}
-            <div className="flex-1">
-                <h3 className="text-white text-lg font-semibold mb-4">Upcoming Events</h3>
+            <div className="flex-1 sidebar-section">
+                <h3 className="sidebar-section-title">Upcoming Events</h3>
                 <ErrorBoundary fallback={<WidgetFallback />}>
                     <div className="space-y-3">
                         {upcomingEvents.length > 0 ? (
@@ -138,12 +152,6 @@ const CalendarSidebar: FC<SidebarProps> = ({
                 </ErrorBoundary>
             </div>
 
-            { }
-            <div className="mt-6 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg">
-                <p className="text-blue-300 text-xs text-center">
-                    💡 Use <strong>Smart Filters</strong> to find events by format, cost, difficulty, and more!
-                </p>
-            </div>
         </aside>
     );
 };
