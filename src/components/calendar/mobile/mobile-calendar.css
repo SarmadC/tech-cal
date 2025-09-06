@@ -4,6 +4,7 @@
 
 /* Import new mobile today and calendar styles */
 @import './mobile-today-calendar.css';
+@import './mobile-enhanced-month.css';
 
 /* ========== ENHANCED ANIMATIONS & INTERACTIONS ========== */
 
