@@ -11,6 +11,7 @@ import {
     ReactNode,
     useCallback,
     useMemo,
+    useRef,
 } from 'react';
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { toast } from 'sonner';
@@ -74,6 +75,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }, [supabase]);
 
+    // Track previous user to avoid showing toast on session refresh
+    const previousUserRef = useRef<User | null>(null);
+
     // Unified auth state management - handles both initial load and subsequent changes
     useEffect(() => {
         let isActive = true;
@@ -89,10 +93,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 return;
             }
 
-            // Show appropriate toasts for auth events (but not on initial load)
+            // Show appropriate toasts for auth events (but not on initial load or session refreshes)
             if (hasInitialized && event !== 'INITIAL') {
                 if (event === 'SIGNED_IN') {
-                    toast.success('Successfully signed in! Welcome back.', { duration: 4000 });
+                    // Only show success toast if there was no previous user (actual sign-in, not session refresh)
+                    const hadPreviousUser = previousUserRef.current !== null;
+                    if (!hadPreviousUser) {
+                        toast.success('Successfully signed in! Welcome back.', { duration: 4000 });
+                    }
                 } else if (event === 'SIGNED_OUT') {
                     toast.info('You have been signed out.');
                 }
@@ -119,6 +127,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 loading: false,
                 initialized: true,
             });
+
+            // Update the ref with the current user for next comparison
+            previousUserRef.current = currentUser;
 
             if (event === 'INITIAL') {
                 hasInitialized = true;

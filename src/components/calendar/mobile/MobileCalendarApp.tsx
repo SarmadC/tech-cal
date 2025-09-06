@@ -144,7 +144,6 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
           onDateChange={handleDateChange}
           view="week"
           onNavigate={handleNavigate}
-          onGoToToday={handleGoToToday}
         />
       )}
       

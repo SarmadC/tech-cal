@@ -140,12 +140,6 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
     setTimeout(() => setIsTransitioning(false), 300);
   }, [currentMonth, onDateChange]);
 
-  const handleGoToToday = useCallback(() => {
-    const today = new Date();
-    setCurrentMonth(today);
-    setSelectedDate(today);
-    onDateChange?.(today);
-  }, [onDateChange]);
 
   // Enhanced gesture handlers
   const { swipeHandlers } = useSwipeGestures({
@@ -266,79 +260,82 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
         </div>
       )}
 
-      {/* Month Header with Navigation */}
-      <div className="mobile-month-header"
+      {/* Modern Month Header */}
+      <div className="mobile-month-header-modern"
         {...pullToRefreshHandlers}
         style={{ transform: pullTransform }}
       >
-        <div className="month-navigation">
+        {/* Date Header with Navigation */}
+        <div className="month-header-top">
+          <div className="date-display">
+            <h1 className="current-date">Today, {new Date().getDate()} {monthName.split(' ')[0]}</h1>
+            <button className="date-picker-toggle" aria-label="Change date">
+              <MaterialIcon name="expand-more" size={20} />
+            </button>
+          </div>
+          <div className="header-actions">
+            <button className="action-button" aria-label="Filter events">
+              <MaterialIcon name="filter" size={20} />
+            </button>
+            <button className="action-button" aria-label="Settings">
+              <MaterialIcon name="settings" size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Month Navigation */}
+        <div className="month-navigation-modern">
           <button
-            className="nav-button"
+            className="nav-button-modern"
             onClick={handlePreviousMonth}
             disabled={isTransitioning}
             aria-label="Previous month"
           >
-            <MaterialIcon name="arrow_back" size={24} />
+            <MaterialIcon name="arrow_back" size={20} />
           </button>
           
-          <div className="month-title-container">
-            <div className="month-title">{monthName}</div>
-            <button
-              className="today-button"
-              onClick={handleGoToToday}
-              aria-label="Go to today"
-            >
-              <MaterialIcon name="calendar" size={16} />
-              <span>Today</span>
-            </button>
+          <div className="month-title-modern">
+            <h2 className="month-name">{monthName}</h2>
           </div>
           
           <button
-            className="nav-button"
+            className="nav-button-modern"
             onClick={handleNextMonth}
             disabled={isTransitioning}
             aria-label="Next month"
           >
-            <MaterialIcon name="chevron_right" size={24} />
+            <MaterialIcon name="chevron_right" size={20} />
           </button>
         </div>
-        
-        {selectedDate && (
-          <button
-            className="clear-selection"
-            onClick={() => setSelectedDate(null)}
-            aria-label="Clear selection"
-          >
-            <MaterialIcon name="clear" size={20} />
-          </button>
-        )}
       </div>
 
-      {/* Calendar Grid */}
+      {/* Modern Calendar Grid */}
       <div 
-        className="mobile-calendar-grid"
+        className="mobile-calendar-grid-modern"
         ref={scrollContainerRef}
-        {...swipeHandlers}
+        onTouchStart={swipeHandlers.onTouchStart}
+        onTouchMove={swipeHandlers.onTouchMove}
+        onTouchEnd={swipeHandlers.onTouchEnd}
         style={{ transform: pullTransform }}
       >
         {/* Week day headers */}
-        <div className="weekday-headers">
+        <div className="weekday-headers-modern">
           {weekDays.map(day => (
-            <div key={day} className="weekday-header">
-              {day}
+            <div key={day} className="weekday-header-modern">
+              {day.toLowerCase()}
             </div>
           ))}
         </div>
 
-        {/* Calendar days */}
+        {/* Calendar days grid */}
         <div 
-          className={`calendar-days ${isTransitioning ? 'transitioning' : ''}`}
+          className={`calendar-days-modern ${isTransitioning ? 'transitioning' : ''}`}
           ref={monthContainerRef}
         >
           {calendarGrid.map((day, index) => (
             <div
               key={index}
-              className={`calendar-day ${
+              className={`calendar-day-modern ${
                 !day.isCurrentMonth ? 'other-month' : ''
               } ${day.isToday ? 'today' : ''} ${
                 day.isSelected ? 'selected' : ''
@@ -360,23 +357,23 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
                 }
               }}
             >
-              <div className="day-number">{day.dayNumber}</div>
+              <div className="day-number-modern">{day.dayNumber}</div>
               
-              {/* Event indicators */}
+              {/* Modern event indicators */}
               {day.hasEvents && (
-                <div className="event-indicators">
-                  {day.events.slice(0, 3).map((event, eventIndex) => (
+                <div className="event-indicators-modern">
+                  {day.events.slice(0, 4).map((event, eventIndex) => (
                     <div
                       key={`${event.id}-${eventIndex}`}
-                      className="event-dot"
+                      className="event-dot-modern"
                       style={{
                         backgroundColor: getEventColor(event),
                       }}
                       title={event.title}
                     />
                   ))}
-                  {day.events.length > 3 && (
-                    <div className="more-events">+{day.events.length - 3}</div>
+                  {day.events.length > 4 && (
+                    <div className="more-events-modern">+{day.events.length - 4}</div>
                   )}
                 </div>
               )}

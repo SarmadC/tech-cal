@@ -2,7 +2,6 @@
 
 import { FC, useState, useCallback } from 'react';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { Button } from '@/components/ui/button';
 import MobileQuickDatePicker from './MobileQuickDatePicker';
 
 export interface MobileNavigationControlsProps {
@@ -10,7 +9,6 @@ export interface MobileNavigationControlsProps {
     onDateChange: (date: Date) => void;
     view: 'month' | 'week' | 'day';
     onNavigate: (direction: 'prev' | 'next') => void;
-    onGoToToday: () => void;
     className?: string;
 }
 
@@ -19,7 +17,6 @@ const MobileNavigationControls: FC<MobileNavigationControlsProps> = ({
     onDateChange,
     view,
     onNavigate: _onNavigate,
-    onGoToToday,
     className = ''
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -65,10 +62,6 @@ const MobileNavigationControls: FC<MobileNavigationControlsProps> = ({
         }
     };
 
-    const isToday = () => {
-        const today = new Date();
-        return currentDate.toDateString() === today.toDateString();
-    };
 
     return (
         <>
@@ -87,8 +80,8 @@ const MobileNavigationControls: FC<MobileNavigationControlsProps> = ({
                         </div>
                     </button>
 
-                    {/* Go to Today Button */}
-                    <Button
+                    {/* Go to Today Button - Removed to avoid duplication with month view */}
+                    {/* <Button
                         onClick={onGoToToday}
                         variant={isToday() ? "default" : "outline"}
                         size="sm"
@@ -97,7 +90,7 @@ const MobileNavigationControls: FC<MobileNavigationControlsProps> = ({
                     >
                         <MaterialIcon name="calendar" size={16} />
                         <span className="mobile-today-text">Today</span>
-                    </Button>
+                    </Button> */}
                 </div>
             </div>
 

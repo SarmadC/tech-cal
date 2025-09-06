@@ -290,7 +290,9 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
       <div 
         className={`mobile-day-content ${isTransitioning ? 'transitioning' : ''}`}
         ref={scrollContainerRef}
-        {...swipeHandlers}
+        onTouchStart={swipeHandlers.onTouchStart}
+        onTouchMove={swipeHandlers.onTouchMove}
+        onTouchEnd={swipeHandlers.onTouchEnd}
         style={{
           transform: pullTransform,
           transition: isTransitioning ? 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'

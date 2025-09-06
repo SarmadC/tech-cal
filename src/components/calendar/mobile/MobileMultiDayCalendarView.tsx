@@ -106,7 +106,7 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
   }, [currentDate, onDateChange]);
 
   // Configure swipe gestures
-  const swipeHandlers = useSwipeGestures({
+  const { swipeHandlers } = useSwipeGestures({
     onSwipeLeft: handleSwipeLeft,
     onSwipeRight: handleSwipeRight,
     threshold: 50,
@@ -131,7 +131,14 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
       </div>
 
       {/* Week Date Picker */}
-      <div className="week-date-picker" role="grid" aria-label="Week navigation" {...swipeHandlers}>
+      <div 
+        className="week-date-picker" 
+        role="grid" 
+        aria-label="Week navigation"
+        onTouchStart={swipeHandlers.onTouchStart}
+        onTouchMove={swipeHandlers.onTouchMove}
+        onTouchEnd={swipeHandlers.onTouchEnd}
+      >
         <div className="weekday-headers">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((dayLetter, index) => (
             <div key={index} className="weekday-header">{dayLetter}</div>

@@ -258,7 +258,9 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
       <div 
         className="mobile-timeline-container"
         ref={scrollContainerRef}
-        {...swipeHandlers}
+        onTouchStart={swipeHandlers.onTouchStart}
+        onTouchMove={swipeHandlers.onTouchMove}
+        onTouchEnd={swipeHandlers.onTouchEnd}
         style={{ transform: pullTransform }}
       >
         {dayEvents.length > 0 ? (

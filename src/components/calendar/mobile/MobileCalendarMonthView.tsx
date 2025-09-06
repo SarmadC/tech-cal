@@ -238,7 +238,9 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
       <div 
         className="mobile-calendar-grid"
         ref={scrollContainerRef}
-        {...swipeHandlers}
+        onTouchStart={swipeHandlers.onTouchStart}
+        onTouchMove={swipeHandlers.onTouchMove}
+        onTouchEnd={swipeHandlers.onTouchEnd}
         style={{ transform: pullTransform }}
       >
         {/* Week day headers */}

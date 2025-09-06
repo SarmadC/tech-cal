@@ -114,13 +114,7 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
     // Quick actions for calendar view - simplified
     const getCalendarQuickActions = () => {
         return [
-            {
-                id: 'go-to-today',
-                label: 'Today',
-                icon: 'calendar' as const,
-                action: () => onDateChange(new Date()),
-                variant: 'outline' as const
-            }
+            // Removed Today button to avoid duplication with month view's Today button
         ];
     };
 
@@ -149,7 +143,12 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
     const _todayStats = currentView === 'today' ? getTodayStats() : null;
 
     return (
-        <div className={`mobile-view-enhancements ${className}`} {...swipeHandlers}>
+        <div 
+          className={`mobile-view-enhancements ${className}`}
+          onTouchStart={swipeHandlers.onTouchStart}
+          onTouchMove={swipeHandlers.onTouchMove}
+          onTouchEnd={swipeHandlers.onTouchEnd}
+        >
             {/* Scroll Detection Wrapper */}
             <div 
                 className="mobile-scroll-container"
@@ -183,13 +182,7 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
                     </div>
                 )}
 
-                {/* Week View - Clean Calendar Interface */}
-                {currentView === 'calendar' && (
-                    <div className="mobile-week-header">
-                        <h2 className="mobile-week-title">Week View</h2>
-                        <p className="mobile-week-subtitle">View events by week</p>
-                    </div>
-                )}
+                {/* Calendar View - No header needed since we're already in Month tab */}
 
                 {/* Scroll Indicator */}
                 {isScrolling && (
