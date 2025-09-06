@@ -156,7 +156,7 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
         
         {eventTags.length > 0 && (
           <div className="task-tags" aria-label={`Event tags: ${eventTags.map(tag => tag.name).join(', ')}`}>
-            {eventTags.slice(0, 2).map((tag, index) => (
+            {eventTags.slice(0, 2).map((tag, _index) => (
               <span 
                 key={tag.id} 
                 className="task-tag"

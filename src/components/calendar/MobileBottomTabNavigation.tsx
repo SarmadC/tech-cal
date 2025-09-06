@@ -4,6 +4,7 @@ import { FC, useState } from 'react';
 import { MaterialIcon, IconName } from '@/components/ui/Icon';
 import QuickDatePicker from './QuickDatePicker';
 import MobileSearchFilter from './MobileSearchFilter';
+import { SmartFilterOptions } from '@/hooks/useSmartFilters';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -17,8 +18,8 @@ export interface MobileBottomTabNavigationProps {
     isSidebarOpen: boolean;
     currentDate: Date;
     // Enhanced search/filter props
-    filters: any; // SmartFilterOptions - using any for now to avoid complex type issues
-    onUpdateFilter: (key: string, value: any) => void;
+    filters: SmartFilterOptions;
+    onUpdateFilter: <K extends keyof SmartFilterOptions>(key: K, value: SmartFilterOptions[K]) => void;
     onResetFilters: () => void;
     onApplyQuickFilter: (filterType: string) => void;
     searchSuggestions?: Array<{ id: string; title: string; type: 'event' | 'organizer' | 'category' }>;

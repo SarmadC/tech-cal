@@ -56,7 +56,7 @@ export function CalendarLayout({
     isSidebarOpen = true,
     onToggleSidebar,
     onEventSelect,
-    onAddEvent,
+    onAddEvent: _onAddEvent,
 }: CalendarLayoutProps) {
     // Get data from context instead of props
     const { currentDate, profile, categories, events } = useCalendar();
@@ -213,7 +213,8 @@ export function CalendarLayout({
                             dateRange: { start: null, end: null },
                             timePreference: 'all',
                             availability: 'all',
-                            location: 'all'
+                            popularity: 'all',
+                            duration: 'all'
                         }}
                         onUpdateFilter={() => {}}
                         onResetFilters={() => {}}
