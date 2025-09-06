@@ -21,8 +21,6 @@ const mockEvents: Event[] = [
     livestreamUrl: null,
     registrationUrl: 'https://example.com/register',
     tags: [],
-    isMultiDay: false,
-    eventPattern: 'single' as const,
     color: '#3b82f6'
   },
   {
@@ -40,8 +38,6 @@ const mockEvents: Event[] = [
     livestreamUrl: 'https://zoom.us/j/123456789',
     registrationUrl: 'https://example.com/register',
     tags: [],
-    isMultiDay: false,
-    eventPattern: 'single' as const,
     color: '#10b981'
   },
   {
@@ -59,8 +55,6 @@ const mockEvents: Event[] = [
     livestreamUrl: null,
     registrationUrl: 'https://example.com/register',
     tags: [],
-    isMultiDay: false,
-    eventPattern: 'single' as const,
     color: '#8b5cf6'
   },
   {
@@ -78,8 +72,6 @@ const mockEvents: Event[] = [
     livestreamUrl: null,
     registrationUrl: 'https://example.com/register',
     tags: [],
-    isMultiDay: false,
-    eventPattern: 'single' as const,
     color: '#f59e0b'
   },
   {
@@ -97,8 +89,6 @@ const mockEvents: Event[] = [
     livestreamUrl: null,
     registrationUrl: 'https://example.com/register',
     tags: [],
-    isMultiDay: false,
-    eventPattern: 'single' as const,
     color: '#ef4444'
   }
 ];
