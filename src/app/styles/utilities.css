@@ -1,0 +1,403 @@
+/* ============================================
+   CSS UTILITIES - COMMON PATTERNS
+   ============================================ */
+
+/* ========== TRANSITION UTILITIES ========== */
+
+/* Standard transitions */
+.transition-fast {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-normal {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-slow {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-ease-in-out {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Specific property transitions */
+.transition-colors {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease,
+                border-color 0.3s ease;
+}
+
+.transition-transform {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-opacity {
+    transition: opacity 0.3s ease;
+}
+
+/* ========== HOVER EFFECTS ========== */
+
+/* Standard hover lift */
+.hover-lift {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+}
+
+/* Scale on hover */
+.scale-on-hover {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scale-on-hover:hover {
+    transform: scale(1.05);
+}
+
+.scale-on-hover:active {
+    transform: scale(0.95);
+}
+
+/* Magnetic hover effect */
+.magnetic-hover {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.magnetic-hover:hover {
+    animation: magnetic-pull 0.4s ease-out;
+}
+
+@keyframes magnetic-pull {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.98); }
+    100% { transform: scale(1.02); }
+}
+
+/* ========== FOCUS STATES ========== */
+
+/* Standard focus ring */
+.focus-ring {
+    transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.focus-ring:focus {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+/* Premium focus with glow */
+.premium-focus {
+    transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-focus:focus {
+    box-shadow: 
+        0 0 0 3px rgba(249, 115, 22, 0.1),
+        0 0 20px rgba(249, 115, 22, 0.2);
+    outline: none;
+}
+
+/* ========== BUTTON UTILITIES ========== */
+
+/* Standard button press effect */
+.button-press {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.button-press:active {
+    transform: scale(0.98);
+}
+
+/* Premium button with ripple effect */
+.premium-button {
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.premium-button:active {
+    transform: scale(0.98);
+}
+
+.premium-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+    pointer-events: none;
+}
+
+.premium-button:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* ========== CARD UTILITIES ========== */
+
+/* Standard card hover */
+.card-hover {
+    transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Premium card with enhanced hover */
+.premium-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+.premium-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 
+        0 20px 40px -15px rgba(0, 0, 0, 0.3),
+        0 0 40px -10px var(--accent-primary);
+}
+
+/* ========== LOADING STATES ========== */
+
+/* Smooth spinner */
+.smooth-spinner {
+    animation: smooth-rotate 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes smooth-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Pulse animation for live elements */
+.pulse-live {
+    position: relative;
+}
+
+.pulse-live::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: var(--accent-primary);
+    border-radius: inherit;
+    opacity: 0.4;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0;
+        transform: scale(1.1);
+    }
+}
+
+/* ========== ENTRANCE ANIMATIONS ========== */
+
+/* Fade in up */
+.fade-in-up {
+    animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Bounce in for success states */
+.bounce-in {
+    animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Staggered animations for lists */
+.stagger-item {
+    opacity: 0;
+    animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 50ms; }
+.stagger-item:nth-child(3) { animation-delay: 100ms; }
+.stagger-item:nth-child(4) { animation-delay: 150ms; }
+.stagger-item:nth-child(5) { animation-delay: 200ms; }
+.stagger-item:nth-child(6) { animation-delay: 250ms; }
+.stagger-item:nth-child(7) { animation-delay: 300ms; }
+.stagger-item:nth-child(8) { animation-delay: 350ms; }
+
+/* ========== LAYOUT UTILITIES ========== */
+
+/* Flexbox utilities */
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-start {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.flex-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+/* ========== SPACING UTILITIES ========== */
+
+/* Common padding patterns */
+.padding-sm { padding: var(--space-2); }
+.padding-md { padding: var(--space-4); }
+.padding-lg { padding: var(--space-6); }
+.padding-xl { padding: var(--space-8); }
+
+/* Common margin patterns */
+.margin-sm { margin: var(--space-2); }
+.margin-md { margin: var(--space-4); }
+.margin-lg { margin: var(--space-6); }
+.margin-xl { margin: var(--space-8); }
+
+/* ========== BORDER RADIUS UTILITIES ========== */
+
+.rounded-sm { border-radius: 4px; }
+.rounded-md { border-radius: 8px; }
+.rounded-lg { border-radius: 12px; }
+.rounded-xl { border-radius: 16px; }
+.rounded-full { border-radius: 50%; }
+
+/* ========== SHADOW UTILITIES ========== */
+
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+
+/* ========== ACCESSIBILITY UTILITIES ========== */
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .transition-fast,
+    .transition-normal,
+    .transition-slow,
+    .transition-ease-in-out,
+    .transition-colors,
+    .transition-transform,
+    .transition-opacity,
+    .hover-lift,
+    .scale-on-hover,
+    .magnetic-hover,
+    .focus-ring,
+    .premium-focus,
+    .button-press,
+    .premium-button,
+    .card-hover,
+    .premium-card {
+        transition: none;
+    }
+    
+    .hover-lift:hover,
+    .scale-on-hover:hover,
+    .card-hover:hover,
+    .premium-card:hover {
+        transform: none;
+    }
+    
+    .smooth-spinner,
+    .pulse-live::before,
+    .fade-in-up,
+    .bounce-in,
+    .stagger-item {
+        animation: none;
+    }
+}
+
+/* ========== RESPONSIVE UTILITIES ========== */
+
+/* Hide on mobile */
+@media (max-width: 768px) {
+    .hide-mobile { display: none !important; }
+}
+
+/* Hide on desktop */
+@media (min-width: 769px) {
+    .hide-desktop { display: none !important; }
+}
+
+/* ========== TEXT UTILITIES ========== */
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-medium { font-weight: 500; }
+.font-normal { font-weight: 400; }
+
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+.text-3xl { font-size: 1.875rem; }
+.text-4xl { font-size: 2.25rem; }
+
+/* ========== COLOR UTILITIES ========== */
+
+.text-primary { color: var(--foreground-primary); }
+.text-secondary { color: var(--foreground-secondary); }
+.text-tertiary { color: var(--foreground-tertiary); }
+.text-accent { color: var(--accent-primary); }
+
+.bg-primary { background-color: var(--background-main); }
+.bg-secondary { background-color: var(--background-secondary); }
+.bg-tertiary { background-color: var(--background-tertiary); }
+.bg-elevated { background-color: var(--background-elevated); }
+.bg-accent { background-color: var(--accent-primary); }

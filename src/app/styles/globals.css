@@ -4,6 +4,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import utility classes */
+@import './utilities.css';
+
 /* ============================================== */
 /* 1. CORE DESIGN SYSTEM & THEME DEFINITIONS      */
 /* ============================================== */

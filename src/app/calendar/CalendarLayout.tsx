@@ -9,6 +9,7 @@ import MobileBottomTabNavigation from '@/components/calendar/MobileBottomTabNavi
 import MobileCalendarApp from '@/components/calendar/mobile/MobileCalendarApp';
 import CalendarTransitionWrapper from '@/components/calendar/CalendarTransitionWrapper';
 import '@/app/styles/calendar-sidebar.css';
+import '@/app/styles/calendar-heatmap.css';
 
 // Removed unused type imports
 import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
