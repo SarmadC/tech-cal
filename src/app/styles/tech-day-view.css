@@ -12,8 +12,8 @@
 .tech-day-view .event-card[data-span="1"] .event-organizer-logo-corner,
 .tech-day-view .event-card[data-span="2"] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--space-sm); /* Use same spacing as week view */
-    left: var(--space-sm); /* Use same spacing as week view */
+    bottom: var(--space-sm); /* Keep at bottom as it was */
+    left: 0; /* Align with left edge of padding */
     z-index: 10;
     width: 20px; /* Larger for better visibility */
     height: 20px; /* Larger for better visibility */
@@ -24,7 +24,7 @@
     align-items: center;
     justify-content: center;
     border: none; /* No border */
-    transform: translate(-8px, 17px); /* Move the entire container */
+    transform: translate(0, 11px); /* Align with event dots */
 }
 
 /* Align event dots with logo for compact cards */
@@ -36,7 +36,7 @@
     display: flex;
     gap: 3px;
     z-index: 10;
-    transform: translate(0, 13px); /* Move dots down to align with logo */
+    transform: translate(-6px, 6px); /* Move dots left and down */
 }
 
 /* Move arrow to top-right for compact day view cards */
@@ -46,7 +46,7 @@
     top: var(--space-sm) !important;
     right: var(--space-sm) !important;
     z-index: 10;
-    transform: translate(15px, -12px) !important;
+    transform: translate(9px, -13px) !important;
 }
 
 /* Hide category pills for compact cards in day view */
@@ -371,6 +371,63 @@
 .tech-day-view .event-card {
     height: 100%;
     margin: 2px 4px;
+}
+
+/* Remove left margin for compact cards to shift content to left edge */
+.tech-day-view .event-card[data-span="1"],
+.tech-day-view .event-card[data-span="2"] {
+    margin-left: 0 !important;
+    margin-right: 4px;
+}
+
+/* Move event title to left edge of padding for compact cards */
+.tech-day-view .event-card[data-span="1"] .event-title-section,
+.tech-day-view .event-card[data-span="2"] .event-title-section {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+}
+
+/* Ensure time and duration stay on single line for medium cards in day view */
+.tech-day-view .event-card[data-span="5"] .event-time-duration,
+.tech-day-view .event-card[data-span="6"] .event-time-duration {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: var(--space-xs) !important;
+}
+
+/* Hide event-duration for medium day view cards */
+.tech-day-view .event-card[data-span="5"] .event-duration,
+.tech-day-view .event-card[data-span="6"] .event-duration {
+    display: none !important;
+}
+
+/* Adjust event-time styling for medium day view cards */
+.tech-day-view .event-card[data-span="5"] .event-time,
+.tech-day-view .event-card[data-span="6"] .event-time {
+    font-size: 0.75rem !important; /* Reduce font size */
+    font-weight: 400 !important; /* Remove boldness */
+    white-space: nowrap !important; /* Ensure single line */
+    line-height: 1.2 !important; /* Tighter line height */
+}
+
+/* Shift position of medium day view cards */
+.tech-day-view .event-card[data-span="5"],
+.tech-day-view .event-card[data-span="6"] {
+    transform: translate(-12px, 13px) !important;
+}
+
+/* Shift event-dots position for medium day view cards */
+.tech-day-view .event-card[data-span="5"] .event-day-dots,
+.tech-day-view .event-card[data-span="6"] .event-day-dots {
+    transform: translate(0, 12px) !important;
+}
+
+/* Shift event-arrow-corner position for medium day view cards */
+.tech-day-view .event-card[data-span="5"] .event-arrow-corner,
+.tech-day-view .event-card[data-span="6"] .event-arrow-corner {
+    transform: translate(7px, -40px) !important;
 }
 
 /* Day view specific event card content adjustments */
