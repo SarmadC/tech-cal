@@ -175,7 +175,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
         >
           {/* View Enhancements */}
           <MobileViewEnhancements
-            currentView={currentView}
+            currentView={currentView === 'month' ? 'calendar' : currentView}
             currentDate={localCurrentDate}
             events={filteredEvents}
             categories={categories}

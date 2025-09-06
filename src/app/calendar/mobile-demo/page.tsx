@@ -117,13 +117,14 @@ const mockCategories: EventType[] = [
 const mockProfile: AppProfile = {
   id: 'demo-user',
   fullName: 'Demo User',
-  email: 'demo@example.com',
   avatarUrl: null,
+  timezone: 'America/New_York',
   preferences: {
     theme: 'light',
-    notifications: true,
-    timezone: 'America/New_York'
-  }
+    notifications: true
+  },
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
 };
 
 export default function MobileDemoPage() {

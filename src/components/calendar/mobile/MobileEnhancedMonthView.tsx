@@ -81,7 +81,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
       const date = new Date(currentDate);
       const isCurrentMonth = date.getMonth() === month;
       const isToday = isSameDay(date, getTodayDate());
-      const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+      const isSelected = selectedDate ? date.toDateString() === selectedDate.toDateString() : false;
       const isWeekend = date.getDay() === 0 || date.getDay() === 6;
       
       // Get events for this day
@@ -278,7 +278,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
             disabled={isTransitioning}
             aria-label="Previous month"
           >
-            <MaterialIcon name="chevron_left" size={24} />
+            <MaterialIcon name="arrow_back" size={24} />
           </button>
           
           <div className="month-title-container">
@@ -288,7 +288,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
               onClick={handleGoToToday}
               aria-label="Go to today"
             >
-              <MaterialIcon name="today" size={16} />
+              <MaterialIcon name="calendar" size={16} />
               <span>Today</span>
             </button>
           </div>
@@ -421,7 +421,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
                     <div className="event-title">{event.title}</div>
                     {event.location && (
                       <div className="event-location">
-                        <MaterialIcon name="location_on" size={12} />
+                        <MaterialIcon name="location" size={12} />
                         <span>{event.location}</span>
                       </div>
                     )}
