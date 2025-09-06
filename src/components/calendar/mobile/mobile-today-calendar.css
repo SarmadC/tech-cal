@@ -41,10 +41,13 @@
   background: var(--background-secondary);
   border-radius: 24px;
   padding: 4px;
+  flex: 1;
+  max-width: 300px;
 }
 
 .nav-tab {
-  padding: var(--space-2) var(--space-6);
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
   border: none;
   background: transparent;
   color: var(--foreground-secondary);
@@ -54,6 +57,10 @@
   transition: all 200ms ease;
   cursor: pointer;
   position: relative;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-tab.active {
@@ -1058,6 +1065,27 @@
   
   .day-number {
     font-size: 1.5rem;
+  }
+  
+  /* Navigation tabs responsive adjustments */
+  .nav-tabs {
+    max-width: 280px;
+  }
+  
+  .nav-tab {
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .nav-tabs {
+    max-width: 240px;
+  }
+  
+  .nav-tab {
+    padding: var(--space-1);
+    font-size: 0.7rem;
   }
 }
 

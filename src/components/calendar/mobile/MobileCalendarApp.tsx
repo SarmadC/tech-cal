@@ -8,6 +8,7 @@ import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import MobileTopNavigation, { MobileViewType } from './MobileTopNavigation';
 import MobileTodayView from './MobileTodayView';
 import MobileMultiDayCalendarView from './MobileMultiDayCalendarView';
+import MobileEnhancedMonthView from './MobileEnhancedMonthView';
 import MobileSearchFilter from '../MobileSearchFilter';
 import MobileNavigationControls from './MobileNavigationControls';
 import MobileViewEnhancements from './MobileViewEnhancements';
@@ -48,7 +49,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
   // Get mobile view from URL, default to 'today'
   const getMobileViewFromURL = useCallback((): MobileViewType => {
     const mobileView = searchParams.get('mobileView');
-    return (mobileView === 'calendar' || mobileView === 'today') ? mobileView : 'today';
+    return (mobileView === 'calendar' || mobileView === 'month' || mobileView === 'today') ? mobileView : 'today';
   }, [searchParams]);
 
   const [currentView, setCurrentView] = useState<MobileViewType>(getMobileViewFromURL());
@@ -191,6 +192,15 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
               categories={categories}
               profile={profile}
               onEventSelect={onEventSelect}
+            />
+          ) : currentView === 'month' ? (
+            <MobileEnhancedMonthView
+              events={filteredEvents}
+              initialDate={localCurrentDate}
+              categories={categories}
+              profile={profile}
+              onEventSelect={onEventSelect}
+              onDateChange={handleDateChange}
             />
           ) : (
             <MobileMultiDayCalendarView

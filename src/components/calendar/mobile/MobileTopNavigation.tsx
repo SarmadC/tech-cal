@@ -4,7 +4,7 @@ import React from 'react';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Badge } from '@/components/ui/badge';
 
-export type MobileViewType = 'today' | 'calendar';
+export type MobileViewType = 'today' | 'calendar' | 'month';
 
 export interface MobileTopNavigationProps {
   currentView: MobileViewType;
@@ -44,6 +44,16 @@ const MobileTopNavigation: React.FC<MobileTopNavigationProps> = ({
             id="calendar-tab"
           >
             Week
+          </button>
+          <button 
+            className={`nav-tab ${currentView === 'month' ? 'active' : ''}`}
+            onClick={() => onViewChange('month')}
+            role="tab"
+            aria-selected={currentView === 'month'}
+            aria-controls="mobile-calendar-content"
+            id="month-tab"
+          >
+            Month
           </button>
         </div>
         
