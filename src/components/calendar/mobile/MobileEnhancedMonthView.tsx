@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { EventClickArg } from '@fullcalendar/core';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import { MaterialIcon } from '@/components/ui/Icon';
@@ -8,7 +8,7 @@ import EventPreviewCard from '../EventPreviewCard';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, MonthViewSkeleton } from '@/components/ui/SkeletonLoader';
-import { isSameDay, getTodayDate, formatDateForURL } from '@/utils/dateUtils';
+import { isSameDay, getTodayDate } from '@/utils/dateUtils';
 
 export interface MobileEnhancedMonthViewProps {
   events: Event[];
@@ -40,7 +40,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
   events,
   initialDate,
   categories,
-  profile,
+  profile: _profile,
   onEventSelect,
   onEventClick: _onEventClick,
   onDateChange,
@@ -66,9 +66,8 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     
-    // Get first day of the month and last day
+    // Get first day of the month
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
     
     // Get the first day of the calendar grid (might be from previous month)
     const startDate = new Date(firstDay);
