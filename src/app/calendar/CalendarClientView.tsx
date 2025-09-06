@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback, useRef, useReducer } from 'react';
+import { useMemo, useCallback, useRef, useReducer, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import { useQuery } from '@tanstack/react-query';
@@ -64,8 +64,26 @@ function useCalendarUIState() {
         selectedEvent: null,
         selectedDate: null,
         isFilterPanelOpen: false,
-        isSidebarOpen: true,
+        isSidebarOpen: false, // Start with sidebar closed to prevent mobile intrusion
     });
+    
+    // Check if mobile and adjust sidebar state accordingly
+    useEffect(() => {
+        const checkMobile = () => {
+            const isMobile = window.innerWidth < 768;
+            
+            // Only open sidebar on desktop, keep closed on mobile
+            if (!isMobile && !state.isSidebarOpen) {
+                dispatch({ type: 'TOGGLE_SIDEBAR' }); // Open sidebar on desktop
+            } else if (isMobile && state.isSidebarOpen) {
+                dispatch({ type: 'TOGGLE_SIDEBAR' }); // Close sidebar on mobile
+            }
+        };
+        
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, [state.isSidebarOpen]);
 
     const actions = useMemo(() => ({
         selectEvent: (event: Event | null) => dispatch({ type: 'SELECT_EVENT', event }),
@@ -300,6 +318,9 @@ export default function CalendarClientView({
                     // Handle add event - could open a modal or navigate to create event page
                     console.log('Add event:', { date, hour });
                 }}
+                events={eventData.enrichedEvents}
+                categories={initialCategories}
+                profile={profile}
                 renderContent={(context) => (
                     <div className="flex h-full relative">
                         <div className="flex-1 relative">

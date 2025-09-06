@@ -54,7 +54,10 @@ export function useSmartFilters(
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
     const filteredEvents = useMemo(() => {
-        return events.filter(event => {
+        console.log('useSmartFilters - Input events:', events.length);
+        console.log('useSmartFilters - Current filters:', filters);
+        
+        const filtered = events.filter(event => {
             // Basic filters (no change needed here)
             if (filters.categories.length > 0 && !filters.categories.includes(event.eventTypeId)) {
                 return false;
@@ -117,6 +120,9 @@ export function useSmartFilters(
 
             return true;
         });
+        
+        console.log('useSmartFilters - Filtered events:', filtered.length);
+        return filtered;
     }, [events, filters, userProfile, userCalendar]);
 
     // 4. UPDATE HELPER SIGNATURES: All helpers now accept the base `Event` type.

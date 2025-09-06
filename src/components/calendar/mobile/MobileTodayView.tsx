@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Event, EventType, AppProfile } from '@/types';
 import { MaterialIcon } from '@/components/ui/Icon';
 import TodayTaskCard from './components/TodayTaskCard';
+import MobileEventPreview from './MobileEventPreview';
 
 export interface MobileTodayViewProps {
   events: Event[];
@@ -19,9 +20,21 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
   currentDate,
   categories: _categories,
   profile: _profile,
-  onEventSelect,
+  onEventSelect: _onEventSelect,
   className = ''
 }) => {
+  // Debug logging
+  console.log('MobileTodayView - Events received:', events.length);
+  console.log('MobileTodayView - Events:', events);
+  
+  // Debug upcoming events filtering
+  const now = new Date();
+  const upcomingEvents = events.filter(event => new Date(event.startTime) > now);
+  console.log('MobileTodayView - Current time:', now);
+  console.log('MobileTodayView - Upcoming events count:', upcomingEvents.length);
+  console.log('MobileTodayView - Event dates:', events.map(e => ({ title: e.title, startTime: e.startTime, isUpcoming: new Date(e.startTime) > now })));
+  const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   // Filter events for today - not used in current implementation
   const _todayEvents = useMemo(() => {
     const today = new Date(currentDate);
@@ -80,6 +93,23 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
 
   const { day, year: _year } = formatMainDate();
 
+  // Event preview handlers
+  const handleEventTap = (event: Event) => {
+    setPreviewEvent(event);
+    setIsPreviewVisible(true);
+  };
+
+  const handleClosePreview = () => {
+    setIsPreviewVisible(false);
+    setPreviewEvent(null);
+  };
+
+  const handleTrackEvent = (event: Event) => {
+    // Event tracking is handled by the MobileEventPreview component
+    // This callback can be used for additional tracking logic if needed
+    console.log('Event tracked:', event.title);
+  };
+
   return (
     <div className={`mobile-today-view ${className}`} role="main" aria-label="Today's calendar view">
       {/* No header needed - handled by parent MobileTopNavigation */}
@@ -95,14 +125,14 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
       {/* Event Feed */}
       <div className="event-feed" role="region" aria-label="Tech events feed">
 
-        {/* All Events Feed - Show all events regardless of date */}
+        {/* Events Feed - Show all events for testing */}
         {events
           .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
           .map((event, index) => (
             <TodayTaskCard
               key={`${event.id}-${index}`}
               event={event}
-              onClick={() => onEventSelect?.(event)}
+              onClick={() => handleEventTap(event)}
             />
           ))}
         
@@ -110,10 +140,20 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
         {events.length === 0 && (
           <div className="no-events-feed">
             <MaterialIcon name="event" size={48} />
-            <div className="no-events-text">No tech events available</div>
+            <div className="no-events-text">No events available</div>
           </div>
         )}
       </div>
+
+      {/* Mobile Event Preview */}
+      {previewEvent && (
+        <MobileEventPreview
+          event={previewEvent}
+          isVisible={isPreviewVisible}
+          onClose={handleClosePreview}
+          onTrackEvent={handleTrackEvent}
+        />
+      )}
     </div>
   );
 };

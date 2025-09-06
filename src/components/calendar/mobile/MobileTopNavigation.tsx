@@ -1,18 +1,24 @@
 'use client';
 
 import React from 'react';
+import { MaterialIcon } from '@/components/ui/Icon';
+import { Badge } from '@/components/ui/badge';
 
 export type MobileViewType = 'today' | 'calendar';
 
 export interface MobileTopNavigationProps {
   currentView: MobileViewType;
   onViewChange: (view: MobileViewType) => void;
+  onToggleSearchFilter?: () => void;
+  activeFilterCount?: number;
   className?: string;
 }
 
 const MobileTopNavigation: React.FC<MobileTopNavigationProps> = ({
   currentView,
   onViewChange,
+  onToggleSearchFilter,
+  activeFilterCount = 0,
   className = ''
 }) => {
   return (
@@ -37,9 +43,27 @@ const MobileTopNavigation: React.FC<MobileTopNavigationProps> = ({
             aria-controls="mobile-calendar-content"
             id="calendar-tab"
           >
-            Browse
+            Week
           </button>
         </div>
+        
+        {/* Search Filter Button */}
+        {onToggleSearchFilter && (
+          <div className="nav-actions">
+            <button
+              onClick={onToggleSearchFilter}
+              className="mobile-search-filter-button"
+              aria-label="Open search and filters"
+            >
+              <MaterialIcon name="search" size={20} />
+              {activeFilterCount > 0 && (
+                <Badge variant="secondary" className="mobile-filter-count-badge">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

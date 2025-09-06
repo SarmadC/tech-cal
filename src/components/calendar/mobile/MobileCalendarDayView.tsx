@@ -8,7 +8,6 @@ import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, DayViewSkeleton } from '@/components/ui/SkeletonLoader';
 import { isSameDay, getTodayDate } from '@/utils/dateUtils';
-import './mobile-calendar.css';
 
 export interface MobileCalendarDayViewProps {
   events: Event[];

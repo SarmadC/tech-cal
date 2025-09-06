@@ -9,7 +9,6 @@ import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, MonthViewSkeleton } from '@/components/ui/SkeletonLoader';
 import { isSameDay, getTodayDate } from '@/utils/dateUtils';
-import './mobile-calendar.css';
 
 export interface MobileCalendarMonthViewProps {
   events: Event[];

@@ -59,7 +59,8 @@ describe('MobileSearchFilter', () => {
     activeFilterCount: 0,
     isOpen: true,
     onClose: vi.fn(),
-    searchSuggestions: [],
+    events: [],
+    categories: [],
     onSearchSuggestionSelect: vi.fn(),
   };
 
@@ -117,12 +118,12 @@ describe('MobileSearchFilter', () => {
   });
 
   it('should show search suggestions when provided', () => {
-    const suggestions = [
+    const _suggestions = [
       { id: '1', title: 'Test Event', type: 'event' as const },
       { id: '2', title: 'Test Organizer', type: 'organizer' as const },
     ];
     
-    render(<MobileSearchFilter {...defaultProps} searchSuggestions={suggestions} />);
+    render(<MobileSearchFilter {...defaultProps} events={[]} categories={[]} />);
     
     const searchInput = screen.getByPlaceholderText('Search events, organizers, topics...');
     fireEvent.change(searchInput, { target: { value: 'test' } });
@@ -138,7 +139,7 @@ describe('MobileSearchFilter', () => {
       { id: '1', title: 'Test Event', type: 'event' as const },
     ];
     
-    render(<MobileSearchFilter {...defaultProps} searchSuggestions={suggestions} onSearchSuggestionSelect={onSearchSuggestionSelect} />);
+    render(<MobileSearchFilter {...defaultProps} events={[]} categories={[]} onSearchSuggestionSelect={onSearchSuggestionSelect} />);
     
     const searchInput = screen.getByPlaceholderText('Search events, organizers, topics...');
     fireEvent.change(searchInput, { target: { value: 'test' } });

@@ -39,7 +39,7 @@ const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
     onUpdateFilter,
     onResetFilters,
     onApplyQuickFilter,
-    searchSuggestions,
+    searchSuggestions: _searchSuggestions,
     onSearchSuggestionSelect
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -135,7 +135,8 @@ const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
                 activeFilterCount={activeFilterCount}
                 isOpen={isSearchFilterOpen}
                 onClose={() => setIsSearchFilterOpen(false)}
-                searchSuggestions={searchSuggestions}
+                events={[]}
+                categories={[]}
                 onSearchSuggestionSelect={onSearchSuggestionSelect}
             />
         </>

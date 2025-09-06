@@ -9,7 +9,6 @@ import { processEventsForWeekView } from '@/utils/multiDayEventUtils';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { EventCardSkeleton, WeekHeaderSkeleton } from '@/components/ui/SkeletonLoader';
-import './mobile-calendar.css';
 
 export interface MobileCalendarWeekViewProps {
   events: (Event | MultiDayEvent)[];

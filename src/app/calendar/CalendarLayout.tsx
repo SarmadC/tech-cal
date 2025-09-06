@@ -10,11 +10,12 @@ import MobileCalendarApp from '@/components/calendar/mobile/MobileCalendarApp';
 import CalendarTransitionWrapper from '@/components/calendar/CalendarTransitionWrapper';
 import '@/app/styles/calendar-sidebar.css';
 import '@/app/styles/calendar-heatmap.css';
+import '@/components/calendar/mobile/mobile-calendar.css';
 
 // Removed unused type imports
 import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
 import { useCalendar } from '@/contexts';
-import { Event } from '@/types';
+import { Event, Json } from '@/types';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -43,6 +44,10 @@ export interface CalendarLayoutProps {
     // Mobile app props
     onEventSelect?: (event: Event) => void;
     onAddEvent?: (date?: Date, hour?: number) => void;
+    // Data props for mobile app
+    events?: Event[];
+    categories?: Array<{ id: string; name: string; color: string; description: string | null }>;
+    profile?: { id: string; fullName: string | null; avatarUrl: string | null; timezone: string | null; preferences: Json | null; createdAt: string | null; updatedAt: string | null } | null;
 }
 
 export function CalendarLayout({
@@ -54,13 +59,16 @@ export function CalendarLayout({
     activeFilterCount = 0,
     calendarRef,
     renderContent,
-    isSidebarOpen = true,
+    isSidebarOpen = false,
     onToggleSidebar,
     onEventSelect,
     onAddEvent: _onAddEvent,
+    events = [],
+    categories = [],
+    profile = null,
 }: CalendarLayoutProps) {
-    // Get data from context instead of props
-    const { currentDate, profile, categories, events } = useCalendar();
+    // Get data from context for desktop, props for mobile
+    const { currentDate } = useCalendar();
     const router = useRouter();
     const searchParams = useSearchParams();
     
@@ -217,9 +225,18 @@ export function CalendarLayout({
                             popularity: 'all',
                             duration: 'all'
                         }}
-                        onUpdateFilter={() => {}}
-                        onResetFilters={() => {}}
-                        onApplyQuickFilter={() => {}}
+                        onUpdateFilter={(key, value) => {
+                            // TODO: Implement filter updates for mobile
+                            console.log('Mobile filter update:', key, value);
+                        }}
+                        onResetFilters={() => {
+                            // TODO: Implement filter reset for mobile
+                            console.log('Mobile filter reset');
+                        }}
+                        onApplyQuickFilter={(filterType) => {
+                            // TODO: Implement quick filter application for mobile
+                            console.log('Mobile quick filter:', filterType);
+                        }}
                         searchSuggestions={[]}
                         onSearchSuggestionSelect={() => {}}
                     />

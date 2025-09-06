@@ -3,10 +3,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Event, EventType, AppProfile } from '@/types';
+import { useSmartFilters } from '@/hooks/useSmartFilters';
+import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import MobileTopNavigation, { MobileViewType } from './MobileTopNavigation';
 import MobileTodayView from './MobileTodayView';
 import MobileMultiDayCalendarView from './MobileMultiDayCalendarView';
-import './mobile-today-calendar.css';
+import MobileSearchFilter from '../MobileSearchFilter';
+import MobileNavigationControls from './MobileNavigationControls';
+import MobileViewEnhancements from './MobileViewEnhancements';
+import MobileAdvancedGestures from './MobileAdvancedGestures';
 
 export interface MobileCalendarAppProps {
   events: Event[];
@@ -30,6 +35,16 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
   const router = useRouter();
   const searchParams = useSearchParams();
   
+  // Smart filters integration
+  const {
+    filters,
+    filteredEvents,
+    updateFilter,
+    resetFilters,
+    applyQuickFilter,
+    activeFilterCount
+  } = useSmartFilters(events, profile);
+
   // Get mobile view from URL, default to 'today'
   const getMobileViewFromURL = useCallback((): MobileViewType => {
     const mobileView = searchParams.get('mobileView');
@@ -38,10 +53,22 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
 
   const [currentView, setCurrentView] = useState<MobileViewType>(getMobileViewFromURL());
 
+  // Debug logging
+  console.log('MobileCalendarApp - Events received:', events.length);
+  console.log('MobileCalendarApp - Filtered events:', filteredEvents.length);
+  console.log('MobileCalendarApp - Current view:', currentView);
+  const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
+  const [localCurrentDate, setLocalCurrentDate] = useState(currentDate);
+
   // Sync with URL changes
   useEffect(() => {
     setCurrentView(getMobileViewFromURL());
   }, [searchParams, getMobileViewFromURL]);
+
+  // Sync local date with prop changes
+  useEffect(() => {
+    setLocalCurrentDate(currentDate);
+  }, [currentDate]);
 
   const handleViewChange = (view: MobileViewType) => {
     setCurrentView(view);
@@ -59,39 +86,149 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
     router.push(`/calendar?${params.toString()}`, { scroll: false });
   };
 
+  const handleToggleSearchFilter = () => {
+    setIsSearchFilterOpen(!isSearchFilterOpen);
+  };
+
+  // Navigation handlers
+  const handleDateChange = useCallback((date: Date) => {
+    setLocalCurrentDate(date);
+    onDateChange?.(date);
+  }, [onDateChange]);
+
+  const handleNavigate = useCallback((direction: 'prev' | 'next') => {
+    const newDate = new Date(localCurrentDate);
+    
+    if (currentView === 'today') {
+      // For today view, navigate by days
+      newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
+    } else {
+      // For calendar view, navigate by weeks
+      newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
+    }
+    
+    handleDateChange(newDate);
+  }, [localCurrentDate, currentView, handleDateChange]);
+
+  const handleGoToToday = useCallback(() => {
+    const today = new Date();
+    handleDateChange(today);
+  }, [handleDateChange]);
+
+  // Swipe gestures configuration
+  const swipeConfig = {
+    onSwipeLeft: () => handleNavigate('next'),
+    onSwipeRight: () => handleNavigate('prev'),
+    threshold: 50,
+    preventScroll: false,
+    enableMomentum: true,
+  };
+
+  const { swipeHandlers: _swipeHandlers } = useSwipeGestures(swipeConfig);
+
 
   return (
     <div className={`mobile-calendar-app ${className}`}>
       <MobileTopNavigation
         currentView={currentView}
         onViewChange={handleViewChange}
+        onToggleSearchFilter={handleToggleSearchFilter}
+        activeFilterCount={activeFilterCount}
       />
       
-      <div 
+      {/* Navigation Controls - Only for Calendar view */}
+      {currentView === 'calendar' && (
+        <MobileNavigationControls
+          currentDate={localCurrentDate}
+          onDateChange={handleDateChange}
+          view="week"
+          onNavigate={handleNavigate}
+          onGoToToday={handleGoToToday}
+        />
+      )}
+      
+      <MobileAdvancedGestures
+        onSwipeLeft={() => handleNavigate('next')}
+        onSwipeRight={() => handleNavigate('prev')}
+        onDoubleTap={() => {
+          // Double tap to go to today
+          handleGoToToday();
+        }}
+        onLongPress={() => {
+          // Long press to open search filters
+          handleToggleSearchFilter();
+        }}
+        onPullToRefresh={() => {
+          // Pull to refresh events
+          console.log('Refreshing events...');
+        }}
+        enablePullToRefresh={true}
+        enableDoubleTap={true}
+        enableLongPress={true}
         className="mobile-calendar-content"
-        id="mobile-calendar-content"
-        role="tabpanel"
-        aria-labelledby={currentView === 'today' ? 'today-tab' : 'calendar-tab'}
       >
-        {currentView === 'today' ? (
-          <MobileTodayView
-            events={events}
-            currentDate={currentDate}
+        <div 
+          id="mobile-calendar-content"
+          role="tabpanel"
+          aria-labelledby={currentView === 'today' ? 'today-tab' : 'calendar-tab'}
+        >
+          {/* View Enhancements */}
+          <MobileViewEnhancements
+            currentView={currentView}
+            currentDate={localCurrentDate}
+            events={filteredEvents}
             categories={categories}
             profile={profile}
+            onDateChange={handleDateChange}
             onEventSelect={onEventSelect}
           />
-        ) : (
-          <MobileMultiDayCalendarView
-            events={events}
-            currentDate={currentDate}
-            categories={categories}
-            profile={profile}
-            onEventSelect={onEventSelect}
-            onDateChange={onDateChange}
-          />
-        )}
-      </div>
+
+          {/* Main Content */}
+          {currentView === 'today' ? (
+            <MobileTodayView
+              events={filteredEvents}
+              currentDate={localCurrentDate}
+              categories={categories}
+              profile={profile}
+              onEventSelect={onEventSelect}
+            />
+          ) : (
+            <MobileMultiDayCalendarView
+              events={filteredEvents}
+              currentDate={localCurrentDate}
+              categories={categories}
+              profile={profile}
+              onEventSelect={onEventSelect}
+              onDateChange={handleDateChange}
+            />
+          )}
+        </div>
+      </MobileAdvancedGestures>
+
+      {/* Mobile Search Filter Overlay */}
+      <MobileSearchFilter
+        filters={filters}
+        onUpdateFilter={updateFilter}
+        onResetFilters={resetFilters}
+        onApplyQuickFilter={applyQuickFilter}
+        activeFilterCount={activeFilterCount}
+        isOpen={isSearchFilterOpen}
+        onClose={() => setIsSearchFilterOpen(false)}
+        events={events.map(event => ({
+          id: event.id,
+          title: event.title,
+          organizer: event.organizer,
+          eventTypeId: event.eventTypeId
+        }))}
+        categories={categories.map(cat => ({
+          id: cat.id,
+          name: cat.name
+        }))}
+        onSearchSuggestionSelect={(suggestion) => {
+          // Handle suggestion selection - could filter events or navigate
+          console.log('Selected suggestion:', suggestion);
+        }}
+      />
     </div>
   );
 };

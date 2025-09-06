@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Event, EventType, AppProfile } from '@/types';
 import { MaterialIcon } from '@/components/ui/Icon';
+import MobileEventPreview from './MobileEventPreview';
+import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 
 export interface MobileMultiDayCalendarViewProps {
   events: Event[];
@@ -19,10 +21,12 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
   currentDate,
   categories: _categories,
   profile: _profile,
-  onEventSelect,
+  onEventSelect: _onEventSelect,
   onDateChange,
   className = ''
 }) => {
+  const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
   // Generate array of days to display (current week)
   const displayDays = useMemo(() => {
@@ -72,42 +76,65 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
 
   const monthNames = getMonthNames();
 
+  // Event preview handlers
+  const handleEventTap = (event: Event) => {
+    setPreviewEvent(event);
+    setIsPreviewVisible(true);
+  };
+
+  const handleClosePreview = () => {
+    setIsPreviewVisible(false);
+    setPreviewEvent(null);
+  };
+
+  const handleTrackEvent = (event: Event) => {
+    // Event tracking is handled by the MobileEventPreview component
+    console.log('Event tracked:', event.title);
+  };
+
+  // Swipe navigation handlers
+  const handleSwipeLeft = useCallback(() => {
+    const nextWeek = new Date(currentDate);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    onDateChange?.(nextWeek);
+  }, [currentDate, onDateChange]);
+
+  const handleSwipeRight = useCallback(() => {
+    const prevWeek = new Date(currentDate);
+    prevWeek.setDate(prevWeek.getDate() - 7);
+    onDateChange?.(prevWeek);
+  }, [currentDate, onDateChange]);
+
+  // Configure swipe gestures
+  const swipeHandlers = useSwipeGestures({
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    threshold: 50,
+    preventScroll: false,
+  });
+
   return (
     <div className={`mobile-multi-day-calendar ${className}`} role="main" aria-label="Weekly calendar view">
-      {/* Tech events calendar view */}
-      <div className="calendar-view-header">
-        <h2 className="view-title">Browse Tech Events</h2>
-        <p className="view-description">Discover conferences, workshops, and networking events by date</p>
-      </div>
-
-      {/* Month Navigation */}
-      <div className="month-navigation" role="navigation" aria-label="Month navigation">
-        <button className="month-nav-button" onClick={handlePreviousMonth} aria-label={`Go to ${monthNames.prev}`}>
-          {monthNames.prev}
+      {/* Week Navigation */}
+      <div className="week-navigation" role="navigation" aria-label="Week navigation">
+        <button className="nav-arrow" onClick={handlePreviousMonth} aria-label="Previous week">
+          <MaterialIcon name="arrow_back" size={20} />
         </button>
         
-        <div className="current-month-section">
-          <button className="nav-arrow" onClick={handlePreviousMonth} aria-label="Previous month">
-            <MaterialIcon name="arrow_back" size={20} />
-          </button>
-          
-          <div className="current-month">{monthNames.current}</div>
-          
-          <button className="nav-arrow" onClick={handleNextMonth} aria-label="Next month">
-            <MaterialIcon name="chevron_right" size={20} />
-          </button>
+        <div className="current-week">
+          {monthNames.current} {currentDate.getFullYear()}
         </div>
         
-        <button className="month-nav-button" onClick={handleNextMonth} aria-label={`Go to ${monthNames.next}`}>
-          {monthNames.next}
+        <button className="nav-arrow" onClick={handleNextMonth} aria-label="Next week">
+          <MaterialIcon name="chevron_right" size={20} />
         </button>
       </div>
 
       {/* Week Date Picker */}
-      <div className="week-date-picker" role="grid" aria-label="Week navigation">
-        <div className="week-header">
+      <div className="week-date-picker" role="grid" aria-label="Week navigation" {...swipeHandlers}>
+        <div className="weekday-headers">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((dayLetter, index) => (
-            <div key={index} className="day-header">{dayLetter}</div>
+            <div key={index} className="weekday-header">{dayLetter}</div>
           ))}
         </div>
         <div className="week-dates">
@@ -147,12 +174,8 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
         </div>
       </div>
 
-      {/* Selected Day Tech Events */}
+      {/* Selected Day Events - Simplified */}
       <div className="selected-day-events">
-        <h3 className="selected-day-title">
-          <MaterialIcon name="event" size={20} />
-          {currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </h3>
         <div className="day-events-list">
           {events
             .filter(event => {
@@ -164,7 +187,7 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
               <div
                 key={`${event.id}-${index}`}
                 className="day-event-item"
-                onClick={() => onEventSelect?.(event)}
+                onClick={() => handleEventTap(event)}
                 style={{
                   backgroundColor: event.category?.color || '#f1f5f9',
                   borderLeft: `4px solid ${event.category?.color ? event.category.color.replace(/[^,)]*/, m => Math.max(0, parseInt(m) - 40).toString()) : '#3b82f6'}`
@@ -191,13 +214,22 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
             return eventDate.toDateString() === currentDate.toDateString();
           }).length === 0 && (
             <div className="no-events-today">
-              <MaterialIcon name="search" size={32} />
-              <span className="no-events-text">No tech events found</span>
-              <span className="no-events-subtext">Events are added regularly - check back soon</span>
+              <MaterialIcon name="event" size={32} />
+              <span className="no-events-text">No events on this date</span>
             </div>
           )}
         </div>
       </div>
+
+      {/* Mobile Event Preview */}
+      {previewEvent && (
+        <MobileEventPreview
+          event={previewEvent}
+          isVisible={isPreviewVisible}
+          onClose={handleClosePreview}
+          onTrackEvent={handleTrackEvent}
+        />
+      )}
     </div>
   );
 };
