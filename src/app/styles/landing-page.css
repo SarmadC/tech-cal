@@ -1,6 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* Landing Page Styles
+   (Design system variables are imported from globals.css)
+*/
 
-/* Modern Design System - Consistent with ChaosToOrder */
 .landing-container * {
     margin: 0;
     padding: 0;
@@ -8,49 +9,9 @@
 }
 
 .landing-container {
-    /* Sophisticated Color Palette */
-    --bg-primary: #0a0a0b;
-    --bg-secondary: #111113;
-    --bg-tertiary: #18181b;
-    --bg-elevated: #1f1f23;
-    
-    --text-primary: #fafafa;
-    --text-secondary: #a1a1aa;
-    --text-tertiary: #71717a;
-    
-    --accent-primary: #f97316;
-    --accent-secondary: rgba(249, 115, 22, 0.12);
-    --accent-border: rgba(249, 115, 22, 0.24);
-    
-    --border-subtle: rgba(255, 255, 255, 0.06);
-    --border-default: rgba(255, 255, 255, 0.08);
-    --border-strong: rgba(255, 255, 255, 0.12);
-    
-    /* Refined Shadows */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.16);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
-    
-    /* Typography */
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-serif: 'Instrument Serif', Georgia, serif;
-    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
-    
-    /* Spacing System */
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-6: 24px;
-    --space-8: 32px;
-    --space-12: 48px;
-    --space-16: 64px;
-    --space-24: 96px;
-
     font-family: var(--font-sans);
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: var(--background-main);
+    color: var(--foreground-primary);
     font-weight: 400;
 }
 
@@ -97,7 +58,7 @@
 }
 
 .landing-container .nav-link {
-    color: var(--text-secondary);
+    color: var(--foreground-secondary);
     text-decoration: none;
     font-weight: 500;
     font-size: 0.9rem;
@@ -105,7 +66,7 @@
 }
 
 .landing-container .nav-link:hover {
-    color: var(--text-primary);
+    color: var(--foreground-primary);
 }
 
 .landing-container .nav-cta {
@@ -199,7 +160,7 @@
     font-weight: 400;
     line-height: 1.1;
     margin-bottom: var(--space-4);
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     letter-spacing: -0.02em;
 }
 
@@ -214,7 +175,7 @@
 
 .landing-container .hero-description {
     font-size: 1.1rem;
-    color: var(--text-secondary);
+    color: var(--foreground-secondary);
     margin-bottom: var(--space-12);
     line-height: 1.6;
     font-weight: 400;
@@ -280,7 +241,7 @@
 
 .landing-container .cta-secondary {
     background: transparent;
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     border: 1px solid var(--border-default);
 }
 
@@ -311,7 +272,7 @@
 .landing-container .calendar-title {
     font-size: 1rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--foreground-primary);
 }
 
 .landing-container .calendar-live {
@@ -361,7 +322,7 @@
 }
 
 .landing-container .event-date {
-    background: var(--accent-secondary);
+    background: var(--accent-primary-light);
     color: var(--accent-primary);
     border: 1px solid var(--accent-border);
     padding: var(--space-2);
@@ -380,14 +341,14 @@
 
 .landing-container .event-title {
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     font-size: 0.85rem;
     margin-bottom: var(--space-1);
 }
 
 .landing-container .event-company {
     font-size: 0.75rem;
-    color: var(--text-secondary);
+    color: var(--foreground-secondary);
     font-weight: 500;
 }
 
@@ -400,7 +361,7 @@
 }
 
 .landing-container .status-upcoming {
-    background: var(--accent-secondary);
+    background: var(--accent-primary-light);
     color: var(--accent-primary);
     border: 1px solid var(--accent-border);
 }
@@ -445,12 +406,12 @@
     border-radius: 6px;
     font-weight: 600;
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--foreground-secondary);
     transition: all 0.3s ease;
 }
 
 .landing-container .company-logo:hover {
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     transform: translateY(-2px);
     border-color: var(--border-default);
     background: var(--bg-elevated);
@@ -458,7 +419,7 @@
 
 .landing-container .user-count {
     font-size: 1rem;
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     font-weight: 600;
 }
 
@@ -479,13 +440,13 @@
     font-size: clamp(2rem, 4vw, 3rem);
     font-weight: 400;
     margin-bottom: var(--space-4);
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     letter-spacing: -0.02em;
 }
 
 .landing-container .features-subtitle {
     font-size: 1.1rem;
-    color: var(--text-secondary);
+    color: var(--foreground-secondary);
     max-width: 600px;
     margin: 0 auto;
     line-height: 1.6;
@@ -518,7 +479,7 @@
 .landing-container .feature-icon {
     width: 48px;
     height: 48px;
-    background: var(--accent-secondary);
+    background: var(--accent-primary-light);
     color: var(--accent-primary);
     border: 1px solid var(--accent-border);
     border-radius: 8px;
@@ -532,13 +493,13 @@
 .landing-container .feature-title {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     margin-bottom: var(--space-4);
     letter-spacing: -0.01em;
 }
 
 .landing-container .feature-description {
-    color: var(--text-secondary);
+    color: var(--foreground-secondary);
     line-height: 1.6;
     font-size: 0.95rem;
 }
@@ -652,7 +613,7 @@
 .landing-container .bento-card .feature-icon {
     width: 56px;
     height: 56px;
-    background: var(--accent-secondary);
+    background: var(--accent-primary-light);
     color: var(--accent-primary);
     border: 1px solid var(--accent-border);
     border-radius: 12px;
@@ -676,7 +637,7 @@
 .landing-container .bento-card .feature-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     margin-bottom: var(--space-4);
     letter-spacing: -0.01em;
     transition: all 0.3s ease;
@@ -688,7 +649,7 @@
 
 /* Updated Feature Description for Bento */
 .landing-container .bento-card .feature-description {
-    color: var(--text-secondary);
+    color: var(--foreground-secondary);
     line-height: 1.6;
     font-size: 0.95rem;
     flex: 1;
@@ -696,7 +657,7 @@
 }
 
 .landing-container .bento-card:hover .feature-description {
-    color: var(--text-primary);
+    color: var(--foreground-primary);
 }
 
 

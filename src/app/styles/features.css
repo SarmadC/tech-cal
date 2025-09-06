@@ -1,9 +1,8 @@
 /* Enhanced Features Grid - 2025 Design Trends */
-/* Standalone CSS for features section */
+/* (Design system variables are imported from globals.css) */
 
-/* 2025 Color System */
 :root {
-    /* Enhanced 2025 Colors */
+    /* Enhanced 2025 Colors - Features specific */
     --mocha-mousse: #A47864;
     --mocha-mousse-light: #B8896F;
     --mocha-mousse-dark: #8B6B56;
@@ -11,12 +10,12 @@
     --sunny-yellow: #F4D03F;
     --warm-gray: #F5F5F5;
     
-    /* Enhanced Gradients */
+    /* Enhanced Gradients - Features specific */
     --gradient-warm: linear-gradient(135deg, #A47864 0%, #B8896F 50%, rgba(164, 120, 100, 0.8) 100%);
     --gradient-primary: linear-gradient(135deg, #f97316 0%, #ea6610 50%, rgba(249, 115, 22, 0.9) 100%);
     --gradient-secondary: linear-gradient(135deg, #111113 0%, #18181b 50%, #1f1f23 100%);
     
-    /* Layered Shadows */
+    /* Layered Shadows - Features specific */
     --shadow-enhanced: 
         0 1px 3px rgba(0, 0, 0, 0.12),
         0 1px 2px rgba(0, 0, 0, 0.24);
@@ -28,27 +27,6 @@
         0 10px 40px rgba(0, 0, 0, 0.2),
         0 4px 16px rgba(249, 115, 22, 0.15),
         0 2px 8px rgba(164, 120, 100, 0.25);
-    
-    /* Spacing (assuming these are available, or define them) */
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-6: 24px;
-    --space-8: 32px;
-    --space-12: 48px;
-    --space-16: 64px;
-    --space-24: 96px;
-    
-    /* Colors (assuming these are available from your design system) */
-    --bg-secondary: #111113;
-    --bg-tertiary: #18181b;
-    --bg-elevated: #1f1f23;
-    --text-primary: #fafafa;
-    --text-secondary: #a1a1aa;
-    --text-tertiary: #71717a;
-    --accent-primary: #f97316;
-    --accent-secondary: rgba(249, 115, 22, 0.12);
-    --accent-border: rgba(249, 115, 22, 0.24);
-    --border-default: rgba(255, 255, 255, 0.08);
 }
 
 /* Enhanced Features Section */
@@ -85,13 +63,13 @@
     font-size: clamp(2rem, 4vw, 3rem);
     font-weight: 400;
     margin-bottom: var(--space-4);
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     letter-spacing: -0.02em;
 }
 
 .features-subtitle {
     font-size: 1.1rem;
-    color: var(--text-secondary);
+    color: var(--foreground-secondary);
     max-width: 600px;
     margin: 0 auto;
     line-height: 1.6;
@@ -283,7 +261,7 @@
 .icon-wrapper {
     width: 64px;
     height: 64px;
-    background: var(--accent-secondary);
+    background: var(--accent-primary-light);
     color: var(--accent-primary);
     border: 2px solid var(--accent-border);
     border-radius: 16px;
@@ -337,7 +315,7 @@
 .feature-title-enhanced {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--foreground-primary);
     margin-bottom: var(--space-4);
     letter-spacing: -0.01em;
     transition: all 0.3s ease;
@@ -355,7 +333,7 @@
 }
 
 .feature-description-enhanced {
-    color: var(--text-secondary);
+    color: var(--foreground-secondary);
     line-height: 1.6;
     font-size: 0.95rem;
     flex: 1;
@@ -368,7 +346,7 @@
 }
 
 .bento-card-enhanced:hover .feature-description-enhanced {
-    color: var(--text-primary);
+    color: var(--foreground-primary);
 }
 
 /* Interactive Elements for Hero Feature */
