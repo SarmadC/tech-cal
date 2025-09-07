@@ -1,18 +1,17 @@
 // src/utils/transformers.ts
 
-// 1. UPDATE IMPORTS: Use the new, specific type names. The deprecated aliases are no longer needed here.
 import type {
     SupabaseEvent,
     SupabaseEventType,
     SupabaseTrackedEvent,
     SupabaseProfile,
-    Event, // Replaces AppEvent
-    EventType, // Replaces AppEventType
-    EventTag, // For event tags
-    Speaker, // For speaker lineup
-    TrackedEventRecord, // Replaces AppTrackedEvent
-    AppProfile, // Assuming this will become `Profile` later, but keeping as-is for now
-    MultiDayEvent, // Replaces EnhancedAppEvent
+    Event,
+    EventType,
+    EventTag,
+    Speaker,
+    TrackedEventRecord,
+    AppProfile,
+    MultiDayEvent,
     SupabaseEventWithDetails,
     SupabaseTrackedEventWithDetails,
     ProfileTransformer,
@@ -162,12 +161,12 @@ export const trackedEventTransformer = {
         const joinedEventData = supabaseTrackedEvent.events;
         let appEvent: Event | null = null;
         if (joinedEventData) {
-            const baseAppEvent = eventTransformer.toApp(joinedEventData);
+            const baseEvent = eventTransformer.toApp(joinedEventData);
             const joinedEventTypeData = joinedEventData.event_type;
             const appEventType = joinedEventTypeData
                 ? eventTypeTransformer.toApp(joinedEventTypeData)
                 : undefined;
-            appEvent = enrichEvent(baseAppEvent, { eventType: appEventType });
+            appEvent = enrichEvent(baseEvent, { eventType: appEventType });
         }
         return {
             trackingId: supabaseTrackedEvent.id,
@@ -242,7 +241,7 @@ export const transformTrackedEventsWithDetailsToApp = (
 };
 
 // --- Validation Utilities ---
-// 7. RENAME and UPDATE `isValidAppEvent` to `isValidEvent`
+// Event validation utility
 export const isValidEvent = (obj: unknown): obj is Event => {
     if (typeof obj !== 'object' || obj === null) return false;
     const event = obj as Record<string, unknown>;

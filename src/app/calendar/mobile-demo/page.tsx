@@ -130,8 +130,8 @@ const mockProfile: AppProfile = {
 export default function MobileDemoPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const handleEventSelect = (event: Event) => {
-    console.log('Event selected:', event);
+  const handleEventSelect = (_event: Event) => {
+    // Event selected for demo
     // In a real app, this would open an event detail modal or navigate to event page
   };
 

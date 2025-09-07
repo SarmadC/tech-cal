@@ -257,7 +257,7 @@ export default function CalendarClientView({
     }, [actions]);
 
     const handleSelectEvent = useCallback((event: Event) => {
-        console.log('handleSelectEvent called with:', event);
+        // Event selection handled
         actions.selectEvent(event);
     }, [actions]);
     
@@ -308,9 +308,9 @@ export default function CalendarClientView({
                 isSidebarOpen={state.isSidebarOpen}
                 onToggleSidebar={actions.toggleSidebar}
                 onEventSelect={handleSelectEvent}
-                onAddEvent={(date, hour) => {
+                onAddEvent={(_date, _hour) => {
                     // Handle add event - could open a modal or navigate to create event page
-                    console.log('Add event:', { date, hour });
+                    // Add event functionality handled
                 }}
                 events={eventData.enrichedEvents}
                 categories={initialCategories}

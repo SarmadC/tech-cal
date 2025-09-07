@@ -225,17 +225,17 @@ export function CalendarLayout({
                             popularity: 'all',
                             duration: 'all'
                         }}
-                        onUpdateFilter={(key, value) => {
+                        onUpdateFilter={(_key, _value) => {
                             // TODO: Implement filter updates for mobile
-                            console.log('Mobile filter update:', key, value);
+                            // Mobile filter update handled
                         }}
                         onResetFilters={() => {
                             // TODO: Implement filter reset for mobile
-                            console.log('Mobile filter reset');
+                            // Mobile filter reset handled
                         }}
-                        onApplyQuickFilter={(filterType) => {
+                        onApplyQuickFilter={(_filterType) => {
                             // TODO: Implement quick filter application for mobile
-                            console.log('Mobile quick filter:', filterType);
+                            // Mobile quick filter handled
                         }}
                         searchSuggestions={[]}
                         onSearchSuggestionSelect={() => {}}

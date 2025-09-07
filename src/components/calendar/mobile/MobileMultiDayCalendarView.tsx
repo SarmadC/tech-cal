@@ -87,9 +87,9 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
     setPreviewEvent(null);
   };
 
-  const handleTrackEvent = (event: Event) => {
+  const handleTrackEvent = (_event: Event) => {
     // Event tracking is handled by the MobileEventPreview component
-    console.log('Event tracked:', event.title);
+    // Event tracked successfully
   };
 
   // Swipe navigation handlers

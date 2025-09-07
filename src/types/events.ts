@@ -15,7 +15,6 @@
 
 /**
  * Core event data structure - the single source of truth for events
- * This replaces the old AppEvent type
  */
 export interface Event {
     // Core identifiers
@@ -63,6 +62,7 @@ export interface Event {
     difficulty?: 'beginner' | 'intermediate' | 'advanced' | null;
     targetAudience?: string | null;
     prerequisites?: string | null;
+
     
     // Agenda and speaker information
     agendaUrl?: string | null;

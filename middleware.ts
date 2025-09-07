@@ -33,17 +33,17 @@ export async function middleware(request: NextRequest) {
 
     // RULE 1: If user is not logged in, and they are trying to access a protected route, redirect to /login
     if (!user && (pathname.startsWith('/calendar') || pathname.startsWith('/dashboard'))) {
-        console.log('[MIDDLEWARE] User not found, redirecting to /login');
+        // User not found, redirecting to login
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
     // RULE 2: If user is logged in, and they are trying to access a public-only route, redirect to /calendar
     if (user && (pathname === '/login' || pathname === '/signup')) {
-        console.log('[MIDDLEWARE] User is logged in, redirecting to /calendar');
+        // User is logged in, redirecting to calendar
         return NextResponse.redirect(new URL('/calendar', request.url))
     }
 
-    console.log(`[MIDDLEWARE] Path: ${pathname} | User Authenticated: ${!!user}`);
+    // Middleware processing complete
     return response
 }
 

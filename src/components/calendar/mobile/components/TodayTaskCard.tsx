@@ -109,7 +109,7 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
     <div 
       className={`today-task-card ${className}`} 
       onClick={() => {
-        console.log('TodayTaskCard clicked:', event.title);
+        // Today task card clicked
         onClick?.();
       }}
       role="listitem"

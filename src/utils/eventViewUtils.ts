@@ -134,7 +134,7 @@ export function getWeekEventVisualInfo(
 }
 
 /**
- * Calculate event height for week view based on duration (legacy)
+ * Calculate event height for week view based on duration
  */
 export const getWeekEventHeight = (event: Event): number => {
     if (!event.endTime) return 60; // Default height for events without end time
@@ -188,7 +188,7 @@ export const getEventsForWeekDay = (
 };
 
 /**
- * Filter events for a specific day and time slot (legacy function for backwards compatibility)
+ * Filter events for a specific day and time slot
  */
 export const getEventsForDayAndTimeSlot = (
     events: Event[], 
