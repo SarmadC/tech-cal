@@ -79,10 +79,8 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
     // Actions
     const handleTrackEvent = () => {
-        console.log('[EventPreviewCard] handleTrackEvent called', { user: !!user, isTracked, eventId: event.id });
         
         if (!user) {
-            console.log('[EventPreviewCard] No user authenticated');
             toast.error('Please sign in to track events');
             return;
         }
@@ -90,13 +88,10 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
         // Use originalEventId for multi-day event instances, otherwise use the regular id
         const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
         
-        console.log('[EventPreviewCard] Using eventId for tracking:', trackingEventId);
 
         if (isTracked) {
-            console.log('[EventPreviewCard] Untracking event');
             untrackEvent({ eventId: trackingEventId });
         } else {
-            console.log('[EventPreviewCard] Tracking event');
             trackEvent({
                 eventId: trackingEventId,
                 status: 'bookmarked' as EventStatus,

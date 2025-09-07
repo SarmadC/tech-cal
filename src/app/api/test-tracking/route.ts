@@ -14,11 +14,9 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
         }
 
-        console.log('[TEST-TRACKING] Testing for user:', user.email);
 
         // Get all tracked event IDs
         const trackedEventIds = await UserEventService.getAllTrackedEventIds(user.id, supabase);
-        console.log('[TEST-TRACKING] Current tracked event IDs:', trackedEventIds);
 
         // Get all events to see what we can track
         const { data: allEvents, error: eventsError } = await supabase
@@ -31,7 +29,6 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
         }
 
-        console.log('[TEST-TRACKING] Available events:', allEvents);
 
         return NextResponse.json({
             user: { id: user.id, email: user.email },
@@ -58,21 +55,17 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { action, eventId } = body;
 
-        console.log('[TEST-TRACKING] POST request:', { action, eventId, userId: user.id });
 
         if (action === 'track') {
             await UserEventService.trackEvent(user.id, eventId, 'bookmarked', undefined, supabase);
-            console.log('[TEST-TRACKING] Successfully tracked event:', eventId);
         } else if (action === 'untrack') {
             await UserEventService.untrackEvent(user.id, eventId, supabase);
-            console.log('[TEST-TRACKING] Successfully untracked event:', eventId);
         } else {
             return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
         }
 
         // Get updated tracked event IDs
         const trackedEventIds = await UserEventService.getAllTrackedEventIds(user.id, supabase);
-        console.log('[TEST-TRACKING] Updated tracked event IDs:', trackedEventIds);
 
         return NextResponse.json({
             success: true,

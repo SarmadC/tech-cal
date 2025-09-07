@@ -50,7 +50,6 @@ export default function TechCalendarWeekView({
 
     // Process events and generate proper instances for multi-day events
     const processedEvents = useMemo(() => {
-        console.log('[TechCalendarWeekView] Processing events:', events.length, 'events total');
 
         // Use the new processing function that handles custom schedules
         const processed = processEventsForWeekView(events);
@@ -69,13 +68,11 @@ export default function TechCalendarWeekView({
             return inRange;
         });
 
-        console.log('[TechCalendarWeekView] Final processed events:', weekEvents.length);
         return weekEvents;
     }, [events, weekDays]);
 
     // Group processed events by day for the grid
     const eventsByDay = useMemo(() => {
-        console.log('[TechCalendarWeekView] Grouping processed events by day:', processedEvents.length, 'events');
         const grouped = new Map<number, (Event | MultiDayEventInstance)[]>();
 
         weekDays.forEach((day, dayIndex) => {
@@ -89,11 +86,7 @@ export default function TechCalendarWeekView({
                     const matches = instanceDate.toDateString() === day.toDateString();
 
                     if (matches) {
-                        console.log(`[TechCalendarWeekView] Multi-day instance matched for day ${dayIndex}:`, {
-                            instanceDate: instance.instanceDate,
-                            dayString: day.toDateString(),
-                            title: instance.title
-                        });
+                        // Multi-day instance matched for this day
                     }
                     return matches;
                 }

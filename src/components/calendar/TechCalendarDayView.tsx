@@ -34,15 +34,6 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
         // Use the same processing logic as week view to ensure consistent multi-day event handling
         const processedEvents = processEventsForWeekView(events);
         
-        if (process.env.NODE_ENV === 'development') {
-            console.log('🔍 Day view processing:', {
-                originalEvents: events.length,
-                processedEvents: processedEvents.length,
-                viewDate: initialDate.toDateString()
-            });
-            
-        }
-        
         // Filter events for the specific day
         const filtered = processedEvents.filter(event => {
             // For multi-day instances, match by instanceDate
@@ -53,16 +44,6 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                 const instanceDate = new Date(year, month - 1, dayNum);
                 const matches = instanceDate.toDateString() === initialDate.toDateString();
                 
-                if (process.env.NODE_ENV === 'development' && event.title?.toLowerCase().includes('aws')) {
-                    console.log('🔍 AWS instance date check:', {
-                        title: event.title,
-                        instanceDate: instance.instanceDate,
-                        instanceDateObj: instanceDate.toDateString(),
-                        viewDate: initialDate.toDateString(),
-                        matches: matches
-                    });
-                }
-                
                 return matches;
             }
             
@@ -70,10 +51,6 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
             const eventStart = new Date(event.startTime);
             return eventStart.toDateString() === initialDate.toDateString();
         });
-        
-        if (process.env.NODE_ENV === 'development') {
-            console.log('📅 Final day events:', filtered.length);
-        }
         
         return filtered;
     }, [events, initialDate]);

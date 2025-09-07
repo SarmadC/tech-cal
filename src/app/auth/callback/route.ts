@@ -10,13 +10,6 @@ export async function GET(request: Request) {
     const errorDescription = searchParams.get('error_description')
     const next = searchParams.get('next') ?? '/calendar'
 
-    console.log('[AUTH CALLBACK] Received request:', { 
-        url: request.url,
-        hasCode: !!code,
-        error,
-        errorDescription
-    });
-
     // Handle OAuth provider errors first
     if (error) {
         console.error('[AUTH CALLBACK] OAuth provider error:', { error, errorDescription });
@@ -31,7 +24,6 @@ export async function GET(request: Request) {
     }
 
     try {
-        console.log('[AUTH CALLBACK] Exchanging authorization code for session...');
         const supabase = await createClient()
         
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
@@ -48,14 +40,8 @@ export async function GET(request: Request) {
             return NextResponse.redirect(`${origin}/login?error=no-session&message=${errorMessage}`);
         }
 
-        console.log('[AUTH CALLBACK] Session exchange successful:', {
-            userId: data.user?.id,
-            email: data.user?.email,
-            provider: data.user?.app_metadata?.provider,
-        });
 
         // Successful authentication - redirect to intended destination
-        console.log(`[AUTH CALLBACK] Redirecting to: ${origin}${next}`);
         return NextResponse.redirect(`${origin}${next}`)
 
     } catch (error) {

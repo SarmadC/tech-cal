@@ -113,14 +113,8 @@ function useEventData(initialEvents: (Event | MultiDayEvent)[], profile: AppProf
         queryKey: ['allTrackedEventIds', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[CalendarClientView] Fetching tracked event IDs for user:', user.id);
-            }
             const supabase = createClient();
             const result = await UserEventService.getAllTrackedEventIds(user.id, supabase);
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[CalendarClientView] Tracked event IDs:', result);
-            }
             return result;
         },
         enabled: !!user?.id,
@@ -129,22 +123,13 @@ function useEventData(initialEvents: (Event | MultiDayEvent)[], profile: AppProf
 
     const enrichedEvents: TrackedEvent[] = useMemo(() => {
         const trackedSet = new Set(trackedEventIds);
-        if (process.env.NODE_ENV === 'development' && filteredEvents.length > 0) {
-            console.log('[CalendarClientView] Enriching events:', filteredEvents.length, 'total');
-        }
 
         const result = filteredEvents.map(event => {
             const isTracked = trackedSet.has(event.id);
             const enriched = enrichWithTracking(event, isTracked);
-            if (isTracked && process.env.NODE_ENV === 'development') {
-                console.log('[CalendarClientView] Event is tracked:', event.id, event.title);
-            }
             return enriched;
         });
 
-        if (process.env.NODE_ENV === 'development' && result.length > 0) {
-            console.log('[CalendarClientView] Enriched events:', result.length, 'Tracked:', result.filter(e => e.isTracked).length);
-        }
         return result;
     }, [filteredEvents, trackedEventIds]);
 
@@ -180,24 +165,8 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
             const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
             const inRange = eventStart <= dayEnd && eventEnd >= dayStart;
             
-            // Debug AWS event specifically
-            if (event.title?.toLowerCase().includes('aws') || event.title?.toLowerCase().includes('reinvent')) {
-                console.log('🔍 AWS event date check:', {
-                    title: event.title,
-                    eventStart: eventStart.toISOString(),
-                    eventEnd: eventEnd.toISOString(),
-                    dayStart: dayStart.toISOString(),
-                    dayEnd: dayEnd.toISOString(),
-                    inRange: inRange
-                });
-            }
-            
             return inRange;
         });
-        
-        if (process.env.NODE_ENV === 'development') {
-            console.log('📅 Day events filtered:', filtered.length, 'out of', enrichedEvents.length);
-        }
         
         return filtered;
     }, [enrichedEvents, searchParams]);
