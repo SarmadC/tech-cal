@@ -191,7 +191,7 @@ export const EventCard: React.FC<EventCardProps> = ({
     const isCompact = isWeekView && cardSize <= 2;
     const isDense = isWeekView && cardSize <= 4;
 
-    const showTimelineRail = isWeekView && cardSize >= 3;
+    const showTimelineRail = (isWeekView && cardSize >= 3) || (isDayView && cardSize >= 8);
 
     // Day view specific content display
     const showDayTime = isDayView;
@@ -357,8 +357,12 @@ export const EventCard: React.FC<EventCardProps> = ({
                             height={18}
                             className="organizer-logo-corner-image"
                             onError={(e) => {
-                                console.error('Failed to load organizer logo:', event.organization?.logo);
+                                // Silently handle logo loading errors without console spam
                                 e.currentTarget.style.display = 'none';
+                            }}
+                            onLoad={(e) => {
+                                // Ensure logo is visible when it loads successfully
+                                e.currentTarget.style.display = 'block';
                             }}
                         />
                     </div>

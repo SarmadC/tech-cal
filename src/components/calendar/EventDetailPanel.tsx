@@ -9,6 +9,7 @@ import { Event, EventType } from '@/types';
 import EventInfo from './EventInfo';
 import EventActions from './EventActions';
 import EventTracking from './EventTracking';
+import EventAgenda from './EventAgenda';
 
 // 2. UPDATE PROPS: The interface now uses the new types.
 interface EventDetailPanelProps {
@@ -43,6 +44,11 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 </div>
 
                 <EventInfo event={event} category={category} />
+                
+                {/* Enriched Agenda Section */}
+                <div className="mt-6 pt-6 border-t border-gray-800">
+                    <EventAgenda event={event} />
+                </div>
             </div>
 
             <div className="mt-6 space-y-4 pt-4 border-t border-gray-800">

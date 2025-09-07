@@ -76,6 +76,9 @@ export default function UserMenu() {
                             width={32}
                             height={32}
                             className="w-8 h-8 rounded-full object-cover"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                            }}
                         />
                     ) : (
                         <div className="w-8 h-8 bg-accent-primary rounded-full flex items-center justify-center">
@@ -117,6 +120,9 @@ export default function UserMenu() {
                                     width={40}
                                     height={40}
                                     className="w-10 h-10 rounded-full object-cover"
+                                    onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                    }}
                                 />
                             ) : (
                                 <div className="w-10 h-10 bg-accent-primary rounded-full flex items-center justify-center">

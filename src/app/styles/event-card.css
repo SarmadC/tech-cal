@@ -537,14 +537,17 @@
 /* Enhanced title wrapping for different card sizes */
 .event-card[data-span-gt-4] .event-title {
     -webkit-line-clamp: 4; /* Allow more lines for larger cards */
+    line-clamp: 4;
 }
 
 .event-card[data-span-gt-6] .event-title {
     -webkit-line-clamp: 5; /* Even more lines for very large cards */
+    line-clamp: 5;
 }
 
 .event-card[data-span-gt-8] .event-title {
     -webkit-line-clamp: 6; /* Maximum lines for extra large cards */
+    line-clamp: 6;
 }
 
 /* Ensure proper spacing for wrapped titles */
@@ -690,6 +693,7 @@
     /* Allow more lines for larger cards */
     display: -webkit-box;
     -webkit-line-clamp: 4; /* Allow up to 4 lines for title section */
+    line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -781,6 +785,7 @@
     /* Allow up to 2 lines for compact view */
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
 }
@@ -829,6 +834,7 @@
     /* Allow up to 2 lines for mini view */
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
 }
@@ -878,6 +884,7 @@
     /* Allow up to 3 lines for week view */
     display: -webkit-box !important;
     -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
 }
@@ -941,4 +948,82 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Timeline Rail for Extra Large Event Cards */
+.event-left-rail {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    z-index: 1;
+}
+
+.event-left-rail .rail-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.event-left-rail .rail-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+    border-radius: 2px;
+    transition: height 0.3s ease;
+}
+
+.event-left-rail.live .rail-fill {
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.event-left-rail .rail-dot {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: translateX(-50%) scale(1.1);
+    }
+}
+
+/* Multi-day Progress Bar */
+.multi-day-progress {
+    margin-top: var(--space-xs);
+}
+
+.multi-day-progress .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.multi-day-progress .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+    border-radius: 2px;
+    transition: width 0.3s ease;
 }
