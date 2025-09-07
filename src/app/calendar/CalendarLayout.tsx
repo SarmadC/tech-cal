@@ -172,7 +172,7 @@ export function CalendarLayout({
                 <>
                     {/* Backdrop overlay for all screen sizes */}
                     <div 
-                        className="fixed inset-0 z-40 bg-black bg-opacity-50"
+                        className={`calendar-sidebar-backdrop ${isSidebarOpen ? 'open' : ''}`}
                         onClick={onToggleSidebar}
                     />
                     

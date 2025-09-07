@@ -46,6 +46,16 @@ const CalendarSidebar: FC<SidebarProps> = ({ onClose }) => {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
 
+    // Prevent body scroll when sidebar is open
+    useEffect(() => {
+        if (onClose) {
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = 'unset';
+            };
+        }
+    }, [onClose]);
+
     const upcomingEvents = useMemo(() => {
         const now = new Date();
         return events
