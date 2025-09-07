@@ -67,20 +67,25 @@ function useCalendarUIState() {
         isSidebarOpen: false, // Start with sidebar closed to prevent mobile intrusion
     });
     
-    // Check if mobile and adjust sidebar state accordingly
+    // Auto-open sidebar on desktop only on initial load
+    useEffect(() => {
+        const isMobile = window.innerWidth < 768;
+        if (!isMobile) {
+            dispatch({ type: 'TOGGLE_SIDEBAR' }); // Open sidebar on desktop initially
+        }
+    }, []); // Empty dependency array - only run on mount
+
+    // Handle mobile resize - close sidebar when switching to mobile
     useEffect(() => {
         const checkMobile = () => {
             const isMobile = window.innerWidth < 768;
             
-            // Only open sidebar on desktop, keep closed on mobile
-            if (!isMobile && !state.isSidebarOpen) {
-                dispatch({ type: 'TOGGLE_SIDEBAR' }); // Open sidebar on desktop
-            } else if (isMobile && state.isSidebarOpen) {
+            // Only close sidebar on mobile if it's open
+            if (isMobile && state.isSidebarOpen) {
                 dispatch({ type: 'TOGGLE_SIDEBAR' }); // Close sidebar on mobile
             }
         };
         
-        checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, [state.isSidebarOpen]);
