@@ -28,7 +28,7 @@ export default async function CalendarPage() {
             if (user?.id) {
                 profile = await ProfileService.getProfile(user.id, supabase);
             }
-        } catch (profileError) {
+        } catch (_profileError) {
             // This is fine - new users don't have profiles yet
         }
 

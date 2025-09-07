@@ -45,6 +45,6 @@ export function getPasswordResetUrl(): string {
 
 
 
-export function logAuthUrls(context: string) {
+export function logAuthUrls(_context: string) {
     // This function is kept for potential future use but logging is disabled
 }

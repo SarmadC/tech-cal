@@ -167,17 +167,17 @@ export function CalendarLayout({
 
     return (
         <div className="flex h-screen bg-background-main overflow-hidden">
-            {/* Sidebar - Different behavior for mobile vs desktop */}
+            {/* Sidebar Overlay - Always an overlay to prevent content compression */}
             {isSidebarOpen && (
                 <>
-                    {/* Mobile overlay - only on mobile */}
+                    {/* Backdrop overlay for all screen sizes */}
                     <div 
-                        className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
+                        className="fixed inset-0 z-40 bg-black bg-opacity-50"
                         onClick={onToggleSidebar}
                     />
                     
-                    {/* Sidebar */}
-                    <div className={`calendar-sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                    {/* Sidebar - Always positioned as overlay */}
+                    <div className={`calendar-sidebar-overlay ${isSidebarOpen ? 'open' : ''}`}>
                         <CalendarSidebar
                             onClose={onToggleSidebar}
                         />
