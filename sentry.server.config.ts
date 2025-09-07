@@ -8,11 +8,15 @@ Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
+  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1,
 
   // Enable logs to be sent to Sentry
-  enableLogs: true,
+  enableLogs: process.env.NODE_ENV !== 'production',
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: false,
+  debug: process.env.NODE_ENV === 'development',
+
+  // Only enable replay in development/staging
+  replaysSessionSampleRate: process.env.NODE_ENV === 'production' ? 0 : 0.1,
+  replaysOnErrorSampleRate: process.env.NODE_ENV === 'production' ? 0 : 1,
 });

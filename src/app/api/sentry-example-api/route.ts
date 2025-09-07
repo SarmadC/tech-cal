@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { kv } from "@vercel/kv";
+import { notFound } from "next/navigation";
 
 // --- Rate Limiter Setup ---
 // This creates a new rate limiter instance.
@@ -23,6 +24,11 @@ class SentryExampleAPIError extends Error {
 
 // The GET function is now async and accepts the request object
 export async function GET(request: NextRequest) {
+    // Gate this API route to non-production environments only
+    if (process.env.NODE_ENV === 'production') {
+        notFound();
+    }
+
     // --- Rate Limiting Logic ---
     // We use the user's IP address as the unique identifier for rate limiting.
     // `x-forwarded-for` is the standard header for identifying the originating IP address

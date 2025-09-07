@@ -3,8 +3,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { UserEventService } from '@/services/userEventService';
+import { notFound } from 'next/navigation';
 
 export async function GET(_request: NextRequest) {
+    // Gate this API route to non-production environments only
+    if (process.env.NODE_ENV === 'production') {
+        notFound();
+    }
+
     // --- FIX END ---
     try {
         const supabase = await createClient();
@@ -44,6 +50,11 @@ export async function GET(_request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    // Gate this API route to non-production environments only
+    if (process.env.NODE_ENV === 'production') {
+        notFound();
+    }
+
     try {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();

@@ -7,8 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:fix": "next lint --fix",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:staging": "playwright test --config=playwright.staging.config.ts",
+    "type-check": "tsc --noEmit",
+    "audit": "npm audit --audit-level=moderate",
+    "audit:fix": "npm audit fix",
+    "build:analyze": "ANALYZE=true npm run build"
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.18",
@@ -59,7 +68,9 @@
     "@types/react-dom": "^19",
     "@types/three": "^0.178.1",
     "@vitejs/plugin-react": "^4.7.0",
+    "audit-ci": "^7.1.0",
     "autoprefixer": "^10.4.21",
+    "codecov": "^3.8.2",
     "dotenv": "^17.2.1",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",

@@ -53,12 +53,11 @@ const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, 
     }
     
     // If it's a filename (including SVG), construct Supabase storage URL
-    const baseUrl = supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mddgtexrnnlctttbcpsy.supabase.co';
-    if (baseUrl) {
-        return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
+    const baseUrl = supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!baseUrl) {
+        throw new Error('NEXT_PUBLIC_SUPABASE_URL environment variable is required but not set');
     }
-    
-    return logoUrl;
+    return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
 };
 
 export const eventTransformer = {
