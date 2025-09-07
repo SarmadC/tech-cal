@@ -6,6 +6,10 @@
  */
 
 // ============================================
+// AGENDA TYPES
+// ============================================
+
+// ============================================
 // BASE EVENT TYPE
 // ============================================
 
@@ -63,6 +67,9 @@ export interface Event {
     // Agenda and speaker information
     agendaUrl?: string | null;
     speakerLineup?: Speaker[] | null;
+    
+    // Agenda information for multi-day events
+    agenda?: AgendaItem[];
 }
 
 // ============================================

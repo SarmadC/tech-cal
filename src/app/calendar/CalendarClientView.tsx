@@ -16,7 +16,7 @@ import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCal
 
 import { useSmartFilters } from '@/hooks/useSmartFilters';
 
-import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
+import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking, MultiDayEvent } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth, CalendarProvider } from '@/contexts';
 
@@ -67,20 +67,25 @@ function useCalendarUIState() {
         isSidebarOpen: false, // Start with sidebar closed to prevent mobile intrusion
     });
     
-    // Check if mobile and adjust sidebar state accordingly
+    // Auto-open sidebar on desktop only on initial load
+    useEffect(() => {
+        const isMobile = window.innerWidth < 768;
+        if (!isMobile) {
+            dispatch({ type: 'TOGGLE_SIDEBAR' }); // Open sidebar on desktop initially
+        }
+    }, []); // Empty dependency array - only run on mount
+
+    // Handle mobile resize - close sidebar when switching to mobile
     useEffect(() => {
         const checkMobile = () => {
             const isMobile = window.innerWidth < 768;
             
-            // Only open sidebar on desktop, keep closed on mobile
-            if (!isMobile && !state.isSidebarOpen) {
-                dispatch({ type: 'TOGGLE_SIDEBAR' }); // Open sidebar on desktop
-            } else if (isMobile && state.isSidebarOpen) {
+            // Only close sidebar on mobile if it's open
+            if (isMobile && state.isSidebarOpen) {
                 dispatch({ type: 'TOGGLE_SIDEBAR' }); // Close sidebar on mobile
             }
         };
         
-        checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, [state.isSidebarOpen]);
@@ -97,7 +102,7 @@ function useCalendarUIState() {
 }
 
 // Custom hook for event data management
-function useEventData(initialEvents: Event[], profile: AppProfile | null) {
+function useEventData(initialEvents: (Event | MultiDayEvent)[], profile: AppProfile | null) {
     const { user } = useAuth();
     
     const {
@@ -113,14 +118,8 @@ function useEventData(initialEvents: Event[], profile: AppProfile | null) {
         queryKey: ['allTrackedEventIds', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[CalendarClientView] Fetching tracked event IDs for user:', user.id);
-            }
             const supabase = createClient();
             const result = await UserEventService.getAllTrackedEventIds(user.id, supabase);
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[CalendarClientView] Tracked event IDs:', result);
-            }
             return result;
         },
         enabled: !!user?.id,
@@ -129,22 +128,13 @@ function useEventData(initialEvents: Event[], profile: AppProfile | null) {
 
     const enrichedEvents: TrackedEvent[] = useMemo(() => {
         const trackedSet = new Set(trackedEventIds);
-        if (process.env.NODE_ENV === 'development' && filteredEvents.length > 0) {
-            console.log('[CalendarClientView] Enriching events:', filteredEvents.length, 'total');
-        }
 
         const result = filteredEvents.map(event => {
             const isTracked = trackedSet.has(event.id);
             const enriched = enrichWithTracking(event, isTracked);
-            if (isTracked && process.env.NODE_ENV === 'development') {
-                console.log('[CalendarClientView] Event is tracked:', event.id, event.title);
-            }
             return enriched;
         });
 
-        if (process.env.NODE_ENV === 'development' && result.length > 0) {
-            console.log('[CalendarClientView] Enriched events:', result.length, 'Tracked:', result.filter(e => e.isTracked).length);
-        }
         return result;
     }, [filteredEvents, trackedEventIds]);
 
@@ -175,11 +165,15 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
         const dayEnd = new Date(currentDate);
         dayEnd.setHours(23, 59, 59, 999);
 
-        return enrichedEvents.filter((event: TrackedEvent) => {
+        const filtered = enrichedEvents.filter((event: TrackedEvent) => {
             const eventStart = new Date(event.startTime);
             const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
-            return eventStart <= dayEnd && eventEnd >= dayStart;
+            const inRange = eventStart <= dayEnd && eventEnd >= dayStart;
+            
+            return inRange;
         });
+        
+        return filtered;
     }, [enrichedEvents, searchParams]);
 
     const weekEvents = useMemo(() => {
@@ -222,7 +216,7 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
 }
 
 interface CalendarClientViewProps {
-    initialEvents: Event[];
+    initialEvents: (Event | MultiDayEvent)[];
     initialCategories: EventType[];
     profile: AppProfile | null;
 }

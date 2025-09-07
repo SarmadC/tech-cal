@@ -175,7 +175,6 @@ export async function oauthSignInAction(provider: OAuthProvider) {
 
     const redirectTo = getOAuthRedirectUrl();
     // --- FIX 3: USE STRUCTURED LOGGING ---
-    console.log("[OAuth Action] Starting OAuth", { provider, redirectTo });
 
     if (!redirectTo || (redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production')) {
         const errorMessage = `Server configuration error: Unable to determine OAuth redirect URL. Got: ${redirectTo}`;
@@ -187,7 +186,6 @@ export async function oauthSignInAction(provider: OAuthProvider) {
 
     try {
         // I've also updated this line for consistency and security
-        console.log("[OAuth Action] Calling Supabase auth.signInWithOAuth", { provider });
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider,
             options: {
@@ -199,13 +197,6 @@ export async function oauthSignInAction(provider: OAuthProvider) {
             },
         });
 
-        console.log(`[OAuth Action] Supabase response:`, {
-            hasData: !!data,
-            hasUrl: !!data?.url,
-            hasError: !!error,
-            errorMessage: error?.message
-        });
-
         if (error) {
             // --- FIX 2: USE STRUCTURED LOGGING ---
             console.error("[OAuth Action] Supabase OAuth Error", { provider, error });
@@ -214,7 +205,6 @@ export async function oauthSignInAction(provider: OAuthProvider) {
 
         if (data?.url) {
             // --- FIX 1: USE STRUCTURED LOGGING ---
-            console.log("[OAuth Action] Redirecting to OAuth provider", { provider, url: data.url });
             return redirect(data.url);
         }
 
@@ -224,7 +214,6 @@ export async function oauthSignInAction(provider: OAuthProvider) {
 
         if (error instanceof Error && (error.message === 'NEXT_REDIRECT' || error.message.includes('NEXT_REDIRECT'))) {
 
-            console.log(`[OAuth Action] NEXT_REDIRECT caught - redirect to ${provider} OAuth provider is working correctly`);
             throw error;
         }
 

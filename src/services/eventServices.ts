@@ -8,6 +8,8 @@ import type {
     SearchSuggestion,
     SupabaseEventWithDetails,
     MultiDayEvent,
+    AgendaItem,
+    Speaker,
 } from '@/types';
 import {
     eventTransformer,
@@ -405,6 +407,287 @@ export class EventService {
                 extra: { function: 'getRecommendedEvents', categoryNames, excludedEventIds }
             });
             throw new Error('Failed to fetch recommended events.');
+        }
+    }
+
+    // 10. NEW METHOD: Fetch event with agenda data
+    static async getEventWithAgenda(
+        eventId: string,
+        supabaseClient: SupabaseClientType
+    ): Promise<Event & { agenda?: AgendaItem[] }> {
+        try {
+            const { data, error } = await supabaseClient
+                .from('events')
+                .select(`
+                    *, 
+                    event_type:event_type_id (*), 
+                    organizer:organizers (id, name, logo_url),
+                    event_agenda (
+                        id,
+                        day_number,
+                        start_time,
+                        end_time,
+                        title,
+                        description,
+                        location,
+                        agenda_type,
+                        duration_minutes,
+                        track,
+                        sort_order,
+                        speakers (
+                            id,
+                            name,
+                            title,
+                            company,
+                            photo_url
+                        )
+                    )
+                `)
+                .eq('id', eventId)
+                .single();
+
+            if (error) throw error;
+            if (!data) throw new Error('Event not found');
+
+            // Fetch tags for this event
+            const eventsWithTags = await this.attachTagsToEvents([data], supabaseClient);
+            const eventWithTags = eventsWithTags[0];
+
+            const item = eventWithTags as SupabaseEventWithDetails;
+            const baseEvent = eventTransformer.toApp(item);
+            const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
+            const enrichedEvent = enrichEvent(baseEvent, { eventType });
+
+            // Add agenda data
+            const eventAgenda = (data as Record<string, unknown>).event_agenda;
+            const agenda = Array.isArray(eventAgenda) ? eventAgenda.map((agendaItem: Record<string, unknown>) => ({
+                id: agendaItem.id as string,
+                day_number: agendaItem.day_number as number,
+                start_time: agendaItem.start_time as string,
+                end_time: agendaItem.end_time as string,
+                title: agendaItem.title as string,
+                description: agendaItem.description as string | undefined,
+                location: agendaItem.location as string | undefined,
+                agenda_type: agendaItem.agenda_type as string,
+                duration_minutes: agendaItem.duration_minutes as number | undefined,
+                track: agendaItem.track as string | undefined,
+                speakers: (agendaItem.speakers as Speaker[]) || []
+            })) : [];
+
+            return { ...enrichedEvent, agenda };
+        } catch (error) {
+            console.error('Error fetching event with agenda:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventWithAgenda', eventId }
+            });
+            throw new Error(`Failed to fetch event with agenda for ID: ${eventId}.`);
+        }
+    }
+
+    // 11. NEW METHOD: Fetch events with agenda data for multi-day events
+    static async getEventsWithAgenda(
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<(Event & { agenda?: AgendaItem[] })[]> {
+        try {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            let query = supabaseClient
+                .from('events')
+                .select(`
+                    *, 
+                    event_type:event_type_id (*), 
+                    organizer:organizers (id, name, logo_url),
+                    event_agenda (
+                        id,
+                        day_number,
+                        start_time,
+                        end_time,
+                        title,
+                        description,
+                        location,
+                        agenda_type,
+                        duration_minutes,
+                        track,
+                        sort_order,
+                        speakers (
+                            id,
+                            name,
+                            title,
+                            company,
+                            photo_url
+                        )
+                    )
+                `)
+                .order('start_time', { ascending: true })
+                .range(from, to);
+
+            if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
+            if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
+            if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
+
+            if (filters.searchTerm) {
+                query = query.textSearch('fts', filters.searchTerm, {
+                    type: 'websearch',
+                    config: 'english'
+                });
+            }
+
+            if (filters.status?.length) query = query.in('status', filters.status);
+            if (filters.eventIds?.length) query = query.in('id', filters.eventIds);
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            // Fetch tags for all events
+            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
+
+            const events: (Event & { agenda?: AgendaItem[] })[] = eventsWithTags.map((item) => {
+                const typedItem = item as SupabaseEventWithDetails;
+                const baseEvent = eventTransformer.toApp(typedItem);
+                const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
+                const enrichedEvent = enrichEvent(baseEvent, { eventType });
+
+                // Add agenda data for multi-day events
+                const eventAgenda = (item as Record<string, unknown>).event_agenda;
+                const agenda = Array.isArray(eventAgenda) ? eventAgenda.map((agendaItem: Record<string, unknown>) => ({
+                    id: agendaItem.id as string,
+                    day_number: agendaItem.day_number as number,
+                    start_time: agendaItem.start_time as string,
+                    end_time: agendaItem.end_time as string,
+                    title: agendaItem.title as string,
+                    description: agendaItem.description as string | undefined,
+                    location: agendaItem.location as string | undefined,
+                    agenda_type: agendaItem.agenda_type as string,
+                    duration_minutes: agendaItem.duration_minutes as number | undefined,
+                    track: agendaItem.track as string | undefined,
+                    speakers: (agendaItem.speakers as Speaker[]) || []
+                })) : [];
+
+                return { ...enrichedEvent, agenda };
+            });
+
+            return events;
+        } catch (error) {
+            console.error('Error fetching events with agenda:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventsWithAgenda', filters }
+            });
+            throw new Error('Failed to fetch events with agenda.');
+        }
+    }
+
+    // 12. NEW METHOD: Fetch events with both agenda data AND multi-day support
+    static async getEventsWithAgendaAndMultiDaySupport(
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<MultiDayEvent[]> {
+        try {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            let query = supabaseClient
+                .from('events')
+                .select(`
+                    *, 
+                    event_type:event_type_id (*), 
+                    organizer:organizers (id, name, logo_url),
+                    event_agenda (
+                        id,
+                        day_number,
+                        start_time,
+                        end_time,
+                        title,
+                        description,
+                        location,
+                        agenda_type,
+                        duration_minutes,
+                        track,
+                        sort_order,
+                        speakers (
+                            id,
+                            name,
+                            title,
+                            company,
+                            photo_url
+                        )
+                    )
+                `)
+                .order('start_time', { ascending: true })
+                .range(from, to);
+
+            if (filters.startDate && filters.endDate) {
+                query = query.or(
+                    `and(start_time.gte.${filters.startDate.toISOString()},start_time.lte.${filters.endDate.toISOString()}),` +
+                    `and(end_time.gte.${filters.startDate.toISOString()},end_time.lte.${filters.endDate.toISOString()}),` +
+                    `and(start_time.lte.${filters.startDate.toISOString()},end_time.gte.${filters.endDate.toISOString()})`
+                );
+            } else if (filters.startDate) {
+                const dayStart = new Date(filters.startDate);
+                dayStart.setHours(0, 0, 0, 0);
+                const dayEnd = new Date(filters.startDate);
+                dayEnd.setHours(23, 59, 59, 999);
+
+                query = query.or(
+                    `and(start_time.gte.${dayStart.toISOString()},start_time.lte.${dayEnd.toISOString()}),` +
+                    `and(start_time.lte.${dayStart.toISOString()},end_time.gte.${dayStart.toISOString()})`
+                );
+            }
+
+            if (filters.categories?.length) {
+                query = query.in('event_type_id', filters.categories);
+            }
+
+            if (filters.searchTerm) {
+                query = query.textSearch('fts', sanitizeFtsQuery(filters.searchTerm));
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            // Fetch tags for all events
+            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
+
+            const events: MultiDayEvent[] = eventsWithTags.map((item) => {
+                const typedItem = item as SupabaseEventWithDetails;
+                const baseEvent = eventTransformer.toApp(typedItem);
+                const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
+                const _enrichedEvent = enrichEvent(baseEvent, { eventType });
+
+                // Add agenda data
+                const eventAgenda = (item as Record<string, unknown>).event_agenda;
+                const agenda = Array.isArray(eventAgenda) ? eventAgenda.map((agendaItem: Record<string, unknown>) => ({
+                    id: agendaItem.id as string,
+                    day_number: agendaItem.day_number as number,
+                    start_time: agendaItem.start_time as string,
+                    end_time: agendaItem.end_time as string,
+                    title: agendaItem.title as string,
+                    description: agendaItem.description as string | undefined,
+                    location: agendaItem.location as string | undefined,
+                    agenda_type: agendaItem.agenda_type as string,
+                    duration_minutes: agendaItem.duration_minutes as number | undefined,
+                    track: agendaItem.track as string | undefined,
+                    speakers: (agendaItem.speakers as Speaker[]) || []
+                })) : [];
+
+                // Process multi-day information (same logic as getEventsWithMultiDaySupport)
+                const multiDayEvent = enhancedEventTransformer.toApp(typedItem);
+                
+                return { ...multiDayEvent, agenda };
+            });
+
+            return events;
+        } catch (error) {
+            console.error('Error fetching events with agenda and multi-day support:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventsWithAgendaAndMultiDaySupport', filters }
+            });
+            throw new Error('Failed to fetch events with agenda and multi-day support.');
         }
     }
 }

@@ -34,6 +34,28 @@ const CalendarSidebar: FC<SidebarProps> = ({ onClose }) => {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    // Add keyboard support for closing sidebar
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && onClose) {
+                onClose();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    // Prevent body scroll when sidebar is open
+    useEffect(() => {
+        if (onClose) {
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = 'unset';
+            };
+        }
+    }, [onClose]);
+
     const upcomingEvents = useMemo(() => {
         const now = new Date();
         return events
@@ -57,14 +79,13 @@ const CalendarSidebar: FC<SidebarProps> = ({ onClose }) => {
                         <p className="text-gray-400 text-sm">Member</p>
                     </div>
                 </div>
-                {/* Close button - only show on mobile */}
+                {/* Close button - show on all screen sizes */}
                 {onClose && (
                     <button
                         onClick={onClose}
-                        className="sidebar-close-button md:hidden"
+                        className="sidebar-close-button"
                         aria-label="Close sidebar"
                         title="Close sidebar"
-                        style={{ backgroundColor: 'green', color: 'white', padding: '10px' }}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

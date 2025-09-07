@@ -16,8 +16,6 @@ export const WeekHeader: React.FC<WeekHeaderProps> = ({
     const today = new Date();
 
     // Debug logging
-    console.log('[WeekHeader] Rendering with weekDays:', weekDays);
-    console.log('[WeekHeader] weekDays length:', weekDays.length);
 
     return (
         <div

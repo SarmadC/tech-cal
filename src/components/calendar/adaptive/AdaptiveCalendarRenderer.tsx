@@ -18,9 +18,9 @@ import MobileCalendarMonthView from '../mobile/MobileCalendarMonthView';
 
 export interface AdaptiveCalendarProps {
   view: string;
-  events: Event[];
+  events: (Event | MultiDayEvent)[];
   weekEvents?: (Event | MultiDayEvent)[];
-  dayEvents?: Event[];
+  dayEvents?: (Event | MultiDayEvent)[];
   initialDate: Date;
   categories: EventType[];
   profile: AppProfile | null;

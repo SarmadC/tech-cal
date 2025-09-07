@@ -13,7 +13,7 @@ import { formatTime } from '@/utils/dateUtils';
 
 
 export interface TechCalendarDayViewProps {
-    events: Event[] | MultiDayEvent[];
+    events: (Event | MultiDayEvent)[];
     initialDate: Date;
     categories: EventType[];
     profile: AppProfile | null;
@@ -35,20 +35,24 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
         const processedEvents = processEventsForWeekView(events);
         
         // Filter events for the specific day
-        return processedEvents.filter(event => {
+        const filtered = processedEvents.filter(event => {
             // For multi-day instances, match by instanceDate
             if ('isInstance' in event && event.isInstance) {
                 const instance = event as MultiDayEventInstance;
                 // Parse the instanceDate correctly (it's in YYYY-MM-DD format)
                 const [year, month, dayNum] = instance.instanceDate.split('-').map(Number);
                 const instanceDate = new Date(year, month - 1, dayNum);
-                return instanceDate.toDateString() === initialDate.toDateString();
+                const matches = instanceDate.toDateString() === initialDate.toDateString();
+                
+                return matches;
             }
             
             // For regular events, check if they occur on this day
             const eventStart = new Date(event.startTime);
             return eventStart.toDateString() === initialDate.toDateString();
         });
+        
+        return filtered;
     }, [events, initialDate]);
 
     const categoryColumnMap = useMemo(() => {
@@ -147,6 +151,7 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                     viewType="day"
                                     visualInfo={visualInfo}
                                     isOverlapping={overlapMap.get(event.id) || false}
+                                    agenda={'agenda' in event ? event.agenda || [] : []}
                                 />
                             </div>
                         );

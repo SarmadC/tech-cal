@@ -55,7 +55,6 @@ export default function LoginPage() {
                 case 'oauth-failed':
                     // Don't show error if it's just NEXT_REDIRECT (which is normal)
                     if (message === 'NEXT_REDIRECT') {
-                        console.log('[LoginPage] Ignoring NEXT_REDIRECT error - this is expected OAuth behavior');
                         router.replace('/login', { scroll: false });
                         return;
                     }
@@ -148,7 +147,6 @@ export default function LoginPage() {
             // Check if this is a Next.js redirect (which is expected)
             if (error instanceof Error && (error.message === 'NEXT_REDIRECT' || error.message.includes('NEXT_REDIRECT'))) {
                 // This is expected - the user is being redirected to OAuth provider
-                console.log('[LoginPage] OAuth redirect successful, user being redirected to provider');
                 toast.dismiss(toastId);
                 return;
             }

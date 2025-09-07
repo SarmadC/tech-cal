@@ -45,20 +45,6 @@ export function getPasswordResetUrl(): string {
 
 
 
-export function logAuthUrls(context: string) {
-    // --- FIX START ---
-    // Use structured logging by passing the dynamic 'context' variable
-    // as a property of the logged object, rather than in the string itself.
-    console.log("[AUTH DEBUG]", {
-        context: context,
-        // --- FIX END ---
-        baseUrl: getBaseUrl(),
-        redirectUrl: getOAuthRedirectUrl(),
-        isClient: typeof window !== 'undefined',
-        env: {
-            NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-            NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
-            NODE_ENV: process.env.NODE_ENV,
-        }
-    });
+export function logAuthUrls(_context: string) {
+    // This function is kept for potential future use but logging is disabled
 }
