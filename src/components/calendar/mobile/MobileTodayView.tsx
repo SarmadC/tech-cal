@@ -24,15 +24,12 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
   className = ''
 }) => {
   // Debug logging
-  console.log('MobileTodayView - Events received:', events.length);
-  console.log('MobileTodayView - Events:', events);
+  // Mobile today view events loaded
   
   // Debug upcoming events filtering
   const now = new Date();
-  const upcomingEvents = events.filter(event => new Date(event.startTime) > now);
-  console.log('MobileTodayView - Current time:', now);
-  console.log('MobileTodayView - Upcoming events count:', upcomingEvents.length);
-  console.log('MobileTodayView - Event dates:', events.map(e => ({ title: e.title, startTime: e.startTime, isUpcoming: new Date(e.startTime) > now })));
+  const _upcomingEvents = events.filter(event => new Date(event.startTime) > now);
+  // Mobile today view time and events processed
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   // Filter events for today - not used in current implementation
@@ -104,10 +101,10 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
     setPreviewEvent(null);
   };
 
-  const handleTrackEvent = (event: Event) => {
+  const handleTrackEvent = (_event: Event) => {
     // Event tracking is handled by the MobileEventPreview component
     // This callback can be used for additional tracking logic if needed
-    console.log('Event tracked:', event.title);
+    // Event tracked successfully
   };
 
   return (

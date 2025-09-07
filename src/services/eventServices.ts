@@ -462,14 +462,14 @@ export class EventService {
             const eventAgenda = (data as Record<string, unknown>).event_agenda;
             const agenda = Array.isArray(eventAgenda) ? eventAgenda.map((agendaItem: Record<string, unknown>) => ({
                 id: agendaItem.id as string,
-                day_number: agendaItem.day_number as number,
-                start_time: agendaItem.start_time as string,
-                end_time: agendaItem.end_time as string,
+                dayNumber: agendaItem.day_number as number,
+                startTime: agendaItem.start_time as string,
+                endTime: agendaItem.end_time as string,
                 title: agendaItem.title as string,
                 description: agendaItem.description as string | undefined,
                 location: agendaItem.location as string | undefined,
-                agenda_type: agendaItem.agenda_type as string,
-                duration_minutes: agendaItem.duration_minutes as number | undefined,
+                type: agendaItem.agenda_type as 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other',
+                durationMinutes: agendaItem.duration_minutes as number | undefined,
                 track: agendaItem.track as string | undefined,
                 speakers: (agendaItem.speakers as Speaker[]) || []
             })) : [];
@@ -555,14 +555,14 @@ export class EventService {
                 const eventAgenda = (item as Record<string, unknown>).event_agenda;
                 const agenda = Array.isArray(eventAgenda) ? eventAgenda.map((agendaItem: Record<string, unknown>) => ({
                     id: agendaItem.id as string,
-                    day_number: agendaItem.day_number as number,
-                    start_time: agendaItem.start_time as string,
-                    end_time: agendaItem.end_time as string,
+                    dayNumber: agendaItem.day_number as number,
+                    startTime: agendaItem.start_time as string,
+                    endTime: agendaItem.end_time as string,
                     title: agendaItem.title as string,
                     description: agendaItem.description as string | undefined,
                     location: agendaItem.location as string | undefined,
-                    agenda_type: agendaItem.agenda_type as string,
-                    duration_minutes: agendaItem.duration_minutes as number | undefined,
+                    type: agendaItem.agenda_type as 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other',
+                    durationMinutes: agendaItem.duration_minutes as number | undefined,
                     track: agendaItem.track as string | undefined,
                     speakers: (agendaItem.speakers as Speaker[]) || []
                 })) : [];
@@ -663,14 +663,14 @@ export class EventService {
                 const eventAgenda = (item as Record<string, unknown>).event_agenda;
                 const agenda = Array.isArray(eventAgenda) ? eventAgenda.map((agendaItem: Record<string, unknown>) => ({
                     id: agendaItem.id as string,
-                    day_number: agendaItem.day_number as number,
-                    start_time: agendaItem.start_time as string,
-                    end_time: agendaItem.end_time as string,
+                    dayNumber: agendaItem.day_number as number,
+                    startTime: agendaItem.start_time as string,
+                    endTime: agendaItem.end_time as string,
                     title: agendaItem.title as string,
                     description: agendaItem.description as string | undefined,
                     location: agendaItem.location as string | undefined,
-                    agenda_type: agendaItem.agenda_type as string,
-                    duration_minutes: agendaItem.duration_minutes as number | undefined,
+                    type: agendaItem.agenda_type as 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other',
+                    durationMinutes: agendaItem.duration_minutes as number | undefined,
                     track: agendaItem.track as string | undefined,
                     speakers: (agendaItem.speakers as Speaker[]) || []
                 })) : [];

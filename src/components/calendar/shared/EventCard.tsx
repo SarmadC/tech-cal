@@ -194,14 +194,15 @@ export const EventCard: React.FC<EventCardProps> = ({
     const isDense = isWeekView && cardSize <= 4;
     const isExtraLarge = cardSize > 8;
 
-    const showTimelineRail = isWeekView && cardSize >= 3;
+    const showTimelineRail = (isWeekView && cardSize >= 3) || (isDayView && cardSize >= 8);
 
     // Group agenda by day and get today's highlights
     const agendaByDay = agenda?.reduce((acc, item) => {
-        if (!acc[item.day_number]) {
-            acc[item.day_number] = [];
+        const dayNum = item.dayNumber || 1; // Default to day 1 if not specified
+        if (!acc[dayNum]) {
+            acc[dayNum] = [];
         }
-        acc[item.day_number].push(item);
+        acc[dayNum].push(item);
         return acc;
     }, {} as Record<number, typeof agenda>) || {};
 
@@ -221,12 +222,12 @@ export const EventCard: React.FC<EventCardProps> = ({
         .filter(item => {
             // Show key agenda items: keynotes, sessions, workshops, panels, and major events
             const keyTypes = ['keynote', 'session', 'workshop', 'panel', 'entertainment', 'networking'];
-            return item?.agenda_type && keyTypes.includes(item.agenda_type);
+            return item?.type && keyTypes.includes(item.type);
         })
         .sort((a, b) => {
             // Sort by start time
-            const timeA = a.start_time || '00:00';
-            const timeB = b.start_time || '00:00';
+            const timeA = a.startTime || '00:00';
+            const timeB = b.startTime || '00:00';
             return timeA.localeCompare(timeB);
         })
         .slice(0, 4); // Show top 4 items
@@ -397,8 +398,12 @@ export const EventCard: React.FC<EventCardProps> = ({
                             height={18}
                             className="organizer-logo-corner-image"
                             onError={(e) => {
-                                console.error('Failed to load organizer logo:', event.organization?.logo);
+                                // Silently handle logo loading errors without console spam
                                 e.currentTarget.style.display = 'none';
+                            }}
+                            onLoad={(e) => {
+                                // Ensure logo is visible when it loads successfully
+                                e.currentTarget.style.display = 'block';
                             }}
                         />
                     </div>
@@ -458,7 +463,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                                keyAgendaItems.map((item, index) => (
                                    <div key={item.id} className="agenda-timeline-item">
                                        <div className="timeline-time">
-                                           {item.start_time}
+                                            {item.startTime}
                                        </div>
                                        <div className="timeline-connector">
                                            <div className="timeline-dot"></div>

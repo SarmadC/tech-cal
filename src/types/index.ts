@@ -57,6 +57,8 @@ export type SupabaseEventWithDetails = Omit<SupabaseEvent, 'organizer'> & {
         color: string;
         category: string;
     }>;
+    agenda_url?: string | null;
+    speaker_lineup?: Json | null;
 };
 
 export type SupabaseTrackedEventWithDetails = Omit<SupabaseTrackedEvent, 'events'> & {

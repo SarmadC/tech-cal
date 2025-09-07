@@ -1,14 +1,6 @@
 // src/hooks/useSmartFilters.ts
 import { useState, useMemo, useCallback } from 'react';
-// 1. UPDATE IMPORTS: Use the new `Event` type and the `isTrackedEvent` type guard.
-import { Event, AppProfile, isTrackedEvent, TrackedEvent } from '@/types';
-
-// `CalendarEventData` from your new types file can be used here if needed, or keep local.
-interface CalendarEvent {
-    start: string | Date;
-    end: string | Date;
-    title?: string;
-}
+import { Event, AppProfile, isTrackedEvent, TrackedEvent, CalendarEventData } from '@/types';
 
 export interface SmartFilterOptions {
     // ... (interface remains the same)
@@ -48,14 +40,13 @@ const defaultFilters: SmartFilterOptions = {
 export function useSmartFilters(
     events: (Event | TrackedEvent)[],
     userProfile: AppProfile | null,
-    userCalendar?: CalendarEvent[]
+    userCalendar?: CalendarEventData[]
 ) {
     const [filters, setFilters] = useState<SmartFilterOptions>(defaultFilters);
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
     const filteredEvents = useMemo(() => {
-        console.log('useSmartFilters - Input events:', events.length);
-        console.log('useSmartFilters - Current filters:', filters);
+        // Smart filters processing events
         
         const filtered = events.filter(event => {
             // Basic filters (no change needed here)
@@ -121,7 +112,7 @@ export function useSmartFilters(
             return true;
         });
         
-        console.log('useSmartFilters - Filtered events:', filtered.length);
+        // Smart filters completed
         return filtered;
     }, [events, filters, userProfile, userCalendar]);
 
@@ -134,12 +125,12 @@ export function useSmartFilters(
         return 'intermediate';
     };
 
-    const checkForConflicts = (event: Event, calendar: CalendarEvent[]): boolean => {
+    const checkForConflicts = (event: Event, calendar: CalendarEventData[]): boolean => {
         const eventStart = new Date(event.startTime);
         const eventEnd = event.endTime ? new Date(event.endTime) : new Date(eventStart.getTime() + 2 * 60 * 60 * 1000);
         return calendar.some(calEvent => {
             const calStart = new Date(calEvent.start);
-            const calEnd = new Date(calEvent.end);
+            const calEnd = calEvent.end ? new Date(calEvent.end) : new Date(calStart.getTime() + 2 * 60 * 60 * 1000);
             return (eventStart < calEnd && eventEnd > calStart);
         });
     };

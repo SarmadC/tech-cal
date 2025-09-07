@@ -9,35 +9,12 @@
 // AGENDA TYPES
 // ============================================
 
-export interface Speaker {
-    id: string;
-    name: string;
-    title?: string;
-    company?: string;
-    photo_url?: string;
-}
-
-export interface AgendaItem {
-    id: string;
-    day_number: number;
-    start_time: string;
-    end_time: string;
-    title: string;
-    description?: string;
-    location?: string;
-    agenda_type: string;
-    duration_minutes?: number;
-    track?: string;
-    speakers?: Speaker[];
-}
-
 // ============================================
 // BASE EVENT TYPE
 // ============================================
 
 /**
  * Core event data structure - the single source of truth for events
- * This replaces the old AppEvent type
  */
 export interface Event {
     // Core identifiers
@@ -86,6 +63,11 @@ export interface Event {
     targetAudience?: string | null;
     prerequisites?: string | null;
 
+    
+    // Agenda and speaker information
+    agendaUrl?: string | null;
+    speakerLineup?: Speaker[] | null;
+    
     // Agenda information for multi-day events
     agenda?: AgendaItem[];
 }
@@ -189,6 +171,64 @@ export interface EventTag {
     name: string;
     color: string;
     category: string;
+}
+
+export interface Speaker {
+    id: string;
+    name: string;
+    title?: string;
+    company?: string;
+    bio?: string;
+    photoUrl?: string;
+    socialLinks?: {
+        twitter?: string;
+        linkedin?: string;
+        website?: string;
+    };
+}
+
+export interface AgendaItem {
+    id: string;
+    title: string;
+    description?: string;
+    startTime: string;
+    endTime: string;
+    speaker?: Speaker;
+    location?: string;
+    type: 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other';
+    tags?: string[];
+    // Additional fields from database
+    dayNumber?: number;
+    durationMinutes?: number;
+    track?: string;
+    difficultyLevel?: string | null;
+    prerequisites?: string | null;
+    capacity?: number | null;
+    isRequired?: boolean;
+    sortOrder?: number;
+}
+
+// Database schema for agenda items
+export interface DatabaseAgendaItem {
+    id: string;
+    event_id: string;
+    day_number: number;
+    start_time: string;
+    end_time: string;
+    title: string;
+    description: string;
+    location: string;
+    agenda_type: string;
+    duration_minutes: number;
+    speaker_id: string | null;
+    track: string;
+    difficulty_level: string | null;
+    prerequisites: string | null;
+    capacity: number | null;
+    is_required: boolean;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface DailySchedule {

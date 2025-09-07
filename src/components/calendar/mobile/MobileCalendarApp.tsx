@@ -55,9 +55,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
   const [currentView, setCurrentView] = useState<MobileViewType>(getMobileViewFromURL());
 
   // Debug logging
-  console.log('MobileCalendarApp - Events received:', events.length);
-  console.log('MobileCalendarApp - Filtered events:', filteredEvents.length);
-  console.log('MobileCalendarApp - Current view:', currentView);
+  // Mobile calendar app state logged
   const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
   const [localCurrentDate, setLocalCurrentDate] = useState(currentDate);
 
@@ -160,7 +158,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
         }}
         onPullToRefresh={() => {
           // Pull to refresh events
-          console.log('Refreshing events...');
+          // Refreshing events...
         }}
         enablePullToRefresh={true}
         enableDoubleTap={true}
@@ -233,9 +231,9 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
           id: cat.id,
           name: cat.name
         }))}
-        onSearchSuggestionSelect={(suggestion) => {
+        onSearchSuggestionSelect={(_suggestion) => {
           // Handle suggestion selection - could filter events or navigate
-          console.log('Selected suggestion:', suggestion);
+          // Selected suggestion handled
         }}
       />
     </div>
