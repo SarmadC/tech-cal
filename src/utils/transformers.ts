@@ -8,6 +8,7 @@ import type {
     SupabaseProfile,
     Event, // Replaces AppEvent
     EventType, // Replaces AppEventType
+    AgendaItem,
     EventTag, // For event tags
     TrackedEventRecord, // Replaces AppTrackedEvent
     AppProfile, // Assuming this will become `Profile` later, but keeping as-is for now
@@ -360,4 +361,30 @@ export const enhancedEventTransformer = {
             eventPattern: eventPattern
         };
     }
+};
+
+// Transform agenda items from database format to app format
+export const transformAgendaItemsToApp = (dbAgendaItems: unknown[]): AgendaItem[] => {
+    return dbAgendaItems.map(item => {
+        const dbItem = item as Record<string, unknown>;
+        return {
+            id: String(dbItem.id || ''),
+            title: String(dbItem.title || ''),
+            description: dbItem.description ? String(dbItem.description) : undefined,
+            startTime: String(dbItem.start_time || ''),
+            endTime: String(dbItem.end_time || ''),
+            speaker: dbItem.speaker_id ? { id: String(dbItem.speaker_id), name: '', bio: '', avatar: '' } : undefined,
+            location: dbItem.location ? String(dbItem.location) : undefined,
+            type: (dbItem.agenda_type as AgendaItem['type']) || 'other',
+            tags: dbItem.track ? [String(dbItem.track)] : undefined,
+            dayNumber: typeof dbItem.day_number === 'number' ? dbItem.day_number : undefined,
+            durationMinutes: typeof dbItem.duration_minutes === 'number' ? dbItem.duration_minutes : undefined,
+            track: dbItem.track ? String(dbItem.track) : undefined,
+            difficultyLevel: dbItem.difficulty_level ? String(dbItem.difficulty_level) : undefined,
+            prerequisites: dbItem.prerequisites ? String(dbItem.prerequisites) : undefined,
+            capacity: typeof dbItem.capacity === 'number' ? dbItem.capacity : undefined,
+            isRequired: Boolean(dbItem.is_required),
+            sortOrder: typeof dbItem.sort_order === 'number' ? dbItem.sort_order : undefined,
+        };
+    });
 };

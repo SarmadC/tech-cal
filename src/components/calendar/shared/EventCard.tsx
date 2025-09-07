@@ -257,8 +257,17 @@ export const EventCard: React.FC<EventCardProps> = ({
             style={cardStyle}
             className={`${cardClasses} ${isCompact ? 'compact' : ''} ${isDense ? 'dense' : ''}`}
             onClick={onClick}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onClick();
+                }
+            }}
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
+            tabIndex={0}
+            role="button"
+            aria-label={`Event: ${event.title}${event.location ? ` at ${event.location}` : ''}${event.organizer ? ` by ${event.organizer}` : ''}`}
             data-span={cardSize}
             data-span-gt-2={cardSize > 2 || undefined}
             data-span-gt-4={cardSize > 4 || undefined}

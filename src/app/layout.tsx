@@ -14,6 +14,7 @@ import '@/components/calendar/mobile/mobile-calendar.css';
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
 import ClientLayout from "@/components/layout/ClientLayout";
+import { SkipNavigation } from "@/components/common/AccessibilityHelpers";
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -32,6 +33,9 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={inter.className}>
+                {/* Skip navigation for accessibility */}
+                <SkipNavigation />
+                
                 {/* Toaster should be high-level to be independent of other re-renders */}
                 <Toaster position="top-center" richColors />
 

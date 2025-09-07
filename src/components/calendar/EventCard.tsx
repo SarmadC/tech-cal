@@ -29,11 +29,21 @@ const EventCard: FC<EventCardProps> = ({
     return (
         <div
             onClick={() => onCardClick?.(event)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onCardClick?.(event);
+                }
+            }}
+            tabIndex={0}
+            role="button"
+            aria-label={`Event: ${event.title} by ${event.organizer}`}
             className={`
                 premium-card smooth-colors
                 bg-[#1e1e1e] border border-gray-800 rounded-xl p-4
                 transition-all duration-200 cursor-pointer group
                 hover:border-blue-500/50 hover:bg-[#2a2a2a]
+                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                 ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : ''}
             `}
         >

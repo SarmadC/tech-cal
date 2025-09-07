@@ -50,12 +50,14 @@ export function AuthForm({
     }, [state, onSuccess]);
 
     return (
-        <form action={formAction} className="space-y-6">
+        <form action={formAction} className="space-y-6" noValidate>
             {/* Display form-level errors */}
             {state?.errors?._form && (
                 <div
                     className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
+                    role="alert"
                     aria-live="polite"
+                    aria-atomic="true"
                 >
                     {state.errors._form.join(', ')}
                 </div>
@@ -64,7 +66,10 @@ export function AuthForm({
             {/* Render the unique fields, passing the state down to them */}
             {children(state)}
 
-            <SubmitButton className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-accent-primary hover:bg-accent-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-primary disabled:bg-opacity-50">
+            <SubmitButton 
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-accent-primary hover:bg-accent-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-primary disabled:bg-opacity-50"
+                aria-describedby={state?.errors?._form ? "form-errors" : undefined}
+            >
                 {submitButtonText}
             </SubmitButton>
         </form>

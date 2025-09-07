@@ -38,7 +38,19 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
     return (
         <div className="fixed inset-0 z-50 lg:relative lg:inset-auto">
             {/* Mobile overlay */}
-            <div className="lg:hidden fixed inset-0 bg-black/50" onClick={onClose} />
+            <div 
+                className="lg:hidden fixed inset-0 bg-black/50" 
+                onClick={onClose}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onClose();
+                    }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label="Close filter panel"
+            />
 
             {/* Panel */}
             <div className="fixed right-0 top-0 h-full w-80 bg-background-elevated border-l border-border-default shadow-xl lg:relative lg:w-full lg:h-auto lg:shadow-none lg:border lg:rounded-lg overflow-y-auto">
