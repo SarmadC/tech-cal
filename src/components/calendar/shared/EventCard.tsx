@@ -4,7 +4,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
+import { Event, MultiDayEventInstance, isEventTracked, AgendaItem } from '@/types';
 import { isEventLive, getEventDuration } from '@/utils/dateUtils';
 import { LearnMoreButton } from './LearnMoreButton';
 
@@ -24,6 +24,7 @@ export interface EventCardProps {
     className?: string;
     style?: React.CSSProperties;
     isOverlapping?: boolean;
+    agenda?: AgendaItem[];
 }
 
 export const EventCard: React.FC<EventCardProps> = ({
@@ -35,7 +36,8 @@ export const EventCard: React.FC<EventCardProps> = ({
     visualInfo,
     className = '',
     style = {},
-    isOverlapping = false
+    isOverlapping = false,
+    agenda = []
 }) => {
     const live = isEventLive(event.startTime, event.endTime);
 
@@ -190,8 +192,46 @@ export const EventCard: React.FC<EventCardProps> = ({
     const isDayView = viewType === 'day';
     const isCompact = isWeekView && cardSize <= 2;
     const isDense = isWeekView && cardSize <= 4;
+    const isExtraLarge = cardSize > 8;
 
     const showTimelineRail = isWeekView && cardSize >= 3;
+
+    // Group agenda by day and get today's highlights
+    const agendaByDay = agenda?.reduce((acc, item) => {
+        if (!acc[item.day_number]) {
+            acc[item.day_number] = [];
+        }
+        acc[item.day_number].push(item);
+        return acc;
+    }, {} as Record<number, typeof agenda>) || {};
+
+    // Determine which day's agenda to show
+    let currentDayNumber = 1; // Default to day 1
+    
+    // For multi-day event instances, use the actual day number
+    if ('isInstance' in event && event.isInstance && event.dayInfo) {
+        currentDayNumber = event.dayInfo.currentDay;
+    }
+    
+
+    
+    // Get the correct day's agenda items
+    const todayAgenda = agendaByDay[currentDayNumber] || [];
+    const keyAgendaItems = todayAgenda
+        .filter(item => {
+            // Show key agenda items: keynotes, sessions, workshops, panels, and major events
+            const keyTypes = ['keynote', 'session', 'workshop', 'panel', 'entertainment', 'networking'];
+            return item?.agenda_type && keyTypes.includes(item.agenda_type);
+        })
+        .sort((a, b) => {
+            // Sort by start time
+            const timeA = a.start_time || '00:00';
+            const timeB = b.start_time || '00:00';
+            return timeA.localeCompare(timeB);
+        })
+        .slice(0, 4); // Show top 4 items
+
+
 
     // Day view specific content display
     const showDayTime = isDayView;
@@ -208,8 +248,8 @@ export const EventCard: React.FC<EventCardProps> = ({
     // Medium cards: Add progress indicators
     const showWeekProgress = viewType === 'week' && cardSize >= 3;
     
-    // Large cards: Add description and tags
-    const showWeekDescription = viewType === 'week' && cardSize >= 8;
+    // Large cards: Add description and tags (but not for multi-day events in week view)
+    const showWeekDescription = viewType === 'week' && cardSize >= 8 && !('isMultiDay' in event && event.isMultiDay);
 
     return (
         <div
@@ -407,6 +447,40 @@ export const EventCard: React.FC<EventCardProps> = ({
                 {(showWeekDescription || showDayDescription) && event.description && (
                     <div className="event-description">
                         <span>{event.description.length > 120 ? `${event.description.substring(0, 120)}...` : event.description}</span>
+                    </div>
+                )}
+
+                {/* Rich agenda timeline for extra large cards (both day and week view) */}
+                {isExtraLarge && (
+                    <div className="event-agenda-timeline">
+                        <div className="agenda-timeline-container">
+                            {keyAgendaItems.length > 0 ? (
+                               keyAgendaItems.map((item, index) => (
+                                   <div key={item.id} className="agenda-timeline-item">
+                                       <div className="timeline-time">
+                                           {item.start_time}
+                                       </div>
+                                       <div className="timeline-connector">
+                                           <div className="timeline-dot"></div>
+                                           {index < keyAgendaItems.length - 1 && <div className="timeline-line"></div>}
+                                       </div>
+                                       <div className="timeline-content">
+                                           <div className="timeline-title">{item.description || item.title}</div>
+                                       </div>
+                                   </div>
+                               ))
+                            ) : (
+                                <div className="timeline-no-data">
+                                    <div className="timeline-time">--:--</div>
+                                    <div className="timeline-connector">
+                                        <div className="timeline-dot"></div>
+                                    </div>
+                                    <div className="timeline-content">
+                                        <div className="timeline-title">Agenda Loading...</div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 

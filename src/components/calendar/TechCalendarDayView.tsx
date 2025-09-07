@@ -13,7 +13,7 @@ import { formatTime } from '@/utils/dateUtils';
 
 
 export interface TechCalendarDayViewProps {
-    events: Event[] | MultiDayEvent[];
+    events: (Event | MultiDayEvent)[];
     initialDate: Date;
     categories: EventType[];
     profile: AppProfile | null;
@@ -34,21 +34,48 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
         // Use the same processing logic as week view to ensure consistent multi-day event handling
         const processedEvents = processEventsForWeekView(events);
         
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔍 Day view processing:', {
+                originalEvents: events.length,
+                processedEvents: processedEvents.length,
+                viewDate: initialDate.toDateString()
+            });
+            
+        }
+        
         // Filter events for the specific day
-        return processedEvents.filter(event => {
+        const filtered = processedEvents.filter(event => {
             // For multi-day instances, match by instanceDate
             if ('isInstance' in event && event.isInstance) {
                 const instance = event as MultiDayEventInstance;
                 // Parse the instanceDate correctly (it's in YYYY-MM-DD format)
                 const [year, month, dayNum] = instance.instanceDate.split('-').map(Number);
                 const instanceDate = new Date(year, month - 1, dayNum);
-                return instanceDate.toDateString() === initialDate.toDateString();
+                const matches = instanceDate.toDateString() === initialDate.toDateString();
+                
+                if (process.env.NODE_ENV === 'development' && event.title?.toLowerCase().includes('aws')) {
+                    console.log('🔍 AWS instance date check:', {
+                        title: event.title,
+                        instanceDate: instance.instanceDate,
+                        instanceDateObj: instanceDate.toDateString(),
+                        viewDate: initialDate.toDateString(),
+                        matches: matches
+                    });
+                }
+                
+                return matches;
             }
             
             // For regular events, check if they occur on this day
             const eventStart = new Date(event.startTime);
             return eventStart.toDateString() === initialDate.toDateString();
         });
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📅 Final day events:', filtered.length);
+        }
+        
+        return filtered;
     }, [events, initialDate]);
 
     const categoryColumnMap = useMemo(() => {
@@ -147,6 +174,7 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                     viewType="day"
                                     visualInfo={visualInfo}
                                     isOverlapping={overlapMap.get(event.id) || false}
+                                    agenda={'agenda' in event ? event.agenda || [] : []}
                                 />
                             </div>
                         );

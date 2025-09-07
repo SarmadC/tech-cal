@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Event } from '@/types';
+import { Event, AgendaItem } from '@/types';
 import { EventCard } from './EventCard';
 import { getWeekEventVisualInfo } from '@/utils/eventViewUtils';
 
 export interface WeekEventRendererProps {
-    events: Event[];
+    events: (Event & { agenda?: AgendaItem[] })[];
     dayIndex: number;
     currentDay: Date;
     startHour: number;
@@ -31,6 +31,7 @@ export const WeekEventRenderer: React.FC<WeekEventRendererProps> = ({
     if (events.length === 0) {
         return null;
     }
+
 
     return (
         <>
@@ -59,6 +60,7 @@ export const WeekEventRenderer: React.FC<WeekEventRendererProps> = ({
                             onLeave={onEventLeave}
                             viewType="week"
                             visualInfo={visualInfo}
+                            agenda={'agenda' in event ? event.agenda : undefined}
                             style={{
                                 height: '100%',
                                 margin: '1px 2px'

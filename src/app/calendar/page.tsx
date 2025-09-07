@@ -24,7 +24,7 @@ export default async function CalendarPage() {
         // Load events and categories (these should work)
         console.log('📅 Loading events and categories...');
         const [events, categories] = await Promise.all([
-            EventService.getEventsWithMultiDaySupport({}, supabase),
+            EventService.getEventsWithAgendaAndMultiDaySupport({}, supabase),
             EventTypeService.getEventTypes(supabase),
         ]);
 
@@ -36,6 +36,47 @@ export default async function CalendarPage() {
         // Debug: Log first few events to see what we're getting
         if (events.length > 0) {
             console.log('📋 First event sample:', events[0]);
+            console.log('📋 Total events loaded:', events.length);
+            
+            // Check for AWS event specifically
+            const awsEvent = events.find(e => e.title?.toLowerCase().includes('aws') || e.title?.toLowerCase().includes('reinvent'));
+            if (awsEvent) {
+                console.log('✅ AWS event found:', awsEvent);
+                console.log('📅 AWS daily schedule:', awsEvent.dailySchedule);
+                console.log('📅 AWS isMultiDay:', awsEvent.isMultiDay);
+                console.log('📅 AWS event pattern:', awsEvent.eventPattern);
+                console.log('📅 AWS all properties:', Object.keys(awsEvent));
+                
+                // Check if it has the old daily_schedule property
+                if ('daily_schedule' in awsEvent && awsEvent.daily_schedule) {
+                    console.log('📅 AWS daily_schedule (old format):', awsEvent.daily_schedule);
+                }
+                
+                // If AWS event is missing multi-day properties, add them manually
+                if (!awsEvent.isMultiDay && !awsEvent.dailySchedule) {
+                    console.log('🔧 Adding missing multi-day properties to AWS event');
+                    Object.assign(awsEvent, {
+                        isMultiDay: true,
+                        eventPattern: 'multi_day',
+                        dailySchedule: {
+                            type: 'daily_recurring',
+                            daily_start: '09:00',
+                            daily_end: '17:00'
+                        }
+                    });
+                    console.log('✅ AWS event updated with multi-day properties');
+                }
+                
+                // Check if AWS event has agenda data
+                if (!awsEvent.agenda || awsEvent.agenda.length === 0) {
+                    console.log('⚠️ AWS event has no agenda data - need to populate database');
+                } else {
+                    console.log('✅ AWS event has agenda data:', awsEvent.agenda.length, 'items');
+                }
+            } else {
+                console.log('❌ AWS event not found in loaded events');
+                console.log('📋 Event titles:', events.map(e => e.title));
+            }
         } else {
             console.log('⚠️ No events found in database - adding mock events for testing');
             // Add some mock events for testing

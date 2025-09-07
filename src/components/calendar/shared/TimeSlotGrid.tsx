@@ -231,6 +231,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                                 viewType="week"
                                 visualInfo={{ span, ...visualInfo }}
                                 className={spanClasses}
+                                agenda={'agenda' in event ? event.agenda : undefined}
                                 style={{
                                     height: '100%'
                                 }}

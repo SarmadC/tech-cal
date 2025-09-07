@@ -195,7 +195,9 @@ export function processEventsForWeekView(
                     // Add custom schedule info for display
                     multiDayStart: dayDate,
                     multiDayEnd: dayDate,
-                    multiDaySpan: 1
+                    multiDaySpan: 1,
+                    // Preserve agenda data
+                    agenda: 'agenda' in event ? event.agenda : undefined
                 };
                 
                 
@@ -246,7 +248,9 @@ export function processEventsForWeekView(
                         // Add multi-day info for display  
                         multiDayStart: dayDate,
                         multiDayEnd: dayDate,
-                        multiDaySpan: 1
+                        multiDaySpan: 1,
+                        // Preserve agenda data
+                        agenda: 'agenda' in event ? event.agenda : undefined
                     };
                     
                     
@@ -261,6 +265,7 @@ export function processEventsForWeekView(
             processedEvents.push(event as Event);
         }
     });
+    
     
     return processedEvents;
 }

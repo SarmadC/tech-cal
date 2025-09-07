@@ -16,7 +16,7 @@ import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCal
 
 import { useSmartFilters } from '@/hooks/useSmartFilters';
 
-import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
+import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking, MultiDayEvent } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth, CalendarProvider } from '@/contexts';
 
@@ -97,7 +97,7 @@ function useCalendarUIState() {
 }
 
 // Custom hook for event data management
-function useEventData(initialEvents: Event[], profile: AppProfile | null) {
+function useEventData(initialEvents: (Event | MultiDayEvent)[], profile: AppProfile | null) {
     const { user } = useAuth();
     
     const {
@@ -175,11 +175,31 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
         const dayEnd = new Date(currentDate);
         dayEnd.setHours(23, 59, 59, 999);
 
-        return enrichedEvents.filter((event: TrackedEvent) => {
+        const filtered = enrichedEvents.filter((event: TrackedEvent) => {
             const eventStart = new Date(event.startTime);
             const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
-            return eventStart <= dayEnd && eventEnd >= dayStart;
+            const inRange = eventStart <= dayEnd && eventEnd >= dayStart;
+            
+            // Debug AWS event specifically
+            if (event.title?.toLowerCase().includes('aws') || event.title?.toLowerCase().includes('reinvent')) {
+                console.log('🔍 AWS event date check:', {
+                    title: event.title,
+                    eventStart: eventStart.toISOString(),
+                    eventEnd: eventEnd.toISOString(),
+                    dayStart: dayStart.toISOString(),
+                    dayEnd: dayEnd.toISOString(),
+                    inRange: inRange
+                });
+            }
+            
+            return inRange;
         });
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📅 Day events filtered:', filtered.length, 'out of', enrichedEvents.length);
+        }
+        
+        return filtered;
     }, [enrichedEvents, searchParams]);
 
     const weekEvents = useMemo(() => {
@@ -222,7 +242,7 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
 }
 
 interface CalendarClientViewProps {
-    initialEvents: Event[];
+    initialEvents: (Event | MultiDayEvent)[];
     initialCategories: EventType[];
     profile: AppProfile | null;
 }

@@ -6,6 +6,32 @@
  */
 
 // ============================================
+// AGENDA TYPES
+// ============================================
+
+export interface Speaker {
+    id: string;
+    name: string;
+    title?: string;
+    company?: string;
+    photo_url?: string;
+}
+
+export interface AgendaItem {
+    id: string;
+    day_number: number;
+    start_time: string;
+    end_time: string;
+    title: string;
+    description?: string;
+    location?: string;
+    agenda_type: string;
+    duration_minutes?: number;
+    track?: string;
+    speakers?: Speaker[];
+}
+
+// ============================================
 // BASE EVENT TYPE
 // ============================================
 
@@ -59,6 +85,9 @@ export interface Event {
     difficulty?: 'beginner' | 'intermediate' | 'advanced' | null;
     targetAudience?: string | null;
     prerequisites?: string | null;
+
+    // Agenda information for multi-day events
+    agenda?: AgendaItem[];
 }
 
 // ============================================

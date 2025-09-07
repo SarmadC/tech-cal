@@ -63,7 +63,10 @@ export default function TechCalendarWeekView({
 
         const weekEvents = processed.filter(event => {
             const eventStart = new Date((event as Event | MultiDayEventInstance).startTime);
-            return eventStart >= weekStart && eventStart <= weekEnd;
+            const inRange = eventStart >= weekStart && eventStart <= weekEnd;
+            
+            
+            return inRange;
         });
 
         console.log('[TechCalendarWeekView] Final processed events:', weekEvents.length);
