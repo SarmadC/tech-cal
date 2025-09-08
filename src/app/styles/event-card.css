@@ -42,13 +42,14 @@
 
 /* Base Event Card Styles */
 .event-card {
+    --card-pad: var(--space-lg);
     background: var(--category-bg) !important;
     color: var(--text-on-pastel) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: var(--radius-lg) !important;
     box-shadow: var(--shadow-card) !important;
     transition: all var(--transition-normal) !important;
-    padding: var(--space-lg) !important;
+    padding: var(--card-pad) !important;
     margin: 2px !important;
     display: flex !important;
     flex-direction: column !important;
@@ -111,6 +112,7 @@
     font-size: 0.85rem !important;
     line-height: 1.4 !important; /* Better line height for readability */
     margin-bottom: 0.375rem !important; /* Consistent spacing */
+    min-height: 1.3em !important; /* Ensure consistent height for larger cards */
 }
 
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-time {
@@ -127,7 +129,6 @@
     color: #475569 !important; /* Maintain medium color for contrast */
     letter-spacing: 0.005em !important; /* Subtle spacing */
     line-height: 1.3 !important; /* Match time line height */
-    transform: translateY(-3px) !important; /* Move up 3px to center align with time */
 }
 
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-location-organizer {
@@ -165,6 +166,7 @@
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-time-duration {
     font-size: 0.9rem !important;
+    min-height: 1.4em !important; /* Ensure consistent height for large cards */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-time {
@@ -177,7 +179,6 @@
     font-size: 0.85rem !important;
     font-weight: 600 !important;
     color: #475569 !important; /* Maintain medium color for contrast */
-    transform: translateY(-3px) !important; /* Move up 3px to center align with time */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-location-organizer {
@@ -206,6 +207,7 @@
 
 .event-card[data-span-gt-8] .event-time-duration {
     font-size: 0.95rem !important;
+    min-height: 1.5em !important; /* Ensure consistent height for extra large cards */
 }
 
 .event-card[data-span-gt-8] .event-time {
@@ -218,7 +220,6 @@
     font-size: 0.9rem !important;
     font-weight: 600 !important;
     color: #475569 !important; /* Maintain medium color for contrast */
-    transform: translateY(-3px) !important; /* Move up 3px to center align with time */
 }
 
 .event-card[data-span-gt-8] .event-location-organizer {
@@ -254,7 +255,7 @@
 
 .event-card .event-time-duration {
     display: flex;
-    align-items: center;
+    align-items: center; /* Center align for visual consistency */
     justify-content: flex-start;
     gap: var(--space-xs);
     font-size: 0.75rem;
@@ -262,6 +263,7 @@
     font-weight: 500;
     line-height: 1.4; /* Better line height for readability */
     margin-bottom: 0.25rem; /* Consistent spacing */
+    min-height: 1.2em; /* Ensure consistent height for alignment */
 }
 
 .event-card .event-time {
@@ -269,6 +271,8 @@
     font-weight: 600;
     letter-spacing: 0.01em; /* Slight positive spacing for time */
     line-height: 1.3; /* Optimal line height */
+    display: flex;
+    align-items: center; /* Ensure proper vertical alignment */
 }
 
 .event-card .event-duration {
@@ -276,7 +280,8 @@
     font-weight: 500;
     letter-spacing: 0.005em; /* Subtle spacing */
     line-height: 1.3; /* Match time line height */
-    transform: translateY(-3px); /* Move up 3px to center align with time */
+    display: flex;
+    align-items: center; /* Ensure proper vertical alignment */
 }
 
 .event-card .event-location-organizer {
@@ -378,11 +383,11 @@
     letter-spacing: 0.025em;
 }
 
-/* Multi-day Event Dots */
+/* Multi-day Event Dots - bottom right corner */
 .event-card .event-day-dots {
     position: absolute;
-    bottom: calc(var(--space-md) + 6px); /* Move up 6px to align with logo */
-    right: var(--space-md);
+    bottom: var(--card-pad);
+    right: var(--card-pad);
     display: flex;
     gap: 3px;
     z-index: 10;
@@ -606,8 +611,8 @@
 /* Arrow in top-right corner */
 .event-card .event-arrow-corner {
     position: absolute;
-    top: calc(var(--space-lg) + 16px); /* Align with title baseline */
-    right: var(--space-md);
+    top: var(--card-pad);
+    right: var(--card-pad);
     z-index: 10;
     /* Center the arrow icon within its container */
     display: flex;
@@ -615,19 +620,16 @@
     justify-content: center;
 }
 
-/* Day view specific arrow positioning for large cards (span > 6) */
-/* Target day view container with large event cards */
-.tech-day-view-grid-container .event-card[data-span-gt-6] .event-arrow-corner {
-    margin-top: -37px !important; /* Fine-tune vertical alignment with title */
-    margin-right: -23px !important; /* Fine-tune horizontal alignment with event dots */
-}
+/* Day view specific arrow positioning - no longer needed with new layout */
 
 /* Organizer logo positioning - now handled by view-specific classes */
 /* See tech-day-view.css and tech-week-view.css for specific positioning */
 
-/* Fallback organizer logo styles - basic container */
+/* Organizer logo styles - bottom left corner */
 .event-card .event-organizer-logo-corner {
     position: absolute;
+    bottom: var(--card-pad);
+    left: var(--card-pad);
     z-index: 10;
     width: 18px;
     height: 18px;
@@ -674,7 +676,7 @@
     filter: none;
 }
 
-/* Adjust title margin when arrow is in corner */
+/* Event title section - top left */
 .event-card .event-title-section {
     position: relative;
     padding-right: 50px; /* Leave space for arrow */
@@ -855,10 +857,9 @@
 
 /* Week View Specific Styling */
 .tech-calendar-week-view .event-card {
-    padding: var(--space-xs) var(--space-md) !important;
+    padding: var(--card-pad) !important;
     gap: var(--space-xs) !important;
-    /* Add bottom padding to create space for the logo */
-    padding-bottom: calc(var(--space-sm) + 32px) !important;
+    padding-bottom: var(--card-pad) !important;
 }
 
 /* Reduce gap between title and logo for week view cards */
@@ -868,7 +869,8 @@
 
 /* Fix arrow positioning for week view cards */
 .tech-calendar-week-view .event-card .event-arrow-corner {
-    top: calc(var(--space-xs) + 2px) !important;
+    top: var(--card-pad) !important;
+    right: var(--card-pad) !important;
 }
 
 .tech-calendar-week-view .event-card .event-title {

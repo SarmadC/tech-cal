@@ -13,8 +13,8 @@
 .tech-calendar-week-view .event-card[data-span="1"] .event-organizer-logo-corner,
 .tech-calendar-week-view .event-card[data-span="2"] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--v8-space-xs);
-    left: var(--v8-space-xs);
+    bottom: var(--space-sm);
+    left: 0; /* Align with left edge of padding like day view */
     z-index: 10;
     width: 12px;
     height: 12px;
@@ -24,6 +24,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: translate(0, 0); /* Align directly below event name */
 }
 
 /* ===================================
@@ -32,8 +33,8 @@
 .tech-calendar-week-view .event-card[data-span="3"] .event-organizer-logo-corner,
 .tech-calendar-week-view .event-card[data-span="4"] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--v8-space-sm);
-    left: var(--v8-space-sm);
+    bottom: var(--space-sm);
+    left: 0; /* Align with left edge of padding like day view */
     z-index: 10;
     width: 14px;
     height: 14px;
@@ -51,8 +52,8 @@
 .tech-calendar-week-view .event-card[data-span="5"] .event-organizer-logo-corner,
 .tech-calendar-week-view .event-card[data-span="6"] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--v8-space-md);
-    left: var(--v8-space-md);
+    bottom: var(--space-sm);
+    left: 0; /* Align with left edge of padding like day view */
     z-index: 10;
     width: 16px;
     height: 16px;
@@ -70,8 +71,8 @@
 .tech-calendar-week-view .event-card[data-span="7"] .event-organizer-logo-corner,
 .tech-calendar-week-view .event-card[data-span="8"] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--v8-space-md);
-    left: var(--v8-space-md);
+    bottom: var(--space-sm);
+    left: 0; /* Align with left edge of padding like day view */
     z-index: 10;
     width: 18px;
     height: 18px;
@@ -88,8 +89,8 @@
    =================================== */
 .tech-calendar-week-view .event-card[data-span-gt-8] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--v8-space-md);
-    left: var(--v8-space-md);
+    bottom: var(--space-sm);
+    left: 0; /* Align with left edge of padding like day view */
     z-index: 10;
     width: 20px;
     height: 20px;
@@ -100,6 +101,7 @@
     align-items: center;
     justify-content: center;
 }
+
 
 /* ===================================
    IMAGE STYLES - Week View (All Sizes)
@@ -246,8 +248,10 @@
 
 /* Week View Event Card Base Styles */
 .tech-calendar-week-view .event-card {
-    padding: var(--space-lg) !important; /* Use consistent padding with base event card */
-    gap: var(--space-sm) !important; /* Use consistent gap spacing */
+    /* Bind to base card padding for consistent x/y anchors */
+    --card-pad: var(--space-lg);
+    padding: var(--card-pad) !important;
+    gap: 0 !important; /* Remove gap to prevent content shifting */
     min-height: 20px !important;
     margin: 1px 1px !important;
     border-radius: var(--v8-radius-lg) !important;
@@ -257,6 +261,50 @@
     transition: all 0.2s ease !important;
     overflow: visible !important;
     position: relative !important;
+    display: flex !important; /* Ensure flex layout */
+    flex-direction: column !important; /* Ensure column layout */
+}
+
+/* Ensure corner anchors reference the card, not the inner content */
+.tech-calendar-week-view .event-card .event-content {
+    position: static !important;
+}
+
+/* Align base info block flush with card padding in week view */
+.tech-calendar-week-view .event-card .event-card-basic-info {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    align-self: stretch !important;
+}
+
+/* Anchor positions in week view - align dots below arrow */
+.tech-calendar-week-view .event-card .event-day-dots {
+    position: absolute !important;
+    bottom: var(--space-sm) !important;
+    right: var(--space-sm) !important;
+    display: flex !important;
+    gap: 3px !important;
+    z-index: 10 !important;
+    transform: translate(0, 0) !important; /* Align directly below arrow */
+}
+
+.tech-calendar-week-view .event-card .event-arrow-corner {
+    position: absolute !important;
+    top: var(--space-sm) !important;
+    right: var(--space-sm) !important;
+    z-index: 10 !important;
+    transform: translate(9px, -13px) !important; /* Match day view positioning */
+}
+
+/* Neutralize legacy arrow spacing rules in week view */
+.tech-calendar-week-view .event-card .button-content,
+.tech-calendar-week-view .event-card .arrow-icon {
+    margin: 0 !important;
+}
+
+/* Ensure title reserves space equal to corner arrow in week view */
+.tech-calendar-week-view .event-card .event-title-section {
+    padding-right: calc(var(--card-pad) + 24px) !important;
 }
 
 /* Event title styling */
@@ -421,21 +469,52 @@
     color: var(--text-secondary-on-pastel);
 }
 
+/* Event content container for week view */
+.tech-calendar-week-view .event-card .event-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--space-xs) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+}
+
+/* Event time-duration container styling for week view */
+.tech-calendar-week-view .event-card .event-time-duration {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: var(--space-xs) !important;
+    margin-bottom: 0.25rem !important;
+    min-height: 1.2em !important; /* Ensure consistent height for week view */
+    line-height: 1.2 !important; /* Consistent line height for alignment */
+}
+
 /* Event time styling */
 .tech-calendar-week-view .event-card .event-time {
     font-size: 0.65rem !important;
     color: var(--text-secondary-on-pastel, #6b7280) !important;
-    margin-top: 2px !important;
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
+    line-height: 1.2 !important; /* Match container line height */
+    font-weight: 600 !important; /* Ensure consistent weight */
+}
+
+/* Event duration styling for week view */
+.tech-calendar-week-view .event-card .event-duration {
+    font-size: 0.65rem !important;
+    color: var(--text-secondary-on-pastel, #6b7280) !important;
+    display: flex !important;
+    align-items: center !important;
+    line-height: 1.2 !important; /* Match container line height */
+    font-weight: 500 !important; /* Slightly lighter than time for hierarchy */
 }
 
 /* Event location styling */
 .tech-calendar-week-view .event-card .event-location {
     font-size: 0.65rem !important;
     color: var(--text-secondary-on-pastel, #6b7280) !important;
-    margin-top: 2px !important;
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
@@ -445,7 +524,6 @@
 .tech-calendar-week-view .event-card .event-organizer {
     font-size: 0.65rem !important;
     color: var(--text-secondary-on-pastel, #6b7280) !important;
-    margin-top: 2px !important;
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;

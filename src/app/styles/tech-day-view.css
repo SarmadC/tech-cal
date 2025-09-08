@@ -61,11 +61,6 @@
     display: none !important;
 }
 
-/* Hide event description for medium cards in day view */
-.tech-day-view .event-card[data-span="5"] .event-description,
-.tech-day-view .event-card[data-span="6"] .event-description {
-    display: none !important;
-}
 
 /* Hide event tags for compact and small cards in day view */
 .tech-day-view .event-card[data-span="1"] .event-tags-section,

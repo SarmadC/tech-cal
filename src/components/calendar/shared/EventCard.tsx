@@ -41,6 +41,15 @@ export const EventCard: React.FC<EventCardProps> = ({
 }) => {
     const live = isEventLive(event.startTime, event.endTime);
 
+    // Size bucket helper derived from span
+    const getSizeBucket = (span: number) => {
+        if (span <= 2) return 'compact' as const;
+        if (span <= 4) return 'small' as const;
+        if (span <= 6) return 'medium' as const;
+        if (span <= 8) return 'large' as const;
+        return 'xl' as const;
+    };
+
     // Timeline/progress helpers
     const startDate = new Date(event.startTime);
     const assumedEndDate = event.endTime ? new Date(event.endTime) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
@@ -188,6 +197,7 @@ export const EventCard: React.FC<EventCardProps> = ({
 
     // Week view specific content display - DYNAMIC based on card size
     const cardSize = visualInfo?.span || 1;
+    const sizeBucket = getSizeBucket(cardSize);
     const isWeekView = viewType === 'week';
     const isDayView = viewType === 'day';
     const isCompact = isWeekView && cardSize <= 2;
@@ -236,29 +246,41 @@ export const EventCard: React.FC<EventCardProps> = ({
 
     // Day view specific content display
     const showDayTime = isDayView;
-    const showDayDuration = isDayView;
+    // Hide duration for medium (5–6) and extra-large (>8) day cards to match CSS
+    const showDayDuration = isDayView && !((cardSize >= 5 && cardSize <= 6) || (cardSize > 8));
     const showDayLocation = isDayView && event.location;
     const showDayOrganizer = isDayView && event.organizer;
-    const showDayDescription = isDayView && cardSize >= 6 && event.description; // Show description for medium+ day cards
+    // Align with design: Day description only for large (span >= 7)
+    const showDayDescription = isDayView && cardSize >= 7 && event.description;
     
     // Small cards: Basic info only
     // Show location for medium and larger cards (span > 4)
     const showWeekLocation = viewType === 'week' && cardSize > 4;
-    const showWeekOrganizer = viewType === 'week' && cardSize >= 6;
+    const showWeekOrganizer = viewType === 'week' && cardSize >= 5;
     
     // Medium cards: Add progress indicators
     const showWeekProgress = viewType === 'week' && cardSize >= 3;
     
     // Large cards: Add description and tags (but not for multi-day events in week view)
-    const showWeekDescription = viewType === 'week' && cardSize >= 8 && !('isMultiDay' in event && event.isMultiDay);
+    // Align with design: Week description from medium (span >= 5)
+    const showWeekDescription = viewType === 'week' && cardSize >= 5 && !('isMultiDay' in event && event.isMultiDay);
 
     return (
         <div
             style={cardStyle}
             className={`${cardClasses} ${isCompact ? 'compact' : ''} ${isDense ? 'dense' : ''}`}
             onClick={onClick}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onClick();
+                }
+            }}
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
+            tabIndex={0}
+            role="button"
+            aria-label={`Event: ${event.title}${event.location ? ` at ${event.location}` : ''}${event.organizer ? ` by ${event.organizer}` : ''}`}
             data-span={cardSize}
             data-span-gt-2={cardSize > 2 || undefined}
             data-span-gt-4={cardSize > 4 || undefined}
@@ -301,7 +323,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                 {isDayView && (
                     <div className="event-day-meta">
                         {/* Event Tags - show only for medium+ cards (span 5+) in day view */}
-                        {event.tags && event.tags.length > 0 && (
+                        {cardSize >= 5 && event.tags && event.tags.length > 0 && (
                             <div className="event-tags-section">
                                 <div className="event-tags-row">
                                     {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
@@ -309,7 +331,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                                         .filter((tag, index, self) => 
                                             index === self.findIndex(t => t.name === tag.name)
                                         )
-                                        .slice(0, 3) // Limit to 3 tags for day view
+                                        .slice(0, 2) // Limit to 2 tags for day view
                                         .map((tag, index) => (
                                             <React.Fragment key={index}>
                                                 {/* Tag Name */}
@@ -324,6 +346,22 @@ export const EventCard: React.FC<EventCardProps> = ({
                                                 </span>
                                             </React.Fragment>
                                         ))}
+                                    {/* Add +n indicator if there are more than 2 tags */}
+                                    {event.tags.filter((tag, index, self) => 
+                                        index === self.findIndex(t => t.name === tag.name)
+                                    ).length > 2 && (
+                                        <span 
+                                            className="event-session-type"
+                                            style={{ 
+                                                backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                                color: 'white'
+                                            }}
+                                        >
+                                            +{event.tags.filter((tag, index, self) => 
+                                                index === self.findIndex(t => t.name === tag.name)
+                                            ).length - 2}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -410,8 +448,8 @@ export const EventCard: React.FC<EventCardProps> = ({
                 )}
 
 
-                {/* Tag Name and Category Display - show both on same line - only for week view */}
-                {event.tags && event.tags.length > 0 && viewType === 'week' && (
+                {/* Event Tags Display - only for week view */}
+                {viewType === 'week' && cardSize >= 3 && event.tags && event.tags.length > 0 && (
                     <div className="event-tags-section">
                         <div className="event-tags-row">
                             {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
@@ -419,31 +457,39 @@ export const EventCard: React.FC<EventCardProps> = ({
                                 .filter((tag, index, self) => 
                                     index === self.findIndex(t => t.name === tag.name)
                                 )
-                                .slice(0, 2)
+                                .slice(0, (sizeBucket === 'small' ? 1 : 2))
                                 .map((tag) => (
-                                    <React.Fragment key={tag.id}>
-                                        {/* Tag Name (Session Type) */}
-                                        <span 
-                                            className="event-session-type"
-                                            style={{ 
-                                                backgroundColor: getPillColor(getCategoryColor(), 0.3),
-                                                color: 'white'
-                                            }}
-                                        >
-                                            {tag.name}
-                                        </span>
-                                        {/* Category */}
-                                        <span 
-                                            className="event-category-pill"
-                                            style={{ 
-                                                backgroundColor: getPillColor(getCategoryColor(), 0.3),
-                                                color: 'white'
-                                            }}
-                                        >
-                                            {tag.category.toUpperCase()}
-                                        </span>
-                                    </React.Fragment>
+                                    <span 
+                                        key={tag.id}
+                                        className="event-session-type"
+                                        style={{ 
+                                            backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                            color: 'white'
+                                        }}
+                                    >
+                                        {tag.name}
+                                    </span>
                                 ))}
+                            {/* Add +n indicator if there are more than 2 tags */}
+                            {(() => {
+                                const uniqueCount = event.tags.filter((tag, index, self) => index === self.findIndex(t => t.name === tag.name)).length;
+                                const limit = sizeBucket === 'small' ? 1 : 2;
+                                return uniqueCount > limit;
+                            })() && (
+                                <span 
+                                    className="event-session-type"
+                                    style={{ 
+                                        backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                        color: 'white'
+                                    }}
+                                >
+                                    +{(() => {
+                                        const uniqueCount = event.tags.filter((tag, index, self) => index === self.findIndex(t => t.name === tag.name)).length;
+                                        const limit = sizeBucket === 'small' ? 1 : 2;
+                                        return uniqueCount - limit;
+                                    })()}
+                                </span>
+                            )}
                         </div>
                     </div>
                 )}
