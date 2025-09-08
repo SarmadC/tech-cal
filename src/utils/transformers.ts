@@ -1,24 +1,23 @@
 // src/utils/transformers.ts
 
+// 1. UPDATE IMPORTS: Use the new, specific type names. The deprecated aliases are no longer needed here.
 import type {
     SupabaseEvent,
     SupabaseEventType,
     SupabaseTrackedEvent,
     SupabaseProfile,
-    Event,
-    EventType,
-    EventTag,
-    Speaker,
-    TrackedEventRecord,
-    AppProfile,
-    MultiDayEvent,
+    Event, // Replaces AppEvent
+    EventType, // Replaces AppEventType
+    AgendaItem,
+    EventTag, // For event tags
+    TrackedEventRecord, // Replaces AppTrackedEvent
+    AppProfile, // Assuming this will become `Profile` later, but keeping as-is for now
+    MultiDayEvent, // Replaces EnhancedAppEvent
     SupabaseEventWithDetails,
     SupabaseTrackedEventWithDetails,
     ProfileTransformer,
     DailySchedule,
-    Json,
-    AgendaItem,
-    DatabaseAgendaItem
+    Json
 } from '@/types';
 import { transparentize } from 'color2k';
 import {
@@ -55,12 +54,11 @@ const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, 
     }
     
     // If it's a filename (including SVG), construct Supabase storage URL
-    const baseUrl = supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mddgtexrnnlctttbcpsy.supabase.co';
-    if (baseUrl) {
-        return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
+    const baseUrl = supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!baseUrl) {
+        throw new Error('NEXT_PUBLIC_SUPABASE_URL environment variable is required but not set');
     }
-    
-    return logoUrl;
+    return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
 };
 
 export const eventTransformer = {
@@ -92,14 +90,7 @@ export const eventTransformer = {
                 id: (supabaseEvent as SupabaseEventWithDetails).organizer?.id || '',
                 name: organizerName,
                 ...(organizerLogo && { logo: organizerLogo })
-            },
-            // Add agenda fields
-            ...((supabaseEvent as SupabaseEventWithDetails).agenda_url && { 
-                agendaUrl: (supabaseEvent as SupabaseEventWithDetails).agenda_url 
-            }),
-            ...((supabaseEvent as SupabaseEventWithDetails).speaker_lineup && { 
-                speakerLineup: (supabaseEvent as SupabaseEventWithDetails).speaker_lineup as unknown as Speaker[] 
-            })
+            }
         };
     },
     toSupabase: (appEvent: Partial<Event>): Partial<SupabaseEvent> => ({
@@ -161,12 +152,12 @@ export const trackedEventTransformer = {
         const joinedEventData = supabaseTrackedEvent.events;
         let appEvent: Event | null = null;
         if (joinedEventData) {
-            const baseEvent = eventTransformer.toApp(joinedEventData);
+            const baseAppEvent = eventTransformer.toApp(joinedEventData);
             const joinedEventTypeData = joinedEventData.event_type;
             const appEventType = joinedEventTypeData
                 ? eventTypeTransformer.toApp(joinedEventTypeData)
                 : undefined;
-            appEvent = enrichEvent(baseEvent, { eventType: appEventType });
+            appEvent = enrichEvent(baseAppEvent, { eventType: appEventType });
         }
         return {
             trackingId: supabaseTrackedEvent.id,
@@ -241,7 +232,7 @@ export const transformTrackedEventsWithDetailsToApp = (
 };
 
 // --- Validation Utilities ---
-// Event validation utility
+// 7. RENAME and UPDATE `isValidAppEvent` to `isValidEvent`
 export const isValidEvent = (obj: unknown): obj is Event => {
     if (typeof obj !== 'object' || obj === null) return false;
     const event = obj as Record<string, unknown>;
@@ -372,88 +363,28 @@ export const enhancedEventTransformer = {
     }
 };
 
-// --- Agenda Transformers ---
-export const agendaTransformer = {
-    toApp: (dbAgendaItem: DatabaseAgendaItem): AgendaItem => {
-        // Map database agenda_type to application type
-        const mapAgendaType = (dbType: string): AgendaItem['type'] => {
-            const typeMap: Record<string, AgendaItem['type']> = {
-                'keynote': 'keynote',
-                'session': 'session',
-                'break': 'break',
-                'networking': 'networking',
-                'workshop': 'workshop',
-                'panel': 'panel',
-                'registration': 'registration',
-                'certification': 'certification',
-                'support': 'support',
-                'exhibition': 'exhibition',
-                'meal': 'meal',
-                'entertainment': 'entertainment'
-            };
-            return typeMap[dbType] || 'other';
-        };
-
-        // Convert time strings to full datetime strings
-        const convertTimeToDateTime = (timeString: string, eventDate: string): string => {
-            // If timeString is already a full datetime, return as-is
-            if (timeString.includes('T') || timeString.includes(' ')) {
-                return timeString;
-            }
-            
-            // Otherwise, combine with event date
-            const eventDateObj = new Date(eventDate);
-            const [hours, minutes, seconds] = timeString.split(':').map(Number);
-            const dateTime = new Date(eventDateObj);
-            dateTime.setHours(hours, minutes, seconds || 0);
-            
-            return dateTime.toISOString();
-        };
-
-        // For now, we'll use the current date as the event date
-        // In a real implementation, you'd get this from the event data
-        const eventDate = new Date().toISOString().split('T')[0];
-        
+// Transform agenda items from database format to app format
+export const transformAgendaItemsToApp = (dbAgendaItems: unknown[]): AgendaItem[] => {
+    return dbAgendaItems.map(item => {
+        const dbItem = item as Record<string, unknown>;
         return {
-            id: dbAgendaItem.id,
-            title: dbAgendaItem.title,
-            description: dbAgendaItem.description || undefined,
-            startTime: convertTimeToDateTime(dbAgendaItem.start_time, eventDate),
-            endTime: convertTimeToDateTime(dbAgendaItem.end_time, eventDate),
-            location: dbAgendaItem.location || undefined,
-            type: mapAgendaType(dbAgendaItem.agenda_type),
-            // Additional fields from database
-            dayNumber: dbAgendaItem.day_number,
-            durationMinutes: dbAgendaItem.duration_minutes,
-            track: dbAgendaItem.track || undefined,
-            difficultyLevel: dbAgendaItem.difficulty_level,
-            prerequisites: dbAgendaItem.prerequisites,
-            capacity: dbAgendaItem.capacity,
-            isRequired: dbAgendaItem.is_required,
-            sortOrder: dbAgendaItem.sort_order
+            id: String(dbItem.id || ''),
+            title: String(dbItem.title || ''),
+            description: dbItem.description ? String(dbItem.description) : undefined,
+            startTime: String(dbItem.start_time || ''),
+            endTime: String(dbItem.end_time || ''),
+            speaker: dbItem.speaker_id ? { id: String(dbItem.speaker_id), name: '', bio: '', avatar: '' } : undefined,
+            location: dbItem.location ? String(dbItem.location) : undefined,
+            type: (dbItem.agenda_type as AgendaItem['type']) || 'other',
+            tags: dbItem.track ? [String(dbItem.track)] : undefined,
+            dayNumber: typeof dbItem.day_number === 'number' ? dbItem.day_number : undefined,
+            durationMinutes: typeof dbItem.duration_minutes === 'number' ? dbItem.duration_minutes : undefined,
+            track: dbItem.track ? String(dbItem.track) : undefined,
+            difficultyLevel: dbItem.difficulty_level ? String(dbItem.difficulty_level) : undefined,
+            prerequisites: dbItem.prerequisites ? String(dbItem.prerequisites) : undefined,
+            capacity: typeof dbItem.capacity === 'number' ? dbItem.capacity : undefined,
+            isRequired: Boolean(dbItem.is_required),
+            sortOrder: typeof dbItem.sort_order === 'number' ? dbItem.sort_order : undefined,
         };
-    },
-    
-    toSupabase: (appAgendaItem: Partial<AgendaItem>): Partial<DatabaseAgendaItem> => ({
-        ...(appAgendaItem.id && { id: appAgendaItem.id }),
-        ...(appAgendaItem.title && { title: appAgendaItem.title }),
-        ...(appAgendaItem.description && { description: appAgendaItem.description }),
-        ...(appAgendaItem.startTime && { start_time: appAgendaItem.startTime }),
-        ...(appAgendaItem.endTime && { end_time: appAgendaItem.endTime }),
-        ...(appAgendaItem.location && { location: appAgendaItem.location }),
-        ...(appAgendaItem.type && { agenda_type: appAgendaItem.type }),
-        ...(appAgendaItem.dayNumber && { day_number: appAgendaItem.dayNumber }),
-        ...(appAgendaItem.durationMinutes && { duration_minutes: appAgendaItem.durationMinutes }),
-        ...(appAgendaItem.track && { track: appAgendaItem.track }),
-        ...(appAgendaItem.difficultyLevel && { difficulty_level: appAgendaItem.difficultyLevel }),
-        ...(appAgendaItem.prerequisites && { prerequisites: appAgendaItem.prerequisites }),
-        ...(appAgendaItem.capacity && { capacity: appAgendaItem.capacity }),
-        ...(appAgendaItem.isRequired !== undefined && { is_required: appAgendaItem.isRequired }),
-        ...(appAgendaItem.sortOrder && { sort_order: appAgendaItem.sortOrder })
-    })
-};
-
-// Transform array of database agenda items to app format
-export const transformAgendaItemsToApp = (dbAgendaItems: DatabaseAgendaItem[]): AgendaItem[] => {
-    return dbAgendaItems.map(agendaTransformer.toApp);
+    });
 };

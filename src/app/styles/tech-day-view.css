@@ -159,6 +159,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Add transform to shift logo position */
+    transform: translate(-10px, 8px); /* Move logo left 10px and down 8px */
 }
 
 /* Align event dots with logo for large cards */
@@ -170,6 +172,8 @@
     display: flex;
     gap: 3px;
     z-index: 10;
+    /* Add transform to shift dots position */
+    transform: translate(12px, 5px); /* Move dots right 12px and down 5px */
 }
 
 /* ===================================
@@ -391,6 +395,20 @@
     align-items: center !important;
     justify-content: flex-start !important;
     gap: var(--space-xs) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+}
+
+/* Ensure time and duration stay on single line for large cards in day view */
+.tech-day-view .event-card[data-span="7"] .event-time-duration,
+.tech-day-view .event-card[data-span="8"] .event-time-duration {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0 !important; /* No gap needed since we're using transform for spacing */
+    flex-wrap: nowrap !important; /* Prevent wrapping but allow proper spacing */
+    min-width: 0 !important; /* Allow flex items to shrink if needed */
 }
 
 /* Hide event-duration for medium day view cards */
@@ -432,6 +450,26 @@
 /* Fix event description color for extra large day view cards */
 .tech-day-view .event-card[data-span-gt-8] .event-description {
     color: #475569 !important; /* Match other event card info color */
+}
+
+/* Ensure consistent styling for large day view cards (data-span="8") */
+.tech-day-view .event-card[data-span="8"] .event-description {
+    color: #475569 !important; /* Consistent color for all event-info elements */
+    font-weight: 500 !important; /* Consistent font weight */
+}
+
+/* Ensure proper spacing for time and duration elements in large day view cards */
+.tech-day-view .event-card[data-span="7"] .event-time,
+.tech-day-view .event-card[data-span="8"] .event-time {
+    flex-shrink: 0 !important; /* Prevent time from shrinking */
+    white-space: nowrap !important; /* Keep time on single line */
+}
+
+.tech-day-view .event-card[data-span="7"] .event-duration,
+.tech-day-view .event-card[data-span="8"] .event-duration {
+    flex-shrink: 0 !important; /* Prevent duration from shrinking */
+    white-space: nowrap !important; /* Keep duration on single line */
+    transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
 }
 
 /* Transform styles for extra large day view cards */

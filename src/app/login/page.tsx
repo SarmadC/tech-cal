@@ -210,15 +210,43 @@ export default function LoginPage() {
                             {/* Email Field */}
                             <div className="space-y-2">
                                 <label htmlFor="email" className="block text-sm font-medium text-foreground-primary">Email address</label>
-                                <input id="email" name="email" type="email" autoComplete="email" required className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent" placeholder="you@example.com" />
-                                {state.errors?.email && (<p className="text-sm text-error">{state.errors.email[0]}</p>)}
+                                <input 
+                                    id="email" 
+                                    name="email" 
+                                    type="email" 
+                                    autoComplete="email" 
+                                    required 
+                                    className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent" 
+                                    placeholder="you@example.com"
+                                    aria-describedby={state.errors?.email ? "email-error" : undefined}
+                                    aria-invalid={state.errors?.email ? "true" : "false"}
+                                />
+                                {state.errors?.email && (
+                                    <p id="email-error" className="text-sm text-error" role="alert">
+                                        {state.errors.email[0]}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Password Field */}
                             <div className="space-y-2">
                                 <label htmlFor="password" className="block text-sm font-medium text-foreground-primary">Password</label>
-                                <input id="password" name="password" type="password" autoComplete="current-password" required className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent" placeholder="••••••••" />
-                                {state.errors?.password && (<p className="text-sm text-error">{state.errors.password[0]}</p>)}
+                                <input 
+                                    id="password" 
+                                    name="password" 
+                                    type="password" 
+                                    autoComplete="current-password" 
+                                    required 
+                                    className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent" 
+                                    placeholder="••••••••"
+                                    aria-describedby={state.errors?.password ? "password-error" : undefined}
+                                    aria-invalid={state.errors?.password ? "true" : "false"}
+                                />
+                                {state.errors?.password && (
+                                    <p id="password-error" className="text-sm text-error" role="alert">
+                                        {state.errors.password[0]}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Remember Me & Forgot Password */}

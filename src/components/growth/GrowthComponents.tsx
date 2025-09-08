@@ -2,7 +2,7 @@
 'use client';
 
 import React, { FC } from 'react';
-import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import dynamic from 'next/dynamic';
 import {
     ChevronDown,
     ArrowRight,
@@ -14,6 +14,12 @@ import {
     Globe,
     Lightbulb
 } from 'lucide-react';
+
+// Dynamic imports for chart components to reduce bundle size
+const IndustryPulseScoreChart = dynamic(
+    () => import('./ChartComponents').then(mod => ({ default: mod.IndustryPulseScoreChart })),
+    { ssr: false, loading: () => <div className="w-full h-[150px] flex items-center justify-center text-gray-400">Loading chart...</div> }
+);
 
 // --- Type Definitions ---
 interface UpcomingOpportunity {
@@ -50,8 +56,6 @@ export const GrowthDashboardHeader: FC<{
 );
 
 export const IndustryPulseScoreCard: FC<{ score: number }> = ({ score }) => {
-    const data = [{ name: 'Score', value: score }, { name: 'Remaining', value: 100 - score }];
-    const colors = ['#3b82f6', '#e5e7eb'];
     return (
         <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4">
@@ -59,18 +63,7 @@ export const IndustryPulseScoreCard: FC<{ score: number }> = ({ score }) => {
                 <TrendingUp className="w-5 h-5 text-blue-500" />
             </div>
             <div className="flex-grow flex items-center justify-center my-4">
-                <ResponsiveContainer width="100%" height={150}>
-                    <PieChart>
-                        <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={70} startAngle={90} endAngle={-270} paddingAngle={0} cornerRadius={50}>
-                            {data.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke={colors[index % colors.length]} />
-                            ))}
-                        </Pie>
-                        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-3xl font-bold text-gray-800">
-                            {score}%
-                        </text>
-                    </PieChart>
-                </ResponsiveContainer>
+                <IndustryPulseScoreChart score={score} />
             </div>
             <p className="text-center text-sm text-gray-500">Your alignment with major tech announcements this quarter.</p>
         </div>

@@ -82,6 +82,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Add transform to shift logo position */
+    transform: translate(-10px, 8px); /* Move logo left 10px and down 8px */
 }
 
 /* ===================================

@@ -40,6 +40,8 @@ const securityHeaders = [
         img-src 'self' data: blob: https:;
         connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co;
         frame-ancestors 'none';
+        base-uri 'self';
+        form-action 'self';
         `.replace(/\s+/g, ' ').trim()
   }
 ];
