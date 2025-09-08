@@ -11,6 +11,17 @@ export const SkipNavigation: React.FC = () => (
   <a
     href="#main-content"
     className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-accent-primary text-white px-4 py-2 rounded-md z-50"
+    style={{
+      position: 'absolute',
+      width: '1px',
+      height: '1px',
+      padding: '0',
+      margin: '-1px',
+      overflow: 'hidden',
+      clip: 'rect(0, 0, 0, 0)',
+      whiteSpace: 'nowrap',
+      border: '0'
+    }}
   >
     Skip to main content
   </a>

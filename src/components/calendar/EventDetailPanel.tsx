@@ -2,7 +2,7 @@
 
 import { FC } from 'react';
 import Link from 'next/link';
-import { X, ArrowUpRight } from 'lucide-react';
+import { MdClose, MdOpenInNew } from 'react-icons/md';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
 import { Event, EventType } from '@/types';
@@ -26,7 +26,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-white">Event Details</h2>
                 <button onClick={onClose} className="p-2 hover:bg-gray-700 rounded-full transition-colors">
-                    <X className="w-5 h-5 text-gray-400" />
+                    <MdClose className="w-5 h-5 text-gray-400" />
                 </button>
             </div>
 
@@ -39,7 +39,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         className="ml-4 p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors"
                         title="View full page"
                     >
-                        <ArrowUpRight className="w-5 h-5" />
+                        <MdOpenInNew className="w-5 h-5" />
                     </Link>
                 </div>
 

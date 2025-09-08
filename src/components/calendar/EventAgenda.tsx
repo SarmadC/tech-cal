@@ -2,150 +2,49 @@
 
 import { FC } from 'react';
 import Image from 'next/image';
-import { Clock, MapPin, User, ExternalLink, Calendar, Users, UserCheck, HelpCircle, Trophy, Coffee, Music, Building } from 'lucide-react';
+import { MdAccessTime, MdLocationOn, MdPerson, MdOpenInNew, MdEvent, MdPeople, MdCheckCircle, MdHelp, MdEmojiEvents, MdLocalCafe, MdMusicNote, MdBusiness } from 'react-icons/md';
 import { Event, AgendaItem } from '@/types';
 import EventProgress from './EventProgress';
-import { transformAgendaItemsToApp } from '@/utils/transformers';
 
 interface EventAgendaProps {
     event: Event;
 }
 
-// Mock agenda data for demonstration - in a real app, this would come from the event data
-// Real AWS re:Invent agenda data (sample from your database)
-const realAgendaData = [
-    {
-        "id": "3f19e5e4-4967-4970-bbdd-4e84d72841eb",
-        "event_id": "782d9d7e-54e0-41ca-84f7-df71ef7aa479",
-        "day_number": 1,
-        "start_time": "07:00:00",
-        "end_time": "23:59:00",
-        "title": "Badge pickup",
-        "description": "Early badge pickup available",
-        "location": "Harry Reid International Airport",
-        "agenda_type": "registration",
-        "duration_minutes": 1020,
-        "speaker_id": null,
-        "track": "logistics",
-        "difficulty_level": null,
-        "prerequisites": null,
-        "capacity": null,
-        "is_required": false,
-        "sort_order": 1,
-        "created_at": "2025-09-07 00:48:00.05064+00",
-        "updated_at": "2025-09-07 00:48:00.05064+00"
-    },
-    {
-        "id": "5325a404-ad50-4d71-b36f-d7e2c6f18fbc",
-        "event_id": "782d9d7e-54e0-41ca-84f7-df71ef7aa479",
-        "day_number": 1,
-        "start_time": "10:00:00",
-        "end_time": "20:00:00",
-        "title": "Badge pickup and help desk",
-        "description": "Main registration and assistance",
-        "location": "Mandalay Bay, MGM Grand, The Venetian",
-        "agenda_type": "registration",
-        "duration_minutes": 600,
-        "speaker_id": null,
-        "track": "logistics",
-        "difficulty_level": null,
-        "prerequisites": null,
-        "capacity": null,
-        "is_required": false,
-        "sort_order": 2,
-        "created_at": "2025-09-07 00:48:00.05064+00",
-        "updated_at": "2025-09-07 00:48:00.05064+00"
-    },
-    {
-        "id": "f4e507d4-f1ec-44ac-b074-722629ee3fec",
-        "event_id": "782d9d7e-54e0-41ca-84f7-df71ef7aa479",
-        "day_number": 1,
-        "start_time": "10:00:00",
-        "end_time": "20:00:00",
-        "title": "AWS Certification verification desk",
-        "description": "Certification verification services",
-        "location": "The Venetian",
-        "agenda_type": "certification",
-        "duration_minutes": 600,
-        "speaker_id": null,
-        "track": "certification",
-        "difficulty_level": null,
-        "prerequisites": null,
-        "capacity": null,
-        "is_required": false,
-        "sort_order": 3,
-        "created_at": "2025-09-07 00:48:00.05064+00",
-        "updated_at": "2025-09-07 00:48:00.05064+00"
-    },
-    {
-        "id": "625f0f16-2b4b-4cb4-8ebe-119dc7905739",
-        "event_id": "782d9d7e-54e0-41ca-84f7-df71ef7aa479",
-        "day_number": 1,
-        "start_time": "10:00:00",
-        "end_time": "18:00:00",
-        "title": "Help desk",
-        "description": "General assistance and information",
-        "location": "Caesars Forum",
-        "agenda_type": "support",
-        "duration_minutes": 480,
-        "speaker_id": null,
-        "track": "logistics",
-        "difficulty_level": null,
-        "prerequisites": null,
-        "capacity": null,
-        "is_required": false,
-        "sort_order": 4,
-        "created_at": "2025-09-07 00:48:00.05064+00",
-        "updated_at": "2025-09-07 00:48:00.05064+00"
-    },
-    {
-        "id": "f7cbf411-6b14-4a6c-9f52-60d9de90ea98",
-        "event_id": "782d9d7e-54e0-41ca-84f7-df71ef7aa479",
-        "day_number": 1,
-        "start_time": "10:00:00",
-        "end_time": "18:00:00",
-        "title": "Sports Forum",
-        "description": "AWS in sports technology showcase",
-        "location": "Caesars Forum",
-        "agenda_type": "exhibition",
-        "duration_minutes": 480,
-        "speaker_id": null,
-        "track": "sports",
-        "difficulty_level": null,
-        "prerequisites": null,
-        "capacity": null,
-        "is_required": false,
-        "sort_order": 5,
-        "created_at": "2025-09-07 00:48:00.05064+00",
-        "updated_at": "2025-09-07 00:48:00.05064+00"
+// Helper to get agenda data from event
+const getEventAgenda = (event: Event): AgendaItem[] => {
+    // Use the event's agenda if available
+    if (event.agenda && event.agenda.length > 0) {
+        return event.agenda;
     }
-];
-
-// Helper to generate real agenda from database data
-const generateRealAgenda = (event: Event): AgendaItem[] => {
-    // Use the event's start date for the agenda items
-    const eventDate = new Date(event.startTime).toISOString().split('T')[0];
     
-    // Transform the real database data to app format
-    const transformedData = realAgendaData.map(item => ({
-        ...item,
-        start_time: `${eventDate}T${item.start_time}`,
-        end_time: `${eventDate}T${item.end_time}`
-    }));
-    
-    return transformAgendaItemsToApp(transformedData);
+    // Fallback: return empty array if no agenda data
+    return [];
 };
 
 const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
-    // Use real agenda data from database
-    const agenda = generateRealAgenda(event);
+    // Use the event's agenda data
+    const agenda = getEventAgenda(event);
     
-    const formatTime = (dateString: string) => {
-        return new Date(dateString).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
+    const formatTime = (timeString: string) => {
+        // Handle time-only strings (e.g., "06:00:00") and full datetime strings
+        if (timeString.includes('T') || timeString.includes(' ')) {
+            // Full datetime string
+            return new Date(timeString).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        } else {
+            // Time-only string (e.g., "06:00:00")
+            const [hours, minutes] = timeString.split(':');
+            const date = new Date();
+            date.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+            return date.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
     };
     
     const getTypeColor = (type: AgendaItem['type']) => {
@@ -182,31 +81,31 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
     const getTypeIcon = (type: AgendaItem['type']) => {
         switch (type) {
             case 'keynote':
-                return <Calendar className="w-4 h-4" />;
+                return <MdEvent className="w-4 h-4" />;
             case 'session':
-                return <Users className="w-4 h-4" />;
+                return <MdPeople className="w-4 h-4" />;
             case 'workshop':
-                return <User className="w-4 h-4" />;
+                return <MdPerson className="w-4 h-4" />;
             case 'panel':
-                return <Users className="w-4 h-4" />;
+                return <MdPeople className="w-4 h-4" />;
             case 'networking':
-                return <Users className="w-4 h-4" />;
+                return <MdPeople className="w-4 h-4" />;
             case 'break':
-                return <Clock className="w-4 h-4" />;
+                return <MdAccessTime className="w-4 h-4" />;
             case 'registration':
-                return <UserCheck className="w-4 h-4" />;
+                return <MdCheckCircle className="w-4 h-4" />;
             case 'certification':
-                return <Trophy className="w-4 h-4" />;
+                return <MdEmojiEvents className="w-4 h-4" />;
             case 'support':
-                return <HelpCircle className="w-4 h-4" />;
+                return <MdHelp className="w-4 h-4" />;
             case 'exhibition':
-                return <Building className="w-4 h-4" />;
+                return <MdBusiness className="w-4 h-4" />;
             case 'meal':
-                return <Coffee className="w-4 h-4" />;
+                return <MdLocalCafe className="w-4 h-4" />;
             case 'entertainment':
-                return <Music className="w-4 h-4" />;
+                return <MdMusicNote className="w-4 h-4" />;
             default:
-                return <Clock className="w-4 h-4" />;
+                return <MdAccessTime className="w-4 h-4" />;
         }
     };
 
@@ -214,7 +113,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
         <div className="event-agenda space-y-6">
             <div className="event-agenda-header flex items-center justify-between mb-6">
                 <h3 className="event-agenda-title flex items-center text-lg font-semibold text-white">
-                    <Calendar className="w-5 h-5 mr-2" />
+                    <MdEvent className="w-5 h-5 mr-2" />
                     Event Agenda
                 </h3>
                 {event.agendaUrl && (
@@ -224,7 +123,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                         rel="noopener noreferrer"
                         className="event-agenda-external-link flex items-center text-sm text-blue-400 hover:text-blue-300 transition-colors"
                     >
-                        <ExternalLink className="w-4 h-4 mr-1" />
+                        <MdOpenInNew className="w-4 h-4 mr-1" />
                         View Full Agenda
                     </a>
                 )}
@@ -233,8 +132,10 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
             {/* Event Progress */}
             <EventProgress event={event} agenda={agenda} />
             
-            <div className="event-agenda-items space-y-4">
-                {agenda.map((item, index) => (
+            {/* Show agenda items or fallback message */}
+            {agenda.length > 0 ? (
+                <div className="event-agenda-items space-y-4">
+                    {agenda.map((item, index) => (
                     <div key={item.id} className="event-agenda-item relative">
                         {/* Timeline connector */}
                         {index < agenda.length - 1 && (
@@ -244,7 +145,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                         <div className="event-agenda-item-content flex items-start space-x-4">
                             {/* Time indicator */}
                             <div className="event-agenda-time-indicator flex-shrink-0 w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-                                <Clock className="w-4 h-4 text-gray-300" />
+                                <MdAccessTime className="w-4 h-4 text-gray-300" />
                             </div>
                             
                             {/* Content */}
@@ -267,7 +168,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                                 
                                 {item.speaker && (
                                     <div className="event-agenda-speaker flex items-center space-x-2 text-sm text-gray-400">
-                                        <User className="w-4 h-4" />
+                                        <MdPerson className="w-4 h-4" />
                                         <span>{item.speaker.name}</span>
                                         {item.speaker.title && (
                                             <>
@@ -280,7 +181,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                                 
                                 {item.location && (
                                     <div className="event-agenda-location flex items-center space-x-2 text-sm text-gray-400 mt-1">
-                                        <MapPin className="w-4 h-4" />
+                                        <MdLocationOn className="w-4 h-4" />
                                         <span>{item.location}</span>
                                     </div>
                                 )}
@@ -288,7 +189,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                                 {item.tags && item.tags.length > 0 && (
                                     <div className="event-agenda-tags flex flex-wrap gap-1 mt-2">
                                         {item.tags.map((tag, tagIndex) => (
-                                            <span key={tagIndex} className="event-agenda-tag px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded-full">
+                                            <span key={tagIndex} className="event-agenda-tag px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded-md">
                                                 {tag}
                                             </span>
                                         ))}
@@ -298,7 +199,26 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                         </div>
                     </div>
                 ))}
-            </div>
+                </div>
+            ) : (
+                <div className="event-agenda-empty text-center py-8">
+                    <MdEvent className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-400 text-sm">
+                        No agenda details available for this event.
+                    </p>
+                    {event.agendaUrl && (
+                        <a
+                            href={event.agendaUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center mt-2 text-blue-400 hover:text-blue-300 transition-colors text-sm"
+                        >
+                            <MdOpenInNew className="w-4 h-4 mr-1" />
+                            Check event website for agenda
+                        </a>
+                    )}
+                </div>
+            )}
             
             {event.speakerLineup && event.speakerLineup.length > 0 && (
                 <div className="event-agenda-speakers mt-6 pt-6 border-t border-gray-700">

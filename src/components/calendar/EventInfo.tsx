@@ -1,7 +1,7 @@
 'use client';
 
 import { FC } from 'react';
-import { Clock, MapPin, Users, Tag } from 'lucide-react';
+import { MdAccessTime, MdLocationOn, MdPeople, MdLocalOffer } from 'react-icons/md';
 // 1. UPDATE IMPORTS: Use the new, specific type names.
 import { Event, EventType } from '@/types';
 // 2. IMPORT DATE UTILITY: Import the centralized formatting function.
@@ -17,27 +17,41 @@ const EventInfo: FC<EventInfoProps> = ({ event, category }) => (
     <>
         <div className="space-y-4">
             <div className="flex items-center space-x-3 text-sm">
-                <Clock className="w-5 h-5 text-gray-400" />
+                <MdAccessTime className="w-5 h-5 text-gray-400" />
                 {/* 4. UPDATE FORMATTING: Use the new utility for consistent date/time display. */}
                 <span>{formatDateTime(event.startTime)}</span>
             </div>
             <div className="flex items-center space-x-3 text-sm">
-                <MapPin className="w-5 h-5 text-gray-400" />
+                <MdLocationOn className="w-5 h-5 text-gray-400" />
                 <span>{event.location}</span>
             </div>
             <div className="flex items-center space-x-3 text-sm">
-                <Users className="w-5 h-5 text-gray-400" />
+                <MdPeople className="w-5 h-5 text-gray-400" />
                 <span>Organized by {event.organizer}</span>
             </div>
         </div>
-        {category && (
-            <div className="flex items-center space-x-2">
-                <div className="px-3 py-1 text-xs rounded-full flex items-center space-x-2" style={{ backgroundColor: `${category.color}33`, color: category.color }}>
-                    <Tag className="w-3 h-3" />
+        {/* Display all tags - category and event tags */}
+        <div className="flex flex-wrap gap-2">
+            {/* Category tag */}
+            {category && (
+                <div className="px-3 py-1 text-xs rounded-md flex items-center space-x-2" style={{ backgroundColor: `${category.color}33`, color: category.color }}>
+                    <MdLocalOffer className="w-3 h-3" />
                     <span>{category.name}</span>
                 </div>
-            </div>
-        )}
+            )}
+            
+            {/* Additional event tags */}
+            {event.tags && event.tags.length > 0 && event.tags.map((tag) => (
+                <div 
+                    key={tag.id} 
+                    className="px-3 py-1 text-xs rounded-md flex items-center space-x-2" 
+                    style={{ backgroundColor: `${tag.color}33`, color: tag.color }}
+                >
+                    <MdLocalOffer className="w-3 h-3" />
+                    <span>{tag.name}</span>
+                </div>
+            ))}
+        </div>
         <p className="text-sm leading-relaxed text-gray-300">
             {event.description}
         </p>

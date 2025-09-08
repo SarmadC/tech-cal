@@ -318,7 +318,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                                         .filter((tag, index, self) => 
                                             index === self.findIndex(t => t.name === tag.name)
                                         )
-                                        .slice(0, 3) // Limit to 3 tags for day view
+                                        .slice(0, 2) // Limit to 2 tags for day view
                                         .map((tag, index) => (
                                             <React.Fragment key={index}>
                                                 {/* Tag Name */}
@@ -333,6 +333,22 @@ export const EventCard: React.FC<EventCardProps> = ({
                                                 </span>
                                             </React.Fragment>
                                         ))}
+                                    {/* Add +n indicator if there are more than 2 tags */}
+                                    {event.tags.filter((tag, index, self) => 
+                                        index === self.findIndex(t => t.name === tag.name)
+                                    ).length > 2 && (
+                                        <span 
+                                            className="event-session-type"
+                                            style={{ 
+                                                backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                                color: 'white'
+                                            }}
+                                        >
+                                            +{event.tags.filter((tag, index, self) => 
+                                                index === self.findIndex(t => t.name === tag.name)
+                                            ).length - 2}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -419,7 +435,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                 )}
 
 
-                {/* Tag Name and Category Display - show both on same line - only for week view */}
+                {/* Event Tags Display - only for week view */}
                 {event.tags && event.tags.length > 0 && viewType === 'week' && (
                     <div className="event-tags-section">
                         <div className="event-tags-row">
@@ -430,29 +446,33 @@ export const EventCard: React.FC<EventCardProps> = ({
                                 )
                                 .slice(0, 2)
                                 .map((tag) => (
-                                    <React.Fragment key={tag.id}>
-                                        {/* Tag Name (Session Type) */}
-                                        <span 
-                                            className="event-session-type"
-                                            style={{ 
-                                                backgroundColor: getPillColor(getCategoryColor(), 0.3),
-                                                color: 'white'
-                                            }}
-                                        >
-                                            {tag.name}
-                                        </span>
-                                        {/* Category */}
-                                        <span 
-                                            className="event-category-pill"
-                                            style={{ 
-                                                backgroundColor: getPillColor(getCategoryColor(), 0.3),
-                                                color: 'white'
-                                            }}
-                                        >
-                                            {tag.category.toUpperCase()}
-                                        </span>
-                                    </React.Fragment>
+                                    <span 
+                                        key={tag.id}
+                                        className="event-session-type"
+                                        style={{ 
+                                            backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                            color: 'white'
+                                        }}
+                                    >
+                                        {tag.name}
+                                    </span>
                                 ))}
+                            {/* Add +n indicator if there are more than 2 tags */}
+                            {event.tags.filter((tag, index, self) => 
+                                index === self.findIndex(t => t.name === tag.name)
+                            ).length > 2 && (
+                                <span 
+                                    className="event-session-type"
+                                    style={{ 
+                                        backgroundColor: getPillColor(getCategoryColor(), 0.3),
+                                        color: 'white'
+                                    }}
+                                >
+                                    +{event.tags.filter((tag, index, self) => 
+                                        index === self.findIndex(t => t.name === tag.name)
+                                    ).length - 2}
+                                </span>
+                            )}
                         </div>
                     </div>
                 )}

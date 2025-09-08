@@ -165,19 +165,31 @@
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-time-duration {
     font-size: 0.9rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0 !important; /* No gap needed since we're using transform for spacing */
+    flex-wrap: nowrap !important; /* Prevent wrapping but allow proper spacing */
+    min-width: 0 !important; /* Allow flex items to shrink if needed */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-time {
     font-size: 0.95rem !important;
     font-weight: 700 !important;
     color: #1e293b !important; /* Maintain dark color for contrast */
+    flex-shrink: 0 !important; /* Prevent time from shrinking */
+    white-space: nowrap !important; /* Keep time on single line */
 }
 
+.tech-calendar-week-view .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-duration,
+.tech-day-view .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-duration,
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-duration {
     font-size: 0.85rem !important;
     font-weight: 600 !important;
-    color: #475569 !important; /* Maintain medium color for contrast */
-    transform: translateY(-3px) !important; /* Move up 3px to center align with time */
+    color: #475569 !important; /* Consistent color for all event-info elements */
+    flex-shrink: 0 !important; /* Prevent duration from shrinking */
+    white-space: nowrap !important; /* Keep duration on single line */
+    transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-location-organizer {
@@ -188,12 +200,19 @@
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-organizer {
     font-size: 0.85rem !important;
     font-weight: 600 !important;
+    color: #475569 !important; /* Consistent color for all event-info elements */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-category-badge .event-category-pill {
     font-size: 0.8rem !important;
     font-weight: 800 !important;
     padding: 4px 10px !important;
+}
+
+/* Ensure consistent styling for event description in large cards */
+.event-card[data-span-gt-6]:not([data-span-gt-8]) .event-description {
+    color: #475569 !important; /* Consistent color for all event-info elements */
+    font-weight: 500 !important; /* Consistent font weight */
 }
 
 /* Dynamic Font Sizing for Extra Large Cards (span 9+) */
@@ -218,7 +237,7 @@
     font-size: 0.9rem !important;
     font-weight: 600 !important;
     color: #475569 !important; /* Maintain medium color for contrast */
-    transform: translateY(-3px) !important; /* Move up 3px to center align with time */
+    transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
 }
 
 .event-card[data-span-gt-8] .event-location-organizer {
