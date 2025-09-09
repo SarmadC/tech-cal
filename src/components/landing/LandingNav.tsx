@@ -1,22 +1,109 @@
-'use client';
-
-import Link from 'next/link';
-
+"use client";
+import {
+  Navbar,
+  NavBody,
+  NavItems,
+  MobileNav,
+  NavbarLogo,
+  NavbarButton,
+  MobileNavHeader,
+  MobileNavToggle,
+  MobileNavMenu,
+} from "@/components/ui/resizable-navbar";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function LandingNav() {
-    return (
-        <nav className="nav">
-            <div className="nav-container">
-                <div className="logo">Kure-Cal</div>
-                <ul className="nav-links">
-                    <li><Link href="#features" className="nav-link">Features</Link></li>
-                    <li><Link href="/blog" className="nav-link">Blog</Link></li>
-                </ul>
-                <div className="flex items-center gap-4">
-                    <Link href="/login" className="nav-link">Sign In</Link>
-                    <Link href="/signup" className="nav-cta">Start Free Trial</Link>
-                </div>
+  const router = useRouter();
+  const navItems = [
+    {
+      name: "Features",
+      link: "#features",
+    },
+    {
+      name: "Blog",
+      link: "/blog",
+    },
+  ];
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  return (
+    <div className="relative w-full">
+      <Navbar>
+        {/* Desktop Navigation */}
+        <NavBody>
+          <NavbarLogo />
+          <NavItems items={navItems} />
+          <div className="flex items-center gap-4">
+            <NavbarButton 
+              as="button" 
+              variant="secondary"
+              onClick={() => router.push("/login")}
+            >
+              Sign In
+            </NavbarButton>
+            <NavbarButton 
+              as="button" 
+              variant="primary"
+              onClick={() => router.push("/signup")}
+            >
+              Start Free Trial
+            </NavbarButton>
+          </div>
+        </NavBody>
+
+        {/* Mobile Navigation */}
+        <MobileNav>
+          <MobileNavHeader>
+            <NavbarLogo />
+            <MobileNavToggle
+              isOpen={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            />
+          </MobileNavHeader>
+
+          <MobileNavMenu
+            isOpen={isMobileMenuOpen}
+            onClose={() => setIsMobileMenuOpen(false)}
+          >
+            {navItems.map((item, idx) => (
+              <a
+                key={`mobile-link-${idx}`}
+                href={item.link}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="relative text-neutral-600 dark:text-neutral-300"
+              >
+                <span className="block">{item.name}</span>
+              </a>
+            ))}
+            <div className="flex w-full flex-col gap-4">
+              <NavbarButton
+                as="button"
+                variant="secondary"
+                className="w-full"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  router.push("/login");
+                }}
+              >
+                Sign In
+              </NavbarButton>
+              <NavbarButton
+                as="button"
+                variant="primary"
+                className="w-full"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  router.push("/signup");
+                }}
+              >
+                Start Free Trial
+              </NavbarButton>
             </div>
-        </nav>
-    );
+          </MobileNavMenu>
+        </MobileNav>
+      </Navbar>
+    </div>
+  );
 }

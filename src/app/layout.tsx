@@ -9,7 +9,10 @@ import './styles/premium-animation.css';
 import './styles/premium-colors.css';
 import './styles/smart-filters.css';
 import './styles/utilities.css';
-import '@/components/calendar/mobile/mobile-calendar.css';   
+import '@/components/calendar/mobile/mobile-calendar.css';
+import './styles/landing-page.css';
+import './styles/navbar.css';
+import './styles/ChaosToOrder.css';   
 
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";

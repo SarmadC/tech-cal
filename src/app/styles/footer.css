@@ -1,14 +1,18 @@
 /* Footer Component Styles - 2025 Modern Design for Kure-Cal */
 
 :root {
-    --brand-orange: #f97316;
-    --brand-orange-light: #fb923c;
-    --brand-orange-glow: rgba(249, 115, 22, 0.2);
-    --brand-orange-subtle: rgba(249, 115, 22, 0.1);
+    --brand-orange: #ff6b35;
+    --brand-orange-light: #ff8c42;
+    --brand-blue: #3b82f6;
+    --brand-purple: #8b5cf6;
+    --brand-orange-glow: rgba(255, 107, 53, 0.3);
+    --brand-orange-subtle: rgba(255, 107, 53, 0.15);
+    --brand-blue-glow: rgba(59, 130, 246, 0.2);
+    --brand-purple-glow: rgba(139, 92, 246, 0.2);
 }
 
 .footer-container {
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #111111 100%);
+    background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
     color: white;
     margin-top: var(--space-24, 96px);
     position: relative;
@@ -38,19 +42,21 @@
 }
 
 .footer-intro-title {
-    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-family: var(--font-serif);
+    font-size: clamp(2.25rem, 5.5vw, 3.75rem);
     font-weight: 600;
-    line-height: 1.1;
+    line-height: 1.05;
     margin-bottom: 40px;
     max-width: 600px;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
     color: white;
     text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
     text-align: left;
+    font-feature-settings: 'liga' 1, 'kern' 1;
 }
 
 .text-accent {
-    background: linear-gradient(135deg, var(--brand-orange) 0%, var(--brand-orange-light) 100%);
+    background: linear-gradient(135deg, var(--brand-orange) 0%, var(--brand-blue) 50%, var(--brand-purple) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -92,25 +98,29 @@
 }
 
 .cta-title {
+    font-family: var(--font-sans);
     color: white;
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 12px;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
 }
 
 .cta-subtitle {
+    font-family: var(--font-sans);
     color: #ccc;
     font-size: 1rem;
     margin-bottom: 32px;
-    line-height: 1.5;
+    line-height: 1.6;
+    font-weight: 400;
+    letter-spacing: -0.01em;
 }
 
 .cta-button {
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    background: linear-gradient(135deg, var(--brand-orange) 0%, var(--brand-orange-light) 100%);
+    background: linear-gradient(135deg, var(--brand-orange) 0%, var(--brand-blue) 50%, var(--brand-purple) 100%);
     color: white;
     padding: 20px 36px;
     border-radius: 16px;
@@ -119,7 +129,7 @@
     font-size: 1.2rem;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 
-        0 12px 40px rgba(249, 115, 22, 0.4),
+        0 12px 40px rgba(255, 107, 53, 0.4),
         0 0 0 1px rgba(255, 255, 255, 0.2) inset,
         0 4px 12px rgba(0, 0, 0, 0.3);
     position: relative;

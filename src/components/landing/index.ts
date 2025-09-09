@@ -7,4 +7,5 @@ export * from './ChaosToOrderSection';
 export * from './SocialProof';
 export * from './FeaturesGrid';
 export * from './Footer';
+export { default as LightRays } from './LightRays';
 

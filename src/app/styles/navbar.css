@@ -1,0 +1,60 @@
+/* Navbar Styles - Aceternity UI Resizable Navbar Component */
+
+/* Debug: Ensure navbar is visible */
+.landing-container .relative.w-full {
+  position: relative !important;
+  z-index: 9999 !important;
+}
+
+/* Override global transitions for navbar components to prevent conflicts with Framer Motion */
+.motion-div,
+.motion-div *,
+.motion-div *::before,
+.motion-div *::after {
+  transition: none !important;
+}
+
+/* Specific overrides for navbar motion components */
+[data-motion] *,
+[data-motion] *::before,
+[data-motion] *::after {
+  transition: none !important;
+}
+
+/* Custom overrides for the resizable navbar to match our design system */
+.resizable-navbar-override {
+  /* Ensure the navbar works with our dark theme */
+  --navbar-bg: rgba(0, 0, 0, 0.9);
+  --navbar-bg-visible: rgba(0, 0, 0, 0.8);
+  --navbar-text: rgba(255, 255, 255, 0.8);
+  --navbar-text-hover: rgba(255, 255, 255, 1);
+  --navbar-accent: #ff6b35;
+}
+
+/* Ensure proper spacing and alignment for navbar */
+[data-navbar] .flex {
+  gap: 2rem;
+}
+
+/* Additional navbar styling to match the target design */
+[data-navbar] {
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  width: fit-content !important;
+  min-width: 400px;
+  max-width: 600px;
+}
+
+/* Mobile navbar specific styles */
+@media (max-width: 768px) {
+  .landing-container .relative.w-full {
+    z-index: 9998 !important;
+  }
+}
+
+/* Dark theme overrides for navbar */
+.dark .landing-container .relative.w-full {
+  z-index: 9999 !important;
+}
+
+/* Note: No special hero padding needed since navbar uses sticky positioning with top-20 offset */

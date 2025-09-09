@@ -1,41 +1,56 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
-import { heroStats } from '@/data/landing-page-data';
-import { CalendarPreview } from './CalendarPreview';
+import LightRays from './LightRays';
 
 export function HeroSection() {
     return (
         <section className="hero">
-            <div className="hero-bg"></div>
-            <div className="hero-grid"></div>
+            {/* Light Rays Effect */}
+            <LightRays
+                raysOrigin="top-center"
+                raysColor="#ffffff"
+                raysSpeed={1.5}
+                lightSpread={0.8}
+                rayLength={1.2}
+                pulsating={false}
+                fadeDistance={1.0}
+                saturation={1.0}
+                followMouse={true}
+                mouseInfluence={0.1}
+                noiseAmount={0.1}
+                distortion={0.05}
+                className="hero-light-rays"
+            />
 
+            {/* Hero Content */}
             <div className="hero-content">
-                <div className="hero-text">
-                    <h1 className="hero-title">Never Miss What Matters</h1>
-                    <p className="hero-subtitle">{"// antidote to information_overload"}</p>
-                    <p className="hero-description">
-                        Stop juggling 12 different calendars and missing crucial tech events.
-                        Kure-Cal consolidates 500+ event sources into one intelligent calendar
-                        that learns what you care about.
-                    </p>
-                    <div className="hero-stats">
-                        {heroStats.map((stat, index) => (
-                            <div key={index} className="hero-stat">
-                                <span className="hero-stat-number">{stat.number}</span>
-                                <div className="hero-stat-label">{stat.label}</div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="cta-container">
-                        <Link href="/calendar" className="cta-button cta-primary">
-                            <span>See Live Calendar</span>
-                            <ArrowRight size={20} />
-                        </Link>
-                    </div>
+                {/* Main Heading */}
+                <h1 className="hero-title">
+                    Never Miss What Matters
+                </h1>
+
+                {/* Sub Heading */}
+                <p className="hero-subtitle">
+                    antidote to the information overload
+                </p>
+
+                {/* CTA Buttons */}
+                <div className="hero-cta">
+                    <button
+                        className="inline-flex h-12 animate-shimmer items-center justify-center rounded-md border border-slate-800 bg-[linear-gradient(110deg,#000103,45%,#1e2631,55%,#000103)] bg-[length:200%_100%] px-8 py-4 font-medium text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50"
+                        onClick={() => window.location.href = '/calendar'}
+                    >
+                        See Live Calendar
+                    </button>
+                    <Link 
+                        href="/features" 
+                        className="inline-flex h-12 items-center justify-center rounded-md border border-slate-800 px-8 py-4 font-medium text-slate-300 transition-colors hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50"
+                        style={{ paddingLeft: '32px', paddingRight: '32px' }}
+                    >
+                        Learn More
+                    </Link>
                 </div>
-                <CalendarPreview />
             </div>
         </section>
     );

@@ -3,17 +3,18 @@
 
 :root {
     /* Enhanced 2025 Colors - Features specific */
-    --mocha-mousse: #A47864;
-    --mocha-mousse-light: #B8896F;
-    --mocha-mousse-dark: #8B6B56;
-    --seafoam-green: #93E9BE;
-    --sunny-yellow: #F4D03F;
-    --warm-gray: #F5F5F5;
+    --vibrant-orange: #ff6b35;
+    --vibrant-blue: #3b82f6;
+    --vibrant-purple: #8b5cf6;
+    --vibrant-cyan: #06b6d4;
+    --vibrant-emerald: #10b981;
+    --vibrant-amber: #f59e0b;
     
     /* Enhanced Gradients - Features specific */
-    --gradient-warm: linear-gradient(135deg, #A47864 0%, #B8896F 50%, rgba(164, 120, 100, 0.8) 100%);
-    --gradient-primary: linear-gradient(135deg, #f97316 0%, #ea6610 50%, rgba(249, 115, 22, 0.9) 100%);
-    --gradient-secondary: linear-gradient(135deg, #111113 0%, #18181b 50%, #1f1f23 100%);
+    --gradient-warm: linear-gradient(135deg, #ff6b35 0%, #f59e0b 50%, #ff8c42 100%);
+    --gradient-primary: linear-gradient(135deg, #ff6b35 0%, #3b82f6 100%);
+    --gradient-secondary: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    --gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
     
     /* Layered Shadows - Features specific */
     --shadow-enhanced: 
@@ -21,12 +22,12 @@
         0 1px 2px rgba(0, 0, 0, 0.24);
     --shadow-hover: 
         0 4px 14px rgba(0, 0, 0, 0.15),
-        0 2px 8px rgba(249, 115, 22, 0.2),
-        0 1px 3px rgba(164, 120, 100, 0.3);
+        0 2px 8px rgba(255, 107, 53, 0.3),
+        0 1px 3px rgba(59, 130, 246, 0.2);
     --shadow-dramatic: 
         0 10px 40px rgba(0, 0, 0, 0.2),
-        0 4px 16px rgba(249, 115, 22, 0.15),
-        0 2px 8px rgba(164, 120, 100, 0.25);
+        0 4px 16px rgba(255, 107, 53, 0.25),
+        0 2px 8px rgba(59, 130, 246, 0.2);
 }
 
 /* Enhanced Features Section */
@@ -37,7 +38,7 @@
     position: relative;
 }
 
-/* Add subtle section background pattern */
+/* Add vibrant section background pattern */
 .features-enhanced::before {
     content: '';
     position: absolute;
@@ -46,9 +47,11 @@
     right: 0;
     bottom: 0;
     background-image: 
-        radial-gradient(circle at 2px 2px, rgba(164, 120, 100, 0.15) 1px, transparent 0);
+        radial-gradient(circle at 2px 2px, rgba(255, 107, 53, 0.1) 1px, transparent 0),
+        radial-gradient(circle at 8px 8px, rgba(59, 130, 246, 0.08) 1px, transparent 0),
+        radial-gradient(circle at 14px 14px, rgba(139, 92, 246, 0.06) 1px, transparent 0);
     background-size: 24px 24px;
-    opacity: 0.4;
+    opacity: 0.6;
     pointer-events: none;
 }
 
@@ -59,20 +62,24 @@
 }
 
 .features-title {
-    font-family: 'Instrument Serif', Georgia, serif;
-    font-size: clamp(2rem, 4vw, 3rem);
-    font-weight: 400;
+    font-family: var(--font-serif);
+    font-size: clamp(2.25rem, 4.5vw, 3.25rem);
+    font-weight: 600;
     margin-bottom: var(--space-4);
     color: var(--foreground-primary);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
+    font-feature-settings: 'liga' 1, 'kern' 1;
 }
 
 .features-subtitle {
-    font-size: 1.1rem;
+    font-family: var(--font-sans);
+    font-size: 1.125rem;
     color: var(--foreground-secondary);
     max-width: 600px;
     margin: 0 auto;
-    line-height: 1.6;
+    line-height: 1.65;
+    font-weight: 400;
+    letter-spacing: -0.01em;
 }
 
 /* Enhanced Bento Grid */
@@ -295,7 +302,7 @@
 
 .bento-card-enhanced:hover .icon-wrapper {
     transform: scale(1.1) rotate(5deg);
-    background: var(--mocha-mousse);
+    background: var(--gradient-primary);
     color: white;
     box-shadow: var(--shadow-hover);
 }
@@ -313,11 +320,12 @@
 
 /* Enhanced Typography */
 .feature-title-enhanced {
+    font-family: var(--font-sans);
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--foreground-primary);
     margin-bottom: var(--space-4);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     transition: all 0.3s ease;
     line-height: 1.3;
 }
@@ -328,16 +336,19 @@
 }
 
 .bento-card-enhanced:hover .feature-title-enhanced {
-    color: var(--mocha-mousse);
+    color: var(--vibrant-orange);
     transform: translateY(-2px);
 }
 
 .feature-description-enhanced {
+    font-family: var(--font-sans);
     color: var(--foreground-secondary);
-    line-height: 1.6;
+    line-height: 1.65;
     font-size: 0.95rem;
     flex: 1;
     transition: all 0.3s ease;
+    font-weight: 400;
+    letter-spacing: -0.01em;
 }
 
 .hero-feature .feature-description-enhanced {
@@ -438,7 +449,7 @@
 .arrow-container {
     width: 36px;
     height: 36px;
-    background: var(--mocha-mousse);
+    background: var(--gradient-accent);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -450,7 +461,7 @@
 
 .bento-card-enhanced:hover .arrow-container {
     transform: scale(1.1);
-    background: var(--accent-primary);
+    background: var(--gradient-primary);
     box-shadow: var(--shadow-hover);
 }
 

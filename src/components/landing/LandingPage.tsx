@@ -4,13 +4,10 @@ import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 const ChaosToOrderSection = dynamic(
-    // This function tells Next.js how to load the component
-    () => import('./ChaosToOrderSection').then((mod) => mod.ChaosToOrderSection),
+    () => import('./ChaosToOrderSection').then((mod) => ({ default: mod.ChaosToOrderSection })),
     {
-        // This component uses browser APIs, so we must disable Server-Side Rendering
         ssr: false,
-        // This provides a placeholder to prevent the page layout from shifting while the component loads
-        loading: () => <div style={{ height: '250vh' }} />
+        loading: () => <div style={{ height: '250vh', background: '#0f0f23' }}>Loading animation...</div>
     }
 );
 

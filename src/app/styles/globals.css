@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -15,34 +15,54 @@
 /* ============================================== */
 
 :root {
-  /* --- Dark Theme (Default) --- */
-  --background-main: #0a0a0b;
-  --background-secondary: #111113;
-  --background-tertiary: #18181b;
-  --background-elevated: #1f1f23;
+  /* --- Vibrant Dark Theme (Default) --- */
+  --background-main: #0f0f23;
+  --background-secondary: #1a1a2e;
+  --background-tertiary: #16213e;
+  --background-elevated: #0f3460;
   
-  --foreground-primary: #fafafa;
-  --foreground-secondary: #ffffff;
-  --foreground-tertiary: #71717a;
-  --foreground-muted: #52525b;
+  --foreground-primary: #ffffff;
+  --foreground-secondary: #e2e8f0;
+  --foreground-tertiary: #94a3b8;
+  --foreground-muted: #64748b;
   
-  --accent-primary: #b45309;
-  --accent-primary-hover: #92400e;
-  --accent-primary-light: rgba(217, 119, 6, 0.12);
-  --accent-border: rgba(217, 119, 6, 0.24);
+  /* Primary Accent - Vibrant Orange */
+  --accent-primary: #ff6b35;
+  --accent-primary-hover: #ff8c42;
+  --accent-primary-light: rgba(255, 107, 53, 0.15);
+  --accent-border: rgba(255, 107, 53, 0.3);
   
-  --success: #047857;
-  --success-light: rgba(4, 120, 87, 0.12);
-  --warning: #d97706;
-  --warning-light: rgba(217, 119, 6, 0.12);
-  --error: #dc2626;
-  --error-light: rgba(220, 38, 38, 0.12);
+  /* Secondary Accent - Electric Blue */
+  --accent-secondary: #3b82f6;
+  --accent-secondary-hover: #2563eb;
+  --accent-secondary-light: rgba(59, 130, 246, 0.15);
   
-  --virtual-event: #8B5CF6;
+  /* Tertiary Accent - Vibrant Purple */
+  --accent-tertiary: #8b5cf6;
+  --accent-tertiary-hover: #7c3aed;
+  --accent-tertiary-light: rgba(139, 92, 246, 0.15);
   
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.12);
+  /* Success - Emerald Green */
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.15);
+  
+  /* Warning - Amber */
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.15);
+  
+  /* Error - Rose */
+  --error: #ef4444;
+  --error-light: rgba(239, 68, 68, 0.15);
+  
+  /* Special Colors */
+  --virtual-event: #8b5cf6;
+  --gradient-primary: linear-gradient(135deg, #ff6b35 0%, #3b82f6 100%);
+  --gradient-secondary: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  --gradient-accent: linear-gradient(135deg, #ff6b35 0%, #f59e0b 50%, #8b5cf6 100%);
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.18);
   --border-accent: var(--accent-border);
   
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -51,9 +71,9 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
   
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-serif: 'Instrument Serif', Georgia, serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Courier New', monospace;
   
   --space-1: 4px;
   --space-2: 8px;
@@ -68,15 +88,17 @@
 /* --- Light Theme Override --- */
 .light {
   --background-main: #ffffff;
-  --background-secondary: #fafafa;
-  --background-tertiary: #f5f5f5;
+  --background-secondary: #f8fafc;
+  --background-tertiary: #f1f5f9;
   --background-elevated: #ffffff;
-  --foreground-primary: #171717;
-  --foreground-secondary: #525252;
-  --foreground-tertiary: #737373;
-  --foreground-muted: #a3a3a3;
+  --foreground-primary: #0f172a;
+  --foreground-secondary: #334155;
+  --foreground-tertiary: #64748b;
+  --foreground-muted: #94a3b8;
   
-  --accent-primary-light: rgba(249, 115, 22, 0.1);
+  --accent-primary-light: rgba(255, 107, 53, 0.1);
+  --accent-secondary-light: rgba(59, 130, 246, 0.1);
+  --accent-tertiary-light: rgba(139, 92, 246, 0.1);
   --success-light: rgba(16, 185, 129, 0.1);
   --warning-light: rgba(245, 158, 11, 0.1);
   --error-light: rgba(239, 68, 68, 0.1);
@@ -114,11 +136,42 @@ body {
 }
 
 /* Typography Scale */
-h1 { font-family: var(--font-serif); font-size: 2.25rem; font-weight: 400; letter-spacing: -0.02em; line-height: 1.2; }
-h2 { font-family: var(--font-serif); font-size: 1.75rem; font-weight: 400; letter-spacing: -0.02em; line-height: 1.3; }
-h3 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.4; }
-h4 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
-p { line-height: 1.6; color: var(--foreground-secondary); }
+h1 { 
+  font-family: var(--font-serif); 
+  font-size: 2.5rem; 
+  font-weight: 600; 
+  letter-spacing: -0.03em; 
+  line-height: 1.1; 
+  font-feature-settings: 'liga' 1, 'kern' 1;
+}
+h2 { 
+  font-family: var(--font-serif); 
+  font-size: 2rem; 
+  font-weight: 500; 
+  letter-spacing: -0.02em; 
+  line-height: 1.2; 
+  font-feature-settings: 'liga' 1, 'kern' 1;
+}
+h3 { 
+  font-family: var(--font-sans); 
+  font-size: 1.375rem; 
+  font-weight: 600; 
+  letter-spacing: -0.015em; 
+  line-height: 1.3; 
+}
+h4 { 
+  font-family: var(--font-sans); 
+  font-size: 1.125rem; 
+  font-weight: 600; 
+  letter-spacing: -0.01em; 
+  line-height: 1.4; 
+}
+p { 
+  font-family: var(--font-sans); 
+  line-height: 1.65; 
+  color: var(--foreground-secondary); 
+  font-weight: 400;
+}
 
 
 /* Focus States & Scrollbar */
@@ -265,51 +318,50 @@ input::placeholder, textarea::placeholder {
 
 @layer base {
   :root {
-    /* --- Dark Theme Shadcn Mapping --- */
-    --background: 10 10 11;
-    --foreground: 250 250 250;
-    --card: 17 17 19;
-    --card-foreground: 250 250 250;
-    --popover: 17 17 19;
-    --popover-foreground: 250 250 250;
-    --primary: 180 83 9;
+    /* --- Vibrant Dark Theme Shadcn Mapping --- */
+    --background: 15 15 35;
+    --foreground: 255 255 255;
+    --card: 26 26 46;
+    --card-foreground: 255 255 255;
+    --popover: 26 26 46;
+    --popover-foreground: 255 255 255;
+    --primary: 255 107 53;
     --primary-foreground: 255 255 255;
-    --secondary: 24 24 27;
-    --secondary-foreground: 161 161 170;
-    --muted: 24 24 27;
-    --muted-foreground: 113 113 122;
-    --accent: 180 83 9;
+    --secondary: 22 33 62;
+    --secondary-foreground: 226 232 240;
+    --muted: 22 33 62;
+    --muted-foreground: 148 163 184;
+    --accent: 59 130 246;
     --accent-foreground: 255 255 255;
-    --destructive: 220 38 38;
+    --destructive: 239 68 68;
     --destructive-foreground: 255 255 255;
-    --border: 39 39 42;
-    --input: 39 39 42;
-    --ring: 249 115 22;
+    --border: 59 130 246;
+    --input: 22 33 62;
+    --ring: 255 107 53;
     --radius: 0.5rem;
   }
  
   .light {
-    /* --- Light Theme Shadcn Override --- */
+    /* --- Vibrant Light Theme Shadcn Override --- */
     --background: 255 255 255;
-    --foreground: 23 23 23;
-    --card: 250 250 250;
-    --card-foreground: 23 23 23;
-    --popover: 250 250 250;
-    --popover-foreground: 23 23 23;
-    --primary: 180 83 9;
+    --foreground: 15 23 42;
+    --card: 248 250 252;
+    --card-foreground: 15 23 42;
+    --popover: 248 250 252;
+    --popover-foreground: 15 23 42;
+    --primary: 255 107 53;
     --primary-foreground: 255 255 255;
-    /* CRITICAL FIX for invisible badge text in light mode */
-    --secondary: 245 245 245;
-    --secondary-foreground: 23 23 23;
-    --muted: 245 245 245;
-    --muted-foreground: 163 163 163;
-    --accent: 180 83 9;
+    --secondary: 241 245 249;
+    --secondary-foreground: 51 65 85;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
+    --accent: 59 130 246;
     --accent-foreground: 255 255 255;
-    --destructive: 220 38 38;
+    --destructive: 239 68 68;
     --destructive-foreground: 255 255 255;
-    --border: 229 229 229;
-    --input: 229 229 229;
-    --ring: 249 115 22;
+    --border: 226 232 240;
+    --input: 226 232 240;
+    --ring: 255 107 53;
   }
 
   /* --- Final Base Apply Rules --- */

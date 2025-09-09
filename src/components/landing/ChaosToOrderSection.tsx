@@ -3,7 +3,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { AnimatedEventCard } from './AnimatedEventCard';
 import { useThreeScene, useCardPositions, useScrollAnimation, DomCache } from './useChaosAnimation';
-import '@/app/styles/ChaosToOrder.css';
 
 // Debounce helper function
 function debounce<F extends (...args: unknown[]) => unknown>(func: F, wait: number): (...args: Parameters<F>) => void {

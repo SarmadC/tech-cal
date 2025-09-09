@@ -35,7 +35,9 @@
       "Bash(npm run:*)",
       "WebFetch(domain:img.logo.dev)",
       "Bash(psql:*)",
-      "mcp__playwright__browser_resize"
+      "mcp__playwright__browser_resize",
+      "Bash(npm ls:*)",
+      "mcp__puppeteer__puppeteer_hover"
     ],
     "deny": [],
     "ask": []

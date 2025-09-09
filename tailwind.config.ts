@@ -69,21 +69,30 @@ const config: Config = {
             },
             fontFamily: {
                 sans: [
-                    'var(--font-geist-sans)'
+                    'var(--font-sans)'
                 ],
                 mono: [
-                    'var(--font-geist-mono)'
+                    'var(--font-mono)'
                 ]
             },
             animation: {
                 'fade-in': 'fadeIn 0.5s ease-in-out',
                 'slide-up': 'slideUp 0.3s ease-out',
-                'slide-down': 'slideDown 0.3s ease-out'
+                'slide-down': 'slideDown 0.3s ease-out',
+                shimmer: "shimmer 2s linear infinite"
             },
             keyframes: {
                 fadeIn: {},
                 slideUp: {},
-                slideDown: {}
+                slideDown: {},
+                shimmer: {
+                    from: {
+                        backgroundPosition: "0 0",
+                    },
+                    to: {
+                        backgroundPosition: "-200% 0",
+                    },
+                }
             },
             borderRadius: {
                 lg: 'var(--radius)',
