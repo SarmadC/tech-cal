@@ -13,8 +13,8 @@
 .tech-calendar-week-view .event-card[data-span="1"] .event-organizer-logo-corner,
 .tech-calendar-week-view .event-card[data-span="2"] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--space-sm);
-    left: 0; /* Align with left edge of padding like day view */
+    bottom: 0; /* Position at the very bottom edge of content area */
+    left: 0; /* Position at the very left edge of content area */
     z-index: 10;
     width: 12px;
     height: 12px;
@@ -33,8 +33,8 @@
 .tech-calendar-week-view .event-card[data-span="3"] .event-organizer-logo-corner,
 .tech-calendar-week-view .event-card[data-span="4"] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--space-sm);
-    left: 0; /* Align with left edge of padding like day view */
+    bottom: 0; /* Position at the very bottom edge of content area */
+    left: 0; /* Position at the very left edge of content area */
     z-index: 10;
     width: 14px;
     height: 14px;
@@ -52,8 +52,8 @@
 .tech-calendar-week-view .event-card[data-span="5"] .event-organizer-logo-corner,
 .tech-calendar-week-view .event-card[data-span="6"] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--space-sm);
-    left: 0; /* Align with left edge of padding like day view */
+    bottom: 0; /* Position at the very bottom edge of content area */
+    left: 0; /* Position at the very left edge of content area */
     z-index: 10;
     width: 16px;
     height: 16px;
@@ -71,8 +71,8 @@
 .tech-calendar-week-view .event-card[data-span="7"] .event-organizer-logo-corner,
 .tech-calendar-week-view .event-card[data-span="8"] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--space-sm);
-    left: 0; /* Align with left edge of padding like day view */
+    bottom: 0; /* Position at the very bottom edge of content area */
+    left: 0; /* Position at the very left edge of content area */
     z-index: 10;
     width: 18px;
     height: 18px;
@@ -82,8 +82,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Add transform to shift logo position */
-    transform: translate(-10px, 8px); /* Move logo left 10px and down 8px */
+    transform: translate(0, 0); /* Remove offset transforms */
 }
 
 /* ===================================
@@ -91,8 +90,8 @@
    =================================== */
 .tech-calendar-week-view .event-card[data-span-gt-8] .event-organizer-logo-corner {
     position: absolute;
-    bottom: var(--space-sm);
-    left: 0; /* Align with left edge of padding like day view */
+    bottom: 0; /* Position at the very bottom edge of content area */
+    left: 0; /* Position at the very left edge of content area */
     z-index: 10;
     width: 20px;
     height: 20px;
@@ -263,27 +262,53 @@
     transition: all 0.2s ease !important;
     overflow: visible !important;
     position: relative !important;
+    align-items: stretch !important; /* Ensure content stretches to full width */
+    justify-content: flex-start !important; /* Align content to start */
     display: flex !important; /* Ensure flex layout */
     flex-direction: column !important; /* Ensure column layout */
 }
 
-/* Ensure corner anchors reference the card, not the inner content */
+/* Event content container for week view - consolidated rules */
 .tech-calendar-week-view .event-card .event-content {
-    position: static !important;
+    position: static !important; /* Ensure corner anchors reference the card, not the inner content */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--space-xs) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+    align-items: stretch !important; /* Ensure content stretches to full width */
+    justify-content: flex-start !important; /* Align content to start */
+    margin: 0 !important; /* Remove any default margins */
+    padding: 0 !important; /* Remove any default padding */
+    box-sizing: border-box !important; /* Ensure padding is included in width calculation */
+    overflow: visible !important; /* Ensure content is not clipped */
 }
 
-/* Align base info block flush with card padding in week view */
+/* Align base info block flush with card padding in week view and set positioning context */
 .tech-calendar-week-view .event-card .event-card-basic-info {
     padding-left: 0 !important;
     margin-left: 0 !important;
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
     align-self: stretch !important;
+    position: relative !important; /* Make this the positioning context for absolutely positioned children */
+    gap: 2px !important; /* Reduce gap between title and logo for week view cards */
+    width: 100% !important; /* Ensure full width */
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important; /* Ensure padding is included in width calculation */
+    overflow: visible !important; /* Ensure content is not clipped */
 }
 
-/* Anchor positions in week view - align dots below arrow */
 .tech-calendar-week-view .event-card .event-day-dots {
     position: absolute !important;
-    bottom: var(--space-sm) !important;
-    right: var(--space-sm) !important;
+    bottom: 0 !important; /* Position at the very bottom edge of content area */
+    right: 0 !important; /* Position at the very right edge of content area */
     display: flex !important;
     gap: 3px !important;
     z-index: 10 !important;
@@ -292,10 +317,22 @@
 
 .tech-calendar-week-view .event-card .event-arrow-corner {
     position: absolute !important;
-    top: var(--space-sm) !important;
-    right: var(--space-sm) !important;
-    z-index: 10 !important;
-    transform: translate(9px, -13px) !important; /* Match day view positioning */
+    top: var(--card-pad) !important; /* Position at the top with card padding */
+    right: var(--card-pad) !important; /* Position at the right with card padding */
+    z-index: 15 !important; /* Higher than title section to ensure it's on top */
+    transform: translate(0, 0) !important; /* Remove any offset transforms */
+    margin: 0 !important; /* Remove any margins */
+    padding: 0 !important; /* Remove any padding */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important; /* Fixed width for the arrow */
+    height: 24px !important; /* Fixed height for the arrow */
+    background: transparent !important; /* Ensure no background */
+    border: none !important; /* Remove any borders */
+    /* Override any inherited positioning from base CSS */
+    left: auto !important;
+    bottom: auto !important;
 }
 
 /* Neutralize legacy arrow spacing rules in week view */
@@ -304,17 +341,54 @@
     margin: 0 !important;
 }
 
-/* Ensure title reserves space equal to corner arrow in week view */
-.tech-calendar-week-view .event-card .event-title-section {
-    padding-right: calc(var(--card-pad) + 24px) !important;
+/* Ensure learn-more-button inside arrow corner is properly positioned */
+.tech-calendar-week-view .event-card .event-arrow-corner .learn-more-button {
+    position: static !important; /* Don't create new positioning context */
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
-/* Event title styling */
+/* Position shiny text centered in the arrow corner container */
+.tech-calendar-week-view .event-card .event-arrow-corner .learn-more-shiny {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) scale(0.8) !important;
+    z-index: 10 !important;
+    pointer-events: none !important; /* Don't interfere with button clicks */
+}
+
+/* Ensure title reserves space equal to corner arrow in week view */
+.tech-calendar-week-view .event-card .event-title-section {
+    padding-right: 24px !important; /* Reserve space only for the arrow icon, not card padding */
+    padding-left: 0 !important; /* Ensure no left padding */
+    padding-top: 0 !important; /* Ensure no top padding */
+    padding-bottom: 0 !important; /* Ensure no bottom padding */
+    position: static !important; /* Override relative positioning to prevent new positioning context */
+    margin: 0 !important; /* Remove any margins that might interfere */
+    z-index: 1 !important; /* Lower z-index than arrow */
+    display: block !important; /* Simple block display */
+    width: calc(100% - 24px) !important; /* Take full width minus arrow space */
+    box-sizing: border-box !important; /* Include padding in width calculation */
+    overflow: visible !important; /* Don't clip content */
+    height: auto !important; /* Allow natural height */
+    min-height: 0 !important; /* Remove any minimum height */
+    max-height: none !important; /* Remove any maximum height */
+    float: left !important; /* Float to the left to make room for arrow */
+}
+
+/* Event title styling - comprehensive override for week view */
 .tech-calendar-week-view .event-card .event-title {
     font-size: 0.75rem !important;
     font-weight: 600 !important;
     color: var(--category-title-color, var(--text-on-pastel)) !important; /* Use dynamic category color */
     margin: 0 !important;
+    padding: 0 !important; /* Remove any padding that might interfere */
     line-height: 1.2 !important;
     /* Allow text wrapping for long titles */
     word-wrap: break-word !important;
@@ -327,6 +401,15 @@
     line-clamp: 3 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
+    position: static !important; /* Ensure no positioning interference */
+    z-index: 1 !important; /* Lower than arrow */
+    width: 100% !important; /* Take full width */
+    box-sizing: border-box !important; /* Include padding in width calculation */
+    height: auto !important; /* Allow natural height */
+    min-height: 0 !important; /* Remove any minimum height */
+    max-height: none !important; /* Remove any maximum height */
+    background: transparent !important; /* Ensure no background color */
+    border: none !important; /* Remove any borders */
 }
 
 /* Event title section - no longer needs flex layout */
@@ -471,15 +554,7 @@
     color: var(--text-secondary-on-pastel);
 }
 
-/* Event content container for week view */
-.tech-calendar-week-view .event-card .event-content {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: var(--space-xs) !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    flex: 1 !important;
-}
+/* Event content container rules are consolidated above */
 
 /* Event time-duration container styling for week view */
 .tech-calendar-week-view .event-card .event-time-duration {
@@ -1168,8 +1243,8 @@
 .arrow-icon {
     color: var(--text-on-pastel);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    width: 20px;
-    height: 20px;
+    width: 10px;
+    height: 10px;
     opacity: 1;
     transform: scale(1);
     visibility: visible;
@@ -1182,10 +1257,31 @@
     margin-top: 3px;
 }
 
-/* Add margin-top and margin-right for medium cards (span > 4 but <= 6) - applied to button-content instead of arrow-icon */
-.event-card[data-span-gt-4]:not([data-span-gt-6]) .button-content {
-    margin-top: 49px;
-    margin-right: -13px; /* Shift 13px right to align with event dots */
+/* Reset margin adjustments for week view - let absolute positioning handle placement */
+.tech-calendar-week-view .event-card .button-content {
+    margin-top: 0 !important;
+    margin-right: 0 !important;
+    /* Position button-content to fill the arrow corner container */
+    width: 100% !important;
+    height: 100% !important;
+    /* Align arrow icon to top-right within button-content */
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: flex-end !important;
+}
+
+/* Position the actual arrow icon at the very corner */
+.tech-calendar-week-view .event-card .arrow-icon {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Force all week view arrows to actual top-right corner - override base compact card rules */
+.tech-calendar-week-view .event-card .event-arrow-corner,
+.tech-calendar-week-view .event-card.compact .event-arrow-corner {
+    top: 0px !important;
+    right: 0px !important;
+    position: absolute !important;
 }
 
 .arrow-icon.arrow-hovered {
@@ -1209,9 +1305,9 @@
     transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s;
 }
 
-.learn-more-shiny.text-visible {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+.tech-calendar-week-view .event-card .event-arrow-corner .learn-more-shiny.text-visible {
+    opacity: 1 !important;
+    transform: translate(-50%, -50%) scale(1) !important;
 }
 
 .learn-more-shiny .shiny-text {

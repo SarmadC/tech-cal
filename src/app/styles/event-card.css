@@ -883,16 +883,9 @@
     padding-bottom: var(--card-pad) !important;
 }
 
-/* Reduce gap between title and logo for week view cards */
-.tech-calendar-week-view .event-card .event-card-basic-info {
-    gap: 2px !important;
-}
+/* Week view basic info styling is handled in tech-week-view.css */
 
-/* Fix arrow positioning for week view cards */
-.tech-calendar-week-view .event-card .event-arrow-corner {
-    top: var(--card-pad) !important;
-    right: var(--card-pad) !important;
-}
+/* Week view arrow positioning is handled in tech-week-view.css */
 
 .tech-calendar-week-view .event-card .event-title {
     font-size: 0.8125rem !important;
