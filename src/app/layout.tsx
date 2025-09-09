@@ -1,4 +1,4 @@
-// src/app/layout.tsx (Refined Best-Practice Version)
+// src/app/layout.tsx 
 
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -11,7 +11,6 @@ import './styles/smart-filters.css';
 import './styles/utilities.css';
 import '@/components/calendar/mobile/mobile-calendar.css';
 import './styles/landing-page.css';
-import './styles/navbar.css';
 import './styles/ChaosToOrder.css';   
 
 import QueryProvider from '@/components/providers/QueryProvider';
@@ -33,7 +32,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
+        <html lang="en" className="dark">
             <body className={inter.className}>
                 {/* Toaster should be high-level to be independent of other re-renders */}
                 <Toaster position="top-center" richColors />

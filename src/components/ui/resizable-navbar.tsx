@@ -9,7 +9,6 @@ import {
 } from "motion/react";
 
 import React, { useRef, useState } from "react";
-import Link from "next/link";
 
 
 interface NavbarProps {
@@ -19,7 +18,6 @@ interface NavbarProps {
 
 interface NavBodyProps {
   children: React.ReactNode;
-  className?: string;
   visible?: boolean;
 }
 
@@ -28,7 +26,6 @@ interface NavItemsProps {
     name: string;
     link: string;
   }[];
-  className?: string;
   onItemClick?: () => void;
 }
 
@@ -47,7 +44,6 @@ interface MobileNavMenuProps {
   children: React.ReactNode;
   className?: string;
   isOpen: boolean;
-  onClose: () => void;
 }
 
 export const Navbar = ({ children, className }: NavbarProps) => {
@@ -69,80 +65,140 @@ export const Navbar = ({ children, className }: NavbarProps) => {
   return (
     <motion.div
       ref={ref}
-      // IMPORTANT: Change this to class of `fixed` if you want the navbar to be fixed
-      className={cn("sticky inset-x-0 top-20 z-40 w-full", className)}
+      className={cn("absolute inset-x-0 top-4 z-50 w-full pointer-events-none", className)}
     >
-      {React.Children.map(children, (child) =>
-        React.isValidElement(child)
-          ? React.cloneElement(
-              child as React.ReactElement<{ visible?: boolean }>,
-              { visible },
-            )
-          : child,
-      )}
+      <div className="pointer-events-auto">
+        {React.Children.map(children, (child) =>
+          React.isValidElement(child)
+            ? React.cloneElement(
+                child as React.ReactElement<{ visible?: boolean }>,
+                { visible },
+              )
+            : child,
+        )}
+      </div>
     </motion.div>
   );
 };
 
-export const NavBody = ({ children, className, visible }: NavBodyProps) => {
+export const NavBody = ({ children, visible }: NavBodyProps) => {
   return (
     <motion.div
       animate={{
-        backdropFilter: visible ? "blur(10px)" : "none",
-        boxShadow: visible
-          ? "0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset"
-          : "none",
-        width: visible ? "40%" : "100%",
-        y: visible ? 20 : 0,
+        scale: visible ? 0.95 : 1,
+        y: visible ? 8 : 0,
       }}
       transition={{
         type: "spring",
-        stiffness: 200,
-        damping: 50,
+        stiffness: 400,
+        damping: 40,
       }}
       style={{
-        minWidth: "800px",
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+        margin: 0,
+        padding: 0,
       }}
-      className={cn(
-        "relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-transparent px-4 py-2 lg:flex dark:bg-transparent",
-        visible && "bg-white/80 dark:bg-neutral-950/80",
-        className,
-      )}
     >
-      {children}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "4px",
+          padding: "6px",
+          backgroundColor: "rgba(0, 0, 0, 0.9)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          borderRadius: "9999px",
+          backdropFilter: "blur(16px)",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)",
+          zIndex: 60,
+          position: "relative",
+          margin: 0,
+          boxSizing: "border-box",
+          width: "fit-content",
+          minWidth: "400px",
+          height: "fit-content",
+        }}
+      >
+        {children}
+      </div>
     </motion.div>
   );
 };
 
-export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
+export const NavItems = ({ items, onItemClick }: NavItemsProps) => {
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
-    <motion.div
+    <div
       onMouseLeave={() => setHovered(null)}
-      className={cn(
-        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2",
-        className,
-      )}
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "2px",
+        margin: 0,
+        padding: 0,
+        flex: 1,
+      }}
     >
       {items.map((item, idx) => (
         <a
           onMouseEnter={() => setHovered(idx)}
           onClick={onItemClick}
-          className="relative px-4 py-2 text-neutral-600 dark:text-neutral-300"
           key={`link-${idx}`}
           href={item.link}
+          style={{
+            position: "relative",
+            padding: "6px 12px",
+            color: "rgba(255, 255, 255, 0.9)",
+            fontSize: "14px",
+            fontWeight: "500",
+            textDecoration: "none",
+            borderRadius: "9999px",
+            transition: "color 0.2s ease",
+            margin: 0,
+            zIndex: 10,
+            display: "block",
+            whiteSpace: "nowrap",
+          }}
+          onMouseOver={(e) => {
+            setHovered(idx);
+            e.currentTarget.style.color = "rgba(255, 255, 255, 1)";
+          }}
+          onMouseOut={(e) => {
+            setHovered(null);
+            e.currentTarget.style.color = "rgba(255, 255, 255, 0.9)";
+          }}
         >
           {hovered === idx && (
             <motion.div
               layoutId="hovered"
-              className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(255, 255, 255, 0.15)",
+                borderRadius: "9999px",
+                zIndex: 1,
+              }}
             />
           )}
-          <span className="relative z-20">{item.name}</span>
+          <span style={{
+            position: "relative",
+            zIndex: 20,
+          }}>
+            {item.name}
+          </span>
         </a>
       ))}
-    </motion.div>
+    </div>
   );
 };
 
@@ -196,7 +252,6 @@ export const MobileNavMenu = ({
   children,
   className,
   isOpen,
-  onClose: _onClose,
 }: MobileNavMenuProps) => {
   return (
     <AnimatePresence>
@@ -233,15 +288,55 @@ export const MobileNavToggle = ({
 
 export const NavbarLogo = () => {
   return (
-    <Link
-      href="/"
-      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
+    <a
+      href="#"
+      style={{
+        position: "relative",
+        zIndex: 20,
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "6px 12px",
+        fontSize: "14px",
+        fontWeight: "500",
+        color: "rgba(255, 255, 255, 1)",
+        textDecoration: "none",
+        borderRadius: "9999px",
+        transition: "background-color 0.2s ease",
+        margin: 0,
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.backgroundColor = "transparent";
+      }}
     >
-      <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-        <span className="text-white font-bold text-sm">K</span>
+      <div style={{
+        width: "24px",
+        height: "24px",
+        backgroundColor: "rgba(255, 255, 255, 1)",
+        borderRadius: "4px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        margin: 0,
+        padding: 0,
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L22 20H2L12 2Z" fill="black"/>
+        </svg>
       </div>
-      <span className="font-medium text-black dark:text-white">Kure-Cal</span>
-    </Link>
+      <span style={{
+        fontWeight: "500",
+        color: "rgba(255, 255, 255, 1)",
+        margin: 0,
+        padding: 0,
+        fontSize: "14px",
+      }}>
+        Startup
+      </span>
+    </a>
   );
 };
 
@@ -249,35 +344,82 @@ export const NavbarButton = ({
   href,
   as: Tag = "a",
   children,
-  className,
   variant = "primary",
   ...props
 }: {
   href?: string;
   as?: React.ElementType;
   children: React.ReactNode;
-  className?: string;
   variant?: "primary" | "secondary" | "dark" | "gradient";
 } & (
   | React.ComponentPropsWithoutRef<"a">
   | React.ComponentPropsWithoutRef<"button">
 )) => {
-  const baseStyles =
-    "px-4 py-2 rounded-md bg-white button bg-white text-black text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center";
+  const getVariantStyles = (variant: string) => {
+    const styles: React.CSSProperties = {
+      position: "relative",
+      padding: "6px 12px",
+      borderRadius: "9999px",
+      fontSize: "14px",
+      fontWeight: "500",
+      cursor: "pointer",
+      transition: "all 0.2s ease",
+      display: "inline-block",
+      textAlign: "center",
+      whiteSpace: "nowrap",
+      margin: 0,
+      textDecoration: "none",
+      border: "none",
+    };
 
-  const variantStyles = {
-    primary:
-      "shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset]",
-    secondary: "bg-transparent shadow-none dark:text-white",
-    dark: "bg-black text-white shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset]",
-    gradient:
-      "bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
+    switch (variant) {
+      case "primary":
+        return {
+          ...styles,
+          backgroundColor: "rgba(255, 255, 255, 1)",
+          color: "rgba(0, 0, 0, 1)",
+        };
+      case "secondary":
+        return {
+          ...styles,
+          backgroundColor: "transparent",
+          color: "rgba(255, 255, 255, 0.9)",
+        };
+      case "dark":
+        return {
+          ...styles,
+          backgroundColor: "rgba(0, 0, 0, 1)",
+          color: "rgba(255, 255, 255, 1)",
+        };
+      default:
+        return styles;
+    }
+  };
+
+  const handleMouseOver = (e: React.MouseEvent<HTMLElement>) => {
+    if (variant === "primary") {
+      e.currentTarget.style.backgroundColor = "rgba(245, 245, 245, 1)";
+    } else if (variant === "secondary") {
+      e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+      e.currentTarget.style.color = "rgba(255, 255, 255, 1)";
+    }
+  };
+
+  const handleMouseOut = (e: React.MouseEvent<HTMLElement>) => {
+    if (variant === "primary") {
+      e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 1)";
+    } else if (variant === "secondary") {
+      e.currentTarget.style.backgroundColor = "transparent";
+      e.currentTarget.style.color = "rgba(255, 255, 255, 0.9)";
+    }
   };
 
   return (
     <Tag
       href={href || undefined}
-      className={cn(baseStyles, variantStyles[variant], className)}
+      style={getVariantStyles(variant)}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
       {...props}
     >
       {children}

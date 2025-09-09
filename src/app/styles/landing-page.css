@@ -15,7 +15,7 @@
     font-weight: 400;
 }
 
-/* Navigation styles moved to navbar.css */
+/* Navigation styles handled by Aceternity UI component */
 
 /* Hero Section */
 .landing-container .hero {
