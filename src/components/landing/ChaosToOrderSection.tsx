@@ -121,7 +121,6 @@ export function ChaosToOrderSection() {
                 <div ref={containerRef} className="cards-container">
                     <div className="calendar-frame clean-calendar" style={{ opacity: 0 }}>
                         <div className="calendar-header">
-                            <h3 className="calendar-month">May 2025</h3>
                             <div className="calendar-days">
                                 <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span>
                                 <span>THU</span><span>FRI</span><span>SAT</span>
