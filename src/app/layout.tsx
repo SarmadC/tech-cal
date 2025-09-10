@@ -1,7 +1,7 @@
 // src/app/layout.tsx 
 
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, DM_Sans } from "next/font/google";
 import { Toaster } from 'sonner';
 
 import "./styles/globals.css";
@@ -12,6 +12,7 @@ import './styles/utilities.css';
 import '@/components/calendar/mobile/mobile-calendar.css';
 import './styles/landing-page.css';
 import './styles/ChaosToOrder.css';   
+import './styles/orbiting-circles.css';
 
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -19,11 +20,12 @@ import ClientLayout from "@/components/layout/ClientLayout";
 
 
 const inter = Inter({ subsets: ["latin"] });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
 
 // Refined Metadata for a more professional look
 export const metadata: Metadata = {
-    title: "Kure-Cal: Your Tech Event Command Center",
-    description: "Consolidate, track, and discover tech events to accelerate your learning and career.",
+    title: "Kure‑Cal: The All‑in‑One Tech Events Calendar",
+    description: "All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.",
 };
 
 export default function RootLayout({
@@ -33,7 +35,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="dark">
-            <body className={inter.className}>
+            <body className={`${inter.className} ${dmSans.variable}`}>
                 {/* Toaster should be high-level to be independent of other re-renders */}
                 <Toaster position="top-center" richColors />
 

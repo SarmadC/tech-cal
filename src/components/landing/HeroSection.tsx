@@ -1,7 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import LightRays from './LightRays';
+import dynamic from 'next/dynamic';
+import { OrbitingCircles } from './OrbitingCircles';
+import { Calendar, Search, Filter, Sparkles } from 'lucide-react';
+
+const LightRays = dynamic(() => import('./LightRays'), { ssr: false });
 
 export function HeroSection() {
     return (
@@ -23,32 +27,43 @@ export function HeroSection() {
                 className="hero-light-rays"
             />
 
+            {/* Orbiting Icons (masked to avoid overlapping hero text) */}
+            <div className="hero-orbit-layer" aria-hidden="true">
+                <OrbitingCircles radius={420} duration={36} iconSize={28}>
+                    <Calendar />
+                    <Search />
+                    <Filter />
+                    <Sparkles />
+                </OrbitingCircles>
+            </div>
+
             {/* Hero Content */}
             <div className="hero-content">
                 {/* Main Heading */}
                 <h1 className="hero-title">
-                    Never Miss What Matters
+                    The All‑in‑One Tech Events Calendar
                 </h1>
 
                 {/* Sub Heading */}
                 <p className="hero-subtitle">
-                    antidote to the information overload
+                    Conferences, meetups, launches, livestreams—everything in one place, without the overload.
                 </p>
 
                 {/* CTA Buttons */}
                 <div className="hero-cta">
-                    <button
-                        className="inline-flex h-12 animate-shimmer items-center justify-center rounded-md border border-slate-800 bg-[linear-gradient(110deg,#000103,45%,#1e2631,55%,#000103)] bg-[length:200%_100%] px-8 py-4 font-medium text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50"
-                        onClick={() => window.location.href = '/calendar'}
+                    <Link
+                        href="/calendar"
+                        aria-label="Open the live tech events calendar"
+                        className="inline-flex h-12 animate-shimmer motion-reduce:animate-none items-center justify-center rounded-md border border-slate-800 bg-[linear-gradient(110deg,#000103,45%,#1e2631,55%,#000103)] bg-[length:200%_100%] px-8 py-4 font-medium text-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50"
                     >
                         See Live Calendar
-                    </button>
+                    </Link>
                     <Link 
-                        href="/features" 
+                        href="#features"
+                        aria-label="Jump to Kure-Cal features"
                         className="inline-flex h-12 items-center justify-center rounded-md border border-slate-800 px-8 py-4 font-medium text-slate-300 transition-colors hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50"
-                        style={{ paddingLeft: '32px', paddingRight: '32px' }}
                     >
-                        Learn More
+                        Explore Features
                     </Link>
                 </div>
             </div>

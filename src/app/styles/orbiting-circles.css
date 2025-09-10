@@ -1,0 +1,65 @@
+/* Orbiting circles animation (PRM-aware) */
+
+.orbit-root {
+    --duration: 20; /* seconds */
+    --radius: 160; /* px */
+    --delay: 0; /* seconds */
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2; /* below hero-content (z 10), above rays (z 1) */
+}
+
+.orbit-path {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--radius) * 2px);
+    height: calc(var(--radius) * 2px);
+    margin-top: calc(var(--radius) * -1px);
+    margin-left: calc(var(--radius) * -1px);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+}
+
+.orbiting {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: 0 0;
+    animation: orbit calc(var(--duration) * 1s) linear infinite;
+    animation-delay: calc(var(--delay) * 1s);
+}
+
+.orbit-reverse .orbiting {
+    animation-direction: reverse;
+}
+
+.orbit-icon {
+    width: var(--icon-size, 30px);
+    height: var(--icon-size, 30px);
+    display: grid;
+    place-items: center;
+    color: rgba(255,255,255,0.9);
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.35));
+}
+
+@keyframes orbit {
+    0% {
+        transform: rotate(calc(var(--angle) * 1deg))
+            translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
+    }
+    100% {
+        transform: rotate(calc(var(--angle) * 1deg + 360deg))
+            translateY(calc(var(--radius) * 1px))
+            rotate(calc((var(--angle) * -1deg) - 360deg));
+    }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+    .orbiting { animation: none !important; }
+    .orbit-path { display: none; }
+}
+
+

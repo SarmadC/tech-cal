@@ -85,6 +85,7 @@ const LightRays: React.FC<LightRaysProps> = ({
   const meshRef = useRef<Mesh | null>(null);
   const cleanupFunctionRef = useRef<(() => void) | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
@@ -108,8 +109,18 @@ const LightRays: React.FC<LightRaysProps> = ({
     };
   }, []);
 
+  // Detect prefers-reduced-motion and keep it in sync
   useEffect(() => {
-    if (!isVisible || !containerRef.current) return;
+    if (typeof window === 'undefined' || !('matchMedia' in window)) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setPrefersReducedMotion(!!mq.matches);
+    update();
+    mq.addEventListener?.('change', update);
+    return () => mq.removeEventListener?.('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible || prefersReducedMotion || !containerRef.current) return;
 
     if (cleanupFunctionRef.current) {
       cleanupFunctionRef.current();
@@ -358,6 +369,7 @@ void main() {
     };
   }, [
     isVisible,
+    prefersReducedMotion,
     raysOrigin,
     raysColor,
     raysSpeed,
@@ -417,11 +429,11 @@ void main() {
       mouseRef.current = { x, y };
     };
 
-    if (followMouse) {
+    if (followMouse && isVisible && !prefersReducedMotion) {
       window.addEventListener('mousemove', handleMouseMove);
       return () => window.removeEventListener('mousemove', handleMouseMove);
     }
-  }, [followMouse]);
+  }, [followMouse, isVisible, prefersReducedMotion]);
 
   return <div ref={containerRef} className={`light-rays-container ${className}`.trim()} />;
 };
