@@ -1,9 +1,7 @@
 // src/data/landing-page-data.tsx
 import {
-  FunnelSimpleIcon,
   LightningIcon,
   CalendarCheckIcon,
-  SquaresFourIcon,
   UsersThreeIcon,
   ChartBarIcon,
 } from '@phosphor-icons/react';
@@ -28,24 +26,14 @@ export const heroStats = [
 
 export const features = [
     {
-        icon: <FunnelSimpleIcon size={24} />,
-        title: 'Smart Filtering',
-        description: 'AI-powered relevance scoring ensures you only see events that matter to your tech stack and interests.'
-    },
-    {
         icon: <LightningIcon size={24} />,
         title: 'Real-time Updates',
         description: 'Get instant notifications when new events are announced or existing ones are updated.'
     },
     {
-        icon: <CalendarCheckIcon size={24} />,
-        title: 'Calendar Sync',
-        description: 'One-click sync with Google Calendar, Outlook, and Apple Calendar. Your schedule, always updated.'
-    },
-    {
-        icon: <SquaresFourIcon size={24} />,
-        title: 'Custom Views',
-        description: 'Weekly, monthly, or list view. Dark mode. Personalized themes. Make it yours.'
+        icon: <ChartBarIcon size={24} />,
+        title: 'Advanced Analytics',
+        description: 'Track attendance trends, popular topics, and upcoming opportunities in your field.'
     },
     {
         icon: <UsersThreeIcon size={24} />,
@@ -53,8 +41,8 @@ export const features = [
         description: 'Share curated event lists with your team. Never let your colleagues miss important conferences.'
     },
     {
-        icon: <ChartBarIcon size={24} />,
-        title: 'Analytics Dashboard',
-        description: 'Track attendance trends, popular topics, and upcoming opportunities in your field.'
+        icon: <CalendarCheckIcon size={24} />,
+        title: 'Calendar Sync',
+        description: 'One-click sync with Google Calendar, Outlook, and Apple Calendar. Your schedule, always updated.'
     }
 ];

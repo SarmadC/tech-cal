@@ -58,6 +58,28 @@
     }
 }
 
+/* Responsive Orbiting Circles */
+@media (max-width: 1024px) {
+    .orbit-icon {
+        width: calc(var(--icon-size, 30px) * 0.9);
+        height: calc(var(--icon-size, 30px) * 0.9);
+    }
+}
+
+@media (max-width: 768px) {
+    .orbit-icon {
+        width: calc(var(--icon-size, 30px) * 0.8);
+        height: calc(var(--icon-size, 30px) * 0.8);
+    }
+}
+
+@media (max-width: 480px) {
+    .orbit-icon {
+        width: calc(var(--icon-size, 30px) * 0.7);
+        height: calc(var(--icon-size, 30px) * 0.7);
+    }
+}
+
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
     .orbiting { animation: none !important; }

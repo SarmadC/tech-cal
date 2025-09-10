@@ -8,12 +8,10 @@ export function FeaturesGrid() {
 
     // Better bento box layout - creating a more balanced grid
     const bentoLayouts = [
-        "md:col-span-2 md:row-span-2 hero-feature",     // Smart Filtering (2x2)
-        "md:col-span-2 md:row-span-1 wide-feature",     // Real-time Updates (2x1)  
-        "md:col-span-1 md:row-span-1 regular-feature",  // Calendar Sync (1x1)
-        "md:col-span-1 md:row-span-1 regular-feature",  // Custom Views (1x1)
-        "md:col-span-2 md:row-span-1 wide-feature",     // Team Collaboration (2x1)
-        "md:col-span-2 md:row-span-1 wide-feature",     // Analytics Dashboard (2x1)
+        "md:col-span-2 md:row-span-2 hero-feature",     // Real-time Updates (2x2)
+        "md:col-span-1 md:row-span-1 regular-feature",  // Advanced Analytics (1x1)  
+        "md:col-span-1 md:row-span-1 regular-feature",  // Team Collaboration (1x1)
+        "md:col-span-2 md:row-span-1 wide-feature",     // Calendar Sync (2x1)
     ];
 
     useEffect(() => {
@@ -78,7 +76,7 @@ export function FeaturesGrid() {
                                 <h3 className="feature-title-enhanced">{feature.title}</h3>
                                 <p className="feature-description-enhanced">{feature.description}</p>
 
-                                {/* Removed the calendar dots from Smart Filtering */}
+                                {/* Progress rings for Advanced Analytics and Team Collaboration */}
 
                                 {(index === 1 || index === 2) && (
                                     <div className="progress-ring">
@@ -98,7 +96,6 @@ export function FeaturesGrid() {
                                                 cy="20"
                                                 r="18"
                                                 fill="none"
-                                                stroke="#A47864"
                                                 strokeWidth="2"
                                                 strokeDasharray="113"
                                                 strokeDashoffset="28"
@@ -108,13 +105,6 @@ export function FeaturesGrid() {
                                     </div>
                                 )}
 
-                                <div className="bento-arrow-enhanced">
-                                    <div className="arrow-container">
-                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     );

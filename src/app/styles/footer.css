@@ -407,7 +407,18 @@
     border-bottom-color: var(--brand-orange);
 }
 
-/* Responsive Design */
+/* Enhanced Responsive Design */
+@media (max-width: 1200px) {
+    .footer-content {
+        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+        gap: 50px;
+    }
+    
+    .footer-intro-title {
+        font-size: clamp(2rem, 4.5vw, 3.25rem);
+    }
+}
+
 @media (max-width: 1024px) {
     .footer-content {
         grid-template-columns: 1fr 1fr;
@@ -420,6 +431,11 @@
 
     .footer-cta-section {
         padding: 32px;
+        text-align: center;
+    }
+    
+    .footer-intro-title {
+        font-size: clamp(1.8rem, 4vw, 2.8rem);
         text-align: center;
     }
 }
@@ -435,7 +451,7 @@
     }
 
     .footer-intro-title {
-        font-size: 2rem;
+        font-size: clamp(1.6rem, 3.5vw, 2rem);
         text-align: center;
     }
 
@@ -469,6 +485,39 @@
     }
 }
 
+@media (max-width: 640px) {
+    .footer-main {
+        padding: 50px 18px;
+    }
+    
+    .footer-intro-title {
+        font-size: clamp(1.4rem, 3vw, 1.8rem);
+    }
+    
+    .footer-cta-section {
+        padding: 24px 20px;
+    }
+    
+    .cta-title {
+        font-size: 1.3rem;
+    }
+    
+    .cta-subtitle {
+        font-size: 0.95rem;
+    }
+    
+    .cta-button {
+        padding: 16px 28px;
+        font-size: 1rem;
+    }
+    
+    .footer-logo-bg {
+        font-size: 10rem;
+        right: -30px;
+        bottom: -60px;
+    }
+}
+
 @media (max-width: 480px) {
     .footer-main {
         padding: 40px 16px;
@@ -479,7 +528,7 @@
     }
 
     .footer-intro-title {
-        font-size: 1.5rem;
+        font-size: clamp(1.2rem, 2.5vw, 1.5rem);
     }
 
     .footer-social-icon {
@@ -494,17 +543,63 @@
     }
 
     .footer-cta-section {
-        padding: 24px 20px;
+        padding: 20px 16px;
     }
 
     .cta-title {
-        font-size: 1.25rem;
+        font-size: 1.2rem;
+    }
+    
+    .cta-subtitle {
+        font-size: 0.9rem;
     }
 
     .cta-button {
-        padding: 16px 28px;
-        font-size: 1rem;
-        gap: 8px;
+        padding: 14px 24px;
+        font-size: 0.95rem;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 360px) {
+    .footer-main {
+        padding: 32px 12px;
+    }
+    
+    .footer-bottom {
+        padding: 16px 12px;
+    }
+    
+    .footer-intro-title {
+        font-size: clamp(1rem, 2.2vw, 1.3rem);
+    }
+    
+    .footer-cta-section {
+        padding: 16px 12px;
+    }
+    
+    .cta-title {
+        font-size: 1.1rem;
+    }
+    
+    .cta-subtitle {
+        font-size: 0.85rem;
+    }
+    
+    .cta-button {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+    }
+    
+    .footer-social-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .footer-logo-bg {
+        font-size: 6rem;
+        right: -20px;
+        bottom: -40px;
     }
 }
 

@@ -61,10 +61,10 @@
   width: 240px;
   height: 100px;
   padding: var(--space-4);
-  background: linear-gradient(135deg, var(--background-elevated), #2a2a2f);
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
+  border: 1px solid #1f2937;
   border-radius: 6px;
-  box-shadow: var(--shadow-sm), var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   box-sizing: border-box;
   opacity: 0;
   transform-style: preserve-3d;
@@ -90,7 +90,7 @@
   background: var(--accent-primary-light);
   color: var(--accent-primary);
   border: 1px solid var(--accent-border);
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 0.6rem;
   font-weight: 500;
   font-family: var(--font-mono);
@@ -187,20 +187,20 @@
 }
 
 .event-card-animated.chaos-state {
-  opacity: 0.7;
-  background: linear-gradient(135deg, var(--background-secondary), var(--background-tertiary));
-  filter: blur(0.5px);
+  opacity: 0.85;
+  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
+  filter: none;
 }
 
 .event-card-animated.organizing {
-  background: linear-gradient(135deg, var(--background-elevated), #252529);
-  border-color: var(--border-default);
-  opacity: 0.9;
+  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
+  border-color: #1f2937;
+  opacity: 0.95;
 }
 
 .event-card-animated.organized-list {
-  background: linear-gradient(135deg, var(--background-elevated), #2a2a2f);
-  border: 1px solid var(--border-strong);
+  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
+  border: 1px solid #1f2937;
   box-shadow: var(--shadow-md);
 }
 
@@ -218,9 +218,9 @@
   z-index: 3;
   box-sizing: border-box;
   background: var(--background-secondary);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
-  box-shadow: var(--shadow-lg), var(--shadow-xl);
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
   overflow: hidden;
 }
 
@@ -256,20 +256,20 @@
   justify-items: center;
   align-items: center;
   width: 100%;
-  background: var(--background-secondary);
+  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .calendar-days span {
   padding: var(--space-2) 0;
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  font-weight: 500;
-  color: var(--foreground-tertiary);
+  font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  font-variant-numeric: normal;
 }
 
 .calendar-grid {
@@ -277,7 +277,7 @@
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(5, 1fr);
   gap: 1px;
-  background: var(--border-subtle);
+  background: #1f2937;
   box-sizing: border-box;
   flex: 1;
   min-height: 250px;
@@ -290,10 +290,11 @@
   flex-direction: column;
   min-height: 60px;
   padding: var(--space-2);
-  background: var(--background-tertiary);
+  background: linear-gradient(180deg, #0b1020 0%, #1a2333 100%);
   border: none;
+  border-radius: 6px;
   box-sizing: border-box;
-  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
 .calendar-cell:not(.has-event) {
@@ -301,10 +302,22 @@
 }
 
 .calendar-cell:hover {
-  background: var(--background-elevated);
+  background: linear-gradient(180deg, #0f1626 0%, #1e2a3d 100%);
   transform: scale(1.01);
   z-index: 10;
   opacity: 1;
+  box-shadow: inset 0 0 0 1px var(--accent-border), 0 0 0 4px rgba(255, 255, 255, 0.04);
+}
+
+/* Optional programmatic active state for week/cell */
+.calendar-cell.is-active {
+  background: linear-gradient(180deg, #0f1626 0%, #1e2a3d 100%);
+  box-shadow: inset 0 0 0 1px var(--accent-border), 0 0 0 6px rgba(255, 255, 255, 0.06);
+}
+
+.calendar-cell:hover .day-number,
+.calendar-cell.is-active .day-number {
+  color: #e5e7eb;
 }
 
 .calendar-cell .day-number {
@@ -312,9 +325,9 @@
   text-align: right;
   padding-right: var(--space-1);
   margin-bottom: var(--space-1);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--foreground-tertiary);
   transition: color 0.2s ease;
   height: 20px;
@@ -423,9 +436,50 @@
    Responsive Design
    ========================================================================== */
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
+  .chaos-section {
+    height: 220vh;
+  }
+  
+  .event-card-animated {
+    width: 220px;
+    height: 95px;
+  }
+  
+  .text-overlay-container {
+    width: 85%;
+    max-width: 700px;
+  }
+  
+  .chaos-title,
+  .order-title {
+    font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+  }
+}
+
+@media (max-width: 1024px) {
   .chaos-section {
     height: 200vh;
+  }
+  
+  .event-card-animated {
+    width: 210px;
+    height: 92px;
+  }
+  
+  .calendar-frame.clean-calendar {
+    max-width: 90%;
+  }
+  
+  .text-overlay-container {
+    width: 88%;
+    max-width: 600px;
+  }
+}
+
+@media (max-width: 768px) {
+  .chaos-section {
+    height: 180vh;
   }
 
   .event-card-animated {
@@ -493,9 +547,55 @@
   .event-list-label p {
     font-size: 0.8rem;
   }
+  
+  .text-overlay-container {
+    width: 90%;
+    max-width: 500px;
+  }
+  
+  .chaos-title,
+  .order-title {
+    font-size: clamp(1.4rem, 3vw, 2rem);
+  }
+  
+  .chaos-subtitle,
+  .order-subtitle {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .chaos-section {
+    height: 160vh;
+  }
+  
+  .event-card-animated {
+    width: 180px;
+    height: 85px;
+    padding: var(--space-2);
+  }
+  
+  .text-overlay-container {
+    width: 92%;
+    max-width: 400px;
+  }
+  
+  .chaos-title,
+  .order-title {
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+  }
+  
+  .chaos-subtitle,
+  .order-subtitle {
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 480px) {
+  .chaos-section {
+    height: 140vh;
+  }
+  
   .event-card-animated {
     width: 160px;
     height: 75px;
@@ -529,5 +629,59 @@
 
   .calendar-header {
     padding: var(--space-3) var(--space-4);
+  }
+  
+  .text-overlay-container {
+    width: 95%;
+    max-width: 350px;
+  }
+  
+  .chaos-title,
+  .order-title {
+    font-size: clamp(1rem, 2.2vw, 1.4rem);
+  }
+  
+  .chaos-subtitle,
+  .order-subtitle {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .chaos-section {
+    height: 120vh;
+  }
+  
+  .event-card-animated {
+    width: 140px;
+    height: 65px;
+    padding: var(--space-1);
+  }
+  
+  .event-card-title {
+    font-size: 0.65rem;
+  }
+  
+  .event-card-company {
+    font-size: 0.45rem;
+  }
+  
+  .calendar-cell {
+    min-height: 30px;
+  }
+  
+  .text-overlay-container {
+    width: 98%;
+    max-width: 300px;
+  }
+  
+  .chaos-title,
+  .order-title {
+    font-size: clamp(0.9rem, 2vw, 1.2rem);
+  }
+  
+  .chaos-subtitle,
+  .order-subtitle {
+    font-size: 0.75rem;
   }
 }

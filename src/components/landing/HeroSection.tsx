@@ -25,7 +25,7 @@ export function HeroSection() {
     // Detect mobile/coarse pointer to disable drift on mobile only
     useEffect(() => {
         if (typeof window === 'undefined' || !('matchMedia' in window)) return;
-        const mq = window.matchMedia('(max-width: 768px), (pointer: coarse)');
+        const mq = window.matchMedia('(max-width: 1024px), (pointer: coarse)');
         const update = () => setIsMobile(!!mq.matches);
         update();
         mq.addEventListener?.('change', update);

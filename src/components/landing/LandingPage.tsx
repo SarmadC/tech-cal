@@ -25,7 +25,6 @@ const ChaosToOrderSection = dynamic(
 
 import {
     HeroSection,
-    SocialProof,
     FeaturesGrid,
     Footer
 } from './';
@@ -50,7 +49,10 @@ export default function LandingPage() {
     ];
 
     useEffect(() => {
-        const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
+        const observerOptions = { 
+            threshold: 0.1, 
+            rootMargin: '0px 0px -50px 0px' 
+        };
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -144,7 +146,6 @@ export default function LandingPage() {
                 <HeroSection />
                 {/* This now renders the dynamically loaded component */}
                 <ChaosToOrderSection />
-                <SocialProof />
                 <FeaturesGrid />
             </main>
             <Footer />
