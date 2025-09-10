@@ -3,7 +3,7 @@
 
 import React, { Component, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+import { WarningOctagonIcon } from '@phosphor-icons/react';
 
 interface Props {
     children: ReactNode;
@@ -17,7 +17,7 @@ interface State {
 // A simple default fallback UI if none is provided
 const DefaultFallback = ({ onReset }: { onReset: () => void }) => (
     <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center text-sm text-destructive">
-        <AlertTriangle className="mx-auto mb-2 h-8 w-8" />
+        <WarningOctagonIcon className="mx-auto mb-2 h-8 w-8" />
         <p className="mb-3 font-semibold">Something went wrong</p>
         <p className="mb-4 text-xs">This part of the app could not be loaded.</p>
         <Button variant="destructive" size="sm" onClick={onReset}>

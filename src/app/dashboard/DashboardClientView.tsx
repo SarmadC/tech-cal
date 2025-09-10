@@ -11,7 +11,7 @@ import { createClient } from '@/utils/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/Loading';
-import { Calendar, Clock, Star, Target, Users, Award, Sparkles, Plus } from 'lucide-react';
+import { CalendarIcon, ClockIcon, StarIcon, TargetIcon, UsersIcon, MedalIcon, SparkleIcon, PlusIcon } from '@phosphor-icons/react';
 // 1. UPDATE IMPORTS: Use the new, canonical type names.
 import type { TrackedEventRecord, EventType, Event } from '@/types';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -116,10 +116,10 @@ export default function DashboardClientView({
         const topCategoryId = Object.keys(categoryCount).sort((a, b) => categoryCount[b] - categoryCount[a])[0];
         const topCategory = eventTypes.find((et: EventType) => et.id === topCategoryId);
         return [
-            { title: 'Upcoming Events', value: upcomingTracked, description: "You're tracking", icon: <Calendar className="w-5 h-5" /> },
-            { title: 'Events Attended', value: attendedThisMonth, description: 'This month', icon: <Award className="w-5 h-5" /> },
-            { title: 'Top Interest', value: topCategory?.name || 'N/A', description: 'Most tracked category', icon: <Target className="w-5 h-5" /> },
-            { title: 'Total Tracked', value: trackedEvents.length, description: 'All time', icon: <Star className="w-5 h-5" /> },
+            { title: 'Upcoming Events', value: upcomingTracked, description: "You're tracking", icon: <CalendarIcon className="w-5 h-5" /> },
+            { title: 'Events Attended', value: attendedThisMonth, description: 'This month', icon: <MedalIcon className="w-5 h-5" /> },
+            { title: 'Top Interest', value: topCategory?.name || 'N/A', description: 'Most tracked category', icon: <TargetIcon className="w-5 h-5" /> },
+            { title: 'Total Tracked', value: trackedEvents.length, description: 'All time', icon: <StarIcon className="w-5 h-5" /> },
         ];
     }, [trackedEvents, eventTypes]);
 
@@ -151,12 +151,12 @@ export default function DashboardClientView({
                         <div>
                             <h1 className="text-4xl font-bold text-gray-900 mb-2">{greeting}</h1>
                             <p className="text-lg text-gray-600 flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-yellow-500" />
+                                <SparkleIcon className="w-5 h-5 text-yellow-500" />
                                 Ready to discover what is happening in tech today?
                             </p>
                         </div>
                         <div className="flex gap-3 mt-4 md:mt-0">
-                            <Button asChild><Link href="/calendar"><Plus className="w-4 h-4 mr-2" />Track Events</Link></Button>
+                            <Button asChild><Link href="/calendar"><PlusIcon className="w-4 h-4 mr-2" />Track Events</Link></Button>
                         </div>
                     </div>
                 </ErrorBoundary>
@@ -191,14 +191,14 @@ export default function DashboardClientView({
                                     <div key={trackedEvent.trackingId} className="group p-4 rounded-lg border border-gray-100 hover:shadow-md transition-all">
                                         <h3 className="font-semibold text-gray-900">{trackedEvent.event?.title}</h3>
                                         <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                                            <span><Clock className="w-4 h-4 inline mr-1" />{trackedEvent.event ? formatDateTime(trackedEvent.event.startTime, trackedEvent.event.timezone) : ''}</span>
-                                            <span><Users className="w-4 h-4 inline mr-1" />{trackedEvent.event?.organizer}</span>
+                                            <span><ClockIcon className="w-4 h-4 inline mr-1" />{trackedEvent.event ? formatDateTime(trackedEvent.event.startTime, trackedEvent.event.timezone) : ''}</span>
+                                            <span><UsersIcon className="w-4 h-4 inline mr-1" />{trackedEvent.event?.organizer}</span>
                                         </div>
                                     </div>
                                 ))
                             ) : (
                                 <div className="text-center py-8">
-                                    <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                    <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                                     <h3 className="font-medium text-gray-900 mb-2">No upcoming events</h3>
                                     <p className="text-gray-600 mb-4">Start tracking events to see them here.</p>
                                     <Button asChild><Link href="/calendar">Browse Events</Link></Button>

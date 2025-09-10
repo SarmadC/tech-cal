@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { updateUserProfileAction, FormState } from './actions';
 import type { AppProfile } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 
 interface ProfileSettingsFormProps {
     profile: AppProfile | null;
@@ -22,7 +22,7 @@ function SaveButton() {
 
     return (
         <Button type="submit" disabled={pending}>
-            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {pending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
             {pending ? 'Saving...' : 'Save Changes'}
         </Button>
     );

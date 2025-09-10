@@ -17,6 +17,7 @@ import './styles/orbiting-circles.css';
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
 import ClientLayout from "@/components/layout/ClientLayout";
+import IconProvider from '../components/providers/IconProvider';
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -47,9 +48,11 @@ export default function RootLayout({
                         {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
                         {/* <SmoothScrollProvider> */}
                             {/* 4. ClientLayout contains the Navbar, which needs auth context */}
-                            <ClientLayout>
-                                {children}
-                            </ClientLayout>
+                            <IconProvider>
+                                <ClientLayout>
+                                    {children}
+                                </ClientLayout>
+                            </IconProvider>
                         {/* </SmoothScrollProvider> */}
                     </QueryProvider>
                 </AuthProvider>

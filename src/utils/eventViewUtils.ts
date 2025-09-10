@@ -1,6 +1,6 @@
 // src/utils/eventViewUtils.ts
 
-import { HelpCircle, Users, Globe, Monitor, MapPin } from 'lucide-react';
+import { QuestionIcon, UsersIcon, GlobeIcon, MonitorIcon, MapPinIcon } from '@phosphor-icons/react';
 import { Event, MultiDayEventInstance, EventType } from '@/types';
 import { formatTime } from '@/utils/dateUtils';
 
@@ -14,11 +14,11 @@ import { formatTime } from '@/utils/dateUtils';
 
 export const getIconForCategory = (categoryName: string) => {
     const name = (categoryName || '').toLowerCase();
-    if (name.includes('conference')) return Users;
-    if (name.includes('workshop') || name.includes('training')) return Monitor;
-    if (name.includes('webinar')) return Globe;
-    if (name.includes('networking') || name.includes('meetup')) return MapPin;
-    return HelpCircle;
+    if (name.includes('conference')) return UsersIcon;
+    if (name.includes('workshop') || name.includes('training')) return MonitorIcon;
+    if (name.includes('webinar')) return GlobeIcon;
+    if (name.includes('networking') || name.includes('meetup')) return MapPinIcon;
+    return QuestionIcon;
 };
 
 // ============================================

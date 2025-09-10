@@ -7,7 +7,7 @@ import { useFormStatus } from 'react-dom';              // DOM-specific hooks fr
 
 import { toast } from 'sonner';
 import { subscribeToAction, type SubscribeFormState } from './actions';
-import { Loader2 } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 
 // A separate button component to automatically handle the loading state
 function SubmitButton() {
@@ -18,7 +18,7 @@ function SubmitButton() {
             disabled={pending}
             className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
         >
-            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {pending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
             {pending ? 'Subscribing...' : 'Subscribe'}
         </button>
     );

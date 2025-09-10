@@ -1,7 +1,7 @@
 'use client';
 
 import { FC } from 'react';
-import { MdAccessTime, MdLocationOn, MdPeople, MdLocalOffer } from 'react-icons/md';
+import { ClockIcon, MapPinIcon, UsersIcon, TagIcon } from '@phosphor-icons/react';
 // 1. UPDATE IMPORTS: Use the new, specific type names.
 import { Event, EventType } from '@/types';
 // 2. IMPORT DATE UTILITY: Import the centralized formatting function.
@@ -17,16 +17,16 @@ const EventInfo: FC<EventInfoProps> = ({ event, category }) => (
     <>
         <div className="space-y-4">
             <div className="flex items-center space-x-3 text-sm">
-                <MdAccessTime className="w-5 h-5 text-gray-400" />
+                <ClockIcon className="w-5 h-5 text-gray-400" />
                 {/* 4. UPDATE FORMATTING: Use the new utility for consistent date/time display. */}
                 <span>{formatDateTime(event.startTime)}</span>
             </div>
             <div className="flex items-center space-x-3 text-sm">
-                <MdLocationOn className="w-5 h-5 text-gray-400" />
+                <MapPinIcon className="w-5 h-5 text-gray-400" />
                 <span>{event.location}</span>
             </div>
             <div className="flex items-center space-x-3 text-sm">
-                <MdPeople className="w-5 h-5 text-gray-400" />
+                <UsersIcon className="w-5 h-5 text-gray-400" />
                 <span>Organized by {event.organizer}</span>
             </div>
         </div>
@@ -35,7 +35,7 @@ const EventInfo: FC<EventInfoProps> = ({ event, category }) => (
             {/* Category tag */}
             {category && (
                 <div className="px-3 py-1 text-xs rounded-md flex items-center space-x-2" style={{ backgroundColor: `${category.color}33`, color: category.color }}>
-                    <MdLocalOffer className="w-3 h-3" />
+                    <TagIcon className="w-3 h-3" />
                     <span>{category.name}</span>
                 </div>
             )}
@@ -47,7 +47,7 @@ const EventInfo: FC<EventInfoProps> = ({ event, category }) => (
                     className="px-3 py-1 text-xs rounded-md flex items-center space-x-2" 
                     style={{ backgroundColor: `${tag.color}33`, color: tag.color }}
                 >
-                    <MdLocalOffer className="w-3 h-3" />
+                    <TagIcon className="w-3 h-3" />
                     <span>{tag.name}</span>
                 </div>
             ))}

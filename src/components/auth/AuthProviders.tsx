@@ -1,7 +1,7 @@
 // src/components/auth/AuthProviders.tsx
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { OAuthProvider } from '@/types';
 
@@ -76,7 +76,7 @@ export default function AuthProviders({
                     >
                         {isThisProviderPending ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <CircleNotchIcon className="w-5 h-5 animate-spin" />
                                 <span>Redirecting to {name}...</span>
                             </>
                         ) : isPending ? (

@@ -2,9 +2,9 @@
 
 import { FC, useRef, useEffect } from 'react';
 import {
-    Clock, MapPin, Users, ExternalLink, Bookmark, BookmarkCheck,
-    Share2, Play, Globe, Calendar
-} from 'lucide-react';
+    ClockIcon, MapPinIcon, UsersIcon, ArrowSquareOutIcon, BookmarkIcon, BookmarkSimpleIcon,
+    ShareNetworkIcon, PlayCircleIcon, GlobeIcon, CalendarIcon
+} from '@phosphor-icons/react';
 // 1. UPDATE IMPORTS: Use the new types and the type guard.
 import { Event, EventStatus, isTrackedEvent, TrackedEvent, MultiDayEventInstance } from '@/types';
 import { useEventTracking } from '@/hooks/useEventTracking';
@@ -189,25 +189,25 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
             {/* Content */}
             <div className="p-4 space-y-3">
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                    <Clock className="w-4 h-4 text-gray-500" />
+                    <ClockIcon className="w-4 h-4 text-gray-500" />
                     <span>{formatDate(event.startTime, event.timezone)} • {formatTime(event.startTime, event.timezone)}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     {isVirtual ? (
-                        <Globe className="w-4 h-4 text-blue-500" />
+                        <GlobeIcon className="w-4 h-4 text-blue-500" />
                     ) : (
-                        <MapPin className="w-4 h-4 text-gray-500" />
+                        <MapPinIcon className="w-4 h-4 text-gray-500" />
                     )}
                     <span className="line-clamp-1">
                         {isVirtual ? 'Virtual Event' : (event.location || 'Location TBA')}
                     </span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                    <Users className="w-4 h-4 text-gray-500" />
+                    <UsersIcon className="w-4 h-4 text-gray-500" />
                     <span className="line-clamp-1">{event.organizer}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <CalendarIcon className="w-4 h-4 text-gray-500" />
                     <span>{getEventDuration(event.startTime, event.endTime)}</span>
                 </div>
                 {event.description && (
@@ -235,12 +235,12 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     >
                         {isTracked ? (
                             <>
-                                <BookmarkCheck className="w-4 h-4" />
+                                <BookmarkSimpleIcon className="w-4 h-4" />
                                 <span>Tracked</span>
                             </>
                         ) : (
                             <>
-                                <Bookmark className="w-4 h-4" />
+                                <BookmarkIcon className="w-4 h-4" />
                                 <span>Track</span>
                             </>
                         )}
@@ -250,7 +250,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                         className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                         title="Share event"
                     >
-                        <Share2 className="w-4 h-4" />
+                        <ShareNetworkIcon className="w-4 h-4" />
                     </button>
                     {event.sourceUrl && (
                         <button
@@ -258,7 +258,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                             title="View event details"
                         >
-                            <ExternalLink className="w-4 h-4" />
+                            <ArrowSquareOutIcon className="w-4 h-4" />
                         </button>
                     )}
                     {event.livestreamUrl && (
@@ -267,7 +267,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                             title="Join live stream"
                         >
-                            <Play className="w-4 h-4" />
+                            <PlayCircleIcon className="w-4 h-4" />
                         </button>
                     )}
                 </div>

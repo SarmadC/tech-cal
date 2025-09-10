@@ -3,7 +3,7 @@
 import { FC, memo } from 'react';
 // 1. UPDATE IMPORTS: Use the new, canonical `TrackedEvent` type.
 import { TrackedEvent } from '@/types';
-import { Clock, MapPin, Users, Star } from 'lucide-react';
+import { ClockIcon, MapPinIcon, UsersIcon, StarIcon } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/utils/dateUtils';
 
@@ -53,7 +53,7 @@ const EventCard: FC<EventCardProps> = ({
                         {event.title}
                     </span>
                     <span className="text-sm text-gray-400 flex items-center mt-1 hover-lift">
-                        <Users className="w-3 h-3 mr-1.5" /> {event.organizer}
+                        <UsersIcon className="w-3 h-3 mr-1.5" /> {event.organizer}
                     </span>
                 </div>
                 {onTrackClick && (
@@ -72,7 +72,7 @@ const EventCard: FC<EventCardProps> = ({
                         `}
                         aria-label={isTracked ? 'Untrack Event' : 'Track Event'}
                     >
-                        <Star className={`w-4 h-4 ${isTracked ? 'fill-current bounce-in' : ''}`} />
+                        <StarIcon className={`w-4 h-4 ${isTracked ? 'fill-current bounce-in' : ''}`} />
                     </button>
                 )}
             </div>
@@ -84,12 +84,12 @@ const EventCard: FC<EventCardProps> = ({
             <div className="flex justify-between items-center text-xs text-gray-400">
                 <div className="flex items-center space-x-3">
                     <span className="flex items-center hover-lift">
-                        <Clock className="w-3 h-3 mr-1" />
+                        <ClockIcon className="w-3 h-3 mr-1" />
                         {formatDate(event.startTime, event.timezone)}
                     </span>
                     {event.location && (
                         <span className="flex items-center truncate hover-lift">
-                            <MapPin className="w-3 h-3 mr-1" />
+                            <MapPinIcon className="w-3 h-3 mr-1" />
                             {event.location}
                         </span>
                     )}

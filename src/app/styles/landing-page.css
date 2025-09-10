@@ -67,6 +67,7 @@
         transparent 0 var(--orbit-hole-radius),
         rgba(255, 255, 255, 1) calc(var(--orbit-hole-radius) + 1px)
     );
+    transform: translate(var(--parallax-x, 0px), var(--parallax-y, 0px));
 }
 
 /* Hero Content */

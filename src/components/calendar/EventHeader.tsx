@@ -2,7 +2,7 @@
 'use client';
 
 import { FC } from 'react';
-import { X } from 'lucide-react';
+import { XIcon } from '@phosphor-icons/react';
 
 interface EventHeaderProps {
     onClose: () => void;
@@ -17,7 +17,7 @@ export const EventHeader: FC<EventHeaderProps> = ({ onClose }) => {
                 className="p-1 hover:bg-gray-700 rounded-full transition-colors"
                 aria-label="Close event details"
             >
-                <X className="w-5 h-5 text-gray-400 hover:text-white" />
+                <XIcon className="w-5 h-5 text-gray-400 hover:text-white" />
             </button>
         </div>
     );

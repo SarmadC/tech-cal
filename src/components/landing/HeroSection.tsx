@@ -1,13 +1,81 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { OrbitingCircles } from './OrbitingCircles';
-import { Calendar, Search, Filter, Sparkles } from 'lucide-react';
+import { CalendarIcon, ArrowClockwiseIcon, MicrophoneIcon, MegaphoneIcon, RocketIcon, TicketIcon } from '@phosphor-icons/react';
 
 const LightRays = dynamic(() => import('./LightRays'), { ssr: false });
 
 export function HeroSection() {
+    const orbitLayerRef = useRef<HTMLDivElement>(null);
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !('matchMedia' in window)) return;
+        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const update = () => setPrefersReducedMotion(!!mq.matches);
+        update();
+        mq.addEventListener?.('change', update);
+        return () => mq.removeEventListener?.('change', update);
+    }, []);
+
+    // Detect mobile/coarse pointer to disable drift on mobile only
+    useEffect(() => {
+        if (typeof window === 'undefined' || !('matchMedia' in window)) return;
+        const mq = window.matchMedia('(max-width: 768px), (pointer: coarse)');
+        const update = () => setIsMobile(!!mq.matches);
+        update();
+        mq.addEventListener?.('change', update);
+        return () => mq.removeEventListener?.('change', update);
+    }, []);
+
+    // Subtle parallax drift for orbit layer
+    useEffect(() => {
+        if (prefersReducedMotion || isMobile) {
+            // reset drift if disabled
+            const el = orbitLayerRef.current;
+            if (el) {
+                el.style.setProperty('--parallax-x', '0px');
+                el.style.setProperty('--parallax-y', '0px');
+            }
+            return;
+        }
+        const el = orbitLayerRef.current;
+        if (!el) return;
+
+        let rafId: number | null = null;
+        let targetX = 0, targetY = 0;
+        let currentX = 0, currentY = 0;
+        const amplitude = 14; // px
+
+        const onMove = (e: MouseEvent) => {
+            const nx = (e.clientX / window.innerWidth) - 0.5;
+            const ny = (e.clientY / window.innerHeight) - 0.5;
+            targetX = nx * amplitude;
+            targetY = ny * amplitude;
+            if (rafId == null) rafId = requestAnimationFrame(tick);
+        };
+
+        const tick = () => {
+            // ease towards target
+            currentX += (targetX - currentX) * 0.08;
+            currentY += (targetY - currentY) * 0.08;
+            el.style.setProperty('--parallax-x', `${currentX.toFixed(2)}px`);
+            el.style.setProperty('--parallax-y', `${currentY.toFixed(2)}px`);
+            rafId = Math.abs(currentX - targetX) < 0.1 && Math.abs(currentY - targetY) < 0.1
+                ? null
+                : requestAnimationFrame(tick);
+        };
+
+        window.addEventListener('mousemove', onMove);
+        return () => {
+            window.removeEventListener('mousemove', onMove);
+            if (rafId) cancelAnimationFrame(rafId);
+        };
+    }, [prefersReducedMotion, isMobile]);
     return (
         <section className="hero">
             {/* Light Rays Effect */}
@@ -28,12 +96,21 @@ export function HeroSection() {
             />
 
             {/* Orbiting Icons (masked to avoid overlapping hero text) */}
-            <div className="hero-orbit-layer" aria-hidden="true">
-                <OrbitingCircles radius={420} duration={36} iconSize={28}>
-                    <Calendar />
-                    <Search />
-                    <Filter />
-                    <Sparkles />
+            <div ref={orbitLayerRef} className="hero-orbit-layer" aria-hidden="true">
+                {/* Outer ring: KURE + Calendar + Sync */}
+                <OrbitingCircles radius={460} duration={32} iconSize={32} reverse>
+                    {/* K - Keynotes */}
+                    <MicrophoneIcon />
+                    {/* U - Updates */}
+                    <MegaphoneIcon />
+                    {/* R - Releases */}
+                    <RocketIcon />
+                    {/* E - Events */}
+                    <TicketIcon />
+                    {/* Calendar */}
+                    <CalendarIcon />
+                    {/* Sync */}
+                    <ArrowClockwiseIcon />
                 </OrbitingCircles>
             </div>
 

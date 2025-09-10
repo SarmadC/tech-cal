@@ -68,6 +68,10 @@ const nextConfig: NextConfig = {
       'logo.clearbit.com', // Clearbit logo API (fallback)
     ],
   },
+  experimental: {
+    // Optimize Phosphor icon imports to avoid compiling all modules in dev
+    optimizePackageImports: ["@phosphor-icons/react"],
+  },
   // ... you can add other Next.js config options here if needed in the future
 };
 

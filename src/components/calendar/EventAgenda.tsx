@@ -2,7 +2,7 @@
 
 import { FC } from 'react';
 import Image from 'next/image';
-import { MdAccessTime, MdLocationOn, MdPerson, MdOpenInNew, MdEvent, MdPeople, MdCheckCircle, MdHelp, MdEmojiEvents, MdLocalCafe, MdMusicNote, MdBusiness } from 'react-icons/md';
+import { ClockIcon, MapPinIcon, UserIcon, ArrowSquareOutIcon, CalendarIcon, UsersIcon, CheckCircleIcon, QuestionIcon, CertificateIcon, CoffeeIcon, MusicNotesIcon, BuildingsIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
 import EventProgress from './EventProgress';
 
@@ -81,31 +81,31 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
     const getTypeIcon = (type: AgendaItem['type']) => {
         switch (type) {
             case 'keynote':
-                return <MdEvent className="w-4 h-4" />;
+                return <CalendarIcon className="w-4 h-4" />;
             case 'session':
-                return <MdPeople className="w-4 h-4" />;
+                return <UsersIcon className="w-4 h-4" />;
             case 'workshop':
-                return <MdPerson className="w-4 h-4" />;
+                return <UserIcon className="w-4 h-4" />;
             case 'panel':
-                return <MdPeople className="w-4 h-4" />;
+                return <UsersIcon className="w-4 h-4" />;
             case 'networking':
-                return <MdPeople className="w-4 h-4" />;
+                return <UsersIcon className="w-4 h-4" />;
             case 'break':
-                return <MdAccessTime className="w-4 h-4" />;
+                return <ClockIcon className="w-4 h-4" />;
             case 'registration':
-                return <MdCheckCircle className="w-4 h-4" />;
+                return <CheckCircleIcon className="w-4 h-4" />;
             case 'certification':
-                return <MdEmojiEvents className="w-4 h-4" />;
+                return <CertificateIcon className="w-4 h-4" />;
             case 'support':
-                return <MdHelp className="w-4 h-4" />;
+                return <QuestionIcon className="w-4 h-4" />;
             case 'exhibition':
-                return <MdBusiness className="w-4 h-4" />;
+                return <BuildingsIcon className="w-4 h-4" />;
             case 'meal':
-                return <MdLocalCafe className="w-4 h-4" />;
+                return <CoffeeIcon className="w-4 h-4" />;
             case 'entertainment':
-                return <MdMusicNote className="w-4 h-4" />;
+                return <MusicNotesIcon className="w-4 h-4" />;
             default:
-                return <MdAccessTime className="w-4 h-4" />;
+                return <ClockIcon className="w-4 h-4" />;
         }
     };
 
@@ -113,7 +113,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
         <div className="event-agenda space-y-6">
             <div className="event-agenda-header flex items-center justify-between mb-6">
                 <h3 className="event-agenda-title flex items-center text-lg font-semibold text-white">
-                    <MdEvent className="w-5 h-5 mr-2" />
+                    <CalendarIcon className="w-5 h-5 mr-2" />
                     Event Agenda
                 </h3>
                 {event.agendaUrl && (
@@ -123,7 +123,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                         rel="noopener noreferrer"
                         className="event-agenda-external-link flex items-center text-sm text-blue-400 hover:text-blue-300 transition-colors"
                     >
-                        <MdOpenInNew className="w-4 h-4 mr-1" />
+                        <ArrowSquareOutIcon className="w-4 h-4 mr-1" />
                         View Full Agenda
                     </a>
                 )}
@@ -145,7 +145,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                         <div className="event-agenda-item-content flex items-start space-x-4">
                             {/* Time indicator */}
                             <div className="event-agenda-time-indicator flex-shrink-0 w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-                                <MdAccessTime className="w-4 h-4 text-gray-300" />
+                                <ClockIcon className="w-4 h-4 text-gray-300" />
                             </div>
                             
                             {/* Content */}
@@ -168,7 +168,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                                 
                                 {item.speaker && (
                                     <div className="event-agenda-speaker flex items-center space-x-2 text-sm text-gray-400">
-                                        <MdPerson className="w-4 h-4" />
+                                        <UserIcon className="w-4 h-4" />
                                         <span>{item.speaker.name}</span>
                                         {item.speaker.title && (
                                             <>
@@ -181,7 +181,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                                 
                                 {item.location && (
                                     <div className="event-agenda-location flex items-center space-x-2 text-sm text-gray-400 mt-1">
-                                        <MdLocationOn className="w-4 h-4" />
+                                        <MapPinIcon className="w-4 h-4" />
                                         <span>{item.location}</span>
                                     </div>
                                 )}
@@ -202,7 +202,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                 </div>
             ) : (
                 <div className="event-agenda-empty text-center py-8">
-                    <MdEvent className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                    <CalendarIcon className="w-12 h-12 text-gray-500 mx-auto mb-4" />
                     <p className="text-gray-400 text-sm">
                         No agenda details available for this event.
                     </p>
@@ -213,7 +213,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                             rel="noopener noreferrer"
                             className="inline-flex items-center mt-2 text-blue-400 hover:text-blue-300 transition-colors text-sm"
                         >
-                            <MdOpenInNew className="w-4 h-4 mr-1" />
+                            <ArrowSquareOutIcon className="w-4 h-4 mr-1" />
                             Check event website for agenda
                         </a>
                     )}

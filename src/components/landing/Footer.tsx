@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Calendar, Mail, Twitter, Linkedin } from 'lucide-react';
+import { ArrowRightIcon, CalendarIcon, EnvelopeSimpleIcon, TwitterLogoIcon, LinkedinLogoIcon } from '@phosphor-icons/react';
 import '@/app/styles/footer.css';
 
 export function Footer() {
@@ -20,9 +20,9 @@ export function Footer() {
                             <h3 className="cta-title">Get personalized event recommendations</h3>
                             <p className="cta-subtitle">Get personalized event recommendations based on what you want to learn</p>
                             <Link href="/signup" className="cta-button">
-                                <Calendar size={20} />
+                                <CalendarIcon size={20} />
                                 <span>Start Free Account</span>
-                                <ArrowRight size={20} />
+                                <ArrowRightIcon size={20} />
                             </Link>
                         </div>
 
@@ -43,7 +43,7 @@ export function Footer() {
                         <h3 className="footer-section-title">Contact & Legal</h3>
                         <nav className="footer-nav">
                             <Link href="mailto:hello@kure-cal.com" className="footer-link footer-email">
-                                <Mail size={16} />
+                                <EnvelopeSimpleIcon size={16} />
                                 hello@kure-cal.com
                             </Link>
                             <Link href="/legal/privacy" className="footer-link">Privacy Policy</Link>
@@ -58,10 +58,10 @@ export function Footer() {
                         </p>
                         <div className="footer-social-icons">
                             <Link href="https://twitter.com/kurecal" className="footer-social-icon twitter" aria-label="Twitter">
-                                <Twitter size={20} />
+                                <TwitterLogoIcon size={20} />
                             </Link>
                             <Link href="https://linkedin.com/company/kurecal" className="footer-social-icon linkedin" aria-label="LinkedIn">
-                                <Linkedin size={20} />
+                                <LinkedinLogoIcon size={20} />
                             </Link>
                         </div>
                     </div>

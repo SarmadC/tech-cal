@@ -4,16 +4,16 @@
 import React, { FC } from 'react';
 import dynamic from 'next/dynamic';
 import {
-    ChevronDown,
-    ArrowRight,
-    Calendar,
-    Zap,
-    TrendingUp,
-    CheckSquare,
-    Flame,
-    Globe,
-    Lightbulb
-} from 'lucide-react';
+    CaretDownIcon,
+    ArrowRightIcon,
+    CalendarIcon,
+    LightningIcon,
+    TrendUpIcon,
+    CheckSquareOffsetIcon,
+    FireIcon,
+    GlobeIcon,
+    LightbulbFilamentIcon
+} from '@phosphor-icons/react';
 
 // Dynamic imports for chart components to reduce bundle size
 const IndustryPulseScoreChart = dynamic(
@@ -49,7 +49,7 @@ export const GrowthDashboardHeader: FC<{
         <div className="flex items-center gap-3">
             <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-gray-200 text-gray-600 text-sm hover:border-gray-300 transition-colors">
                 <span>{selectedPeriod}</span>
-                <ChevronDown className="w-4 h-4" />
+                <CaretDownIcon className="w-4 h-4" />
             </button>
         </div>
     </div>
@@ -60,7 +60,7 @@ export const IndustryPulseScoreCard: FC<{ score: number }> = ({ score }) => {
         <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-700 font-medium">Industry Pulse Score</h3>
-                <TrendingUp className="w-5 h-5 text-blue-500" />
+                <TrendUpIcon className="w-5 h-5 text-blue-500" />
             </div>
             <div className="flex-grow flex items-center justify-center my-4">
                 <IndustryPulseScoreChart score={score} />
@@ -75,7 +75,7 @@ export const FollowThroughRateCard: FC<{ rate: number }> = ({ rate }) => (
     <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6">
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-gray-700 font-medium">Follow-Through Rate</h3>
-            <CheckSquare className="w-5 h-5 text-green-500" />
+            <CheckSquareOffsetIcon className="w-5 h-5 text-green-500" />
         </div>
         <div className="text-5xl font-bold text-gray-800 mb-2">{rate}%</div>
         <p className="text-sm text-gray-500">Of bookmarked events you attended. Excellent community engagement!</p>
@@ -86,7 +86,7 @@ export const LearningConsistencyCard: FC<{ currentStreak: number, longestStreak:
     <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6">
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-gray-700 font-medium">Engagement Streak</h3>
-            <Flame className="w-5 h-5 text-orange-500" />
+            <FireIcon className="w-5 h-5 text-orange-500" />
         </div>
         <div className="flex items-baseline gap-6">
             <div>
@@ -105,7 +105,7 @@ export const TechStackCurrencyCard: FC<{ data: TechStackCurrencyData[] }> = ({ d
     <div className="col-span-12 md:col-span-7 bg-white rounded-3xl p-6">
         <div className="flex items-center justify-between mb-6">
             <h3 className="text-gray-800 font-medium">Tech Stack Relevance</h3>
-            <Zap className="w-4 h-4 text-gray-600" />
+            <LightningIcon className="w-4 h-4 text-gray-600" />
         </div>
         <div className="space-y-4">
             {data.map(item => (
@@ -127,7 +127,7 @@ export const NetworkExpansionCard: FC<{ count: number }> = ({ count }) => (
     <div className="col-span-12 md:col-span-5 bg-gray-800 rounded-3xl p-6 text-white">
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-medium">Network Expansion</h3>
-            <Globe className="w-5 h-5 text-teal-300" />
+            <GlobeIcon className="w-5 h-5 text-teal-300" />
         </div>
         <p className="text-5xl font-bold text-white mb-2">{count}</p>
         <p className="text-sm text-gray-400">New communities & organizers you&apos;ve engaged with this quarter.</p>
@@ -141,7 +141,7 @@ export const UpcomingOpportunitiesCard: FC<{ opportunities: UpcomingOpportunity[
             <h3 className="text-gray-800 font-medium">Trend Awareness: Upcoming Opportunities</h3>
             <button className="text-sm text-blue-600 font-medium flex items-center gap-1">
                 <span>See All</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRightIcon className="w-4 h-4" />
             </button>
         </div>
         <div className="space-y-4">
@@ -149,14 +149,14 @@ export const UpcomingOpportunitiesCard: FC<{ opportunities: UpcomingOpportunity[
                 <div key={opp.title} className="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-gray-500" />
+                            <CalendarIcon className="w-5 h-5 text-gray-500" />
                         </div>
                         <div>
                             <div className="font-medium text-gray-800">{opp.title}</div>
                             <div className="text-sm text-gray-500">{opp.date} - {opp.category}</div>
                         </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-gray-400" />
+                    <ArrowRightIcon className="w-4 h-4 text-gray-400" />
                 </div>
             )) : (
                 <p className="text-center text-gray-500 py-8">No specific opportunities based on your top categories right now. Broaden your horizons!</p>
@@ -169,7 +169,7 @@ export const IndustryPulseCard: FC<{ trends: string[] }> = ({ trends }) => (
     <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-gray-800 rounded-3xl p-6 text-white">
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-medium">Industry Pulse</h3>
-            <Lightbulb className="w-4 h-4 text-yellow-300" />
+            <LightbulbFilamentIcon className="w-4 h-4 text-yellow-300" />
         </div>
         <p className="text-sm text-gray-400 mb-6">Hot topics based on community engagement.</p>
         <div className="flex flex-wrap gap-2">

@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, useMemo } from 'react';
-import { Clock, CheckCircle, Circle } from 'lucide-react';
+import { ClockIcon, CheckCircleIcon, CircleIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
 import { getEventTimeStatus } from '@/utils/dateUtils';
 
@@ -83,13 +83,13 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
         return (
             <div className="space-y-4">
                 <div className="flex items-center space-x-2 text-sm text-gray-400">
-                    <Clock className="w-4 h-4" />
+                    <ClockIcon className="w-4 h-4" />
                     <span>Event starts in {Math.ceil((eventStart.getTime() - now.getTime()) / (1000 * 60 * 60))} hours</span>
                 </div>
                 {progressData.nextItem && (
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
                         <div className="flex items-center space-x-2 text-blue-300">
-                            <Circle className="w-4 h-4" />
+                            <CircleIcon className="w-4 h-4" />
                             <span className="font-medium">Next: {progressData.nextItem.title}</span>
                         </div>
                         <div className="text-sm text-blue-200 mt-1">
@@ -105,7 +105,7 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
         return (
             <div className="space-y-4">
                 <div className="flex items-center space-x-2 text-sm text-gray-400">
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircleIcon className="w-4 h-4" />
                     <span>Event completed</span>
                 </div>
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
@@ -164,7 +164,7 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
             {progressData.nextItem && !progressData.currentItem && (
                 <div className="bg-gray-700/50 border border-gray-600/20 rounded-lg p-3">
                     <div className="flex items-center space-x-2 text-gray-300">
-                        <Circle className="w-4 h-4" />
+                        <CircleIcon className="w-4 h-4" />
                         <span className="font-medium">Next: {progressData.nextItem.title}</span>
                     </div>
                     <div className="text-sm text-gray-400 mt-1">
@@ -177,7 +177,7 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
             {progressData.completedItems > 0 && (
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
                     <div className="flex items-center space-x-2 text-green-300">
-                        <CheckCircle className="w-4 h-4" />
+                        <CheckCircleIcon className="w-4 h-4" />
                         <span className="font-medium">{progressData.completedItems} sessions completed</span>
                     </div>
                 </div>

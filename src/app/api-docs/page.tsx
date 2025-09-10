@@ -3,7 +3,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Code2, Calendar, Bell, Zap } from 'lucide-react';
+import { CodeBlockIcon, CalendarIcon, BellIcon, LightningIcon } from '@phosphor-icons/react';
 
 export default function ApiDocsPage() {
     return (
@@ -24,7 +24,7 @@ export default function ApiDocsPage() {
                 {/* Coming Soon Content */}
                 <div className="text-center mb-16">
                     <div className="w-32 h-32 bg-accent-primary/10 rounded-full flex items-center justify-center mx-auto mb-8">
-                        <Code2 className="w-16 h-16 text-accent-primary" />
+                        <CodeBlockIcon className="w-16 h-16 text-accent-primary" />
                     </div>
 
                     <h2 className="text-3xl font-bold text-foreground-primary mb-4">
@@ -56,7 +56,7 @@ export default function ApiDocsPage() {
                 {/* Planned Features */}
                 <div className="grid md:grid-cols-3 gap-8 mb-16">
                     <div className="bg-background-secondary rounded-xl p-6 border border-border-color text-center">
-                        <Calendar className="w-12 h-12 text-accent-primary mx-auto mb-4" />
+                        <CalendarIcon className="w-12 h-12 text-accent-primary mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-foreground-primary mb-2">
                             Event Data Access
                         </h3>
@@ -66,7 +66,7 @@ export default function ApiDocsPage() {
                     </div>
 
                     <div className="bg-background-secondary rounded-xl p-6 border border-border-color text-center">
-                        <Bell className="w-12 h-12 text-accent-primary mx-auto mb-4" />
+                        <BellIcon className="w-12 h-12 text-accent-primary mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-foreground-primary mb-2">
                             Real-time Webhooks
                         </h3>
@@ -76,7 +76,7 @@ export default function ApiDocsPage() {
                     </div>
 
                     <div className="bg-background-secondary rounded-xl p-6 border border-border-color text-center">
-                        <Zap className="w-12 h-12 text-accent-primary mx-auto mb-4" />
+                        <LightningIcon className="w-12 h-12 text-accent-primary mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-foreground-primary mb-2">
                             Fast & Reliable
                         </h3>

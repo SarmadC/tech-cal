@@ -8,7 +8,7 @@ import { useFormStatus } from 'react-dom';              // DOM-specific hooks fr
 import { submitContactFormAction, type ContactFormState } from './actions';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Helper component for the submit button to show a pending state
@@ -16,7 +16,7 @@ function SubmitButton() {
     const { pending } = useFormStatus();
     return (
         <Button type="submit" disabled={pending} className="w-full">
-            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {pending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
             {pending ? 'Sending...' : 'Send Message'}
         </Button>
     );

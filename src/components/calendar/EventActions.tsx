@@ -1,6 +1,7 @@
 // src/components/calendar/EventActions.tsx
+'use client';
 import { FC } from 'react';
-import { Calendar as CalendarIcon, Share2 } from 'lucide-react';
+import { CalendarPlusIcon, ShareNetworkIcon } from '@phosphor-icons/react';
 // 1. UPDATE IMPORT: Use the new, canonical `Event` type.
 import { Event } from '@/types';
 import { useEventActions } from '@/hooks/useEventActions';
@@ -19,10 +20,10 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
                 Add to Google
             </a>
             <button onClick={handleIcsDownload} className="p-3 bg-gray-700 hover:bg-gray-600 rounded-lg">
-                <CalendarIcon className="w-5 h-5" />
+                <CalendarPlusIcon className="w-5 h-5" />
             </button>
             <button onClick={handleShare} className="p-3 bg-gray-700 hover:bg-gray-600 rounded-lg">
-                <Share2 className="w-5 h-5" />
+                <ShareNetworkIcon className="w-5 h-5" />
             </button>
         </div>
     );

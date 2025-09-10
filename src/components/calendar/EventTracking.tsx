@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, useState } from 'react';
-import { Check, Star, UserCheck, AlertTriangle, Loader2 } from 'lucide-react';
+import { CheckIcon, StarIcon, UserCheckIcon, WarningOctagonIcon, CircleNotchIcon } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEventTracking, useEventTrackingStatus } from '@/hooks/useEventTracking';
 // 1. UPDATE IMPORTS: Use the new, canonical `Event` type.
@@ -77,7 +77,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
     if (isLoadingStatus && !optimisticStatus) {
         return (
             <div className="flex items-center justify-center p-4">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                <CircleNotchIcon className="w-5 h-5 animate-spin text-gray-400" />
                 <span className="ml-2 text-sm text-gray-400">Loading...</span>
             </div>
         );
@@ -86,7 +86,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
     if (statusError && !optimisticStatus) {
         return (
             <div className="bg-red-500/10 text-red-300 text-xs p-3 rounded-lg flex items-center space-x-2">
-                <AlertTriangle className="w-4 h-4" />
+                <WarningOctagonIcon className="w-4 h-4" />
                 <span>Unable to load tracking status</span>
             </div>
         );
@@ -97,7 +97,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
             {currentStatus.isTracked ? (
                 <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
                     <div className="flex items-center space-x-2">
-                        <Check className="w-5 h-5 text-green-400" />
+                        <CheckIcon className="w-5 h-5 text-green-400" />
                         <span className="text-green-300 font-medium text-sm capitalize">
                             {currentStatus.status === 'bookmarked' && 'Bookmarked'}
                             {currentStatus.status === 'attending' && 'Attending'}
@@ -111,7 +111,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                         className="text-red-400 hover:text-red-300 text-sm font-medium disabled:opacity-50 transition-colors"
                     >
                         {isMutating ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <CircleNotchIcon className="w-4 h-4 animate-spin" />
                         ) : (
                             'Remove'
                         )}
@@ -125,9 +125,9 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                         className="flex flex-col items-center justify-center space-y-1 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
                     >
                         {isMutating ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                            <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
                         ) : (
-                            <Star className="w-4 h-4 text-yellow-400 group-hover:text-yellow-300" />
+                            <StarIcon className="w-4 h-4 text-yellow-400 group-hover:text-yellow-300" />
                         )}
                         <span className="text-xs text-gray-300">Bookmark</span>
                     </button>
@@ -137,9 +137,9 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                         className="flex flex-col items-center justify-center space-y-1 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
                     >
                         {isMutating ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                            <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
                         ) : (
-                            <UserCheck className="w-4 h-4 text-blue-400 group-hover:text-blue-300" />
+                            <UserCheckIcon className="w-4 h-4 text-blue-400 group-hover:text-blue-300" />
                         )}
                         <span className="text-xs text-gray-300">Attending</span>
                     </button>
@@ -149,9 +149,9 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                         className="flex flex-col items-center justify-center space-y-1 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
                     >
                         {isMutating ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                            <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
                         ) : (
-                            <Check className="w-4 h-4 text-green-400 group-hover:text-green-300" />
+                            <CheckIcon className="w-4 h-4 text-green-400 group-hover:text-green-300" />
                         )}
                         <span className="text-xs text-gray-300">Attended</span>
                     </button>
