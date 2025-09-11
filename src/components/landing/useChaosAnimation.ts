@@ -303,9 +303,7 @@ export function useScrollAnimation(
         };
 
         const textTl = gsap.timeline({ paused: true })
-            .set([chaosTitle, chaosSubtitle], { opacity: 1, display: 'block' }, 0)
-            .set([orderTitle, orderSubtitle], { opacity: 0, display: 'none' }, 0)
-            .to([chaosTitle, chaosSubtitle], { opacity: 0, duration: 0.3 }, 0.3)
+            .to([chaosTitle, chaosSubtitle], { opacity: 0, duration: 0.3 }, 0)
             .set([orderTitle, orderSubtitle], { display: 'block' }, 0.5)
             .to([orderTitle, orderSubtitle], { opacity: 1, duration: 0.3 }, 0.5);
 

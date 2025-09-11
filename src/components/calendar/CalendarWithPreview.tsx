@@ -137,7 +137,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
     }, [onDateChange]);
 
     return (
-        <div className={`calendar-container relative ${className}`}>
+        <div className={`calendar-container relative h-full ${className}`}>
             <FullCalendar
                 ref={activeCalendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
@@ -151,7 +151,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
                 eventMouseLeave={hidePreview}
                 datesSet={handleDatesSet}
                 headerToolbar={false}
-                height="auto"
+                height="100%"
                 dayMaxEvents={isMobile ? 1 : 3}
                 moreLinkClick="popover"
                 eventDisplay="block"
@@ -167,7 +167,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
                     return isMobile ? `+${arg.num}` : `+${arg.num} more`;
                 }}
                 // Mobile viewport optimizations - remove restrictive aspectRatio
-                aspectRatio={isMobile ? (fullCalendarView === 'dayGridMonth' ? 0.8 : undefined) : 1.2}
+                aspectRatio={isMobile ? (fullCalendarView === 'dayGridMonth' ? 0.8 : undefined) : undefined}
                 // Mobile scrolling improvements
                 scrollTime={isMobile ? "06:00:00" : "08:00:00"}
                 scrollTimeReset={false}

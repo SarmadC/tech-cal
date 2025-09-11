@@ -57,6 +57,31 @@ export function formatTime(
 }
 
 /**
+ * Formats a range of times like "12 pm to 3 pm" (timezone aware).
+ */
+export function formatTimeRange(
+    start: string | Date,
+    end?: string | Date | null,
+    eventTimezone?: string | null
+): string {
+    if (!end) {
+        // All-day or missing end
+        return formatInTimeZone(start, 'p', eventTimezone);
+    }
+    const startStr = formatInTimeZone(start, 'p', eventTimezone).toLowerCase();
+    const endStr = formatInTimeZone(end, 'p', eventTimezone).toLowerCase();
+
+    // If both share am/pm, drop am/pm from the first part for brevity
+    const ampmMatch = endStr.match(/\s?(am|pm)$/);
+    if (ampmMatch) {
+        const ampm = ampmMatch[1];
+        const compactStart = startStr.replace(/\s?(am|pm)$/i, '');
+        return `${compactStart} ${ampm} to ${endStr}`;
+    }
+    return `${startStr} to ${endStr}`;
+}
+
+/**
  * Formats only the date part of a date.
  * Example: "Sep 17, 2025"
  */

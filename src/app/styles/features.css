@@ -106,13 +106,12 @@
     position: relative;
     overflow: hidden;
     border-radius: 8px;
-    background: linear-gradient(135deg, var(--landing-primary) 0%, var(--landing-secondary) 50%, var(--landing-primary) 100%);
-    border: 1px solid var(--landing-border);
+    background: linear-gradient(135deg, rgba(20, 25, 45, 0.8) 0%, rgba(30, 35, 55, 0.9) 50%, rgba(20, 25, 45, 0.8) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 
         var(--shadow-enhanced), 
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 0 0 1px rgba(139, 92, 246, 0.1);
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
     cursor: pointer;
     min-height: 200px;
     opacity: 0;
@@ -168,10 +167,8 @@
     transform: translateY(-4px) scale(1.01);
     box-shadow: 
         var(--shadow-dramatic), 
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(139, 92, 246, 0.3),
-        0 0 20px rgba(139, 92, 246, 0.15);
-    background: linear-gradient(135deg, var(--landing-secondary) 0%, var(--landing-accent) 50%, var(--landing-secondary) 100%);
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, rgba(35, 40, 60, 0.9) 0%, rgba(45, 50, 70, 0.95) 50%, rgba(35, 40, 60, 0.9) 100%);
 }
 
 .bento-card-enhanced:hover .card-pattern {
@@ -218,9 +215,9 @@
 .icon-wrapper {
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, var(--landing-primary) 0%, var(--landing-secondary) 100%);
+    background: linear-gradient(135deg, rgba(25, 30, 50, 0.8) 0%, rgba(35, 40, 60, 0.9) 100%);
     color: var(--landing-text-primary);
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -230,7 +227,7 @@
     position: relative;
     overflow: hidden;
     box-shadow: 
-        0 4px 12px rgba(139, 92, 246, 0.2),
+        0 4px 12px rgba(0, 0, 0, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
@@ -254,13 +251,12 @@
 
 .bento-card-enhanced:hover .icon-wrapper {
     transform: scale(1.05);
-    background: linear-gradient(135deg, var(--landing-secondary) 0%, var(--landing-accent) 100%);
+    background: linear-gradient(135deg, rgba(40, 45, 65, 0.9) 0%, rgba(50, 55, 75, 0.95) 100%);
     color: var(--landing-text-primary);
-    border-color: rgba(139, 92, 246, 0.5);
+    border-color: rgba(255, 255, 255, 0.2);
     box-shadow: 
         var(--shadow-hover),
-        0 0 0 1px rgba(139, 92, 246, 0.4),
-        0 0 16px rgba(139, 92, 246, 0.3);
+        0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .bento-card-enhanced:hover .icon-wrapper::before {
@@ -515,6 +511,27 @@
     }
 }
 
+/* Tablet-specific optimizations */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .bento-grid-enhanced {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-5);
+    }
+    
+    .hero-feature {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+    
+    .wide-feature {
+        grid-column: 1 / -1;
+    }
+    
+    .bento-card-enhanced {
+        min-height: 200px;
+    }
+}
+
 @media (max-width: 640px) {
     .features-enhanced {
         padding: var(--space-14) var(--space-5);
@@ -652,6 +669,16 @@
     
     .feature-description-enhanced {
         font-size: 0.75rem;
+    }
+    
+    .features-title {
+        font-size: clamp(1.5rem, 6vw, 2rem);
+        margin-bottom: var(--space-3);
+    }
+    
+    .features-subtitle {
+        font-size: 0.9rem;
+        line-height: 1.5;
     }
 }
 

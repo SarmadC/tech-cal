@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRightIcon, CalendarIcon, EnvelopeSimpleIcon, TwitterLogoIcon, LinkedinLogoIcon } from '@phosphor-icons/react';
+import { Highlight } from '../ui/hero-highlight';
 import '@/app/styles/footer.css';
 
 export function Footer() {
@@ -12,7 +13,9 @@ export function Footer() {
                 <div className="footer-content">
                     <div className="footer-intro">
                         <h2 className="footer-intro-title">
-                            <span className="text-accent">Tech events</span> that matter to your career and interests
+                            <Highlight className="text-black dark:text-white">
+                                Tech Events
+                            </Highlight> that matter to your career and interests
                         </h2>
 
                         {/* Prominent CTA Section */}

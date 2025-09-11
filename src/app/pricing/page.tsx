@@ -209,7 +209,7 @@ export default function PricingPage() {
             <section className="py-20 bg-background-main">
                 <div className="max-w-4xl mx-auto px-4 text-center">
                     <h2 className="text-3xl font-bold text-foreground-primary mb-4">
-                        Ready to Stay Ahead of Tech Events?
+                        Ready to Never Miss a Tech Event?
                     </h2>
                     <p className="text-xl text-foreground-secondary mb-8">
                         Join thousands of professionals staying ahead with TechCalendar

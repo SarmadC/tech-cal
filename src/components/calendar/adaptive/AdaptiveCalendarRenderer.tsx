@@ -7,7 +7,8 @@ import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 
 // Web (Desktop) Components
-import CalendarWithPreview from '../CalendarWithPreview';
+// import CalendarWithPreview from '../CalendarWithPreview';
+import TechCalendarMonthView from '../TechCalendarMonthView';
 import TechCalendarWeekView from '../TechCalendarWeekView';
 import { TechCalendarDayView } from '../TechCalendarDayView';
 
@@ -139,11 +140,13 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
     case 'month':
     default:
       return (
-        <CalendarWithPreview
+        <TechCalendarMonthView
           events={events}
+          initialDate={initialDate}
+          categories={categories}
+          profile={profile}
+          onEventSelect={onEventSelect}
           onEventClick={onEventClick}
-          view={view}
-          date={initialDate}
           calendarRef={calendarRef}
           className={className}
         />

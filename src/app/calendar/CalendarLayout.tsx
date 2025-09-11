@@ -139,7 +139,7 @@ export function CalendarLayout({
     // Handle loading states
     if (!profile && categories.length === 0) {
         return (
-            <div className="flex h-screen bg-background-main">
+            <div className="flex h-screen calendar-page">
                 <div className="flex-1 flex flex-col">
                     <div className="flex-1 overflow-hidden">
                         {content}
@@ -152,7 +152,7 @@ export function CalendarLayout({
     // Render new mobile app for mobile devices
     if (useNewMobileViews) {
         return (
-            <div className="flex h-screen bg-background-main">
+            <div className="flex h-screen calendar-page">
                 <MobileCalendarApp
                     events={events || []}
                     currentDate={activeDate}
@@ -166,7 +166,7 @@ export function CalendarLayout({
     }
 
     return (
-        <div className="flex h-screen bg-background-main overflow-hidden">
+        <div className="flex h-screen calendar-page overflow-hidden">
             {/* Sidebar Overlay - Always an overlay to prevent content compression */}
             {isSidebarOpen && (
                 <>

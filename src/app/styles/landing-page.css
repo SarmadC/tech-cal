@@ -166,6 +166,37 @@
     }
 }
 
+/* Hero CTA Responsive Design */
+@media (max-width: 768px) {
+    .landing-container .hero-cta {
+        flex-direction: column;
+        gap: var(--space-3);
+        width: 100%;
+        max-width: 320px;
+    }
+    
+    .landing-container .hero-cta button,
+    .landing-container .hero-cta a {
+        width: 100%;
+        min-width: unset;
+        height: 44px;
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .landing-container .hero-cta {
+        max-width: 280px;
+    }
+    
+    .landing-container .hero-cta button,
+    .landing-container .hero-cta a {
+        height: 42px;
+        font-size: 0.9rem;
+        padding: 0 var(--space-4);
+    }
+}
+
 @media (max-width: 1200px) {
     .landing-container .hero-content {
         max-width: 700px;
@@ -1135,16 +1166,25 @@
         padding: var(--space-10) var(--space-3);
     }
     
-    .landing-container .features-title {
-        font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    .landing-container .hero .hero-title {
+        font-size: clamp(2rem, 8vw, 2.5rem) !important;
+        line-height: 1.1 !important;
     }
     
-    .landing-container .feature-card {
-        padding: var(--space-3);
+    .landing-container .hero-subtitle {
+        font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+        margin-bottom: var(--space-8);
     }
     
-    .landing-container .final-cta {
-        padding: var(--space-10) var(--space-3);
+    .landing-container .hero-cta {
+        max-width: 260px;
+    }
+    
+    .landing-container .hero-cta button,
+    .landing-container .hero-cta a {
+        height: 40px;
+        font-size: 0.85rem;
+        padding: 0 var(--space-3);
     }
 }
 
