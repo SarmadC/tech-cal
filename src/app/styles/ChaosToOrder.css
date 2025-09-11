@@ -17,8 +17,9 @@
 .chaos-section {
   position: relative;
   height: 250vh;
-  background: linear-gradient(180deg, #060010 0%, #0b1020 50%, #060010 100%);
+  background: transparent;
   font-family: var(--font-sans);
+  margin-bottom: 0;
 }
 
 .sticky-container {
@@ -61,8 +62,8 @@
   width: 240px;
   height: 100px;
   padding: var(--space-4);
-  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
-  border: 1px solid #1f2937;
+  background: linear-gradient(110deg, var(--landing-primary) 0%, var(--landing-secondary) 100%);
+  border: 1px solid var(--landing-border);
   border-radius: 6px;
   box-shadow: var(--shadow-sm);
   box-sizing: border-box;
@@ -188,19 +189,19 @@
 
 .event-card-animated.chaos-state {
   opacity: 0.85;
-  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
+  background: linear-gradient(110deg, var(--landing-primary) 0%, var(--landing-secondary) 100%);
   filter: none;
 }
 
 .event-card-animated.organizing {
-  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
-  border-color: #1f2937;
+  background: linear-gradient(110deg, var(--landing-primary) 0%, var(--landing-secondary) 100%);
+  border-color: var(--landing-border);
   opacity: 0.95;
 }
 
 .event-card-animated.organized-list {
-  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
-  border: 1px solid #1f2937;
+  background: linear-gradient(110deg, var(--landing-primary) 0%, var(--landing-secondary) 100%);
+  border: 1px solid var(--landing-border);
   box-shadow: var(--shadow-md);
 }
 
@@ -217,8 +218,8 @@
   pointer-events: none;
   z-index: 3;
   box-sizing: border-box;
-  background: var(--background-secondary);
-  border: 1px solid #1f2937;
+  background: var(--landing-secondary);
+  border: 1px solid var(--landing-border);
   border-radius: 6px;
   box-shadow: var(--shadow-md);
   overflow: hidden;
@@ -256,7 +257,7 @@
   justify-items: center;
   align-items: center;
   width: 100%;
-  background: linear-gradient(110deg, #000103 0%, #1e2631 100%);
+  background: linear-gradient(110deg, var(--landing-primary) 0%, var(--landing-secondary) 100%);
   border: none;
   border-radius: 6px;
 }
@@ -276,8 +277,8 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(5, 1fr);
-  gap: 1px;
-  background: #1f2937;
+  gap: 0;
+  background: var(--landing-primary);
   box-sizing: border-box;
   flex: 1;
   min-height: 250px;
@@ -290,19 +291,19 @@
   flex-direction: column;
   min-height: 60px;
   padding: var(--space-2);
-  background: linear-gradient(180deg, #0b1020 0%, #1a2333 100%);
-  border: none;
+  background: var(--landing-primary);
+  border: 1px solid var(--landing-border-light);
   border-radius: 6px;
   box-sizing: border-box;
   transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
 .calendar-cell:not(.has-event) {
-  opacity: 0.6;
+  opacity: 1;
 }
 
 .calendar-cell:hover {
-  background: linear-gradient(180deg, #0f1626 0%, #1e2a3d 100%);
+  background: var(--landing-secondary);
   transform: scale(1.01);
   z-index: 10;
   opacity: 1;
@@ -311,13 +312,13 @@
 
 /* Optional programmatic active state for week/cell */
 .calendar-cell.is-active {
-  background: linear-gradient(180deg, #0f1626 0%, #1e2a3d 100%);
+  background: var(--landing-secondary);
   box-shadow: inset 0 0 0 1px var(--accent-border), 0 0 0 6px rgba(255, 255, 255, 0.06);
 }
 
 .calendar-cell:hover .day-number,
 .calendar-cell.is-active .day-number {
-  color: #e5e7eb;
+  color: var(--landing-text-secondary);
 }
 
 .calendar-cell .day-number {
@@ -379,12 +380,22 @@
   z-index: 10;
 }
 
-.chaos-text-wrapper,
+.chaos-text-wrapper {
+  position: absolute;
+  width: 100%;
+  left: 50%;
+  top: 8%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
 .order-text-wrapper {
   position: absolute;
   width: 100%;
   left: 50%;
+  top: 8%;
   transform: translateX(-50%);
+  z-index: 10;
 }
 
 .chaos-title,
@@ -415,10 +426,12 @@
 .chaos-title {
   color: var(--foreground-primary);
   opacity: 1;
+  display: block;
 }
 
 .chaos-subtitle {
   opacity: 1;
+  display: block;
 }
 
 .order-title {

@@ -47,10 +47,10 @@ export function FeaturesGrid() {
     return (
         <section className="features-enhanced" id="features">
             <div className="features-header fade-in">
-                <h2 className="features-title">The Complete Solution</h2>
+                <h2 className="features-title">Stop Scrolling, Start Growing</h2>
                 <p className="features-subtitle">
-                    Everything you need to stay on top of the tech world,
-                    without the information overload
+                    Transform chaos into clarity. Get the tech events that matter to your career,
+                    delivered intelligently to your calendar—no noise, just signal.
                 </p>
             </div>
 

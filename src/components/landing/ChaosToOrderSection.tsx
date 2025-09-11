@@ -148,7 +148,7 @@ export function ChaosToOrderSection() {
                     </div>
                     <div className="order-text-wrapper">
                         <h2 className="order-title">The Solution: Organized Calendar</h2>
-                        <p className="order-subtitle">Every event organized. Color-coded. Never miss what matters.</p>
+                        <p className="order-subtitle">Smart organization with color-coded events. Stay focused on what drives your career forward.</p>
                     </div>
                 </div>
             </div>

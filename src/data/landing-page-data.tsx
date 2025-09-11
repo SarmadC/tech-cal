@@ -27,22 +27,22 @@ export const heroStats = [
 export const features = [
     {
         icon: <LightningIcon size={24} />,
-        title: 'Real-time Updates',
-        description: 'Get instant notifications when new events are announced or existing ones are updated.'
+        title: 'Stay Ahead of the Curve',
+        description: 'Get lightning-fast alerts the moment new events drop. No more checking Twitter, Discord, and Slack—we bring everything to you instantly.'
     },
     {
         icon: <ChartBarIcon size={24} />,
-        title: 'Advanced Analytics',
-        description: 'Track attendance trends, popular topics, and upcoming opportunities in your field.'
+        title: 'Smart Insights',
+        description: 'Discover which events matter most to your career. See trending topics, track your industry\'s pulse, and spot opportunities before everyone else.'
     },
     {
         icon: <UsersThreeIcon size={24} />,
-        title: 'Team Collaboration',
-        description: 'Share curated event lists with your team. Never let your colleagues miss important conferences.'
+        title: 'Team Intelligence',
+        description: 'Turn your team into a powerhouse of knowledge. Share must-attend events, coordinate conference schedules, and ensure your team stays ahead.'
     },
     {
         icon: <CalendarCheckIcon size={24} />,
-        title: 'Calendar Sync',
-        description: 'One-click sync with Google Calendar, Outlook, and Apple Calendar. Your schedule, always updated.'
+        title: 'Seamless Integration',
+        description: 'One click, infinite possibilities. Sync with Google Calendar, Outlook, or Apple Calendar—your events flow seamlessly into your existing workflow.'
     }
 ];
