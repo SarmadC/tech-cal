@@ -496,3 +496,16 @@ input::placeholder, textarea::placeholder {
     color: black !important;
   }
 }
+
+/* Custom mobile menu padding override */
+.mobile-menu-custom-padding {
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+  filter: none !important; /* Ensure the mobile menu itself is not blurred */
+}
+
+/* Mobile menu background blur effect */
+.blur-background {
+  filter: blur(4px);
+  transition: filter 0.3s ease-in-out;
+}

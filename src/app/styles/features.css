@@ -404,6 +404,18 @@
     transform: translateY(0) translateX(0);
 }
 
+/* Mobile-optimized card styles */
+.bento-card-enhanced.mobile-optimized {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.bento-card-enhanced.mobile-optimized:active {
+    transform: translateY(-2px) scale(0.98);
+    transition: transform 0.1s ease;
+}
+
 /* Enhanced Mobile Responsiveness */
 @media (max-width: 1200px) {
     .features-enhanced {

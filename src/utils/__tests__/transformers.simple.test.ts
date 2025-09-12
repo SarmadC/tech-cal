@@ -26,9 +26,17 @@ describe('transformers', () => {
         const supabaseEvent = {
           id: '1',
           title: 'Test Event',
+          description: 'Test description',
           start_time: '2024-01-01T10:00:00Z',
+          end_time: '2024-01-01T11:00:00Z',
+          location: 'Test location',
+          status: 'confirmed',
+          source_url: 'https://example.com',
+          livestream_url: 'https://example.com/stream',
           event_type_id: 'type1',
+          organizer_id: 'org1',
           created_at: '2024-01-01T09:00:00Z',
+          updated_at: '2024-01-01T09:00:00Z',
           organizer: {
             id: 'org1',
             name: 'Test Organizer',
@@ -51,9 +59,17 @@ describe('transformers', () => {
         const supabaseEvent = {
           id: '1',
           title: 'Test Event',
+          description: null,
           start_time: '2024-01-01T10:00:00Z',
+          end_time: null,
+          location: null,
+          status: 'confirmed',
+          source_url: null,
+          livestream_url: null,
           event_type_id: 'type1',
+          organizer_id: 'org1',
           created_at: '2024-01-01T09:00:00Z',
+          updated_at: '2024-01-01T09:00:00Z',
           organizer: {
             id: 'org1',
             name: 'Test Organizer',
@@ -145,7 +161,8 @@ describe('transformers', () => {
         id: 'type1',
         name: 'Conference',
         color: '#3B82F6',
-      } as unknown as Event;
+        description: 'Conference events',
+      };
 
       const result = enrichEvent(event, { eventType });
 

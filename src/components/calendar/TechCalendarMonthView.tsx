@@ -43,6 +43,10 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         hidePreview
     } = useEventPreview();
 
+    // Add refs for debouncing hover events
+    const showTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+    const hideTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+
     // Check if mobile on mount and resize
     React.useEffect(() => {
         const checkMobile = () => {
@@ -204,6 +208,10 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         // Remove any inline/background from FullCalendar so base card shows
         (info.el as HTMLElement).style.background = 'transparent';
         (info.el as HTMLElement).style.borderWidth = '0';
+        
+        // Ensure hover detection works across entire element
+        (info.el as HTMLElement).style.pointerEvents = 'all';
+        (info.el as HTMLElement).style.cursor = 'pointer';
 
         // Dynamic sizing based on number of events in the day
         const dayCell = info.el.closest('.fc-daygrid-day');
@@ -273,16 +281,89 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         if (dots) dots.remove();
     }, []);
 
-    // Handle event mouse enter
+    // Handle event mouse enter with debouncing
     const handleEventMouseEnter = useCallback((info: EventHoveringArg) => {
-        const event = info.event.extendedProps as Event;
-        const rect = info.el.getBoundingClientRect();
-        const position = {
-            x: rect.left + rect.width / 2,
-            y: rect.top
-        };
-        showPreview(event, position);
+        // Clear any pending hide timeout
+        if (hideTimeoutRef.current) {
+            clearTimeout(hideTimeoutRef.current);
+            hideTimeoutRef.current = undefined;
+        }
+
+        // Clear any existing show timeout
+        if (showTimeoutRef.current) {
+            clearTimeout(showTimeoutRef.current);
+        }
+
+        // Show preview after a short delay to prevent flicker
+        showTimeoutRef.current = setTimeout(() => {
+            const event = info.event.extendedProps as Event;
+            const rect = info.el.getBoundingClientRect();
+            
+            // Smart positioning to avoid cursor interference and screen boundaries
+            const cardWidth = 320;
+            const cardHeight = 400;
+            const bufferZone = 50; // Safe zone around cursor
+            
+            let x = rect.right + 20; // Start to the right of event
+            let y = rect.top;
+            
+            // Check if preview would go off-screen on the right
+            if (x + cardWidth > window.innerWidth - 20) {
+                // Try positioning to the left of the event
+                x = rect.left - cardWidth - 20;
+                // If still off-screen, clamp to left edge
+                if (x < 20) {
+                    x = 20;
+                    // Position well away from cursor path
+                    y = rect.bottom + bufferZone;
+                }
+            }
+            
+            // Check if preview would go off-screen vertically
+            if (y + cardHeight > window.innerHeight - 20) {
+                y = window.innerHeight - cardHeight - 20;
+            }
+            
+            // Ensure we're not too close to the cursor position
+            if (y < 20) {
+                y = 20;
+            }
+            
+            const position = { x, y };
+            showPreview(event, position);
+        }, 100); // Reduced delay for better responsiveness
     }, [showPreview]);
+
+    // Handle event mouse leave with debouncing
+    const handleEventMouseLeave = useCallback(() => {
+        // Clear any pending show timeout
+        if (showTimeoutRef.current) {
+            clearTimeout(showTimeoutRef.current);
+            showTimeoutRef.current = undefined;
+        }
+
+        // Hide preview after a longer delay to allow moving to preview card
+        hideTimeoutRef.current = setTimeout(() => {
+            hidePreview();
+        }, 300); // Increased delay to give user time to move to preview
+    }, [hidePreview]);
+
+    // Handle preview card hover (keep preview open)
+    const handlePreviewHover = useCallback(() => {
+        // Clear any pending hide timeout when hovering over preview
+        if (hideTimeoutRef.current) {
+            clearTimeout(hideTimeoutRef.current);
+            hideTimeoutRef.current = undefined;
+        }
+    }, []);
+
+    // Handle preview card leave (hide preview)
+    const handlePreviewLeave = useCallback(() => {
+        // Hide preview immediately when leaving the preview card
+        hideTimeoutRef.current = setTimeout(() => {
+            hidePreview();
+        }, 100);
+    }, [hidePreview]);
 
     // Keep FullCalendar in sync with external date changes
     React.useEffect(() => {
@@ -324,6 +405,18 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         return () => window.removeEventListener('resize', handleResize);
     }, [activeCalendarRef]);
 
+    // Cleanup timeouts on unmount
+    React.useEffect(() => {
+        return () => {
+            if (showTimeoutRef.current) {
+                clearTimeout(showTimeoutRef.current);
+            }
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+            }
+        };
+    }, []);
+
     // Handle date changes (from calendar navigation)
     const handleDatesSet = useCallback((_dateInfo: { start: Date }) => {
         // Handle date changes if needed
@@ -342,7 +435,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 eventDidMount={handleEventDidMount}
                 eventWillUnmount={handleEventWillUnmount}
                 eventMouseEnter={handleEventMouseEnter}
-                eventMouseLeave={hidePreview}
+                eventMouseLeave={handleEventMouseLeave}
                 datesSet={handleDatesSet}
                 headerToolbar={false}
                 height="100%"
@@ -395,6 +488,8 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     isVisible={previewState.isVisible}
                     position={previewState.position}
                     onClose={hidePreview}
+                    onHover={handlePreviewHover}
+                    onLeave={handlePreviewLeave}
                 />
             )}
         </div>

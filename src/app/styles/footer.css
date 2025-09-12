@@ -124,6 +124,19 @@
     transform: translateY(0);
 }
 
+/* Mobile-optimized CTA button */
+.cta-button.mobile-optimized {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 48px;
+    padding: 16px 24px;
+}
+
+.cta-button.mobile-optimized:active {
+    transform: translateY(-1px) scale(0.98);
+    transition: transform 0.1s ease;
+}
+
 .footer-credits {
     font-size: 0.9rem;
     color: var(--landing-text-tertiary);

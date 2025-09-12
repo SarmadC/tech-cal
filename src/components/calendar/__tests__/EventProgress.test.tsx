@@ -14,6 +14,7 @@ const mockEvent: Event = {
     startTime: '2024-03-15T09:00:00Z',
     endTime: '2024-03-15T17:00:00Z',
     sourceUrl: 'https://example.com',
+    livestreamUrl: 'https://example.com/livestream',
     eventTypeId: 'conference'
 };
 

@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useMemo } from 'react';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { AnimatedEventCard } from './AnimatedEventCard';
 import { useThreeScene, useCardPositions, useScrollAnimation, DomCache } from './useChaosAnimation';
+import '@/app/styles/ChaosToOrder.css';
 
 // Debounce helper function
 function debounce<F extends (...args: unknown[]) => unknown>(func: F, wait: number): (...args: Parameters<F>) => void {
@@ -34,12 +36,15 @@ export function ChaosToOrderSection() {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const scrollProgressRef = useRef(0);
+    const { isMobile, isTablet } = useDeviceDetection();
     const domCacheRef = useRef<DomCache>({
         cards: null, chaosTitle: null, chaosSubtitle: null, orderTitle: null, orderSubtitle: null
     });
 
     // --- HOOKS ---
     const [cardPositions, calculateCardPositions] = useCardPositions(animationEventsData);
+    
+    // Always call hooks in the same order - hooks handle mobile detection internally
     useThreeScene(canvasRef, scrollProgressRef);
     useScrollAnimation(sectionRef, containerRef, domCacheRef, cardPositions, scrollProgressRef);
 
@@ -78,8 +83,11 @@ export function ChaosToOrderSection() {
         if (!container || !section) return;
 
         // 1. Cache all DOM nodes
+        const cards = container.querySelectorAll<HTMLElement>('.event-card-animated');
+        console.log('DOM caching - found cards:', cards.length);
+        
         domCacheRef.current = {
-            cards: container.querySelectorAll<HTMLElement>('.event-card-animated'),
+            cards,
             chaosTitle: section.querySelector<HTMLElement>('.chaos-title'),
             chaosSubtitle: section.querySelector<HTMLElement>('.chaos-subtitle'),
             orderTitle: section.querySelector<HTMLElement>('.order-title'),
@@ -96,11 +104,17 @@ export function ChaosToOrderSection() {
         const debouncedResizeHandler = debounce(handleResize, 150);
         window.addEventListener('resize', debouncedResizeHandler);
 
-        // 3. Run the initial calculation with a small delay to ensure DOM is ready
+        // 3. Make calendar frame visible first, then calculate positions
+        const calendarFrame = container.querySelector('.calendar-frame') as HTMLElement;
+        if (calendarFrame) {
+            calendarFrame.style.opacity = '1';
+        }
+
+        // 4. Run the initial calculation with a small delay to ensure DOM is ready
         setTimeout(() => {
             handleResize();
 
-            // 4. Stagger the initial card visibility for a nice fade-in effect
+            // 5. Stagger the initial card visibility for a nice fade-in effect
             domCacheRef.current.cards?.forEach((card: HTMLElement, i: number) => {
                 setTimeout(() => card.classList.add('visible'), i * 50);
             });
@@ -114,12 +128,15 @@ export function ChaosToOrderSection() {
 
     // --- RENDER ---
     return (
-        <section ref={sectionRef} className="chaos-section">
+        <section ref={sectionRef} className={`chaos-section ${isMobile ? 'mobile-optimized' : ''}`}>
             <div className="sticky-container">
-                <canvas ref={canvasRef} className="three-canvas" />
+                {/* Only render Three.js canvas on desktop for better mobile performance */}
+                {!isMobile && !isTablet && (
+                    <canvas ref={canvasRef} className="three-canvas" />
+                )}
 
-                <div ref={containerRef} className="cards-container">
-                    <div className="calendar-frame clean-calendar" style={{ opacity: 0 }}>
+                <div ref={containerRef} className={`cards-container ${isMobile ? 'mobile-optimized' : ''}`}>
+                    <div className="calendar-frame clean-calendar">
                         <div className="calendar-header">
                             <div className="calendar-days">
                                 <span>SUN</span><span>MON</span><span>TUE</span><span>WED</span>

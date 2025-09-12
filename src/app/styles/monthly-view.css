@@ -155,6 +155,20 @@
   cursor: pointer;
 }
 
+/* Ensure the entire FullCalendar event element is hoverable */
+.tech-calendar-month-view .fc-event {
+  cursor: pointer !important;
+  pointer-events: all !important;
+}
+
+/* Ensure all child elements of event cards allow hover detection */
+.tech-calendar-month-view .fc-event .fc-event-main,
+.tech-calendar-month-view .fc-event .event-card-basic-info,
+.tech-calendar-month-view .fc-event .event-title,
+.tech-calendar-month-view .fc-event .event-time {
+  pointer-events: none !important; /* Let parent handle hover */
+}
+
 .tech-calendar-month-view .event-card .event-title,
 .tech-calendar-month-view .event-card .event-time {
   user-select: none;

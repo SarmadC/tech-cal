@@ -22,6 +22,11 @@
   margin-bottom: 0;
 }
 
+/* Mobile-optimized chaos section */
+.chaos-section.mobile-optimized {
+  height: 200vh; /* Reduced height for mobile */
+}
+
 .sticky-container {
   position: sticky;
   top: 0;
@@ -49,6 +54,11 @@
   pointer-events: none;
   z-index: 5;
   transform: translateZ(0);
+}
+
+/* Mobile-optimized cards container */
+.cards-container.mobile-optimized {
+  pointer-events: auto; /* Enable touch interactions on mobile */
 }
 
 /* ==========================================================================

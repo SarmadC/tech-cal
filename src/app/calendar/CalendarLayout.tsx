@@ -284,7 +284,8 @@ export function CalendarLayout({
                     />
                 </div>
 
-                {/* Mobile Navigation - Bottom Tab Style */}
+                {/* Mobile Navigation - Bottom Tab Style - Only show when NOT using new mobile views */}
+                {!useNewMobileViews && (
                 <div className="md:hidden">
                     <MobileBottomTabNavigation
                         currentView={view}
@@ -326,6 +327,7 @@ export function CalendarLayout({
                         onSearchSuggestionSelect={() => {}}
                     />
                 </div>
+                )}
 
                 <div ref={containerRef} className="flex-1 flex flex-col min-h-0 overflow-hidden calendar-content-with-bottom-tabs">
                     <CalendarTransitionWrapper view={view} date={localDate}>

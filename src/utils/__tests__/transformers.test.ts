@@ -40,7 +40,9 @@ describe('eventTransformer', () => {
         source_url: 'https://example.com',
         livestream_url: 'https://stream.example.com',
         event_type_id: 'type1',
+        organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
+        updated_at: '2024-01-01T09:00:00Z',
         organizer: {
           id: 'org1',
           name: 'Test Organizer',
@@ -81,9 +83,17 @@ describe('eventTransformer', () => {
       const supabaseEvent = {
         id: '1',
         title: 'Test Event',
+        description: null,
         start_time: '2024-01-01T10:00:00Z',
+        end_time: null,
+        location: null,
+        status: 'confirmed',
+        source_url: null,
+        livestream_url: null,
         event_type_id: 'type1',
+        organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
+        updated_at: '2024-01-01T09:00:00Z',
         organizer: {
           id: 'org1',
           name: 'Test Organizer',
@@ -117,9 +127,17 @@ describe('eventTransformer', () => {
       const supabaseEvent = {
         id: '1',
         title: 'Test Event',
+        description: 'Test description',
         start_time: '2024-01-01T10:00:00Z',
+        end_time: '2024-01-01T11:00:00Z',
+        location: 'Online',
+        status: 'confirmed',
+        source_url: 'https://example.com',
+        livestream_url: 'https://example.com/stream',
         event_type_id: 'type1',
+        organizer_id: null,
         created_at: '2024-01-01T09:00:00Z',
+        updated_at: '2024-01-01T09:00:00Z',
         organizer: null,
         tags: [],
       };
@@ -127,7 +145,7 @@ describe('eventTransformer', () => {
       const result = eventTransformer.toApp(supabaseEvent);
 
       expect(result.organizer).toBe('Unknown Organizer');
-      expect(result.organization.name).toBe('Unknown Organizer');
+      expect(result.organization?.name).toBe('Unknown Organizer');
     });
   });
 
@@ -203,6 +221,7 @@ describe('eventTypeTransformer', () => {
         id: '1',
         name: 'Conference',
         color: '#3B82F6',
+        description: 'Conference events',
       };
 
       const result = eventTypeTransformer.toApp(supabaseEventType);
@@ -244,18 +263,34 @@ describe('trackedEventTransformer', () => {
         id: 'tracking1',
         user_id: 'user1',
         event_id: 'event1',
-        status: 'bookmarked',
+        status: 'bookmarked' as const,
         notes: 'Test notes',
         created_at: '2024-01-01T10:00:00Z',
         events: {
           id: 'event1',
           title: 'Test Event',
+          description: 'Test event description',
           start_time: '2024-01-01T10:00:00Z',
+          end_time: '2024-01-01T11:00:00Z',
+          location: 'Online',
+          status: 'confirmed',
+          source_url: 'https://example.com',
+          livestream_url: 'https://example.com/stream',
+          event_type_id: 'type1',
+          organizer_id: 'org1',
+          created_at: '2024-01-01T09:00:00Z',
+          updated_at: '2024-01-01T09:00:00Z',
           event_type: {
             id: 'type1',
             name: 'Conference',
             color: '#3B82F6',
+            description: 'Conference events',
           },
+          organizer: {
+            id: 'org1',
+            name: 'Test Organizer',
+          },
+          tags: [],
         },
       };
 
@@ -281,7 +316,7 @@ describe('trackedEventTransformer', () => {
         id: 'tracking1',
         user_id: 'user1',
         event_id: 'event1',
-        status: 'bookmarked',
+        status: 'bookmarked' as const,
         notes: '',
         created_at: '2024-01-01T10:00:00Z',
         events: null,
@@ -384,18 +419,34 @@ describe('array transformers', () => {
       {
         id: '1',
         title: 'Event 1',
+        description: 'Event 1 description',
         start_time: '2024-01-01T10:00:00Z',
+        end_time: '2024-01-01T11:00:00Z',
+        location: 'Online',
+        status: 'confirmed',
+        source_url: 'https://example.com',
+        livestream_url: 'https://example.com/stream',
         event_type_id: 'type1',
+        organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
+        updated_at: '2024-01-01T09:00:00Z',
         organizer: { id: 'org1', name: 'Org 1' },
         tags: [],
       },
       {
         id: '2',
         title: 'Event 2',
+        description: 'Event 2 description',
         start_time: '2024-01-02T10:00:00Z',
+        end_time: '2024-01-02T11:00:00Z',
+        location: 'Online',
+        status: 'confirmed',
+        source_url: 'https://example.com',
+        livestream_url: 'https://example.com/stream',
         event_type_id: 'type2',
+        organizer_id: 'org2',
         created_at: '2024-01-02T09:00:00Z',
+        updated_at: '2024-01-02T09:00:00Z',
         organizer: { id: 'org2', name: 'Org 2' },
         tags: [],
       },
@@ -414,11 +465,13 @@ describe('array transformers', () => {
         id: 'type1',
         name: 'Conference',
         color: '#3B82F6',
+        description: 'Conference events',
       },
       {
         id: 'type2',
         name: 'Workshop',
         color: '#10B981',
+        description: 'Workshop events',
       },
     ];
 
@@ -661,10 +714,17 @@ describe('enhancedEventTransformer', () => {
       const supabaseEvent = {
         id: '1',
         title: 'Multi-day Conference',
+        description: null,
         start_time: '2024-01-01T10:00:00Z',
         end_time: '2024-01-03T18:00:00Z',
+        location: null,
+        status: 'confirmed',
+        source_url: null,
+        livestream_url: null,
         event_type_id: 'type1',
+        organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
+        updated_at: '2024-01-01T09:00:00Z',
         organizer: { id: 'org1', name: 'Test Org' },
         tags: [],
         is_multi_day: true,
@@ -679,6 +739,7 @@ describe('enhancedEventTransformer', () => {
           id: 'type1',
           name: 'Conference',
           color: '#3B82F6',
+          description: 'Conference events',
         },
       };
 
@@ -722,10 +783,17 @@ describe('enhancedEventTransformer', () => {
       const supabaseEvent = {
         id: '1',
         title: 'Single Day Event',
+        description: null,
         start_time: '2024-01-01T10:00:00Z',
         end_time: '2024-01-01T12:00:00Z',
+        location: null,
+        status: 'confirmed',
+        source_url: null,
+        livestream_url: null,
         event_type_id: 'type1',
+        organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
+        updated_at: '2024-01-01T09:00:00Z',
         organizer: { id: 'org1', name: 'Test Org' },
         tags: [],
         is_multi_day: false,
@@ -735,6 +803,7 @@ describe('enhancedEventTransformer', () => {
           id: 'type1',
           name: 'Workshop',
           color: '#10B981',
+          description: 'Workshop events',
         },
       };
 

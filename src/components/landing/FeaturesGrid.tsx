@@ -1,10 +1,12 @@
 'use client';
 import '@/app/styles/features.css';
 import { useEffect, useRef } from 'react';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { features } from '@/data/landing-page-data';
 
 export function FeaturesGrid() {
     const gridRef = useRef<HTMLDivElement>(null);
+    const { isMobile } = useDeviceDetection();
 
     // Better bento box layout - creating a more balanced grid
     const bentoLayouts = [
@@ -62,8 +64,16 @@ export function FeaturesGrid() {
                     return (
                         <div
                             key={index}
-                            className={`bento-card-enhanced ${layoutClass} ${animationClass}`}
+                            className={`bento-card-enhanced ${layoutClass} ${animationClass} ${isMobile ? 'mobile-optimized' : ''}`}
                             data-index={index}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    // Add any click action here if needed
+                                }
+                            }}
                         >
                             <div className="card-pattern"></div>
                             <div className="card-gradient"></div>

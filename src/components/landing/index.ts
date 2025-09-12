@@ -8,3 +8,7 @@ export * from './FeaturesGrid';
 export * from './Footer';
 export { default as LightRays } from './LightRays';
 
+// Export adaptive renderer and mobile components
+export { default as AdaptiveLandingRenderer } from './AdaptiveLandingRenderer';
+export { default as MobileLandingPage } from './mobile/MobileLandingPage';
+

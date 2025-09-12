@@ -1,11 +1,11 @@
 // src/app/page.tsx
 
-import LandingPage from '@/components/landing/LandingPage';
+import AdaptiveLandingRenderer from '@/components/landing/AdaptiveLandingRenderer';
 
 export default function HomePage() {
   return (
     <main id="main-content">
-      <LandingPage />
+      <AdaptiveLandingRenderer />
     </main>
   );
 }

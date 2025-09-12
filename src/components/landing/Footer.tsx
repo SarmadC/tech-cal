@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { ArrowRightIcon, CalendarIcon, EnvelopeSimpleIcon, TwitterLogoIcon, LinkedinLogoIcon } from '@phosphor-icons/react';
 import { Highlight } from '../ui/hero-highlight';
 import '@/app/styles/footer.css';
 
 export function Footer() {
+    const { isMobile } = useDeviceDetection();
+    
     return (
         <footer className="footer-container">
             {/* Main Footer */}
@@ -22,10 +25,14 @@ export function Footer() {
                         <div className="footer-cta-section">
                             <h3 className="cta-title">Get personalized event recommendations</h3>
                             <p className="cta-subtitle">Get personalized event recommendations based on what you want to learn</p>
-                            <Link href="/signup" className="cta-button">
-                                <CalendarIcon size={20} />
+                            <Link 
+                                href="/signup" 
+                                className={`cta-button ${isMobile ? 'mobile-optimized' : ''}`}
+                                aria-label="Start your free account to access tech events calendar"
+                            >
+                                <CalendarIcon size={isMobile ? 18 : 20} />
                                 <span>Start Free Account</span>
-                                <ArrowRightIcon size={20} />
+                                <ArrowRightIcon size={isMobile ? 18 : 20} />
                             </Link>
                         </div>
 
