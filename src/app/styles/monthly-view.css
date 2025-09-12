@@ -136,6 +136,18 @@
 /* Ensure FC inner wrapper does not capture positioning context */
 .tech-calendar-month-view .fc-event .fc-event-main { position: static !important; }
 
+/* Ensure consistent pointer and avoid text selection flicker */
+.tech-calendar-month-view .event-card,
+.tech-calendar-month-view .event-card * {
+  cursor: pointer;
+}
+
+.tech-calendar-month-view .event-card .event-title,
+.tech-calendar-month-view .event-card .event-time {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* Month view: slightly tighter mini card padding for denser grid */
 .tech-calendar-month-view .event-card.mini {
   --card-pad: 0.375rem; /* tighter padding for dense month cells */

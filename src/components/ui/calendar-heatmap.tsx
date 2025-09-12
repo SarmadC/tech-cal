@@ -11,6 +11,8 @@ interface CalendarHeatmapProps {
   startDate?: Date;
   endDate?: Date;
   selectedDate?: Date;
+  selectedRangeStart?: Date;
+  selectedRangeEnd?: Date;
   onDateSelect?: (date: Date) => void;
   onMonthChange?: (date: Date) => void;
 }
@@ -23,6 +25,8 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
   startDate,
   endDate,
   selectedDate,
+  selectedRangeStart,
+  selectedRangeEnd,
   onDateSelect,
   onMonthChange,
 }: CalendarHeatmapProps) {
@@ -165,7 +169,7 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
       {/* Month/Year Header */}
       <div className="flex items-center justify-between mb-3">
         <button 
-          className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
+          className="p-1 rounded text-foreground-tertiary hover:text-foreground-secondary"
           onClick={handlePreviousMonth}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,10 +177,10 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
           </svg>
         </button>
         
-        <h3 className="text-white font-semibold text-sm">{monthYearHeader}</h3>
+        <h3 className="text-foreground-secondary font-medium text-sm tracking-wide">{monthYearHeader}</h3>
         
         <button 
-          className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
+          className="p-1 rounded text-foreground-tertiary hover:text-foreground-secondary"
           onClick={handleNextMonth}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,12 +203,18 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
         {baseCalendarData.map((day, _index) => {
           const isInRange = day.isInRange;
           const hasWeight = day.weight > 0;
-          const variantIndex = Math.min(day.variant, variantClassnames.length - 1);
+          // const variantIndex = Math.min(day.variant, variantClassnames.length - 1);
           const isSelected = selectedDateString ? day.date.toDateString() === selectedDateString : false;
+          const inRange = selectedRangeStart && selectedRangeEnd
+            ? day.date >= new Date(selectedRangeStart.getFullYear(), selectedRangeStart.getMonth(), selectedRangeStart.getDate()) &&
+              day.date <= new Date(selectedRangeEnd.getFullYear(), selectedRangeEnd.getMonth(), selectedRangeEnd.getDate())
+            : false;
+          const isRangeStart = selectedRangeStart ? day.date.toDateString() === selectedRangeStart.toDateString() : false;
+          const isRangeEnd = selectedRangeEnd ? day.date.toDateString() === selectedRangeEnd.toDateString() : false;
           
           // Create descriptive text for accessibility
           const eventsText = day.weight === 1 ? 'event' : 'events';
-          const selectedText = isSelected ? ' (Selected)' : '';
+          const selectedText = isSelected || isRangeStart || isRangeEnd ? ' (Selected)' : '';
           const todayText = day.isToday ? ' (Today)' : '';
           // Use consistent date format to prevent hydration mismatch
           const dateString = day.date.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -215,19 +225,16 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
               key={day.key}
               onClick={() => handleDateClick(day.date)}
               className={cn(
-                "aspect-square rounded-md transition-all duration-200 cursor-pointer",
+                "relative aspect-square rounded-lg transition-all duration-200 cursor-pointer",
                 "flex items-center justify-center text-xs font-medium",
-                isInRange ? (
-                  hasWeight ? 
-                    `event-density-${variantIndex}` : 
-                    "bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white"
-                ) : "bg-transparent text-gray-600 hover:text-gray-400",
-                // Today's date: subtle blue ring
-                day.isToday && !isSelected && "ring-1 ring-blue-400 ring-opacity-40",
-                // Selected date: solid background with border
-                isSelected && "bg-yellow-500/20 border-2 border-yellow-400 font-bold text-yellow-100",
-                // Both today and selected: special treatment
-                day.isToday && isSelected && "bg-yellow-500/30 border-2 border-yellow-400 ring-1 ring-blue-400 ring-opacity-60 font-bold text-yellow-100"
+                // Base: no backgrounds on tiles, just text color
+                isInRange ? "bg-transparent text-white" : "bg-transparent text-foreground-tertiary hover:text-foreground-secondary",
+                // Today's date: subtle ring only
+                day.isToday && !isSelected && !inRange && "ring-1 ring-[rgba(76,111,255,0.45)]",
+                // Range endpoints: subtle accent border without fill
+                (isRangeStart || isRangeEnd) && "border-2 border-[rgba(76,111,255,0.65)]",
+                // Single selected (fallback): emphasize text only
+                isSelected && "text-white"
               )}
               aria-label={ariaLabel}
               role="button"
@@ -240,7 +247,16 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
               }}
               title={ariaLabel}
             >
-              {day.dayNumber}
+              <span className={cn(!isInRange && "text-foreground-tertiary", isInRange && "text-white")}>{day.dayNumber}</span>
+              {hasWeight && (
+                <span
+                  className={cn(
+                    "absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full",
+                    day.weight >= 4 ? "bg-[rgba(76,111,255,0.8)]" : day.weight >= 2 ? "bg-foreground-secondary" : "bg-foreground-tertiary",
+                    "w-1 h-1"
+                  )}
+                />
+              )}
             </button>
           );
         })}

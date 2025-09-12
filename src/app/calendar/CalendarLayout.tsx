@@ -94,16 +94,28 @@ export function CalendarLayout({
 
     const urlDate = dateParam ? parseDateFromURL(dateParam) : null;
 
-    const activeDate = currentDate || urlDate || new Date();
+    const initialActiveDate = currentDate || urlDate || new Date();
+    const [localDate, setLocalDate] = React.useState<Date>(initialActiveDate);
+
+    // Keep localDate in sync if URL/date context changes externally
+    React.useEffect(() => {
+        const nextDate = currentDate || urlDate || new Date();
+        if (Math.abs(nextDate.getTime() - localDate.getTime()) > 1000 * 60) {
+            setLocalDate(nextDate);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dateParam, currentDate]);
 
     const handleViewChange = (newView: string) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set('view', newView);
-        params.set('date', formatDateForURL(activeDate));
+        params.set('date', formatDateForURL(localDate));
         router.push(`/calendar?${params.toString()}`, { scroll: false });
     };
 
     const handleDateChange = (newDate: Date) => {
+        // Optimistically update local state for instant UI response
+        setLocalDate(newDate);
         const params = new URLSearchParams(searchParams.toString());
         params.set('date', formatDateForURL(newDate));
         router.push(`/calendar?${params.toString()}`, { scroll: false });
@@ -115,9 +127,37 @@ export function CalendarLayout({
 
         if (calendarRef?.current) {
             const calendarApi = calendarRef.current.getApi();
-            const newDate = calendarApi.getDate();
-            handleDateChange(newDate);
+            if (calendarApi) {
+                // Perform the navigation on the calendar first
+                if (direction === 'today') {
+                    calendarApi.today();
+                } else if (direction === 'prev') {
+                    calendarApi.prev();
+                } else if (direction === 'next') {
+                    calendarApi.next();
+                }
+                // Read the new active date and sync URL/state
+                const newDate = calendarApi.getDate();
+                handleDateChange(newDate);
+                return;
+            }
         }
+        // Fallback: compute date based on current view when FullCalendar API is not available
+        if (direction === 'today') {
+            handleDateChange(new Date());
+            return;
+        }
+
+        const sign = direction === 'prev' ? -1 : 1;
+        const newDate = new Date(localDate);
+        if (view === 'day') {
+            newDate.setDate(newDate.getDate() + sign);
+        } else if (view === 'week') {
+            newDate.setDate(newDate.getDate() + 7 * sign);
+        } else {
+            newDate.setMonth(newDate.getMonth() + sign);
+        }
+        handleDateChange(newDate);
     };
 
     const handleToggleFilters = () => {
@@ -127,7 +167,7 @@ export function CalendarLayout({
 
     const layoutContext: CalendarLayoutContext = {
         view,
-        date: activeDate,
+        date: localDate,
         onNavigate: handleNavigation,
         onViewChange: handleViewChange,
         onDateChange: handleDateChange,
@@ -155,7 +195,7 @@ export function CalendarLayout({
             <div className="flex h-screen calendar-page">
                 <MobileCalendarApp
                     events={events || []}
-                    currentDate={activeDate}
+                    currentDate={localDate}
                     categories={categories}
                     profile={profile}
                     onEventSelect={onEventSelect}
@@ -189,7 +229,7 @@ export function CalendarLayout({
                 {/* Desktop Header */}
                 <div className="hidden md:block">
                     <CalendarHeader
-                        currentDate={activeDate}
+                        currentDate={localDate}
                         onNavigate={handleNavigation}
                         onToggleFilters={handleToggleFilters}
                         isFilterPanelOpen={isFilterPanelOpen}
@@ -209,7 +249,7 @@ export function CalendarLayout({
                         onDateChange={handleDateChange}
                         activeFilterCount={activeFilterCount}
                         isSidebarOpen={isSidebarOpen}
-                        currentDate={activeDate}
+                        currentDate={localDate}
                         filters={{
                             searchTerm: '',
                             format: 'all',
@@ -243,7 +283,7 @@ export function CalendarLayout({
                 </div>
 
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden calendar-content-with-bottom-tabs">
-                    <CalendarTransitionWrapper view={view} date={activeDate}>
+                    <CalendarTransitionWrapper view={view} date={localDate}>
                         {content}
                     </CalendarTransitionWrapper>
                 </div>

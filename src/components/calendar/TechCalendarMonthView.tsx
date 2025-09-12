@@ -271,6 +271,27 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         showPreview(event, position);
     }, [showPreview]);
 
+    // Keep FullCalendar in sync with external date changes
+    React.useEffect(() => {
+        const calendarInstance = activeCalendarRef.current;
+        if (!calendarInstance) return;
+        const api = calendarInstance.getApi();
+        if (!api) return;
+
+        // Avoid redundant navigation if already on the same date
+        const current = api.getDate?.();
+        if (current && current.toDateString() === initialDate.toDateString()) return;
+
+        const run = () => api.gotoDate(initialDate);
+        if (typeof queueMicrotask === 'function') {
+            queueMicrotask(run);
+        } else if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+            requestAnimationFrame(run);
+        } else {
+            setTimeout(run, 0);
+        }
+    }, [initialDate, activeCalendarRef]);
+
     // Handle date changes (from calendar navigation)
     const handleDatesSet = useCallback((_dateInfo: { start: Date }) => {
         // Handle date changes if needed

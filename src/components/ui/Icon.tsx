@@ -80,6 +80,7 @@ export type IconName =
   | 'event_available'
   | 'clear'
   | 'chevron_right'
+  | 'chevron_left'
   | 'arrow_back';
 
 interface IconProps {
@@ -128,6 +129,7 @@ const iconMap = {
   'event_available': CalendarCheckIcon,
   'clear': XSquareIcon,
   'chevron_right': CaretRightIcon,
+  'chevron_left': ArrowLeftIcon,
   'arrow_back': ArrowLeftIcon,
 } as const;
 

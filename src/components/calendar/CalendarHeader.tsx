@@ -1,11 +1,13 @@
 'use client';
 
-import { FC } from 'react';
+import { FC, useMemo, useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation'; // 1. IMPORT ROUTER HOOKS
 import { MaterialIcon } from '@/components/ui/Icon';
 import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/common/UserMenu';
+import { formatDateForURL } from '@/utils/dateUtils';
+import QuickDatePicker from '@/components/calendar/QuickDatePicker';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -23,7 +25,7 @@ export interface CalendarHeaderProps {
 }
 
 const CalendarHeader: FC<CalendarHeaderProps> = ({
-    currentDate: _currentDate,
+    currentDate,
     onNavigate,
     onToggleFilters,
     isFilterPanelOpen,
@@ -39,16 +41,105 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
     const view = (searchParams.get('view') as CalendarViewType) || 'month';
 
     // 5. NEW HANDLER to change the view by navigating to a new URL
-    const handleViewChange = (newView: CalendarViewType) => {
+    const handleViewChange = useCallback((newView: CalendarViewType) => {
         // Preserve existing URL parameters and update the view
         const params = new URLSearchParams(searchParams.toString());
         params.set('view', newView);
         router.push(`/calendar?${params.toString()}`, { scroll: false });
-    };
+    }, [router, searchParams]);
+
+    // Active date context
+    const monthYearLabel = useMemo(() => {
+        return currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }, [currentDate]);
+
+    const dateContextLabel = useMemo(() => {
+        if (view === 'week') {
+            // Show the focused date for context in week view
+            return currentDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+        if (view === 'day') {
+            return currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        }
+        // Month view: still show the date for context, compact
+        return currentDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }, [currentDate, view]);
+
+    const isToday = useMemo(() => {
+        const today = new Date();
+        return currentDate.toDateString() === today.toDateString();
+    }, [currentDate]);
+
+    const todayButtonLabel = useMemo(() => {
+        if (isToday) return 'Today';
+        const shortDate = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return `Today (${shortDate})`;
+    }, [isToday, currentDate]);
+
+    // Go to date quick picker
+    // Quick date picker state
+    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+    const openDatePicker = useCallback(() => setIsDatePickerOpen(true), []);
+    const closeDatePicker = useCallback(() => setIsDatePickerOpen(false), []);
+    const handleQuickDateChange = useCallback((date: Date) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('date', formatDateForURL(date));
+        router.push(`/calendar?${params.toString()}`, { scroll: false });
+    }, [router, searchParams]);
+
+    // Keyboard shortcuts: ←/→ to navigate, T for Today, M/W/D to switch views
+    useEffect(() => {
+        const isEditableTarget = (el: EventTarget | null) => {
+            if (!(el instanceof HTMLElement)) return false;
+            const tag = el.tagName;
+            const editableTags = ['INPUT', 'TEXTAREA', 'SELECT'];
+            return editableTags.includes(tag) || el.isContentEditable;
+        };
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (isEditableTarget(e.target) || isDatePickerOpen) return;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    onNavigate('prev');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    onNavigate('next');
+                    break;
+                case 't':
+                case 'T':
+                    e.preventDefault();
+                    onNavigate('today');
+                    break;
+                case 'm':
+                case 'M':
+                    e.preventDefault();
+                    handleViewChange('month');
+                    break;
+                case 'w':
+                case 'W':
+                    e.preventDefault();
+                    handleViewChange('week');
+                    break;
+                case 'd':
+                case 'D':
+                    e.preventDefault();
+                    handleViewChange('day');
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onNavigate, handleViewChange, isDatePickerOpen]);
 
     return (
         <header className="h-20 flex-shrink-0 px-4 md:px-6 flex items-center justify-between border-b border-border-subtle">
-            {/* Left Section: Branding and Sidebar Toggle */}
+            {/* Left Section: Branding, Month label */}
             <div className="flex items-center space-x-4">
                 {/* Sidebar Toggle Button */}
                 {onToggleSidebar && (
@@ -65,13 +156,44 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                 <Link href="/dashboard" className="p-2 text-foreground-secondary hover:text-foreground-primary hover:bg-background-tertiary rounded-lg transition-colors" title="Go to Dashboard">
                     <MaterialIcon name="dashboard" size={20} />
                 </Link>
+
+                {/* Navigation arrows + Month/Year + date context */}
+                <div className="hidden md:flex items-center gap-2" aria-live="polite">
+                    <button
+                        type="button"
+                        onClick={() => onNavigate('prev')}
+                        className="p-1.5 border border-border-default rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
+                        aria-label="Previous period"
+                    >
+                        <MaterialIcon name="chevron_left" size={16} />
+                    </button>
+                    <div className="text-foreground-primary font-medium select-none">
+                        <span>{monthYearLabel}</span>
+                        <span className="text-foreground-secondary text-sm ml-2">• {dateContextLabel}</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => onNavigate('next')}
+                        className="p-1.5 border border-border-default rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
+                        aria-label="Next period"
+                    >
+                        <MaterialIcon name="chevron_right" size={16} />
+                    </button>
+                </div>
             </div>
 
             {/* Center Section: Calendar Controls */}
             <div className="flex items-center space-x-2 md:space-x-4">
                 {/* Keep only the Today button */}
                 <div className="flex items-center space-x-1">
-                    <button onClick={() => onNavigate('today')} className="text-sm px-3 py-1.5 border border-border-default rounded-lg hover:bg-background-tertiary transition-colors">Today</button>
+                    <button 
+                        onClick={() => onNavigate('today')} 
+                        className="text-sm px-3 py-1.5 border border-border-default rounded-lg hover:bg-background-tertiary transition-colors"
+                        aria-pressed={isToday}
+                        aria-label={isToday ? 'Go to today' : `Go to today, ${todayButtonLabel}`}
+                    >
+                        {todayButtonLabel}
+                    </button>
                 </div>
 
                 {/* Desktop View Switcher Buttons */}
@@ -105,6 +227,30 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                         </div>
                     )}
                 </button>
+
+                {/* Move Go to date next to filter button */}
+                <div className="hidden md:flex items-center">
+                    <button
+                        type="button"
+                        className="flex items-center gap-2 text-sm px-3 py-1.5 bg-background-tertiary border border-border-default rounded-lg hover:bg-background-elevated transition-colors"
+                        onClick={openDatePicker}
+                        aria-haspopup="dialog"
+                        aria-expanded={isDatePickerOpen}
+                        aria-label="Open go to date picker"
+                    >
+                        <MaterialIcon name="event" size={16} />
+                        Go to date
+                    </button>
+                </div>
+
+                {/* Themed Quick Date Picker Popover */}
+                <QuickDatePicker
+                    currentDate={currentDate}
+                    onDateChange={handleQuickDateChange}
+                    view={view}
+                    isOpen={isDatePickerOpen}
+                    onClose={closeDatePicker}
+                />
                 {user ? (
                     <UserMenu />
                 ) : (

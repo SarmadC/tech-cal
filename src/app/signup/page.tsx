@@ -99,11 +99,11 @@ export default function SignupPage() {
                                     </div>
                                     <div className="flex items-start">
                                         <div className="flex items-center h-5">
-                                            <input id="acceptTerms" name="acceptTerms" type="checkbox" className="h-4 w-4 text-accent-primary bg-background-tertiary border-border-default rounded focus:ring-accent-primary" />
+                                            <input id="acceptTerms" name="acceptTerms" type="checkbox" className="h-4 w-4 text-accent-primary bg-background-tertiary border-border-default rounded focus:ring-accent-primary" required />
                                         </div>
                                         <div className="ml-3 text-sm">
                                             <label htmlFor="acceptTerms" className="text-foreground-secondary">
-                                                I agree to the <Link href="/legal/terms" className="font-medium text-accent-primary hover:underline">Terms of Service</Link>
+                                                I agree to the <Link href="/legal/terms" className="font-medium text-accent-primary hover:underline">Terms of Service</Link> and <Link href="/legal/privacy" className="font-medium text-accent-primary hover:underline">Privacy Policy</Link>
                                             </label>
                                             {state.errors?.acceptTerms && <p className="text-sm text-red-500">{state.errors.acceptTerms[0]}</p>}
                                         </div>

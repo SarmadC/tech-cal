@@ -359,6 +359,11 @@
     border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
+/* Month view: dampen hover lift to avoid pointer jitter over large blocks */
+.tech-calendar-month-view .event-card:hover {
+    transform: translateY(-1px) !important;
+}
+
 /* Add subtle gradient overlay for depth */
 .event-card::before {
     content: '';

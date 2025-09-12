@@ -15,22 +15,22 @@
 /* ============================================== */
 
 :root {
-  /* --- Vibrant Dark Theme (Default) --- */
-  --background-main: #0f0f23;
-  --background-secondary: #1a1a2e;
-  --background-tertiary: #16213e;
-  --background-elevated: #0f3460;
+  /* --- Minimal Dark Theme (Neutral-first) --- */
+  --background-main: #0B0F14;
+  --background-secondary: #0F141C;
+  --background-tertiary: #121924;
+  --background-elevated: #141C27;
   
-  --foreground-primary: #ffffff;
-  --foreground-secondary: #e2e8f0;
-  --foreground-tertiary: #94a3b8;
-  --foreground-muted: #64748b;
+  --foreground-primary: #E7ECF3;
+  --foreground-secondary: #AAB6C6;
+  --foreground-tertiary: #7B8798;
+  --foreground-muted: #637082;
   
-  /* Primary Accent - Vibrant Orange */
-  --accent-primary: #ff6b35;
-  --accent-primary-hover: #ff8c42;
-  --accent-primary-light: rgba(255, 107, 53, 0.15);
-  --accent-border: rgba(255, 107, 53, 0.3);
+  /* Primary Accent - Paid-feel Blue */
+  --accent-primary: #4C6FFF;
+  --accent-primary-hover: #3B5BDB;
+  --accent-primary-light: rgba(76, 111, 255, 0.12);
+  --accent-border: rgba(76, 111, 255, 0.35);
   
   /* Secondary Accent - Electric Blue */
   --accent-secondary: #3b82f6;
@@ -56,13 +56,13 @@
   
   /* Special Colors */
   --virtual-event: #8b5cf6;
-  --gradient-primary: linear-gradient(135deg, #ff6b35 0%, #3b82f6 100%);
-  --gradient-secondary: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
-  --gradient-accent: linear-gradient(135deg, #ff6b35 0%, #f59e0b 50%, #8b5cf6 100%);
+  --gradient-primary: linear-gradient(135deg, #1a2230 0%, #0F141C 100%);
+  --gradient-secondary: linear-gradient(135deg, #141C27 0%, #0B0F14 100%);
+  --gradient-accent: linear-gradient(135deg, rgba(76,111,255,0.15) 0%, rgba(76,111,255,0.06) 100%);
   
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-default: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-subtle: rgba(231, 236, 243, 0.06);
+  --border-default: rgba(231, 236, 243, 0.10);
+  --border-strong: rgba(231, 236, 243, 0.16);
   --border-accent: var(--accent-border);
   
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -325,7 +325,7 @@ input::placeholder, textarea::placeholder {
     --card-foreground: 255 255 255;
     --popover: 26 26 46;
     --popover-foreground: 255 255 255;
-    --primary: 255 107 53;
+    --primary: 76 111 255; /* blue */
     --primary-foreground: 255 255 255;
     --secondary: 22 33 62;
     --secondary-foreground: 226 232 240;
@@ -337,7 +337,7 @@ input::placeholder, textarea::placeholder {
     --destructive-foreground: 255 255 255;
     --border: 59 130 246;
     --input: 22 33 62;
-    --ring: 255 107 53;
+    --ring: 76 111 255;
     --radius: 0.5rem;
   }
  
@@ -349,7 +349,7 @@ input::placeholder, textarea::placeholder {
     --card-foreground: 15 23 42;
     --popover: 248 250 252;
     --popover-foreground: 15 23 42;
-    --primary: 255 107 53;
+    --primary: 76 111 255;
     --primary-foreground: 255 255 255;
     --secondary: 241 245 249;
     --secondary-foreground: 51 65 85;
@@ -361,7 +361,7 @@ input::placeholder, textarea::placeholder {
     --destructive-foreground: 255 255 255;
     --border: 226 232 240;
     --input: 226 232 240;
-    --ring: 255 107 53;
+    --ring: 76 111 255;
   }
 
   /* --- Final Base Apply Rules --- */

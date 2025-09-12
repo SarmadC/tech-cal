@@ -1,7 +1,9 @@
 'use client';
 
 import { FC, useState, useRef, useEffect, useCallback } from 'react';
+import { formatDate } from '@/utils/dateUtils';
 import { MaterialIcon } from '@/components/ui/Icon';
+import { CalendarHeatmap } from '@/components/ui/calendar-heatmap';
 
 export interface QuickDatePickerProps {
     currentDate: Date;
@@ -19,9 +21,15 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
     onClose
 }) => {
     const [selectedDate, setSelectedDate] = useState(currentDate);
+    const [rangeStart, setRangeStart] = useState<Date | null>(null);
+    const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
     const [isAnimating, setIsAnimating] = useState(false);
     const [direction, setDirection] = useState<'prev' | 'next' | null>(null);
     const pickerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const [inputValue, setInputValue] = useState('');
+    const [parsedInputDate, setParsedInputDate] = useState<Date | null>(null);
 
     // Update selected date when currentDate changes
     useEffect(() => {
@@ -56,7 +64,104 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
         }
     }, [isOpen, onClose]);
 
-    const navigateDate = useCallback((direction: 'prev' | 'next') => {
+    // Autofocus input when opened
+    useEffect(() => {
+        if (isOpen) {
+            setTimeout(() => inputRef.current?.focus(), 0);
+        }
+    }, [isOpen]);
+
+    // Parse manual input into a Date
+    const parseQuickDate = useCallback((raw: string, base: Date): Date | null => {
+        if (!raw) return null;
+        const s = raw.trim().toLowerCase();
+        if (!s) return null;
+
+        const clone = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const today = clone(base);
+
+        // YYYY-MM-DD
+        const iso = s.match(/^\d{4}-\d{2}-\d{2}$/);
+        if (iso) {
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        // MM/DD[/YYYY]
+        const mmdd = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+        if (mmdd) {
+            const m = parseInt(mmdd[1], 10) - 1;
+            const day = parseInt(mmdd[2], 10);
+            const y = mmdd[3] ? (mmdd[3].length === 2 ? 2000 + parseInt(mmdd[3], 10) : parseInt(mmdd[3], 10)) : today.getFullYear();
+            const d = new Date(y, m, day);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        // Today / Tomorrow / Yesterday
+        if (s === 'today') return today;
+        if (s === 'tomorrow') { const d = clone(today); d.setDate(d.getDate() + 1); return d; }
+        if (s === 'yesterday') { const d = clone(today); d.setDate(d.getDate() - 1); return d; }
+
+        // In N days/weeks/months
+        const inMatch = s.match(/^in\s+(\d+)\s+(day|days|week|weeks|month|months)$/);
+        if (inMatch) {
+            const n = parseInt(inMatch[1], 10);
+            const unit = inMatch[2];
+            const d = clone(today);
+            if (unit.startsWith('day')) d.setDate(d.getDate() + n);
+            else if (unit.startsWith('week')) d.setDate(d.getDate() + n * 7);
+            else if (unit.startsWith('month')) d.setMonth(d.getMonth() + n);
+            return d;
+        }
+
+        // Next week / next month
+        if (s === 'next week') { const d = clone(today); d.setDate(d.getDate() + 7); return d; }
+        if (s === 'next month') { const d = clone(today); d.setMonth(d.getMonth() + 1); return d; }
+
+        // Next <weekday>
+        // weekdays map is inlined below to avoid unused var lint
+        const nextWd = s.match(/^next\s+(sun|sunday|mon|monday|tue|tuesday|wed|wednesday|thu|thursday|fri|friday|sat|saturday)$/);
+        if (nextWd) {
+            const token = nextWd[1];
+            const map: Record<string, number> = { sun:0,sunday:0, mon:1,monday:1, tue:2,tuesday:2, wed:3,wednesday:3, thu:4,thursday:4, fri:5,friday:5, sat:6,saturday:6 };
+            const target = map[token];
+            const d = clone(today);
+            const diff = (7 + target - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + diff);
+            return d;
+        }
+
+        // Month name patterns like "Sep 11 [2025]" or "11 Sep [2025]"
+        const monthMap: Record<string, number> = { jan:0,january:0, feb:1,february:1, mar:2,march:2, apr:3,april:3, may:4, jun:5,june:5, jul:6,july:6, aug:7,august:7, sep:8,sept:8,september:8, oct:9,october:9, nov:10,november:10, dec:11,december:11 };
+        const mdy = s.match(/^([a-zA-Z]+)\s+(\d{1,2})(?:,?\s*(\d{4}))?$/);
+        if (mdy && monthMap[mdy[1].toLowerCase()] !== undefined) {
+            const m = monthMap[mdy[1].toLowerCase()];
+            const day = parseInt(mdy[2], 10);
+            const y = mdy[3] ? parseInt(mdy[3], 10) : today.getFullYear();
+            const d = new Date(y, m, day);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        const dmy = s.match(/^(\d{1,2})\s+([a-zA-Z]+)(?:,?\s*(\d{4}))?$/);
+        if (dmy && monthMap[dmy[2].toLowerCase()] !== undefined) {
+            const m = monthMap[dmy[2].toLowerCase()];
+            const day = parseInt(dmy[1], 10);
+            const y = dmy[3] ? parseInt(dmy[3], 10) : today.getFullYear();
+            const d = new Date(y, m, day);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        // Fallback native parse
+        const fallback = new Date(raw);
+        return isNaN(fallback.getTime()) ? null : fallback;
+    }, []);
+
+    useEffect(() => {
+        if (!inputValue) { setParsedInputDate(null); return; }
+        const parsed = parseQuickDate(inputValue, new Date());
+        setParsedInputDate(parsed);
+    }, [inputValue, parseQuickDate]);
+
+    const _navigateDate = useCallback((direction: 'prev' | 'next') => {
         if (isAnimating) return;
 
         setDirection(direction);
@@ -86,18 +191,34 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
     }, [selectedDate, view, isAnimating]);
 
     const handleDateSelect = useCallback((date: Date) => {
-        onDateChange(date);
-        onClose();
-    }, [onDateChange, onClose]);
+        // Range selection logic: first click sets start, second sets end
+        if (!rangeStart || (rangeStart && rangeEnd)) {
+            setRangeStart(date);
+            setRangeEnd(null);
+            setSelectedDate(date);
+            return;
+        }
+        if (rangeStart && !rangeEnd) {
+            if (date < rangeStart) {
+                setRangeEnd(rangeStart);
+                setRangeStart(date);
+                setSelectedDate(date);
+            } else {
+                setRangeEnd(date);
+                setSelectedDate(date);
+            }
+            return;
+        }
+    }, [rangeStart, rangeEnd]);
 
-    const goToToday = useCallback(() => {
+    const _goToToday = useCallback(() => {
         const today = new Date();
         setSelectedDate(today);
-        onDateChange(today);
-        onClose();
-    }, [onDateChange, onClose]);
+        setRangeStart(today);
+        setRangeEnd(today);
+    }, []);
 
-    const formatDateDisplay = (date: Date) => {
+    const _formatDateDisplay = (date: Date) => {
         switch (view) {
             case 'month':
                 return date.toLocaleDateString('en-US', { 
@@ -126,7 +247,7 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
         }
     };
 
-    const generateQuickDates = () => {
+    const _generateQuickDates = () => {
         const dates = [];
         const today = new Date();
         
@@ -169,69 +290,87 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                         <MaterialIcon name="close" size={20} />
                     </button>
                     <h3 className="quick-date-picker-title">Jump to Date</h3>
-                    <button
-                        onClick={goToToday}
-                        className="quick-date-picker-today"
-                        aria-label="Go to today"
-                    >
-                        Today
-                    </button>
+                    {/* Today pill removed to match mock */}
                 </div>
 
-                {/* Current Date Display */}
-                <div className="quick-date-picker-current">
-                    <div className="current-date-display">
-                        {formatDateDisplay(selectedDate)}
-                    </div>
-                    
-                    {/* Navigation Controls */}
-                    <div className="date-navigation-controls">
-                        <button
-                            onClick={() => navigateDate('prev')}
-                            className="date-nav-button"
-                            disabled={isAnimating}
-                            aria-label={`Previous ${view}`}
-                        >
-                            <MaterialIcon name="arrow_back" size={24} />
-                        </button>
-                        
-                        <button
-                            onClick={() => navigateDate('next')}
-                            className="date-nav-button"
-                            disabled={isAnimating}
-                            aria-label={`Next ${view}`}
-                        >
-                            <MaterialIcon name="chevron_right" size={24} />
-                        </button>
-                    </div>
-                </div>
+                {/* Content: Presets (left) + Calendar (right) */}
+                <div className="quick-date-content">
+                    <div className="quick-date-left">
+                        {/* Manual entry */}
+                        <div className="quick-date-manual">
+                            <label htmlFor="quick-date-input" className="quick-date-section-title">Type a date</label>
+                            <input
+                                id="quick-date-input"
+                                ref={inputRef}
+                                type="text"
+                                className="quick-date-input"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.currentTarget.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && parsedInputDate) {
+                                        handleDateSelect(parsedInputDate);
+                                    }
+                                }}
+                                aria-describedby="quick-date-help"
+                            />
+                            <div id="quick-date-help" className={`quick-date-hint ${parsedInputDate ? 'valid' : (inputValue ? 'invalid' : '')}`}>
+                                {parsedInputDate
+                                    ? `Will go to ${formatDate(parsedInputDate)}`
+                                    : (inputValue ? 'Unrecognized date. Try YYYY-MM-DD, "next Tue", or "in 2 weeks".' : 'Enter a date or phrase.')}
+                            </div>
+                        </div>
 
-                {/* Quick Date Options */}
-                <div className="quick-date-options">
-                    <h4 className="quick-date-section-title">Quick Select</h4>
-                    <div className="quick-date-list">
-                        {(() => {
-                            const { dates, today } = generateQuickDates();
-                            return dates.map((item, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => handleDateSelect(item.date)}
-                                    className={`quick-date-option ${item.isToday ? 'today' : ''}`}
-                                >
-                                    <div className="quick-date-option-content">
-                                        <span className="quick-date-option-label">{item.label}</span>
-                                        <span className="quick-date-option-date">
-                                            {item.date.toLocaleDateString('en-US', { 
-                                                month: 'short', 
-                                                day: 'numeric',
-                                                year: item.date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-                                            })}
-                                        </span>
-                                    </div>
-                                    <MaterialIcon name="chevron_right" size={16} />
-                                </button>
-                            ));
-                        })()}
+                        {/* Quick presets */}
+                        <div className="quick-date-options">
+                            <h4 className="quick-date-section-title">Quick Select</h4>
+                            <div className="quick-date-list">
+                                {(() => {
+                                    const presets = [
+                                        { label: 'Today', fn: () => new Date(), key: 'today' },
+                                        { label: 'Yesterday', fn: () => { const d = new Date(); d.setDate(d.getDate() - 1); return d; }, key: 'yesterday' },
+                                        { label: 'This week', fn: () => selectedDate, key: 'this-week' },
+                                        { label: 'Last week', fn: () => { const d = new Date(); d.setDate(d.getDate() - 7); return d; }, key: 'last-week' },
+                                        { label: 'This month', fn: () => { const d = new Date(); d.setDate(1); return d; }, key: 'this-month' },
+                                        { label: 'Last month', fn: () => { const d = new Date(); d.setMonth(d.getMonth() - 1, 1); return d; }, key: 'last-month' },
+                                        { label: 'This year', fn: () => { const d = new Date(); d.setMonth(0, 1); return d; }, key: 'this-year' },
+                                        { label: 'Last year', fn: () => { const d = new Date(); d.setFullYear(d.getFullYear() - 1, 0, 1); return d; }, key: 'last-year' },
+                                    ];
+                                    return presets.map((p) => (
+                                        <button
+                                            key={p.key}
+                                            onClick={() => handleDateSelect(p.fn())}
+                                            className={`quick-date-option ${p.key === 'today' ? 'today' : ''}`}
+                                        >
+                                            <div className="quick-date-option-content">
+                                                <span className="quick-date-option-label">{p.label}</span>
+                                            </div>
+                                            <MaterialIcon name="chevron_right" size={16} />
+                                        </button>
+                                    ));
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="quick-date-right">
+                        <CalendarHeatmap
+                            variantClassnames={[
+                                'bg-background-tertiary text-foreground-secondary hover:text-foreground-primary hover:bg-background-elevated',
+                                'bg-background-tertiary text-foreground-secondary',
+                                'bg-background-tertiary text-foreground-secondary',
+                                'bg-background-tertiary text-foreground-secondary',
+                                'bg-background-tertiary text-foreground-secondary'
+                            ]}
+                            weightedDates={[]}
+                            startDate={selectedDate}
+                            endDate={selectedDate}
+                            selectedDate={selectedDate}
+                            selectedRangeStart={rangeStart ?? undefined}
+                            selectedRangeEnd={rangeEnd ?? undefined}
+                            onDateSelect={(d) => handleDateSelect(d)}
+                            onMonthChange={(d) => setSelectedDate(d)}
+                            className="quick-date-calendar"
+                        />
                     </div>
                 </div>
 
@@ -244,10 +383,16 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                         Cancel
                     </button>
                     <button
-                        onClick={() => handleDateSelect(selectedDate)}
+                        onClick={() => {
+                            const next = parsedInputDate || (rangeStart && rangeEnd ? rangeStart : selectedDate);
+                            const finalDate = next || selectedDate;
+                            onDateChange(finalDate);
+                            onClose();
+                        }}
                         className="quick-date-picker-confirm"
+                        disabled={(!!inputValue && !parsedInputDate) || (!!rangeStart && !rangeEnd && !parsedInputDate)}
                     >
-                        Go to {view === 'month' ? 'Month' : view === 'week' ? 'Week' : 'Day'}
+                        {rangeStart && rangeEnd ? 'Go to Range' : `Go to ${view === 'month' ? 'Month' : view === 'week' ? 'Week' : 'Day'}`}
                     </button>
                 </div>
             </div>
