@@ -1,0 +1,221 @@
+/* ==========================================================================
+   QUICK DATE PICKER (extracted from legacy calendar-sidebar.css)
+   ========================================================================== */
+
+.quick-date-picker-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: quickDatePickerFadeIn 0.3s ease-out;
+}
+
+@keyframes quickDatePickerFadeIn {
+    from { opacity: 0; backdrop-filter: blur(0px); }
+    to { opacity: 1; backdrop-filter: blur(4px); }
+}
+
+.quick-date-picker {
+    background: var(--background-main, #0f0f23);
+    border-radius: 16px;
+    box-shadow:
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    width: 100%;
+    max-width: 720px;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: quickDatePickerSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+}
+
+@keyframes quickDatePickerSlideIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.quick-date-picker.animating { overflow: hidden; }
+.quick-date-picker.slide-prev .current-date-display { animation: slideOutRight 0.3s ease-in-out; }
+.quick-date-picker.slide-next .current-date-display { animation: slideOutLeft 0.3s ease-in-out; }
+
+@keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+@keyframes slideOutLeft  { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
+
+.quick-date-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border-subtle, #e5e7eb);
+}
+
+.quick-date-picker-close {
+    padding: 0.5rem;
+    color: var(--foreground-secondary, #6b7280);
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quick-date-picker-close:hover {
+    color: var(--foreground-primary, #1e293b);
+    background: var(--background-tertiary, #f8fafc);
+}
+
+.quick-date-picker-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--foreground-secondary, #AAB6C6);
+    margin: 0;
+}
+
+.quick-date-content {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 1rem;
+    padding: 1rem 1.5rem 1.5rem 1.5rem;
+}
+
+.quick-date-left { border-right: 1px solid var(--border-subtle, rgba(255,255,255,0.08)); padding-right: 1rem; }
+
+.quick-date-manual { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.quick-date-input {
+    width: 100%;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-default, rgba(231,236,243,0.10));
+    color: var(--foreground-primary, #E7ECF3);
+    border-radius: 12px;
+    padding: 0 12px;
+    outline: none;
+}
+
+.quick-date-input:focus {
+    border-color: var(--accent-border, rgba(76,111,255,0.35));
+    box-shadow: 0 0 0 3px var(--accent-primary-light, rgba(76,111,255,0.12));
+}
+
+.quick-date-input::placeholder { color: transparent; }
+
+.quick-date-hint { font-size: 0.8rem; color: var(--foreground-tertiary, #7B8798); }
+.quick-date-hint.valid { color: var(--foreground-secondary, #AAB6C6); }
+.quick-date-hint.invalid { color: #ef4444; }
+
+.quick-date-options { padding: 0.5rem 0 0; max-height: 360px; overflow-y: auto; }
+.quick-date-section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--foreground-secondary, #AAB6C6);
+    margin: 0 0 1rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.quick-date-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.quick-date-option {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.75rem 0.75rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    text-align: left;
+    width: 100%;
+}
+
+.quick-date-option:hover,
+.quick-date-option:focus-visible,
+.quick-date-option[aria-selected="true"] {
+    background: var(--accent-primary-light, rgba(76,111,255,0.12));
+    border-color: var(--accent-border, rgba(76,111,255,0.35));
+}
+
+.quick-date-option.today {
+    background: rgba(76,111,255,0.14);
+    border-color: var(--accent-primary, #4C6FFF);
+    color: var(--accent-primary, #4C6FFF);
+}
+
+.quick-date-option-content { display: flex; flex-direction: column; gap: 0.25rem; }
+.quick-date-option-label { font-weight: 500; color: var(--foreground-primary, #ffffff); }
+.quick-date-option-date { font-size: 0.875rem; color: var(--foreground-tertiary, #94a3b8); }
+.quick-date-option.today .quick-date-option-date { color: var(--accent-primary, #3b82f6); }
+
+.quick-date-picker-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem 1.25rem;
+    border-top: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+    background: transparent;
+}
+
+.quick-date-picker-cancel {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-default, rgba(255,255,255,0.12));
+    border-radius: 0.5rem;
+    color: var(--foreground-secondary, rgba(255,255,255,0.8));
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.quick-date-picker-cancel:hover {
+    background: var(--background-tertiary, #f8fafc);
+    border-color: var(--border-strong, rgba(255,255,255,0.18));
+    color: var(--foreground-primary, #ffffff);
+}
+
+.quick-date-picker-confirm {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: var(--accent-primary, #8b5cf6);
+    border: none;
+    border-radius: 0.5rem;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.quick-date-picker-confirm:hover {
+    background: var(--accent-primary-hover, #7c3aed);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+}
+
+.quick-date-right { padding-left: 0.5rem; display: flex; align-items: center; justify-content: center; }
+.quick-date-calendar { width: 100%; }
+
+@media (max-width: 640px) {
+    .quick-date-content { grid-template-columns: 1fr; }
+    .quick-date-left { border-right: none; padding-right: 0; }
+}
+
+@media (max-width: 480px) {
+    .quick-date-picker-overlay { padding: 0.5rem; }
+    .quick-date-picker { max-height: 85vh; }
+    .quick-date-picker-header { padding: 1rem 1rem 0.75rem; }
+    .quick-date-picker-actions { padding: 1rem; flex-direction: column; }
+    .quick-date-picker-cancel,
+    .quick-date-picker-confirm { flex: none; }
+}
+
+

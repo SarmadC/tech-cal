@@ -13,6 +13,7 @@ import '@/components/calendar/mobile/mobile-calendar.css';
 import './styles/landing-page.css';
 import './styles/ChaosToOrder.css';   
 import './styles/orbiting-circles.css';
+import './styles/quick-date-picker.css';
 
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -36,6 +37,11 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="dark">
+            <head>
+                {/* FullCalendar base styles via CDN (avoids package export limits) */}
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.18/index.css" />
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.18/index.css" />
+            </head>
             <body className={`${inter.className} ${dmSans.variable}`}>
                 {/* Toaster should be high-level to be independent of other re-renders */}
                 <Toaster position="top-center" richColors />

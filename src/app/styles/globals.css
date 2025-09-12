@@ -310,6 +310,11 @@ input::placeholder, textarea::placeholder {
   .space-8 { gap: var(--space-8); }
   .space-12 { gap: var(--space-12); }
   .space-16 { gap: var(--space-16); }
+
+  /* Force DM Sans across a subtree */
+  .font-sans-all, .font-sans-all * {
+    font-family: var(--font-sans) !important;
+  }
 }
 
 /* ============================================== */
@@ -339,6 +344,13 @@ input::placeholder, textarea::placeholder {
     --input: 22 33 62;
     --ring: 76 111 255;
     --radius: 0.5rem;
+
+    /* Sidebar theme tokens (oklch l c h[/a]) */
+    /* Deep neutral-blue surface with subtle accent */
+    --sidebar: 0.22 0.02 260;
+    --sidebar-foreground: 0.98 0 0;
+    --sidebar-border: 0.6 0.02 260/18%;
+    --sidebar-accent: 0.27 0.03 260;
   }
  
   .light {
@@ -362,6 +374,12 @@ input::placeholder, textarea::placeholder {
     --border: 226 232 240;
     --input: 226 232 240;
     --ring: 76 111 255;
+
+    /* Sidebar theme tokens (light) */
+    --sidebar: 0.98 0 0;
+    --sidebar-foreground: 0.17 0.02 260;
+    --sidebar-border: 0.88 0 0/35%;
+    --sidebar-accent: 0.92 0.02 260;
   }
 
   /* --- Final Base Apply Rules --- */
@@ -372,6 +390,36 @@ input::placeholder, textarea::placeholder {
     @apply bg-background text-foreground;
   }
 }
+
+/* ============================================== */
+/* 6a. CALENDAR TRANSITION CONTAINER (restored)   */
+/* ============================================== */
+
+/* These classes were previously defined in calendar-sidebar.css and
+   are required for the calendar to occupy space and render properly. */
+.calendar-transition-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.calendar-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.calendar-transition.transitioning {
+  opacity: 0.7;
+  transform: scale(0.98);
+}
+
+@keyframes slideOutRight { from { transform: translateX(0) scale(1); opacity: 1; } to { transform: translateX(100%) scale(0.95); opacity: 0; } }
+@keyframes slideOutLeft  { from { transform: translateX(0) scale(1); opacity: 1; } to { transform: translateX(-100%) scale(0.95); opacity: 0; } }
+@keyframes slideInRight  { from { transform: translateX(100%) scale(0.95); opacity: 0; } to { transform: translateX(0) scale(1); opacity: 1; } }
+@keyframes slideInLeft   { from { transform: translateX(-100%) scale(0.95); opacity: 0; } to { transform: translateX(0) scale(1); opacity: 1; } }
+
+.calendar-transition:not(.transitioning) { animation: slideInRight 0.3s ease-in-out; }
+.calendar-transition.slide-prev:not(.transitioning) { animation: slideInLeft 0.3s ease-in-out; }
 
 /* ============================================== */
 /* 6. RESPONSIVE & PRINT STYLES                   */

@@ -38,7 +38,10 @@ import {
   CalendarCheckIcon,
   XSquareIcon,
   CaretRightIcon,
+  CaretLeftIcon,
   ArrowLeftIcon,
+  CaretDoubleLeftIcon,
+  HouseIcon,
 } from '@phosphor-icons/react';
 
 export type IconName = 
@@ -81,7 +84,9 @@ export type IconName =
   | 'clear'
   | 'chevron_right'
   | 'chevron_left'
-  | 'arrow_back';
+  | 'arrow_back'
+  | 'chevron_double_left'
+  | 'home';
 
 interface IconProps {
   name: IconName;
@@ -129,8 +134,10 @@ const iconMap = {
   'event_available': CalendarCheckIcon,
   'clear': XSquareIcon,
   'chevron_right': CaretRightIcon,
-  'chevron_left': ArrowLeftIcon,
+  'chevron_left': CaretLeftIcon,
   'arrow_back': ArrowLeftIcon,
+  'chevron_double_left': CaretDoubleLeftIcon,
+  'home': HouseIcon,
 } as const;
 
 export const MaterialIcon: React.FC<IconProps> = ({ 

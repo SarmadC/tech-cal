@@ -31,7 +31,7 @@ export default async function SettingsPage() {
     // --- CHANGED SECTION END ---
 
     return (
-        <div className="max-w-5xl mx-auto py-12 px-4">
+        <div className="max-w-5xl mx-auto py-12 px-4 font-sans-all">
             <header className="mb-8">
                 <h1 className="text-3xl font-bold text-foreground-primary">Settings</h1>
                 <p className="text-md text-foreground-secondary mt-1">Manage your account and subscription settings.</p>

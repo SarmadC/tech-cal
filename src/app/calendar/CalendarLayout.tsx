@@ -4,11 +4,12 @@ import React, { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
-import CalendarSidebar from '@/components/calendar/CalendarSidebar';
+import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
+import AppSidebar from '@/components/app-sidebar';
 import MobileBottomTabNavigation from '@/components/calendar/MobileBottomTabNavigation';
 import MobileCalendarApp from '@/components/calendar/mobile/MobileCalendarApp';
 import CalendarTransitionWrapper from '@/components/calendar/CalendarTransitionWrapper';
-import '@/app/styles/calendar-sidebar.css';
+/* removed legacy calendar-sidebar.css */
 import '@/app/styles/calendar-heatmap.css';
 import '@/components/calendar/mobile/mobile-calendar.css';
 
@@ -49,6 +50,30 @@ export interface CalendarLayoutProps {
     categories?: Array<{ id: string; name: string; color: string; description: string | null }>;
     profile?: { id: string; fullName: string | null; avatarUrl: string | null; timezone: string | null; preferences: Json | null; createdAt: string | null; updatedAt: string | null } | null;
 }
+
+// Header wrapper that can safely use the Sidebar context (must be rendered under provider)
+const HeaderWithSidebarToggle: React.FC<{
+    currentDate: Date;
+    onNavigate: (dir: 'prev' | 'next' | 'today') => void;
+    onToggleFilters: () => void;
+    isFilterPanelOpen: boolean;
+    activeFilterCount: number;
+    fallbackToggle?: () => void;
+    fallbackOpen?: boolean;
+}> = ({ currentDate, onNavigate, onToggleFilters, isFilterPanelOpen, activeFilterCount, fallbackToggle: _fallbackToggle, fallbackOpen: _fallbackOpen }) => {
+    const { open, toggle } = useSidebar();
+    return (
+        <CalendarHeader
+            currentDate={currentDate}
+            onNavigate={onNavigate}
+            onToggleFilters={onToggleFilters}
+            isFilterPanelOpen={isFilterPanelOpen}
+            activeFilterCount={activeFilterCount}
+            onToggleSidebar={toggle}
+            isSidebarOpen={open}
+        />
+    );
+};
 
 export function CalendarLayout({
     children,
@@ -96,6 +121,7 @@ export function CalendarLayout({
 
     const initialActiveDate = currentDate || urlDate || new Date();
     const [localDate, setLocalDate] = React.useState<Date>(initialActiveDate);
+    const containerRef = React.useRef<HTMLDivElement | null>(null);
 
     // Keep localDate in sync if URL/date context changes externally
     React.useEffect(() => {
@@ -176,6 +202,39 @@ export function CalendarLayout({
 
     const content = renderContent ? renderContent(layoutContext) : children;
 
+    // Ensure FullCalendar recalculates layout when container size changes (e.g., sidebar toggle)
+    React.useEffect(() => {
+        const updateCalendarSize = () => {
+            try {
+                const api = calendarRef?.current?.getApi?.();
+                api?.updateSize();
+            } catch {
+                // no-op
+            }
+        };
+
+        // Initial update after mount
+        const timer = setTimeout(updateCalendarSize, 0);
+
+        // Observe container size changes
+        let resizeObserver: ResizeObserver | null = null;
+        if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+            resizeObserver = new ResizeObserver(() => updateCalendarSize());
+            resizeObserver.observe(containerRef.current);
+        }
+
+        // Also update on window resize
+        window.addEventListener('resize', updateCalendarSize);
+
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', updateCalendarSize);
+            if (resizeObserver) {
+                resizeObserver.disconnect();
+            }
+        };
+    }, [calendarRef]);
+
     // Handle loading states
     if (!profile && categories.length === 0) {
         return (
@@ -206,36 +265,22 @@ export function CalendarLayout({
     }
 
     return (
+        <SidebarProvider>
         <div className="flex h-screen calendar-page overflow-hidden">
-            {/* Sidebar Overlay - Always an overlay to prevent content compression */}
-            {isSidebarOpen && (
-                <>
-                    {/* Backdrop overlay for all screen sizes */}
-                    <div 
-                        className={`calendar-sidebar-backdrop ${isSidebarOpen ? 'open' : ''}`}
-                        onClick={onToggleSidebar}
-                    />
-                    
-                    {/* Sidebar - Always positioned as overlay */}
-                    <div className={`calendar-sidebar-overlay ${isSidebarOpen ? 'open' : ''}`}>
-                        <CalendarSidebar
-                            onClose={onToggleSidebar}
-                        />
-                    </div>
-                </>
-            )}
+            {/* Legacy overlay sidebar removed in favor of AppSidebar */}
 
+            <AppSidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Desktop Header */}
                 <div className="hidden md:block">
-                    <CalendarHeader
+                    <HeaderWithSidebarToggle
                         currentDate={localDate}
                         onNavigate={handleNavigation}
                         onToggleFilters={handleToggleFilters}
                         isFilterPanelOpen={isFilterPanelOpen}
                         activeFilterCount={activeFilterCount}
-                        onToggleSidebar={onToggleSidebar || (() => {})}
-                        isSidebarOpen={isSidebarOpen}
+                        fallbackToggle={onToggleSidebar}
+                        fallbackOpen={isSidebarOpen}
                     />
                 </div>
 
@@ -282,12 +327,13 @@ export function CalendarLayout({
                     />
                 </div>
 
-                <div className="flex-1 flex flex-col min-h-0 overflow-hidden calendar-content-with-bottom-tabs">
+                <div ref={containerRef} className="flex-1 flex flex-col min-h-0 overflow-hidden calendar-content-with-bottom-tabs">
                     <CalendarTransitionWrapper view={view} date={localDate}>
                         {content}
                     </CalendarTransitionWrapper>
                 </div>
             </div>
         </div>
+        </SidebarProvider>
     );
 }

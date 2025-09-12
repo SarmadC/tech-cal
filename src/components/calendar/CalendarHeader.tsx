@@ -30,8 +30,8 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
     onToggleFilters,
     isFilterPanelOpen,
     activeFilterCount,
-    onToggleSidebar,
-    isSidebarOpen = true
+    onToggleSidebar: _onToggleSidebar,
+    isSidebarOpen: _isSidebarOpen = true
 }) => {
     const { user } = useAuth();
     const router = useRouter(); // 2. INITIALIZE THE ROUTER
@@ -139,30 +139,14 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
 
     return (
         <header className="h-20 flex-shrink-0 px-4 md:px-6 flex items-center justify-between border-b border-border-subtle">
-            {/* Left Section: Branding, Month label */}
+            {/* Left Section: Month label */}
             <div className="flex items-center space-x-4">
-                {/* Sidebar Toggle Button */}
-                {onToggleSidebar && (
-                    <button
-                        onClick={onToggleSidebar}
-                        className="sidebar-toggle-button"
-                        aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-                        title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-                    >
-                        <MaterialIcon name={isSidebarOpen ? "close" : "menu"} size={20} />
-                    </button>
-                )}
-                
-                <Link href="/dashboard" className="p-2 text-foreground-secondary hover:text-foreground-primary hover:bg-background-tertiary rounded-lg transition-colors" title="Go to Dashboard">
-                    <MaterialIcon name="dashboard" size={20} />
-                </Link>
-
                 {/* Navigation arrows + Month/Year + date context */}
                 <div className="hidden md:flex items-center gap-2" aria-live="polite">
                     <button
                         type="button"
                         onClick={() => onNavigate('prev')}
-                        className="p-1.5 border border-border-default rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
+                        className="p-1.5 rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
                         aria-label="Previous period"
                     >
                         <MaterialIcon name="chevron_left" size={16} />
@@ -174,7 +158,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                     <button
                         type="button"
                         onClick={() => onNavigate('next')}
-                        className="p-1.5 border border-border-default rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
+                        className="p-1.5 rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
                         aria-label="Next period"
                     >
                         <MaterialIcon name="chevron_right" size={16} />
@@ -188,7 +172,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                 <div className="flex items-center space-x-1">
                     <button 
                         onClick={() => onNavigate('today')} 
-                        className="text-sm px-3 py-1.5 border border-border-default rounded-lg hover:bg-background-tertiary transition-colors"
+                        className="text-sm px-3 py-1.5 rounded-lg hover:bg-background-tertiary transition-colors"
                         aria-pressed={isToday}
                         aria-label={isToday ? 'Go to today' : `Go to today, ${todayButtonLabel}`}
                     >
@@ -232,7 +216,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                 <div className="hidden md:flex items-center">
                     <button
                         type="button"
-                        className="flex items-center gap-2 text-sm px-3 py-1.5 bg-background-tertiary border border-border-default rounded-lg hover:bg-background-elevated transition-colors"
+                        className="flex items-center gap-2 text-sm px-3 py-1.5 bg-background-tertiary rounded-lg hover:bg-background-elevated transition-colors"
                         onClick={openDatePicker}
                         aria-haspopup="dialog"
                         aria-expanded={isDatePickerOpen}
