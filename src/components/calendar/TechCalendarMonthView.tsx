@@ -204,32 +204,45 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         // Remove any inline/background from FullCalendar so base card shows
         (info.el as HTMLElement).style.background = 'transparent';
         (info.el as HTMLElement).style.borderWidth = '0';
-        
-        // Add dynamic sizing based on number of events in the day
-        const dayEl = info.el.closest('.fc-daygrid-day');
-        if (dayEl) {
-            const eventsInDay = dayEl.querySelectorAll('.fc-daygrid-event').length;
-            const moreLink = dayEl.querySelector('.fc-more-link');
-            const visibleEvents = moreLink ? eventsInDay - 1 : eventsInDay;
+
+        // Dynamic sizing based on number of events in the day
+        const dayCell = info.el.closest('.fc-daygrid-day');
+        if (dayCell) {
+            const eventsInDay = dayCell.querySelectorAll('.fc-event');
+            const eventCount = eventsInDay.length;
+            const eventGap = 6; // 6px gap between events
             
-            // Add class for dynamic sizing
-            if (visibleEvents === 1) {
-                info.el.classList.add('event-single');
-                // Stretch to full cell
-                (info.el as HTMLElement).style.width = '100%';
-                (info.el as HTMLElement).style.height = '100%';
-                (info.el as HTMLElement).style.margin = '0';
-                // Ensure the harness container also expands
-                const harness = info.el.parentElement as HTMLElement;
-                if (harness && harness.classList.contains('fc-daygrid-event-harness')) {
-                    harness.style.width = '100%';
+            // Calculate available height for events (cell height minus day number and padding)
+            const dayEvents = dayCell.querySelector('.fc-daygrid-day-events') as HTMLElement;
+            if (dayEvents) {
+                const cellHeight = dayCell.getBoundingClientRect().height;
+                const dayNumber = dayCell.querySelector('.fc-daygrid-day-number') as HTMLElement;
+                const dayNumberHeight = dayNumber ? dayNumber.getBoundingClientRect().height : 20;
+                const cellPadding = 12; // 6px top + 6px bottom padding
+                
+                const availableHeight = cellHeight - dayNumberHeight - cellPadding;
+                
+                if (eventCount === 1) {
+                    // Single event: fill entire available height
+                    (info.el as HTMLElement).style.height = `${availableHeight}px`;
+                    (info.el as HTMLElement).style.minHeight = `${availableHeight}px`;
+                } else if (eventCount === 2) {
+                    // Two events: each takes exactly half with gap
+                    const eventHeight = (availableHeight - eventGap) / 2;
+                    (info.el as HTMLElement).style.height = `${eventHeight}px`;
+                    (info.el as HTMLElement).style.minHeight = `${eventHeight}px`;
+                } else if (eventCount === 3) {
+                    // Three events: each takes exactly one-third with gaps
+                    const eventHeight = (availableHeight - (eventGap * 2)) / 3;
+                    (info.el as HTMLElement).style.height = `${eventHeight}px`;
+                    (info.el as HTMLElement).style.minHeight = `${eventHeight}px`;
+                } else if (eventCount >= 4) {
+                    // Four or more events: equal portions with overflow indicator handled by FullCalendar
+                    const visibleEvents = Math.min(eventCount, 3); // Show max 3 events, rest in "+n more"
+                    const eventHeight = (availableHeight - (eventGap * (visibleEvents - 1))) / visibleEvents;
+                    (info.el as HTMLElement).style.height = `${eventHeight}px`;
+                    (info.el as HTMLElement).style.minHeight = `${eventHeight}px`;
                 }
-            } else if (visibleEvents === 2) {
-                info.el.classList.add('event-half');
-            } else if (visibleEvents === 3) {
-                info.el.classList.add('event-third');
-            } else if (visibleEvents >= 4) {
-                info.el.classList.add('event-quarter');
             }
         }
 
@@ -292,6 +305,25 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         }
     }, [initialDate, activeCalendarRef]);
 
+    // Add resize listener to recalculate event heights on window resize
+    React.useEffect(() => {
+        const handleResize = () => {
+            setTimeout(() => {
+                // Force re-render of events to recalculate sizes
+                const calendarInstance = activeCalendarRef.current;
+                if (calendarInstance) {
+                    const api = calendarInstance.getApi();
+                    api?.updateSize();
+                    // Trigger remount of events to recalculate dynamic sizes
+                    api?.refetchEvents();
+                }
+            }, 100);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [activeCalendarRef]);
+
     // Handle date changes (from calendar navigation)
     const handleDatesSet = useCallback((_dateInfo: { start: Date }) => {
         // Handle date changes if needed
@@ -345,13 +377,14 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                         info.el.classList.add('today-cell');
                     }
                 }}
-                // Disable default event limiting to show all events
-                dayMaxEvents={false}
+                // Limit to 3 events per day for consistent cell height
+                dayMaxEvents={3}
+                dayMaxEventRows={false}
                 // Custom more link handling
                 moreLinkContent={(arg) => {
                     const totalEvents = arg.num;
                     if (totalEvents <= 3) return '';
-                    return `+${totalEvents - 3} more`;
+                    return `+${totalEvents - 3}`;
                 }}
             />
 

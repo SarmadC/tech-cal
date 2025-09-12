@@ -319,7 +319,6 @@
   /* Mobile month view adjustments */
   .fc-daygrid-day-frame {
     padding: 2px !important;
-    min-height: 50px;
   }
   
   .fc-daygrid-day-number {
@@ -357,7 +356,6 @@
     
     .fc-daygrid-day-frame {
       padding: 1px !important;
-      min-height: 40px;
     }
     
     .fc-daygrid-day-number {

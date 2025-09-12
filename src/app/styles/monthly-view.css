@@ -13,6 +13,15 @@
   --dots-offset: calc(var(--card-pad, 0.375rem) + 4px);
 }
 
+/* Ensure FullCalendar stretches to fill the container */
+.tech-calendar-month-view .fc,
+.tech-calendar-month-view .fc-view-harness,
+.tech-calendar-month-view .fc-view-harness-active,
+.tech-calendar-month-view .fc-scroller-harness,
+.tech-calendar-month-view .fc-scroller-harness-liquid {
+  height: 100% !important;
+}
+
 /* Enhanced FullCalendar styling for month view */
 .tech-calendar-month-view .fc {
   height: 100%;
@@ -22,6 +31,10 @@
 /* Month view grid container */
 .tech-calendar-month-view .fc-daygrid {
   background: transparent;
+}
+.tech-calendar-month-view .fc-daygrid-day {
+  /* default rows per day; updated dynamically via JS */
+  --rows: 1;
 }
 
 /* Remove inner padding so cards can reach cell edges */
@@ -187,11 +200,7 @@
 }
 
 /* Dynamic Event Sizing */
-.tech-calendar-month-view .fc-event.event-single {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-}
+.tech-calendar-month-view .fc-event.event-single { }
 
 .tech-calendar-month-view .fc-event.event-half {
   width: calc((100% - var(--event-gap)) / 2);
@@ -205,23 +214,80 @@
   width: calc((100% - (var(--event-gap) * 3)) / 4);
 }
 
-/* Event container for proper wrapping */
-.tech-calendar-month-view .fc-daygrid-day-events {
+/* Make day frame allocate remaining space to events area */
+.tech-calendar-month-view .fc-daygrid-day-frame {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--event-gap);
-  margin: 0;
-  padding: var(--cell-pad); /* space from grid lines */
-  height: 100%; /* Allow events to fill the full day height */
-  position: relative;
-  align-items: flex-start;
-  justify-content: flex-start;
+  flex-direction: column;
+  height: 100% !important;
+  min-height: 100% !important;
 }
 
-/* Ensure proper spacing between event rows */
+/* Events container - use flex column with equal distribution */
+.tech-calendar-month-view .fc-daygrid-day-events {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--cell-pad);
+  min-height: 0;
+}
+
+/* Each harness adapts to dynamic sizing instead of equal distribution */
+.tech-calendar-month-view .fc-daygrid-event-harness {
+  margin: 0 !important;
+  position: static !important;
+  display: flex;
+  min-height: 0;
+  flex: none; /* Let dynamic sizing control the height */
+  height: auto !important; /* Allow dynamic height setting */
+}
+
+/* Events respect dynamic height sizing */
 .tech-calendar-month-view .fc-daygrid-event {
-  margin-bottom: 3px;
-  flex-shrink: 0;
+  margin: 0 !important;
+  width: 100% !important;
+  height: auto !important; /* Let dynamic sizing control height */
+  display: flex;
+  min-height: 0; /* Allow flex shrinking */
+  box-sizing: border-box;
+}
+
+.tech-calendar-month-view .fc-event .fc-event-main {
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Center content vertically */
+  padding: 8px; /* Add some padding for better appearance */
+}
+
+/* Ensure our mini event card respects dynamic sizing */
+.tech-calendar-month-view .event-card.mini {
+  height: auto !important; /* Let dynamic sizing control height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Center content vertically */
+  box-sizing: border-box;
+}
+
+/* More link styling for overflow events */
+.tech-calendar-month-view .fc-more-link {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--foreground-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 2px;
+  display: inline-block;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+.tech-calendar-month-view .fc-more-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--foreground-primary);
+  transform: translateY(-1px);
 }
 
 .tech-calendar-month-view .fc-event::before {
@@ -437,7 +503,6 @@
   /* Mobile dynamic sizing adjustments */
   .tech-calendar-month-view .fc-event.event-single {
     height: calc(100% - 4px);
-    min-height: 50px;
   }
   
   .tech-calendar-month-view .fc-event.event-half {
@@ -456,7 +521,7 @@
   }
   
   .month-day-cell {
-    min-height: 60px;
+    /* Dynamic height based on content */
   }
 }
 
@@ -487,7 +552,7 @@
   }
   
   .month-day-cell {
-    min-height: 50px;
+    /* Dynamic height based on content */
   }
 }
 
