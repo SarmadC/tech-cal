@@ -8,32 +8,33 @@ export interface MobileFeaturesGridProps {
 }
 
 const MobileFeaturesGrid: React.FC<MobileFeaturesGridProps> = ({ className = '' }) => {
-  const gridRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     const observerOptions = {
       threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
+      rootMargin: '0px 0px -50px 0px',
     };
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry, index) => {
         if (entry.isIntersecting) {
+          // Small stagger for a calm entrance
           setTimeout(() => {
             entry.target.classList.add('visible');
-          }, index * 100);
+          }, index * 80);
         }
       });
     }, observerOptions);
 
     const cards = gridRef.current?.querySelectorAll('.mobile-feature-card');
-    cards?.forEach(card => observer.observe(card));
+    cards?.forEach((card) => observer.observe(card));
 
     const header = gridRef.current?.parentElement?.querySelector('.mobile-features-header');
     if (header) observer.observe(header);
 
     return () => {
-      cards?.forEach(card => observer.unobserve(card));
+      cards?.forEach((card) => observer.unobserve(card));
       if (header) observer.unobserve(header);
     };
   }, []);
@@ -48,33 +49,21 @@ const MobileFeaturesGrid: React.FC<MobileFeaturesGridProps> = ({ className = '' 
         </p>
       </div>
 
-      <div ref={gridRef} className="mobile-features-grid">
+      <ul ref={gridRef} className="mobile-features-list" role="list">
         {features.map((feature, index) => (
-          <div
-            key={index}
-            className="mobile-feature-card slide-in-stagger"
-            data-index={index}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                // Add any click action here if needed
-              }
-            }}
-          >
+          <li key={index} className="mobile-feature-card slide-in-stagger" data-index={index}>
             <div className="mobile-feature-content">
               <div className="mobile-feature-icon">
-                <div className="icon-wrapper">
+                <div className="icon-wrapper" aria-hidden="true">
                   {feature.icon}
                 </div>
               </div>
               <h3 className="mobile-feature-title">{feature.title}</h3>
               <p className="mobile-feature-description">{feature.description}</p>
             </div>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 };

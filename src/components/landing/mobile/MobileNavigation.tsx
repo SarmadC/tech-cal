@@ -37,11 +37,8 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
             src="/logo.svg" 
             alt="Kure-Cal Logo" 
             className="logo-image"
-            width={32}
-            height={32}
-            style={{
-              width: 'auto'
-            }}
+            width={24}
+            height={24}
           />
         </div>
         
