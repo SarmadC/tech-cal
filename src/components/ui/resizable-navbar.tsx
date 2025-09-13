@@ -1,5 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import { IconMenu2, IconX } from "@tabler/icons-react";
 import {
   motion,
@@ -312,21 +313,13 @@ export const NavbarLogo = () => {
         e.currentTarget.style.backgroundColor = "transparent";
       }}
     >
-      <div style={{
-        width: "24px",
-        height: "24px",
-        backgroundColor: "rgba(255, 255, 255, 1)",
-        borderRadius: "4px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        margin: 0,
-        padding: 0,
-      }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L22 20H2L12 2Z" fill="black"/>
-        </svg>
-      </div>
+      <Image
+        src="/logo.svg"
+        alt="Kure-Cal logo"
+        width={24}
+        height={24}
+        style={{ objectFit: "contain", borderRadius: 4 }}
+      />
       <span style={{
         fontWeight: "500",
         color: "rgba(255, 255, 255, 1)",
@@ -334,7 +327,7 @@ export const NavbarLogo = () => {
         padding: 0,
         fontSize: "14px",
       }}>
-        Startup
+        Kure-Cal
       </span>
     </a>
   );

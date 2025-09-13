@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/common/UserMenu';
 import { formatDateForURL } from '@/utils/dateUtils';
 import QuickDatePicker from '@/components/calendar/QuickDatePicker';
+import { Event } from '@/types/events';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -19,6 +20,7 @@ export interface CalendarHeaderProps {
     onToggleFilters: () => void;
     isFilterPanelOpen: boolean;
     activeFilterCount: number;
+    events?: Event[];
     // Sidebar toggle props
     onToggleSidebar?: () => void;
     isSidebarOpen?: boolean;
@@ -30,6 +32,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
     onToggleFilters,
     isFilterPanelOpen,
     activeFilterCount,
+    events = [],
     onToggleSidebar: _onToggleSidebar,
     isSidebarOpen: _isSidebarOpen = true
 }) => {
@@ -234,6 +237,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                     view={view}
                     isOpen={isDatePickerOpen}
                     onClose={closeDatePicker}
+                    events={events}
                 />
                 {user ? (
                     <UserMenu />

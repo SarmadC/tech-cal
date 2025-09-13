@@ -1,9 +1,10 @@
 'use client';
 
-import { FC, useState, useRef, useEffect, useCallback } from 'react';
+import { FC, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { formatDate } from '@/utils/dateUtils';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { CalendarHeatmap } from '@/components/ui/calendar-heatmap';
+import { Event } from '@/types/events';
 
 export interface QuickDatePickerProps {
     currentDate: Date;
@@ -11,6 +12,7 @@ export interface QuickDatePickerProps {
     view: 'month' | 'week' | 'day';
     isOpen: boolean;
     onClose: () => void;
+    events?: Event[];
 }
 
 const QuickDatePicker: FC<QuickDatePickerProps> = ({
@@ -18,7 +20,8 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
     onDateChange,
     view,
     isOpen,
-    onClose
+    onClose,
+    events = []
 }) => {
     const [selectedDate, setSelectedDate] = useState(currentDate);
     const [rangeStart, setRangeStart] = useState<Date | null>(null);
@@ -272,6 +275,22 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
         return { dates, today };
     };
 
+    const eventsByDate = useMemo(() => {
+        const dateMap = new Map<string, number>();
+        
+        events.forEach(event => {
+            const eventDate = new Date(event.startTime);
+            const dateKey = eventDate.toISOString().split('T')[0];
+            const currentCount = dateMap.get(dateKey) || 0;
+            dateMap.set(dateKey, currentCount + 1);
+        });
+
+        return Array.from(dateMap.entries()).map(([dateString, count]) => ({
+            date: new Date(dateString),
+            weight: count
+        }));
+    }, [events]);
+
     if (!isOpen) return null;
 
     return (
@@ -361,7 +380,7 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                                 'bg-background-tertiary text-foreground-secondary',
                                 'bg-background-tertiary text-foreground-secondary'
                             ]}
-                            weightedDates={[]}
+                            weightedDates={eventsByDate}
                             startDate={selectedDate}
                             endDate={selectedDate}
                             selectedDate={selectedDate}

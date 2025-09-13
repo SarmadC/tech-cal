@@ -252,7 +252,7 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
                 <span
                   className={cn(
                     "absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full",
-                    day.weight >= 4 ? "bg-[rgba(76,111,255,0.8)]" : day.weight >= 2 ? "bg-foreground-secondary" : "bg-foreground-tertiary",
+                    day.weight >= 4 ? "bg-blue-500" : day.weight >= 2 ? "bg-blue-400" : "bg-blue-300",
                     "w-1 h-1"
                   )}
                 />

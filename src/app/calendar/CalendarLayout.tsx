@@ -58,9 +58,10 @@ const HeaderWithSidebarToggle: React.FC<{
     onToggleFilters: () => void;
     isFilterPanelOpen: boolean;
     activeFilterCount: number;
+    events?: Event[];
     fallbackToggle?: () => void;
     fallbackOpen?: boolean;
-}> = ({ currentDate, onNavigate, onToggleFilters, isFilterPanelOpen, activeFilterCount, fallbackToggle: _fallbackToggle, fallbackOpen: _fallbackOpen }) => {
+}> = ({ currentDate, onNavigate, onToggleFilters, isFilterPanelOpen, activeFilterCount, events, fallbackToggle: _fallbackToggle, fallbackOpen: _fallbackOpen }) => {
     const { open, toggle } = useSidebar();
     return (
         <CalendarHeader
@@ -69,6 +70,7 @@ const HeaderWithSidebarToggle: React.FC<{
             onToggleFilters={onToggleFilters}
             isFilterPanelOpen={isFilterPanelOpen}
             activeFilterCount={activeFilterCount}
+            events={events}
             onToggleSidebar={toggle}
             isSidebarOpen={open}
         />
@@ -279,6 +281,7 @@ export function CalendarLayout({
                         onToggleFilters={handleToggleFilters}
                         isFilterPanelOpen={isFilterPanelOpen}
                         activeFilterCount={activeFilterCount}
+                        events={events}
                         fallbackToggle={onToggleSidebar}
                         fallbackOpen={isSidebarOpen}
                     />

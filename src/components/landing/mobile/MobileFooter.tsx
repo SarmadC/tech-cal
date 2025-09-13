@@ -56,10 +56,7 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ className = '' }) => {
           </Link>
         </div>
 
-        {/* Bottom tiny meta */}
-        <div className="mobile-footer-bottom small">
-          <p className="mobile-footer-copyright">© 2024 Kure-Cal</p>
-        </div>
+        {/* Bottom tiny meta removed per request */}
       </div>
     </footer>
   );
