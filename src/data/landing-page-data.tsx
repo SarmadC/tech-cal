@@ -10,7 +10,7 @@ export const eventsData = [
   { company: 'Google', date: 'May 14', title: 'Google I/O 2025', type: 'Conference' },
   { company: 'Apple', date: 'Jun 10', title: 'WWDC 2025', type: 'Developer Conference' },
   { company: 'Microsoft', date: 'May 21', title: 'Microsoft Build', type: 'Developer Conference' },
-  { company: 'Meta', date: 'Apr 22', title: 'React Conf', type: 'Framework Conference' },
+  { company: 'Meta', date: 'Apr 22', title: 'Meta Con', type: 'Framework Conference' },
   { company: 'Vercel', date: 'Oct 25', title: 'Next.js Conf', type: 'Framework Conference' },
   { company: 'OpenAI', date: 'Mar 15', title: 'OpenAI DevDay', type: 'AI Conference' },
   { company: 'Amazon', date: 'Nov 27', title: 'AWS re:Invent', type: 'Cloud Conference' },

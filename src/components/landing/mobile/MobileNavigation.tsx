@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { List, X } from '@phosphor-icons/react';
 
 export interface NavItem {
@@ -32,12 +33,13 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       {/* Mobile Nav Header */}
       <div className="mobile-nav-header">
         <div className="mobile-nav-logo">
-          <img 
+          <Image 
             src="/logo.svg" 
             alt="Kure-Cal Logo" 
             className="logo-image"
+            width={32}
+            height={32}
             style={{
-              height: '32px',
               width: 'auto'
             }}
           />

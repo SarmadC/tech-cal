@@ -20,7 +20,7 @@ function debounce<F extends (...args: unknown[]) => unknown>(func: F, wait: numb
 }
 
 const animationEventsData = [
-    { company: 'Meta', date: 'May 1', title: 'React Conf', type: 'Framework Conference' },
+    { company: 'Meta', date: 'May 1', title: 'Meta Con', type: 'Framework Conference' },
     { company: 'OpenAI', date: 'May 4', title: 'OpenAI DevDay', type: 'AI Conference' },
     { company: 'Google', date: 'May 7', title: 'Google I/O 2025', type: 'Conference' },
     { company: 'Apple', date: 'May 11', title: 'WWDC 2025', type: 'Developer Conference' },

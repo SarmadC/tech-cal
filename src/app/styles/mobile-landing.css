@@ -51,10 +51,7 @@
 .mobile-nav-logo .logo-text {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #4c6fff, #7c3aed);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff;
 }
 
 .mobile-nav-toggle {
@@ -131,7 +128,7 @@
 
 .mobile-nav-link:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #4c6fff;
+  color: #ffffff;
 }
 
 .link-text {
@@ -146,7 +143,7 @@
 }
 
 .mobile-nav-link:hover .link-arrow {
-  color: #4c6fff;
+  color: #ffffff;
 }
 
 .mobile-nav-cta {
@@ -157,9 +154,9 @@
 
 .mobile-cta-button {
   width: 100%;
-  background: linear-gradient(135deg, #4c6fff, #7c3aed);
-  color: white;
-  border: none;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   padding: 1rem 1.5rem;
   border-radius: 12px;
   font-size: 1.125rem;
@@ -174,7 +171,7 @@
 
 .mobile-cta-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(76, 111, 255, 0.3);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
 }
 
 .mobile-nav-backdrop {
@@ -242,10 +239,7 @@
 
 .mobile-hero-title .highlight-text {
   font-weight: 700;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff;
   display: inline-block;
 }
 
@@ -435,14 +429,15 @@
 .icon-wrapper {
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #4c6fff, #7c3aed);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
   color: white;
-  box-shadow: 0 4px 15px rgba(76, 111, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
 }
 
 .mobile-feature-title {
@@ -465,6 +460,11 @@
 .mobile-chaos-to-order {
   padding: 4rem 1.5rem;
   background: #000000;
+  position: relative;
+  overflow: hidden;
+  /* Dynamic square sizing based on viewport and calendar cells */
+  --tile-size: 34px; /* locked default for 341–420px devices */
+  --logo-scale: 0.68; /* 68% of tile for clean spacing */
 }
 
 .mobile-chaos-container {
@@ -493,52 +493,396 @@
   margin: 0 auto;
 }
 
-.mobile-process {
+/* Animation Container */
+.mobile-animation-container {
+  position: relative;
+  /* Viewport-scaled height ensuring square cells */
+  height: min(68vh, 540px);
+  margin: 2rem 0;
+  background: rgba(255, 255, 255, 0.04); /* ~4% contrast over page */
+  border: 1px solid #000000; /* blend border with page background */
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.mobile-animation-container.finalized .mobile-event-card,
+.mobile-animation-container.finalized .mobile-event-cards,
+.mobile-animation-container.finalized .calendar-date,
+.mobile-animation-container.finalized .calendar-dates {
+  transition: none !important;
+}
+
+/* Calendar Grid */
+.mobile-calendar-grid {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  background: #000000; /* black calendar background */
+  border-radius: 16px;
+  padding: 1rem;
+  opacity: 0.8;
+  transition: opacity 0.5s ease;
+}
+
+.calendar-header {
+  margin-bottom: 0.75rem;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  align-items: center;
+  margin-bottom: 0.5rem;
+  height: 42px; /* 40–44px target */
+  padding: 0; /* full-width inside the card so columns align with dates */
+  width: 100%;
+  background: rgba(0, 0, 0, 0.72); /* reduced contrast so it doesn't dominate */
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  column-gap: 12px; /* match dates grid gap exactly */
+}
+
+.calendar-days span {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em; /* tighter letterspacing */
+}
+
+.calendar-dates {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px; /* locked grid gap */
+  position: relative;
+  /* Ensure cells maintain aspect ratio */
+  grid-auto-rows: 1fr;
+}
+
+.calendar-date {
+  aspect-ratio: 1;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
 }
 
-.process-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 1.5rem;
-  padding: 1.5rem 0;
+/* Staging rail under weekday bar */
+.staging-rail {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  height: clamp(2px, 0.5vh, 4px);
+  background: rgba(76, 111, 255, 0.15);
+  border-radius: 3px;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: scaleX(0);
 }
 
-.process-number {
-  font-size: 1.5rem;
-  font-weight: 300;
-  color: rgba(255, 255, 255, 0.6);
-  min-width: 60px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+.staging-rail.active {
+  opacity: 1;
+  background: rgba(76, 111, 255, 0.45);
+  box-shadow: 0 0 16px rgba(76, 111, 255, 0.25);
+  height: clamp(3px, 0.7vh, 5px);
+  transform: scaleX(1);
 }
 
-.process-content {
-  flex: 1;
+/* Target pulse for destination cells */
+.calendar-date.target-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 0 rgba(255,255,255,0.22);
+  animation: cellPulse 0.45s ease-out 2;
 }
 
-.process-title {
-  font-size: 1.25rem;
+@keyframes cellPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.22); }
+  100% { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+}
+
+.calendar-date.has-event {
+  background: rgba(76, 111, 255, 0.1);
+}
+
+.date-number {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.92);
   font-weight: 500;
-  margin-bottom: 0.5rem;
-  color: white;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.process-description {
-  font-size: 1rem;
-  line-height: 1.5;
+.event-dot {
+  width: 6px;
+  height: 6px;
+  background: #4c6fff;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 2px;
+}
+
+/* Final state: emphasize dots and hide cards */
+.mobile-animation-container.final-dots .mobile-event-card {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mobile-animation-container.final-dots .calendar-date.has-event .event-dot {
+  width: 10px;
+  height: 10px;
+  bottom: 4px;
+  box-shadow: 0 0 0 3px rgba(76,111,255,0.18), 0 0 10px rgba(76,111,255,0.4);
+}
+
+/* Event Cards */
+.mobile-event-cards {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* allow events only on cards */
+}
+
+.mobile-chaos-to-order .mobile-event-card {
+  position: absolute;
+  /* Dynamic perfect squares matching calendar cells */
+  width: var(--tile-size) !important;
+  height: var(--tile-size) !important;
+  aspect-ratio: 1;
+  /* Clean minimal styling - no gradients */
+  background: rgba(16, 16, 20, 0.98); /* neutral dark so white logos stay visible */
+  border: 1px solid rgba(255, 255, 255, 0.12); /* light stroke for separation on white grid */
+  border-radius: clamp(4px, 0.5vw, 8px);
+  padding: 0;
+  color: #fff;
+  font-size: 0.75rem;
+  /* Subtle shadow 12–16px blur */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.10);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: scale(0.85) translateZ(0);
+  z-index: 10;
+  pointer-events: auto;
+  /* Prevent layout shifts */
+  will-change: transform, opacity;
+  /* Force square override */
+  min-width: var(--tile-size);
+  max-width: var(--tile-size);
+  min-height: var(--tile-size);
+  max-height: var(--tile-size);
+}
+
+.mobile-chaos-to-order .mobile-event-card.chaos {
+  opacity: 1 !important;
+  transform: scale(1) !important;
+  /* Chaos positions - scattered randomly */
+}
+
+.mobile-chaos-to-order .mobile-event-card.chaos:nth-child(1) {
+  --chaos-rotation: -6deg;
+  top: clamp(60px, 12vh, 100px);
+  left: clamp(24px, 6vw, 60px);
+  transform: scale(1) rotate(-6deg);
+  animation: chaosFloat 3s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.mobile-chaos-to-order .mobile-event-card.chaos:nth-child(2) {
+  --chaos-rotation: 4deg;
+  top: clamp(140px, 26vh, 180px);
+  right: clamp(28px, 7vw, 64px);
+  transform: scale(1) rotate(4deg);
+  animation: chaosFloat 3s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+.mobile-chaos-to-order .mobile-event-card.chaos:nth-child(3) {
+  --chaos-rotation: -2deg;
+  top: clamp(220px, 40vh, 260px);
+  left: clamp(48px, 12vw, 80px);
+  transform: scale(1) rotate(-2deg);
+  animation: chaosFloat 3s ease-in-out infinite;
+  animation-delay: 1.0s;
+}
+
+.mobile-chaos-to-order .mobile-event-card.chaos:nth-child(4) {
+  --chaos-rotation: 5deg;
+  top: clamp(300px, 54vh, 340px);
+  right: clamp(32px, 8vw, 56px);
+  transform: scale(1) rotate(5deg);
+  animation: chaosFloat 3s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+.mobile-chaos-to-order .mobile-event-card.chaos:nth-child(5) {
+  --chaos-rotation: -3deg;
+  top: clamp(380px, 68vh, 420px);
+  left: clamp(64px, 16vw, 96px);
+  transform: scale(1) rotate(-3deg);
+  animation: chaosFloat 3s ease-in-out infinite;
+  animation-delay: 2.0s;
+}
+
+@keyframes chaosFloat {
+  0%, 100% { transform: scale(1) rotate(var(--chaos-rotation)) translateY(0px); }
+  50% { transform: scale(1) rotate(var(--chaos-rotation)) translateY(-4px); }
+}
+
+.mobile-chaos-to-order .mobile-event-card.organizing {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+  animation: none; /* Stop floating animation */
+  transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-chaos-to-order .mobile-event-card.ordered {
+  opacity: 1 !important;
+  transform: scale(1) rotate(0deg) !important;
+  animation: none; /* Stop floating animation */
+  /* Maintain perfect square ratio */
+  width: var(--tile-size) !important;
+  height: var(--tile-size) !important;
+  padding: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Ensure visibility */
+  visibility: visible;
+  z-index: 15;
+}
+
+/* Hide text content when cards become tiny squares */
+.mobile-chaos-to-order .mobile-event-card .logo-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.95);
+  /* Ensure logo doesn't overflow */
+  overflow: hidden;
+}
+
+.mobile-chaos-to-order .mobile-event-card .logo-wrapper img,
+.mobile-chaos-to-order .mobile-event-card .logo-wrapper svg {
+  /* Predictable scaling with aspect ratio preservation */
+  width: calc(var(--logo-scale) * var(--tile-size));
+  height: calc(var(--logo-scale) * var(--tile-size));
+  max-width: calc(var(--logo-scale) * 100%);
+  max-height: calc(var(--logo-scale) * 100%);
+  object-fit: contain;
+  /* Ensure crisp rendering at small sizes */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.mobile-event-card.ordered .card-header,
+.mobile-event-card.ordered .card-title { display: none; }
+
+/* Explicit ordered positions removed; positions are computed in JS to center on cells */
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.25rem;
+}
+
+.company-name {
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
+.event-date {
+  font-size: 0.65rem;
+  opacity: 0.9;
+}
+
+.card-title {
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* Text Overlay */
+.mobile-text-overlay {
+  position: absolute;
+  bottom: 2rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  text-align: center;
+}
+
+.text-state {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.5s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.text-state.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.state-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.state-description {
+  font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.8);
   margin: 0;
 }
 
-.process-divider {
-  width: 100%;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 0.5rem 0;
+/* Minimal event preview */
+.mobile-event-preview {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1200;
+}
+
+.preview-card {
+  width: 90%;
+  margin: 0 0 24px 0;
+  background: #0b0b0b;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px;
+  color: white;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.preview-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.preview-meta {
+  color: rgba(255,255,255,0.7);
+  font-size: 0.875rem;
+}
+
+.preview-hint {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.6);
 }
 
 /* ============================================== */
@@ -731,6 +1075,39 @@
   .mobile-step {
     padding: 1rem;
   }
+}
+
+/* Ultra-compact phones ~320–340px width */
+@media (max-width: 340px) {
+  .mobile-chaos-to-order {
+    --tile-size: 30px; /* locked for ultra-compact */
+    --logo-scale: 0.64;
+  }
+  .mobile-animation-container { height: min(66vh, 520px); }
+}
+
+/* Common phones up to ~420px width (iPhone 11–15 base) */
+@media (min-width: 341px) and (max-width: 420px) {
+  .mobile-chaos-to-order {
+    --tile-size: 34px; /* locked default */
+    --logo-scale: 0.70;
+  }
+  .mobile-animation-container { height: min(68vh, 540px); }
+}
+
+/* If viewport height is tight, prefer shrinking tiles/gap before typography */
+@media (max-height: 780px) {
+  .mobile-chaos-to-order { --tile-size: 32px; }
+  .calendar-dates { gap: 10px; }
+}
+
+/* Larger mobile widths ≥421px (Plus/Max/some Androids) */
+@media (min-width: 421px) {
+  .mobile-chaos-to-order {
+    --tile-size: 38px; /* locked for larger phones */
+    --logo-scale: 0.74;
+  }
+  .mobile-animation-container { height: min(70vh, 560px); }
 }
 
 @media (max-width: 360px) {
