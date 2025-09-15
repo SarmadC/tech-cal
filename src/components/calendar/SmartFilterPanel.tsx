@@ -57,10 +57,10 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border-subtle">
                     <div className="flex items-center space-x-2">
-                        <MaterialIcon name="filter" size={20} className="text-accent-primary" />
+                        <MaterialIcon name="filter" size={20} className="text-foreground-secondary" />
                         <h3 className="font-semibold text-foreground-primary">Smart Filters</h3>
                         {activeFilterCount > 0 && (
-                            <Badge variant="secondary" className="bg-accent-primary text-white">
+                            <Badge variant="secondary" className="bg-foreground-primary text-background-main">
                                 {activeFilterCount}
                             </Badge>
                         )}
@@ -107,7 +107,7 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                                         value={option.value}
                                         checked={filters.format === option.value}
                                         onChange={(e) => onUpdateFilter('format', e.target.value as SmartFilterOptions['format'])}
-                                        className="text-accent-primary"
+                                        className="text-foreground-secondary"
                                     />
                                     <MaterialIcon name={option.icon} size={16} className="text-foreground-tertiary" />
                                     <span className="text-sm text-foreground-secondary">{option.label}</span>
@@ -132,7 +132,7 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                                         value={option.value}
                                         checked={filters.cost === option.value}
                                         onChange={(e) => onUpdateFilter('cost', e.target.value as SmartFilterOptions['cost'])}
-                                        className="text-accent-primary"
+                                        className="text-foreground-secondary"
                                     />
                                     <span className="text-sm text-foreground-secondary">{option.label}</span>
                                 </label>
@@ -157,7 +157,7 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                                         value={option.value}
                                         checked={filters.difficulty === option.value}
                                         onChange={(e) => onUpdateFilter('difficulty', e.target.value as SmartFilterOptions['difficulty'])}
-                                        className="text-accent-primary"
+                                        className="text-foreground-secondary"
                                     />
                                     <span className="text-sm text-foreground-secondary">{option.label}</span>
                                 </label>
@@ -182,7 +182,7 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                                         value={option.value}
                                         checked={filters.timePreference === option.value}
                                         onChange={(e) => onUpdateFilter('timePreference', e.target.value as SmartFilterOptions['timePreference'])}
-                                        className="text-accent-primary"
+                                        className="text-foreground-secondary"
                                     />
                                     <span className="text-sm text-foreground-secondary">{option.label}</span>
                                 </label>

@@ -75,7 +75,7 @@ export default function GrowthClientView({
                 <div className="max-w-7xl mx-auto text-center py-20">
                     <h2 className="text-2xl font-semibold text-gray-700 mb-4">Start Your Growth Journey</h2>
                     <p className="text-gray-500 mb-6">Track and attend events to see your professional development analytics here.</p>
-                    <Link href="/calendar" className="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700">Browse Events</Link>
+                    <Link href="/calendar" className="bg-gray-900 text-white font-semibold py-3 px-6 rounded-lg hover:bg-gray-800">Browse Events</Link>
                 </div>
             </div>
         );

@@ -126,7 +126,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
             ref={cardRef}
             className={`fixed z-50 w-80 bg-white dark:bg-gray-800 border rounded-lg shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 ${
                 isPinned 
-                    ? 'border-blue-400 dark:border-blue-500 shadow-blue-200 dark:shadow-blue-900' 
+                    ? 'border-zinc-300 dark:border-zinc-400 shadow-zinc-200 dark:shadow-black/40' 
                     : 'border-gray-200 dark:border-gray-600'
             }`}
             style={{
@@ -137,38 +137,38 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
             onMouseLeave={onLeave}
         >
             {/* Header */}
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 border-b border-gray-200 dark:border-gray-600">
+            <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 border-b border-gray-200 dark:border-gray-600">
                 <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2 flex-wrap gap-1">
                         {event.tags && event.tags.length > 0 ? (
                             event.tags.slice(0, 2).map((tag, index) => (
                                 <span
                                     key={index}
-                                    className="px-2 py-1 text-xs font-medium text-white rounded-full bg-blue-500"
+                                    className="px-2 py-1 text-xs font-medium text-gray-900 dark:text-white rounded-md bg-gray-200 dark:bg-gray-600"
                                 >
                                     {tag.name}
                                 </span>
                             ))
                         ) : (
                             event.eventTypeId && (
-                                <span className="px-2 py-1 text-xs font-medium bg-blue-500 text-white rounded-full">
+                                <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-900 dark:bg-gray-600 dark:text-white rounded-md">
                                     Event
                                 </span>
                             )
                         )}
                         {event.tags && event.tags.length > 2 && (
-                            <span className="px-2 py-1 text-xs font-medium bg-gray-500 text-white rounded-full">
+                            <span className="px-2 py-1 text-xs font-medium bg-gray-500 text-white rounded-md">
                                 +{event.tags.length - 2}
                             </span>
                         )}
                         {isEventLive(event.startTime, event.endTime) && (
-                            <span className="px-2 py-1 text-xs font-medium bg-red-500 text-white rounded-full flex items-center">
+                            <span className="px-2 py-1 text-xs font-medium bg-red-500 text-white rounded-md flex items-center">
                                 <div className="w-2 h-2 bg-white rounded-full animate-pulse mr-1" />
                                 Live
                             </span>
                         )}
                         {isPinned && (
-                            <span className="px-2 py-1 text-xs font-medium bg-blue-500 text-white rounded-full">
+                            <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-900 dark:bg-gray-600 dark:text-white rounded-md">
                                 📌 Pinned
                             </span>
                         )}
@@ -194,7 +194,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                     {isVirtual ? (
-                        <GlobeIcon className="w-4 h-4 text-blue-500" />
+                        <GlobeIcon className="w-4 h-4 text-gray-500" />
                     ) : (
                         <MapPinIcon className="w-4 h-4 text-gray-500" />
                     )}
@@ -229,8 +229,8 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                             isLoading 
                                 ? 'bg-gray-400 text-white cursor-not-allowed'
                                 : isTracked
-                                    ? 'bg-green-600 text-white hover:bg-green-700'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    ? 'bg-gray-800 text-white hover:bg-gray-700'
+                                    : 'bg-gray-900 text-white hover:bg-gray-800'
                             }`}
                     >
                         {isTracked ? (
@@ -264,7 +264,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     {event.livestreamUrl && (
                         <button
                             onClick={() => window.open(event.livestreamUrl!, '_blank')}
-                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                             title="Join live stream"
                         >
                             <PlayCircleIcon className="w-4 h-4" />

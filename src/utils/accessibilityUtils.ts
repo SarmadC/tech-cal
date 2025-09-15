@@ -72,7 +72,7 @@ export function validateThemeContrast(): { [key: string]: boolean } {
     'background-secondary': '#111113',
     'foreground-primary': '#fafafa',
     'foreground-secondary': '#ffffff',
-    'accent-primary': '#f97316',
+    'accent-primary': '#ffffff',
     'error': '#ef4444',
     'success': '#10b981',
     'warning': '#f59e0b',

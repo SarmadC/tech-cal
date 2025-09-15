@@ -18,12 +18,12 @@ const initialState: AuthFormState = {
 
 const SuccessDisplay = () => (
     <div className="text-center space-y-6">
-        <div className="w-16 h-16 bg-success-light rounded-full flex items-center justify-center mx-auto">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
         </div>
-        <div className="bg-success-light border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-background-elevated border border-border-default text-foreground-secondary px-4 py-3 rounded-lg text-sm">
             Your password has been successfully updated!
         </div>
         <p className="text-sm text-foreground-secondary">Redirecting to your dashboard...</p>

@@ -50,6 +50,26 @@
 
 .fc-theme-standard td, .fc-theme-standard th {
     border-color: var(--border-subtle);
+    border-width: 1px;
+}
+
+/* Ensure month view has consistent thin borders */
+.fc-daygrid {
+    border-color: var(--border-subtle);
+}
+
+.fc-daygrid-day {
+    border-color: var(--border-subtle) !important;
+    border-width: 1px !important;
+}
+
+.fc-daygrid-day-frame {
+    border: none !important;
+}
+
+/* Remove the thick outer border from FullCalendar scrollgrid */
+.fc-theme-standard .fc-scrollgrid {
+    border: none !important;
 }
 .fc .fc-daygrid-day-frame {
     padding: 12px;
@@ -76,7 +96,7 @@
 .fc .fc-day-today .fc-daygrid-day-number {
     font-weight: 700;
     color: var(--accent-primary);
-    background-color: rgba(249, 115, 22, 0.1);
+    background-color: var(--accent-primary-light);
     border-radius: 9999px;
     padding: 2px 6px;
 }
@@ -168,12 +188,12 @@
     color: var(--foreground-secondary);
 }
 .filter-toggle-button:hover {
-    border-color: var(--border-strong);
+    border: 1px solid var(--border-strong) !important;
     background-color: var(--background-tertiary);
     color: var(--foreground-primary);
 }
 .filter-toggle-button.active {
-    border-color: var(--accent-primary);
+    border: 1px solid var(--border-strong) !important;
     color: var(--accent-primary);
 }
 

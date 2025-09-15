@@ -442,7 +442,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 moreLinkClick="popover"
                 eventDisplay="block"
                 displayEventTime={!isMobile}
-                allDaySlot={false}
                 slotMinTime="06:00:00"
                 slotMaxTime="22:00:00"
                 expandRows={true}

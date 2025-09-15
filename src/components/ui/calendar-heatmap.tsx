@@ -229,12 +229,12 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
                 "flex items-center justify-center text-xs font-medium",
                 // Base: no backgrounds on tiles, just text color
                 isInRange ? "bg-transparent text-white" : "bg-transparent text-foreground-tertiary hover:text-foreground-secondary",
-                // Today's date: subtle ring only
-                day.isToday && !isSelected && !inRange && "ring-1 ring-[rgba(76,111,255,0.45)]",
+                // Today's date: subtle ring only (when not selected)
+                day.isToday && !isSelected && !inRange && "ring-1 ring-[rgba(255,255,255,0.45)]",
                 // Range endpoints: subtle accent border without fill
-                (isRangeStart || isRangeEnd) && "border-2 border-[rgba(76,111,255,0.65)]",
-                // Single selected (fallback): emphasize text only
-                isSelected && "text-white"
+                (isRangeStart || isRangeEnd) && "border-2 border-[rgba(255,255,255,0.65)]",
+                // Single selected: prominent background and white text
+                isSelected && "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
               )}
               aria-label={ariaLabel}
               role="button"
@@ -252,7 +252,7 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
                 <span
                   className={cn(
                     "absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full",
-                    day.weight >= 4 ? "bg-blue-500" : day.weight >= 2 ? "bg-blue-400" : "bg-blue-300",
+                    day.weight >= 4 ? "bg-zinc-600" : day.weight >= 2 ? "bg-zinc-500" : "bg-zinc-400",
                     "w-1 h-1"
                   )}
                 />

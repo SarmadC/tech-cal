@@ -21,14 +21,14 @@
 }
 
 .filter-toggle-button:hover {
-    border-color: var(--border-strong);
+    border: 1px solid var(--border-strong) !important;
     background-color: var(--background-tertiary);
     color: var(--foreground-primary);
 }
 
 /* Style for when the filter panel is open */
 .filter-toggle-button.active {
-    border-color: var(--accent-primary);
+    border: 1px solid var(--border-strong) !important;
     color: var(--accent-primary);
 }
 

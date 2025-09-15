@@ -1,15 +1,6 @@
 /* Footer Component Styles - 2025 Modern Design for Kure-Cal */
 
-:root {
-    --brand-orange: #ff6b35;
-    --brand-orange-light: #ff8c42;
-    --brand-blue: #3b82f6;
-    --brand-purple: #8b5cf6;
-    --brand-orange-glow: rgba(255, 107, 53, 0.3);
-    --brand-orange-subtle: rgba(255, 107, 53, 0.15);
-    --brand-blue-glow: rgba(59, 130, 246, 0.2);
-    --brand-purple-glow: rgba(139, 92, 246, 0.2);
-}
+/* Removed brand color variables in favor of landing page neutrals */
 
 .footer-container {
     background: transparent;
@@ -23,7 +14,7 @@
 .footer-main {
     padding: 80px 40px;
     position: relative;
-    border-top: 1px solid rgba(249, 115, 22, 0.1);
+    border-top: 1px solid var(--landing-border-light);
 }
 
 .footer-content {
@@ -502,6 +493,6 @@
 .footer-link:focus-visible,
 .footer-social-icon:focus-visible,
 .footer-newsletter-button:focus-visible {
-    outline: 2px solid var(--brand-orange);
+    outline: 2px solid var(--landing-text-primary);
     outline-offset: 2px;
 }

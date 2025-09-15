@@ -13,7 +13,7 @@
     transform: translateY(-4px) scale(1.02);
     box-shadow: 
         0 20px 40px -15px rgba(0, 0, 0, 0.3),
-        0 0 40px -10px var(--accent-primary, #ff6b35);
+        0 0 40px -10px var(--accent-primary, #ffffff);
 }
 
 /* 2. MAGNETIC HOVER EFFECT */
@@ -178,7 +178,7 @@
     left: -2px;
     right: -2px;
     bottom: -2px;
-    background: var(--accent-primary, #ff6b35);
+    background: var(--accent-primary, #ffffff);
     border-radius: inherit;
     opacity: 0.4;
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;

@@ -60,7 +60,7 @@ export const IndustryPulseScoreCard: FC<{ score: number }> = ({ score }) => {
         <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-700 font-medium">Industry Pulse Score</h3>
-                <TrendUpIcon className="w-5 h-5 text-blue-500" />
+                <TrendUpIcon className="w-5 h-5 text-gray-500" />
             </div>
             <div className="flex-grow flex items-center justify-center my-4">
                 <IndustryPulseScoreChart score={score} />
@@ -75,7 +75,7 @@ export const FollowThroughRateCard: FC<{ rate: number }> = ({ rate }) => (
     <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6">
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-gray-700 font-medium">Follow-Through Rate</h3>
-            <CheckSquareOffsetIcon className="w-5 h-5 text-green-500" />
+            <CheckSquareOffsetIcon className="w-5 h-5 text-gray-500" />
         </div>
         <div className="text-5xl font-bold text-gray-800 mb-2">{rate}%</div>
         <p className="text-sm text-gray-500">Of bookmarked events you attended. Excellent community engagement!</p>
@@ -86,7 +86,7 @@ export const LearningConsistencyCard: FC<{ currentStreak: number, longestStreak:
     <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-6">
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-gray-700 font-medium">Engagement Streak</h3>
-            <FireIcon className="w-5 h-5 text-orange-500" />
+            <FireIcon className="w-5 h-5 text-gray-500" />
         </div>
         <div className="flex items-baseline gap-6">
             <div>
@@ -127,7 +127,7 @@ export const NetworkExpansionCard: FC<{ count: number }> = ({ count }) => (
     <div className="col-span-12 md:col-span-5 bg-gray-800 rounded-3xl p-6 text-white">
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-medium">Network Expansion</h3>
-            <GlobeIcon className="w-5 h-5 text-teal-300" />
+            <GlobeIcon className="w-5 h-5 text-gray-300" />
         </div>
         <p className="text-5xl font-bold text-white mb-2">{count}</p>
         <p className="text-sm text-gray-400">New communities & organizers you&apos;ve engaged with this quarter.</p>
@@ -139,7 +139,7 @@ export const UpcomingOpportunitiesCard: FC<{ opportunities: UpcomingOpportunity[
     <div className="col-span-12 bg-white rounded-3xl p-6">
         <div className="flex items-center justify-between mb-6">
             <h3 className="text-gray-800 font-medium">Trend Awareness: Upcoming Opportunities</h3>
-            <button className="text-sm text-blue-600 font-medium flex items-center gap-1">
+            <button className="text-sm text-gray-700 font-medium flex items-center gap-1">
                 <span>See All</span>
                 <ArrowRightIcon className="w-4 h-4" />
             </button>
@@ -169,7 +169,7 @@ export const IndustryPulseCard: FC<{ trends: string[] }> = ({ trends }) => (
     <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-gray-800 rounded-3xl p-6 text-white">
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-medium">Industry Pulse</h3>
-            <LightbulbFilamentIcon className="w-4 h-4 text-yellow-300" />
+            <LightbulbFilamentIcon className="w-4 h-4 text-gray-300" />
         </div>
         <p className="text-sm text-gray-400 mb-6">Hot topics based on community engagement.</p>
         <div className="flex flex-wrap gap-2">

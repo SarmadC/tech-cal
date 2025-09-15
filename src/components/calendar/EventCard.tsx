@@ -42,14 +42,14 @@ const EventCard: FC<EventCardProps> = ({
                 premium-card smooth-colors
                 bg-[#1e1e1e] border border-gray-800 rounded-xl p-4
                 transition-all duration-200 cursor-pointer group
-                hover:border-blue-500/50 hover:bg-[#2a2a2a]
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : ''}
+                hover:border-zinc-500/50 hover:bg-[#2a2a2a]
+                focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-transparent
+                ${isSelected ? 'border-zinc-300 ring-2 ring-white/30' : ''}
             `}
         >
             <div className="flex justify-between items-start mb-3">
                 <div className="flex flex-col">
-                    <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                    <span className="font-semibold text-white group-hover:text-zinc-200 transition-colors">
                         {event.title}
                     </span>
                     <span className="text-sm text-gray-400 flex items-center mt-1 hover-lift">
@@ -66,7 +66,7 @@ const EventCard: FC<EventCardProps> = ({
                             premium-button scale-on-hover
                             p-2 rounded-full transition-colors
                             ${isTracked
-                                ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
+                                ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
                                 : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                             }
                         `}

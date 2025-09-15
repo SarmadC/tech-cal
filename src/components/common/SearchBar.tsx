@@ -57,7 +57,7 @@ export default function SearchBar({
           rounded-full 
           focus:outline-none 
           focus:ring-2 
-          focus:ring-blue-500 
+          focus:ring-gray-900 dark:focus:ring-gray-200
           focus:border-transparent
           transition-all duration-200
         "

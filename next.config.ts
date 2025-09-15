@@ -35,8 +35,9 @@ const securityHeaders = [
     value: `
         default-src 'self';
         script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.sentry-cdn.com;
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        font-src 'self' https://fonts.gstatic.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
+        style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
+        font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
         img-src 'self' data: blob: https:;
         connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co;
         frame-ancestors 'none';

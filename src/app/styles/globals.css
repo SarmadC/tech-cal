@@ -14,6 +14,48 @@
 /* 1. CORE DESIGN SYSTEM & THEME DEFINITIONS      */
 /* ============================================== */
 
+/* FullCalendar Monochrome Overrides */
+.fc-day-today {
+  background-color: var(--background-tertiary) !important;
+  color: var(--foreground-primary) !important;
+}
+
+.fc-day-today .fc-daygrid-day-number {
+  color: var(--foreground-primary) !important;
+  font-weight: 600 !important;
+}
+
+.fc-day-today .fc-daygrid-day-frame {
+  background-color: var(--background-tertiary) !important;
+}
+
+/* Override any yellow highlights in FullCalendar */
+.fc-day-today.fc-daygrid-day {
+  background-color: var(--background-tertiary) !important;
+}
+
+.fc-day-today.fc-daygrid-day:hover {
+  background-color: var(--background-elevated) !important;
+}
+
+/* Remove all yellow/orange borders globally - but exclude FullCalendar elements */
+*:not([class*="fc-"]) {
+  border-color: var(--border-default) !important;
+}
+
+/* Ensure clean borders for interactive elements - but exclude FullCalendar */
+button:not([class*="fc-"]), input:not([class*="fc-"]), select:not([class*="fc-"]), textarea:not([class*="fc-"]) {
+  border-color: var(--border-default) !important;
+}
+
+button:not([class*="fc-"]):hover, input:not([class*="fc-"]):hover, select:not([class*="fc-"]):hover, textarea:not([class*="fc-"]):hover {
+  border-color: var(--border-strong) !important;
+}
+
+button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([class*="fc-"]):focus, textarea:not([class*="fc-"]):focus {
+  border-color: var(--accent-primary) !important;
+}
+
 :root {
   /* --- Minimal Dark Theme (Neutral-first) --- */
   --background-main: #0B0F14;
@@ -26,21 +68,20 @@
   --foreground-tertiary: #7B8798;
   --foreground-muted: #637082;
   
-  /* Primary Accent - Paid-feel Blue */
-  --accent-primary: #4C6FFF;
-  --accent-primary-hover: #3B5BDB;
-  --accent-primary-light: rgba(76, 111, 255, 0.12);
-  --accent-border: rgba(76, 111, 255, 0.35);
+  /* Monochrome Accents */
+  --accent-primary: #ffffff; /* white accent for dark surfaces */
+  --accent-primary-hover: #e5e5e5; /* slightly dimmed white */
+  --accent-primary-light: rgba(255, 255, 255, 0.12);
+  --accent-border: rgba(255, 255, 255, 0.28);
   
-  /* Secondary Accent - Electric Blue */
-  --accent-secondary: #3b82f6;
-  --accent-secondary-hover: #2563eb;
-  --accent-secondary-light: rgba(59, 130, 246, 0.15);
+  /* Secondary/Tertiary accents map to neutral variants */
+  --accent-secondary: #ffffff;
+  --accent-secondary-hover: #e5e5e5;
+  --accent-secondary-light: rgba(255, 255, 255, 0.12);
   
-  /* Tertiary Accent - Vibrant Purple */
-  --accent-tertiary: #8b5cf6;
-  --accent-tertiary-hover: #7c3aed;
-  --accent-tertiary-light: rgba(139, 92, 246, 0.15);
+  --accent-tertiary: #ffffff;
+  --accent-tertiary-hover: #e5e5e5;
+  --accent-tertiary-light: rgba(255, 255, 255, 0.12);
   
   /* Success - Emerald Green */
   --success: #10b981;
@@ -55,10 +96,10 @@
   --error-light: rgba(239, 68, 68, 0.15);
   
   /* Special Colors */
-  --virtual-event: #8b5cf6;
-  --gradient-primary: linear-gradient(135deg, #1a2230 0%, #0F141C 100%);
-  --gradient-secondary: linear-gradient(135deg, #141C27 0%, #0B0F14 100%);
-  --gradient-accent: linear-gradient(135deg, rgba(76,111,255,0.15) 0%, rgba(76,111,255,0.06) 100%);
+  --virtual-event: #cfcfcf; /* neutral placeholder */
+  --gradient-primary: linear-gradient(135deg, #0F141C 0%, #0B0F14 100%);
+  --gradient-secondary: linear-gradient(135deg, #141C27 0%, #0F141C 100%);
+  --gradient-accent: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.06) 100%);
   
   --border-subtle: rgba(231, 236, 243, 0.06);
   --border-default: rgba(231, 236, 243, 0.10);
@@ -96,9 +137,15 @@
   --foreground-tertiary: #64748b;
   --foreground-muted: #94a3b8;
   
-  --accent-primary-light: rgba(255, 107, 53, 0.1);
-  --accent-secondary-light: rgba(59, 130, 246, 0.1);
-  --accent-tertiary-light: rgba(139, 92, 246, 0.1);
+  --accent-primary: #000000; /* black accent for light surfaces */
+  --accent-primary-hover: #111111;
+  --accent-primary-light: rgba(0, 0, 0, 0.08);
+  --accent-secondary: #000000;
+  --accent-secondary-hover: #111111;
+  --accent-secondary-light: rgba(0, 0, 0, 0.08);
+  --accent-tertiary: #000000;
+  --accent-tertiary-hover: #111111;
+  --accent-tertiary-light: rgba(0, 0, 0, 0.08);
   --success-light: rgba(16, 185, 129, 0.1);
   --warning-light: rgba(245, 158, 11, 0.1);
   --error-light: rgba(239, 68, 68, 0.1);
@@ -323,26 +370,26 @@ input::placeholder, textarea::placeholder {
 
 @layer base {
   :root {
-    /* --- Vibrant Dark Theme Shadcn Mapping --- */
-    --background: 15 15 35;
-    --foreground: 255 255 255;
-    --card: 26 26 46;
-    --card-foreground: 255 255 255;
-    --popover: 26 26 46;
-    --popover-foreground: 255 255 255;
-    --primary: 76 111 255; /* blue */
-    --primary-foreground: 255 255 255;
-    --secondary: 22 33 62;
-    --secondary-foreground: 226 232 240;
-    --muted: 22 33 62;
-    --muted-foreground: 148 163 184;
-    --accent: 59 130 246;
-    --accent-foreground: 255 255 255;
-    --destructive: 239 68 68;
+    /* --- Monochrome Dark Theme Shadcn Mapping --- */
+    --background: 11 15 20; /* matches --background-main */
+    --foreground: 231 236 243;
+    --card: 20 26 38; /* background-secondary */
+    --card-foreground: 231 236 243;
+    --popover: 20 26 38;
+    --popover-foreground: 231 236 243;
+    --primary: 255 255 255; /* white */
+    --primary-foreground: 0 0 0; /* black text on white */
+    --secondary: 18 25 36; /* background-tertiary */
+    --secondary-foreground: 170 182 198;
+    --muted: 18 25 36;
+    --muted-foreground: 123 135 152;
+    --accent: 255 255 255; /* neutral accent */
+    --accent-foreground: 0 0 0;
+    --destructive: 239 68 68; /* keep error for clarity */
     --destructive-foreground: 255 255 255;
-    --border: 59 130 246;
-    --input: 22 33 62;
-    --ring: 76 111 255;
+    --border: 80 80 80; /* neutral border */
+    --input: 20 26 38;
+    --ring: 255 255 255; /* neutral focus ring */
     --radius: 0.5rem;
 
     /* Sidebar theme tokens (oklch l c h[/a]) */
@@ -354,32 +401,32 @@ input::placeholder, textarea::placeholder {
   }
  
   .light {
-    /* --- Vibrant Light Theme Shadcn Override --- */
+    /* --- Monochrome Light Theme Shadcn Override --- */
     --background: 255 255 255;
-    --foreground: 15 23 42;
+    --foreground: 15 15 15;
     --card: 248 250 252;
-    --card-foreground: 15 23 42;
+    --card-foreground: 15 15 15;
     --popover: 248 250 252;
-    --popover-foreground: 15 23 42;
-    --primary: 76 111 255;
+    --popover-foreground: 15 15 15;
+    --primary: 0 0 0; /* black */
     --primary-foreground: 255 255 255;
     --secondary: 241 245 249;
-    --secondary-foreground: 51 65 85;
+    --secondary-foreground: 51 51 51;
     --muted: 241 245 249;
-    --muted-foreground: 100 116 139;
-    --accent: 59 130 246;
+    --muted-foreground: 100 100 100;
+    --accent: 0 0 0; /* neutral accent */
     --accent-foreground: 255 255 255;
     --destructive: 239 68 68;
     --destructive-foreground: 255 255 255;
     --border: 226 232 240;
     --input: 226 232 240;
-    --ring: 76 111 255;
+    --ring: 0 0 0; /* black focus ring */
 
     /* Sidebar theme tokens (light) */
     --sidebar: 0.98 0 0;
-    --sidebar-foreground: 0.17 0.02 260;
+    --sidebar-foreground: 0.17 0 0;
     --sidebar-border: 0.88 0 0/35%;
-    --sidebar-accent: 0.92 0.02 260;
+    --sidebar-accent: 0.92 0 0;
   }
 
   /* --- Final Base Apply Rules --- */

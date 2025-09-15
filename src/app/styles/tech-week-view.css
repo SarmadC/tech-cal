@@ -55,8 +55,8 @@
     bottom: 0; /* Position at the very bottom edge of content area */
     left: 0; /* Position at the very left edge of content area */
     z-index: 10;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: var(--radius-sm);
     overflow: hidden;
     background: transparent;
@@ -74,8 +74,8 @@
     bottom: 0; /* Position at the very bottom edge of content area */
     left: 0; /* Position at the very left edge of content area */
     z-index: 10;
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
     border-radius: var(--radius-sm);
     overflow: hidden;
     background: transparent;
@@ -93,14 +93,30 @@
     bottom: 0; /* Position at the very bottom edge of content area */
     left: 0; /* Position at the very left edge of content area */
     z-index: 10;
-    width: 20px;
-    height: 20px;
+    width: 28px;
+    height: 28px;
     border-radius: var(--radius-sm);
     overflow: hidden;
     background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* ===================================
+   VERY LARGE CARDS (span > 10) - Week View
+   =================================== */
+.tech-calendar-week-view .event-card[data-span-gt-10] .event-organizer-logo-corner {
+    width: 32px;
+    height: 32px;
+}
+
+/* ===================================
+   MAXIMUM SIZE CARDS (span > 12) - Week View
+   =================================== */
+.tech-calendar-week-view .event-card[data-span-gt-12] .event-organizer-logo-corner {
+    width: 36px;
+    height: 36px;
 }
 
 
@@ -663,9 +679,6 @@
     z-index: 2;
 }
 
-.tech-calendar-week-view .event-card[class*="day-"] .event-title {
-    margin-top: 14px !important;
-}
 
 /* Remove top margin for compact cards only */
 .tech-calendar-week-view .event-card.compact[class*="day-"] .event-title {

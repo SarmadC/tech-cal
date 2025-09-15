@@ -87,12 +87,12 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
                     <span>Event starts in {Math.ceil((eventStart.getTime() - now.getTime()) / (1000 * 60 * 60))} hours</span>
                 </div>
                 {progressData.nextItem && (
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                        <div className="flex items-center space-x-2 text-blue-300">
+                    <div className="bg-zinc-800/50 border border-zinc-700/60 rounded-lg p-3">
+                        <div className="flex items-center space-x-2 text-zinc-300">
                             <CircleIcon className="w-4 h-4" />
                             <span className="font-medium">Next: {progressData.nextItem.title}</span>
                         </div>
-                        <div className="text-sm text-blue-200 mt-1">
+                        <div className="text-sm text-zinc-400 mt-1">
                             {formatTime(progressData.nextItem.startTime)} - {formatTime(progressData.nextItem.endTime)}
                         </div>
                     </div>
@@ -128,7 +128,7 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
                     <span className="text-gray-400">{progressData.completedItems}/{progressData.totalItems} sessions</span>
                 </div>
                 <div 
-                    className="w-full bg-gray-700 rounded-full h-2"
+                    className="w-full bg-zinc-700 rounded-full h-2"
                     role="progressbar"
                     aria-valuenow={progressData.progressPercent}
                     aria-valuemin={0}
@@ -136,7 +136,7 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
                     aria-label={`Event progress: ${progressData.completedItems} of ${progressData.totalItems} sessions completed`}
                 >
                     <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-zinc-200 dark:bg-zinc-300 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${progressData.progressPercent}%` }}
                     />
                 </div>
@@ -144,16 +144,16 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
 
             {/* Current Session */}
             {progressData.currentItem && (
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                    <div className="flex items-center space-x-2 text-blue-300">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                <div className="bg-zinc-800/50 border border-zinc-700/60 rounded-lg p-3">
+                    <div className="flex items-center space-x-2 text-zinc-300">
+                        <div className="w-2 h-2 bg-zinc-300 rounded-full animate-pulse" />
                         <span className="font-medium">Live: {progressData.currentItem.title}</span>
                     </div>
-                    <div className="text-sm text-blue-200 mt-1">
+                    <div className="text-sm text-zinc-400 mt-1">
                         {formatTime(progressData.currentItem.startTime)} - {formatTime(progressData.currentItem.endTime)}
                     </div>
                     {progressData.currentItem.speaker && (
-                        <div className="text-sm text-blue-200 mt-1">
+                        <div className="text-sm text-zinc-400 mt-1">
                             Speaker: {progressData.currentItem.speaker.name}
                         </div>
                     )}
@@ -175,8 +175,8 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
 
             {/* Completed Sessions */}
             {progressData.completedItems > 0 && (
-                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-                    <div className="flex items-center space-x-2 text-green-300">
+                <div className="bg-zinc-800/50 border border-zinc-700/60 rounded-lg p-3">
+                    <div className="flex items-center space-x-2 text-zinc-300">
                         <CheckCircleIcon className="w-4 h-4" />
                         <span className="font-medium">{progressData.completedItems} sessions completed</span>
                     </div>

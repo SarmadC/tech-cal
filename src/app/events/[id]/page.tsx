@@ -52,7 +52,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 </Link>
 
                 <div className="bg-background-secondary rounded-2xl border border-border-color overflow-hidden">
-                    <div className="h-48 bg-gradient-to-br from-accent-primary/20 to-purple-600/20" />
+                    <div className="h-48 bg-gradient-to-br from-background-tertiary to-background-elevated" />
 
                     <div className="p-8">
                         <h1 className="text-3xl md:text-4xl font-bold text-foreground-primary mb-4">

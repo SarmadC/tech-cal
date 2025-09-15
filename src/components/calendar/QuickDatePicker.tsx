@@ -24,8 +24,6 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
     events = []
 }) => {
     const [selectedDate, setSelectedDate] = useState(currentDate);
-    const [rangeStart, setRangeStart] = useState<Date | null>(null);
-    const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
     const [isAnimating, setIsAnimating] = useState(false);
     const [direction, setDirection] = useState<'prev' | 'next' | null>(null);
     const pickerRef = useRef<HTMLDivElement>(null);
@@ -194,31 +192,13 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
     }, [selectedDate, view, isAnimating]);
 
     const handleDateSelect = useCallback((date: Date) => {
-        // Range selection logic: first click sets start, second sets end
-        if (!rangeStart || (rangeStart && rangeEnd)) {
-            setRangeStart(date);
-            setRangeEnd(null);
-            setSelectedDate(date);
-            return;
-        }
-        if (rangeStart && !rangeEnd) {
-            if (date < rangeStart) {
-                setRangeEnd(rangeStart);
-                setRangeStart(date);
-                setSelectedDate(date);
-            } else {
-                setRangeEnd(date);
-                setSelectedDate(date);
-            }
-            return;
-        }
-    }, [rangeStart, rangeEnd]);
+        // Simple single-click selection for QuickDatePicker
+        setSelectedDate(date);
+    }, []);
 
     const _goToToday = useCallback(() => {
         const today = new Date();
         setSelectedDate(today);
-        setRangeStart(today);
-        setRangeEnd(today);
     }, []);
 
     const _formatDateDisplay = (date: Date) => {
@@ -384,8 +364,6 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                             startDate={selectedDate}
                             endDate={selectedDate}
                             selectedDate={selectedDate}
-                            selectedRangeStart={rangeStart ?? undefined}
-                            selectedRangeEnd={rangeEnd ?? undefined}
                             onDateSelect={(d) => handleDateSelect(d)}
                             onMonthChange={(d) => setSelectedDate(d)}
                             className="quick-date-calendar"
@@ -403,15 +381,14 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                     </button>
                     <button
                         onClick={() => {
-                            const next = parsedInputDate || (rangeStart && rangeEnd ? rangeStart : selectedDate);
-                            const finalDate = next || selectedDate;
+                            const finalDate = parsedInputDate || selectedDate;
                             onDateChange(finalDate);
                             onClose();
                         }}
                         className="quick-date-picker-confirm"
-                        disabled={(!!inputValue && !parsedInputDate) || (!!rangeStart && !rangeEnd && !parsedInputDate)}
+                        disabled={!!inputValue && !parsedInputDate}
                     >
-                        {rangeStart && rangeEnd ? 'Go to Range' : `Go to ${view === 'month' ? 'Month' : view === 'week' ? 'Week' : 'Day'}`}
+                        {`Go to ${view === 'month' ? 'Month' : view === 'week' ? 'Week' : 'Day'}`}
                     </button>
                 </div>
             </div>

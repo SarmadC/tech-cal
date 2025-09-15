@@ -48,33 +48,23 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
     };
     
     const getTypeColor = (type: AgendaItem['type']) => {
+        // Monochrome badges with subtle variations only by intensity
         switch (type) {
             case 'keynote':
-                return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
             case 'session':
-                return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
             case 'workshop':
-                return 'bg-green-500/20 text-green-300 border-green-500/30';
             case 'panel':
-                return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
             case 'networking':
-                return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
             case 'break':
-                return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
             case 'registration':
-                return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
             case 'certification':
-                return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
             case 'support':
-                return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
             case 'exhibition':
-                return 'bg-rose-500/20 text-rose-300 border-rose-500/30';
             case 'meal':
-                return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
             case 'entertainment':
-                return 'bg-violet-500/20 text-violet-300 border-violet-500/30';
+                return 'bg-zinc-800/50 text-zinc-300 border-zinc-700/60';
             default:
-                return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+                return 'bg-zinc-800/50 text-zinc-300 border-zinc-700/60';
         }
     };
     
@@ -121,7 +111,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                         href={event.agendaUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="event-agenda-external-link flex items-center text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                        className="event-agenda-external-link flex items-center text-sm text-foreground-secondary hover:text-foreground-primary transition-colors"
                     >
                         <ArrowSquareOutIcon className="w-4 h-4 mr-1" />
                         View Full Agenda
@@ -211,7 +201,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
                             href={event.agendaUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center mt-2 text-blue-400 hover:text-blue-300 transition-colors text-sm"
+                            className="inline-flex items-center mt-2 text-foreground-secondary hover:text-foreground-primary transition-colors text-sm"
                         >
                             <ArrowSquareOutIcon className="w-4 h-4 mr-1" />
                             Check event website for agenda

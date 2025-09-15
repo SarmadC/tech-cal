@@ -16,11 +16,27 @@ export default async function CalendarPage() {
     }
 
     try {
-        // Load events and categories
-        const [events, categories] = await Promise.all([
-            EventService.getEventsWithAgendaAndMultiDaySupport({}, supabase),
-            EventTypeService.getEventTypes(supabase),
-        ]);
+        // Load events with robust fallback, then categories
+        let events = [] as Awaited<ReturnType<typeof EventService.getEventsWithAgendaAndMultiDaySupport>>;
+        try {
+            events = await EventService.getEventsWithAgendaAndMultiDaySupport({}, supabase);
+        } catch (_err) {
+            // Fallback to simpler queries if the combined join fails
+            try {
+                events = await EventService.getEventsWithMultiDaySupport({}, supabase);
+            } catch (__err) {
+                // Convert basic events to MultiDayEvent format for consistency
+                const basicEvents = await EventService.getEvents({}, supabase);
+                events = basicEvents.map(event => ({
+                    ...event,
+                    isMultiDay: false,
+                    eventPattern: 'single' as const,
+                    agenda: undefined
+                }));
+            }
+        }
+
+        const categories = await EventTypeService.getEventTypes(supabase);
 
         // Load profile separately with error handling
         let profile = null;

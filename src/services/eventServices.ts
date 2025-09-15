@@ -501,7 +501,7 @@ export class EventService {
                     *, 
                     event_type:event_type_id (*), 
                     organizer:organizers (id, name, logo_url),
-                    event_agenda (
+                    event_agenda!left (
                         id,
                         day_number,
                         start_time,
@@ -512,14 +512,7 @@ export class EventService {
                         agenda_type,
                         duration_minutes,
                         track,
-                        sort_order,
-                        speakers (
-                            id,
-                            name,
-                            title,
-                            company,
-                            photo_url
-                        )
+                        sort_order
                     )
                 `)
                 .order('start_time', { ascending: true })
@@ -597,7 +590,7 @@ export class EventService {
                     *, 
                     event_type:event_type_id (*), 
                     organizer:organizers (id, name, logo_url),
-                    event_agenda (
+                    event_agenda!left (
                         id,
                         day_number,
                         start_time,
@@ -608,14 +601,7 @@ export class EventService {
                         agenda_type,
                         duration_minutes,
                         track,
-                        sort_order,
-                        speakers (
-                            id,
-                            name,
-                            title,
-                            company,
-                            photo_url
-                        )
+                        sort_order
                     )
                 `)
                 .order('start_time', { ascending: true })
@@ -683,7 +669,12 @@ export class EventService {
 
             return events;
         } catch (error) {
-            console.error('Error fetching events with agenda and multi-day support:', error);
+            // Improve diagnostics: capture message and stack when available
+            const err = error as unknown as { message?: string; stack?: string };
+            console.error('Error fetching events with agenda and multi-day support:', {
+                message: err?.message,
+                stack: err?.stack
+            });
             Sentry.captureException(error, {
                 extra: { function: 'getEventsWithAgendaAndMultiDaySupport', filters }
             });

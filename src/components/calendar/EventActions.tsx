@@ -16,7 +16,7 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
 
     return (
         <div className="flex space-x-3">
-            <a href={googleCalendarLink} target="_blank" rel="noopener noreferrer" className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-center">
+            <a href={googleCalendarLink} target="_blank" rel="noopener noreferrer" className="flex-1 py-3 bg-zinc-200 hover:bg-zinc-300 text-zinc-900 rounded-lg font-semibold text-center dark:bg-zinc-200 dark:hover:bg-zinc-300 dark:text-zinc-900">
                 Add to Google
             </a>
             <button onClick={handleIcsDownload} className="p-3 bg-gray-700 hover:bg-gray-600 rounded-lg">

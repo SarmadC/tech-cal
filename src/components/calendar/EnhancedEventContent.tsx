@@ -53,7 +53,7 @@ const EnhancedEventContent: FC<EnhancedEventContentProps> = ({
                         </Badge>
                     )}
                     {isTrackedEvent(eventData) && eventData.isTracked && (
-                        <span className="ml-1 text-yellow-500">★</span>
+                        <span className="ml-1 text-gray-300">★</span>
                     )}
                 </div>
             </div>

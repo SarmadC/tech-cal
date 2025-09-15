@@ -66,7 +66,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
     if (!user) {
         return (
             <div className="text-center text-sm text-gray-400 p-3 bg-gray-800 rounded-lg">
-                <a href="/login" className="text-blue-400 hover:underline">
+                <a href="/login" className="text-foreground-secondary hover:underline">
                     Sign in
                 </a>{' '}
                 to track events
@@ -95,10 +95,10 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
     return (
         <div className="space-y-3">
             {currentStatus.isTracked ? (
-                <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg">
                     <div className="flex items-center space-x-2">
-                        <CheckIcon className="w-5 h-5 text-green-400" />
-                        <span className="text-green-300 font-medium text-sm capitalize">
+                        <CheckIcon className="w-5 h-5 text-zinc-300" />
+                        <span className="text-zinc-300 font-medium text-sm capitalize">
                             {currentStatus.status === 'bookmarked' && 'Bookmarked'}
                             {currentStatus.status === 'attending' && 'Attending'}
                             {currentStatus.status === 'attended' && 'Attended'}
@@ -127,7 +127,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                         {isMutating ? (
                             <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
                         ) : (
-                            <StarIcon className="w-4 h-4 text-yellow-400 group-hover:text-yellow-300" />
+                            <StarIcon className="w-4 h-4 text-zinc-300 group-hover:text-zinc-200" />
                         )}
                         <span className="text-xs text-gray-300">Bookmark</span>
                     </button>
@@ -139,7 +139,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                         {isMutating ? (
                             <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
                         ) : (
-                            <UserCheckIcon className="w-4 h-4 text-blue-400 group-hover:text-blue-300" />
+                            <UserCheckIcon className="w-4 h-4 text-zinc-300 group-hover:text-zinc-200" />
                         )}
                         <span className="text-xs text-gray-300">Attending</span>
                     </button>
@@ -151,7 +151,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                         {isMutating ? (
                             <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
                         ) : (
-                            <CheckIcon className="w-4 h-4 text-green-400 group-hover:text-green-300" />
+                            <CheckIcon className="w-4 h-4 text-zinc-300 group-hover:text-zinc-200" />
                         )}
                         <span className="text-xs text-gray-300">Attended</span>
                     </button>

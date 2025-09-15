@@ -107,7 +107,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
 
                     {featuredPost && selectedCategory === 'All' && !searchTerm && (
                         <div className="mb-12">
-                            <div className="bg-gradient-to-r from-accent-primary to-purple-600 rounded-2xl p-8 text-white">
+                            <div className="bg-gradient-to-r from-gray-900 to-gray-700 rounded-2xl p-8 text-white">
                                 <div className="flex items-center space-x-2 mb-4">
                                     <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold">Featured</span>
                                     <span className="text-sm opacity-80">{featuredPost.category?.name}</span>
@@ -134,7 +134,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {filteredPosts.length > 0 ? filteredPosts.map((post) => (
                             <article key={post.id} className="bg-background-secondary rounded-xl border border-border-color overflow-hidden hover:border-accent-primary/30 transition-all group">
-                                <div className="aspect-video bg-gradient-to-br from-accent-primary/20 to-purple-600/20 relative overflow-hidden">
+                                <div className="aspect-video bg-gradient-to-br from-gray-800/30 to-gray-600/20 relative overflow-hidden">
                                     <div className="absolute inset-0 bg-background-tertiary" />
                                 </div>
                                 <div className="p-6">
@@ -170,7 +170,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                             <p className="col-span-full text-center text-foreground-secondary">No posts found matching your criteria.</p>
                         )}
                     </div>
-                    <div className="mt-16 bg-gradient-to-r from-accent-primary to-purple-600 rounded-2xl p-8 text-center text-white">
+                    <div className="mt-16 bg-gradient-to-r from-gray-900 to-gray-700 rounded-2xl p-8 text-center text-white">
                         <SubscribeForm />
                     </div>
                 </div>
