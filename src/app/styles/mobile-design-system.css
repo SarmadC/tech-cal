@@ -411,13 +411,6 @@
   height: auto;
 }
 
-.mobile-image-contain {
-  object-fit: contain;
-}
-
-.mobile-opacity-0 {
-  opacity: 0;
-}
 
 /* ==============================================
    14. MOBILE LAYOUT UTILITIES
