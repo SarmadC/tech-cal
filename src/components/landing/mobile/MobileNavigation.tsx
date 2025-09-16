@@ -47,10 +47,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           onClick={onToggle}
           aria-label={isOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isOpen}
-          style={{ 
-            backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-            border: '1px solid rgba(255, 255, 255, 0.3)' 
-          }}
         >
           {isOpen ? (
             <X size={24} weight="bold" />
@@ -81,16 +77,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                   onToggle();
                 }}
                 className="mobile-nav-link"
-                style={{ 
-                  color: 'white', 
-                  fontSize: '1.25rem', 
-                  fontWeight: '500',
-                  padding: '0.75rem 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  textDecoration: 'none'
-                }}
               >
                 <span className="link-text">{item.name}</span>
                 <svg 
@@ -113,15 +99,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 onToggle();
               }}
               className="mobile-nav-link"
-              style={{ 
-                color: 'white', 
-                fontSize: '1.25rem', 
-                fontWeight: '500',
-                padding: '0.75rem 0',
-                display: 'flex',
-                alignItems: 'center',
-                textDecoration: 'none'
-              }}
             >
               <span className="link-text">Login</span>
             </a>
@@ -135,18 +112,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 onToggle();
               }}
               className="mobile-cta-button enhanced-primary"
-              style={{
-                width: '100%',
-                background: 'white',
-                color: 'black',
-                border: '2px solid rgba(255, 255, 255, 0.2)',
-                padding: '1rem 1.5rem',
-                borderRadius: '12px',
-                fontWeight: '600',
-                fontSize: '1.125rem',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
             >
               <span>START FREE TRIAL</span>
             </button>
