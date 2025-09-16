@@ -376,7 +376,51 @@
 }
 
 /* ==============================================
-   13. MOBILE LAYOUT UTILITIES
+   13. MOBILE ANIMATION UTILITIES
+   ============================================== */
+
+.mobile-pull-transform {
+  transform: var(--pull-transform, translateY(0));
+}
+
+.mobile-pull-indicator {
+  opacity: var(--indicator-opacity, 0);
+  transform: var(--indicator-transform, scale(1) rotate(0deg));
+}
+
+.mobile-event-dot {
+  background-color: var(--event-color, var(--accent-primary));
+}
+
+.mobile-event-border {
+  border-left-color: var(--event-color, var(--accent-primary));
+}
+
+.mobile-task-card {
+  background-color: var(--category-color, var(--background-secondary));
+  color: var(--pill-color, var(--foreground-primary));
+}
+
+.mobile-task-tag {
+  background-color: var(--tag-bg-color, var(--accent-primary));
+  color: var(--tag-text-color, white);
+}
+
+.mobile-nav-menu-height {
+  min-height: calc(100vh - 60px);
+  height: auto;
+}
+
+.mobile-image-contain {
+  object-fit: contain;
+}
+
+.mobile-opacity-0 {
+  opacity: 0;
+}
+
+/* ==============================================
+   14. MOBILE LAYOUT UTILITIES
    ============================================== */
 
 .mobile-container {

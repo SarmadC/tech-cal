@@ -121,10 +121,11 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
           onClick?.();
         }
       }}
+      className="mobile-task-card"
       style={{
-        backgroundColor: categoryColor,
-        color: pillColor
-      }}
+        '--category-color': categoryColor,
+        '--pill-color': pillColor
+      } as React.CSSProperties}
     >
       <div className="task-card-header">
         <div className="task-title-section">
@@ -159,22 +160,22 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
             {eventTags.slice(0, 2).map((tag, _index) => (
               <span 
                 key={tag.id} 
-                className="task-tag"
+                className="task-tag mobile-task-tag"
                 style={{
-                  backgroundColor: getPillColor(categoryColor, 0.6),
-                  color: 'white'
-                }}
+                  '--tag-bg-color': getPillColor(categoryColor, 0.6),
+                  '--tag-text-color': 'white'
+                } as React.CSSProperties}
               >
                 {tag.name}
               </span>
             ))}
             {eventTags.length > 2 && (
               <span 
-                className="task-tag-more"
+                className="task-tag-more mobile-task-tag"
                 style={{
-                  backgroundColor: getPillColor(categoryColor, 0.6),
-                  color: 'white'
-                }}
+                  '--tag-bg-color': getPillColor(categoryColor, 0.6),
+                  '--tag-text-color': 'white'
+                } as React.CSSProperties}
               >
                 +{eventTags.length - 2}
               </span>

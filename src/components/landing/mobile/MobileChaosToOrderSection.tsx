@@ -261,14 +261,13 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
               <div
                 key={i}
                 ref={(el) => { cardRefs.current[i] = el; }}
-                className="mobile-event-card"
+                className="mobile-event-card mobile-opacity-0"
                 role="button"
                 aria-label={`${e.company} — ${e.title} on ${e.date}`}
                 onClick={() => setSelectedIndex(i)}
-                style={{ opacity: 0 }}
               >
                 <div className="logo-wrapper" aria-hidden="true">
-                  <Image src={logoUrl(e.company)} alt="" width={22} height={22} style={{ objectFit: 'contain' }} />
+                  <Image src={logoUrl(e.company)} alt="" width={22} height={22} className="mobile-image-contain" />
                 </div>
               </div>
             ))}

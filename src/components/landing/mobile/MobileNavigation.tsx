@@ -58,11 +58,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
 
       {/* Mobile Nav Menu */}
       <div 
-        className={`mobile-nav-menu ${isOpen ? 'menu-open' : ''}`}
-        style={{
-          minHeight: 'calc(100vh - 60px)',
-          height: 'auto'
-        }}
+        className={`mobile-nav-menu mobile-nav-menu-height ${isOpen ? 'menu-open' : ''}`}
       >
         <div className="mobile-nav-content">
           {/* Main Navigation Links */}
