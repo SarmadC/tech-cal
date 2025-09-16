@@ -1,0 +1,440 @@
+/* ==============================================
+   MOBILE DESIGN SYSTEM - CONSISTENT STYLING
+   ============================================== */
+
+/* ==============================================
+   1. MOBILE TYPOGRAPHY SCALE
+   ============================================== */
+
+.mobile-text-xs {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.mobile-text-sm {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.mobile-text-base {
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+.mobile-text-lg {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.mobile-text-xl {
+  font-size: 1.25rem;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.mobile-text-2xl {
+  font-size: 1.5rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.mobile-text-3xl {
+  font-size: 2rem;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.mobile-text-4xl {
+  font-size: 2.5rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+/* ==============================================
+   2. MOBILE SPACING SYSTEM
+   ============================================== */
+
+.mobile-spacing-xs { padding: var(--space-1); }
+.mobile-spacing-sm { padding: var(--space-2); }
+.mobile-spacing-md { padding: var(--space-4); }
+.mobile-spacing-lg { padding: var(--space-6); }
+.mobile-spacing-xl { padding: var(--space-8); }
+
+.mobile-margin-xs { margin: var(--space-1); }
+.mobile-margin-sm { margin: var(--space-2); }
+.mobile-margin-md { margin: var(--space-4); }
+.mobile-margin-lg { margin: var(--space-6); }
+.mobile-margin-xl { margin: var(--space-8); }
+
+/* ==============================================
+   3. MOBILE SHADOW SYSTEM
+   ============================================== */
+
+.mobile-shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.mobile-shadow-md {
+  box-shadow: var(--shadow-md);
+}
+
+.mobile-shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+.mobile-shadow-xl {
+  box-shadow: var(--shadow-xl);
+}
+
+/* ==============================================
+   4. MOBILE BORDER SYSTEM
+   ============================================== */
+
+.mobile-border {
+  border: 1px solid var(--border-default);
+}
+
+.mobile-border-subtle {
+  border: 1px solid var(--border-subtle);
+}
+
+.mobile-border-strong {
+  border: 1px solid var(--border-strong);
+}
+
+.mobile-border-radius {
+  border-radius: var(--radius);
+}
+
+.mobile-border-radius-lg {
+  border-radius: var(--radius-lg);
+}
+
+/* ==============================================
+   5. MOBILE BACKGROUND SYSTEM
+   ============================================== */
+
+.mobile-bg-main {
+  background: var(--background-main);
+}
+
+.mobile-bg-secondary {
+  background: var(--background-secondary);
+}
+
+.mobile-bg-tertiary {
+  background: var(--background-tertiary);
+}
+
+.mobile-bg-elevated {
+  background: var(--background-elevated);
+}
+
+/* ==============================================
+   6. MOBILE TEXT COLOR SYSTEM
+   ============================================== */
+
+.mobile-text-primary {
+  color: var(--foreground-primary);
+}
+
+.mobile-text-secondary {
+  color: var(--foreground-secondary);
+}
+
+.mobile-text-tertiary {
+  color: var(--foreground-tertiary);
+}
+
+.mobile-text-muted {
+  color: var(--foreground-muted);
+}
+
+.mobile-text-accent {
+  color: var(--accent-primary);
+}
+
+/* ==============================================
+   7. MOBILE BUTTON SYSTEM
+   ============================================== */
+
+.mobile-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius);
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  min-height: 44px; /* iOS touch target minimum */
+}
+
+.mobile-button-primary {
+  background: var(--accent-primary);
+  color: var(--background-main);
+  border: 1px solid var(--border-default);
+}
+
+.mobile-button-primary:hover {
+  background: var(--accent-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.mobile-button-secondary {
+  background: transparent;
+  color: var(--foreground-primary);
+  border: 1px solid var(--border-default);
+}
+
+.mobile-button-secondary:hover {
+  background: var(--background-secondary);
+  border-color: var(--border-strong);
+}
+
+.mobile-button-ghost {
+  background: transparent;
+  color: var(--foreground-secondary);
+  border: none;
+}
+
+.mobile-button-ghost:hover {
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
+}
+
+/* ==============================================
+   8. MOBILE CARD SYSTEM
+   ============================================== */
+
+.mobile-card {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  padding: var(--space-6);
+  transition: all 0.2s ease;
+}
+
+.mobile-card:hover {
+  background: var(--background-elevated);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.mobile-card-elevated {
+  background: var(--background-elevated);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ==============================================
+   9. MOBILE INPUT SYSTEM
+   ============================================== */
+
+.mobile-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+  min-height: 44px; /* iOS touch target minimum */
+}
+
+.mobile-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-light);
+}
+
+.mobile-input::placeholder {
+  color: var(--foreground-tertiary);
+}
+
+/* ==============================================
+   10. MOBILE RESPONSIVE UTILITIES
+   ============================================== */
+
+/* Mobile-first responsive breakpoints */
+@media (max-width: 320px) {
+  .mobile-text-4xl {
+    font-size: 2rem;
+  }
+  
+  .mobile-text-3xl {
+    font-size: 1.75rem;
+  }
+  
+  .mobile-spacing-lg {
+    padding: var(--space-4);
+  }
+  
+  .mobile-spacing-xl {
+    padding: var(--space-6);
+  }
+}
+
+@media (min-width: 321px) and (max-width: 375px) {
+  .mobile-text-4xl {
+    font-size: 2.25rem;
+  }
+  
+  .mobile-text-3xl {
+    font-size: 1.875rem;
+  }
+}
+
+@media (min-width: 376px) and (max-width: 414px) {
+  .mobile-text-4xl {
+    font-size: 2.5rem;
+  }
+  
+  .mobile-text-3xl {
+    font-size: 2rem;
+  }
+}
+
+/* ==============================================
+   11. MOBILE ANIMATION UTILITIES
+   ============================================== */
+
+.mobile-fade-in {
+  animation: mobileFadeIn 0.3s ease-out;
+}
+
+.mobile-slide-up {
+  animation: mobileSlideUp 0.3s ease-out;
+}
+
+.mobile-scale-in {
+  animation: mobileScaleIn 0.2s ease-out;
+}
+
+@keyframes mobileFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobileSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mobileScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==============================================
+   12. MOBILE ACCESSIBILITY UTILITIES
+   ============================================== */
+
+.mobile-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mobile-focus-visible:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* ==============================================
+   13. MOBILE LAYOUT UTILITIES
+   ============================================== */
+
+.mobile-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.mobile-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.mobile-stack-sm {
+  gap: var(--space-2);
+}
+
+.mobile-stack-lg {
+  gap: var(--space-6);
+}
+
+.mobile-row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.mobile-row-sm {
+  gap: var(--space-2);
+}
+
+.mobile-row-lg {
+  gap: var(--space-6);
+}
+
+.mobile-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-start {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.mobile-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
