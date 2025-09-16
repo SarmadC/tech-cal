@@ -201,11 +201,11 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
       {/* Pull to Refresh Indicator */}
       {pullState.isPulling && (
         <div 
-          className="pull-refresh-indicator"
+          className="pull-refresh-indicator mobile-pull-indicator"
           style={{
-            opacity: indicatorOpacity,
-            transform: `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
-          }}
+            '--indicator-opacity': indicatorOpacity,
+            '--indicator-transform': `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
+          } as React.CSSProperties}
         >
           <MaterialIcon name="refresh" size={24} />
         </div>
@@ -219,9 +219,9 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
         </div>
       )}
       {/* Month Header */}
-      <div className="mobile-month-header"
+      <div className="mobile-month-header mobile-pull-transform"
         {...pullToRefreshHandlers}
-        style={{ transform: pullTransform }}
+        style={{ '--pull-transform': pullTransform } as React.CSSProperties}
       >
         <div className="month-title">{monthName}</div>
         {selectedDate && (
@@ -236,12 +236,12 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
 
       {/* Calendar Grid */}
       <div 
-        className="mobile-calendar-grid"
+        className="mobile-calendar-grid mobile-pull-transform"
         ref={scrollContainerRef}
         onTouchStart={swipeHandlers.onTouchStart}
         onTouchMove={swipeHandlers.onTouchMove}
         onTouchEnd={swipeHandlers.onTouchEnd}
-        style={{ transform: pullTransform }}
+        style={{ '--pull-transform': pullTransform } as React.CSSProperties}
       >
         {/* Week day headers */}
         <div className="weekday-headers">
@@ -272,10 +272,10 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
                   {day.events.slice(0, 3).map((event, eventIndex) => (
                     <div
                       key={`${event.id}-${eventIndex}`}
-                      className="event-dot"
+                      className="event-dot mobile-event-dot"
                       style={{
-                        backgroundColor: event.color || '#3b82f6',
-                      }}
+                        '--event-color': event.color || 'var(--accent-primary)',
+                      } as React.CSSProperties}
                       title={event.title}
                     />
                   ))}
@@ -310,13 +310,13 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
               selectedDateEvents.map((event, index) => (
                 <div
                   key={`${event.id}-${index}`}
-                  className="mobile-month-event"
+                  className="mobile-month-event mobile-event-border"
                   onClick={(e) => handleEventClick(event, e)}
                   onMouseEnter={(e) => handleEventHover(event, e)}
                   onMouseLeave={handleEventLeave}
                   style={{
-                    borderLeftColor: event.color || '#3b82f6',
-                  }}
+                    '--event-color': event.color || 'var(--accent-primary)',
+                  } as React.CSSProperties}
                 >
                   <div className="event-time">
                     {formatEventTime(event)}

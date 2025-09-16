@@ -1,4 +1,4 @@
-/* Mobile Landing Page Styles - 2025 Modern Design for Kure-Cal */
+/* Mobile Landing Page Styles - Consistent with Design System */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
 /* ============================================== */
@@ -7,11 +7,11 @@
 
 .mobile-landing-container {
   min-height: 100vh;
-  background: #000000;
-  color: white;
+  background: var(--background-main);
+  color: var(--foreground-primary);
   overflow-x: hidden;
   position: relative;
-  font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .mobile-landing-container.blur-background {
@@ -33,9 +33,9 @@
   left: 0;
   right: 0;
   z-index: 10000;
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--background-main);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-subtle);
   display: block;
 }
 
@@ -65,16 +65,16 @@
 .mobile-nav-logo .logo-text {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--foreground-primary);
 }
 
 .mobile-nav-toggle {
   background: none;
   border: none;
-  color: white;
+  color: var(--foreground-primary);
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: var(--radius);
   transition: background-color 0.2s ease;
   display: flex;
   align-items: center;
@@ -84,7 +84,7 @@
 }
 
 .mobile-nav-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--background-secondary);
 }
 
 .mobile-nav-menu {
@@ -93,7 +93,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #000000;
+  background: var(--background-main);
   transform: translateX(-100%);
   transition: transform 0.3s ease;
   overflow-y: auto;
@@ -129,20 +129,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: white;
+  color: var(--foreground-primary);
   text-decoration: none;
   font-size: 1.25rem;
   font-weight: 500;
   padding: 0.75rem 0;
-  border-radius: 8px;
+  border-radius: var(--radius);
   transition: all 0.2s ease;
   position: relative;
   z-index: 10002;
 }
 
 .mobile-nav-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
 }
 
 .link-text {
@@ -152,12 +152,12 @@
 .link-arrow {
   width: 1rem;
   height: 1rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--foreground-tertiary);
   transition: color 0.2s ease;
 }
 
 .mobile-nav-link:hover .link-arrow {
-  color: #ffffff;
+  color: var(--foreground-primary);
 }
 
 .mobile-nav-cta {
@@ -168,11 +168,11 @@
 
 .mobile-cta-button {
   width: 100%;
-  background: #ffffff;
-  color: #000000;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--accent-primary);
+  color: var(--background-main);
+  border: 1px solid var(--border-default);
   padding: 1rem 1.5rem;
-  border-radius: 12px;
+  border-radius: var(--radius);
   font-size: 1.125rem;
   font-weight: 600;
   cursor: pointer;
@@ -184,8 +184,9 @@
 }
 
 .mobile-cta-button:hover {
+  background: var(--accent-primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-lg);
 }
 
 .mobile-nav-backdrop {
@@ -208,9 +209,9 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 2rem 1.5rem;
-  background: #000000;
-  color: white;
+  padding: var(--space-8) var(--space-6);
+  background: var(--background-main);
+  color: var(--foreground-primary);
 }
 
 .mobile-hero-background {
@@ -228,7 +229,7 @@
   right: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #2d1b1b 0%, #4a3c2a 100%);
+  background: var(--background-secondary);
   border-radius: 0 0 0 20px;
 }
 
@@ -246,14 +247,14 @@
   font-size: 3.75rem;
   font-weight: 300;
   line-height: 1.15;
-  margin-bottom: 2.5rem;
+  margin-bottom: var(--space-12);
   letter-spacing: -0.025em;
-  font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .mobile-hero-title .highlight-text {
   font-weight: 700;
-  color: #ffffff;
+  color: var(--foreground-primary);
   display: inline-block;
 }
 
@@ -265,7 +266,7 @@
 }
 
 .subtitle-icon {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--foreground-secondary);
   margin-top: 0.125rem;
   flex-shrink: 0;
   transition: transform 0.3s ease;
@@ -292,8 +293,8 @@
 .subtitle-main {
   font-size: 1.125rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.95);
-  margin: 0 0 0.75rem 0;
+  color: var(--foreground-primary);
+  margin: 0 0 var(--space-3) 0;
   font-weight: 500;
   letter-spacing: -0.01em;
 }
@@ -301,7 +302,7 @@
 .subtitle-secondary {
   font-size: 1rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--foreground-secondary);
   margin: 0;
   font-weight: 400;
 }
@@ -318,29 +319,29 @@
 }
 
 .mobile-primary-cta.enhanced-primary {
-  background: #ffffff;
-  color: #000000;
+  background: var(--accent-primary);
+  color: var(--background-main);
   text-decoration: none;
-  padding: 1.125rem 2rem;
-  border-radius: 12px;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius);
   font-weight: 600;
   font-size: 1rem;
   text-align: center;
   transition: all 0.3s ease;
-  border: none;
+  border: 1px solid var(--border-default);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: var(--space-2);
+  box-shadow: var(--shadow-sm);
   letter-spacing: 0.025em;
 }
 
 .mobile-primary-cta.enhanced-primary:hover {
   transform: translateY(-2px);
-  background: #f8f9fa;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--accent-primary-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .cta-arrow {
@@ -353,23 +354,23 @@
 
 .mobile-secondary-cta.enhanced-secondary {
   background: transparent;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--foreground-secondary);
   text-decoration: none;
-  padding: 1rem 1.5rem;
-  border-radius: 12px;
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius);
   font-weight: 500;
   font-size: 0.875rem;
   text-align: center;
   transition: all 0.3s ease;
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid var(--border-default);
   cursor: pointer;
   letter-spacing: 0.025em;
 }
 
 .mobile-secondary-cta.enhanced-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.4);
-  color: white;
+  background: var(--background-secondary);
+  border-color: var(--border-strong);
+  color: var(--foreground-primary);
   transform: translateY(-1px);
 }
 
@@ -378,8 +379,8 @@
 /* ============================================== */
 
 .mobile-features {
-  padding: 4rem 1.5rem;
-  background: #000000;
+  padding: var(--space-16) var(--space-6);
+  background: var(--background-main);
 }
 
 .mobile-features-header {
@@ -390,14 +391,14 @@
 .mobile-features-title {
   font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 1rem;
-  color: white;
+  margin-bottom: var(--space-4);
+  color: var(--foreground-primary);
 }
 
 .mobile-features-subtitle {
   font-size: 1rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--foreground-secondary);
   max-width: 90%;
   margin: 0 auto;
 }
@@ -412,10 +413,10 @@
 }
 
 .mobile-feature-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  padding: var(--space-6);
   transition: background-color 0.15s ease, transform 0.12s ease, border-color 0.15s ease, opacity 0.25s ease;
   -webkit-tap-highlight-color: transparent;
   opacity: 0;
@@ -444,27 +445,27 @@
 .icon-wrapper {
   width: 40px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
+  background: var(--background-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-  color: white;
+  color: var(--foreground-primary);
 }
 
 .mobile-feature-title {
   font-size: 1.125rem;
   font-weight: 600;
-  margin: 0.75rem 0 0.5rem 0;
-  color: white;
+  margin: var(--space-3) 0 var(--space-2) 0;
+  color: var(--foreground-primary);
 }
 
 .mobile-feature-description {
   font-size: 0.95rem;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--foreground-secondary);
 }
 
 /* ============================================== */
@@ -472,8 +473,8 @@
 /* ============================================== */
 
 .mobile-chaos-to-order {
-  padding: 4rem 1.5rem;
-  background: #000000;
+  padding: var(--space-16) var(--space-6);
+  background: var(--background-main);
   position: relative;
   overflow: hidden;
   /* Dynamic square sizing based on viewport and calendar cells */
@@ -493,15 +494,15 @@
 .mobile-chaos-title {
   font-size: 2.5rem;
   font-weight: 300;
-  margin-bottom: 1rem;
-  color: white;
+  margin-bottom: var(--space-4);
+  color: var(--foreground-primary);
   line-height: 1.1;
-  font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .mobile-chaos-subtitle {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--foreground-secondary);
   line-height: 1.6;
   max-width: 90%;
   margin: 0 auto;
@@ -513,8 +514,8 @@
   /* Viewport-scaled height ensuring square cells */
   height: min(68vh, 540px);
   margin: 2rem 0;
-  background: rgba(255, 255, 255, 0.04); /* ~4% contrast over page */
-  border: 1px solid #000000; /* blend border with page background */
+  background: var(--background-secondary); /* subtle contrast over page */
+  border: 1px solid var(--border-default); /* blend border with page background */
   border-radius: 16px;
   overflow: hidden;
 }
@@ -533,7 +534,7 @@
   left: 1rem;
   right: 1rem;
   bottom: 1rem;
-  background: #000000; /* black calendar background */
+  background: var(--background-main); /* calendar background */
   border-radius: 16px;
   padding: 1rem;
   opacity: 0.8;
@@ -591,7 +592,7 @@
   left: 1rem;
   right: 1rem;
   height: clamp(2px, 0.5vh, 4px);
-  background: rgba(76, 111, 255, 0.15);
+  background: var(--accent-primary-light);
   border-radius: 3px;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0;
@@ -600,8 +601,8 @@
 
 .staging-rail.active {
   opacity: 1;
-  background: rgba(76, 111, 255, 0.45);
-  box-shadow: 0 0 16px rgba(76, 111, 255, 0.25);
+  background: var(--accent-primary);
+  box-shadow: 0 0 16px var(--accent-primary-light);
   height: clamp(3px, 0.7vh, 5px);
   transform: scaleX(1);
 }
@@ -634,7 +635,7 @@
 .event-dot {
   width: 6px;
   height: 6px;
-  background: #4c6fff;
+  background: var(--accent-primary);
   border-radius: 50%;
   position: absolute;
   bottom: 2px;
@@ -674,7 +675,7 @@
   border: 1px solid rgba(255, 255, 255, 0.12); /* light stroke for separation on white grid */
   border-radius: clamp(4px, 0.5vw, 8px);
   padding: 0;
-  color: #fff;
+  color: var(--foreground-primary);
   font-size: 0.75rem;
   /* Subtle shadow 12–16px blur */
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.10);
@@ -875,7 +876,7 @@
 .preview-card {
   width: 90%;
   margin: 0 0 24px 0;
-  background: #0b0b0b;
+  background: var(--background-main);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
   padding: 16px;
@@ -904,7 +905,7 @@
 /* ============================================== */
 
 .mobile-footer {
-  background: linear-gradient(180deg, #0f0f23 0%, #000000 100%);
+  background: var(--background-main);
   color: white;
   padding: 3rem 1.5rem 2rem;
 }
@@ -947,8 +948,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: #ffffff;
-  color: #000000;
+  background: var(--accent-primary);
+  color: var(--background-main);
   padding: 0.5rem 0.8rem;
   border-radius: 10px;
   font-weight: 600;
@@ -1042,7 +1043,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #4c6fff, #7c3aed);
+  background: var(--accent-primary);
   color: white;
   text-decoration: none;
   padding: 0.875rem 1.5rem;
@@ -1092,7 +1093,7 @@
 }
 
 .mobile-footer-link:hover {
-  color: #4c6fff;
+  color: var(--accent-primary);
 }
 
 .mobile-footer-community-text {
@@ -1138,7 +1139,7 @@
 .mobile-footer-logo {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #4c6fff, #7c3aed);
+  background: var(--accent-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

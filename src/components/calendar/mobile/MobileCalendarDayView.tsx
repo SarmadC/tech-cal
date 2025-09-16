@@ -213,11 +213,11 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
       {/* Pull to Refresh Indicator */}
       {pullState.isPulling && (
         <div 
-          className="pull-refresh-indicator"
+          className="pull-refresh-indicator mobile-pull-indicator"
           style={{
-            opacity: indicatorOpacity,
-            transform: `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
-          }}
+            '--indicator-opacity': indicatorOpacity,
+            '--indicator-transform': `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
+          } as React.CSSProperties}
         >
           <MaterialIcon name="refresh" size={24} />
         </div>
@@ -231,9 +231,9 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
         </div>
       )}
       {/* Day Header */}
-      <div className="mobile-day-header"
+      <div className="mobile-day-header mobile-pull-transform"
         {...pullToRefreshHandlers}
-        style={{ transform: pullTransform }}
+        style={{ '--pull-transform': pullTransform } as React.CSSProperties}
       >
         <div className="day-title">
           <div className="day-name">
@@ -256,12 +256,12 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
 
       {/* Timeline Content */}
       <div 
-        className="mobile-timeline-container"
+        className="mobile-timeline-container mobile-pull-transform"
         ref={scrollContainerRef}
         onTouchStart={swipeHandlers.onTouchStart}
         onTouchMove={swipeHandlers.onTouchMove}
         onTouchEnd={swipeHandlers.onTouchEnd}
-        style={{ transform: pullTransform }}
+        style={{ '--pull-transform': pullTransform } as React.CSSProperties}
       >
         {dayEvents.length > 0 ? (
           <div className="timeline">
@@ -282,13 +282,13 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
                     return (
                       <div
                         key={`${event.id}-${index}`}
-                        className="mobile-timeline-event"
+                        className="mobile-timeline-event mobile-event-border"
                         onClick={() => handleEventClick(event)}
                         onMouseEnter={(e) => handleEventHover(event, e)}
                         onMouseLeave={handleEventLeave}
                         style={{
-                          borderLeftColor: event.color || '#3b82f6',
-                        }}
+                          '--event-color': event.color || 'var(--accent-primary)',
+                        } as React.CSSProperties}
                       >
                         <div className="event-header">
                           <div className="event-title">{event.title}</div>

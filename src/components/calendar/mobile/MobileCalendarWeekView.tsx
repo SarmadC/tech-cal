@@ -228,11 +228,11 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
       {/* Pull to Refresh Indicator */}
       {pullState.isPulling && (
         <div 
-          className="pull-refresh-indicator"
+          className="pull-refresh-indicator mobile-pull-indicator"
           style={{
-            opacity: indicatorOpacity,
-            transform: `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
-          }}
+            '--indicator-opacity': indicatorOpacity,
+            '--indicator-transform': `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
+          } as React.CSSProperties}
         >
           <MaterialIcon name="refresh" size={24} />
         </div>
@@ -247,9 +247,9 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
       )}
 
       {/* Week Navigation Header */}
-      <div className="mobile-week-header"
+      <div className="mobile-week-header mobile-pull-transform"
         {...pullToRefreshHandlers}
-        style={{ transform: pullTransform }}
+        style={{ '--pull-transform': pullTransform } as React.CSSProperties}
       >
         <div className="week-nav-container">
           <button
@@ -288,28 +288,28 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
 
       {/* Day Content */}
       <div 
-        className={`mobile-day-content ${isTransitioning ? 'transitioning' : ''}`}
+        className={`mobile-day-content mobile-pull-transform ${isTransitioning ? 'transitioning' : ''}`}
         ref={scrollContainerRef}
         onTouchStart={swipeHandlers.onTouchStart}
         onTouchMove={swipeHandlers.onTouchMove}
         onTouchEnd={swipeHandlers.onTouchEnd}
         style={{
-          transform: pullTransform,
+          '--pull-transform': pullTransform,
           transition: isTransitioning ? 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
-        }}
+        } as React.CSSProperties}
       >
         {currentDayEvents.length > 0 ? (
           <div className="events-timeline">
             {currentDayEvents.map((event, index) => (
               <div 
                 key={`${event.id}-${index}`}
-                className="mobile-event-card"
+                className="mobile-event-card mobile-event-border"
                 onClick={() => handleEventClick(event)}
                 onMouseEnter={(e) => handleEventHover(event, e)}
                 onMouseLeave={handleEventLeave}
                 style={{
-                  borderLeftColor: event.color || '#3b82f6',
-                }}
+                  '--event-color': event.color || 'var(--accent-primary)',
+                } as React.CSSProperties}
               >
                 <div className="event-time">
                   {formatEventTime(event)}

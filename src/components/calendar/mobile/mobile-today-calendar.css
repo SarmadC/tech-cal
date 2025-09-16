@@ -679,40 +679,47 @@
   box-shadow: var(--shadow-lg);
 }
 
-/* Day Card Color Themes */
+/* Day Card Color Themes - Minimal Design */
 .day-card-purple {
-  background: linear-gradient(135deg, #8B7CF6 0%, #A78BFA 100%);
-  color: white;
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
+  border: 1px solid var(--border-default);
 }
 
 .day-card-coral {
-  background: linear-gradient(135deg, #F472B6 0%, #FB7185 100%);
-  color: white;
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
+  border: 1px solid var(--border-default);
 }
 
 .day-card-teal {
-  background: linear-gradient(135deg, #14B8A6 0%, #06B6D4 100%);
-  color: white;
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
+  border: 1px solid var(--border-default);
 }
 
 .day-card-green {
-  background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
-  color: white;
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
+  border: 1px solid var(--border-default);
 }
 
 .day-card-yellow {
-  background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
-  color: white;
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
+  border: 1px solid var(--border-default);
 }
 
 .day-card-blue {
-  background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
-  color: white;
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
+  border: 1px solid var(--border-default);
 }
 
 .day-card-orange {
-  background: linear-gradient(135deg, #F97316 0%, #FB923C 100%);
-  color: white;
+  background: var(--background-secondary);
+  color: var(--foreground-primary);
+  border: 1px solid var(--border-default);
 }
 
 /* Day Card Header */
@@ -755,8 +762,7 @@
 
 /* Day Card Content */
 .day-card-content {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: var(--background-tertiary);
   padding: var(--space-2) 0;
 }
 
@@ -766,7 +772,7 @@
   align-items: center;
   padding: var(--space-2) var(--space-4);
   min-height: 44px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .time-slot-row:last-child {
@@ -793,10 +799,9 @@
 }
 
 .time-slot-event {
-  /* background: rgba(255, 255, 255, 0.2); - removed to allow dynamic category colors */
-  /* backdrop-filter: blur(5px); - removed for better color visibility */
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
   padding: var(--space-1) var(--space-2);
   font-size: 0.75rem;
   font-weight: 500;
@@ -808,9 +813,9 @@
 }
 
 .time-slot-event:hover {
-  /* background: rgba(255, 255, 255, 0.3); - removed to maintain category color on hover */
+  background: var(--background-elevated);
   transform: scale(1.02);
-  filter: brightness(0.95); /* Slightly darken the category color on hover */
+  box-shadow: var(--shadow-sm);
 }
 
 .time-slot-event .event-title {

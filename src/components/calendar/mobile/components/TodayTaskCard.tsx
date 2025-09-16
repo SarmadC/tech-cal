@@ -61,25 +61,25 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
     switch (categoryName) {
       case 'tech summit':
       case 'summit':
-        return '#bfdbfe'; // soft blue
+        return 'var(--accent-primary-light)'; // soft blue
       case 'workshop':
-        return '#e9d7ff'; // soft lavender
+        return 'var(--accent-secondary-light)'; // soft lavender
       case 'networking':
-        return '#b8ffcc'; // soft mint
+        return 'var(--accent-success-light)'; // soft mint
       case 'conference':
-        return '#a7f3d0'; // soft teal
+        return 'var(--accent-info-light)'; // soft teal
       case 'webinar':
-        return '#fed8ae'; // soft peach
+        return 'var(--accent-warning-light)'; // soft peach
       case 'startup':
-        return '#fecaca'; // soft coral
+        return 'var(--accent-error-light)'; // soft coral
       case 'trade show':
-        return '#faf3dd'; // soft cream
+        return 'var(--background-tertiary)'; // soft cream
       case 'product launch':
-        return '#ffa69e'; // soft coral
+        return 'var(--accent-error-light)'; // soft coral
       case 'training':
-        return '#b8f2e6'; // soft mint
+        return 'var(--accent-success-light)'; // soft mint
       default:
-        return '#f1f5f9'; // light gray fallback
+        return 'var(--background-secondary)'; // light gray fallback
     }
   };
 
@@ -107,7 +107,7 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
 
   return (
     <div 
-      className={`today-task-card ${className}`} 
+      className={`today-task-card mobile-task-card ${className}`} 
       onClick={() => {
         // Today task card clicked
         onClick?.();
@@ -122,9 +122,9 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
         }
       }}
       style={{
-        backgroundColor: categoryColor,
-        color: pillColor
-      }}
+        '--category-color': categoryColor,
+        '--pill-color': pillColor
+      } as React.CSSProperties}
     >
       <div className="task-card-header">
         <div className="task-title-section">
@@ -159,22 +159,22 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
             {eventTags.slice(0, 2).map((tag, _index) => (
               <span 
                 key={tag.id} 
-                className="task-tag"
+                className="task-tag mobile-task-tag"
                 style={{
-                  backgroundColor: getPillColor(categoryColor, 0.6),
-                  color: 'white'
-                }}
+                  '--tag-bg-color': getPillColor(categoryColor, 0.6),
+                  '--tag-text-color': 'white'
+                } as React.CSSProperties}
               >
                 {tag.name}
               </span>
             ))}
             {eventTags.length > 2 && (
               <span 
-                className="task-tag-more"
+                className="task-tag-more mobile-task-tag"
                 style={{
-                  backgroundColor: getPillColor(categoryColor, 0.6),
-                  color: 'white'
-                }}
+                  '--tag-bg-color': getPillColor(categoryColor, 0.6),
+                  '--tag-text-color': 'white'
+                } as React.CSSProperties}
               >
                 +{eventTags.length - 2}
               </span>

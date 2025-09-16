@@ -138,7 +138,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
     return (
         <div className="mobile-event-detail-panel fixed inset-0 z-50 bg-black flex flex-col">
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-[#1e1e1e] border-b border-gray-800 px-4 py-3 flex-shrink-0">
+            <div className="sticky top-0 z-10 bg-[var(--background-main)] border-b border-[var(--border-default)] px-4 py-3 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold font-dm-sans text-white">Event Details</h2>
                     <button 
@@ -181,7 +181,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto bg-[#1e1e1e]">
+            <div className="flex-1 overflow-y-auto bg-[var(--background-main)]">
                 {activeTab === 'details' ? (
                     <div className="p-4 space-y-6">
                         {/* Event Title */}

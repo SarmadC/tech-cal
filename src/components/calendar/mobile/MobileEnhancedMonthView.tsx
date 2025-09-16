@@ -219,7 +219,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
   // Get event color based on category
   const getEventColor = useCallback((event: Event) => {
     const category = categories.find(cat => cat.id === event.eventTypeId);
-    return category?.color || event.color || '#3b82f6';
+    return category?.color || event.color || 'var(--accent-primary)';
   }, [categories]);
 
   const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -242,11 +242,11 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
       {/* Pull to Refresh Indicator */}
       {pullState.isPulling && (
         <div 
-          className="pull-refresh-indicator"
+          className="pull-refresh-indicator mobile-pull-indicator"
           style={{
-            opacity: indicatorOpacity,
-            transform: `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
-          }}
+            '--indicator-opacity': indicatorOpacity,
+            '--indicator-transform': `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
+          } as React.CSSProperties}
         >
           <MaterialIcon name="refresh" size={24} />
         </div>
@@ -261,9 +261,9 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
       )}
 
       {/* Modern Month Header */}
-      <div className="mobile-month-header-modern"
+      <div className="mobile-month-header-modern mobile-pull-transform"
         {...pullToRefreshHandlers}
-        style={{ transform: pullTransform }}
+        style={{ '--pull-transform': pullTransform } as React.CSSProperties}
       >
         {/* Date Header with Navigation */}
         <div className="month-header-top">
@@ -311,12 +311,12 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
 
       {/* Modern Calendar Grid */}
       <div 
-        className="mobile-calendar-grid-modern"
+        className="mobile-calendar-grid-modern mobile-pull-transform"
         ref={scrollContainerRef}
         onTouchStart={swipeHandlers.onTouchStart}
         onTouchMove={swipeHandlers.onTouchMove}
         onTouchEnd={swipeHandlers.onTouchEnd}
-        style={{ transform: pullTransform }}
+        style={{ '--pull-transform': pullTransform } as React.CSSProperties}
       >
         {/* Week day headers */}
         <div className="weekday-headers-modern">
@@ -365,10 +365,10 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
                   {day.events.slice(0, 4).map((event, eventIndex) => (
                     <div
                       key={`${event.id}-${eventIndex}`}
-                      className="event-dot-modern"
+                      className="event-dot-modern mobile-event-dot"
                       style={{
-                        backgroundColor: getEventColor(event),
-                      }}
+                        '--event-color': getEventColor(event),
+                      } as React.CSSProperties}
                       title={event.title}
                     />
                   ))}
@@ -403,13 +403,13 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
               selectedDateEvents.map((event, index) => (
                 <div
                   key={`${event.id}-${index}`}
-                  className="mobile-month-event"
+                  className="mobile-month-event mobile-event-border"
                   onClick={(e) => handleEventClick(event, e)}
                   onMouseEnter={(e) => handleEventHover(event, e)}
                   onMouseLeave={handleEventLeave}
                   style={{
-                    borderLeftColor: getEventColor(event),
-                  }}
+                    '--event-color': getEventColor(event),
+                  } as React.CSSProperties}
                 >
                   <div className="event-time">
                     {formatEventTime(event)}

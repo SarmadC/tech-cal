@@ -7,6 +7,9 @@
 /* Import utility classes */
 @import './utilities.css';
 
+/* Import mobile design system */
+@import './mobile-design-system.css';
+
 /* Import event agenda styles */
 @import './event-agenda.css';
 

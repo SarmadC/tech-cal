@@ -166,8 +166,8 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
                     {dayEvents.slice(0, 3).map((event, _eventIndex) => (
                       <div
                         key={event.id}
-                        className="event-dot"
-                        style={{ backgroundColor: event.category?.color || '#3b82f6' }}
+                        className="event-dot mobile-event-dot"
+                        style={{ '--event-color': event.category?.color || 'var(--accent-primary)' } as React.CSSProperties}
                       />
                     ))}
                     {dayEvents.length > 3 && (
@@ -193,12 +193,12 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
             .map((event, index) => (
               <div
                 key={`${event.id}-${index}`}
-                className="day-event-item"
+                className="day-event-item mobile-task-card mobile-event-border"
                 onClick={() => handleEventTap(event)}
                 style={{
-                  backgroundColor: event.category?.color || '#f1f5f9',
-                  borderLeft: `4px solid ${event.category?.color ? event.category.color.replace(/[^,)]*/, m => Math.max(0, parseInt(m) - 40).toString()) : '#3b82f6'}`
-                }}
+                  '--category-color': event.category?.color || 'var(--background-secondary)',
+                  '--event-color': event.category?.color ? event.category.color.replace(/[^,)]*/, m => Math.max(0, parseInt(m) - 40).toString()) : 'var(--accent-primary)'
+                } as React.CSSProperties}
               >
                 <div className="event-time">
                   {new Date(event.startTime).toLocaleTimeString('en-US', {
