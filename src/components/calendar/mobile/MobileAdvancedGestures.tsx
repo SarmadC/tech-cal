@@ -199,21 +199,21 @@ const MobileAdvancedGestures: FC<MobileAdvancedGesturesProps> = ({
     return (
         <div
             ref={containerRef}
-            className={`mobile-advanced-gestures ${className}`}
+            className={`mobile-advanced-gestures mobile-pull-transform ${className}`}
             {...combinedTouchHandlers}
             style={{
-                transform: isPulling ? `translateY(${Math.min(pullDistance, pullToRefreshThreshold)}px)` : 'none',
+                '--pull-transform': isPulling ? `translateY(${Math.min(pullDistance, pullToRefreshThreshold)}px)` : 'none',
                 transition: isPulling ? 'none' : 'transform 0.3s ease'
-            }}
+            } as React.CSSProperties}
         >
             {/* Pull to refresh indicator */}
             {enablePullToRefresh && (
                 <div 
-                    className={`mobile-pull-refresh-indicator ${isPulling ? 'active' : ''} ${isRefreshing ? 'refreshing' : ''}`}
+                    className={`mobile-pull-refresh-indicator mobile-pull-indicator ${isPulling ? 'active' : ''} ${isRefreshing ? 'refreshing' : ''}`}
                     style={{
-                        opacity: isPulling ? Math.min(pullDistance / pullToRefreshThreshold, 1) : 0,
-                        transform: `translateY(${Math.min(pullDistance - pullToRefreshThreshold, 0)}px)`
-                    }}
+                        '--indicator-opacity': isPulling ? Math.min(pullDistance / pullToRefreshThreshold, 1) : 0,
+                        '--indicator-transform': `translateY(${Math.min(pullDistance - pullToRefreshThreshold, 0)}px)`
+                    } as React.CSSProperties}
                 >
                     <div className="mobile-pull-refresh-content">
                         {isRefreshing ? (
