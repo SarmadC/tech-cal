@@ -1164,57 +1164,57 @@
 }
 
 .mobile-quick-filter-blue {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
 }
 
 .mobile-quick-filter-blue:hover {
-  background: #dbeafe;
+  background: var(--accent-primary-light);
 }
 
 .mobile-quick-filter-green {
-  border-color: #10b981;
-  color: #10b981;
+  border-color: var(--accent-success);
+  color: var(--accent-success);
 }
 
 .mobile-quick-filter-green:hover {
-  background: #d1fae5;
+  background: var(--accent-success-light);
 }
 
 .mobile-quick-filter-purple {
-  border-color: #8b5cf6;
-  color: #8b5cf6;
+  border-color: var(--accent-secondary);
+  color: var(--accent-secondary);
 }
 
 .mobile-quick-filter-purple:hover {
-  background: #ede9fe;
+  background: var(--accent-secondary-light);
 }
 
 .mobile-quick-filter-orange {
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--accent-warning);
+  color: var(--accent-warning);
 }
 
 .mobile-quick-filter-orange:hover {
-  background: #fef3c7;
+  background: var(--accent-warning-light);
 }
 
 .mobile-quick-filter-yellow {
-  border-color: #eab308;
-  color: #eab308;
+  border-color: var(--accent-info);
+  color: var(--accent-info);
 }
 
 .mobile-quick-filter-yellow:hover {
-  background: #fefce8;
+  background: var(--accent-info-light);
 }
 
 .mobile-quick-filter-emerald {
-  border-color: #059669;
-  color: #059669;
+  border-color: var(--accent-success);
+  color: var(--accent-success);
 }
 
 .mobile-quick-filter-emerald:hover {
-  background: #d1fae5;
+  background: var(--accent-success-light);
 }
 
 /* Mobile Top Navigation Search Filter Button */
@@ -1358,7 +1358,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  background: #dc2626;
+  background: var(--accent-error);
   color: white;
   border: none;
 }

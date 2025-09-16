@@ -274,7 +274,7 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
                       key={`${event.id}-${eventIndex}`}
                       className="event-dot"
                       style={{
-                        backgroundColor: event.color || '#3b82f6',
+                        backgroundColor: event.color || 'var(--accent-primary)',
                       }}
                       title={event.title}
                     />
@@ -315,7 +315,7 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
                   onMouseEnter={(e) => handleEventHover(event, e)}
                   onMouseLeave={handleEventLeave}
                   style={{
-                    borderLeftColor: event.color || '#3b82f6',
+                    borderLeftColor: event.color || 'var(--accent-primary)',
                   }}
                 >
                   <div className="event-time">

@@ -219,7 +219,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
   // Get event color based on category
   const getEventColor = useCallback((event: Event) => {
     const category = categories.find(cat => cat.id === event.eventTypeId);
-    return category?.color || event.color || '#3b82f6';
+    return category?.color || event.color || 'var(--accent-primary)';
   }, [categories]);
 
   const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });

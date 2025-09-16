@@ -61,25 +61,25 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
     switch (categoryName) {
       case 'tech summit':
       case 'summit':
-        return '#bfdbfe'; // soft blue
+        return 'var(--accent-primary-light)'; // soft blue
       case 'workshop':
-        return '#e9d7ff'; // soft lavender
+        return 'var(--accent-secondary-light)'; // soft lavender
       case 'networking':
-        return '#b8ffcc'; // soft mint
+        return 'var(--accent-success-light)'; // soft mint
       case 'conference':
-        return '#a7f3d0'; // soft teal
+        return 'var(--accent-info-light)'; // soft teal
       case 'webinar':
-        return '#fed8ae'; // soft peach
+        return 'var(--accent-warning-light)'; // soft peach
       case 'startup':
-        return '#fecaca'; // soft coral
+        return 'var(--accent-error-light)'; // soft coral
       case 'trade show':
-        return '#faf3dd'; // soft cream
+        return 'var(--background-tertiary)'; // soft cream
       case 'product launch':
-        return '#ffa69e'; // soft coral
+        return 'var(--accent-error-light)'; // soft coral
       case 'training':
-        return '#b8f2e6'; // soft mint
+        return 'var(--accent-success-light)'; // soft mint
       default:
-        return '#f1f5f9'; // light gray fallback
+        return 'var(--background-secondary)'; // light gray fallback
     }
   };
 

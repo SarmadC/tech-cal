@@ -287,7 +287,7 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
                         onMouseEnter={(e) => handleEventHover(event, e)}
                         onMouseLeave={handleEventLeave}
                         style={{
-                          borderLeftColor: event.color || '#3b82f6',
+                          borderLeftColor: event.color || 'var(--accent-primary)',
                         }}
                       >
                         <div className="event-header">

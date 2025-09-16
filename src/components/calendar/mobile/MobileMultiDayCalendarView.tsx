@@ -167,7 +167,7 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
                       <div
                         key={event.id}
                         className="event-dot"
-                        style={{ backgroundColor: event.category?.color || '#3b82f6' }}
+                        style={{ backgroundColor: event.category?.color || 'var(--accent-primary)' }}
                       />
                     ))}
                     {dayEvents.length > 3 && (
@@ -196,8 +196,8 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
                 className="day-event-item"
                 onClick={() => handleEventTap(event)}
                 style={{
-                  backgroundColor: event.category?.color || '#f1f5f9',
-                  borderLeft: `4px solid ${event.category?.color ? event.category.color.replace(/[^,)]*/, m => Math.max(0, parseInt(m) - 40).toString()) : '#3b82f6'}`
+                  backgroundColor: event.category?.color || 'var(--background-secondary)',
+                  borderLeft: `4px solid ${event.category?.color ? event.category.color.replace(/[^,)]*/, m => Math.max(0, parseInt(m) - 40).toString()) : 'var(--accent-primary)'}`
                 }}
               >
                 <div className="event-time">

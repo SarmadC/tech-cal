@@ -229,7 +229,7 @@
   right: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #2d1b1b 0%, #4a3c2a 100%);
+  background: var(--background-secondary);
   border-radius: 0 0 0 20px;
 }
 
@@ -473,8 +473,8 @@
 /* ============================================== */
 
 .mobile-chaos-to-order {
-  padding: 4rem 1.5rem;
-  background: #000000;
+  padding: var(--space-16) var(--space-6);
+  background: var(--background-main);
   position: relative;
   overflow: hidden;
   /* Dynamic square sizing based on viewport and calendar cells */
@@ -494,15 +494,15 @@
 .mobile-chaos-title {
   font-size: 2.5rem;
   font-weight: 300;
-  margin-bottom: 1rem;
-  color: white;
+  margin-bottom: var(--space-4);
+  color: var(--foreground-primary);
   line-height: 1.1;
-  font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .mobile-chaos-subtitle {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--foreground-secondary);
   line-height: 1.6;
   max-width: 90%;
   margin: 0 auto;
@@ -514,8 +514,8 @@
   /* Viewport-scaled height ensuring square cells */
   height: min(68vh, 540px);
   margin: 2rem 0;
-  background: rgba(255, 255, 255, 0.04); /* ~4% contrast over page */
-  border: 1px solid #000000; /* blend border with page background */
+  background: var(--background-secondary); /* subtle contrast over page */
+  border: 1px solid var(--border-default); /* blend border with page background */
   border-radius: 16px;
   overflow: hidden;
 }
@@ -534,7 +534,7 @@
   left: 1rem;
   right: 1rem;
   bottom: 1rem;
-  background: #000000; /* black calendar background */
+  background: var(--background-main); /* calendar background */
   border-radius: 16px;
   padding: 1rem;
   opacity: 0.8;
@@ -592,7 +592,7 @@
   left: 1rem;
   right: 1rem;
   height: clamp(2px, 0.5vh, 4px);
-  background: rgba(76, 111, 255, 0.15);
+  background: var(--accent-primary-light);
   border-radius: 3px;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0;
@@ -601,8 +601,8 @@
 
 .staging-rail.active {
   opacity: 1;
-  background: rgba(76, 111, 255, 0.45);
-  box-shadow: 0 0 16px rgba(76, 111, 255, 0.25);
+  background: var(--accent-primary);
+  box-shadow: 0 0 16px var(--accent-primary-light);
   height: clamp(3px, 0.7vh, 5px);
   transform: scaleX(1);
 }
@@ -635,7 +635,7 @@
 .event-dot {
   width: 6px;
   height: 6px;
-  background: #4c6fff;
+  background: var(--accent-primary);
   border-radius: 50%;
   position: absolute;
   bottom: 2px;
@@ -675,7 +675,7 @@
   border: 1px solid rgba(255, 255, 255, 0.12); /* light stroke for separation on white grid */
   border-radius: clamp(4px, 0.5vw, 8px);
   padding: 0;
-  color: #fff;
+  color: var(--foreground-primary);
   font-size: 0.75rem;
   /* Subtle shadow 12–16px blur */
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.10);
@@ -876,7 +876,7 @@
 .preview-card {
   width: 90%;
   margin: 0 0 24px 0;
-  background: #0b0b0b;
+  background: var(--background-main);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
   padding: 16px;
@@ -905,7 +905,7 @@
 /* ============================================== */
 
 .mobile-footer {
-  background: linear-gradient(180deg, #0f0f23 0%, #000000 100%);
+  background: var(--background-main);
   color: white;
   padding: 3rem 1.5rem 2rem;
 }
@@ -948,8 +948,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: #ffffff;
-  color: #000000;
+  background: var(--accent-primary);
+  color: var(--background-main);
   padding: 0.5rem 0.8rem;
   border-radius: 10px;
   font-weight: 600;
@@ -1043,7 +1043,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #4c6fff, #7c3aed);
+  background: var(--accent-primary);
   color: white;
   text-decoration: none;
   padding: 0.875rem 1.5rem;
@@ -1093,7 +1093,7 @@
 }
 
 .mobile-footer-link:hover {
-  color: #4c6fff;
+  color: var(--accent-primary);
 }
 
 .mobile-footer-community-text {
@@ -1139,7 +1139,7 @@
 .mobile-footer-logo {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #4c6fff, #7c3aed);
+  background: var(--accent-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
