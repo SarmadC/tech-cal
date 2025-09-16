@@ -309,7 +309,6 @@ export function CalendarLayout({
                             recommended: false,
                             categories: [],
                             dateRange: { start: null, end: null },
-                            timePreference: 'all',
                             availability: 'all',
                             popularity: 'all',
                             duration: 'all'

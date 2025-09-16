@@ -235,6 +235,7 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
           isVisible={isPreviewVisible}
           onClose={handleClosePreview}
           onTrackEvent={handleTrackEvent}
+          categories={_categories}
         />
       )}
     </div>

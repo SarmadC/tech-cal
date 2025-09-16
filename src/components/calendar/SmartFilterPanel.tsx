@@ -165,30 +165,6 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                         </div>
                     </div>
 
-                    {/* Time Preference */}
-                    <div>
-                        <h4 className="text-sm font-medium text-foreground-primary mb-3">Time Preference</h4>
-                        <div className="space-y-2">
-                            {[
-                                { value: 'all', label: 'Any Time' },
-                                { value: 'work-hours', label: 'Work Hours (9-5)' },
-                                { value: 'after-hours', label: 'After Hours' },
-                                { value: 'weekends', label: 'Weekends' }
-                            ].map(option => (
-                                <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="timePreference"
-                                        value={option.value}
-                                        checked={filters.timePreference === option.value}
-                                        onChange={(e) => onUpdateFilter('timePreference', e.target.value as SmartFilterOptions['timePreference'])}
-                                        className="text-foreground-secondary"
-                                    />
-                                    <span className="text-sm text-foreground-secondary">{option.label}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
 
                     {/* Personal Filters */}
                     <div>

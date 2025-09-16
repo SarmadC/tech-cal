@@ -40,7 +40,11 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
   // Handle click outside to close
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (previewRef.current && !previewRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const isInsidePreview = previewRef.current && previewRef.current.contains(target);
+      const isInsideDetailPanel = target && (target as Element).closest('.mobile-event-detail-panel');
+      
+      if (!isInsidePreview && !isInsideDetailPanel) {
         onClose();
       }
     };
@@ -225,7 +229,7 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
               href={googleCalendarLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 py-2 px-3 bg-zinc-200 hover:bg-zinc-300 text-zinc-900 rounded-lg font-medium font-dm-sans text-sm transition-colors"
+              className="mobile-calendar-button"
             >
               <CalendarPlusIcon className="w-4 h-4" />
               <span>Add to Calendar</span>

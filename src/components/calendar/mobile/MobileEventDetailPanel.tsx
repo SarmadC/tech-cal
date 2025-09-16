@@ -1,21 +1,22 @@
 'use client';
 
 import { FC, useState, useEffect } from 'react';
-import { XIcon, CalendarIcon, ClockIcon, MapPinIcon, UsersIcon } from '@phosphor-icons/react';
-import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';
+import { XIcon, CalendarIcon, ClockIcon, MapPinIcon, UsersIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
+import { Event, EventType, AgendaItem, MultiDayEventInstance, TrackedEvent } from '@/types';
 import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
 import { getSpeakerAvatarUrl } from '@/services/avatarService';
-import { formatTime, formatDate } from '@/utils/dateUtils';
+import { formatDate } from '@/utils/dateUtils';
 
 interface MobileEventDetailPanelProps {
-    event: Event;
+    event: Event | TrackedEvent | MultiDayEventInstance;
     onClose: () => void;
     categories: EventType[];
 }
 
 const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClose, categories }) => {
-    const category = categories.find(c => c.id === event.eventTypeId);
+    
+    const category = categories.find(c => c.id === event?.eventTypeId);
     const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'details' | 'agenda'>('details');
@@ -40,18 +41,92 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
         fetchEventWithAgenda();
     }, [event.id, event]);
 
+    // Handle case where event might be undefined or malformed
+    if (!event) {
+        console.error('MobileEventDetailPanel: No event provided');
+        return null;
+    }
+
     const displayEvent = eventWithAgenda || event;
     const agenda = displayEvent.agenda || [];
+    
+
+    // Helper function to safely format time values
+    const safeFormatTime = (timeString: string | undefined | null): string => {
+        if (!timeString || timeString.trim() === '') {
+            return 'TBD';
+        }
+        
+        try {
+            // Handle different time formats
+            let date: Date;
+            
+            // If it's a time-only string (HH:MM or HH:MM:SS format)
+            if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeString.trim())) {
+                // Create a date with today's date and the time
+                const today = new Date();
+                const timeParts = timeString.split(':');
+                const hours = parseInt(timeParts[0], 10);
+                const minutes = parseInt(timeParts[1], 10);
+                const seconds = timeParts[2] ? parseInt(timeParts[2], 10) : 0;
+                
+                date = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes, seconds);
+                
+                // Format directly without using formatTime
+                return date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } else {
+                // Try to parse as a full date string
+                date = new Date(timeString);
+                
+                if (isNaN(date.getTime())) {
+                    console.warn('Invalid time string:', timeString);
+                    return 'TBD';
+                }
+                
+                // Format directly without using formatTime
+                return date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
+        } catch (error) {
+            console.warn('Error formatting time string:', timeString, error);
+            return 'TBD';
+        }
+    };
 
     const formatEventTime = (startTime: string, endTime: string, timezone?: string) => {
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        
-        return {
-            date: formatDate(startTime, timezone),
-            time: `${formatTime(startTime, timezone)} - ${formatTime(endTime, timezone)}`,
-            duration: Math.round((end.getTime() - start.getTime()) / (1000 * 60))
-        };
+        try {
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            
+            // Check if dates are valid
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                return {
+                    date: 'TBD',
+                    time: 'TBD',
+                    duration: 0
+                };
+            }
+            
+            return {
+                date: formatDate(startTime, timezone),
+                time: `${safeFormatTime(startTime)} - ${safeFormatTime(endTime)}`,
+                duration: Math.round((end.getTime() - start.getTime()) / (1000 * 60))
+            };
+        } catch (error) {
+            console.warn('Error formatting event time:', { startTime, endTime, timezone }, error);
+            return {
+                date: 'TBD',
+                time: 'TBD',
+                duration: 0
+            };
+        }
     };
 
     const eventTime = formatEventTime(
@@ -61,9 +136,9 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
     );
 
     return (
-        <div className="fixed inset-0 z-50 bg-black">
+        <div className="mobile-event-detail-panel fixed inset-0 z-50 bg-black flex flex-col">
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-[#1e1e1e] border-b border-gray-800 px-4 py-3">
+            <div className="sticky top-0 z-10 bg-[#1e1e1e] border-b border-gray-800 px-4 py-3 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold font-dm-sans text-white">Event Details</h2>
                     <button 
@@ -77,7 +152,10 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                 {/* Tab Navigation */}
                 <div className="flex mt-3 bg-gray-800 rounded-lg p-1">
                     <button
-                        onClick={() => setActiveTab('details')}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveTab('details');
+                        }}
                         className={`flex-1 py-2 px-3 rounded-md text-sm font-medium font-dm-sans transition-colors ${
                             activeTab === 'details'
                                 ? 'bg-gray-700 text-white font-dm-sans'
@@ -87,7 +165,10 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                         Details
                     </button>
                     <button
-                        onClick={() => setActiveTab('agenda')}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveTab('agenda');
+                        }}
                         className={`flex-1 py-2 px-3 rounded-md text-sm font-medium font-dm-sans transition-colors ${
                             activeTab === 'agenda'
                                 ? 'bg-gray-700 text-white font-dm-sans'
@@ -195,8 +276,20 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                     <div className="space-y-3">
                                         {speakers.map((speaker, index) => {
                                             if (!speaker) return null;
+                                            const hasLinkedIn = Boolean(speaker.socialLinks?.linkedin);
                                             return (
-                                            <div key={speaker.id || index} className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg">
+                                            <div 
+                                                key={speaker.id || index} 
+                                                className={`flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg ${
+                                                    hasLinkedIn ? 'cursor-pointer hover:bg-gray-700/50 transition-colors' : ''
+                                                }`}
+                                                onClick={() => {
+                                                    if (hasLinkedIn) {
+                                                        window.open(speaker.socialLinks!.linkedin, '_blank', 'noopener,noreferrer');
+                                                    }
+                                                }}
+                                                title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
+                                            >
                                                 <img 
                                                     src={getSpeakerAvatarUrl(speaker, 40)} 
                                                     alt={speaker.name}
@@ -215,6 +308,11 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                         <div className="text-xs text-gray-500 truncate">{speaker.company}</div>
                                                     )}
                                                 </div>
+                                                {hasLinkedIn && (
+                                                    <div className="text-gray-400 text-xs">
+                                                        <ArrowSquareOutIcon className="w-4 h-4" />
+                                                    </div>
+                                                )}
                                             </div>
                                             );
                                         })}
@@ -242,7 +340,9 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                         <div className="flex items-start justify-between mb-2">
                                             <div className="flex items-center gap-2 text-sm text-gray-400">
                                                 <ClockIcon className="w-4 h-4" />
-                                                <span>{formatTime(item.startTime)} - {formatTime(item.endTime)}</span>
+                                                <span>
+                                                    {safeFormatTime(item.startTime)} - {safeFormatTime(item.endTime)}
+                                                </span>
                                             </div>
                                             <span className="px-2 py-1 text-xs font-medium font-dm-sans bg-gray-700 text-gray-300 rounded">
                                                 {item.type}
@@ -268,8 +368,21 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                     Speaker{(item.speakers?.length || 0) > 1 ? 's' : ''}
                                                 </div>
                                                 {Array.isArray(item.speakers) && item.speakers.length > 0 ? (
-                                                    item.speakers.map((speaker, speakerIndex) => (
-                                                        <div key={speaker.id || speakerIndex} className="flex items-center gap-2">
+                                                    item.speakers.map((speaker, speakerIndex) => {
+                                                        const hasLinkedIn = Boolean(speaker.socialLinks?.linkedin);
+                                                        return (
+                                                        <div 
+                                                            key={speaker.id || speakerIndex} 
+                                                            className={`flex items-center gap-2 ${
+                                                                hasLinkedIn ? 'cursor-pointer hover:bg-gray-700/30 rounded px-1 py-0.5 transition-colors' : ''
+                                                            }`}
+                                                            onClick={() => {
+                                                                if (hasLinkedIn) {
+                                                                    window.open(speaker.socialLinks!.linkedin, '_blank', 'noopener,noreferrer');
+                                                                }
+                                                            }}
+                                                            title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
+                                                        >
                                                             <img 
                                                                 src={getSpeakerAvatarUrl(speaker, 24)} 
                                                                 alt={speaker.name}
@@ -280,10 +393,24 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                                 }}
                                                             />
                                                             <span className="text-sm text-gray-300">{speaker.name}</span>
+                                                            {hasLinkedIn && (
+                                                                <ArrowSquareOutIcon className="w-3 h-3 text-gray-400" />
+                                                            )}
                                                         </div>
-                                                    ))
+                                                        );
+                                                    })
                                                 ) : item.speaker && (
-                                                    <div className="flex items-center gap-2">
+                                                    <div 
+                                                        className={`flex items-center gap-2 ${
+                                                            item.speaker.socialLinks?.linkedin ? 'cursor-pointer hover:bg-gray-700/30 rounded px-1 py-0.5 transition-colors' : ''
+                                                        }`}
+                                                        onClick={() => {
+                                                            if (item.speaker?.socialLinks?.linkedin) {
+                                                                window.open(item.speaker.socialLinks.linkedin, '_blank', 'noopener,noreferrer');
+                                                            }
+                                                        }}
+                                                        title={item.speaker.socialLinks?.linkedin ? `View ${item.speaker.name}'s LinkedIn profile` : item.speaker.name}
+                                                    >
                                                         <img 
                                                             src={getSpeakerAvatarUrl(item.speaker, 24)} 
                                                             alt={item.speaker.name}
@@ -294,6 +421,9 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                             }}
                                                         />
                                                         <span className="text-sm text-gray-300">{item.speaker.name}</span>
+                                                        {item.speaker.socialLinks?.linkedin && (
+                                                            <ArrowSquareOutIcon className="w-3 h-3 text-gray-400" />
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>

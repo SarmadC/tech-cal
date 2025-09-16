@@ -91,6 +91,12 @@ const MobileAdvancedGestures: FC<MobileAdvancedGesturesProps> = ({
         const deltaY = touch.clientY - touchStart.y;
         const deltaX = touch.clientX - touchStart.x;
 
+        // Clear long press timer if user starts moving (scrolling)
+        if (longPressTimer && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
+            clearTimeout(longPressTimer);
+            setLongPressTimer(null);
+        }
+
         // Only handle vertical pull from top
         if (deltaY > 0 && Math.abs(deltaX) < Math.abs(deltaY)) {
             const scrollTop = containerRef.current?.scrollTop || 0;
@@ -124,7 +130,7 @@ const MobileAdvancedGestures: FC<MobileAdvancedGesturesProps> = ({
             }
             setLastPinchDistance(distance);
         }
-    }, [enablePullToRefresh, enablePinch, touchStart, isRefreshing, pullToRefreshThreshold, lastPinchDistance, onPinchIn, onPinchOut]);
+    }, [enablePullToRefresh, enablePinch, touchStart, isRefreshing, pullToRefreshThreshold, lastPinchDistance, onPinchIn, onPinchOut, longPressTimer]);
 
     const handleTouchEnd = useCallback(() => {
         if (!enablePullToRefresh) return;

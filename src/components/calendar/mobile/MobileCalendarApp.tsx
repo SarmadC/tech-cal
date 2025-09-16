@@ -136,15 +136,13 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
         activeFilterCount={activeFilterCount}
       />
       
-      {/* Navigation Controls - Only for Calendar view */}
-      {currentView === 'calendar' && (
-        <MobileNavigationControls
-          currentDate={localCurrentDate}
-          onDateChange={handleDateChange}
-          view="week"
-          onNavigate={handleNavigate}
-        />
-      )}
+      {/* Navigation Controls - Available for all views */}
+      <MobileNavigationControls
+        currentDate={localCurrentDate}
+        onDateChange={handleDateChange}
+        view={currentView === 'month' ? 'month' : currentView === 'today' ? 'day' : 'week'}
+        onNavigate={handleNavigate}
+      />
       
       <MobileAdvancedGestures
         onSwipeLeft={() => handleNavigate('next')}
@@ -153,17 +151,18 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
           // Double tap to go to today
           handleGoToToday();
         }}
-        onLongPress={() => {
-          // Long press to open search filters
-          handleToggleSearchFilter();
-        }}
+        // Disabled long press to prevent accidental filter opening during scrolling
+        // onLongPress={() => {
+        //   // Long press to open search filters
+        //   handleToggleSearchFilter();
+        // }}
         onPullToRefresh={() => {
           // Pull to refresh events
           // Refreshing events...
         }}
         enablePullToRefresh={true}
         enableDoubleTap={true}
-        enableLongPress={true}
+        enableLongPress={false}
         className="mobile-calendar-content"
       >
         <div 

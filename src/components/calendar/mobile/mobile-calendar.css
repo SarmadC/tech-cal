@@ -1422,6 +1422,7 @@
 }
 
 .mobile-event-title {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--foreground-primary);
@@ -1479,43 +1480,108 @@
   gap: var(--space-2);
   padding: var(--space-3);
   font-weight: 500;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   border-radius: 12px;
   transition: all 0.2s ease;
 }
 
+/* Track button - override default button styles */
 .mobile-track-button {
-  background: var(--accent-primary);
-  color: white;
-  border: none;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
 }
 
-.mobile-track-button:hover {
-  background: var(--accent-primary-dark);
+/* When tracked (default variant) - accent background */
+.mobile-track-button.bg-primary {
+  background: var(--accent-primary) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.mobile-track-button.bg-primary:hover {
+  background: var(--accent-primary-dark) !important;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+}
+
+/* When untracked (outline variant) - outline style */
+.mobile-track-button.bg-background {
+  background: var(--background-main) !important;
+  color: var(--foreground-primary) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+.mobile-track-button.bg-background:hover {
+  background: var(--background-tertiary) !important;
+  border-color: var(--border-strong) !important;
 }
 
 .mobile-share-button {
-  background: var(--background-main);
-  color: var(--foreground-primary);
-  border: 1px solid var(--border-default);
+  background: var(--background-main) !important;
+  color: var(--foreground-primary) !important;
+  border: 1px solid var(--border-default) !important;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
 }
 
 .mobile-share-button:hover {
-  background: var(--background-tertiary);
-  border-color: var(--border-strong);
+  background: var(--background-tertiary) !important;
+  border-color: var(--border-strong) !important;
 }
 
 .mobile-join-button {
-  background: var(--accent-primary);
-  color: white;
-  border: none;
+  background: var(--accent-primary) !important;
+  color: white !important;
+  border: none !important;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
 }
 
 .mobile-join-button:hover {
-  background: var(--accent-primary-dark);
+  background: var(--accent-primary-dark) !important;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+}
+
+.mobile-details-button {
+  background: var(--background-main) !important;
+  color: var(--foreground-primary) !important;
+  border: 1px solid var(--border-default) !important;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.mobile-details-button:hover {
+  background: var(--background-tertiary) !important;
+  border-color: var(--border-strong) !important;
+}
+
+.mobile-calendar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--background-main);
+  color: var(--foreground-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  font-weight: 500;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.mobile-calendar-button:hover {
+  background: var(--background-tertiary);
+  border-color: var(--border-strong);
+  text-decoration: none;
+  color: var(--foreground-primary);
 }
 
 /* Animations */

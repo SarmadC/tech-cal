@@ -34,19 +34,8 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Advanced swipe gestures for view-specific actions
+    // Only enable horizontal swipes to prevent interference with vertical scrolling
     const swipeConfig = {
-        onSwipeUp: () => {
-            if (currentView === 'today') {
-                // Swipe up to go to calendar view
-                // This could be handled by parent component
-            }
-        },
-        onSwipeDown: () => {
-            if (currentView === 'calendar') {
-                // Swipe down to go to today view
-                // This could be handled by parent component
-            }
-        },
         onSwipeLeft: () => {
             // Navigate to next period
             const newDate = new Date(currentDate);
@@ -67,9 +56,9 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
             }
             onDateChange(newDate);
         },
-        threshold: 50,
+        threshold: 120, // Increased threshold to make swipes less sensitive
         preventScroll: false,
-        enableMomentum: true,
+        enableMomentum: false, // Disabled momentum to prevent accidental triggers
     };
 
     const { swipeHandlers } = useSwipeGestures(swipeConfig);

@@ -1,10 +1,9 @@
 'use client';
 
 import { FC, useState } from 'react';
-import { ClockIcon, MapPinIcon, UserIcon, UsersIcon, CalendarIcon, CaretDownIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { ClockIcon, MapPinIcon, UserIcon, UsersIcon, CalendarIcon, CaretDownIcon, CaretRightIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
 import { getSpeakerAvatarUrl } from '@/services/avatarService';
-import { formatTime } from '@/utils/dateUtils';
 
 interface MobileTimelineViewProps {
     event: Event;
@@ -13,6 +12,55 @@ interface MobileTimelineViewProps {
 const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
     const agenda = event.agenda || [];
     const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set([1])); // Expand first day by default
+
+    // Helper function to safely format time values
+    const safeFormatTime = (timeString: string | undefined | null): string => {
+        if (!timeString || timeString.trim() === '') {
+            return 'TBD';
+        }
+        
+        try {
+            // Handle different time formats
+            let date: Date;
+            
+            // If it's a time-only string (HH:MM or HH:MM:SS format)
+            if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeString.trim())) {
+                // Create a date with today's date and the time
+                const today = new Date();
+                const timeParts = timeString.split(':');
+                const hours = parseInt(timeParts[0], 10);
+                const minutes = parseInt(timeParts[1], 10);
+                const seconds = timeParts[2] ? parseInt(timeParts[2], 10) : 0;
+                
+                date = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes, seconds);
+                
+                // Format directly without using formatTime
+                return date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } else {
+                // Try to parse as a full date string
+                date = new Date(timeString);
+                
+                if (isNaN(date.getTime())) {
+                    console.warn('Invalid time string:', timeString);
+                    return 'TBD';
+                }
+                
+                // Format directly without using formatTime
+                return date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
+        } catch (error) {
+            console.warn('Error formatting time string:', timeString, error);
+            return 'TBD';
+        }
+    };
 
     if (agenda.length === 0) {
         return (
@@ -64,7 +112,7 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 text-sm text-gray-400">
                     <ClockIcon className="w-4 h-4" />
-                    <span>{formatTime(item.startTime)} - {formatTime(item.endTime)}</span>
+                    <span>{safeFormatTime(item.startTime)} - {safeFormatTime(item.endTime)}</span>
                 </div>
                 <span className={`px-2 py-1 text-xs font-medium font-dm-sans rounded-md border ${getTypeColor(item.type)}`}>
                     {item.type}
@@ -97,8 +145,21 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                     
                     <div className="space-y-2">
                         {Array.isArray(item.speakers) && item.speakers.length > 0 ? (
-                            item.speakers.map((speaker, index) => (
-                                <div key={speaker.id || index} className="flex items-center gap-3 p-2 bg-gray-700/40 rounded-lg">
+                            item.speakers.map((speaker, index) => {
+                                const hasLinkedIn = Boolean(speaker.socialLinks?.linkedin);
+                                return (
+                                <div 
+                                    key={speaker.id || index} 
+                                    className={`flex items-center gap-3 p-2 bg-gray-700/40 rounded-lg ${
+                                        hasLinkedIn ? 'cursor-pointer hover:bg-gray-600/40 transition-colors' : ''
+                                    }`}
+                                    onClick={() => {
+                                        if (hasLinkedIn) {
+                                            window.open(speaker.socialLinks!.linkedin, '_blank', 'noopener,noreferrer');
+                                        }
+                                    }}
+                                    title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
+                                >
                                     <img 
                                         src={getSpeakerAvatarUrl(speaker, 32)} 
                                         alt={speaker.name}
@@ -117,10 +178,24 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                                             <div className="text-xs text-gray-500 truncate">{speaker.company}</div>
                                         )}
                                     </div>
+                                    {hasLinkedIn && (
+                                        <ArrowSquareOutIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    )}
                                 </div>
-                            ))
+                                );
+                            })
                         ) : item.speaker && (
-                            <div className="flex items-center gap-3 p-2 bg-gray-700/40 rounded-lg">
+                            <div 
+                                className={`flex items-center gap-3 p-2 bg-gray-700/40 rounded-lg ${
+                                    item.speaker.socialLinks?.linkedin ? 'cursor-pointer hover:bg-gray-600/40 transition-colors' : ''
+                                }`}
+                                onClick={() => {
+                                    if (item.speaker?.socialLinks?.linkedin) {
+                                        window.open(item.speaker.socialLinks.linkedin, '_blank', 'noopener,noreferrer');
+                                    }
+                                }}
+                                title={item.speaker.socialLinks?.linkedin ? `View ${item.speaker.name}'s LinkedIn profile` : item.speaker.name}
+                            >
                                 <img 
                                     src={getSpeakerAvatarUrl(item.speaker, 32)} 
                                     alt={item.speaker.name}
@@ -139,6 +214,9 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                                         <div className="text-xs text-gray-500 truncate">{item.speaker.company}</div>
                                     )}
                                 </div>
+                                {item.speaker.socialLinks?.linkedin && (
+                                    <ArrowSquareOutIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                )}
                             </div>
                         )}
                     </div>

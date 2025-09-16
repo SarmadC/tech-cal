@@ -454,13 +454,13 @@ export class EventService {
                         sort_order,
                         agenda_speakers!left (
                             speakers!inner (
-                                id,
-                                name,
-                                title,
-                                company,
-                                bio,
-                                linkedin_url,
-                                twitter_url,
+                            id,
+                            name,
+                            title,
+                            company,
+                            bio,
+                            linkedin_url,
+                            twitter_url,
                                 website_url,
                                 photo_url
                             )
@@ -482,6 +482,7 @@ export class EventService {
             const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
             const enrichedEvent = enrichEvent(baseEvent, { eventType });
 
+            
             // Merge agenda from event_agenda (preferred) and daily_schedule JSON (fallback)
             const parsedFromTable: AgendaItem[] = Array.isArray((data as unknown as { event_agenda?: unknown[] }).event_agenda)
                 ? ((data as unknown as { event_agenda: unknown[] }).event_agenda as Array<{
@@ -531,7 +532,7 @@ export class EventService {
                                 company: (sp.company as string) ?? undefined,
                                 bio: (sp.bio as string) ?? undefined,
                                 photoUrl: (sp.photo_url as string) ?? undefined,
-                                socialLinks: {
+                    socialLinks: {
                                     linkedin: (sp.linkedin_url as string) ?? undefined,
                                     twitter: (sp.twitter_url as string) ?? undefined,
                                     website: (sp.website_url as string) ?? undefined
@@ -555,6 +556,7 @@ export class EventService {
                     } as AgendaItem;
                 })
                 : [];
+            
 
             const dailySchedule = (data as Record<string, unknown>).daily_schedule;
             const parsedFromJson: AgendaItem[] = (() => {
@@ -584,6 +586,8 @@ export class EventService {
             })();
 
             const agenda: AgendaItem[] = parsedFromTable.length > 0 ? parsedFromTable : parsedFromJson;
+            
+
             return { ...enrichedEvent, agenda };
         } catch (error) {
             const message = error instanceof Error
@@ -771,7 +775,7 @@ export class EventService {
                                 company: (speaker.company as string) ?? undefined,
                                 bio: (speaker.bio as string) ?? undefined,
                                 photoUrl: (speaker.photoUrl as string) ?? undefined,
-                                socialLinks: {
+                    socialLinks: {
                                     linkedin: ((speaker.socialLinks as Record<string, unknown>)?.linkedin as string) ?? undefined,
                                     twitter: ((speaker.socialLinks as Record<string, unknown>)?.twitter as string) ?? undefined,
                                     website: ((speaker.socialLinks as Record<string, unknown>)?.website as string) ?? undefined,

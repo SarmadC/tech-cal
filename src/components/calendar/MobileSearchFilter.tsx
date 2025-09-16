@@ -141,12 +141,6 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
         { value: 'advanced', label: 'Advanced' }
     ];
 
-    const timePreferenceOptions = [
-        { value: 'all', label: 'Any Time', icon: 'time' as const },
-        { value: 'work-hours', label: 'Work Hours', icon: 'building' as const },
-        { value: 'after-hours', label: 'After Hours', icon: 'star' as const },
-        { value: 'weekends', label: 'Weekends', icon: 'calendar' as const }
-    ];
 
     const availabilityOptions = [
         { value: 'all', label: 'All Events', icon: 'event' as const },
@@ -192,10 +186,6 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
             chips.push({ key: 'difficulty', label: difficultyLabel, type: 'difficulty' });
         }
         
-        if (filters.timePreference !== 'all') {
-            const timeLabel = timePreferenceOptions.find(opt => opt.value === filters.timePreference)?.label || filters.timePreference;
-            chips.push({ key: 'timePreference', label: timeLabel, type: 'time' });
-        }
         
         if (filters.availability !== 'all') {
             const availabilityLabel = availabilityOptions.find(opt => opt.value === filters.availability)?.label || filters.availability;
@@ -243,9 +233,6 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                 break;
             case 'difficulty':
                 onUpdateFilter('difficulty', 'all');
-                break;
-            case 'timePreference':
-                onUpdateFilter('timePreference', 'all');
                 break;
             case 'availability':
                 onUpdateFilter('availability', 'all');
@@ -501,28 +488,6 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                 </div>
                             </div>
 
-                            {/* Time Preference Filter */}
-                            <div className="mobile-filter-section">
-                                <h3 className="mobile-section-title">Time Preference</h3>
-                                <div className="mobile-filter-options">
-                                    {timePreferenceOptions.map((option) => (
-                                        <label key={option.value} className="mobile-filter-option">
-                                            <input
-                                                type="radio"
-                                                name="timePreference"
-                                                value={option.value}
-                                                checked={filters.timePreference === option.value}
-                                                onChange={(e) => onUpdateFilter('timePreference', e.target.value as SmartFilterOptions['timePreference'])}
-                                                className="mobile-filter-radio"
-                                            />
-                                            <div className="mobile-filter-option-content">
-                                                <MaterialIcon name={option.icon} size={16} />
-                                                <span>{option.label}</span>
-                                            </div>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
 
                             {/* Availability Filter */}
                             <div className="mobile-filter-section">

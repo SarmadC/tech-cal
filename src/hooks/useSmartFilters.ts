@@ -10,7 +10,6 @@ export interface SmartFilterOptions {
     format: 'all' | 'virtual' | 'in-person' | 'hybrid';
     cost: 'all' | 'free' | 'paid';
     difficulty: 'all' | 'beginner' | 'intermediate' | 'advanced';
-    timePreference: 'all' | 'work-hours' | 'after-hours' | 'weekends';
     availability: 'all' | 'available' | 'no-conflicts';
     popularity: 'all' | 'trending' | 'high-attendance' | 'niche';
     myTracked: boolean;
@@ -27,7 +26,6 @@ const defaultFilters: SmartFilterOptions = {
     format: 'all',
     cost: 'all',
     difficulty: 'all',
-    timePreference: 'all',
     availability: 'all',
     popularity: 'all',
     duration: 'all',
@@ -81,16 +79,6 @@ export function useSmartFilters(
             }
             if (filters.difficulty !== 'all') {
                 if (filters.difficulty !== getDifficultyFromEvent(event)) return false;
-            }
-            if (filters.timePreference !== 'all') {
-                const eventDate = new Date(event.startTime);
-                const hour = eventDate.getHours();
-                const dayOfWeek = eventDate.getDay();
-                switch (filters.timePreference) {
-                    case 'work-hours': if (hour < 9 || hour > 17 || dayOfWeek === 0 || dayOfWeek === 6) return false; break;
-                    case 'after-hours': if ((hour >= 9 && hour <= 17) && dayOfWeek !== 0 && dayOfWeek !== 6) return false; break;
-                    case 'weekends': if (dayOfWeek !== 0 && dayOfWeek !== 6) return false; break;
-                }
             }
             if (filters.availability === 'no-conflicts' && userCalendar) {
                 if (checkForConflicts(event, userCalendar)) return false;
@@ -219,7 +207,6 @@ export function useSmartFilters(
         if (filters.format !== 'all') count++;
         if (filters.cost !== 'all') count++;
         if (filters.difficulty !== 'all') count++;
-        if (filters.timePreference !== 'all') count++;
         if (filters.availability !== 'all') count++;
         if (filters.popularity !== 'all') count++;
         if (filters.duration !== 'all') count++;

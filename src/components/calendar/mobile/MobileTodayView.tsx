@@ -149,6 +149,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
           isVisible={isPreviewVisible}
           onClose={handleClosePreview}
           onTrackEvent={handleTrackEvent}
+          categories={_categories}
         />
       )}
     </div>
