@@ -9,7 +9,6 @@ import MobileFeaturesGrid from './MobileFeaturesGrid';
 import MobileFooter from './MobileFooter';
 import MobileNavigation from './MobileNavigation';
 import '@/app/styles/mobile-landing.css';
-import '@/app/styles/mobile-design-system.css';
 
 export interface MobileLandingPageProps {
   className?: string;
