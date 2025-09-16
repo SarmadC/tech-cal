@@ -13,6 +13,7 @@ import MobileSearchFilter from '../MobileSearchFilter';
 import MobileNavigationControls from './MobileNavigationControls';
 import MobileViewEnhancements from './MobileViewEnhancements';
 import MobileAdvancedGestures from './MobileAdvancedGestures';
+import MobileNavigationEnhancements from './MobileNavigationEnhancements';
 
 export interface MobileCalendarAppProps {
   events: Event[];
@@ -235,6 +236,18 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
           // Handle suggestion selection - could filter events or navigate
           // Selected suggestion handled
         }}
+      />
+
+      {/* Mobile Navigation Enhancements */}
+      <MobileNavigationEnhancements
+        onSearchToggle={() => setIsSearchFilterOpen(!isSearchFilterOpen)}
+        onFilterToggle={() => setIsSearchFilterOpen(!isSearchFilterOpen)}
+        onTodayClick={() => {
+          const today = new Date();
+          onDateChange?.(today);
+        }}
+        showSearch={isSearchFilterOpen}
+        showFilters={isSearchFilterOpen}
       />
     </div>
   );

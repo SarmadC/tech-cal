@@ -99,6 +99,13 @@ const config: Config = {
                 ],
                 mono: [
                     'var(--font-mono)'
+                ],
+                'dm-sans': [
+                    'var(--font-dm-sans)',
+                    'DM Sans',
+                    'ui-sans-serif',
+                    'system-ui',
+                    'sans-serif'
                 ]
             },
             animation: {

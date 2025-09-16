@@ -1,31 +1,38 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Event, EventStatus, isTrackedEvent, TrackedEvent, MultiDayEventInstance } from '@/types';
+import { Event, EventStatus, isTrackedEvent, TrackedEvent, MultiDayEventInstance, EventType } from '@/types';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
+import { CalendarPlusIcon, ShareNetworkIcon } from '@phosphor-icons/react';
+import { useEventActions } from '@/hooks/useEventActions';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 
 interface MobileEventPreviewProps {
   event: Event | TrackedEvent | MultiDayEventInstance;
   isVisible: boolean;
   onClose: () => void;
   onTrackEvent?: (event: Event) => void;
+  categories?: EventType[];
 }
 
 const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
   event,
   isVisible,
   onClose,
-  onTrackEvent
+  onTrackEvent,
+  categories = []
 }) => {
   const { user } = useAuth();
   const { trackEvent, untrackEvent, isLoading } = useEventTracking();
+  const { handleShare, googleCalendarLink } = useEventActions(event);
   const previewRef = useRef<HTMLDivElement>(null);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
 
   // Use the tracking status directly from the event prop
   const isTracked = isTrackedEvent(event) ? event.isTracked : false;
@@ -83,25 +90,6 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
     onTrackEvent?.(event);
   };
 
-  const handleShare = async () => {
-    const shareUrl = event.sourceUrl || window.location.href;
-
-    if (navigator.share && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-      try {
-        await navigator.share({
-          title: event.title,
-          text: `Check out this tech event: ${event.title}`,
-          url: shareUrl
-        });
-        return;
-      } catch {
-        // Fallback to clipboard
-      }
-    }
-
-    await navigator.clipboard.writeText(shareUrl);
-    toast.success('Event link copied to clipboard');
-  };
 
   const handleJoinEvent = () => {
     if (event.livestreamUrl) {
@@ -109,6 +97,14 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
     } else if (event.sourceUrl) {
       window.open(event.sourceUrl, '_blank');
     }
+  };
+
+  const handleViewDetails = () => {
+    setShowDetailPanel(true);
+  };
+
+  const handleCloseDetailPanel = () => {
+    setShowDetailPanel(false);
   };
 
   if (!isVisible) return null;
@@ -194,37 +190,69 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
 
         {/* Actions */}
         <div className="mobile-event-preview-actions">
-          <Button
-            onClick={handleTrackEvent}
-            disabled={isLoading}
-            variant={isTracked ? "default" : "outline"}
-            className="mobile-track-button"
-          >
-            <MaterialIcon name={isTracked ? "star" : "star"} size={16} />
-            <span>{isTracked ? 'Tracked' : 'Track Event'}</span>
-          </Button>
-          
-          <Button
-            onClick={handleShare}
-            variant="outline"
-            className="mobile-share-button"
-          >
-            <MaterialIcon name="arrow-forward" size={16} />
-            <span>Share</span>
-          </Button>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <Button
+              onClick={handleTrackEvent}
+              disabled={isLoading}
+              variant={isTracked ? "default" : "outline"}
+              className="mobile-track-button"
+            >
+              <MaterialIcon name={isTracked ? "star" : "star"} size={16} />
+              <span>{isTracked ? 'Tracked' : 'Track Event'}</span>
+            </Button>
+            
+            <Button
+              onClick={handleViewDetails}
+              variant="outline"
+              className="mobile-details-button"
+            >
+              <MaterialIcon name="info" size={16} />
+              <span>Details</span>
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <Button
+              onClick={handleShare}
+              variant="outline"
+              className="mobile-share-button"
+            >
+              <ShareNetworkIcon className="w-4 h-4" />
+              <span>Share</span>
+            </Button>
+            
+            <a
+              href={googleCalendarLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 py-2 px-3 bg-zinc-200 hover:bg-zinc-300 text-zinc-900 rounded-lg font-medium font-dm-sans text-sm transition-colors"
+            >
+              <CalendarPlusIcon className="w-4 h-4" />
+              <span>Add to Calendar</span>
+            </a>
+          </div>
           
           {(event.livestreamUrl || event.sourceUrl) && (
             <Button
               onClick={handleJoinEvent}
               variant="default"
-              className="mobile-join-button"
+              className="mobile-join-button w-full"
             >
               <MaterialIcon name="arrow-forward" size={16} />
-              <span>{event.livestreamUrl ? 'Join Live' : 'View Details'}</span>
+              <span>{event.livestreamUrl ? 'Join Live' : 'View Event'}</span>
             </Button>
           )}
         </div>
       </div>
+
+      {/* Mobile Event Detail Panel */}
+      {showDetailPanel && (
+        <MobileEventDetailPanel
+          event={event}
+          onClose={handleCloseDetailPanel}
+          categories={categories}
+        />
+      )}
     </div>
   );
 };

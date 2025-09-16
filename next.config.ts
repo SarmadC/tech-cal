@@ -28,7 +28,7 @@ const securityHeaders = [
   },
   {
     key: 'Referrer-Policy',
-    value: 'origin-when-cross-origin' // A good balance of privacy and usability
+    value: 'strict-origin-when-cross-origin' // Aligns with modern browser defaults
   },
   {
     key: 'Content-Security-Policy',
@@ -37,8 +37,8 @@ const securityHeaders = [
         script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.sentry-cdn.com;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
         style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
+        img-src 'self' data: blob: https: https://cdn.jsdelivr.net;
         font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
-        img-src 'self' data: blob: https:;
         connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co;
         frame-ancestors 'none';
         base-uri 'self';

@@ -122,38 +122,41 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
                     <button
                         onClick={() => handleTrackEvent('bookmarked')}
                         disabled={isMutating}
-                        className="flex flex-col items-center justify-center space-y-1 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
+                        title="Bookmark this event"
                     >
                         {isMutating ? (
                             <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
                         ) : (
                             <StarIcon className="w-4 h-4 text-zinc-300 group-hover:text-zinc-200" />
                         )}
-                        <span className="text-xs text-gray-300">Bookmark</span>
+                        <span className="text-sm text-gray-300">Bookmark</span>
                     </button>
                     <button
                         onClick={() => handleTrackEvent('attending')}
                         disabled={isMutating}
-                        className="flex flex-col items-center justify-center space-y-1 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
+                        title="Mark as attending"
                     >
                         {isMutating ? (
                             <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
                         ) : (
                             <UserCheckIcon className="w-4 h-4 text-zinc-300 group-hover:text-zinc-200" />
                         )}
-                        <span className="text-xs text-gray-300">Attending</span>
+                        <span className="text-sm text-gray-300">Attending</span>
                     </button>
                     <button
                         onClick={() => handleTrackEvent('attended')}
                         disabled={isMutating}
-                        className="flex flex-col items-center justify-center space-y-1 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
+                        title="Mark as attended"
                     >
                         {isMutating ? (
                             <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
                         ) : (
                             <CheckIcon className="w-4 h-4 text-zinc-300 group-hover:text-zinc-200" />
                         )}
-                        <span className="text-xs text-gray-300">Attended</span>
+                        <span className="text-sm text-gray-300">Attended</span>
                     </button>
                 </div>
             )}

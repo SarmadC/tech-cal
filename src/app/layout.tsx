@@ -14,8 +14,7 @@ import './styles/landing-page.css';
 import './styles/ChaosToOrder.css';   
 import './styles/orbiting-circles.css';
 import './styles/quick-date-picker.css';
-// FullCalendar styles (import locally to comply with CSP)
-// NOTE: FullCalendar CSS is now loaded via CDN <link> tags in <head> due to package export limitations
+// FullCalendar styles (loaded via CDN due to package export limitations)
 
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -40,11 +39,8 @@ export default function RootLayout({
     return (
         <html lang="en" className="dark">
             <head>
-                {/* FullCalendar styles via CDN (CSP updated to allow jsDelivr) */}
-                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.18/index.css" />
-                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.18/index.css" />
-                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.18/index.css" />
-                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.18/index.css" />
+                {/* FullCalendar monolithic CSS (v6) */}
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css" />
             </head>
             <body className={`${inter.className} ${dmSans.variable}`}>
                 {/* Toaster should be high-level to be independent of other re-renders */}

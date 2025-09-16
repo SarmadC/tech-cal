@@ -193,7 +193,8 @@ export interface AgendaItem {
     description?: string;
     startTime: string;
     endTime: string;
-    speaker?: Speaker;
+    speaker?: Speaker; // primary speaker (compat)
+    speakers?: Speaker[]; // multiple speakers
     location?: string;
     type: 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other';
     tags?: string[];

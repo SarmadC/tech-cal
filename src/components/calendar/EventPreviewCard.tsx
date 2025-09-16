@@ -168,8 +168,9 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                             </span>
                         )}
                         {isPinned && (
-                            <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-900 dark:bg-gray-600 dark:text-white rounded-md">
-                                📌 Pinned
+                            <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-900 dark:bg-gray-600 dark:text-white rounded-md flex items-center gap-1">
+                                <BookmarkSimpleIcon className="w-3.5 h-3.5" />
+                                <span>Pinned</span>
                             </span>
                         )}
                     </div>

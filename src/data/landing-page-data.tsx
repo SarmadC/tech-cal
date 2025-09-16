@@ -34,7 +34,7 @@ export const features = [
         icon: <ChartBarIcon size={24} />,
         title: 'Smart Insights',
         description: 'See the events that actually move your career forward.'
-    },
+    },   
     {
         icon: <UsersThreeIcon size={24} />,
         title: 'Team Intelligence',

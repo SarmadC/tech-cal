@@ -15,16 +15,37 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
     const { handleShare, googleCalendarLink, handleIcsDownload } = useEventActions(event);
 
     return (
-        <div className="flex space-x-3">
-            <a href={googleCalendarLink} target="_blank" rel="noopener noreferrer" className="flex-1 py-3 bg-zinc-200 hover:bg-zinc-300 text-zinc-900 rounded-lg font-semibold text-center dark:bg-zinc-200 dark:hover:bg-zinc-300 dark:text-zinc-900">
-                Add to Google
+        <div className="space-y-3">
+            {/* Primary Action - Full width for better balance */}
+            <a 
+                href={googleCalendarLink} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-zinc-200 hover:bg-zinc-300 text-zinc-900 rounded-lg font-medium text-sm transition-colors dark:bg-zinc-200 dark:hover:bg-zinc-300 dark:text-zinc-900 w-full"
+            >
+                <CalendarPlusIcon className="w-4 h-4" />
+                <span>Add to Calendar</span>
             </a>
-            <button onClick={handleIcsDownload} className="p-3 bg-gray-700 hover:bg-gray-600 rounded-lg">
-                <CalendarPlusIcon className="w-5 h-5" />
-            </button>
-            <button onClick={handleShare} className="p-3 bg-gray-700 hover:bg-gray-600 rounded-lg">
-                <ShareNetworkIcon className="w-5 h-5" />
-            </button>
+            
+            {/* Secondary Actions - Evenly spaced row */}
+            <div className="flex gap-3">
+                <button 
+                    onClick={handleIcsDownload} 
+                    className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                    title="Download ICS file"
+                >
+                    <CalendarPlusIcon className="w-4 h-4 text-gray-300" />
+                    <span className="text-sm text-gray-300">Download .ics</span>
+                </button>
+                <button 
+                    onClick={handleShare} 
+                    className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                    title="Share event"
+                >
+                    <ShareNetworkIcon className="w-4 h-4 text-gray-300" />
+                    <span className="text-sm text-gray-300">Share</span>
+                </button>
+            </div>
         </div>
     );
 };

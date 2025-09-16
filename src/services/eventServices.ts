@@ -9,7 +9,6 @@ import type {
     SupabaseEventWithDetails,
     MultiDayEvent,
     AgendaItem,
-    Speaker,
 } from '@/types';
 import {
     eventTransformer,
@@ -86,7 +85,26 @@ export class EventService {
                 .select(`
                     *, 
                     event_type:event_type_id (*), 
-                    organizer:organizers (id, name, logo_url)
+                    organizer:organizers (id, name, logo_url),
+                    event_agenda!left (
+                        id,
+                        day_number,
+                        start_time,
+                        end_time,
+                        title,
+                        description,
+                        location,
+                        agenda_type,
+                        duration_minutes,
+                        track,
+                        sort_order,
+                        agenda_speakers!left (
+                            sort_order,
+                            speakers!inner (
+                                id, name, title, company, bio, linkedin_url, twitter_url, website_url, photo_url
+                            )
+                        )
+                    )
                 `)
                 .order('start_time', { ascending: true })
                 .range(from, to);
@@ -422,7 +440,7 @@ export class EventService {
                     *, 
                     event_type:event_type_id (*), 
                     organizer:organizers (id, name, logo_url),
-                    event_agenda (
+                    event_agenda!left (
                         id,
                         day_number,
                         start_time,
@@ -434,12 +452,18 @@ export class EventService {
                         duration_minutes,
                         track,
                         sort_order,
-                        speakers (
-                            id,
-                            name,
-                            title,
-                            company,
-                            photo_url
+                        agenda_speakers!left (
+                            speakers!inner (
+                                id,
+                                name,
+                                title,
+                                company,
+                                bio,
+                                linkedin_url,
+                                twitter_url,
+                                website_url,
+                                photo_url
+                            )
                         )
                     )
                 `)
@@ -458,29 +482,124 @@ export class EventService {
             const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
             const enrichedEvent = enrichEvent(baseEvent, { eventType });
 
-            // Add agenda data
-            const eventAgenda = (data as Record<string, unknown>).event_agenda;
-            const agenda = Array.isArray(eventAgenda) ? eventAgenda.map((agendaItem: Record<string, unknown>) => ({
-                id: agendaItem.id as string,
-                dayNumber: agendaItem.day_number as number,
-                startTime: agendaItem.start_time as string,
-                endTime: agendaItem.end_time as string,
-                title: agendaItem.title as string,
-                description: agendaItem.description as string | undefined,
-                location: agendaItem.location as string | undefined,
-                type: agendaItem.agenda_type as 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other',
-                durationMinutes: agendaItem.duration_minutes as number | undefined,
-                track: agendaItem.track as string | undefined,
-                speakers: (agendaItem.speakers as Speaker[]) || []
-            })) : [];
+            // Merge agenda from event_agenda (preferred) and daily_schedule JSON (fallback)
+            const parsedFromTable: AgendaItem[] = Array.isArray((data as unknown as { event_agenda?: unknown[] }).event_agenda)
+                ? ((data as unknown as { event_agenda: unknown[] }).event_agenda as Array<{
+                    id: string;
+                    day_number: number;
+                    start_time: string;
+                    end_time: string;
+                    title: string;
+                    description?: string;
+                    location?: string;
+                    agenda_type: string;
+                    duration_minutes?: number;
+                    track?: string;
+                    sort_order?: number;
+                    agenda_speakers?: Array<{
+                        speakers?: {
+                            id: string;
+                            name: string;
+                            title?: string;
+                            company?: string;
+                            bio?: string;
+                            photo_url?: string;
+                            linkedin_url?: string;
+                            twitter_url?: string;
+                            website_url?: string;
+                        };
+                    }>;
+                }>).map(a => {
+                    const speakers = Array.isArray(a.agenda_speakers)
+                        ? a.agenda_speakers
+                            .map((eas: { speakers?: unknown }) => eas?.speakers)
+                            .filter((sp): sp is {
+                                id: string;
+                                name: string;
+                                title?: string;
+                                company?: string;
+                                bio?: string;
+                                photo_url?: string;
+                                linkedin_url?: string;
+                                twitter_url?: string;
+                                website_url?: string;
+                            } => Boolean(sp))
+                            .map((sp) => ({
+                                id: String(sp.id),
+                                name: sp.name as string,
+                                title: (sp.title as string) ?? undefined,
+                                company: (sp.company as string) ?? undefined,
+                                bio: (sp.bio as string) ?? undefined,
+                                photoUrl: (sp.photo_url as string) ?? undefined,
+                                socialLinks: {
+                                    linkedin: (sp.linkedin_url as string) ?? undefined,
+                                    twitter: (sp.twitter_url as string) ?? undefined,
+                                    website: (sp.website_url as string) ?? undefined
+                                }
+                            }))
+                        : [];
 
+                    return {
+                        id: a.id as string,
+                        dayNumber: (a.day_number as number) ?? 1,
+                        startTime: a.start_time as string,
+                        endTime: a.end_time as string,
+                        title: a.title as string,
+                        description: a.description as string | undefined,
+                        location: a.location as string | undefined,
+                        type: (a.agenda_type as AgendaItem['type']) ?? 'other',
+                        durationMinutes: a.duration_minutes as number | undefined,
+                        track: a.track as string | undefined,
+                        speakers,
+                        speaker: speakers[0]
+                    } as AgendaItem;
+                })
+                : [];
+
+            const dailySchedule = (data as Record<string, unknown>).daily_schedule;
+            const parsedFromJson: AgendaItem[] = (() => {
+                if (!dailySchedule || typeof dailySchedule !== 'object') return [];
+                try {
+                    const scheduleData = dailySchedule as { agenda?: unknown[] };
+                    const raw = Array.isArray(scheduleData.agenda) ? scheduleData.agenda : [];
+                    return raw.map((it: unknown) => {
+                        const item = it as Record<string, unknown>;
+                        return {
+                        id: (item.id as string) || `agenda-${Math.random()}`,
+                        dayNumber: (item.dayNumber as number) ?? (item.day_number as number) ?? 1,
+                        startTime: (item.startTime as string) ?? (item.start_time as string),
+                        endTime: (item.endTime as string) ?? (item.end_time as string),
+                        title: item.title as string,
+                        description: (item.description as string) || undefined,
+                        location: (item.location as string) || undefined,
+                        type: (item.type as AgendaItem['type']) ?? (item.agenda_type as AgendaItem['type']) ?? 'other',
+                        durationMinutes: (item.durationMinutes as number) ?? (item.duration_minutes as number) ?? undefined,
+                        track: (item.track as string) || undefined,
+                        };
+                    });
+                } catch (e) {
+                    console.warn('Failed to parse daily_schedule JSON:', e);
+                    return [];
+                }
+            })();
+
+            const agenda: AgendaItem[] = parsedFromTable.length > 0 ? parsedFromTable : parsedFromJson;
             return { ...enrichedEvent, agenda };
         } catch (error) {
-            console.error('Error fetching event with agenda:', error);
+            const message = error instanceof Error
+                ? error.message
+                : typeof error === 'string'
+                    ? error
+                    : 'Unknown error';
+            const stack = error instanceof Error ? error.stack : undefined;
+
+            if (process.env.NODE_ENV !== 'production') {
+                console.warn('getEventWithAgenda failed; falling back…', { message, stack });
+            }
             Sentry.captureException(error, {
-                extra: { function: 'getEventWithAgenda', eventId }
+                extra: { function: 'getEventWithAgenda', eventId, message, stack }
             });
-            throw new Error(`Failed to fetch event with agenda for ID: ${eventId}.`);
+            throw new Error(`Failed to fetch event with agenda for ID: ${eventId}. ${message}`);
         }
     }
 
@@ -512,7 +631,13 @@ export class EventService {
                         agenda_type,
                         duration_minutes,
                         track,
-                        sort_order
+                        sort_order,
+                        agenda_speakers!left (
+                            sort_order,
+                            speakers!inner (
+                                id, name, title, company, bio, linkedin_url, twitter_url, website_url, photo_url
+                            )
+                        )
                     )
                 `)
                 .order('start_time', { ascending: true })
@@ -544,22 +669,133 @@ export class EventService {
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
                 const enrichedEvent = enrichEvent(baseEvent, { eventType });
 
-                // Add agenda data for multi-day events
-                const eventAgenda = (item as Record<string, unknown>).event_agenda;
-                const agenda = Array.isArray(eventAgenda) ? eventAgenda.map((agendaItem: Record<string, unknown>) => ({
-                    id: agendaItem.id as string,
-                    dayNumber: agendaItem.day_number as number,
-                    startTime: agendaItem.start_time as string,
-                    endTime: agendaItem.end_time as string,
-                    title: agendaItem.title as string,
-                    description: agendaItem.description as string | undefined,
-                    location: agendaItem.location as string | undefined,
-                    type: agendaItem.agenda_type as 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other',
-                    durationMinutes: agendaItem.duration_minutes as number | undefined,
-                    track: agendaItem.track as string | undefined,
-                    speakers: (agendaItem.speakers as Speaker[]) || []
-                })) : [];
+                // Prefer event_agenda rows; fallback to daily_schedule JSON
+                const fromTable: AgendaItem[] = Array.isArray((item as unknown as { event_agenda?: unknown[] }).event_agenda)
+                    ? ((item as unknown as { event_agenda: unknown[] }).event_agenda as Array<{
+                        id: string;
+                        day_number: number;
+                        start_time: string;
+                        end_time: string;
+                        title: string;
+                        description?: string;
+                        location?: string;
+                        agenda_type: string;
+                        duration_minutes?: number;
+                        track?: string;
+                        sort_order?: number;
+                        event_agenda_speakers?: Array<{
+                            speakers?: {
+                                id: string;
+                                name: string;
+                                title?: string;
+                                company?: string;
+                                bio?: string;
+                                photo_url?: string;
+                                linkedin_url?: string;
+                                twitter_url?: string;
+                                website_url?: string;
+                            };
+                        }>;
+                    }>).map(a => {
+                        const speakers = Array.isArray(a.event_agenda_speakers)
+                            ? a.event_agenda_speakers
+                                .map((eas: { speakers?: unknown }) => eas?.speakers)
+                                .filter((sp): sp is {
+                                    id: string;
+                                    name: string;
+                                    title?: string;
+                                    company?: string;
+                                    bio?: string;
+                                    photo_url?: string;
+                                    linkedin_url?: string;
+                                    twitter_url?: string;
+                                    website_url?: string;
+                                } => Boolean(sp))
+                                .map((sp) => ({
+                                    id: String(sp.id),
+                                    name: sp.name as string,
+                                    title: (sp.title as string) ?? undefined,
+                                    company: (sp.company as string) ?? undefined,
+                                    bio: (sp.bio as string) ?? undefined,
+                                    photoUrl: (sp.photo_url as string) ?? undefined,
+                                    socialLinks: {
+                                        linkedin: (sp.linkedin_url as string) ?? undefined,
+                                        twitter: (sp.twitter_url as string) ?? undefined,
+                                        website: (sp.website_url as string) ?? undefined
+                                    }
+                                }))
+                            : [];
 
+                        return {
+                            id: a.id as string,
+                            dayNumber: (a.day_number as number) ?? 1,
+                            startTime: a.start_time as string,
+                            endTime: a.end_time as string,
+                            title: a.title as string,
+                            description: a.description as string | undefined,
+                            location: a.location as string | undefined,
+                            type: (a.agenda_type as AgendaItem['type']) ?? 'other',
+                            durationMinutes: a.duration_minutes as number | undefined,
+                            track: a.track as string | undefined,
+                            speakers,
+                            speaker: speakers[0]
+                        } as AgendaItem;
+                    })
+                    : [];
+
+                const dailySchedule = (item as Record<string, unknown>).daily_schedule;
+                const fromJson: AgendaItem[] = (() => {
+                    if (!dailySchedule || typeof dailySchedule !== 'object') return [];
+                    try {
+                        const scheduleData = dailySchedule as { agenda?: unknown[] };
+                        const raw = Array.isArray(scheduleData.agenda) ? scheduleData.agenda : [];
+                        return raw.map((it: unknown) => {
+                            const item = it as Record<string, unknown>;
+                            return {
+                            id: (item.id as string) || `agenda-${Math.random()}`,
+                            dayNumber: (item.dayNumber as number) ?? (item.day_number as number) ?? 1,
+                            startTime: (item.startTime as string) ?? (item.start_time as string),
+                            endTime: (item.endTime as string) ?? (item.end_time as string),
+                            title: item.title as string,
+                            description: (item.description as string) || undefined,
+                            location: (item.location as string) || undefined,
+                            type: (item.type as AgendaItem['type']) ?? (item.agenda_type as AgendaItem['type']) ?? 'other',
+                            durationMinutes: (item.durationMinutes as number) ?? (item.duration_minutes as number) ?? undefined,
+                            track: (item.track as string) || undefined,
+                            speakers: Array.isArray(item.speakers) ? (item.speakers as unknown[]).map((sp: unknown) => {
+                                const speaker = sp as Record<string, unknown>;
+                                return {
+                                id: String(speaker.id),
+                                name: speaker.name as string,
+                                title: (speaker.title as string) ?? undefined,
+                                company: (speaker.company as string) ?? undefined,
+                                bio: (speaker.bio as string) ?? undefined,
+                                photoUrl: (speaker.photoUrl as string) ?? undefined,
+                                socialLinks: {
+                                    linkedin: ((speaker.socialLinks as Record<string, unknown>)?.linkedin as string) ?? undefined,
+                                    twitter: ((speaker.socialLinks as Record<string, unknown>)?.twitter as string) ?? undefined,
+                                    website: ((speaker.socialLinks as Record<string, unknown>)?.website as string) ?? undefined,
+                                }
+                            };
+                        }) : undefined,
+                            speaker: Array.isArray(item.speakers) && item.speakers.length ? {
+                                id: String(((item.speakers as unknown[])[0] as Record<string, unknown>)?.id),
+                                name: ((item.speakers as unknown[])[0] as Record<string, unknown>)?.name as string,
+                                title: ((item.speakers as unknown[])[0] as Record<string, unknown>)?.title as string ?? undefined,
+                                company: ((item.speakers as unknown[])[0] as Record<string, unknown>)?.company as string ?? undefined,
+                                bio: ((item.speakers as unknown[])[0] as Record<string, unknown>)?.bio as string ?? undefined,
+                                photoUrl: ((item.speakers as unknown[])[0] as Record<string, unknown>)?.photoUrl as string ?? undefined,
+                                socialLinks: ((item.speakers as unknown[])[0] as Record<string, unknown>)?.socialLinks as Record<string, unknown> ?? undefined
+                            } : undefined,
+                        };
+                        });
+                    } catch (e) {
+                        console.warn('Failed to parse daily_schedule JSON:', e);
+                        return [];
+                    }
+                })();
+
+                const agenda = fromTable.length > 0 ? fromTable : fromJson;
                 return { ...enrichedEvent, agenda };
             });
 
@@ -589,20 +825,7 @@ export class EventService {
                 .select(`
                     *, 
                     event_type:event_type_id (*), 
-                    organizer:organizers (id, name, logo_url),
-                    event_agenda!left (
-                        id,
-                        day_number,
-                        start_time,
-                        end_time,
-                        title,
-                        description,
-                        location,
-                        agenda_type,
-                        duration_minutes,
-                        track,
-                        sort_order
-                    )
+                    organizer:organizers (id, name, logo_url)
                 `)
                 .order('start_time', { ascending: true })
                 .range(from, to);
@@ -645,21 +868,32 @@ export class EventService {
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
                 const _enrichedEvent = enrichEvent(baseEvent, { eventType });
 
-                // Add agenda data
-                const eventAgenda = (item as Record<string, unknown>).event_agenda;
-                const agenda = Array.isArray(eventAgenda) ? eventAgenda.map((agendaItem: Record<string, unknown>) => ({
-                    id: agendaItem.id as string,
-                    dayNumber: agendaItem.day_number as number,
-                    startTime: agendaItem.start_time as string,
-                    endTime: agendaItem.end_time as string,
+                // Add agenda data from daily_schedule JSON field
+                const dailySchedule = (item as Record<string, unknown>).daily_schedule;
+                const agenda: AgendaItem[] = [];
+                
+                if (dailySchedule && typeof dailySchedule === 'object') {
+                    try {
+                        const scheduleData = dailySchedule as Record<string, unknown>;
+                        if (scheduleData.agenda && Array.isArray(scheduleData.agenda)) {
+                            agenda.push(...scheduleData.agenda.map((agendaItem: Record<string, unknown>) => ({
+                                id: agendaItem.id as string || `agenda-${Math.random()}`,
+                                dayNumber: agendaItem.dayNumber as number || 1,
+                                startTime: agendaItem.startTime as string,
+                                endTime: agendaItem.endTime as string,
                     title: agendaItem.title as string,
                     description: agendaItem.description as string | undefined,
                     location: agendaItem.location as string | undefined,
-                    type: agendaItem.agenda_type as 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other',
-                    durationMinutes: agendaItem.duration_minutes as number | undefined,
+                                type: agendaItem.type as 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other',
+                                durationMinutes: agendaItem.durationMinutes as number | undefined,
                     track: agendaItem.track as string | undefined,
-                    speakers: (agendaItem.speakers as Speaker[]) || []
-                })) : [];
+                                speaker: undefined
+                            })));
+                        }
+                    } catch (error) {
+                        console.warn('Failed to parse daily_schedule JSON:', error);
+                    }
+                }
 
                 // Process multi-day information (same logic as getEventsWithMultiDaySupport)
                 const multiDayEvent = enhancedEventTransformer.toApp(typedItem);
@@ -669,16 +903,23 @@ export class EventService {
 
             return events;
         } catch (error) {
-            // Improve diagnostics: capture message and stack when available
-            const err = error as unknown as { message?: string; stack?: string };
-            console.error('Error fetching events with agenda and multi-day support:', {
-                message: err?.message,
-                stack: err?.stack
-            });
+            // Improve diagnostics without noisy `{}` logs
+            const message = error instanceof Error
+                ? error.message
+                : typeof error === 'string'
+                    ? error
+                    : 'Unknown error';
+            const stack = error instanceof Error ? error.stack : undefined;
+
+            // Only warn in non-production; page.tsx already implements graceful fallbacks
+            if (process.env.NODE_ENV !== 'production') {
+                console.warn('getEventsWithAgendaAndMultiDaySupport failed; falling back…', { message, stack });
+            }
+
             Sentry.captureException(error, {
-                extra: { function: 'getEventsWithAgendaAndMultiDaySupport', filters }
+                extra: { function: 'getEventsWithAgendaAndMultiDaySupport', filters, message, stack }
             });
-            throw new Error('Failed to fetch events with agenda and multi-day support.');
+            throw new Error(message || 'Failed to fetch events with agenda and multi-day support.');
         }
     }
 }
