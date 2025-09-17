@@ -2,7 +2,6 @@
 
 import { FC, useState, useCallback, useRef } from 'react';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { Button } from '@/components/ui/button';
 import { Event, EventType, AppProfile } from '@/types';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 
@@ -107,7 +106,7 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
         ];
     };
 
-    const quickActions = currentView === 'today' ? getTodayQuickActions() : getCalendarQuickActions();
+    const _quickActions = currentView === 'today' ? getTodayQuickActions() : getCalendarQuickActions();
 
     // Event statistics for today view
     const getTodayStats = () => {
@@ -143,33 +142,7 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
                 className="mobile-scroll-container"
                 onScroll={handleScroll}
             >
-                {/* Quick Actions Bar - Only for Calendar view */}
-                {currentView === 'calendar' && (
-                    <div className={`mobile-quick-actions ${isScrolling && scrollDirection === 'down' ? 'hidden' : ''}`}>
-                        <div className="mobile-quick-actions-content">
-                            {quickActions.map((action) => (
-                                <Button
-                                    key={action.id}
-                                    onClick={action.action}
-                                    variant={action.variant as "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"}
-                                    size="sm"
-                                    className="mobile-quick-action-button"
-                                >
-                                    <MaterialIcon name={action.icon} size={16} />
-                                    <span className="mobile-quick-action-label">{action.label}</span>
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-                )}
 
-                {/* Today View - Clean Discovery Interface */}
-                {currentView === 'today' && (
-                    <div className="mobile-discovery-header">
-                        <h2 className="mobile-discovery-title">Discover Events</h2>
-                        <p className="mobile-discovery-subtitle">Find your next tech event</p>
-                    </div>
-                )}
 
                 {/* Calendar View - No header needed since we're already in Month tab */}
 

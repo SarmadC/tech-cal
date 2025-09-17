@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { EventClickArg } from '@fullcalendar/core';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
-import { MaterialIcon } from '@/components/ui/Icon';
+import { CaretLeft, CaretRight, ArrowClockwise, MapPin, User, Calendar } from '@phosphor-icons/react';
 import EventPreviewCard from '../EventPreviewCard';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -57,6 +57,12 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
   const [hideTimer, setHideTimer] = useState<NodeJS.Timeout | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(initialDate);
+
+  // Sync currentMonth with initialDate changes (e.g., from search)
+  React.useEffect(() => {
+    console.log('MobileEnhancedMonthView: Received initialDate change:', initialDate);
+    setCurrentMonth(initialDate);
+  }, [initialDate]);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthContainerRef = useRef<HTMLDivElement>(null);
@@ -248,14 +254,14 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
             '--indicator-transform': `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
           } as React.CSSProperties}
         >
-          <MaterialIcon name="refresh" size={24} />
+          <ArrowClockwise size={24} />
         </div>
       )}
       
       {/* Loading Indicator */}
       {pullState.isRefreshing && (
         <div className="refresh-loading-indicator">
-          <MaterialIcon name="refresh" size={20} className="spinning" />
+          <ArrowClockwise size={20} className="spinning" />
           <span>Refreshing...</span>
         </div>
       )}
@@ -265,23 +271,6 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
         {...pullToRefreshHandlers}
         style={{ '--pull-transform': pullTransform } as React.CSSProperties}
       >
-        {/* Date Header with Navigation */}
-        <div className="month-header-top">
-          <div className="date-display">
-            <h1 className="current-date">Today, {new Date().getDate()} {monthName.split(' ')[0]}</h1>
-            <button className="date-picker-toggle" aria-label="Change date">
-              <MaterialIcon name="expand-more" size={20} />
-            </button>
-          </div>
-          <div className="header-actions">
-            <button className="action-button" aria-label="Filter events">
-              <MaterialIcon name="filter" size={20} />
-            </button>
-            <button className="action-button" aria-label="Settings">
-              <MaterialIcon name="settings" size={20} />
-            </button>
-          </div>
-        </div>
 
         {/* Month Navigation */}
         <div className="month-navigation-modern">
@@ -291,7 +280,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
             disabled={isTransitioning}
             aria-label="Previous month"
           >
-            <MaterialIcon name="arrow_back" size={20} />
+            <CaretLeft size={20} />
           </button>
           
           <div className="month-title-modern">
@@ -304,7 +293,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
             disabled={isTransitioning}
             aria-label="Next month"
           >
-            <MaterialIcon name="chevron_right" size={20} />
+            <CaretRight size={20} />
           </button>
         </div>
       </div>
@@ -418,25 +407,25 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
                     <div className="event-title">{event.title}</div>
                     {event.location && (
                       <div className="event-location">
-                        <MaterialIcon name="location" size={12} />
+                        <MapPin size={12} />
                         <span>{event.location}</span>
                       </div>
                     )}
                     {event.organizer && (
                       <div className="event-organizer">
-                        <MaterialIcon name="person" size={12} />
+                        <User size={12} />
                         <span>{event.organizer}</span>
                       </div>
                     )}
                   </div>
                   <div className="event-chevron">
-                    <MaterialIcon name="chevron_right" size={16} />
+                    <CaretRight size={16} />
                   </div>
                 </div>
               ))
             ) : (
               <div className="no-events-selected">
-                <MaterialIcon name="event_available" size={24} />
+                <Calendar size={24} />
                 <span>No events on this day</span>
               </div>
             )}

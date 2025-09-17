@@ -90,13 +90,13 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
         return parseInt(h || '0', 10) * 60 + parseInt(m || '0', 10);
     };
 
-    const isAllDayLike = (item: AgendaItem): boolean => {
+    const isAllDayLike = useCallback((item: AgendaItem): boolean => {
         const duration = item.durationMinutes ?? Math.max(0, toMinutes(item.endTime) - toMinutes(item.startTime));
         const longWindow = duration >= 360; // 6+ hours
         const typeBand = ['registration', 'support', 'exhibition'].includes(item.type);
         const fullSpan = item.startTime.startsWith('07:') && item.endTime.startsWith('23:');
         return longWindow || typeBand || fullSpan;
-    };
+    }, []);
 
     type DayKey = number;
     type TrackKey = string;
@@ -168,7 +168,7 @@ const EventAgenda: FC<EventAgendaProps> = ({ event }) => {
         }
 
         return byDay;
-    }, [agenda]);
+    }, [agenda, isAllDayLike]);
 
     const uniqueTracksForDay = (dayData: { tracks: Map<TrackKey, Cluster[]> }): string[] => {
         return Array.from(dayData.tracks.keys());

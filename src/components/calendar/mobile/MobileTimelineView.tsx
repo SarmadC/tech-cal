@@ -114,12 +114,12 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                     <ClockIcon className="w-4 h-4" />
                     <span>{safeFormatTime(item.startTime)} - {safeFormatTime(item.endTime)}</span>
                 </div>
-                <span className={`px-2 py-1 text-xs font-medium font-dm-sans rounded-md border ${getTypeColor(item.type)}`}>
+                <span className={`px-2 py-1 text-xs font-medium rounded-md border ${getTypeColor(item.type)}`}>
                     {item.type}
                 </span>
             </div>
             
-            <h5 className="text-white font-dm-sans font-medium font-dm-sans mb-2">{item.title}</h5>
+            <h5 className="text-white font-medium mb-2">{item.title}</h5>
             
             {item.description && (
                 <p className="text-gray-300 text-sm mb-3">{item.description}</p>
@@ -134,7 +134,7 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
             
             {(item.speaker || (Array.isArray(item.speakers) && item.speakers.length > 0)) && (
                 <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-medium font-dm-sans text-gray-400">
+                    <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
                         {Array.isArray(item.speakers) && item.speakers.length > 1 ? (
                             <UsersIcon className="w-3.5 h-3.5" />
                         ) : (
@@ -170,7 +170,7 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                                         }}
                                     />
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-medium font-dm-sans text-white text-sm truncate">{speaker.name}</div>
+                                        <div className="font-medium text-white text-sm truncate">{speaker.name}</div>
                                         {speaker.title && (
                                             <div className="text-xs text-gray-400 truncate">{speaker.title}</div>
                                         )}
@@ -206,7 +206,7 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                                     }}
                                 />
                                 <div className="flex-1 min-w-0">
-                                    <div className="font-medium font-dm-sans text-white text-sm truncate">{item.speaker.name}</div>
+                                    <div className="font-medium text-white text-sm truncate">{item.speaker.name}</div>
                                     {item.speaker.title && (
                                         <div className="text-xs text-gray-400 truncate">{item.speaker.title}</div>
                                     )}
@@ -246,7 +246,7 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                             >
                                 <div className="flex items-center gap-3">
                                     <CalendarIcon className="w-5 h-5 text-gray-300" />
-                                    <span className="text-white font-dm-sans font-semibold font-dm-sans">Day {day}</span>
+                                    <span className="text-white font-semibold">Day {day}</span>
                                     <span className="text-xs text-gray-400">{sortedItems.length} events</span>
                                 </div>
                                 <div className="flex items-center gap-2">

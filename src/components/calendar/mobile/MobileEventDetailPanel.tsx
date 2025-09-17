@@ -140,7 +140,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
             {/* Header */}
             <div className="sticky top-0 z-10 bg-[var(--background-main)] border-b border-[var(--border-default)] px-4 py-3 flex-shrink-0">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold font-dm-sans text-white">Event Details</h2>
+                    <h2 className="text-lg font-semibold text-white">Event Details</h2>
                     <button 
                         onClick={onClose} 
                         className="p-2 hover:bg-gray-700 rounded-full transition-colors"
@@ -156,10 +156,10 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                             e.stopPropagation();
                             setActiveTab('details');
                         }}
-                        className={`flex-1 py-2 px-3 rounded-md text-sm font-medium font-dm-sans transition-colors ${
+                        className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                             activeTab === 'details'
-                                ? 'bg-gray-700 text-white font-dm-sans'
-                                : 'text-gray-400 hover:text-white font-dm-sans'
+                                ? 'bg-gray-700 text-white'
+                                : 'text-gray-400 hover:text-white'
                         }`}
                     >
                         Details
@@ -169,10 +169,10 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                             e.stopPropagation();
                             setActiveTab('agenda');
                         }}
-                        className={`flex-1 py-2 px-3 rounded-md text-sm font-medium font-dm-sans transition-colors ${
+                        className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                             activeTab === 'agenda'
-                                ? 'bg-gray-700 text-white font-dm-sans'
-                                : 'text-gray-400 hover:text-white font-dm-sans'
+                                ? 'bg-gray-700 text-white'
+                                : 'text-gray-400 hover:text-white'
                         }`}
                     >
                         Agenda ({agenda.length})
@@ -186,7 +186,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                     <div className="p-4 space-y-6">
                         {/* Event Title */}
                         <div>
-                            <h1 className="text-2xl font-bold font-dm-sans text-white mb-2">{displayEvent.title}</h1>
+                            <h1 className="text-2xl font-bold text-white mb-2">{displayEvent.title}</h1>
                             {category && (
                                 <div className="flex gap-2">
                                     <span className="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm">
@@ -201,7 +201,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                             <div className="flex items-start gap-3">
                                 <ClockIcon className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
                                 <div>
-                                    <div className="text-white font-dm-sans font-medium font-dm-sans">{eventTime.date}</div>
+                                    <div className="text-white font-medium">{eventTime.date}</div>
                                     <div className="text-gray-400 text-sm">{eventTime.time}</div>
                                     <div className="text-gray-500 text-xs">{eventTime.duration} minutes</div>
                                 </div>
@@ -211,7 +211,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                 <div className="flex items-start gap-3">
                                     <MapPinIcon className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
                                     <div>
-                                        <div className="text-white font-dm-sans font-medium font-dm-sans">Location</div>
+                                        <div className="text-white font-medium">Location</div>
                                         <div className="text-gray-400 text-sm">{displayEvent.location}</div>
                                     </div>
                                 </div>
@@ -221,7 +221,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                 <div className="flex items-start gap-3">
                                     <UsersIcon className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
                                     <div>
-                                        <div className="text-white font-dm-sans font-medium font-dm-sans">Organizer</div>
+                                        <div className="text-white font-medium">Organizer</div>
                                         <div className="text-gray-400 text-sm">{displayEvent.organizer}</div>
                                     </div>
                                 </div>
@@ -231,7 +231,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                         {/* Description */}
                         {displayEvent.description && (
                             <div>
-                                <h3 className="text-lg font-semibold font-dm-sans text-white mb-3">About</h3>
+                                <h3 className="text-lg font-semibold text-white mb-3">About</h3>
                                 <p className="text-gray-300 leading-relaxed">{displayEvent.description}</p>
                             </div>
                         )}
@@ -272,7 +272,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
 
                             return (
                                 <div>
-                                    <h3 className="text-lg font-semibold font-dm-sans text-white mb-3">Speakers ({speakers.length})</h3>
+                                    <h3 className="text-lg font-semibold text-white mb-3">Speakers ({speakers.length})</h3>
                                     <div className="space-y-3">
                                         {speakers.map((speaker, index) => {
                                             if (!speaker) return null;
@@ -300,7 +300,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                     }}
                                                 />
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="font-medium font-dm-sans text-white text-sm">{speaker.name}</div>
+                                                    <div className="font-medium text-white text-sm">{speaker.name}</div>
                                                     {speaker.title && (
                                                         <div className="text-xs text-gray-400 truncate">{speaker.title}</div>
                                                     )}
@@ -334,7 +334,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <h3 className="text-lg font-semibold font-dm-sans text-white mb-4">Event Agenda</h3>
+                                <h3 className="text-lg font-semibold text-white mb-4">Event Agenda</h3>
                                 {agenda.map((item, index) => (
                                     <div key={item.id || index} className="bg-gray-800/50 rounded-lg p-4">
                                         <div className="flex items-start justify-between mb-2">
@@ -344,12 +344,12 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                     {safeFormatTime(item.startTime)} - {safeFormatTime(item.endTime)}
                                                 </span>
                                             </div>
-                                            <span className="px-2 py-1 text-xs font-medium font-dm-sans bg-gray-700 text-gray-300 rounded">
+                                            <span className="px-2 py-1 text-xs font-medium bg-gray-700 text-gray-300 rounded">
                                                 {item.type}
                                             </span>
                                         </div>
                                         
-                                        <h4 className="text-white font-dm-sans font-medium font-dm-sans mb-2">{item.title}</h4>
+                                        <h4 className="text-white font-medium mb-2">{item.title}</h4>
                                         
                                         {item.description && (
                                             <p className="text-gray-300 text-sm mb-3">{item.description}</p>
@@ -364,7 +364,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                         
                                         {(item.speaker || (Array.isArray(item.speakers) && item.speakers.length > 0)) && (
                                             <div className="space-y-2">
-                                                <div className="text-xs font-medium font-dm-sans text-gray-400">
+                                                <div className="text-xs font-medium text-gray-400">
                                                     Speaker{(item.speakers?.length || 0) > 1 ? 's' : ''}
                                                 </div>
                                                 {Array.isArray(item.speakers) && item.speakers.length > 0 ? (

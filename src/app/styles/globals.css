@@ -442,8 +442,7 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ============================================== */
-/* 6a. CALENDAR TRANSITION CONTAINER (restored)   */
-/* ============================================== */
+/* 6a. CALENDAR TRANSITION CONTAINER == */
 
 /* These classes were previously defined in calendar-sidebar.css and
    are required for the calendar to occupy space and render properly. */

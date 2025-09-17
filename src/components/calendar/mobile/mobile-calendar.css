@@ -1034,16 +1034,6 @@
   padding: 0 var(--space-4);
 }
 
-.mobile-section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--foreground-primary);
-  margin-bottom: var(--space-3);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 .mobile-filter-options {
   display: flex;
   flex-direction: column;
@@ -1350,6 +1340,29 @@
   font-size: 0.75rem;
   padding: var(--space-1) var(--space-2);
   border-radius: 12px;
+  background: var(--accent-primary) !important;
+  color: var(--background-main) !important;
+  border: 1px solid var(--accent-border) !important;
+  font-weight: 500;
+}
+
+/* Override Badge component styles specifically for mobile event tags */
+.mobile-event-tag.bg-secondary {
+  background: var(--accent-primary) !important;
+  color: var(--background-main) !important;
+}
+
+.mobile-event-tag.text-secondary-foreground {
+  color: var(--background-main) !important;
+}
+
+.mobile-event-tag.border-transparent {
+  border: 1px solid var(--accent-border) !important;
+}
+
+.mobile-event-tag:hover {
+  background: var(--accent-primary-hover) !important;
+  color: var(--background-main) !important;
 }
 
 .mobile-live-badge {
@@ -1389,7 +1402,6 @@
 }
 
 .mobile-event-title {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--foreground-primary);
@@ -1447,48 +1459,171 @@
   gap: var(--space-2);
   padding: var(--space-3);
   font-weight: 500;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   border-radius: 12px;
   transition: all 0.2s ease;
 }
 
 /* Track button - override default button styles */
 .mobile-track-button {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   border-radius: 12px !important;
   transition: all 0.2s ease !important;
 }
 
-/* When tracked (default variant) - accent background */
+/* Primary CTA - Track button with accent background */
+.mobile-track-button {
+  background: var(--accent-primary) !important;
+  color: var(--background-main) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.mobile-track-button:hover {
+  background: var(--accent-primary-hover) !important;
+  color: var(--background-main) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Override Tailwind classes for track button */
 .mobile-track-button.bg-primary {
   background: var(--accent-primary) !important;
-  color: white !important;
-  border: none !important;
+  color: var(--background-main) !important;
 }
 
-.mobile-track-button.bg-primary:hover {
-  background: var(--accent-primary-dark) !important;
+.mobile-track-button.text-primary-foreground {
+  color: var(--background-main) !important;
+}
+
+/* Icon-only button styling */
+.mobile-icon-only {
+  aspect-ratio: 1;
+  padding: var(--space-3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 48px;
+  min-width: 48px;
+}
+
+.mobile-icon-only:hover {
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  transition: all 0.2s ease;
 }
 
-/* When untracked (outline variant) - outline style */
-.mobile-track-button.bg-background {
-  background: var(--background-main) !important;
-  color: var(--foreground-primary) !important;
-  border: 1px solid var(--border-default) !important;
+/* Single row icon-only button styling */
+.mobile-icon-only-row {
+  flex: 1;
+  aspect-ratio: 1;
+  padding: var(--space-2) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 44px;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
 }
 
-.mobile-track-button.bg-background:hover {
+.mobile-icon-only-row:hover {
+  transform: translateY(-1px);
   background: var(--background-tertiary) !important;
-  border-color: var(--border-strong) !important;
+}
+
+/* Favorite CTA button enhancement */
+.mobile-favorite-cta {
+  position: relative;
+}
+
+.mobile-favorite-cta::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--accent-primary);
+  border-radius: 1px;
+  opacity: 0.8;
+}
+
+/* Share Menu Styling */
+.mobile-share-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.mobile-share-menu {
+  background: var(--background-elevated);
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-4);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.mobile-share-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-default);
+  padding-bottom: var(--space-3);
+}
+
+.mobile-share-menu-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground-primary);
+}
+
+.mobile-share-menu-close {
+  padding: var(--space-1) !important;
+  min-height: auto !important;
+  min-width: auto !important;
+}
+
+.mobile-share-menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mobile-share-menu-option {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: var(--space-3) !important;
+  padding: var(--space-3) var(--space-4) !important;
+  text-align: left !important;
+  font-weight: 500 !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.mobile-share-menu-option:hover {
+  background: var(--background-tertiary) !important;
+  transform: translateY(-1px);
 }
 
 .mobile-share-button {
   background: var(--background-main) !important;
   color: var(--foreground-primary) !important;
   border: 1px solid var(--border-default) !important;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   border-radius: 12px !important;
   transition: all 0.2s ease !important;
 }
@@ -1500,24 +1635,35 @@
 
 .mobile-join-button {
   background: var(--accent-primary) !important;
-  color: white !important;
+  color: var(--background-main) !important;
   border: none !important;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   border-radius: 12px !important;
   transition: all 0.2s ease !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Override Tailwind classes specifically for mobile join button */
+.mobile-join-button.bg-primary {
+  background: var(--accent-primary) !important;
+  color: var(--background-main) !important;
+}
+
+.mobile-join-button.text-primary-foreground {
+  color: var(--background-main) !important;
 }
 
 .mobile-join-button:hover {
-  background: var(--accent-primary-dark) !important;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  background: var(--accent-primary-hover) !important;
+  color: var(--background-main) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
 }
 
 .mobile-details-button {
   background: var(--background-main) !important;
   color: var(--foreground-primary) !important;
   border: 1px solid var(--border-default) !important;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   border-radius: 12px !important;
   transition: all 0.2s ease !important;
 }
@@ -1538,7 +1684,6 @@
   border: 1px solid var(--border-default);
   border-radius: 12px;
   font-weight: 500;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 0.875rem;
   text-decoration: none;
   transition: all 0.2s ease;
@@ -2047,6 +2192,385 @@
     font-weight: 500;
 }
 
+/* ========== MOBILE SEARCH & FILTERS ========== */
+
+/* Search Filter Overlay */
+.mobile-search-filter-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--background-main);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-search-filter-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--background-main);
+}
+
+/* Header */
+.mobile-search-filter-header {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--background-elevated);
+}
+
+.mobile-search-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground-primary);
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+.mobile-search-close-button {
+  padding: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--foreground-secondary);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.mobile-search-close-button:hover {
+  background: var(--background-tertiary);
+  color: var(--foreground-primary);
+}
+
+/* Tab Navigation */
+.mobile-search-tabs {
+  display: flex;
+  background: var(--background-secondary);
+  margin: 0 var(--space-4);
+  border-radius: 12px;
+  padding: var(--space-1);
+  margin-top: var(--space-4);
+}
+
+.mobile-search-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground-secondary);
+  transition: all 0.2s ease;
+  position: relative;
+  font-family: var(--font-sans);
+}
+
+.mobile-search-tab.active {
+  background: var(--accent-primary);
+  color: var(--background-main);
+  font-weight: 600;
+}
+
+.mobile-tab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Search Content */
+.mobile-search-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.mobile-search-input-container {
+  position: relative;
+  margin-bottom: var(--space-6);
+}
+
+.mobile-search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.mobile-search-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-12) var(--space-3) var(--space-3);
+  background: var(--background-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 24px;
+  font-size: 1rem;
+  color: var(--foreground-primary);
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+}
+
+.mobile-search-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  background: var(--background-elevated);
+}
+
+.mobile-search-clear {
+  position: absolute;
+  right: var(--space-3);
+  background: none;
+  border: none;
+  color: var(--foreground-secondary);
+  padding: var(--space-1);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.mobile-search-clear:hover {
+  background: var(--background-tertiary);
+  color: var(--foreground-primary);
+}
+
+/* Section Titles */
+.mobile-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground-primary);
+  margin-bottom: var(--space-3);
+  font-family: var(--font-sans);
+}
+
+
+/* Quick Date Section */
+.mobile-quick-date-section {
+  margin-top: var(--space-6);
+}
+
+.mobile-quick-dates-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.mobile-quick-date-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  background: var(--background-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground-primary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.mobile-quick-date-button:hover {
+  background: var(--background-tertiary);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.mobile-quick-date-button.today {
+  background: var(--accent-primary);
+  color: var(--background-main);
+  border-color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.mobile-quick-date-button.today:hover {
+  background: var(--accent-primary-hover);
+  color: var(--background-main);
+}
+
+/* Inline Calendar Interface */
+.mobile-inline-calendar {
+  margin-top: var(--space-4);
+  background: var(--background-secondary);
+  border-radius: 12px;
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+}
+
+.mobile-calendar-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.mobile-calendar-month-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground-primary);
+  font-family: var(--font-sans);
+}
+
+.mobile-calendar-grid-inline {
+  /* Grid styling handled by existing classes */
+}
+
+.mobile-calendar-nav-button {
+  background: none;
+  border: none;
+  color: var(--foreground-secondary);
+  padding: var(--space-2);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-calendar-nav-button:hover {
+  background: var(--background-tertiary);
+  color: var(--foreground-primary);
+}
+
+.mobile-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.mobile-calendar-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground-secondary);
+  padding: var(--space-1);
+  font-family: var(--font-sans);
+}
+
+.mobile-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+}
+
+.mobile-calendar-day {
+  aspect-ratio: 1;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground-primary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  min-height: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  position: relative;
+}
+
+.mobile-calendar-day:hover {
+  background: var(--background-tertiary);
+}
+
+.mobile-calendar-day.other-month {
+  color: var(--foreground-tertiary);
+  opacity: 0.5;
+}
+
+.mobile-calendar-day.today {
+  background: var(--accent-primary);
+  color: var(--background-main);
+  font-weight: 600;
+}
+
+.mobile-calendar-day.today:hover {
+  background: var(--accent-primary-hover);
+}
+
+.mobile-calendar-day-number {
+  font-size: 0.875rem;
+  font-weight: inherit;
+  line-height: 1;
+}
+
+.mobile-calendar-event-indicators {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  max-width: 100%;
+}
+
+.mobile-calendar-event-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--event-color, var(--accent-primary));
+  flex-shrink: 0;
+}
+
+.mobile-calendar-more-events {
+  font-size: 0.625rem;
+  color: var(--foreground-tertiary);
+  font-weight: 600;
+  margin-left: 1px;
+}
+
+.mobile-calendar-day.today .mobile-calendar-event-dot {
+  background: var(--background-main);
+  opacity: 0.8;
+}
+
+.mobile-calendar-day.today .mobile-calendar-more-events {
+  color: var(--background-main);
+  opacity: 0.8;
+}
+
+
+
+/* Filters Content */
+.mobile-filters-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.mobile-filters-scroll {
+  padding: var(--space-4);
+}
+
+/* Reset Button */
+.mobile-reset-button {
+  width: 100%;
+  margin-top: var(--space-4);
+  background: var(--background-secondary) !important;
+  color: var(--foreground-primary) !important;
+  border: 1px solid var(--border-default) !important;
+  font-weight: 500 !important;
+}
+
+.mobile-reset-button:hover {
+  background: var(--background-tertiary) !important;
+  border-color: var(--accent-primary) !important;
+}
+
 /* ========== MOBILE VIEW ENHANCEMENTS ========== */
 
 .mobile-view-enhancements {
@@ -2059,49 +2583,7 @@
     scroll-behavior: smooth;
 }
 
-.mobile-quick-actions {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--background-elevated);
-    border-bottom: 1px solid var(--border-color);
-    padding: 12px 16px;
-    transition: transform 0.3s ease;
-}
 
-.mobile-quick-actions.hidden {
-    transform: translateY(-100%);
-}
-
-.mobile-quick-actions-content {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-}
-
-.mobile-quick-action-button {
-    min-width: auto;
-    height: 36px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-}
-
-.mobile-quick-action-button:hover {
-    transform: translateY(-1px);
-}
-
-.mobile-quick-action-label {
-    font-size: 13px;
-    font-weight: 500;
-}
 
 .mobile-today-stats {
     padding: 16px;
@@ -2232,7 +2714,6 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-.mobile-discovery-title,
 .mobile-week-title {
     font-size: 24px;
     font-weight: 700;
@@ -2241,7 +2722,6 @@
     line-height: 1.2;
 }
 
-.mobile-discovery-subtitle,
 .mobile-week-subtitle {
     font-size: 16px;
     color: var(--foreground-secondary);
@@ -2251,17 +2731,14 @@
 
 /* Responsive adjustments */
 @media (max-width: 480px) {
-    .mobile-discovery-header,
     .mobile-week-header {
         padding: 16px 12px 12px;
     }
     
-    .mobile-discovery-title,
     .mobile-week-title {
         font-size: 20px;
     }
     
-    .mobile-discovery-subtitle,
     .mobile-week-subtitle {
         font-size: 14px;
     }
@@ -2526,9 +3003,9 @@
 
 /* Modern Month Header */
 .mobile-month-header-modern {
-  background: var(--background-main);
+  background: var(--background-elevated);
   padding: var(--space-4) var(--space-4) var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-default);
   border-radius: 0 0 16px 16px;
 }
 
@@ -2596,6 +3073,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+  padding: var(--space-4) var(--space-2);
 }
 
 .nav-button-modern {
@@ -2633,16 +3111,20 @@
   font-weight: 600;
   color: var(--foreground-primary);
   margin: 0;
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 /* Modern Calendar Grid */
 .mobile-calendar-grid-modern {
   background: var(--background-main);
-  padding: 0 var(--space-4);
+  padding: var(--space-4);
   border-radius: 16px 16px 0 0;
   margin-top: -8px;
   position: relative;
   z-index: 1;
+  box-shadow: var(--shadow-sm);
 }
 
 .weekday-headers-modern {
@@ -2699,14 +3181,20 @@
 }
 
 .calendar-day-modern.selected {
-  background: var(--accent-primary-light);
-  color: var(--accent-primary);
+  background: white;
+  color: black;
   font-weight: 600;
   border-radius: 14px;
 }
 
+.calendar-day-modern.selected .day-number-modern {
+  color: black;
+  font-weight: 600;
+}
+
 .calendar-day-modern.other-month {
   color: var(--foreground-muted);
+  opacity: 0.4;
 }
 
 .calendar-day-modern.weekend {
@@ -3108,11 +3596,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, 
-    var(--background-secondary) 0%, 
-    var(--background-elevated) 100%
-  );
-  border-top: 2px solid var(--border-default);
+  background: var(--background-elevated);
+  border-top: 1px solid var(--border-default);
   animation: slideInUp 0.3s ease-out;
 }
 

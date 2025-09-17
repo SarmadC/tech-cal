@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, useState, useRef, useEffect, useCallback } from 'react';
-import { MaterialIcon } from '@/components/ui/Icon';
+import { X, MagnifyingGlass, Funnel, Calendar, MapPin, Users, Clock, Tag, Star, ArrowClockwise, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SmartFilterOptions } from '@/hooks/useSmartFilters';
@@ -16,27 +16,57 @@ export interface MobileSearchFilterProps {
     activeFilterCount: number;
     isOpen: boolean;
     onClose: () => void;
-    events: Array<{ id: string; title: string; organizer: string; eventTypeId: string }>;
-    categories: Array<{ id: string; name: string }>;
+    events: Array<{ id: string; title: string; organizer: string; eventTypeId: string; startTime: string; endTime?: string }>;
+    categories: Array<{ id: string; name: string; color?: string }>;
     onSearchSuggestionSelect?: (suggestion: SearchSuggestion) => void;
+    onDateChange?: (date: Date) => void;
 }
+
+// Helper function to get the appropriate Phosphor icon
+const getIconComponent = (iconName: string, size: number = 16) => {
+    switch (iconName) {
+        case 'event':
+        case 'calendar':
+            return <Calendar size={size} />;
+        case 'people':
+            return <Users size={size} />;
+        case 'label':
+        case 'tag':
+            return <Tag size={size} />;
+        case 'location':
+            return <MapPin size={size} />;
+        case 'time':
+        case 'clock':
+            return <Clock size={size} />;
+        case 'star':
+            return <Star size={size} />;
+        case 'close':
+            return <X size={size} />;
+        case 'refresh':
+            return <ArrowClockwise size={size} />;
+        default:
+            return <Tag size={size} />;
+    }
+};
 
 const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
     filters,
     onUpdateFilter,
     onResetFilters,
-    onApplyQuickFilter,
+    onApplyQuickFilter: _onApplyQuickFilter,
     activeFilterCount,
     isOpen,
     onClose,
     events,
     categories,
-    onSearchSuggestionSelect
+    onSearchSuggestionSelect,
+    onDateChange
 }) => {
     const [searchTerm, setSearchTerm] = useState(filters.searchTerm);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [activeTab, setActiveTab] = useState<'search' | 'filters'>('search');
     const [_isSearchFocused, setIsSearchFocused] = useState(false);
+    const [calendarDate, setCalendarDate] = useState(new Date());
     
     const searchInputRef = useRef<HTMLInputElement>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -112,20 +142,101 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
         searchInputRef.current?.focus();
     }, [onUpdateFilter]);
 
-    const quickFilters = [
-        { id: 'this-week', label: 'This Week', icon: 'calendar' as const, color: 'blue' },
-        { id: 'free-events', label: 'Free Events', icon: 'money' as const, color: 'green' },
-        { id: 'virtual-only', label: 'Virtual', icon: 'wifi' as const, color: 'purple' },
-        { id: 'trending', label: 'Trending', icon: 'trending-up' as const, color: 'orange' },
-        { id: 'my-level', label: 'My Level', icon: 'star' as const, color: 'yellow' },
-        { id: 'no-conflicts', label: 'No Conflicts', icon: 'check-circle' as const, color: 'emerald' },
+
+    // Quick date options similar to web view
+    const quickDateOptions = [
+        { 
+            id: 'today', 
+            label: 'Today', 
+            date: new Date(),
+            isToday: true
+        },
+        { 
+            id: 'tomorrow', 
+            label: 'Tomorrow', 
+            date: (() => {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                return tomorrow;
+            })(),
+            isToday: false
+        },
+        { 
+            id: 'next-week', 
+            label: 'Next Week', 
+            date: (() => {
+                const nextWeek = new Date();
+                nextWeek.setDate(nextWeek.getDate() + 7);
+                return nextWeek;
+            })(),
+            isToday: false
+        },
+        { 
+            id: 'next-month', 
+            label: 'Next Month', 
+            date: (() => {
+                const nextMonth = new Date();
+                nextMonth.setMonth(nextMonth.getMonth() + 1);
+                return nextMonth;
+            })(),
+            isToday: false
+        },
     ];
+
+    // Calendar navigation functions
+    const navigateCalendar = (direction: 'prev' | 'next') => {
+        const newDate = new Date(calendarDate);
+        newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
+        setCalendarDate(newDate);
+    };
+
+    const generateCalendarDays = () => {
+        const year = calendarDate.getFullYear();
+        const month = calendarDate.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const _lastDay = new Date(year, month + 1, 0);
+        const startDate = new Date(firstDay);
+        
+        // Start from Sunday of the week containing the first day
+        startDate.setDate(firstDay.getDate() - firstDay.getDay());
+        
+        const days = [];
+        const today = new Date();
+        
+        for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + i);
+            
+            // Find events for this day
+            const dayEvents = events.filter(event => {
+                const eventDate = new Date(event.startTime);
+                return eventDate.toDateString() === currentDate.toDateString();
+            });
+            
+            days.push({
+                date: currentDate,
+                isCurrentMonth: currentDate.getMonth() === month,
+                isToday: currentDate.toDateString() === today.toDateString(),
+                dayNumber: currentDate.getDate(),
+                hasEvents: dayEvents.length > 0,
+                events: dayEvents
+            });
+        }
+        
+        return days;
+    };
+
+    // Helper function to get event color
+    const getEventColor = (event: { eventTypeId: string }) => {
+        const category = categories.find(cat => cat.id === event.eventTypeId);
+        return category?.color || 'var(--accent-primary)';
+    };
 
     const formatOptions = [
         { value: 'all', label: 'All Formats', icon: 'calendar' as const },
         { value: 'virtual', label: 'Virtual', icon: 'wifi' as const },
-        { value: 'in-person', label: 'In-Person', icon: 'people' as const },
-        { value: 'hybrid', label: 'Hybrid', icon: 'star' as const }
+        { value: 'in-person', label: 'In-Person', icon: 'location' as const },
+        { value: 'hybrid', label: 'Hybrid', icon: 'people' as const }
     ];
 
     const costOptions = [
@@ -268,7 +379,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                             className="mobile-search-close-button"
                             aria-label="Close search and filters"
                         >
-                            <MaterialIcon name="close" size={20} />
+                            <X size={20} />
                         </button>
                         <h2 className="mobile-search-title">Search & Filters</h2>
                         {activeFilterCount > 0 && (
@@ -285,14 +396,14 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                         onClick={() => setActiveTab('search')}
                         className={`mobile-search-tab ${activeTab === 'search' ? 'active' : ''}`}
                     >
-                        <MaterialIcon name="search" size={18} />
+                        <MagnifyingGlass size={18} />
                         <span>Search</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('filters')}
                         className={`mobile-search-tab ${activeTab === 'filters' ? 'active' : ''}`}
                     >
-                        <MaterialIcon name="filter" size={18} />
+                        <Funnel size={18} />
                         <span>Filters</span>
                         {activeFilterCount > 0 && (
                             <div className="mobile-tab-badge">{activeFilterCount}</div>
@@ -306,7 +417,6 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                         {/* Search Input */}
                         <div className="mobile-search-input-container">
                             <div className="mobile-search-input-wrapper">
-                                <MaterialIcon name="search" size={20} className="mobile-search-icon" />
                                 <input
                                     ref={searchInputRef}
                                     type="text"
@@ -326,7 +436,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                         className="mobile-search-clear"
                                         aria-label="Clear search"
                                     >
-                                        <MaterialIcon name="close" size={16} />
+                                        <X size={16} />
                                     </button>
                                 )}
                             </div>
@@ -346,10 +456,10 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                                 onClick={() => handleSuggestionSelect(suggestion)}
                                                 className="mobile-search-suggestion"
                                             >
-                                                <MaterialIcon 
-                                                    name={(suggestion.icon as 'event' | 'people' | 'label') || (suggestion.type === 'event' ? 'event' : suggestion.type === 'organizer' ? 'people' : 'label')} 
-                                                    size={16} 
-                                                />
+                                                {getIconComponent(
+                                                    (suggestion.icon as string) || (suggestion.type === 'event' ? 'event' : suggestion.type === 'organizer' ? 'people' : 'label'), 
+                                                    16
+                                                )}
                                                 <div className="mobile-suggestion-content">
                                                     <span className="mobile-suggestion-text">{suggestion.title}</span>
                                                     {suggestion.subtitle && (
@@ -361,7 +471,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                         ))
                                     ) : searchTerm.length > 1 ? (
                                         <div className="mobile-search-no-results">
-                                            <MaterialIcon name="search" size={20} />
+                                            {getIconComponent('search', 20)}
                                             <span>No results found for &quot;{searchTerm}&quot;</span>
                                         </div>
                                     ) : null}
@@ -390,7 +500,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                                 className="mobile-filter-chip-remove"
                                                 aria-label={`Remove ${chip.label} filter`}
                                             >
-                                                <MaterialIcon name="close" size={14} />
+                                                {getIconComponent('close', 14)}
                                             </button>
                                         </div>
                                     ))}
@@ -398,22 +508,102 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                             </div>
                         )}
 
-                        {/* Quick Search Filters */}
-                        <div className="mobile-quick-search-filters">
-                            <h3 className="mobile-section-title">Quick Search</h3>
-                            <div className="mobile-quick-filters-grid">
-                                {quickFilters.map((filter) => (
-                                    <button
-                                        key={filter.id}
-                                        onClick={() => onApplyQuickFilter(filter.id)}
-                                        className={`mobile-quick-filter mobile-quick-filter-${filter.color}`}
-                                    >
-                                        <MaterialIcon name={filter.icon} size={16} />
-                                        <span>{filter.label}</span>
-                                    </button>
-                                ))}
+
+                        {/* Quick Date Navigation */}
+                        {onDateChange && (
+                            <div className="mobile-quick-date-section">
+                                <h3 className="mobile-section-title">Quick Dates</h3>
+                                <div className="mobile-quick-dates-grid">
+                                    {quickDateOptions.map((dateOption) => (
+                                        <button
+                                            key={dateOption.id}
+                                            onClick={() => {
+                                                if (onDateChange) {
+                                                    console.log('MobileSearchFilter: Quick date selected:', dateOption.label, dateOption.date);
+                                                    onDateChange(dateOption.date);
+                                                    onClose();
+                                                }
+                                            }}
+                                            className={`mobile-quick-date-button ${dateOption.isToday ? 'today' : ''}`}
+                                        >
+                                            <span>{dateOption.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Inline Calendar Interface */}
+                                <div className="mobile-inline-calendar">
+                                    <div className="mobile-calendar-navigation">
+                                        <button
+                                            onClick={() => navigateCalendar('prev')}
+                                            className="mobile-calendar-nav-button"
+                                        >
+                                            <CaretLeft size={18} />
+                                        </button>
+                                        <span className="mobile-calendar-month-title">
+                                            {calendarDate.toLocaleDateString('en-US', { 
+                                                month: 'long', 
+                                                year: 'numeric' 
+                                            })}
+                                        </span>
+                                        <button
+                                            onClick={() => navigateCalendar('next')}
+                                            className="mobile-calendar-nav-button"
+                                        >
+                                            <CaretRight size={18} />
+                                        </button>
+                                    </div>
+
+                                    <div className="mobile-calendar-grid-inline">
+                                        <div className="mobile-calendar-weekdays">
+                                            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                                <div key={day} className="mobile-calendar-weekday">
+                                                    {day}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="mobile-calendar-days">
+                                            {generateCalendarDays().map((day, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => {
+                                                        if (onDateChange) {
+                                                            console.log('MobileSearchFilter: Date selected:', day.date);
+                                                            onDateChange(day.date);
+                                                            onClose();
+                                                        }
+                                                    }}
+                                                    className={`mobile-calendar-day ${
+                                                        day.isCurrentMonth ? 'current-month' : 'other-month'
+                                                    } ${day.isToday ? 'today' : ''} ${
+                                                        day.hasEvents ? 'has-events' : ''
+                                                    }`}
+                                                >
+                                                    <div className="mobile-calendar-day-number">{day.dayNumber}</div>
+                                                    {day.hasEvents && (
+                                                        <div className="mobile-calendar-event-indicators">
+                                                            {day.events.slice(0, 3).map((event, eventIndex) => (
+                                                                <div
+                                                                    key={`${event.id}-${eventIndex}`}
+                                                                    className="mobile-calendar-event-dot"
+                                                                    style={{
+                                                                        '--event-color': getEventColor(event),
+                                                                    } as React.CSSProperties}
+                                                                    title={event.title}
+                                                                />
+                                                            ))}
+                                                            {day.events.length > 3 && (
+                                                                <div className="mobile-calendar-more-events">+{day.events.length - 3}</div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 
@@ -436,7 +626,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                                 className="mobile-filter-radio"
                                             />
                                             <div className="mobile-filter-option-content">
-                                                <MaterialIcon name={option.icon} size={16} />
+                                                {getIconComponent(option.icon, 16)}
                                                 <span>{option.label}</span>
                                             </div>
                                         </label>
@@ -504,7 +694,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                                 className="mobile-filter-radio"
                                             />
                                             <div className="mobile-filter-option-content">
-                                                <MaterialIcon name={option.icon} size={16} />
+                                                {getIconComponent(option.icon, 16)}
                                                 <span>{option.label}</span>
                                             </div>
                                         </label>
@@ -527,7 +717,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                                 className="mobile-filter-radio"
                                             />
                                             <div className="mobile-filter-option-content">
-                                                <MaterialIcon name={option.icon} size={16} />
+                                                {getIconComponent(option.icon, 16)}
                                                 <span>{option.label}</span>
                                             </div>
                                         </label>
@@ -550,7 +740,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                                 className="mobile-filter-radio"
                                             />
                                             <div className="mobile-filter-option-content">
-                                                <MaterialIcon name={option.icon} size={16} />
+                                                {getIconComponent(option.icon, 16)}
                                                 <span>{option.label}</span>
                                             </div>
                                         </label>
@@ -570,8 +760,8 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                             className="mobile-filter-checkbox"
                                         />
                                         <div className="mobile-filter-option-content">
-                                            <MaterialIcon name="star" size={16} />
-                                            <span>My Tracked Events</span>
+                                            {getIconComponent('star', 16)}
+                                            <span>My Favorites</span>
                                         </div>
                                     </label>
                                     <label className="mobile-filter-option">
@@ -582,20 +772,8 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                             className="mobile-filter-checkbox"
                                         />
                                         <div className="mobile-filter-option-content">
-                                            <MaterialIcon name="people" size={16} />
-                                            <span>My Network is Attending</span>
-                                        </div>
-                                    </label>
-                                    <label className="mobile-filter-option">
-                                        <input
-                                            type="checkbox"
-                                            checked={filters.recommended}
-                                            onChange={(e) => onUpdateFilter('recommended', e.target.checked)}
-                                            className="mobile-filter-checkbox"
-                                        />
-                                        <div className="mobile-filter-option-content">
-                                            <MaterialIcon name="star" size={16} />
-                                            <span>Recommended for Me</span>
+                                            {getIconComponent('people', 16)}
+                                            <span>My Network</span>
                                         </div>
                                     </label>
                                 </div>
@@ -610,7 +788,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                     onClick={onResetFilters}
                                     className="mobile-reset-button"
                                 >
-                                    <MaterialIcon name="refresh" size={16} />
+                                    {getIconComponent('refresh', 16)}
                                     Reset All Filters
                                 </Button>
                             )}
@@ -618,6 +796,7 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                     </div>
                 )}
             </div>
+
         </div>
     );
 };

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { MaterialIcon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Event, EventStatus, isTrackedEvent, TrackedEvent, MultiDayEventInstance, EventType } from '@/types';
@@ -9,7 +8,7 @@ import { useEventTracking } from '@/hooks/useEventTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
-import { CalendarPlusIcon, ShareNetworkIcon } from '@phosphor-icons/react';
+import { CalendarPlusIcon, ShareNetworkIcon, Info, Star, ArrowDown, X, Clock, MapPin, WifiHigh, Users, Calendar } from '@phosphor-icons/react';
 import { useEventActions } from '@/hooks/useEventActions';
 import MobileEventDetailPanel from './MobileEventDetailPanel';
 
@@ -30,9 +29,10 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
 }) => {
   const { user } = useAuth();
   const { trackEvent, untrackEvent, isLoading } = useEventTracking();
-  const { handleShare, googleCalendarLink } = useEventActions(event);
+  const { handleShare: originalHandleShare, googleCalendarLink, handleIcsDownload } = useEventActions(event);
   const previewRef = useRef<HTMLDivElement>(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   // Use the tracking status directly from the event prop
   const isTracked = isTrackedEvent(event) ? event.isTracked : false;
@@ -95,13 +95,6 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
   };
 
 
-  const handleJoinEvent = () => {
-    if (event.livestreamUrl) {
-      window.open(event.livestreamUrl, '_blank');
-    } else if (event.sourceUrl) {
-      window.open(event.sourceUrl, '_blank');
-    }
-  };
 
   const handleViewDetails = () => {
     setShowDetailPanel(true);
@@ -109,6 +102,49 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
 
   const handleCloseDetailPanel = () => {
     setShowDetailPanel(false);
+  };
+
+  // Enhanced share function with multiple options
+  const handleShare = () => {
+    setShowShareMenu(true);
+  };
+
+  const handleWebShare = async () => {
+    const shareData = {
+      title: event.title,
+      text: `Check out this event: ${event.title}${event.description ? `\n\n${event.description}` : ''}`,
+      url: `${window.location.origin}/events/${event.id}`
+    };
+
+    // Check if Web Share API is supported (mobile devices)
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        setShowShareMenu(false);
+      } catch (error) {
+        // User cancelled sharing or error occurred
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('Error sharing:', error);
+          // Fallback to copy link
+          originalHandleShare();
+          setShowShareMenu(false);
+        }
+      }
+    } else {
+      // Fallback for desktop or unsupported browsers
+      originalHandleShare();
+      setShowShareMenu(false);
+    }
+  };
+
+  const handleAddToGoogleCalendar = () => {
+    window.open(googleCalendarLink, '_blank');
+    setShowShareMenu(false);
+  };
+
+  const handleDownloadIcs = () => {
+    handleIcsDownload();
+    setShowShareMenu(false);
   };
 
   if (!isVisible) return null;
@@ -153,7 +189,7 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
             className="mobile-event-preview-close"
             aria-label="Close event preview"
           >
-            <MaterialIcon name="close" size={24} />
+            <X size={24} />
           </button>
         </div>
 
@@ -165,22 +201,22 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
         {/* Event Details */}
         <div className="mobile-event-preview-details">
           <div className="mobile-event-detail">
-            <MaterialIcon name="time" size={20} />
+            <Clock size={20} />
             <span>{formatDate(event.startTime, event.timezone)} • {formatTime(event.startTime, event.timezone)}</span>
           </div>
           
           <div className="mobile-event-detail">
-            <MaterialIcon name={isVirtual ? "wifi" : "location"} size={20} />
+            {isVirtual ? <WifiHigh size={20} /> : <MapPin size={20} />}
             <span>{isVirtual ? 'Virtual Event' : (event.location || 'Location TBA')}</span>
           </div>
           
           <div className="mobile-event-detail">
-            <MaterialIcon name="people" size={20} />
+            <Users size={20} />
             <span>{event.organizer}</span>
           </div>
           
           <div className="mobile-event-detail">
-            <MaterialIcon name="calendar" size={20} />
+            <Calendar size={20} />
             <span>{getEventDuration(event.startTime, event.endTime)}</span>
           </div>
         </div>
@@ -194,57 +230,92 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
 
         {/* Actions */}
         <div className="mobile-event-preview-actions">
-          <div className="grid grid-cols-2 gap-2 mb-3">
+          {/* Single Row Button Layout - Optimized Order */}
+          <div className="flex gap-3 justify-between">
+            {/* Primary CTA - Favorite (first position for prominence) */}
             <Button
               onClick={handleTrackEvent}
               disabled={isLoading}
-              variant={isTracked ? "default" : "outline"}
-              className="mobile-track-button"
+              variant="default"
+              className="mobile-track-button mobile-icon-only-row mobile-favorite-cta"
+              title={isTracked ? 'Remove from Favorites' : 'Add to Favorites'}
             >
-              <MaterialIcon name={isTracked ? "star" : "star"} size={16} />
-              <span>{isTracked ? 'Tracked' : 'Track Event'}</span>
+              <Star size={18} weight={isTracked ? "fill" : "regular"} />
+            </Button>
+
+            <Button
+              onClick={() => window.open(googleCalendarLink, '_blank')}
+              variant="outline"
+              className="mobile-calendar-button mobile-icon-only-row"
+              title="Add to Calendar"
+            >
+              <CalendarPlusIcon size={16} />
             </Button>
             
-            <Button
-              onClick={handleViewDetails}
-              variant="outline"
-              className="mobile-details-button"
-            >
-              <MaterialIcon name="info" size={16} />
-              <span>Details</span>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 mb-3">
             <Button
               onClick={handleShare}
               variant="outline"
-              className="mobile-share-button"
+              className="mobile-share-button mobile-icon-only-row"
+              title="Share & Export"
             >
-              <ShareNetworkIcon className="w-4 h-4" />
-              <span>Share</span>
+              <ShareNetworkIcon size={16} />
             </Button>
-            
-            <a
-              href={googleCalendarLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mobile-calendar-button"
-            >
-              <CalendarPlusIcon className="w-4 h-4" />
-              <span>Add to Calendar</span>
-            </a>
-          </div>
-          
-          {(event.livestreamUrl || event.sourceUrl) && (
+
             <Button
-              onClick={handleJoinEvent}
-              variant="default"
-              className="mobile-join-button w-full"
+              onClick={handleViewDetails}
+              variant="outline"
+              className="mobile-details-button mobile-icon-only-row"
+              title="View Details"
             >
-              <MaterialIcon name="arrow-forward" size={16} />
-              <span>{event.livestreamUrl ? 'Join Live' : 'View Event'}</span>
+              <Info size={18} />
             </Button>
+          </div>
+
+          {/* Share Menu */}
+          {showShareMenu && (
+            <div className="mobile-share-menu-overlay" onClick={() => setShowShareMenu(false)}>
+              <div className="mobile-share-menu" onClick={(e) => e.stopPropagation()}>
+                <div className="mobile-share-menu-header">
+                  <h3>Share & Export</h3>
+                  <Button
+                    onClick={() => setShowShareMenu(false)}
+                    variant="ghost"
+                    className="mobile-share-menu-close"
+                  >
+                    <X size={20} />
+                  </Button>
+                </div>
+                
+                <div className="mobile-share-menu-options">
+                  <Button
+                    onClick={handleWebShare}
+                    variant="outline"
+                    className="mobile-share-menu-option"
+                  >
+                    <ShareNetworkIcon size={20} />
+                    <span>Share Event</span>
+                  </Button>
+                  
+                  <Button
+                    onClick={handleAddToGoogleCalendar}
+                    variant="outline"
+                    className="mobile-share-menu-option"
+                  >
+                    <CalendarPlusIcon size={20} />
+                    <span>Add to Google Calendar</span>
+                  </Button>
+                  
+                  <Button
+                    onClick={handleDownloadIcs}
+                    variant="outline"
+                    className="mobile-share-menu-option"
+                  >
+                    <ArrowDown size={20} />
+                    <span>Download .ics File</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

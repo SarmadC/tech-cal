@@ -10,10 +10,8 @@ import MobileTodayView from './MobileTodayView';
 import MobileMultiDayCalendarView from './MobileMultiDayCalendarView';
 import MobileEnhancedMonthView from './MobileEnhancedMonthView';
 import MobileSearchFilter from '../MobileSearchFilter';
-import MobileNavigationControls from './MobileNavigationControls';
 import MobileViewEnhancements from './MobileViewEnhancements';
 import MobileAdvancedGestures from './MobileAdvancedGestures';
-import MobileNavigationEnhancements from './MobileNavigationEnhancements';
 
 export interface MobileCalendarAppProps {
   events: Event[];
@@ -92,9 +90,26 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
 
   // Navigation handlers
   const handleDateChange = useCallback((date: Date) => {
+    console.log('MobileCalendarApp: Date change requested:', date);
     setLocalCurrentDate(date);
     onDateChange?.(date);
-  }, [onDateChange]);
+    
+    // Auto-switch to month view when date is selected via search
+    if (currentView !== 'month') {
+      console.log('MobileCalendarApp: Switching to month view');
+      setCurrentView('month');
+      
+      // Update URL to reflect the view change
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('mobileView', 'month');
+      
+      // Add the selected date to URL
+      const dateParam = date.toISOString().split('T')[0];
+      params.set('date', dateParam);
+      
+      router.push(`/calendar?${params.toString()}`, { scroll: false });
+    }
+  }, [onDateChange, currentView, searchParams, router]);
 
   const handleNavigate = useCallback((direction: 'prev' | 'next') => {
     const newDate = new Date(localCurrentDate);
@@ -136,13 +151,6 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
         activeFilterCount={activeFilterCount}
       />
       
-      {/* Navigation Controls - Available for all views */}
-      <MobileNavigationControls
-        currentDate={localCurrentDate}
-        onDateChange={handleDateChange}
-        view={currentView === 'month' ? 'month' : currentView === 'today' ? 'day' : 'week'}
-        onNavigate={handleNavigate}
-      />
       
       <MobileAdvancedGestures
         onSwipeLeft={() => handleNavigate('next')}
@@ -225,29 +233,22 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
           id: event.id,
           title: event.title,
           organizer: event.organizer,
-          eventTypeId: event.eventTypeId
+          eventTypeId: event.eventTypeId,
+          startTime: event.startTime,
+          endTime: event.endTime || undefined
         }))}
         categories={categories.map(cat => ({
           id: cat.id,
-          name: cat.name
+          name: cat.name,
+          color: cat.color
         }))}
         onSearchSuggestionSelect={(_suggestion) => {
           // Handle suggestion selection - could filter events or navigate
           // Selected suggestion handled
         }}
+        onDateChange={onDateChange}
       />
 
-      {/* Mobile Navigation Enhancements */}
-      <MobileNavigationEnhancements
-        onSearchToggle={() => setIsSearchFilterOpen(!isSearchFilterOpen)}
-        onFilterToggle={() => setIsSearchFilterOpen(!isSearchFilterOpen)}
-        onTodayClick={() => {
-          const today = new Date();
-          onDateChange?.(today);
-        }}
-        showSearch={isSearchFilterOpen}
-        showFilters={isSearchFilterOpen}
-      />
     </div>
   );
 };

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Event, EventType, AppProfile } from '@/types';
-import { MaterialIcon } from '@/components/ui/Icon';
+import { Calendar } from '@phosphor-icons/react';
 import TodayTaskCard from './components/TodayTaskCard';
 import MobileEventPreview from './MobileEventPreview';
 
@@ -136,7 +136,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
         {/* Show empty state if no events */}
         {events.length === 0 && (
           <div className="no-events-feed">
-            <MaterialIcon name="event" size={48} />
+            <Calendar size={48} />
             <div className="no-events-text">No events available</div>
           </div>
         )}

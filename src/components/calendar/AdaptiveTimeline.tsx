@@ -16,7 +16,6 @@ interface AdaptiveTimelineProps {
 type LayoutType = 'branching' | 'swimlane' | 'stacked' | 'matrix';
 
 const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event, forceLayout = 'auto' }) => {
-    const agenda = event.agenda || [];
     const [userLayout, setUserLayout] = useState<LayoutType | null>(null);
     const [isMobile, setIsMobile] = useState(false);
     
@@ -30,6 +29,7 @@ const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event, forceLayout = 'aut
     
     // Analyze agenda characteristics
     const analysis = useMemo(() => {
+        const agenda = event.agenda || [];
         if (agenda.length === 0) return null;
         
         // Group by time slots to find max concurrent events
@@ -59,7 +59,7 @@ const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event, forceLayout = 'aut
             isDense: agenda.length > 20,
             isMultiDay: dayCount > 1
         };
-    }, [agenda]);
+    }, [event.agenda]);
     
     // Determine optimal layout
     const optimalLayout = useMemo((): LayoutType => {

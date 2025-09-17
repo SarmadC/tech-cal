@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { Event } from '@/types';
-import { MaterialIcon } from '@/components/ui/Icon';
+import { Users, Calendar, MapPin } from '@phosphor-icons/react';
 
 export interface TodayTaskCardProps {
   event: Event;
@@ -147,7 +147,7 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
             {/* Show attendee count if available */}
             {hasAttendees && (
               <div className="attendee-count" role="listitem" aria-label={`${attendeeCount} attendees`}>
-                <MaterialIcon name="people" size={16} />
+                <Users size={16} />
                 <span className="count-text">{attendeeCount}</span>
               </div>
             )}
@@ -185,7 +185,7 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
       
       <div className="task-time-section" role="region" aria-labelledby={`task-title-${event.id}`}>
         <div className="task-start-date">
-          <MaterialIcon name="event" size={14} />
+          <Calendar size={14} />
           <span className="time-value">{new Date(event.startTime).toLocaleDateString('en-US', { 
             month: 'short', 
             day: 'numeric' 
@@ -195,7 +195,7 @@ const TodayTaskCard: React.FC<TodayTaskCardProps> = ({
 
       {event.location && (
         <div className="task-location">
-          <MaterialIcon name="location" size={14} />
+          <MapPin size={14} />
           <span>{event.location}</span>
         </div>
       )}
