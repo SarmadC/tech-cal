@@ -149,21 +149,15 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     // Helper function to render individual event cards
     const renderEventCard = (item: AgendaItem) => (
         <>
-            {/* Header with type and individual time */}
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <span>
-                        {formatTime(item.startTime)}
-                        {item.endTime && ` - ${formatTime(item.endTime)}`}
-                    </span>
-                </div>
+            {/* Tag positioned absolutely in top-right */}
+            <div className="absolute top-3 right-3">
                 <span className={`px-2 py-1 text-xs font-medium rounded-md border ${getTypeColor(item.type)}`}>
-                    {item.type}
+                    {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                 </span>
             </div>
             
             {/* Title */}
-            <h5 className="text-white font-medium mb-2">
+            <h5 className="text-white font-medium mb-2 pr-20">
                 {item.title}
             </h5>
             
@@ -328,7 +322,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                         {/* Parallel events layout */}
                                         {cluster.items.length === 1 ? (
                                             /* Single event */
-                                            <div className="bg-gray-800/40 border border-gray-700/60 rounded-lg p-4">
+                                            <div className="relative bg-gray-800/40 border border-gray-700/60 rounded-lg p-4">
                                                 {renderEventCard(cluster.items[0])}
                                             </div>
                                         ) : (
@@ -340,7 +334,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                                         {itemIndex > 0 && (
                                                             <div className="absolute -left-8 top-6 w-6 h-px bg-gray-600"></div>
                                                         )}
-                                                        <div className="bg-gray-800/40 border border-gray-700/60 rounded-lg p-4 ml-4">
+                                                        <div className="relative bg-gray-800/40 border border-gray-700/60 rounded-lg p-4 ml-4">
                                                             {renderEventCard(item)}
                                                         </div>
                                                     </div>
