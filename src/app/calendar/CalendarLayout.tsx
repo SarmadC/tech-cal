@@ -18,7 +18,7 @@ import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
 import { useCalendar } from '@/contexts';
 import { Event, Json } from '@/types';
 
-type CalendarViewType = 'month' | 'week' | 'day';
+type CalendarViewType = 'month' | 'week' | 'day' | 'discover';
 
 export interface CalendarLayoutContext {
     view: string;
@@ -115,7 +115,7 @@ export function CalendarLayout({
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    const view = (searchParams.get('view') as CalendarViewType) || 'month';
+    const view = (searchParams.get('view') as CalendarViewType) || 'discover';
 
     const dateParam = searchParams.get('date');
 
@@ -259,7 +259,12 @@ export function CalendarLayout({
                     currentDate={localDate}
                     categories={categories}
                     profile={profile}
+                    trackedEvents={[]} // Will be passed from parent with enriched events
                     onEventSelect={onEventSelect}
+                    onEventTrack={async (_event) => {
+                        // This should be handled by parent component
+                        console.warn('Event tracking should be handled by parent');
+                    }}
                     onDateChange={handleDateChange}
                 />
             </div>
@@ -291,7 +296,7 @@ export function CalendarLayout({
                 {!useNewMobileViews && (
                 <div className="md:hidden">
                     <MobileBottomTabNavigation
-                        currentView={view}
+                        currentView={view === 'discover' ? 'month' : view as 'month' | 'week' | 'day'}
                         onViewChange={handleViewChange}
                         onToggleSidebar={onToggleSidebar || (() => {})}
                         onToggleFilters={handleToggleFilters}

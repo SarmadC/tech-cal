@@ -4,18 +4,20 @@ import React from 'react';
 import { EventClickArg } from '@fullcalendar/core';
 import FullCalendar from '@fullcalendar/react';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
-import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
+import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance, TrackedEvent } from '@/types';
 
 // Web (Desktop) Components
 // import CalendarWithPreview from '../CalendarWithPreview';
 import TechCalendarMonthView from '../TechCalendarMonthView';
 import TechCalendarWeekView from '../TechCalendarWeekView';
 import { TechCalendarDayView } from '../TechCalendarDayView';
+import DesktopDiscoveryView from '../desktop/discovery/DesktopDiscoveryView';
 
-// Mobile Components (to be created)
+// Mobile Components
 import MobileCalendarWeekView from '../mobile/MobileCalendarWeekView';
 import MobileCalendarDayView from '../mobile/MobileCalendarDayView';
 import MobileCalendarMonthView from '../mobile/MobileCalendarMonthView';
+import MobileTodayView from '../mobile/MobileTodayView';
 
 export interface AdaptiveCalendarProps {
   view: string;
@@ -25,8 +27,10 @@ export interface AdaptiveCalendarProps {
   initialDate: Date;
   categories: EventType[];
   profile: AppProfile | null;
+  trackedEvents?: TrackedEvent[];
   onEventSelect?: (event: Event | MultiDayEventInstance) => void;
   onEventClick?: (clickInfo: EventClickArg) => void;
+  onTrackEvent?: (event: Event) => void;
   onRefresh?: () => Promise<void>;
   calendarRef?: React.RefObject<FullCalendar | null>;
   className?: string;
@@ -41,8 +45,10 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
   initialDate,
   categories,
   profile,
+  trackedEvents = [],
   onEventSelect,
   onEventClick,
+  onTrackEvent,
   onRefresh,
   calendarRef,
   className = '',
@@ -61,6 +67,22 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
   if (useMobileVersion) {
     // Mobile-optimized components
     switch (view) {
+      case 'discover':
+      case 'today':
+        return (
+          <MobileTodayView
+            events={events as Event[]}
+            currentDate={initialDate}
+            categories={categories}
+            profile={profile}
+            trackedEvents={trackedEvents}
+            onEventSelect={onEventSelect as (event: Event) => void}
+            onTrackEvent={onTrackEvent}
+            showDiscoveryMode={true}
+            className={className}
+          />
+        );
+
       case 'week':
         return (
           <MobileCalendarWeekView
@@ -115,6 +137,20 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
 
   // Desktop/Web-optimized components (existing)
   switch (view) {
+    case 'discover':
+    case 'today':
+      return (
+        <DesktopDiscoveryView
+          events={events as Event[]}
+          categories={categories}
+          profile={profile}
+          trackedEvents={trackedEvents}
+          onEventSelect={onEventSelect as (event: Event) => void}
+          onTrackEvent={onTrackEvent}
+          className={className}
+        />
+      );
+
     case 'week':
       return (
         <TechCalendarWeekView

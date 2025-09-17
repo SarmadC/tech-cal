@@ -3,9 +3,9 @@
 import { useMemo, useCallback, useRef, useReducer, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
-import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { createClient } from '@/utils/supabase/client';
 import { formatDateForURL } from '@/utils/dateUtils';
@@ -16,9 +16,10 @@ import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCal
 
 import { useSmartFilters } from '@/hooks/useSmartFilters';
 
-import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking, MultiDayEvent } from '@/types';
+import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking, MultiDayEvent, EVENT_STATUS } from '@/types';
 import { UserEventService } from '@/services/userEventService';
 import { useAuth, CalendarProvider } from '@/contexts';
+import { useTrackedEventIds } from '@/hooks/useTrackedEventsUnified';
 
 const EventDetailPanelDynamic = dynamic(
     () => import('@/components/calendar/EventDetailPanel'),
@@ -103,7 +104,7 @@ function useCalendarUIState() {
 
 // Custom hook for event data management
 function useEventData(initialEvents: (Event | MultiDayEvent)[], profile: AppProfile | null) {
-    const { user } = useAuth();
+    const { user: _user } = useAuth();
     
     const {
         filters,
@@ -114,23 +115,12 @@ function useEventData(initialEvents: (Event | MultiDayEvent)[], profile: AppProf
         activeFilterCount
     } = useSmartFilters(initialEvents, profile);
 
-    const { data: trackedEventIds = [] } = useQuery({
-        queryKey: ['allTrackedEventIds', user?.id],
-        queryFn: async () => {
-            if (!user?.id) return [];
-            const supabase = createClient();
-            const result = await UserEventService.getAllTrackedEventIds(user.id, supabase);
-            return result;
-        },
-        enabled: !!user?.id,
-        staleTime: 5 * 60 * 1000,
-    });
+    const { trackedEventIds } = useTrackedEventIds();
 
     const enrichedEvents: TrackedEvent[] = useMemo(() => {
-        const trackedSet = new Set(trackedEventIds);
 
         const result = filteredEvents.map(event => {
-            const isTracked = trackedSet.has(event.id);
+            const isTracked = trackedEventIds.has(event.id);
             const enriched = enrichWithTracking(event, isTracked);
             return enriched;
         });
@@ -268,6 +258,9 @@ export default function CalendarClientView({
         router.push(`/calendar?${params.toString()}`, { scroll: false });
     }, [searchParams, router, actions]);
 
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
+    
     const renderCalendarContent = (context: CalendarLayoutContext) => {
         return (
             <AdaptiveCalendarRenderer
@@ -278,8 +271,28 @@ export default function CalendarClientView({
                 initialDate={context.date}
                 categories={initialCategories}
                 profile={profile}
+                trackedEvents={eventData.enrichedEvents.filter(e => e.isTracked)}
                 onEventSelect={handleSelectEvent}
                 onEventClick={handleEventClick}
+                onTrackEvent={async (event) => {
+                    if (!user) return;
+                    
+                    try {
+                        const supabase = createClient();
+                        await UserEventService.trackEvent(
+                            user.id, 
+                            event.id, 
+                            EVENT_STATUS.BOOKMARKED, 
+                            undefined, 
+                            supabase
+                        );
+                        // Invalidate tracked events queries to refresh UI
+                        queryClient.invalidateQueries({ queryKey: ['trackedEvents', user.id] });
+                        queryClient.invalidateQueries({ queryKey: ['lightweightTrackedEvents', user.id] });
+                    } catch (error) {
+                        console.error('Failed to track event:', error);
+                    }
+                }}
                 calendarRef={context.calendarRef}
             />
         );

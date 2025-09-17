@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation'; // Standard, top-level import
 import ProfileSettingsForm from './ProfileSettingsForm';
+import CareerProfileManager from '@/components/profile/CareerProfileManager';
 import { AppProfile } from '@/types';
 
 // The component itself is unchanged
@@ -13,11 +14,14 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
 
     const tabs = [
         { id: 'profile', label: 'Profile' },
+        { id: 'career', label: 'Career Profile' },
         { id: 'billing', label: 'Billing' },
     ];
 
     const renderContent = () => {
         switch (activeTab) {
+            case 'career':
+                return <CareerProfileManager />;
             case 'billing':
                 return <div className="p-6">Billing and subscription management goes here.</div>;
             case 'profile':

@@ -1,0 +1,126 @@
+/* Desktop Discovery Styles */
+.desktop-discovery-view {
+  @apply p-6 max-w-7xl mx-auto;
+}
+
+.discovery-header {
+  @apply mb-8 text-center;
+}
+
+.discovery-title-section {
+  @apply max-w-2xl mx-auto;
+}
+
+.discovery-title {
+  @apply text-3xl font-bold text-gray-900 mb-2;
+}
+
+.discovery-subtitle {
+  @apply text-lg text-gray-600;
+}
+
+/* Desktop Grid Layout */
+.discovery-grid {
+  @apply grid grid-cols-1 lg:grid-cols-3 gap-8;
+}
+
+.discovery-primary {
+  @apply lg:col-span-2 space-y-8;
+}
+
+.discovery-secondary {
+  @apply lg:col-span-1 space-y-6;
+}
+
+.discovery-section-wrapper {
+  @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
+}
+
+/* Desktop-specific section styles */
+.desktop-for-you .discovery-cards-container {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+}
+
+.desktop-trending .discovery-cards-container {
+  @apply space-y-4;
+}
+
+.desktop-trending .featured-trending {
+  @apply mb-6;
+}
+
+.desktop-trending .trending-list {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+}
+
+.desktop-new .discovery-cards-container {
+  @apply space-y-3;
+}
+
+.desktop-quick-wins .discovery-cards-container {
+  @apply space-y-3;
+}
+
+/* Desktop discovery cards */
+.desktop-discovery-view .discovery-card {
+  @apply hover:shadow-md transition-shadow duration-200;
+}
+
+.desktop-discovery-view .discovery-card.featured {
+  @apply md:col-span-2;
+}
+
+/* Empty state */
+.discovery-empty-state {
+  @apply flex items-center justify-center py-16;
+}
+
+.empty-content {
+  @apply text-center;
+}
+
+.empty-content h3 {
+  @apply text-xl font-semibold text-gray-900 mb-2;
+}
+
+.empty-content p {
+  @apply text-gray-600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .discovery-grid {
+    @apply grid-cols-1;
+  }
+  
+  .discovery-primary {
+    @apply col-span-1;
+  }
+  
+  .discovery-secondary {
+    @apply col-span-1;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-discovery-view {
+    @apply p-4;
+  }
+  
+  .discovery-header {
+    @apply mb-6;
+  }
+  
+  .discovery-title {
+    @apply text-2xl;
+  }
+  
+  .discovery-subtitle {
+    @apply text-base;
+  }
+  
+  .discovery-section-wrapper {
+    @apply p-4;
+  }
+}
+

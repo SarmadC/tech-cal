@@ -123,10 +123,30 @@ export function useSmartFilters(
         });
     };
 
-    const getEventPopularity = (_event: Event): 'trending' | 'high-attendance' | 'niche' => {
-        const random = Math.random();
-        if (random > 0.8) return 'trending';
-        if (random > 0.5) return 'high-attendance';
+    const getEventPopularity = (event: Event): 'trending' | 'high-attendance' | 'niche' => {
+        // Base popularity on actual event metrics
+        const attendeeCount = event.attendeeCount || 0;
+        const hasRegistration = Boolean(event.registrationUrl);
+        const isRecentlyCreated = event.createdAt ? 
+          (new Date().getTime() - new Date(event.createdAt).getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
+        
+        // Calculate popularity score
+        let popularityScore = 0;
+        if (attendeeCount > 500) popularityScore += 0.4;
+        else if (attendeeCount > 100) popularityScore += 0.2;
+        
+        if (hasRegistration) popularityScore += 0.2;
+        if (isRecentlyCreated) popularityScore += 0.2;
+        
+        // Major organizers boost
+        const orgName = event.organization?.name?.toLowerCase() || '';
+        const majorOrgs = ['google', 'microsoft', 'amazon', 'meta', 'apple'];
+        if (majorOrgs.some(org => orgName.includes(org))) {
+          popularityScore += 0.3;
+        }
+        
+        if (popularityScore >= 0.6) return 'trending';
+        if (popularityScore >= 0.3) return 'high-attendance';
         return 'niche';
     };
 
@@ -141,13 +161,46 @@ export function useSmartFilters(
         return 'short';
     };
 
-    const hasNetworkConnections = (_event: Event): boolean => {
-        return Math.random() > 0.7;
+    const hasNetworkConnections = (event: Event): boolean => {
+        // Check if event has networking potential based on type and size
+        const eventType = event.category?.name?.toLowerCase() || '';
+        const attendeeCount = event.attendeeCount || 0;
+        
+        // High networking potential events
+        if (eventType.includes('networking') || eventType.includes('meetup')) return true;
+        if (eventType.includes('conference') && attendeeCount > 200) return true;
+        if (eventType.includes('summit') && attendeeCount > 100) return true;
+        
+        // Medium networking potential
+        if (attendeeCount > 500) return true;
+        if (eventType.includes('workshop') && attendeeCount > 50) return true;
+        
+        return false;
     };
 
-    const isRecommendedForUser = (_event: Event, profile: AppProfile | null): boolean => {
+    const isRecommendedForUser = (event: Event, profile: AppProfile | null): boolean => {
         if (!profile) return false;
-        return Math.random() > 0.6;
+        
+        // Basic recommendation logic to avoid circular dependency
+        const preferences = profile.preferences as Record<string, unknown>;
+        const careerProfile = preferences?.careerProfile as Record<string, unknown>;
+        
+        if (!careerProfile) {
+          // Fallback: basic category matching
+          const eventText = `${event.title} ${event.description || ''}`.toLowerCase();
+          const commonTechTerms = ['react', 'javascript', 'python', 'ai', 'machine learning', 'data'];
+          return commonTechTerms.some(term => eventText.includes(term));
+        }
+        
+        // Simple skill matching
+        const eventText = `${event.title} ${event.description || ''}`.toLowerCase();
+        const primarySkills = (careerProfile.primarySkills as string[]) || [];
+        const skillsToLearn = (careerProfile.skillsToLearn as string[]) || [];
+        const userSkills = [...primarySkills, ...skillsToLearn];
+        
+        return userSkills.some((skill: string) => 
+          eventText.includes(skill.toLowerCase())
+        );
     };
 
     // Filter actions

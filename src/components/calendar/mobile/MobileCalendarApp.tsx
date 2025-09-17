@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Event, EventType, AppProfile } from '@/types';
+import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { useSmartFilters } from '@/hooks/useSmartFilters';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import MobileTopNavigation, { MobileViewType } from './MobileTopNavigation';
@@ -18,7 +18,9 @@ export interface MobileCalendarAppProps {
   currentDate: Date;
   categories: EventType[];
   profile: AppProfile | null;
+  trackedEvents?: TrackedEvent[];
   onEventSelect?: (event: Event) => void;
+  onEventTrack?: (event: Event) => Promise<void>;
   onDateChange?: (date: Date) => void;
   className?: string;
 }
@@ -28,12 +30,25 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
   currentDate,
   categories,
   profile,
+  trackedEvents = [],
   onEventSelect,
+  onEventTrack,
   onDateChange,
   className = ''
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // Use events as TrackedEvent[] if they're already enriched, otherwise convert
+  const enrichedEvents: TrackedEvent[] = React.useMemo(() => {
+    // Check if events are already TrackedEvent objects
+    if (events.length > 0 && 'isTracked' in events[0]) {
+      return events as TrackedEvent[];
+    }
+    // Otherwise, convert to TrackedEvent format
+    const trackedSet = new Set(trackedEvents.map(te => te.id));
+    return events.map(event => enrichWithTracking(event, trackedSet.has(event.id)));
+  }, [events, trackedEvents]);
   
   // Smart filters integration
   const {
@@ -43,7 +58,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
     resetFilters,
     applyQuickFilter,
     activeFilterCount
-  } = useSmartFilters(events, profile);
+  } = useSmartFilters(enrichedEvents, profile);
 
   // Get mobile view from URL, default to 'today'
   const getMobileViewFromURL = useCallback((): MobileViewType => {
@@ -196,7 +211,12 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
               currentDate={localCurrentDate}
               categories={categories}
               profile={profile}
+              trackedEvents={enrichedEvents.filter(e => e.isTracked)}
               onEventSelect={onEventSelect}
+              onTrackEvent={onEventTrack || (async () => {
+                console.warn('Event tracking not implemented in parent component');
+              })}
+              showDiscoveryMode={true}
             />
           ) : currentView === 'month' ? (
             <MobileEnhancedMonthView

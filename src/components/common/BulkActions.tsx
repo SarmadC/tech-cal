@@ -2,13 +2,12 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEventTracking } from '@/hooks/useEventTracking';
+import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { EventService } from '@/services/eventServices';
 import { LoadingButton } from '@/components/Loading';
 import { toast } from 'sonner';
 
 import { createClient } from '@/utils/supabase/client';
-import { EventStatus } from '@/types';
 
 interface BulkActionsProps {
     selectedEvents: Set<string>;
@@ -17,12 +16,12 @@ interface BulkActionsProps {
     className?: string;
 }
 
-type LocalOperation = 'export' | 'share';
+type LocalOperation = 'export' | 'share' | 'tracking';
 
 export default function BulkActions({
     selectedEvents,
     onClearSelection,
-    onBulkComplete,
+    onBulkComplete: _onBulkComplete,
     className = ''
 }: BulkActionsProps) {
     const [supabase] = useState(() => createClient());
@@ -30,22 +29,25 @@ export default function BulkActions({
     const selectedEventArray = Array.from(selectedEvents);
     const selectedCount = selectedEventArray.length;
 
-    const { bulkTrackEvents, isLoading: isBulkTracking } = useEventTracking();
+    const { trackEvent, isLoading: isBulkTracking } = useTrackedEventsUnified();
     const [localLoading, setLocalLoading] = useState<LocalOperation | null>(null);
 
-    const handleBulkTrack = () => {
+    const handleBulkTrack = async () => {
         if (!user || selectedCount === 0) return;
-        bulkTrackEvents(
-            { eventIds: selectedEventArray, status: 'bookmarked' as EventStatus },
-            {
-                onSuccess: (response) => {
-                    // CHANGED: The `response` is now the data object directly.
-                    if (response?.tracked && response.tracked > 0) {
-                        onBulkComplete();
-                    }
-                }
+        
+        setLocalLoading('tracking');
+        try {
+            for (const eventId of selectedEventArray) {
+                await trackEvent(eventId);
             }
-        );
+            toast.success(`Successfully tracked ${selectedCount} events`);
+            onClearSelection();
+        } catch (error) {
+            console.error('Bulk track error:', error);
+            toast.error('Failed to track some events');
+        } finally {
+            setLocalLoading(null);
+        }
     };
 
     const handleBulkUntrack = () => {

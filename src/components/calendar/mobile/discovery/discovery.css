@@ -1,0 +1,560 @@
+/* Discovery Section Styles - Inspired by Landing Page Design System */
+
+/* Shadow Variables - Matching Landing Page */
+:root {
+  --shadow-enhanced: 
+    0 1px 3px rgba(6, 0, 16, 0.12),
+    0 1px 2px rgba(6, 0, 16, 0.24);
+  --shadow-hover: 
+    0 4px 14px rgba(6, 0, 16, 0.25),
+    0 2px 8px rgba(11, 16, 32, 0.3),
+    0 1px 3px rgba(11, 16, 32, 0.2);
+  --shadow-dramatic: 
+    0 10px 40px rgba(6, 0, 16, 0.35),
+    0 4px 16px rgba(11, 16, 32, 0.35),
+    0 2px 8px rgba(6, 0, 16, 0.25);
+}
+.discovery-section {
+  @apply mb-12 px-4;
+  position: relative;
+}
+
+.discovery-section-header {
+  @apply flex items-center justify-between mb-6;
+  position: relative;
+  z-index: 10;
+}
+
+.section-title-container {
+  @apply flex items-center gap-4;
+}
+
+.section-icon {
+  @apply flex items-center justify-center w-12 h-12 rounded-lg;
+  background: linear-gradient(135deg, rgba(25, 30, 50, 0.8) 0%, rgba(35, 40, 60, 0.9) 100%);
+  color: var(--landing-text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.section-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, var(--landing-primary) 0%, var(--landing-secondary) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.section-icon > * {
+  position: relative;
+  z-index: 1;
+}
+
+.discovery-section:hover .section-icon {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, rgba(40, 45, 65, 0.9) 0%, rgba(50, 55, 75, 0.95) 100%);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    var(--shadow-hover),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.discovery-section:hover .section-icon::before {
+  opacity: 0.2;
+}
+
+.section-title {
+  font-family: var(--font-dm-sans);
+  @apply text-xl font-semibold text-foreground-primary;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.25rem;
+}
+
+.section-subtitle {
+  font-family: var(--font-sans);
+  @apply text-sm text-foreground-secondary;
+  line-height: 1.6;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.view-all-button {
+  @apply flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground-primary hover:opacity-80 transition-all duration-300;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-family: var(--font-sans);
+}
+
+.view-all-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.view-all-text {
+  @apply text-sm;
+}
+
+.discovery-section-content {
+  @apply space-y-4;
+}
+
+/* Discovery Card Styles - Inspired by Landing Page Bento Cards */
+.discovery-card {
+  @apply relative flex flex-col gap-4 p-8 rounded-lg border border-subtle transition-all duration-300 cursor-pointer;
+  background: linear-gradient(135deg, rgba(20, 25, 45, 0.8) 0%, rgba(30, 35, 55, 0.9) 50%, rgba(20, 25, 45, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    var(--shadow-enhanced), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  will-change: transform, box-shadow;
+  position: relative;
+  overflow: hidden;
+  min-height: 280px;
+}
+
+.discovery-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.02) 1px, transparent 0),
+    radial-gradient(circle at 8px 8px, rgba(139, 92, 246, 0.05) 1px, transparent 0);
+  background-size: 16px 16px, 24px 24px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.discovery-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 
+    var(--shadow-dramatic), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, rgba(35, 40, 60, 0.9) 0%, rgba(45, 50, 70, 0.95) 50%, rgba(35, 40, 60, 0.9) 100%);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.discovery-card:hover::before {
+  opacity: 1;
+}
+
+.discovery-card.featured {
+  @apply p-10;
+  background: linear-gradient(135deg, rgba(25, 30, 50, 0.9) 0%, rgba(35, 40, 60, 0.95) 50%, rgba(25, 30, 50, 0.9) 100%);
+  border-color: rgba(255, 255, 255, 0.15);
+  min-height: 320px;
+}
+
+.discovery-card.compact {
+  @apply p-6 gap-3;
+  min-height: 200px;
+  flex-direction: row;
+}
+
+.discovery-card-visual {
+  @apply relative flex-shrink-0;
+}
+
+.event-image {
+  @apply rounded-lg object-cover;
+}
+
+.category-color-block {
+  @apply w-20 h-16 rounded-lg flex items-center justify-center text-white font-bold text-lg;
+}
+
+.discovery-card.compact .category-color-block {
+  @apply w-12 h-12 text-sm;
+}
+
+.discovery-badge {
+  @apply absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center;
+}
+
+.discovery-icon.trending {
+  @apply text-accent-primary;
+}
+
+.discovery-icon.new {
+  @apply text-accent-primary;
+}
+
+.discovery-icon.personalized {
+  @apply text-accent-primary;
+}
+
+.discovery-card-content {
+  @apply flex-1 min-w-0;
+}
+
+.event-header {
+  @apply mb-2;
+}
+
+.event-title {
+  font-family: var(--font-dm-sans);
+  @apply font-semibold text-white text-xl leading-tight mb-3;
+  letter-spacing: -0.015em;
+  font-feature-settings: 'liga' 1, 'kern' 1;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.discovery-card.compact .event-title {
+  @apply text-lg;
+  font-family: var(--font-dm-sans);
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.discovery-reason {
+  font-family: var(--font-sans);
+  @apply text-sm font-medium mb-2;
+  color: rgba(139, 92, 246, 0.9);
+  letter-spacing: -0.01em;
+}
+
+.event-meta {
+  font-family: var(--font-sans);
+  @apply flex items-center gap-3 mb-3 text-sm;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: -0.01em;
+}
+
+.meta-item {
+  @apply flex items-center gap-1;
+}
+
+.duration-badge {
+  @apply px-3 py-1.5 rounded-full text-sm font-medium;
+  background: rgba(139, 92, 246, 0.2);
+  color: rgba(139, 92, 246, 0.9);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.event-details {
+  @apply flex items-center gap-3 mb-4 text-sm flex-wrap;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.detail-item {
+  @apply flex items-center gap-1;
+}
+
+.location-text {
+  @apply truncate max-w-24;
+}
+
+.location-indicator {
+  @apply ml-1 text-xs;
+}
+
+.location-indicator.local {
+  @apply text-accent-primary;
+}
+
+.location-indicator.regional {
+  @apply text-foreground-secondary;
+}
+
+.location-indicator.distant {
+  @apply text-foreground-tertiary;
+}
+
+.location-indicator.remote {
+  @apply text-foreground-muted;
+}
+
+.category-tag {
+  @apply px-3 py-1.5 rounded-full text-sm font-medium;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.card-actions {
+  @apply flex items-center gap-3 pt-4 border-t border-subtle mt-auto;
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.track-button {
+  @apply px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300;
+  background: linear-gradient(110deg, var(--landing-primary), 45%, var(--landing-secondary), 55%, var(--landing-primary));
+  background-size: 200% 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+.track-button:hover {
+  background-position: 100% 0;
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.learn-more-button {
+  @apply px-5 py-2.5 border border-subtle rounded-lg text-sm font-medium transition-all duration-300;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.15);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+.learn-more-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.trending-indicator {
+  @apply absolute top-2 right-2 w-6 h-6 bg-accent-primary text-white rounded-full flex items-center justify-center;
+}
+
+/* Section-specific Styles */
+
+/* For You Section */
+.for-you-card {
+  @apply border-default bg-background-secondary;
+}
+
+.for-you-card:hover {
+  @apply border-strong bg-background-elevated;
+}
+
+/* Trending Section */
+.trending-container {
+  @apply space-y-4;
+}
+
+.featured-trending {
+  @apply mb-4;
+}
+
+.trending-featured-card {
+  @apply bg-background-elevated border-strong;
+}
+
+.trending-list {
+  @apply space-y-2;
+}
+
+.trending-card {
+  @apply border-default bg-background-secondary;
+}
+
+.trending-stats {
+  @apply mt-4 pt-3 border-t border-subtle;
+}
+
+.stat-item {
+  @apply flex items-center gap-2 text-xs text-foreground-tertiary;
+}
+
+.stat-text {
+  @apply font-medium;
+}
+
+/* New This Week Section */
+.new-events-container {
+  @apply space-y-3;
+}
+
+.new-event-wrapper {
+  @apply relative;
+}
+
+.new-event-card {
+  @apply border-default bg-background-secondary;
+}
+
+.new-badge {
+  @apply absolute -top-2 -right-2 flex items-center gap-1 px-2 py-1 bg-accent-primary text-white text-xs font-bold rounded-full shadow-md;
+}
+
+.new-events-stats {
+  @apply mt-4 pt-3 border-t border-subtle;
+}
+
+/* Quick Wins Section */
+.quick-wins-container {
+  @apply grid grid-cols-1 gap-3;
+}
+
+.quick-win-card {
+  @apply border-default bg-background-secondary;
+}
+
+.quick-wins-info {
+  @apply mt-4 pt-3 border-t border-subtle flex items-center gap-2 text-xs text-foreground-tertiary;
+}
+
+.info-text {
+  @apply font-medium;
+}
+
+/* Empty States */
+.empty-state {
+  @apply flex flex-col items-center justify-center py-8 text-center;
+}
+
+.empty-icon {
+  @apply text-foreground-muted mb-3;
+}
+
+.empty-text {
+  @apply text-sm text-foreground-secondary max-w-xs;
+}
+
+/* Discovery Cards Container */
+.discovery-cards-container {
+  @apply space-y-3;
+}
+
+/* Error Boundary Styles */
+.discovery-error-boundary {
+  @apply flex items-center justify-center py-8 px-4;
+}
+
+.error-content {
+  @apply text-center max-w-sm;
+}
+
+.error-icon {
+  @apply text-red-500 mx-auto mb-3;
+}
+
+.error-title {
+  @apply text-lg font-semibold text-gray-900 mb-2;
+}
+
+.error-message {
+  @apply text-sm text-gray-600 mb-4;
+}
+
+.error-retry-button {
+  @apply flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto;
+}
+
+/* Responsive adjustments */
+@media (min-width: 640px) {
+  .quick-wins-container {
+    @apply grid-cols-2;
+  }
+  
+  .discovery-cards-container {
+    @apply space-y-4;
+  }
+  
+  .discovery-card {
+    @apply gap-4;
+  }
+}
+
+/* Empty State Styling */
+.discovery-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem 1rem;
+  min-height: 120px;
+}
+
+.discovery-empty-state {
+  @apply text-center py-8;
+}
+
+.discovery-empty-state .empty-icon {
+  color: var(--foreground-muted);
+  margin-bottom: 1.5rem;
+  opacity: 0.6;
+}
+
+.discovery-empty-state .empty-title {
+  font-family: var(--font-dm-sans);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground-primary);
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.015em;
+}
+
+.discovery-empty-state .empty-subtitle {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--foreground-secondary);
+  line-height: 1.6;
+  max-width: 320px;
+  margin: 0 auto;
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 768px) {
+  .discovery-empty-state {
+    padding: 3rem 2rem;
+    min-height: 160px;
+  }
+  
+  .discovery-empty-state .empty-title {
+    font-size: 1.125rem;
+  }
+}
+
+/* Discovery Algorithm Error Boundary */
+.discovery-algorithm-error {
+  @apply bg-red-50 border border-red-200 rounded-lg p-6 my-4;
+}
+
+.discovery-algorithm-error .error-content {
+  @apply text-center;
+}
+
+.discovery-algorithm-error .error-icon {
+  @apply text-red-500 mx-auto mb-4;
+}
+
+.discovery-algorithm-error .error-title {
+  @apply text-lg font-semibold text-red-800 mb-3;
+}
+
+.discovery-algorithm-error .error-message {
+  @apply text-sm text-red-700 mb-4 max-w-md mx-auto;
+}
+
+.discovery-algorithm-error .error-actions {
+  @apply space-y-4;
+}
+
+.discovery-algorithm-error .error-retry-button {
+  @apply flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors mx-auto;
+}
+
+.discovery-algorithm-error .error-suggestions {
+  @apply flex flex-col items-center gap-2 text-xs text-red-600 bg-red-100 rounded-lg p-3;
+}
+
+.discovery-algorithm-error .suggestion-icon {
+  @apply text-red-500;
+}
+
+.discovery-algorithm-error .suggestions-list {
+  @apply flex flex-col gap-1 text-left;
+}
+
+.discovery-algorithm-error .suggestion-title {
+  @apply font-semibold mb-2;
+}

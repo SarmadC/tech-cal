@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { EventService } from '@/services/eventServices';
-import { UserEventService } from '@/services/userEventService';
 import { EventTypeService } from '@/services/eventTypeService';
 import { createClient } from '@/utils/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,6 +14,9 @@ import { CalendarIcon, ClockIcon, StarIcon, TargetIcon, UsersIcon, MedalIcon, Sp
 // 1. UPDATE IMPORTS: Use the new, canonical type names.
 import type { TrackedEventRecord, EventType, Event } from '@/types';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import CareerProfilePrompt from '@/components/calendar/mobile/discovery/CareerProfilePrompt';
+import { CareerProfileService } from '@/services/careerProfileService';
+import { useLightweightTrackedEvents } from '@/hooks/useTrackedEventsUnified';
 import { formatDateTime } from '@/utils/dateUtils';
 
 // 2. UPDATE PROPS: The interface now uses the new types.
@@ -38,28 +40,21 @@ const SectionFallback = () => (
 );
 
 export default function DashboardClientView({
-    initialTrackedEvents,
+    initialTrackedEvents: _initialTrackedEvents,
     initialEventTypes,
     initialUpcomingEvents
 }: DashboardClientViewProps) {
     const [supabase] = useState(() => createClient());
-    const { user, profile } = useAuth();
+    const { user: _user, profile } = useAuth();
 
     const {
         data: trackedEvents,
-        isError: isTrackedError,
+        isLoading: _isTrackedLoading,
         error: trackedError,
         refetch: refetchTracked,
-        // 3. UPDATE USEQUERY TYPE: The hook is now strongly typed to expect `TrackedEventRecord[]`.
-    } = useQuery<TrackedEventRecord[]>({
-        queryKey: ['lightweightTrackedEvents', user?.id],
-        queryFn: () => {
-            if (!user) return [];
-            return UserEventService.getLightweightTrackedEvents(user.id, supabase);
-        },
-        enabled: !!user,
-        initialData: initialTrackedEvents,
-    });
+    } = useLightweightTrackedEvents();
+
+    const isTrackedError = !!trackedError;
 
     const {
         data: eventTypes,
@@ -160,6 +155,13 @@ export default function DashboardClientView({
                         </div>
                     </div>
                 </ErrorBoundary>
+
+                {/* Career Profile Prompt */}
+                {profile && !CareerProfileService.hasCompletedOnboarding(profile) && (
+                    <ErrorBoundary fallback={<SectionFallback />}>
+                        <CareerProfilePrompt profile={profile} />
+                    </ErrorBoundary>
+                )}
 
                 <ErrorBoundary fallback={<SectionFallback />}>
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

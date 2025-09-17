@@ -10,7 +10,7 @@ import { formatDateForURL } from '@/utils/dateUtils';
 import QuickDatePicker from '@/components/calendar/QuickDatePicker';
 import { Event } from '@/types/events';
 
-type CalendarViewType = 'month' | 'week' | 'day';
+type CalendarViewType = 'month' | 'week' | 'day' | 'discover';
 
 export interface CalendarHeaderProps {
     currentDate: Date;
@@ -185,7 +185,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
 
                 {/* Desktop View Switcher Buttons */}
                 <div className="hidden md:flex items-center bg-background-tertiary p-1 rounded-lg">
-                    {(['month', 'week', 'day'] as CalendarViewType[]).map(v => (
+                    {(['discover', 'month', 'week', 'day'] as CalendarViewType[]).map(v => (
                         <button
                             key={v}
                             onClick={() => handleViewChange(v)} // 6. USE THE NEW HANDLER
@@ -231,14 +231,14 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                 </div>
 
                 {/* Themed Quick Date Picker Popover */}
-                <QuickDatePicker
-                    currentDate={currentDate}
-                    onDateChange={handleQuickDateChange}
-                    view={view}
-                    isOpen={isDatePickerOpen}
-                    onClose={closeDatePicker}
-                    events={events}
-                />
+                    <QuickDatePicker
+                        currentDate={currentDate}
+                        onDateChange={handleQuickDateChange}
+                        view={view === 'discover' ? 'month' : view}
+                        isOpen={isDatePickerOpen}
+                        onClose={closeDatePicker}
+                        events={events}
+                    />
                 {user ? (
                     <UserMenu />
                 ) : (

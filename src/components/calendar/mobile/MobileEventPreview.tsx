@@ -3,8 +3,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Event, EventStatus, isTrackedEvent, TrackedEvent, MultiDayEventInstance, EventType } from '@/types';
-import { useEventTracking } from '@/hooks/useEventTracking';
+import { Event, isTrackedEvent, TrackedEvent, MultiDayEventInstance, EventType } from '@/types';
+import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
@@ -28,7 +28,7 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
   categories = []
 }) => {
   const { user } = useAuth();
-  const { trackEvent, untrackEvent, isLoading } = useEventTracking();
+    const { trackEvent, untrackEvent, isLoading } = useTrackedEventsUnified();
   const { handleShare: originalHandleShare, googleCalendarLink, handleIcsDownload } = useEventActions(event);
   const previewRef = useRef<HTMLDivElement>(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
@@ -72,7 +72,7 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
   const isVirtual = event.livestreamUrl || event.location?.toLowerCase().includes('virtual');
 
   // Actions
-  const handleTrackEvent = () => {
+  const handleTrackEvent = async () => {
     if (!user) {
       toast.error('Please sign in to track events');
       return;
@@ -82,12 +82,9 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
     const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
 
     if (isTracked) {
-      untrackEvent({ eventId: trackingEventId });
+      await untrackEvent(trackingEventId);
     } else {
-      trackEvent({
-        eventId: trackingEventId,
-        status: 'bookmarked' as EventStatus,
-      });
+      await trackEvent(trackingEventId);
     }
 
     // Notify parent component

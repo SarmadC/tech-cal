@@ -6,8 +6,8 @@ import {
     ShareNetworkIcon, PlayCircleIcon, GlobeIcon, CalendarIcon
 } from '@phosphor-icons/react';
 // 1. UPDATE IMPORTS: Use the new types and the type guard.
-import { Event, EventStatus, isTrackedEvent, TrackedEvent, MultiDayEventInstance } from '@/types';
-import { useEventTracking } from '@/hooks/useEventTracking';
+import { Event, isTrackedEvent, TrackedEvent, MultiDayEventInstance } from '@/types';
+import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
@@ -33,7 +33,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     isPinned = false
 }) => {
     const { user } = useAuth();
-    const { trackEvent, untrackEvent, isLoading } = useEventTracking();
+    const { trackEvent, untrackEvent, isLoading } = useTrackedEventsUnified();
 
     // Use the tracking status directly from the event prop instead of local state
     const isTracked = isTrackedEvent(event) ? event.isTracked : false;
@@ -78,7 +78,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     const isVirtual = event.livestreamUrl || event.location?.toLowerCase().includes('virtual');
 
     // Actions
-    const handleTrackEvent = () => {
+    const handleTrackEvent = async () => {
         
         if (!user) {
             toast.error('Please sign in to track events');
@@ -90,12 +90,9 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
         
 
         if (isTracked) {
-            untrackEvent({ eventId: trackingEventId });
+            await untrackEvent(trackingEventId);
         } else {
-            trackEvent({
-                eventId: trackingEventId,
-                status: 'bookmarked' as EventStatus,
-            });
+            await trackEvent(trackingEventId);
         }
     };
 

@@ -439,6 +439,19 @@ input::placeholder, textarea::placeholder {
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Discovery Mode Enhancements */
+  .discovery-feed {
+    @apply pb-6;
+  }
+
+  .discovery-empty {
+    @apply text-center py-12;
+  }
+
+  .discovery-empty .empty-subtitle {
+    @apply text-xs text-foreground-secondary mt-2;
+  }
 }
 
 /* ============================================== */
