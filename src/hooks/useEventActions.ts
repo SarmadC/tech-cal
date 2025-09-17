@@ -14,19 +14,34 @@ import { formatToUTC } from '@/utils/dateUtils';
 // 2. UPDATE SIGNATURE: The hook now accepts the `Event` type.
 export function useEventActions(event: Event) {
     /**
-     * Copies a shareable link for the event to the user's clipboard and shows a confirmation toast.
+     * Enhanced share function with Web Share API support for all devices
      */
-    const handleShare = () => {
-        const link = `${window.location.origin}/events/${event.id}`;
+    const handleShare = async () => {
+        const shareUrl = event.sourceUrl || `${window.location.origin}/events/${event.id}`;
 
-        navigator.clipboard.writeText(link)
-            .then(() => {
-                toast.success('Share link copied to clipboard!');
-            })
-            .catch(err => {
-                console.error('Failed to copy text: ', err);
-                toast.error('Could not copy link to clipboard.');
-            });
+        // Check if Web Share API is supported (works on both mobile and desktop)
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: event.title,
+                    text: `Check out this tech event: ${event.title}${event.description ? `\n\n${event.description}` : ''}`,
+                    url: shareUrl
+                });
+                return;
+            } catch (error) {
+                // User cancelled or share failed - fallback to clipboard
+                console.log('Share cancelled or failed:', error);
+            }
+        }
+
+        // Fallback to clipboard if Web Share API not supported or failed
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            toast.success('Event link copied to clipboard');
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            toast.error('Could not copy link to clipboard.');
+        }
     };
 
     /**

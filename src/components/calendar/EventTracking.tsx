@@ -86,71 +86,75 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
         );
     }
 
+    // Determine current attendance state and next action
+    const getAttendanceState = () => {
+        if (!currentStatus.isTracked) return { state: 'none', label: 'Not attending', nextAction: 'attending' };
+        
+        // Check if we have a status property (from optimisticStatus)
+        const status = 'status' in currentStatus ? currentStatus.status : null;
+        
+        if (status === 'attending') return { state: 'attending', label: 'Attending', nextAction: 'attended' };
+        if (status === 'attended') return { state: 'attended', label: 'Attended', nextAction: 'none' };
+        if (status === 'bookmarked') return { state: 'bookmarked', label: 'Bookmarked', nextAction: 'attending' };
+        
+        // Default to attending if tracked but no specific status
+        return { state: 'attending', label: 'Attending', nextAction: 'attended' };
+    };
+
+    const attendanceState = getAttendanceState();
+
+    const handleAttendanceToggle = async () => {
+        if (attendanceState.nextAction === 'none') {
+            // Remove tracking
+            await handleUntrackEvent();
+        } else {
+            // Set next state
+            await handleTrackEvent(attendanceState.nextAction as EventStatus);
+        }
+    };
+
+    const getToggleIcon = () => {
+        if (isLoading) return <CircleNotchIcon className="w-4 h-4 animate-spin" />;
+        
+        switch (attendanceState.state) {
+            case 'attending':
+                return <UserCheckIcon className="w-4 h-4" />;
+            case 'attended':
+                return <CheckIcon className="w-4 h-4" />;
+            case 'bookmarked':
+                return <StarIcon className="w-4 h-4" />;
+            default:
+                return <UserCheckIcon className="w-4 h-4" />;
+        }
+    };
+
+    const getToggleStyles = () => {
+        switch (attendanceState.state) {
+            case 'attending':
+                return 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600';
+            case 'attended':
+                return 'bg-green-600 hover:bg-green-700 text-white border-green-600';
+            case 'bookmarked':
+                return 'bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-600';
+            default:
+                return 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600';
+        }
+    };
+
     return (
         <div className="space-y-3">
-            {currentStatus.isTracked ? (
-                <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                        <CheckIcon className="w-5 h-5 text-zinc-300" />
-                        <span className="text-zinc-300 font-medium text-sm capitalize">
-                            Tracked
-                        </span>
-                    </div>
-                    <button
-                        onClick={handleUntrackEvent}
-                        disabled={isLoading}
-                        className="text-red-400 hover:text-red-300 text-sm font-medium disabled:opacity-50 transition-colors"
-                    >
-                        {isLoading ? (
-                            <CircleNotchIcon className="w-4 h-4 animate-spin" />
-                        ) : (
-                            'Remove'
-                        )}
-                    </button>
-                </div>
-            ) : (
-                <div className="grid grid-cols-3 gap-2">
-                    <button
-                        onClick={() => handleTrackEvent('bookmarked')}
-                        disabled={isLoading}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
-                        title="Bookmark this event"
-                    >
-                        {isLoading ? (
-                            <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
-                        ) : (
-                            <StarIcon className="w-4 h-4 text-zinc-300 group-hover:text-zinc-200" />
-                        )}
-                        <span className="text-sm text-gray-300">Bookmark</span>
-                    </button>
-                    <button
-                        onClick={() => handleTrackEvent('attending')}
-                        disabled={isLoading}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
-                        title="Mark as attending"
-                    >
-                        {isLoading ? (
-                            <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
-                        ) : (
-                            <UserCheckIcon className="w-4 h-4 text-zinc-300 group-hover:text-zinc-200" />
-                        )}
-                        <span className="text-sm text-gray-300">Attending</span>
-                    </button>
-                    <button
-                        onClick={() => handleTrackEvent('attended')}
-                        disabled={isLoading}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 group"
-                        title="Mark as attended"
-                    >
-                        {isLoading ? (
-                            <CircleNotchIcon className="w-4 h-4 animate-spin text-gray-400" />
-                        ) : (
-                            <CheckIcon className="w-4 h-4 text-zinc-300 group-hover:text-zinc-200" />
-                        )}
-                        <span className="text-sm text-gray-300">Attended</span>
-                    </button>
-                </div>
-            )}
+            {/* Single Attendance Toggle */}
+            <button
+                onClick={handleAttendanceToggle}
+                disabled={isLoading}
+                className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 border ${getToggleStyles()} disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800`}
+                title={`Currently: ${attendanceState.label}. Click to ${attendanceState.nextAction === 'none' ? 'remove' : `mark as ${attendanceState.nextAction}`}`}
+                aria-pressed={attendanceState.state !== 'none'}
+                aria-label={`Attendance status: ${attendanceState.label}`}
+            >
+                {getToggleIcon()}
+                <span>{attendanceState.label}</span>
+            </button>
         </div>
     );
 };
