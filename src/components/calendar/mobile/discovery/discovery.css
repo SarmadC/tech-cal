@@ -15,7 +15,7 @@
     0 2px 8px rgba(6, 0, 16, 0.25);
 }
 .discovery-section {
-  @apply mb-12 px-4;
+  @apply mb-6;
   position: relative;
 }
 
@@ -36,7 +36,6 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden;
   box-shadow: 
     0 4px 12px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -107,19 +106,18 @@
 
 .discovery-section-content {
   @apply space-y-4;
+  overflow: visible;
 }
 
-/* Discovery Card Styles - Inspired by Landing Page Bento Cards */
+/* Discovery Card Styles - Dynamic Category Colors */
 .discovery-card {
-  @apply relative flex flex-col gap-4 p-8 rounded-lg border border-subtle transition-all duration-300 cursor-pointer;
-  background: linear-gradient(135deg, rgba(20, 25, 45, 0.8) 0%, rgba(30, 35, 55, 0.9) 50%, rgba(20, 25, 45, 0.8) 100%);
+  @apply relative flex flex-col gap-6 p-6 rounded-xl border border-subtle transition-all duration-300 cursor-pointer;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 
     var(--shadow-enhanced), 
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   will-change: transform, box-shadow;
   position: relative;
-  overflow: hidden;
   min-height: 280px;
 }
 
@@ -143,8 +141,8 @@
   box-shadow: 
     var(--shadow-dramatic), 
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  background: linear-gradient(135deg, rgba(35, 40, 60, 0.9) 0%, rgba(45, 50, 70, 0.95) 50%, rgba(35, 40, 60, 0.9) 100%);
   border-color: rgba(255, 255, 255, 0.15);
+  filter: brightness(1.05);
 }
 
 .discovery-card:hover::before {
@@ -153,7 +151,6 @@
 
 .discovery-card.featured {
   @apply p-10;
-  background: linear-gradient(135deg, rgba(25, 30, 50, 0.9) 0%, rgba(35, 40, 60, 0.95) 50%, rgba(25, 30, 50, 0.9) 100%);
   border-color: rgba(255, 255, 255, 0.15);
   min-height: 320px;
 }
@@ -204,19 +201,23 @@
   @apply mb-2;
 }
 
-.event-title {
+/* Event title styling - matching event-card.css pattern */
+.discovery-card .event-title {
   font-family: var(--font-dm-sans);
-  @apply font-semibold text-white text-xl leading-tight mb-3;
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1.3;
+  margin-bottom: 0.5rem;
   letter-spacing: -0.015em;
   font-feature-settings: 'liga' 1, 'kern' 1;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--category-title-color, var(--text-on-pastel));
 }
 
 .discovery-card.compact .event-title {
-  @apply text-lg;
+  font-size: 1.125rem;
   font-family: var(--font-dm-sans);
   letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--category-title-color, var(--text-on-pastel));
 }
 
 .discovery-reason {
@@ -228,9 +229,10 @@
 
 .event-meta {
   font-family: var(--font-sans);
-  @apply flex items-center gap-3 mb-3 text-sm;
-  color: rgba(255, 255, 255, 0.7);
+  @apply flex items-center gap-3 mb-4 text-sm;
+  color: var(--category-title-color, var(--text-on-pastel));
   letter-spacing: -0.01em;
+  opacity: 0.7;
 }
 
 .meta-item {
@@ -246,7 +248,8 @@
 
 .event-details {
   @apply flex items-center gap-3 mb-4 text-sm flex-wrap;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--category-title-color, var(--text-on-pastel));
+  opacity: 0.6;
 }
 
 .detail-item {
@@ -279,14 +282,14 @@
 
 .category-tag {
   @apply px-3 py-1.5 rounded-full text-sm font-medium;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--category-title-color, var(--text-on-pastel));
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .card-actions {
   @apply flex items-center gap-3 pt-4 border-t border-subtle mt-auto;
-  border-top-color: rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.15);
 }
 
 .track-button {
@@ -437,11 +440,11 @@
 }
 
 .error-title {
-  @apply text-lg font-semibold text-gray-900 mb-2;
+  @apply text-lg font-semibold text-white mb-2;
 }
 
 .error-message {
-  @apply text-sm text-gray-600 mb-4;
+  @apply text-sm text-gray-300 mb-4;
 }
 
 .error-retry-button {
@@ -516,7 +519,7 @@
 
 /* Discovery Algorithm Error Boundary */
 .discovery-algorithm-error {
-  @apply bg-red-50 border border-red-200 rounded-lg p-6 my-4;
+  @apply bg-red-900/20 border border-red-700/50 rounded-lg p-6 my-4;
 }
 
 .discovery-algorithm-error .error-content {
@@ -528,11 +531,11 @@
 }
 
 .discovery-algorithm-error .error-title {
-  @apply text-lg font-semibold text-red-800 mb-3;
+  @apply text-lg font-semibold text-red-300 mb-3;
 }
 
 .discovery-algorithm-error .error-message {
-  @apply text-sm text-red-700 mb-4 max-w-md mx-auto;
+  @apply text-sm text-red-200 mb-4 max-w-md mx-auto;
 }
 
 .discovery-algorithm-error .error-actions {
@@ -544,7 +547,7 @@
 }
 
 .discovery-algorithm-error .error-suggestions {
-  @apply flex flex-col items-center gap-2 text-xs text-red-600 bg-red-100 rounded-lg p-3;
+  @apply flex flex-col items-center gap-2 text-xs text-red-200 bg-red-900/30 rounded-lg p-3;
 }
 
 .discovery-algorithm-error .suggestion-icon {

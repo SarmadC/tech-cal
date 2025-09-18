@@ -7,10 +7,7 @@ import {
   MapPin, 
   Users, 
   Clock, 
-  Fire,
-  TrendUp,
-  Sparkle,
-  Lightning
+  TrendUp
 } from '@phosphor-icons/react';
 import { DiscoveryEvent } from '@/services/discoveryService';
 
@@ -68,39 +65,61 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     return `${Math.ceil(diffHours * 60)}min`;
   };
 
-  // Get discovery indicator icon
-  const getDiscoveryIcon = () => {
-    if (event.isTrending) return <Fire size={14} weight="fill" className="discovery-icon trending" />;
-    if (event.isNew) return <Sparkle size={14} weight="fill" className="discovery-icon new" />;
-    if (event.isPersonalized) return <Lightning size={14} weight="fill" className="discovery-icon personalized" />;
-    return null;
-  };
 
-  // Get category color
+  // Get category color - matching the pattern from other event cards
   const getCategoryColor = () => {
-    if (event.category?.color) return event.category.color;
+    // If we have a category with a color, use it directly
+    if (event.category?.color) {
+      return event.category.color;
+    }
     
+    // Fallback to category name matching if no color is set
     const categoryName = event.category?.name?.toLowerCase();
     switch (categoryName) {
       case 'tech summit':
       case 'summit':
-        return '#3B82F6'; // blue
+        return '#bfdbfe'; // soft blue
       case 'workshop':
-        return '#8B5CF6'; // purple
+        return '#e9d7ff'; // soft lavender
       case 'networking':
-        return '#10B981'; // green
+        return '#b8ffcc'; // soft mint
       case 'conference':
-        return '#06B6D4'; // cyan
+        return '#a7f3d0'; // soft teal
       case 'webinar':
-        return '#F59E0B'; // amber
+        return '#fed8ae'; // soft peach
+      case 'startup':
+        return '#fecaca'; // soft coral
+      case 'trade show':
+        return '#faf3dd'; // soft cream
+      case 'product launch':
+        return '#ffa69e'; // soft coral
+      case 'training':
+        return '#b8f2e6'; // soft mint
       default:
-        return '#6B7280'; // gray
+        return '#f1f5f9'; // light gray fallback
     }
   };
 
+  // Create contrasting text colors from pastel backgrounds (matching EventCard)
+  const getPillColor = (color: string, factor: number = 0.5) => {
+    // Convert hex to RGB
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Create a darker version for text
+    const newR = Math.max(0, Math.floor(r * factor));
+    const newG = Math.max(0, Math.floor(g * factor));
+    const newB = Math.max(0, Math.floor(b * factor));
+    
+    return `rgb(${newR}, ${newG}, ${newB})`;
+  };
+
   const categoryColor = getCategoryColor();
+  const titleColor = getPillColor(categoryColor, 0.5);
   const duration = getEventDuration();
-  const discoveryIcon = getDiscoveryIcon();
+
 
   return (
     <div 
@@ -116,7 +135,9 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         }
       }}
       style={{
-        '--category-color': categoryColor,
+        '--category-bg': categoryColor,
+        '--category-title-color': titleColor,
+        backgroundColor: categoryColor,
       } as React.CSSProperties}
     >
       {/* Event Image or Category Color Block */}
@@ -134,14 +155,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
           />
         ) : (
           <div className="category-color-block" style={{ backgroundColor: categoryColor }}>
-            {event.category?.name?.charAt(0).toUpperCase() || 'E'}
-          </div>
-        )}
-        
-        {/* Discovery Badge */}
-        {discoveryIcon && (
-          <div className="discovery-badge">
-            {discoveryIcon}
+            {/* No text needed - color indicates category */}
           </div>
         )}
       </div>

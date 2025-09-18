@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkle, Plus } from '@phosphor-icons/react';
+import { Sparkle } from '@phosphor-icons/react';
 import { Event } from '@/types';
 import { DiscoveryService, DiscoveryEvent } from '@/services/discoveryService';
 import DiscoverySection from './DiscoverySection';
@@ -67,21 +67,14 @@ const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
     >
       <div className="discovery-cards-container new-events-container">
         {newEvents.map((event, index) => (
-          <div key={`${event.id}-${index}`} className="new-event-wrapper">
-            <DiscoveryCard
-              event={event}
-              onClick={() => handleEventClick(event)}
-              onTrack={() => handleTrackEvent(event)}
-              variant="default"
-              className="new-event-card"
-            />
-            
-            {/* New badge */}
-            <div className="new-badge">
-              <Plus size={12} />
-              <span>NEW</span>
-            </div>
-          </div>
+          <DiscoveryCard
+            key={`${event.id}-${index}`}
+            event={event}
+            onClick={() => handleEventClick(event)}
+            onTrack={() => handleTrackEvent(event)}
+            variant="default"
+            className="new-event-card"
+          />
         ))}
       </div>
 

@@ -273,11 +273,11 @@ export function CalendarLayout({
 
     return (
         <SidebarProvider>
-        <div className="flex h-screen calendar-page overflow-hidden">
+        <div className="flex h-screen calendar-page">
             {/* Legacy overlay sidebar removed in favor of AppSidebar */}
 
             <AppSidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col">
                 {/* Desktop Header */}
                 <div className="hidden md:block">
                     <HeaderWithSidebarToggle
@@ -336,7 +336,7 @@ export function CalendarLayout({
                 </div>
                 )}
 
-                <div ref={containerRef} className="flex-1 flex flex-col min-h-0 overflow-hidden calendar-content-with-bottom-tabs">
+                <div ref={containerRef} className="flex-1 flex flex-col calendar-content-with-bottom-tabs">
                     <CalendarTransitionWrapper view={view} date={localDate}>
                         {content}
                     </CalendarTransitionWrapper>

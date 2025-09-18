@@ -6,7 +6,6 @@
   height: 100%;
   background: var(--background-main);
   border-radius: 8px;
-  overflow: hidden;
   --event-gap: 6px;
   --cell-pad: 6px;
   /* Nudge dots further inward from the bottom-right */

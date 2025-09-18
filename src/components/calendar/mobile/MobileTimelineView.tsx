@@ -1,6 +1,7 @@
 'use client';
 
 import { FC, useState } from 'react';
+import Image from 'next/image';
 import { ClockIcon, MapPinIcon, UserIcon, UsersIcon, CalendarIcon, CaretDownIcon, CaretRightIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
 import { getSpeakerAvatarUrl } from '@/services/avatarService';
@@ -160,9 +161,11 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                                     }}
                                     title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
                                 >
-                                    <img 
+                                    <Image 
                                         src={getSpeakerAvatarUrl(speaker, 32)} 
                                         alt={speaker.name}
+                                        width={32}
+                                        height={32}
                                         className="w-8 h-8 rounded-full object-cover border border-gray-500"
                                         onError={(e) => {
                                             const target = e.currentTarget as HTMLImageElement;
@@ -196,9 +199,11 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                                 }}
                                 title={item.speaker.socialLinks?.linkedin ? `View ${item.speaker.name}'s LinkedIn profile` : item.speaker.name}
                             >
-                                <img 
+                                <Image 
                                     src={getSpeakerAvatarUrl(item.speaker, 32)} 
                                     alt={item.speaker.name}
+                                    width={32}
+                                    height={32}
                                     className="w-8 h-8 rounded-full object-cover border border-gray-500"
                                     onError={(e) => {
                                         const target = e.currentTarget as HTMLImageElement;

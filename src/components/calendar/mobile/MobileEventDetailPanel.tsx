@@ -1,6 +1,7 @@
 'use client';
 
 import { FC, useState, useEffect } from 'react';
+import Image from 'next/image';
 import { XIcon, CalendarIcon, ClockIcon, MapPinIcon, UsersIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { Event, EventType, AgendaItem, MultiDayEventInstance, TrackedEvent } from '@/types';
 import { EventService } from '@/services/eventServices';
@@ -290,9 +291,11 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                 }}
                                                 title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
                                             >
-                                                <img 
+                                                <Image 
                                                     src={getSpeakerAvatarUrl(speaker, 40)} 
                                                     alt={speaker.name}
+                                                    width={40}
+                                                    height={40}
                                                     className="w-10 h-10 rounded-full object-cover border border-gray-600"
                                                     onError={(e) => {
                                                         const target = e.currentTarget as HTMLImageElement;
@@ -383,9 +386,11 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                             }}
                                                             title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
                                                         >
-                                                            <img 
+                                                            <Image 
                                                                 src={getSpeakerAvatarUrl(speaker, 24)} 
                                                                 alt={speaker.name}
+                                                                width={24}
+                                                                height={24}
                                                                 className="w-6 h-6 rounded-full object-cover border border-gray-600"
                                                                 onError={(e) => {
                                                                     const target = e.currentTarget as HTMLImageElement;
@@ -411,9 +416,11 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                         }}
                                                         title={item.speaker.socialLinks?.linkedin ? `View ${item.speaker.name}'s LinkedIn profile` : item.speaker.name}
                                                     >
-                                                        <img 
+                                                        <Image 
                                                             src={getSpeakerAvatarUrl(item.speaker, 24)} 
                                                             alt={item.speaker.name}
+                                                            width={24}
+                                                            height={24}
                                                             className="w-6 h-6 rounded-full object-cover border border-gray-600"
                                                             onError={(e) => {
                                                                 const target = e.currentTarget as HTMLImageElement;
