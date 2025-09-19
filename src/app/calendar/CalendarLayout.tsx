@@ -77,6 +77,20 @@ const HeaderWithSidebarToggle: React.FC<{
     );
 };
 
+// Main content wrapper that adjusts margin based on sidebar state
+const MainContentWithSidebarOffset: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const { open } = useSidebar();
+    return (
+        <div 
+            className={`flex-1 flex flex-col transition-[margin] duration-200 ease-in-out ${
+                open ? 'md:ml-64' : 'md:ml-16'
+            } ml-0`}
+        >
+            {children}
+        </div>
+    );
+};
+
 export function CalendarLayout({
     children,
     onNavigate,
@@ -277,7 +291,7 @@ export function CalendarLayout({
             {/* Legacy overlay sidebar removed in favor of AppSidebar */}
 
             <AppSidebar />
-            <div className="flex-1 flex flex-col">
+            <MainContentWithSidebarOffset>
                 {/* Desktop Header */}
                 <div className="hidden md:block">
                     <HeaderWithSidebarToggle
@@ -341,7 +355,7 @@ export function CalendarLayout({
                         {content}
                     </CalendarTransitionWrapper>
                 </div>
-            </div>
+            </MainContentWithSidebarOffset>
         </div>
         </SidebarProvider>
     );

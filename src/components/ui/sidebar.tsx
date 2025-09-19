@@ -59,6 +59,7 @@ export function Sidebar({ side: _side = 'left', className = '', style, children,
         text-[oklch(var(--sidebar-foreground,0.985_0_0))]
         border-[color:oklch(var(--sidebar-border,1_0_0_/10%))]
         border-r overflow-hidden transition-[width] duration-200 ease-in-out
+        fixed left-0 top-0 h-screen z-40
         ${className}
       `}
       style={{
