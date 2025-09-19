@@ -2,9 +2,12 @@
 
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { EnhancedAnalyticsService } from '@/services/enhancedAnalyticsService';
 import Navbar from "@/components/common/Navbar";
+import AnalyticsConsentBanner from '@/components/common/AnalyticsConsentBanner';
 
 export default function ClientLayout({
     children,
@@ -15,10 +18,27 @@ export default function ClientLayout({
     const { isMobile } = useDeviceDetection();
     const excludedPaths = ['/calendar', '/'];
 
+    // Cleanup analytics buffers on page unload
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            EnhancedAnalyticsService.forceFlushAll();
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, []);
+
     // Don't render navbar on excluded paths or on mobile devices
     // Mobile devices should use their own navigation components
     if (excludedPaths.includes(pathname) || isMobile) {
-        return <>{children}</>;
+        return (
+            <>
+                {children}
+                <AnalyticsConsentBanner />
+            </>
+        );
     }
 
     return (
@@ -28,6 +48,7 @@ export default function ClientLayout({
             <main className="pt-16">
                 {children}
             </main>
+            <AnalyticsConsentBanner />
         </>
     );
 }

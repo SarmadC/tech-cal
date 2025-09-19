@@ -9,13 +9,14 @@ import {
   Clock, 
   TrendUp
 } from '@phosphor-icons/react';
-import { DiscoveryEvent } from '@/services/discoveryService';
+import { RecommendationEvent } from '@/types/unifiedEventTypes';
 import { Card, CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 export interface DiscoveryCardProps {
-  event: DiscoveryEvent;
+  event: RecommendationEvent;
   onClick?: () => void;
+  onView?: () => void;
   className?: string;
   variant?: 'default' | 'featured' | 'compact';
 }
@@ -23,9 +24,20 @@ export interface DiscoveryCardProps {
 const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   event,
   onClick,
+  onView,
   className = '',
   variant = 'default'
 }) => {
+  const hasTrackedView = React.useRef(false);
+
+  // Track view only once when component mounts
+  React.useEffect(() => {
+    if (!hasTrackedView.current && onView) {
+      onView();
+      hasTrackedView.current = true;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
   // Format date for display - show actual date instead of countdown
   const formatEventDate = (dateString: string) => {
     const date = new Date(dateString);

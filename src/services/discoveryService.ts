@@ -1,6 +1,9 @@
 'use client';
 
 import { Event, AppProfile, TrackedEvent } from '@/types';
+import { extractCareerProfile } from '@/utils/profileTypeGuards';
+import { TIME_CONSTANTS } from '@/config/analyticsConfig';
+import { UnifiedEventUtils } from '@/utils/unifiedEventUtils';
 import { 
   CareerProfile, 
   SeniorityLevel, 
@@ -129,11 +132,11 @@ export class DiscoveryService {
    */
   static getNewEvents(events: Event[], limit: number = 5): DiscoveryEvent[] {
     const now = new Date();
-    const _weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const _weekAgo = new Date(now.getTime() - TIME_CONSTANTS.WEEK);
     
     // For now, we'll simulate "created_at" by using events that start within 2 weeks
     // In a real implementation, you'd have a created_at field
-    const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const twoWeeksFromNow = new Date(now.getTime() + 2 * TIME_CONSTANTS.WEEK);
     
     const newEvents = events
       .filter(event => {
@@ -236,24 +239,15 @@ export class DiscoveryService {
   }
 
   private static getUserInterests(userProfile: AppProfile): string[] {
-    // Extract interests from user profile
-    // This would be enhanced based on actual profile structure
-    const interests: string[] = [];
-    
-    // Add interests based on profile fields if available
-    // Note: Adjust based on actual AppProfile structure
-    const profileData = userProfile as Record<string, unknown>;
-    if (typeof profileData.bio === 'string') {
-      const bio = profileData.bio.toLowerCase();
-      if (bio.includes('react')) interests.push('react');
-      if (bio.includes('javascript')) interests.push('javascript');
-      if (bio.includes('python')) interests.push('python');
-      if (bio.includes('ai') || bio.includes('machine learning')) interests.push('ai');
-      if (bio.includes('blockchain')) interests.push('blockchain');
-      if (bio.includes('mobile')) interests.push('mobile');
-    }
+    // Use centralized profile extraction for consistency
+    const careerProfile = extractCareerProfile(userProfile);
+    if (!careerProfile) return [];
 
-    return interests;
+    return [
+      ...(careerProfile.interests || []),
+      ...(careerProfile.primarySkills || []),
+      ...(careerProfile.skillsToLearn || [])
+    ];
   }
 
   private static calculatePersonalizedScore(
@@ -370,11 +364,7 @@ export class DiscoveryService {
   }
 
   private static getEventDuration(event: Event): number {
-    if (!event.endTime) return 2; // Default 2 hours
-    
-    const start = new Date(event.startTime);
-    const end = new Date(event.endTime);
-    return (end.getTime() - start.getTime()) / (1000 * 60 * 60); // Hours
+    return UnifiedEventUtils.getDurationAs(event, 'hours') as number;
   }
 
   private static calculateLocationRelevance(

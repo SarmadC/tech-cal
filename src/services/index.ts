@@ -13,6 +13,10 @@ export { ProfileService } from './profileService';
 export { EventService } from './eventServices';
 export { EventTypeService } from './eventTypeService';
 export { UserEventService } from './userEventService';
+export { AnalyticsService } from './analyticsService';
+export { EnhancedAnalyticsService } from './enhancedAnalyticsService';
+export { DiscoveryService } from './discoveryService';
+export { EnhancedDiscoveryService } from './enhancedDiscoveryService';
 
 export type { ApiResponse };
 

@@ -3,7 +3,8 @@
 import React from 'react';
 import { Sparkle } from '@phosphor-icons/react';
 import { Event } from '@/types';
-import { DiscoveryService, DiscoveryEvent } from '@/services/discoveryService';
+import { DiscoveryService } from '@/services/discoveryService';
+import { migrateDiscoveryEvent } from '@/types/unifiedEventTypes';
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 
@@ -26,7 +27,7 @@ const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
     return DiscoveryService.getNewEvents(events, limit);
   }, [events, limit]);
 
-  const handleEventClick = React.useCallback((event: DiscoveryEvent) => {
+  const handleEventClick = React.useCallback((event: Event) => {
     onEventSelect?.(event);
   }, [onEventSelect]);
 
@@ -66,7 +67,7 @@ const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
         {newEvents.map((event, index) => (
           <DiscoveryCard
             key={`${event.id}-${index}`}
-            event={event}
+            event={migrateDiscoveryEvent(event)}
             onClick={() => handleEventClick(event)}
             variant="default"
             className=""

@@ -1,6 +1,7 @@
 // src/hooks/useSmartFilters.ts
 import { useState, useMemo, useCallback } from 'react';
 import { Event, AppProfile, isTrackedEvent, TrackedEvent, CalendarEventData } from '@/types';
+import { UnifiedEventUtils, DurationCategory } from '@/utils/unifiedEventUtils';
 
 export interface SmartFilterOptions {
     // ... (interface remains the same)
@@ -150,15 +151,8 @@ export function useSmartFilters(
         return 'niche';
     };
 
-    const getEventDuration = (event: Event): 'short' | 'medium' | 'long' | 'multi-day' => {
-        if (!event.endTime) return 'medium';
-        const start = new Date(event.startTime);
-        const end = new Date(event.endTime);
-        const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        if (diffHours > 24) return 'multi-day';
-        if (diffHours > 6) return 'long';
-        if (diffHours > 3) return 'medium';
-        return 'short';
+    const getEventDuration = (event: Event): DurationCategory => {
+        return UnifiedEventUtils.getDurationAs(event, 'category') as DurationCategory;
     };
 
     const hasNetworkConnections = (event: Event): boolean => {

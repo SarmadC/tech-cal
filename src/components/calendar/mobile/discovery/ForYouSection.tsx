@@ -1,13 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Lightning } from '@phosphor-icons/react';
 import { Event, AppProfile, TrackedEvent } from '@/types';
-import { DiscoveryService, DiscoveryEvent } from '@/services/discoveryService';
+import { DiscoveryService } from '@/services/discoveryService';
+import { EnhancedDiscoveryService } from '@/services/enhancedDiscoveryService';
+import { RecommendationEvent, migrateDiscoveryEvent } from '@/types/unifiedEventTypes';
+import { useForYouTracking } from '@/hooks/useRecommendationTracking';
+import { hasCompleteCareerProfile, extractCareerProfile } from '@/utils/profileTypeGuards';
+import { createClient } from '@/utils/supabase/client';
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 import CareerProfilePrompt from './CareerProfilePrompt';
-import { CareerProfileService } from '@/services/careerProfileService';
 
 export interface ForYouSectionProps {
   events: Event[];
@@ -30,25 +34,132 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   limit = 5,
   userLocation
 }) => {
-  const hasCareerProfile = userProfile ? CareerProfileService.hasCompletedOnboarding(userProfile) : false;
+  const careerProfile = extractCareerProfile(userProfile);
+  const hasCareerProfile = hasCompleteCareerProfile(careerProfile);
+  const supabase = createClient();
   
-  const personalizedEvents = React.useMemo(() => {
-    // Only run personalization if we have a complete career profile
-    if (!hasCareerProfile) {
-      return [];
-    }
-    return DiscoveryService.getPersonalizedRecommendations(
-      events,
-      userProfile,
-      trackedEvents,
-      limit,
-      userLocation
-    );
-  }, [events, userProfile, trackedEvents, limit, userLocation, hasCareerProfile]);
+  // Enhanced tracking for For You section
+  const tracking = useForYouTracking();
+  const {
+    trackForYouView,
+    trackForYouClick,
+    isTrackingEnabled
+  } = tracking;
 
-  const handleEventClick = React.useCallback((event: DiscoveryEvent) => {
+  // Stable reference for trackForYouDisplay to prevent infinite re-renders
+  const trackForYouDisplayRef = useRef(tracking.trackForYouDisplay);
+  trackForYouDisplayRef.current = tracking.trackForYouDisplay;
+
+  const [personalizedEvents, setPersonalizedEvents] = React.useState<RecommendationEvent[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // Enhanced recommendations with behavioral data
+  React.useEffect(() => {
+    let isCancelled = false; // Prevent memory leaks
+
+    async function loadEnhancedRecommendations() {
+      if (!hasCareerProfile || !userProfile) {
+        if (!isCancelled) {
+          setPersonalizedEvents([]);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (!isCancelled) {
+          setIsLoading(true);
+        }
+        
+        // Use enhanced discovery service with behavioral data
+        let enhanced: RecommendationEvent[] = [];
+        
+        try {
+          enhanced = await EnhancedDiscoveryService.getEnhancedPersonalizedRecommendations(
+            events,
+            userProfile,
+            trackedEvents,
+            supabase,
+            limit,
+            userLocation
+          );
+        } catch (enhancedError) {
+          console.warn('Enhanced recommendations failed, falling back to basic:', enhancedError);
+          // Fallback to basic recommendations (migrate to unified type)
+          const basicRecs = DiscoveryService.getPersonalizedRecommendations(
+            events,
+            userProfile,
+            trackedEvents,
+            limit,
+            userLocation
+          );
+          enhanced = basicRecs.map(event => migrateDiscoveryEvent(event));
+        }
+
+        // Only update state if component is still mounted
+        if (!isCancelled) {
+          setPersonalizedEvents(enhanced);
+
+          // Track recommendation display (with error handling)
+          if (isTrackingEnabled && enhanced.length > 0) {
+            try {
+              const recommendationData = enhanced.map((event, index) => ({
+                eventId: event.id,
+                score: event.discoveryMetrics?.personalizedScore || 0,
+                position: index + 1
+              }));
+              
+              trackForYouDisplayRef.current(recommendationData);
+            } catch (trackingError) {
+              console.warn('Recommendation tracking failed:', trackingError);
+              // Continue without tracking - don't break the UI
+            }
+          }
+        }
+
+      } catch (error) {
+        if (!isCancelled) {
+          console.error('Error loading enhanced recommendations:', error);
+          // Fallback to basic recommendations
+          const basic = DiscoveryService.getPersonalizedRecommendations(
+            events,
+            userProfile,
+            trackedEvents,
+            limit,
+            userLocation
+          );
+          setPersonalizedEvents(basic.map(event => migrateDiscoveryEvent(event)));
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadEnhancedRecommendations();
+
+    // Cleanup function to prevent memory leaks
+    return () => {
+      isCancelled = true;
+    };
+  }, [events, userProfile, trackedEvents, limit, userLocation, hasCareerProfile, supabase, isTrackingEnabled]);
+
+  const handleEventClick = React.useCallback((event: RecommendationEvent, position: number) => {
+    // Track click interaction
+    if (isTrackingEnabled) {
+      trackForYouClick(event.id, position + 1);
+    }
+    
     onEventSelect?.(event);
-  }, [onEventSelect]);
+  }, [onEventSelect, trackForYouClick, isTrackingEnabled]);
+
+  const handleEventView = React.useCallback((event: RecommendationEvent, position: number) => {
+    // Track view interaction
+    if (isTrackingEnabled) {
+      trackForYouView(event.id, position + 1);
+    }
+  }, [trackForYouView, isTrackingEnabled]);
 
 
   // Show career profile prompt if user doesn't have complete profile
@@ -61,6 +172,26 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
         className={className}
       >
         <CareerProfilePrompt profile={userProfile} />
+      </DiscoverySection>
+    );
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <DiscoverySection
+        title="For You"
+        subtitle="Personalized recommendations based on your interests"
+        icon={<Lightning size={20} weight="fill" />}
+        className={className}
+      >
+        <div className="discovery-loading-state">
+          <div className="animate-pulse space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
       </DiscoverySection>
     );
   }
@@ -88,7 +219,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   return (
     <DiscoverySection
       title="For You"
-      subtitle="Personalized recommendations based on your interests"
+      subtitle="Personalized recommendations based on your interests and behavior"
       icon={<Lightning size={20} weight="fill" />}
       className={className}
       showViewAll={personalizedEvents.length >= limit}
@@ -102,7 +233,8 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
           <DiscoveryCard
             key={`${event.id}-${index}`}
             event={event}
-            onClick={() => handleEventClick(event)}
+            onClick={() => handleEventClick(event, index)}
+            onView={() => handleEventView(event, index)}
             variant={index === 0 ? 'featured' : 'default'}
             className=""
           />

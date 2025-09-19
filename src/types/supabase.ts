@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_speakers: {
+        Row: {
+          agenda_id: string
+          created_at: string | null
+          speaker_id: string
+        }
+        Insert: {
+          agenda_id: string
+          created_at?: string | null
+          speaker_id: string
+        }
+        Update: {
+          agenda_id?: string
+          created_at?: string | null
+          speaker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_speakers_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "event_agenda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_speaker_id_fkey"
+            columns: ["speaker_id"]
+            isOneToOne: false
+            referencedRelation: "speakers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           created_at: string | null
@@ -52,6 +85,84 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      event_agenda: {
+        Row: {
+          agenda_type: string | null
+          capacity: number | null
+          created_at: string | null
+          day_number: number
+          description: string | null
+          difficulty_level: string | null
+          duration_minutes: number | null
+          end_time: string | null
+          event_id: string
+          id: string
+          is_required: boolean | null
+          location: string | null
+          prerequisites: string | null
+          sort_order: number | null
+          start_time: string
+          title: string
+          track: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agenda_type?: string | null
+          capacity?: number | null
+          created_at?: string | null
+          day_number: number
+          description?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
+          end_time?: string | null
+          event_id: string
+          id?: string
+          is_required?: boolean | null
+          location?: string | null
+          prerequisites?: string | null
+          sort_order?: number | null
+          start_time: string
+          title: string
+          track?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agenda_type?: string | null
+          capacity?: number | null
+          created_at?: string | null
+          day_number?: number
+          description?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
+          end_time?: string | null
+          event_id?: string
+          id?: string
+          is_required?: boolean | null
+          location?: string | null
+          prerequisites?: string | null
+          sort_order?: number | null
+          start_time?: string
+          title?: string
+          track?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_agenda_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_agenda_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_series: {
         Row: {
@@ -187,51 +298,6 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: []
-      }
-      event_updates: {
-        Row: {
-          change_reason: string | null
-          changed_at: string | null
-          event_id: string | null
-          field_changed: string
-          id: string
-          new_value: string | null
-          old_value: string | null
-        }
-        Insert: {
-          change_reason?: string | null
-          changed_at?: string | null
-          event_id?: string | null
-          field_changed: string
-          id?: string
-          new_value?: string | null
-          old_value?: string | null
-        }
-        Update: {
-          change_reason?: string | null
-          changed_at?: string | null
-          event_id?: string | null
-          field_changed?: string
-          id?: string
-          new_value?: string | null
-          old_value?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_updates_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_updates_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events_detailed"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       events: {
         Row: {
@@ -503,6 +569,13 @@ export type Database = {
             foreignKeyName: "posts_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
             referencedRelation: "user_event_stats"
             referencedColumns: ["user_id"]
           },
@@ -517,6 +590,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          analytics_consent: boolean | null
+          analytics_consent_date: string | null
           avatar_url: string | null
           bookmark_count_today: number | null
           created_at: string | null
@@ -525,10 +600,13 @@ export type Database = {
           last_bookmark_at: string | null
           location: string | null
           preferences: Json | null
+          recommendation_preferences: Json | null
           timezone: string | null
           updated_at: string | null
         }
         Insert: {
+          analytics_consent?: boolean | null
+          analytics_consent_date?: string | null
           avatar_url?: string | null
           bookmark_count_today?: number | null
           created_at?: string | null
@@ -537,10 +615,13 @@ export type Database = {
           last_bookmark_at?: string | null
           location?: string | null
           preferences?: Json | null
+          recommendation_preferences?: Json | null
           timezone?: string | null
           updated_at?: string | null
         }
         Update: {
+          analytics_consent?: boolean | null
+          analytics_consent_date?: string | null
           avatar_url?: string | null
           bookmark_count_today?: number | null
           created_at?: string | null
@@ -549,8 +630,106 @@ export type Database = {
           last_bookmark_at?: string | null
           location?: string | null
           preferences?: Json | null
+          recommendation_preferences?: Json | null
           timezone?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      recommendation_batches: {
+        Row: {
+          algorithm_version: string
+          event_ids: string[]
+          id: string
+          interactions_count: number | null
+          scores: number[]
+          section: string
+          session_id: string
+          shown_at: string | null
+          user_id: string
+        }
+        Insert: {
+          algorithm_version?: string
+          event_ids: string[]
+          id?: string
+          interactions_count?: number | null
+          scores: number[]
+          section: string
+          session_id: string
+          shown_at?: string | null
+          user_id: string
+        }
+        Update: {
+          algorithm_version?: string
+          event_ids?: string[]
+          id?: string
+          interactions_count?: number | null
+          scores?: number[]
+          section?: string
+          session_id?: string
+          shown_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_batches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_batches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "recommendation_batches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      speakers: {
+        Row: {
+          bio: string | null
+          company: string | null
+          created_at: string | null
+          id: string
+          linkedin_url: string | null
+          name: string
+          photo_url: string | null
+          title: string | null
+          twitter_url: string | null
+          website_url: string | null
+        }
+        Insert: {
+          bio?: string | null
+          company?: string | null
+          created_at?: string | null
+          id?: string
+          linkedin_url?: string | null
+          name: string
+          photo_url?: string | null
+          title?: string | null
+          twitter_url?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          bio?: string | null
+          company?: string | null
+          created_at?: string | null
+          id?: string
+          linkedin_url?: string | null
+          name?: string
+          photo_url?: string | null
+          title?: string | null
+          twitter_url?: string | null
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -574,28 +753,37 @@ export type Database = {
       }
       user_events: {
         Row: {
+          algorithm_version: string | null
           created_at: string | null
+          discovery_source: string | null
           event_id: string
           id: string
           notes: string | null
+          recommendation_context: Json | null
           status: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          algorithm_version?: string | null
           created_at?: string | null
+          discovery_source?: string | null
           event_id: string
           id?: string
           notes?: string | null
+          recommendation_context?: Json | null
           status?: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          algorithm_version?: string | null
           created_at?: string | null
+          discovery_source?: string | null
           event_id?: string
           id?: string
           notes?: string | null
+          recommendation_context?: Json | null
           status?: string
           updated_at?: string | null
           user_id?: string
@@ -614,6 +802,124 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "events_detailed"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_experiments: {
+        Row: {
+          assigned_at: string | null
+          experiment_name: string
+          id: string
+          user_id: string
+          variant: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          experiment_name: string
+          id?: string
+          user_id: string
+          variant: string
+        }
+        Update: {
+          assigned_at?: string | null
+          experiment_name?: string
+          id?: string
+          user_id?: string
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_experiments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_experiments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_experiments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_interactions_simple: {
+        Row: {
+          algorithm_version: string | null
+          created_at: string | null
+          duration_ms: number | null
+          event_id: string | null
+          id: string
+          interaction_type: string
+          position: number | null
+          section: string
+          user_id: string
+        }
+        Insert: {
+          algorithm_version?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          event_id?: string | null
+          id?: string
+          interaction_type: string
+          position?: number | null
+          section: string
+          user_id: string
+        }
+        Update: {
+          algorithm_version?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          event_id?: string | null
+          id?: string
+          interaction_type?: string
+          position?: number | null
+          section?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_interactions_simple_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_interactions_simple_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_interactions_simple_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_interactions_simple_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_interactions_simple_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -669,6 +975,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "user_notifications_user_id_fkey"
@@ -800,6 +1113,17 @@ export type Database = {
           },
         ]
       }
+      user_engagement_summary: {
+        Row: {
+          clicks_30d: number | null
+          events_tracked_30d: number | null
+          events_viewed_30d: number | null
+          full_name: string | null
+          last_interaction: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       user_event_stats: {
         Row: {
           full_name: string | null
@@ -811,9 +1135,21 @@ export type Database = {
       }
     }
     Functions: {
+      batch_insert_interactions: {
+        Args: { interactions: Json[] }
+        Returns: undefined
+      }
       cleanup_old_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      cleanup_old_interactions: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_analytics_health: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_event_types_with_counts: {
         Args: Record<PropertyKey, never>

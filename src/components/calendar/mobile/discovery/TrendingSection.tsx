@@ -3,7 +3,8 @@
 import React from 'react';
 import { Fire, TrendUp } from '@phosphor-icons/react';
 import { Event } from '@/types';
-import { DiscoveryService, DiscoveryEvent } from '@/services/discoveryService';
+import { DiscoveryService } from '@/services/discoveryService';
+import { migrateDiscoveryEvent } from '@/types/unifiedEventTypes';
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 
@@ -28,7 +29,7 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
     return DiscoveryService.getTrendingEvents(events, limit, userLocation);
   }, [events, limit, userLocation]);
 
-  const handleEventClick = React.useCallback((event: DiscoveryEvent) => {
+  const handleEventClick = React.useCallback((event: Event) => {
     onEventSelect?.(event);
   }, [onEventSelect]);
 
@@ -73,7 +74,7 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
         {featuredEvent && (
           <div className="featured-trending">
             <DiscoveryCard
-              event={featuredEvent}
+              event={migrateDiscoveryEvent(featuredEvent)}
               onClick={() => handleEventClick(featuredEvent)}
               variant="featured"
               className=""
@@ -87,7 +88,7 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
             {otherEvents.map((event, index) => (
               <DiscoveryCard
                 key={`${event.id}-${index}`}
-                event={event}
+                event={migrateDiscoveryEvent(event)}
                 onClick={() => handleEventClick(event)}
                 variant="compact"
                 className=""

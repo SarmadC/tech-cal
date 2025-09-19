@@ -3,7 +3,8 @@
 import React from 'react';
 import { Clock, Lightning } from '@phosphor-icons/react';
 import { Event } from '@/types';
-import { DiscoveryService, DiscoveryEvent } from '@/services/discoveryService';
+import { DiscoveryService } from '@/services/discoveryService';
+import { migrateDiscoveryEvent } from '@/types/unifiedEventTypes';
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 
@@ -26,7 +27,7 @@ const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
     return DiscoveryService.getQuickWinEvents(events, limit);
   }, [events, limit]);
 
-  const handleEventClick = React.useCallback((event: DiscoveryEvent) => {
+  const handleEventClick = React.useCallback((event: Event) => {
     onEventSelect?.(event);
   }, [onEventSelect]);
 
@@ -61,7 +62,7 @@ const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
         {quickWinEvents.map((event, index) => (
           <DiscoveryCard
             key={`${event.id}-${index}`}
-            event={event}
+            event={migrateDiscoveryEvent(event)}
             onClick={() => handleEventClick(event)}
             variant="compact"
             className=""
