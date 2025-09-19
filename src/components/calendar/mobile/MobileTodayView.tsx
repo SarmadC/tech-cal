@@ -76,7 +76,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
   };
 
   // Format the main date display using actual current date
-  const formatMainDate = () => {
+  const _formatMainDate = () => {
     const now = new Date();
     const day = now.getDate().toString().padStart(2, '0');
     const month = now.getMonth() + 1;
@@ -84,16 +84,6 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
     const year = now.getFullYear();
     
     return { day: `${day}.${monthStr}`, year: year.toString() };
-  };
-
-  const formatWeekday = () => {
-    const now = new Date();
-    return now.toLocaleDateString('en-US', { weekday: 'long' });
-  };
-
-  const formatMonthName = () => {
-    const now = new Date();
-    return now.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
   };
 
   // Format time for reminders - not used in current implementation
@@ -106,12 +96,12 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
     });
   };
 
-  const { day, year: _year } = formatMainDate();
-
   // Event preview handlers
   const handleEventTap = (event: Event) => {
     setPreviewEvent(event);
     setIsPreviewVisible(true);
+    // Also call the parent's onEventSelect if provided
+    onEventSelect?.(event);
   };
 
   const handleClosePreview = () => {
@@ -128,13 +118,6 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
     <div className={`mobile-today-view ${className}`} role="main" aria-label={showDiscoveryMode ? "Discover events" : "Today's calendar view"}>
       {/* No header needed - handled by parent MobileTopNavigation */}
 
-      {/* Compact Header */}
-      <div className="compact-header">
-        <div className="app-title">Kure-Cal</div>
-        <div className="date-info">
-          {formatWeekday()}, {day} {formatMonthName()}
-        </div>
-      </div>
 
       {showDiscoveryMode ? (
         /* Discovery Mode - New Sectioned Layout */
@@ -146,7 +129,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
               events={events}
               userProfile={profile}
               trackedEvents={trackedEvents}
-              onEventSelect={onEventSelect}
+              onEventSelect={handleEventTap}
               onTrackEvent={handleTrackEvent}
               userLocation={userLocation || undefined}
               limit={5}
@@ -159,7 +142,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
             <DiscoveryAlgorithmErrorBoundary algorithmName="Trending">
               <TrendingSection
               events={events}
-              onEventSelect={onEventSelect}
+              onEventSelect={handleEventTap}
               onTrackEvent={handleTrackEvent}
               userLocation={userLocation || undefined}
               limit={5}
@@ -172,7 +155,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
             <DiscoveryAlgorithmErrorBoundary algorithmName="New Events">
               <NewThisWeekSection
               events={events}
-              onEventSelect={onEventSelect}
+              onEventSelect={handleEventTap}
               onTrackEvent={handleTrackEvent}
               limit={4}
             />
@@ -184,7 +167,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
             <DiscoveryAlgorithmErrorBoundary algorithmName="Quick Wins">
               <QuickWinsSection
               events={events}
-              onEventSelect={onEventSelect}
+              onEventSelect={handleEventTap}
               onTrackEvent={handleTrackEvent}
               limit={4}
             />

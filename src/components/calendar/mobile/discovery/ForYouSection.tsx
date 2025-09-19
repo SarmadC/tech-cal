@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { Lightning } from '@phosphor-icons/react';
+import { User } from '@phosphor-icons/react';
 import { Event, AppProfile, TrackedEvent } from '@/types';
 import { DiscoveryService } from '@/services/discoveryService';
 import { EnhancedDiscoveryService } from '@/services/enhancedDiscoveryService';
@@ -34,9 +34,9 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   limit = 5,
   userLocation
 }) => {
-  const careerProfile = extractCareerProfile(userProfile);
-  const hasCareerProfile = hasCompleteCareerProfile(careerProfile);
-  const supabase = createClient();
+  const careerProfile = React.useMemo(() => extractCareerProfile(userProfile), [userProfile]);
+  const hasCareerProfile = React.useMemo(() => hasCompleteCareerProfile(careerProfile), [careerProfile]);
+  const supabase = React.useMemo(() => createClient(), []);
   
   // Enhanced tracking for For You section
   const tracking = useForYouTracking();
@@ -52,6 +52,13 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
 
   const [personalizedEvents, setPersonalizedEvents] = React.useState<RecommendationEvent[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [lastFetchKey, setLastFetchKey] = React.useState<string>('');
+
+  // Create a stable cache key based on relevant data
+  const cacheKey = React.useMemo(() => {
+    if (!hasCareerProfile || !userProfile) return '';
+    return `${userProfile.id}-${events.length}-${trackedEvents.length}-${limit}-${userLocation?.city || ''}-${userLocation?.timezone || ''}`;
+  }, [hasCareerProfile, userProfile, events.length, trackedEvents.length, limit, userLocation]);
 
   // Enhanced recommendations with behavioral data
   React.useEffect(() => {
@@ -61,6 +68,15 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
       if (!hasCareerProfile || !userProfile) {
         if (!isCancelled) {
           setPersonalizedEvents([]);
+          setIsLoading(false);
+          setLastFetchKey('');
+        }
+        return;
+      }
+
+      // Skip if we already have data for this cache key
+      if (cacheKey === lastFetchKey && personalizedEvents.length > 0) {
+        if (!isCancelled) {
           setIsLoading(false);
         }
         return;
@@ -99,6 +115,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
         // Only update state if component is still mounted
         if (!isCancelled) {
           setPersonalizedEvents(enhanced);
+          setLastFetchKey(cacheKey);
 
           // Track recommendation display (with error handling)
           if (isTrackingEnabled && enhanced.length > 0) {
@@ -129,6 +146,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             userLocation
           );
           setPersonalizedEvents(basic.map(event => migrateDiscoveryEvent(event)));
+          setLastFetchKey(cacheKey);
         }
       } finally {
         if (!isCancelled) {
@@ -143,7 +161,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return () => {
       isCancelled = true;
     };
-  }, [events, userProfile, trackedEvents, limit, userLocation, hasCareerProfile, supabase, isTrackingEnabled]);
+  }, [cacheKey, hasCareerProfile, userProfile, personalizedEvents.length, lastFetchKey, events, isTrackingEnabled, limit, supabase, trackedEvents, userLocation]);
 
   const handleEventClick = React.useCallback((event: RecommendationEvent, position: number) => {
     // Track click interaction
@@ -167,8 +185,8 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return (
       <DiscoverySection
         title="For You"
-        subtitle="Get personalized recommendations"
-        icon={<Lightning size={20} weight="fill" />}
+        subtitle="Personalized Recommendations"
+        icon={<User size={20} weight="fill" />}
         className={className}
       >
         <CareerProfilePrompt profile={userProfile} />
@@ -181,8 +199,8 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return (
       <DiscoverySection
         title="For You"
-        subtitle="Personalized recommendations based on your interests"
-        icon={<Lightning size={20} weight="fill" />}
+        subtitle="Personalized Recommendations"
+        icon={<User size={20} weight="fill" />}
         className={className}
       >
         <div className="discovery-loading-state">
@@ -201,12 +219,12 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return (
       <DiscoverySection
         title="For You"
-        subtitle="Personalized recommendations based on your interests"
-        icon={<Lightning size={20} weight="fill" />}
+        subtitle="Personalized Recommendations"
+        icon={<User size={20} weight="fill" />}
         className={className}
       >
         <div className="discovery-empty-state">
-          <Lightning size={48} className="empty-icon" />
+          <User size={48} className="empty-icon" />
           <div className="empty-title">Building your recommendations</div>
           <div className="empty-subtitle">
             We&apos;re analyzing events that match your career profile. Check back soon for personalized suggestions!
@@ -219,8 +237,8 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   return (
     <DiscoverySection
       title="For You"
-      subtitle="Personalized recommendations based on your interests and behavior"
-      icon={<Lightning size={20} weight="fill" />}
+      subtitle="Personalized Recommendations"
+      icon={<User size={20} weight="fill" />}
       className={className}
       showViewAll={personalizedEvents.length >= limit}
       onViewAll={() => {
@@ -243,7 +261,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
       
       {personalizedEvents.length === 0 && userProfile && (
         <div className="empty-state">
-          <Lightning size={32} className="empty-icon" />
+          <User size={32} className="empty-icon" />
           <p className="empty-text">
             We&apos;re learning your preferences. Track some events to get personalized recommendations!
           </p>
@@ -252,7 +270,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
       
       {!userProfile && (
         <div className="empty-state">
-          <Lightning size={32} className="empty-icon" />
+          <User size={32} className="empty-icon" />
           <p className="empty-text">
             Sign in to get personalized event recommendations tailored to your interests.
           </p>

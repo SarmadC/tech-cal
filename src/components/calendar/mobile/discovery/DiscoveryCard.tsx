@@ -201,28 +201,25 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
 
       {/* Event Image or Category Color Block - Moved to bottom */}
       <div className="px-6 pb-6">
-        <div className={cn(
-          "rounded-lg overflow-hidden",
-          variant === 'compact' ? "w-12 h-12" : "w-16 h-12"
-        )}>
+        <div className="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-start">
           {event.eventImageUrl ? (
             <Image
               src={event.eventImageUrl}
               alt={`${event.title} event image`}
-              width={variant === 'featured' ? 80 : variant === 'compact' ? 48 : 64}
-              height={variant === 'featured' ? 48 : variant === 'compact' ? 48 : 48}
+              width={56}
+              height={56}
               className="w-full h-full object-cover"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}
             />
           ) : event.organization?.logo ? (
-            <div className="w-full h-full flex items-center justify-start bg-white/5">
+            <div className="w-full h-full flex items-center justify-start">
               <Image
                 src={event.organization.logo}
                 alt={`${event.organization.name} logo`}
-                width={variant === 'featured' ? 40 : variant === 'compact' ? 24 : 32}
-                height={variant === 'featured' ? 40 : variant === 'compact' ? 24 : 32}
+                width={32}
+                height={32}
                 className="object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Fire, TrendUp } from '@phosphor-icons/react';
+import { Fire } from '@phosphor-icons/react';
 import { Event } from '@/types';
 import { DiscoveryService } from '@/services/discoveryService';
 import { migrateDiscoveryEvent } from '@/types/unifiedEventTypes';
@@ -98,16 +98,6 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
         )}
       </div>
 
-      {/* Trending Stats */}
-      <div className="trending-stats">
-        <div className="stat-item">
-          <TrendUp size={16} />
-          <span className="stat-text">
-            {trendingEvents.reduce((sum, event) => sum + (event.attendeeCount || 0), 0).toLocaleString()} 
-            people interested this week
-          </span>
-        </div>
-      </div>
     </DiscoverySection>
   );
 });

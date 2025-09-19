@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CaretRight, Sparkle } from '@phosphor-icons/react';
+import { Sparkle } from '@phosphor-icons/react';
 import { generateSectionId, generateSectionDescId } from '@/utils/domUtils';
 
 export interface DiscoverySectionProps {
@@ -59,7 +59,6 @@ const DiscoverySection: React.FC<DiscoverySectionProps> = ({
             aria-describedby={subtitle ? sectionDescId : undefined}
           >
             <span className="view-all-text">View All</span>
-            <CaretRight size={16} aria-hidden="true" />
           </button>
         )}
       </div>

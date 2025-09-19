@@ -1217,6 +1217,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .mobile-search-filter-button {
@@ -1226,9 +1227,9 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  background: var(--background-elevated);
+  background: var(--background-secondary);
   border: 1px solid var(--border-default);
-  border-radius: 12px;
+  border-radius: 20px;
   color: var(--foreground-primary);
   transition: all 0.2s ease;
   cursor: pointer;
