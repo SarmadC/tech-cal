@@ -37,7 +37,10 @@
       "Bash(psql:*)",
       "mcp__playwright__browser_resize",
       "Bash(npm ls:*)",
-      "mcp__puppeteer__puppeteer_hover"
+      "mcp__puppeteer__puppeteer_hover",
+      "Bash(npm uninstall:*)",
+      "Bash(npm install:*)",
+      "Read(//Users/sarmad/.nvm/versions/node/v20.17.0/lib/node_modules/@anthropic-ai/**)"
     ],
     "deny": [],
     "ask": []

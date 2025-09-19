@@ -10,11 +10,12 @@ import {
   TrendUp
 } from '@phosphor-icons/react';
 import { DiscoveryEvent } from '@/services/discoveryService';
+import { Card, CardHeader } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 export interface DiscoveryCardProps {
   event: DiscoveryEvent;
   onClick?: () => void;
-  onTrack?: () => void;
   className?: string;
   variant?: 'default' | 'featured' | 'compact';
 }
@@ -22,23 +23,24 @@ export interface DiscoveryCardProps {
 const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   event,
   onClick,
-  onTrack,
   className = '',
   variant = 'default'
 }) => {
-  // Format date for display
+  // Format date for display - show actual date instead of countdown
   const formatEventDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     
+    // Always show actual date, but keep special cases for very near dates
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Tomorrow';
-    if (diffDays <= 7) return `${diffDays} days`;
     
+    // For all other dates, show the actual date
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
   };
 
@@ -52,18 +54,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     });
   };
 
-  // Get duration in human readable format
-  const getEventDuration = () => {
-    if (!event.endTime) return null;
-    
-    const start = new Date(event.startTime);
-    const end = new Date(event.endTime);
-    const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    
-    if (diffHours >= 24) return `${Math.ceil(diffHours / 24)} day${diffHours >= 48 ? 's' : ''}`;
-    if (diffHours >= 1) return `${Math.ceil(diffHours)}h`;
-    return `${Math.ceil(diffHours * 60)}min`;
-  };
 
 
   // Get category color - matching the pattern from other event cards
@@ -118,12 +108,17 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
 
   const categoryColor = getCategoryColor();
   const titleColor = getPillColor(categoryColor, 0.5);
-  const duration = getEventDuration();
 
 
   return (
-    <div 
-      className={`discovery-card ${variant} ${className}`}
+    <Card 
+      className={cn(
+        "event-card cursor-pointer transition-all duration-300 hover:shadow-lg",
+        "border-border/50 bg-card hover:bg-card/80",
+        variant === 'featured' && "md:col-span-2",
+        variant === 'compact' && "flex-row items-center gap-4",
+        className
+      )}
       onClick={onClick}
       role="listitem"
       tabIndex={0}
@@ -137,138 +132,118 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       style={{
         '--category-bg': categoryColor,
         '--category-title-color': titleColor,
-        backgroundColor: categoryColor,
       } as React.CSSProperties}
     >
-      {/* Event Image or Category Color Block */}
-      <div className="discovery-card-visual">
-        {event.eventImageUrl ? (
-          <Image
-            src={event.eventImageUrl}
-            alt={`${event.title} event image`}
-            width={variant === 'featured' ? 120 : 80}
-            height={variant === 'featured' ? 80 : 60}
-            className="event-image"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        ) : (
-          <div className="category-color-block" style={{ backgroundColor: categoryColor }}>
-            {/* No text needed - color indicates category */}
-          </div>
-        )}
-      </div>
-
-      {/* Event Content */}
-      <div className="discovery-card-content">
-        <div className="event-header">
-          <h3 className="event-title">{event.title}</h3>
-          {event.discoveryReason && (
-            <p className="discovery-reason">{event.discoveryReason}</p>
-          )}
-        </div>
-
-        <div className="event-meta">
-          <div className="meta-item">
-            <Calendar size={14} />
-            <span>{formatEventDate(event.startTime)}</span>
-          </div>
+      <CardHeader className="pb-0">
+        {/* Event Header Content - Now takes full width */}
+        <div className="w-full space-y-4">
+          <h3 
+            className="font-semibold text-lg leading-tight tracking-tight"
+            style={{ color: titleColor }}
+          >
+            {event.title}
+          </h3>
           
-          <div className="meta-item">
-            <Clock size={14} />
-            <span>{formatTime(event.startTime)}</span>
+          {event.discoveryReason && (
+            <p className="text-sm text-gray-700 font-medium">
+              {event.discoveryReason}
+            </p>
+          )}
+
+          <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
+            <div className="flex items-center gap-1">
+              <Calendar size={14} />
+              <span>{formatEventDate(event.startTime)}</span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Clock size={14} />
+              <span>{formatTime(event.startTime)}</span>
+            </div>
           </div>
 
-          {duration && (
-            <div className="meta-item">
-              <span className="duration-badge">{duration}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Additional Info Row */}
-        <div className="event-details">
+          {/* Location section - moved from CardContent */}
           {event.location && (
-            <div className="detail-item">
-              <MapPin size={12} />
-              <span className="location-text">
-                {event.location.length > 20 
-                  ? `${event.location.substring(0, 20)}...` 
-                  : event.location
-                }
-              </span>
-              {/* Location relevance indicator */}
-              {event.discoveryMetrics?.locationRelevanceScore !== undefined && (
-                <span className={`location-indicator ${
-                  event.discoveryMetrics.locationRelevanceScore >= 1.0 ? 'local' :
-                  event.discoveryMetrics.locationRelevanceScore >= 0.7 ? 'regional' :
-                  event.discoveryMetrics.locationRelevanceScore >= 0.5 ? 'distant' : 'remote'
-                }`}>
-                  <MapPin size={10} weight={
-                    event.discoveryMetrics.locationRelevanceScore >= 1.0 ? 'fill' : 'regular'
-                  } />
+            <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
+              <div className="flex items-center gap-1">
+                <MapPin size={14} />
+                <span className="max-w-64">
+                  {event.location.length > 28
+                    ? `${event.location.substring(0, 28)}...` 
+                    : event.location
+                  }
                 </span>
+              </div>
+
+              {event.attendeeCount && (
+                <div className="flex items-center gap-1">
+                  <Users size={14} />
+                  <span>{event.attendeeCount} attending</span>
+                </div>
               )}
             </div>
           )}
-
-          {event.attendeeCount && (
-            <div className="detail-item">
-              <Users size={12} />
-              <span>{event.attendeeCount} attending</span>
-            </div>
-          )}
-
-          {event.category && (
-            <div className="detail-item">
-              <span 
-                className="category-tag"
-                style={{ 
-                  backgroundColor: `${categoryColor}15`,
-                  color: categoryColor 
-                }}
-              >
-                {event.category.name}
-              </span>
-            </div>
-          )}
         </div>
+      </CardHeader>
 
-        {/* Action Buttons */}
-        <div className="card-actions">
-          <button 
-            className="track-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTrack?.();
-            }}
-            aria-label={`Track ${event.title} event`}
-          >
-            Track Event
-          </button>
-          
-          {variant === 'featured' && (
-            <button 
-              className="learn-more-button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick?.();
+
+      {/* Event Image or Category Color Block - Moved to bottom */}
+      <div className="px-6 pb-6">
+        <div className={cn(
+          "rounded-lg overflow-hidden",
+          variant === 'compact' ? "w-12 h-12" : "w-16 h-12"
+        )}>
+          {event.eventImageUrl ? (
+            <Image
+              src={event.eventImageUrl}
+              alt={`${event.title} event image`}
+              width={variant === 'featured' ? 80 : variant === 'compact' ? 48 : 64}
+              height={variant === 'featured' ? 48 : variant === 'compact' ? 48 : 48}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
               }}
+            />
+          ) : event.organization?.logo ? (
+            <div className="w-full h-full flex items-center justify-start bg-white/5">
+              <Image
+                src={event.organization.logo}
+                alt={`${event.organization.name} logo`}
+                width={variant === 'featured' ? 40 : variant === 'compact' ? 24 : 32}
+                height={variant === 'featured' ? 40 : variant === 'compact' ? 24 : 32}
+                className="object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  // Show fallback color block if logo fails
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    parent.style.backgroundColor = categoryColor;
+                  }
+                }}
+                onLoad={(e) => {
+                  e.currentTarget.style.display = 'block';
+                }}
+              />
+            </div>
+          ) : (
+            <div 
+              className="w-full h-full flex items-center justify-start"
+              style={{ backgroundColor: categoryColor }}
             >
-              Learn More
-            </button>
+              {/* Category color block fallback */}
+            </div>
           )}
         </div>
       </div>
 
       {/* Trending Indicator */}
       {event.isTrending && (
-        <div className="trending-indicator">
+        <div className="trending-indicator absolute top-2 right-2 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
           <TrendUp size={12} />
         </div>
       )}
-    </div>
+
+    </Card>
   );
 });
 

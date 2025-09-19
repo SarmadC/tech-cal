@@ -25,7 +25,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   userProfile,
   trackedEvents = [],
   onEventSelect,
-  onTrackEvent,
+  onTrackEvent: _onTrackEvent,
   className = '',
   limit = 5,
   userLocation
@@ -46,13 +46,10 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     );
   }, [events, userProfile, trackedEvents, limit, userLocation, hasCareerProfile]);
 
-  const handleEventClick = (event: DiscoveryEvent) => {
+  const handleEventClick = React.useCallback((event: DiscoveryEvent) => {
     onEventSelect?.(event);
-  };
+  }, [onEventSelect]);
 
-  const handleTrackEvent = (event: DiscoveryEvent) => {
-    onTrackEvent?.(event);
-  };
 
   // Show career profile prompt if user doesn't have complete profile
   if (!hasCareerProfile && userProfile) {
@@ -97,7 +94,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
       showViewAll={personalizedEvents.length >= limit}
       onViewAll={() => {
         // Handle view all - could navigate to a full personalized feed
-        console.log('View all personalized recommendations');
+        // TODO: Navigate to full personalized recommendations view
       }}
     >
       <div className="discovery-cards-container">
@@ -106,9 +103,8 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             key={`${event.id}-${index}`}
             event={event}
             onClick={() => handleEventClick(event)}
-            onTrack={() => handleTrackEvent(event)}
             variant={index === 0 ? 'featured' : 'default'}
-            className="for-you-card"
+            className=""
           />
         ))}
       </div>

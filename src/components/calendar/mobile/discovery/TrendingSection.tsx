@@ -19,7 +19,7 @@ export interface TrendingSectionProps {
 const TrendingSection = React.memo<TrendingSectionProps>(({
   events,
   onEventSelect,
-  onTrackEvent,
+  onTrackEvent: _onTrackEvent,
   className = '',
   limit = 5,
   userLocation
@@ -28,13 +28,10 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
     return DiscoveryService.getTrendingEvents(events, limit, userLocation);
   }, [events, limit, userLocation]);
 
-  const handleEventClick = (event: DiscoveryEvent) => {
+  const handleEventClick = React.useCallback((event: DiscoveryEvent) => {
     onEventSelect?.(event);
-  };
+  }, [onEventSelect]);
 
-  const handleTrackEvent = (event: DiscoveryEvent) => {
-    onTrackEvent?.(event);
-  };
 
   if (trendingEvents.length === 0) {
     return (
@@ -68,7 +65,7 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
       showViewAll={trendingEvents.length >= limit}
       onViewAll={() => {
         // Handle view all trending events
-        console.log('View all trending events');
+        // TODO: Navigate to full trending view
       }}
     >
       <div className="discovery-cards-container trending-container">
@@ -78,9 +75,8 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
             <DiscoveryCard
               event={featuredEvent}
               onClick={() => handleEventClick(featuredEvent)}
-              onTrack={() => handleTrackEvent(featuredEvent)}
               variant="featured"
-              className="trending-featured-card"
+              className=""
             />
           </div>
         )}
@@ -93,9 +89,8 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
                 key={`${event.id}-${index}`}
                 event={event}
                 onClick={() => handleEventClick(event)}
-                onTrack={() => handleTrackEvent(event)}
                 variant="compact"
-                className="trending-card"
+                className=""
               />
             ))}
           </div>

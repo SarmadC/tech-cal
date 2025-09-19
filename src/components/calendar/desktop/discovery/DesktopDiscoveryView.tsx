@@ -19,7 +19,6 @@ export interface DesktopDiscoveryViewProps {
   profile: AppProfile | null;
   trackedEvents?: TrackedEvent[];
   onEventSelect?: (event: Event) => void;
-  onTrackEvent?: (event: Event) => void;
   className?: string;
 }
 
@@ -29,7 +28,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
   profile,
   trackedEvents = [],
   onEventSelect,
-  onTrackEvent,
   className = ''
 }) => {
   // Get user location for location-aware recommendations
@@ -60,7 +58,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                 userProfile={profile}
                 trackedEvents={trackedEvents}
                 onEventSelect={onEventSelect}
-                onTrackEvent={onTrackEvent}
                 userLocation={userLocation || undefined}
                 limit={8}
                     className="desktop-for-you"
@@ -75,7 +72,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
               <TrendingSection
                 events={events}
                 onEventSelect={onEventSelect}
-                onTrackEvent={onTrackEvent}
                 userLocation={userLocation || undefined}
                 limit={6}
                 className="desktop-trending"
@@ -92,7 +88,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
               <NewThisWeekSection
                 events={events}
                 onEventSelect={onEventSelect}
-                onTrackEvent={onTrackEvent}
                 limit={5}
                 className="desktop-new"
               />
@@ -105,7 +100,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
               <QuickWinsSection
                 events={events}
                 onEventSelect={onEventSelect}
-                onTrackEvent={onTrackEvent}
                 limit={5}
                 className="desktop-quick-wins"
               />

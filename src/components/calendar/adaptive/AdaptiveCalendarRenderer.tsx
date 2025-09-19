@@ -30,7 +30,6 @@ export interface AdaptiveCalendarProps {
   trackedEvents?: TrackedEvent[];
   onEventSelect?: (event: Event | MultiDayEventInstance) => void;
   onEventClick?: (clickInfo: EventClickArg) => void;
-  onTrackEvent?: (event: Event) => void;
   onRefresh?: () => Promise<void>;
   calendarRef?: React.RefObject<FullCalendar | null>;
   className?: string;
@@ -48,7 +47,6 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
   trackedEvents = [],
   onEventSelect,
   onEventClick,
-  onTrackEvent,
   onRefresh,
   calendarRef,
   className = '',
@@ -77,7 +75,6 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
             profile={profile}
             trackedEvents={trackedEvents}
             onEventSelect={onEventSelect as (event: Event) => void}
-            onTrackEvent={onTrackEvent}
             showDiscoveryMode={true}
             className={className}
           />
@@ -146,7 +143,6 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
           profile={profile}
           trackedEvents={trackedEvents}
           onEventSelect={onEventSelect as (event: Event) => void}
-          onTrackEvent={onTrackEvent}
           className={className}
         />
       );

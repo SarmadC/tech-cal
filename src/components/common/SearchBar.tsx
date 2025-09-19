@@ -54,7 +54,7 @@ export default function SearchBar({
 
           /* Shared Styles */
           text-base
-          rounded-full 
+          rounded-lg 
           focus:outline-none 
           focus:ring-2 
           focus:ring-gray-900 dark:focus:ring-gray-200

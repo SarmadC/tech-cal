@@ -138,7 +138,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
 
       {showDiscoveryMode ? (
         /* Discovery Mode - New Sectioned Layout */
-        <div className="discovery-feed" role="region" aria-label="Discover tech events">
+        <div className="discovery-feed" role="region" aria-label="Discover tech events" data-view="discovery">
           {/* For You Section */}
           <DiscoveryErrorBoundary sectionName="For You">
             <DiscoveryAlgorithmErrorBoundary algorithmName="Personalization">

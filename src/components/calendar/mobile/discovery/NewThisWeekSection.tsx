@@ -18,7 +18,7 @@ export interface NewThisWeekSectionProps {
 const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
   events,
   onEventSelect,
-  onTrackEvent,
+  onTrackEvent: _onTrackEvent,
   className = '',
   limit = 5
 }) => {
@@ -26,13 +26,10 @@ const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
     return DiscoveryService.getNewEvents(events, limit);
   }, [events, limit]);
 
-  const handleEventClick = (event: DiscoveryEvent) => {
+  const handleEventClick = React.useCallback((event: DiscoveryEvent) => {
     onEventSelect?.(event);
-  };
+  }, [onEventSelect]);
 
-  const handleTrackEvent = (event: DiscoveryEvent) => {
-    onTrackEvent?.(event);
-  };
 
   if (newEvents.length === 0) {
     return (
@@ -62,7 +59,7 @@ const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
       showViewAll={newEvents.length >= limit}
       onViewAll={() => {
         // Handle view all new events
-        console.log('View all new events');
+        // TODO: Navigate to full new events view
       }}
     >
       <div className="discovery-cards-container new-events-container">
@@ -71,9 +68,8 @@ const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
             key={`${event.id}-${index}`}
             event={event}
             onClick={() => handleEventClick(event)}
-            onTrack={() => handleTrackEvent(event)}
             variant="default"
-            className="new-event-card"
+            className=""
           />
         ))}
       </div>

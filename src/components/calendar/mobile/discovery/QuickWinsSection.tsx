@@ -18,7 +18,7 @@ export interface QuickWinsSectionProps {
 const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
   events,
   onEventSelect,
-  onTrackEvent,
+  onTrackEvent: _onTrackEvent,
   className = '',
   limit = 4
 }) => {
@@ -26,13 +26,10 @@ const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
     return DiscoveryService.getQuickWinEvents(events, limit);
   }, [events, limit]);
 
-  const handleEventClick = (event: DiscoveryEvent) => {
+  const handleEventClick = React.useCallback((event: DiscoveryEvent) => {
     onEventSelect?.(event);
-  };
+  }, [onEventSelect]);
 
-  const handleTrackEvent = (event: DiscoveryEvent) => {
-    onTrackEvent?.(event);
-  };
 
   if (quickWinEvents.length === 0) {
     return (
@@ -66,9 +63,8 @@ const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
             key={`${event.id}-${index}`}
             event={event}
             onClick={() => handleEventClick(event)}
-            onTrack={() => handleTrackEvent(event)}
             variant="compact"
-            className="quick-win-card"
+            className=""
           />
         ))}
       </div>
