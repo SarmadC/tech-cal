@@ -330,7 +330,8 @@ export function CalendarLayout({
                             dateRange: { start: null, end: null },
                             availability: 'all',
                             popularity: 'all',
-                            duration: 'all'
+                            duration: 'all',
+                            sortBy: 'default'
                         }}
                         onUpdateFilter={(_key, _value) => {
                             // TODO: Implement filter updates for mobile

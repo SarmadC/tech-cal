@@ -1,12 +1,14 @@
 // src/components/SearchBar.tsx
 
 import { MaterialIcon } from '@/components/ui/Icon';
+import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 
 type Suggestion = {
   id: string;
   title: string | null;
   organizer: string | null;
   start_time: string;
+  careerScore?: number;
 };
 
 interface SearchBarProps {
@@ -71,14 +73,25 @@ export default function SearchBar({
               <li key={suggestion.id}>
                 <button
                   onClick={() => onSuggestionClick(suggestion)}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex flex-col"
+                  className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
                 >
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                    {suggestion.title || 'Untitled Event'}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {suggestion.organizer || 'Unknown Organizer'} • {new Date(suggestion.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                      {suggestion.title || 'Untitled Event'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {suggestion.organizer || 'Unknown Organizer'} • {new Date(suggestion.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  {/* Career Impact Indicator */}
+                  {suggestion.careerScore && suggestion.careerScore > 0 && (
+                    <CareerImpactIndicator 
+                      score={suggestion.careerScore}
+                      size="sm"
+                      showValue={false}
+                      className="flex-shrink-0 ml-2"
+                    />
+                  )}
                 </button>
               </li>
             ))}

@@ -748,6 +748,34 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                 </div>
                             </div>
 
+                            {/* Sort Options */}
+                            <div className="mobile-filter-section">
+                                <h3 className="mobile-section-title">Sort By</h3>
+                                <div className="mobile-filter-options">
+                                    {[
+                                        { value: 'default', label: 'Default', icon: 'calendar' },
+                                        { value: 'date', label: 'Date', icon: 'time' },
+                                        { value: 'popularity', label: 'Popularity', icon: 'trending-up' },
+                                        { value: 'career-impact', label: 'Career Impact', icon: 'target' }
+                                    ].map((option) => (
+                                        <label key={option.value} className="mobile-filter-option">
+                                            <input
+                                                type="radio"
+                                                name="sortBy"
+                                                value={option.value}
+                                                checked={filters.sortBy === option.value}
+                                                onChange={(e) => onUpdateFilter('sortBy', e.target.value as SmartFilterOptions['sortBy'])}
+                                                className="mobile-filter-radio"
+                                            />
+                                            <div className="mobile-filter-option-content">
+                                                {getIconComponent(option.icon, 16)}
+                                                <span>{option.label}</span>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Personal Filters */}
                             <div className="mobile-filter-section">
                                 <h3 className="mobile-section-title">Personal</h3>

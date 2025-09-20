@@ -17,6 +17,7 @@ export interface SmartFilterOptions {
     myNetwork: boolean;
     recommended: boolean;
     duration: 'all' | 'short' | 'medium' | 'long' | 'multi-day';
+    sortBy: 'default' | 'date' | 'popularity' | 'career-impact';
 }
 
 const defaultFilters: SmartFilterOptions = {
@@ -33,6 +34,7 @@ const defaultFilters: SmartFilterOptions = {
     myTracked: false,
     myNetwork: false,
     recommended: false,
+    sortBy: 'default',
 };
 
 // 2. UPDATE SIGNATURE: The hook now accepts a flexible array of Event or TrackedEvent.
@@ -101,8 +103,33 @@ export function useSmartFilters(
             return true;
         });
         
+        // Apply sorting based on sortBy filter
+        const sorted = [...filtered].sort((a, b) => {
+            switch (filters.sortBy) {
+                case 'date':
+                    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+                case 'popularity':
+                    // Simple popularity sorting based on attendee count
+                    const aAttendees = a.attendeeCount || 0;
+                    const bAttendees = b.attendeeCount || 0;
+                    return bAttendees - aAttendees;
+                case 'career-impact':
+                    // Career impact sorting (will be enhanced with actual scores)
+                    const aCareerScore = (a as { careerImpactLite?: { overall: number } }).careerImpactLite?.overall || 0;
+                    const bCareerScore = (b as { careerImpactLite?: { overall: number } }).careerImpactLite?.overall || 0;
+                    if (aCareerScore !== bCareerScore) {
+                        return bCareerScore - aCareerScore; // Higher scores first
+                    }
+                    // Fallback to date sorting
+                    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+                default:
+                    // Default sorting by date
+                    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+            }
+        });
+        
         // Smart filters completed
-        return filtered;
+        return sorted;
     }, [events, filters, userProfile, userCalendar]);
 
     // 4. UPDATE HELPER SIGNATURES: All helpers now accept the base `Event` type.

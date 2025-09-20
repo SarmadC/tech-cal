@@ -5,11 +5,13 @@ import React from 'react';
 import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Event, MultiDayEventInstance, isEventTracked, AgendaItem } from '@/types';
+import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { isEventLive, getEventDuration } from '@/utils/dateUtils';
+import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 import { LearnMoreButton } from './LearnMoreButton';
 
 export interface EventCardProps {
-    event: Event | MultiDayEventInstance;
+    event: Event | MultiDayEventInstance | (Event & { careerImpactLite?: CareerImpactScoreLite });
     onClick: () => void;
     onHover: (e: React.MouseEvent) => void;
     onLeave: () => void;
@@ -25,6 +27,7 @@ export interface EventCardProps {
     style?: React.CSSProperties;
     isOverlapping?: boolean;
     agenda?: AgendaItem[];
+    showCareerImpact?: boolean;
 }
 
 export const EventCard: React.FC<EventCardProps> = ({
@@ -37,7 +40,8 @@ export const EventCard: React.FC<EventCardProps> = ({
     className = '',
     style = {},
     isOverlapping = false,
-    agenda = []
+    agenda = [],
+    showCareerImpact = true
 }) => {
     const live = isEventLive(event.startTime, event.endTime);
 
@@ -308,7 +312,18 @@ export const EventCard: React.FC<EventCardProps> = ({
 
                 {/* Main title section */}
                 <div className="event-title-section">
-                    <h3 className="event-title">{event.title}</h3>
+                    <div className="flex items-start justify-between">
+                        <h3 className="event-title flex-1">{event.title}</h3>
+                        {/* Career Impact Indicator */}
+                        {showCareerImpact && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
+                            <CareerImpactIndicator 
+                                score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall}
+                                size={viewType === 'week' ? 'sm' : 'md'}
+                                showValue={false}
+                                className="flex-shrink-0 ml-2"
+                            />
+                        )}
+                    </div>
                 </div>
                 
                 {/* Arrow icon in top-right corner */}

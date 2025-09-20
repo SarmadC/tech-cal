@@ -9,6 +9,7 @@ export interface SearchSuggestion {
     type: 'event' | 'organizer' | 'category';
     subtitle?: string;
     icon?: string;
+    careerScore?: number;
 }
 
 export interface UseSearchSuggestionsProps {
@@ -39,19 +40,43 @@ export function useSearchSuggestions({
         const term = debouncedSearchTerm.toLowerCase();
         const suggestions: SearchSuggestion[] = [];
 
-        // Event suggestions
+        // Event suggestions with career impact ranking
         const eventMatches = events
             .filter(event => 
                 event.title.toLowerCase().includes(term) ||
                 event.organizer.toLowerCase().includes(term)
             )
+            .sort((a, b) => {
+                // Sort by career impact if available, otherwise by relevance
+                const aCareerScore = (a as { careerImpactLite?: { overall: number } }).careerImpactLite?.overall || 0;
+                const bCareerScore = (b as { careerImpactLite?: { overall: number } }).careerImpactLite?.overall || 0;
+                
+                if (aCareerScore !== bCareerScore) {
+                    return bCareerScore - aCareerScore; // Higher career impact first
+                }
+                
+                // Fallback to title relevance (exact matches first)
+                const aExactMatch = a.title.toLowerCase() === term;
+                const bExactMatch = b.title.toLowerCase() === term;
+                if (aExactMatch && !bExactMatch) return -1;
+                if (!aExactMatch && bExactMatch) return 1;
+                
+                // Then by start of title
+                const aStartsWithTerm = a.title.toLowerCase().startsWith(term);
+                const bStartsWithTerm = b.title.toLowerCase().startsWith(term);
+                if (aStartsWithTerm && !bStartsWithTerm) return -1;
+                if (!aStartsWithTerm && bStartsWithTerm) return 1;
+                
+                return 0;
+            })
             .slice(0, Math.ceil(maxSuggestions / 2))
             .map(event => ({
                 id: `event-${event.id}`,
                 title: event.title,
                 type: 'event' as const,
                 subtitle: event.organizer,
-                icon: 'event'
+                icon: 'event',
+                careerScore: (event as { careerImpactLite?: { overall: number } }).careerImpactLite?.overall
             }));
 
         suggestions.push(...eventMatches);
