@@ -1,12 +1,8 @@
 // profileService.ts
 
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
-import type { AppProfile, ProfileUpdateForm, Json } from '@/types'; // ApiResponse is removed
+import type { AppProfile, ProfileUpdateForm, Json, SupabaseClientType } from '@/types'; // ApiResponse is removed
 import { profileTransformer } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
-
-type SupabaseClientType = SupabaseClient<Database>;
 
 export class ProfileService {
     static async getProfile(

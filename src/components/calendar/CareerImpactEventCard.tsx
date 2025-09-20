@@ -6,6 +6,7 @@ import { EventCard } from './shared/EventCard';
 import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
 import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 import { CareerImpactTooltip } from '@/components/ui/career-impact-tooltip';
+import { useOptimizedCareerImpact } from '@/hooks/useOptimizedCareerImpact';
 
 interface CareerImpactEventCardProps {
   event: Event & { 
@@ -132,65 +133,21 @@ export function CareerImpactEventCard({
 
 /**
  * Hook for enhancing events with career impact in components
+ * Now uses optimized batch API instead of N+1 queries
  */
 export function useCareerImpactEvents(
   events: Event[],
   userProfile: AppProfile | null,
   enabled: boolean = true
 ) {
-  const [enhancedEvents, setEnhancedEvents] = React.useState<(Event & { 
-    careerImpactLite?: CareerImpactScoreLite 
-  })[]>(events);
-  const [isLoading, setIsLoading] = React.useState(false);
+  // Use the optimized hook that leverages batch API
+  const { enhancedEvents, isLoading, error } = useOptimizedCareerImpact(events, { 
+    enabled: enabled && !!userProfile 
+  });
 
-  React.useEffect(() => {
-    if (!enabled || !userProfile || events.length === 0) {
-      setEnhancedEvents(events);
-      return;
-    }
-
-    let isCancelled = false;
-
-    async function enhanceEvents() {
-      setIsLoading(true);
-      
-      try {
-        const { CareerImpactUtils } = await import('@/utils/careerImpactUtils');
-        const { CareerProfileService } = await import('@/services/careerProfileService');
-        
-        const careerProfile = CareerProfileService.getCareerProfile(userProfile);
-        if (!careerProfile) {
-          if (!isCancelled) {
-            setEnhancedEvents(events);
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        const enhanced = await CareerImpactUtils.enhanceEventsWithCareerImpactLite(
-          events,
-          careerProfile
-        );
-
-        if (!isCancelled) {
-          setEnhancedEvents(enhanced);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.warn('Failed to enhance events with career impact:', error);
-        if (!isCancelled) {
-          setEnhancedEvents(events);
-          setIsLoading(false);
-        }
-      }
-    }
-
-    enhanceEvents();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [events, userProfile, enabled]);
-
-  return { enhancedEvents, isLoading };
+  return { 
+    enhancedEvents, 
+    isLoading,
+    error 
+  };
 }

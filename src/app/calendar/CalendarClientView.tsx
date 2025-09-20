@@ -8,6 +8,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 
 import { formatDateForURL } from '@/utils/dateUtils';
 import { CalendarLayout, type CalendarLayoutContext } from './CalendarLayout';
+import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import Loading from '@/components/Loading';
 import SmartFilterPanel from '@/components/calendar/SmartFilterPanel';
 import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCalendarRenderer';
@@ -275,9 +276,10 @@ export default function CalendarClientView({
     };
 
     return (
-        <CalendarProvider
-            selectedDate={state.selectedDate}
-            currentDate={currentDate}
+        <PageErrorBoundary name="Calendar">
+            <CalendarProvider
+                selectedDate={state.selectedDate}
+                currentDate={currentDate}
             events={eventData.enrichedEvents}
             categories={initialCategories}
             profile={profile}
@@ -351,5 +353,6 @@ export default function CalendarClientView({
                 )}
             />
         </CalendarProvider>
+        </PageErrorBoundary>
     );
 }

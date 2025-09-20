@@ -1,13 +1,12 @@
 'use client';
 
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
+// Removed unused imports - using SupabaseClientType from types
 import { CareerProfile, CareerOnboardingData } from '@/types/career';
-import { AppProfile, Json } from '@/types';
+import { AppProfile, Json, SupabaseClientType } from '@/types';
 import * as Sentry from '@sentry/nextjs';
 import { CareerImpactService } from './careerImpactService';
 
-type SupabaseClientType = SupabaseClient<Database>;
+// SupabaseClientType now imported from types
 
 export class CareerProfileService {
   /**

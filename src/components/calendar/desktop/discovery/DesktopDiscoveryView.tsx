@@ -8,8 +8,7 @@ import {
   NewThisWeekSection, 
   QuickWinsSection 
 } from '../../mobile/discovery';
-import DiscoveryErrorBoundary from '../../mobile/discovery/DiscoveryErrorBoundary';
-import DiscoveryAlgorithmErrorBoundary from '../../mobile/discovery/DiscoveryAlgorithmErrorBoundary';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import './desktop-discovery.css';
 
@@ -51,24 +50,22 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
         <div className="discovery-primary">
           {/* For You Section */}
               <div className="discovery-section-wrapper">
-                <DiscoveryErrorBoundary sectionName="For You">
-                  <DiscoveryAlgorithmErrorBoundary algorithmName="Personalization">
-                    <ForYouSection
-                events={events}
-                userProfile={profile}
-                trackedEvents={trackedEvents}
-                onEventSelect={onEventSelect}
-                userLocation={userLocation || undefined}
-                limit={8}
+                <ErrorBoundary name="ForYou">
+                  <ForYouSection
+                    events={events}
+                    userProfile={profile}
+                    trackedEvents={trackedEvents}
+                    onEventSelect={onEventSelect}
+                    userLocation={userLocation || undefined}
+                    limit={8}
                     className="desktop-for-you"
                   />
-                  </DiscoveryAlgorithmErrorBoundary>
-                </DiscoveryErrorBoundary>
+                </ErrorBoundary>
               </div>
 
           {/* Trending Section */}
           <div className="discovery-section-wrapper">
-            <DiscoveryErrorBoundary sectionName="Trending">
+            <ErrorBoundary name="Trending">
               <TrendingSection
                 events={events}
                 onEventSelect={onEventSelect}
@@ -76,7 +73,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                 limit={6}
                 className="desktop-trending"
               />
-            </DiscoveryErrorBoundary>
+            </ErrorBoundary>
           </div>
         </div>
 
@@ -84,26 +81,26 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
         <div className="discovery-secondary">
           {/* New This Week Section */}
           <div className="discovery-section-wrapper">
-            <DiscoveryErrorBoundary sectionName="New This Week">
+            <ErrorBoundary name="New This Week">
               <NewThisWeekSection
                 events={events}
                 onEventSelect={onEventSelect}
                 limit={5}
                 className="desktop-new"
               />
-            </DiscoveryErrorBoundary>
+            </ErrorBoundary>
           </div>
 
           {/* Quick Wins Section */}
           <div className="discovery-section-wrapper">
-            <DiscoveryErrorBoundary sectionName="Quick Wins">
+            <ErrorBoundary name="Quick Wins">
               <QuickWinsSection
                 events={events}
                 onEventSelect={onEventSelect}
                 limit={5}
                 className="desktop-quick-wins"
               />
-            </DiscoveryErrorBoundary>
+            </ErrorBoundary>
           </div>
         </div>
       </div>

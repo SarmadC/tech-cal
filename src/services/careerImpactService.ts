@@ -9,9 +9,30 @@ import {
   BatchCareerImpactResult,
   CareerImpactScoreLite
 } from '@/types/careerImpact';
-import { getCareerImpactCache, CacheHashUtils } from '@/services/cache';
+import { CareerImpactCache } from '@/services/cache/careerImpactCache';
 
 export class CareerImpactService {
+  static readonly EMPTY_COMPONENTS = {
+    skillRelevance: 0,
+    careerStageMatch: 0,
+    networkingValue: 0,
+    industryRelevance: 0,
+    timingBonus: 0
+  };
+
+  /**
+   * Create cached score explanation
+   */
+  private static createCachedExplanation(category: string) {
+    return {
+      careerImpactCategory: category as 'transformative' | 'high' | 'moderate' | 'low',
+      reasons: [`Cached result for ${category} impact event`],
+      matchedSkills: [],
+      speakerHighlights: [],
+      confidenceFactors: [`${Math.round(0.9 * 100)}% confidence`]
+    };
+  }
+
   private static readonly DEFAULT_CONFIG: ScoringAlgorithmConfig = {
     version: '2.0.0',
     weights: {
@@ -104,36 +125,48 @@ export class CareerImpactService {
     options: CareerImpactCalculationOptions = {}
   ): Promise<CareerImpactScore> {
     const { event, careerProfile } = input;
-    
-    // Skip cache if explicitly disabled
-    if (options.skipCache) {
-      return this.calculateCareerImpactScore(input, options);
-    }
 
     try {
-      const cache = getCareerImpactCache();
-      const profileHash = CacheHashUtils.generateProfileHash(careerProfile);
-      
-      // Try cache first
-      const cached = await cache.getScore(event.id, profileHash);
-      if (cached.hit && cached.data) {
-        return cached.data;
-      }
+      // Generate cache key
+      const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
 
-      // Calculate fresh score
-      const score = this.calculateCareerImpactScore(input, options);
-      
-      // Store in cache (fire and forget - don't block on cache errors)
-      cache.setScore(event.id, profileHash, score, options.cacheTtl).catch(error => {
-        console.warn(`Failed to cache score for event ${event.id}:`, error);
-      });
-      
-      return score;
-    } catch (cacheError) {
-      // Fallback to direct calculation if cache fails
-      console.warn('Cache error, falling back to direct calculation:', cacheError);
-      return this.calculateCareerImpactScore(input, options);
+      // Try cache first
+      const cached = await CareerImpactCache.get(event.id, profileHash);
+      if (cached) {
+        // Convert lite score to full score for compatibility
+        return {
+          overall: cached.overall,
+          confidence: cached.confidence,
+          components: this.EMPTY_COMPONENTS,
+          explanation: this.createCachedExplanation(cached.category),
+          metadata: {
+            algorithmVersion: this.DEFAULT_CONFIG.version,
+            calculatedAt: new Date().toISOString(),
+            careerProfileHash: profileHash,
+            eventDataHash: CareerImpactCache.generateEventHash(event)
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('Cache lookup failed, falling back to calculation:', error);
     }
+
+    // Calculate and cache result
+    const result = this.calculateCareerImpactScore(input, options);
+
+    // Cache the lite version asynchronously
+    const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
+    const lite: CareerImpactScoreLite = {
+      overall: result.overall,
+      confidence: result.confidence,
+      category: result.explanation.careerImpactCategory
+    };
+
+    CareerImpactCache.set(event.id, profileHash, lite).catch(error => {
+      console.warn('Cache set failed:', error);
+    });
+
+    return result;
   }
 
   /**
@@ -144,36 +177,30 @@ export class CareerImpactService {
     options: CareerImpactCalculationOptions = {}
   ): Promise<CareerImpactScoreLite> {
     const { event, careerProfile } = input;
-    
-    // Skip cache if explicitly disabled
-    if (options.skipCache) {
-      return this.getCareerImpactScoreLite(input, options);
-    }
 
     try {
-      const cache = getCareerImpactCache();
-      const profileHash = CacheHashUtils.generateProfileHash(careerProfile);
-      
-      // Try cache first
-      const cached = await cache.getScoreLite(event.id, profileHash);
-      if (cached.hit && cached.data) {
-        return cached.data;
-      }
+      // Generate cache key
+      const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
 
-      // Calculate fresh score
-      const score = this.getCareerImpactScoreLite(input, options);
-      
-      // Store in cache (fire and forget)
-      cache.setScoreLite(event.id, profileHash, score, options.cacheTtl).catch(error => {
-        console.warn(`Failed to cache lite score for event ${event.id}:`, error);
-      });
-      
-      return score;
-    } catch (cacheError) {
-      // Fallback to direct calculation if cache fails
-      console.warn('Cache error, falling back to direct calculation:', cacheError);
-      return this.getCareerImpactScoreLite(input, options);
+      // Try cache first
+      const cached = await CareerImpactCache.get(event.id, profileHash);
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      console.warn('Cache lookup failed, falling back to calculation:', error);
     }
+
+    // Calculate and cache result
+    const result = this.getCareerImpactScoreLite(input, options);
+
+    // Cache result asynchronously
+    const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
+    CareerImpactCache.set(event.id, profileHash, result).catch(error => {
+      console.warn('Cache set failed:', error);
+    });
+
+    return result;
   }
 
   /**
@@ -183,88 +210,8 @@ export class CareerImpactService {
     input: BatchCareerImpactInput,
     options: CareerImpactCalculationOptions = {}
   ): Promise<BatchCareerImpactResult> {
-    const startTime = Date.now();
-    const results = new Map<string, CareerImpactScore>();
-    const errors: Array<{ eventId: string; error: string }> = [];
-    let cachedScores = 0;
-    let newCalculations = 0;
-
-    // Skip cache if explicitly disabled
-    if (options.skipCache) {
-      return this.calculateBatchCareerImpactDirect(input, options);
-    }
-
-    try {
-      const cache = getCareerImpactCache();
-      const profileHash = CacheHashUtils.generateProfileHash(input.careerProfile);
-      
-      // Check for batch cache first
-      const batchId = CacheHashUtils.generateBatchId(
-        input.events.map(e => e.id), 
-        profileHash
-      );
-      
-      const batchCached = await cache.getBatchResult(batchId);
-      if (batchCached.hit && batchCached.data) {
-        return batchCached.data;
-      }
-
-      // Process events individually with cache
-      for (const event of input.events) {
-        try {
-          // Try individual cache first
-          const cached = await cache.getScore(event.id, profileHash);
-          if (cached.hit && cached.data) {
-            results.set(event.id, cached.data);
-            cachedScores++;
-          } else {
-            // Calculate fresh score
-            const score = this.calculateCareerImpactScore(
-              { event, careerProfile: input.careerProfile },
-              options
-            );
-            results.set(event.id, score);
-            newCalculations++;
-            
-            // Store in cache (fire and forget)
-            cache.setScore(event.id, profileHash, score, options.cacheTtl).catch(error => {
-              console.warn(`Failed to cache score for event ${event.id}:`, error);
-            });
-          }
-        } catch (error) {
-          errors.push({
-            eventId: event.id,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-        }
-      }
-
-      const endTime = Date.now();
-      const result = {
-        scores: results,
-        errors,
-        stats: {
-          totalEvents: input.events.length,
-          successfulCalculations: results.size,
-          cachedScores,
-          newCalculations,
-          processingTimeMs: endTime - startTime
-        }
-      };
-
-      // Cache batch result if successful and significant (fire and forget)
-      if (results.size > 5 && errors.length === 0) {
-        cache.setBatchResult(batchId, result, options.cacheTtl).catch(error => {
-          console.warn(`Failed to cache batch result:`, error);
-        });
-      }
-
-      return result;
-    } catch (cacheError) {
-      // Fallback to direct calculation if cache fails
-      console.warn('Cache error in batch processing, falling back to direct calculation:', cacheError);
-      return this.calculateBatchCareerImpactDirect(input, options);
-    }
+    // Use direct calculation for now (cache optimization will be added later)
+    return this.calculateBatchCareerImpactDirect(input, options);
   }
 
   /**
@@ -313,31 +260,28 @@ export class CareerImpactService {
    */
   static async invalidateProfileCache(careerProfile: CareerProfile): Promise<number> {
     try {
-      const cache = getCareerImpactCache();
-      const profileHash = CacheHashUtils.generateProfileHash(careerProfile);
-      return await cache.invalidateProfile(profileHash);
+      const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
+      return await CareerImpactCache.invalidateProfile(profileHash);
     } catch (error) {
-      console.warn('Failed to invalidate profile cache:', error);
+      console.warn('Profile cache invalidation failed:', error);
       return 0;
     }
   }
 
   static async invalidateEventCache(eventId: string): Promise<number> {
     try {
-      const cache = getCareerImpactCache();
-      return await cache.invalidateEvent(eventId);
+      return await CareerImpactCache.invalidateEvent(eventId);
     } catch (error) {
-      console.warn('Failed to invalidate event cache:', error);
+      console.warn('Event cache invalidation failed:', error);
       return 0;
     }
   }
 
   static async invalidateAllCache(): Promise<number> {
     try {
-      const cache = getCareerImpactCache();
-      return await cache.invalidateAll();
+      return await CareerImpactCache.invalidateAll();
     } catch (error) {
-      console.warn('Failed to invalidate all cache:', error);
+      console.warn('Full cache invalidation failed:', error);
       return 0;
     }
   }
@@ -347,11 +291,10 @@ export class CareerImpactService {
    */
   static async getCacheStats() {
     try {
-      const cache = getCareerImpactCache();
-      return await cache.getStats();
+      return await CareerImpactCache.getStats();
     } catch (error) {
-      console.warn('Failed to get cache stats:', error);
-      return null;
+      console.warn('Cache stats retrieval failed:', error);
+      return { hits: 0, misses: 0, totalRequests: 0, hitRate: 0, lastReset: new Date().toISOString() };
     }
   }
 

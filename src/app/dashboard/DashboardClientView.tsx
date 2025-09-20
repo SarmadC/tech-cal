@@ -13,13 +13,15 @@ import { ErrorState } from '@/components/Loading';
 import { CalendarIcon, ClockIcon, StarIcon, TargetIcon, UsersIcon, MedalIcon, SparkleIcon, PlusIcon } from '@phosphor-icons/react';
 // 1. UPDATE IMPORTS: Use the new, canonical type names.
 import React from 'react';
+import { SectionErrorBoundary, PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import type { TrackedEventRecord, EventType, Event, AppProfile } from '@/types';
-import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import CareerProfilePrompt from '@/components/calendar/mobile/discovery/CareerProfilePrompt';
 import { CareerProfileService } from '@/services/careerProfileService';
-import { CareerInsightsCard, CareerProgressCard } from '@/components/dashboard/CareerInsightsCard';
-import { CareerImpactUtils } from '@/utils/careerImpactUtils';
+import { CareerAnalyticsCard } from '@/components/dashboard/CareerAnalyticsCard';
+import { CareerRecommendationsCard, QuickCareerActionsCard } from '@/components/dashboard/CareerRecommendationsCard';
+import { CareerAnalyticsService } from '@/services/careerAnalyticsService';
+import { useOptimizedCareerImpact } from '@/hooks/useOptimizedCareerImpact';
 import { useLightweightTrackedEvents } from '@/hooks/useTrackedEventsUnified';
 import { formatDateTime } from '@/utils/dateUtils';
 
@@ -37,90 +39,170 @@ type PersonalInsight = {
     icon: React.ReactNode;
 };
 
-const SectionFallback = () => (
-    <div className="flex h-full min-h-[150px] items-center justify-center rounded-lg border-2 border-dashed border-red-200 bg-red-50 text-sm text-red-600">
-        There was an error loading this section.
-    </div>
-);
+// Removed SectionFallback - using ErrorBoundary's built-in fallback
 
 /**
  * Career Insights Section with enhanced events
  */
 function CareerInsightsSection({ 
   upcomingEvents, 
-  userProfile 
+  userProfile,
+  trackedEvents
 }: { 
   upcomingEvents: Event[]; 
-  userProfile: AppProfile; 
+  userProfile: AppProfile;
+  trackedEvents: TrackedEventRecord[];
 }) {
-  const [careerOpportunities, setCareerOpportunities] = React.useState<(Event & { careerImpactLite?: CareerImpactScoreLite })[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // Use optimized career impact hook for better performance
+  const { 
+    enhancedEvents, 
+    isLoading: careerImpactLoading, 
+    error: _careerImpactError,
+    stats: _stats 
+  } = useOptimizedCareerImpact(upcomingEvents, { enabled: true });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [analyticsData, setAnalyticsData] = React.useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [recommendations, setRecommendations] = React.useState<any[]>([]);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = React.useState(true);
+
+  // Use a stable reference for events to prevent infinite re-renders
+  const stableEventsRef = React.useRef<Event[]>([]);
+  const eventsToUse = React.useMemo(() => {
+    const events = enhancedEvents.length > 0 ? enhancedEvents : upcomingEvents;
+    // Only update if the event IDs have actually changed
+    const currentEventIds = events.map(e => e.id).sort().join(',');
+    const previousEventIds = stableEventsRef.current.map(e => e.id).sort().join(',');
+    
+    if (currentEventIds !== previousEventIds) {
+      stableEventsRef.current = events;
+    }
+    
+    return stableEventsRef.current;
+  }, [enhancedEvents, upcomingEvents]); // Include full arrays as dependencies
 
   React.useEffect(() => {
-    async function loadCareerInsights() {
+    async function loadCareerAnalytics() {
       try {
         const careerProfile = CareerProfileService.getCareerProfile(userProfile);
         if (!careerProfile) {
-          setCareerOpportunities([]);
-          setIsLoading(false);
+          setAnalyticsData(null);
+          setRecommendations([]);
+          setIsAnalyticsLoading(false);
           return;
         }
+        
+        // Load comprehensive career analytics with individual error handling
+        const [analyticsResult, recommendationsResult] = await Promise.allSettled([
+          CareerAnalyticsService.generateCareerAnalytics(userProfile, trackedEvents, eventsToUse),
+          CareerAnalyticsService.generateCareerRecommendations(userProfile, trackedEvents, eventsToUse)
+        ]);
 
-        // Get top career opportunities
-        const enhanced = await CareerImpactUtils.enhanceEventsWithCareerImpactLite(
-          upcomingEvents.slice(0, 20), // Limit for performance
-          careerProfile
-        );
+        // Handle analytics result
+        if (analyticsResult.status === 'fulfilled') {
+          setAnalyticsData(analyticsResult.value);
+        } else {
+          console.warn('Failed to load career analytics:', analyticsResult.reason);
+          setAnalyticsData(null);
+        }
 
-        // Sort by career impact and take top 10
-        const topOpportunities = enhanced
-          .filter(event => event.careerImpactLite)
-          .sort((a, b) => (b.careerImpactLite?.overall || 0) - (a.careerImpactLite?.overall || 0))
-          .slice(0, 10);
-
-        setCareerOpportunities(topOpportunities);
+        // Handle recommendations result
+        if (recommendationsResult.status === 'fulfilled') {
+          setRecommendations(recommendationsResult.value);
+        } else {
+          console.warn('Failed to load career recommendations:', recommendationsResult.reason);
+          setRecommendations([]);
+        }
       } catch (error) {
-        console.warn('Failed to load career insights:', error);
-        setCareerOpportunities([]);
+        console.warn('Failed to load career analytics:', error);
+        setAnalyticsData(null);
+        setRecommendations([]);
       } finally {
-        setIsLoading(false);
+        setIsAnalyticsLoading(false);
       }
     }
 
-    loadCareerInsights();
-  }, [upcomingEvents, userProfile]);
+    loadCareerAnalytics();
+  }, [userProfile, trackedEvents, eventsToUse]); // Include all dependencies
+
+  // Show loading if either career impact or analytics are loading
+  const isLoading = careerImpactLoading || isAnalyticsLoading;
 
   if (isLoading) {
     return (
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="animate-pulse bg-gray-200 rounded-lg h-48"></div>
-        <div className="animate-pulse bg-gray-200 rounded-lg h-48"></div>
+      <div className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="animate-pulse bg-gray-200 rounded-lg h-48 lg:col-span-2"></div>
+          <div className="animate-pulse bg-gray-200 rounded-lg h-48"></div>
+        </div>
+        <div className="animate-pulse bg-gray-200 rounded-lg h-64"></div>
       </div>
     );
   }
 
-  if (careerOpportunities.length === 0) {
-    return null; // Don't show section if no career opportunities
+  if (!analyticsData) {
+    return (
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TargetIcon className="w-5 h-5 text-blue-600" />
+            Career Analytics
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <TargetIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="font-medium text-gray-900 mb-2">No career analytics available</h3>
+          <p className="text-gray-600">Complete your career profile to see personalized insights.</p>
+        </CardContent>
+      </Card>
+    );
   }
 
-  // Calculate recent scores for progress tracking
-  const recentScores = careerOpportunities
-    .slice(0, 5)
-    .map(event => event.careerImpactLite?.overall || 0)
-    .filter(score => score > 0);
+  const quickActions = [
+    {
+      id: 'complete-profile',
+      title: 'Complete Career Profile',
+      description: 'Add skills and goals for better recommendations',
+      actionText: 'Complete',
+      priority: 'high' as const,
+      onAction: () => window.location.href = '/onboarding/career'
+    },
+    {
+      id: 'browse-events',
+      title: 'Explore Events',
+      description: 'Find events matching your interests',
+      actionText: 'Browse',
+      priority: 'medium' as const,
+      onAction: () => window.location.href = '/calendar'
+    }
+  ];
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <CareerInsightsCard 
-        topOpportunities={careerOpportunities}
-        className="border-0 shadow-lg bg-white/80 backdrop-blur-sm"
-      />
-      {recentScores.length > 0 && (
-        <CareerProgressCard 
-          recentScores={recentScores}
-          className="border-0 shadow-lg bg-white/80 backdrop-blur-sm"
-        />
-      )}
+    <div className="space-y-6">
+      {/* Career Analytics Overview */}
+      <SectionErrorBoundary name="CareerAnalytics">
+        <CareerAnalyticsCard analyticsData={analyticsData} />
+      </SectionErrorBoundary>
+      
+      {/* Recommendations and Quick Actions */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <SectionErrorBoundary name="Recommendations">
+            <CareerRecommendationsCard
+              recommendations={recommendations}
+              userProfile={userProfile}
+              onEventSelect={(event) => window.location.href = `/events/${event.id}`}
+              onRecommendationAction={(rec) => console.log('Action for recommendation:', rec)}
+            />
+          </SectionErrorBoundary>
+        </div>
+        <div>
+          <ErrorBoundary name="QuickActions">
+            <QuickCareerActionsCard actions={quickActions} />
+          </ErrorBoundary>
+        </div>
+      </div>
     </div>
   );
 }
@@ -225,9 +307,10 @@ export default function DashboardClientView({
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-            <div className="max-w-7xl mx-auto p-6 space-y-8">
-                <ErrorBoundary fallback={<SectionFallback />}>
+        <PageErrorBoundary name="Dashboard">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+                <div className="max-w-7xl mx-auto p-6 space-y-8">
+                <SectionErrorBoundary name="DashboardSection">
                     <div className="flex flex-col md:flex-row md:items-center justify-between">
                         <div>
                             <h1 className="text-4xl font-bold text-gray-900 mb-2">{greeting}</h1>
@@ -240,26 +323,27 @@ export default function DashboardClientView({
                             <Button asChild><Link href="/calendar"><PlusIcon className="w-4 h-4 mr-2" />Track Events</Link></Button>
                         </div>
                     </div>
-                </ErrorBoundary>
+                </SectionErrorBoundary>
 
                 {/* Career Profile Prompt */}
                 {profile && !CareerProfileService.hasCompletedOnboarding(profile) && (
-                    <ErrorBoundary fallback={<SectionFallback />}>
+                    <SectionErrorBoundary name="DashboardSection">
                         <CareerProfilePrompt profile={profile} />
-                    </ErrorBoundary>
+                    </SectionErrorBoundary>
                 )}
 
                 {/* Career Insights - Show if user has completed career profile */}
                 {profile && CareerProfileService.hasCompletedOnboarding(profile) && (
-                    <ErrorBoundary fallback={<SectionFallback />}>
+                    <SectionErrorBoundary name="DashboardSection">
                         <CareerInsightsSection 
                             upcomingEvents={allUpcomingEvents || []}
                             userProfile={profile}
+                            trackedEvents={trackedEvents || []}
                         />
-                    </ErrorBoundary>
+                    </SectionErrorBoundary>
                 )}
 
-                <ErrorBoundary fallback={<SectionFallback />}>
+                <SectionErrorBoundary name="DashboardSection">
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                         {insights.map((insight, index) => (
                             <Card key={index} className="relative overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -274,9 +358,9 @@ export default function DashboardClientView({
                             </Card>
                         ))}
                     </div>
-                </ErrorBoundary>
+                </SectionErrorBoundary>
 
-                <ErrorBoundary fallback={<SectionFallback />}>
+                <SectionErrorBoundary name="DashboardSection">
                     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle>Your Upcoming Events</CardTitle>
@@ -304,10 +388,10 @@ export default function DashboardClientView({
                             )}
                         </CardContent>
                     </Card>
-                </ErrorBoundary>
+                </SectionErrorBoundary>
 
                 {recommendedEvents.length > 0 && (
-                    <ErrorBoundary fallback={<SectionFallback />}>
+                    <SectionErrorBoundary name="DashboardSection">
                         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                             <CardHeader>
                                 <CardTitle>Recommended for You</CardTitle>
@@ -321,9 +405,10 @@ export default function DashboardClientView({
                                 ))}
                             </CardContent>
                         </Card>
-                    </ErrorBoundary>
+                    </SectionErrorBoundary>
                 )}
             </div>
         </div>
+        </PageErrorBoundary>
     );
 }

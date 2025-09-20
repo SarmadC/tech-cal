@@ -18,6 +18,7 @@ import './styles/quick-date-picker.css';
 
 import QueryProvider from '@/components/providers/QueryProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import ClientLayout from "@/components/layout/ClientLayout";
 import IconProvider from '../components/providers/IconProvider';
 
@@ -46,22 +47,25 @@ export default function RootLayout({
                 {/* Toaster should be high-level to be independent of other re-renders */}
                 <Toaster position="top-center" richColors />
 
-                {/* 1. AuthProvider is the outermost context provider */}
-                <AuthProvider>
-                    {/* 2. QueryProvider is next, it might need auth context for queries */}
-                    <QueryProvider>
-                        {/* 3. UI/UX providers can go inside */}
-                        {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
-                        {/* <SmoothScrollProvider> */}
-                            {/* 4. ClientLayout contains the Navbar, which needs auth context */}
-                            <IconProvider>
-                                <ClientLayout>
-                                    {children}
-                                </ClientLayout>
-                            </IconProvider>
-                        {/* </SmoothScrollProvider> */}
-                    </QueryProvider>
-                </AuthProvider>
+                {/* Global Error Boundary */}
+                <PageErrorBoundary name="RootLayout">
+                    {/* 1. AuthProvider is the outermost context provider */}
+                    <AuthProvider>
+                        {/* 2. QueryProvider is next, it might need auth context for queries */}
+                        <QueryProvider>
+                            {/* 3. UI/UX providers can go inside */}
+                            {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
+                            {/* <SmoothScrollProvider> */}
+                                {/* 4. ClientLayout contains the Navbar, which needs auth context */}
+                                <IconProvider>
+                                    <ClientLayout>
+                                        {children}
+                                    </ClientLayout>
+                                </IconProvider>
+                            {/* </SmoothScrollProvider> */}
+                        </QueryProvider>
+                    </AuthProvider>
+                </PageErrorBoundary>
             </body>
         </html>
     );

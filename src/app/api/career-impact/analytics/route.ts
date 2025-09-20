@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { EventService } from '@/services/eventServices';
-import { CareerImpactUtils } from '@/utils/careerImpactUtils';
+// import { CareerImpactUtils } from '@/utils/careerImpactUtils'; // Now using batch service
 import { CareerProfile } from '@/types/career';
 
 interface AnalyticsResponse {
@@ -95,11 +95,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Calculate career impact for events (using lite version for performance)
-    const enhancedEvents = await CareerImpactUtils.enhanceEventsWithCareerImpactLite(
-      events,
-      careerProfile
-    );
+    // Calculate career impact for events using batch API (optimized)
+    const { BatchCareerImpactService } = await import('@/services/batchCareerImpactService');
+    const enhancedEvents = await BatchCareerImpactService.enhanceEventsLite(events);
 
     // Filter events with career impact scores
     const scoredEvents = enhancedEvents.filter(event => event.careerImpactLite);

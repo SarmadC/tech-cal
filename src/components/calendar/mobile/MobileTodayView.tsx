@@ -11,8 +11,7 @@ import {
   NewThisWeekSection, 
   QuickWinsSection 
 } from './discovery';
-import DiscoveryErrorBoundary from './discovery/DiscoveryErrorBoundary';
-import DiscoveryAlgorithmErrorBoundary from './discovery/DiscoveryAlgorithmErrorBoundary';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import './discovery/discovery.css';
 
@@ -123,9 +122,8 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
         /* Discovery Mode - New Sectioned Layout */
         <div className="discovery-feed" role="region" aria-label="Discover tech events" data-view="discovery">
           {/* For You Section */}
-          <DiscoveryErrorBoundary sectionName="For You">
-            <DiscoveryAlgorithmErrorBoundary algorithmName="Personalization">
-              <ForYouSection
+          <ErrorBoundary name="ForYou">
+            <ForYouSection
               events={events}
               userProfile={profile}
               trackedEvents={trackedEvents}
@@ -134,45 +132,38 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
               userLocation={userLocation || undefined}
               limit={5}
             />
-            </DiscoveryAlgorithmErrorBoundary>
-          </DiscoveryErrorBoundary>
+          </ErrorBoundary>
 
           {/* Trending Section */}
-          <DiscoveryErrorBoundary sectionName="Trending">
-            <DiscoveryAlgorithmErrorBoundary algorithmName="Trending">
-              <TrendingSection
+          <ErrorBoundary name="Trending">
+            <TrendingSection
               events={events}
               onEventSelect={handleEventTap}
               onTrackEvent={handleTrackEvent}
               userLocation={userLocation || undefined}
               limit={5}
             />
-            </DiscoveryAlgorithmErrorBoundary>
-          </DiscoveryErrorBoundary>
+          </ErrorBoundary>
 
           {/* New This Week Section */}
-          <DiscoveryErrorBoundary sectionName="New This Week">
-            <DiscoveryAlgorithmErrorBoundary algorithmName="New Events">
-              <NewThisWeekSection
+          <ErrorBoundary name="NewThisWeek">
+            <NewThisWeekSection
               events={events}
               onEventSelect={handleEventTap}
               onTrackEvent={handleTrackEvent}
               limit={4}
             />
-            </DiscoveryAlgorithmErrorBoundary>
-          </DiscoveryErrorBoundary>
+          </ErrorBoundary>
 
           {/* Quick Wins Section */}
-          <DiscoveryErrorBoundary sectionName="Quick Wins">
-            <DiscoveryAlgorithmErrorBoundary algorithmName="Quick Wins">
-              <QuickWinsSection
+          <ErrorBoundary name="QuickWins">
+            <QuickWinsSection
               events={events}
               onEventSelect={handleEventTap}
               onTrackEvent={handleTrackEvent}
               limit={4}
             />
-            </DiscoveryAlgorithmErrorBoundary>
-          </DiscoveryErrorBoundary>
+          </ErrorBoundary>
 
           {/* Show empty state if no events at all */}
           {events.length === 0 && (

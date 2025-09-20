@@ -1,8 +1,5 @@
 // src/services/analyticsService.ts
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase'; // Import Json
-
-type SupabaseClientType = SupabaseClient<Database>;
+import type { SupabaseClientType } from '@/types';
 
 export interface GrowthAnalytics {
     followThroughRate: number;

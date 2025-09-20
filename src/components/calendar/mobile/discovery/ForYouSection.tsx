@@ -161,7 +161,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return () => {
       isCancelled = true;
     };
-  }, [cacheKey, hasCareerProfile, userProfile, personalizedEvents.length, lastFetchKey, events, isTrackingEnabled, limit, supabase, trackedEvents, userLocation]);
+  }, [cacheKey, hasCareerProfile, userProfile, personalizedEvents.length, lastFetchKey, events, isTrackingEnabled, limit, supabase, trackedEvents, userLocation]); // Include all dependencies
 
   const handleEventClick = React.useCallback((event: Event, position: number) => {
     // Track click interaction

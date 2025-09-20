@@ -35,27 +35,45 @@ export class CareerImpactUtils {
   }
 
   /**
-   * Enhance events with lightweight career impact scores (faster)
+   * Enhance events with lightweight career impact scores (OPTIMIZED - uses batch API)
    */
   static async enhanceEventsWithCareerImpactLite(
     events: Event[],
     careerProfile: CareerProfile,
     options?: CareerImpactCalculationOptions
   ): Promise<(Event & { careerImpactLite?: CareerImpactScoreLite })[]> {
-    const results = await Promise.all(
-      events.map(async event => {
-        const careerImpactLite = await CareerImpactService.getCareerImpactScoreLiteAsync(
-          { event, careerProfile },
-          options
-        );
-        return {
-          ...event,
-          careerImpactLite,
-        };
-      })
-    );
+    if (events.length === 0) {
+      return events;
+    }
 
-    return results;
+    try {
+      // Use batch API instead of N+1 individual calls
+      const { BatchCareerImpactService } = await import('@/services/batchCareerImpactService');
+      return await BatchCareerImpactService.enhanceEventsLite(events);
+    } catch (error) {
+      console.error('Batch career impact enhancement failed, falling back to individual calls:', error);
+      
+      // Fallback to individual calls only if batch fails
+      const results = await Promise.all(
+        events.map(async event => {
+          try {
+            const careerImpactLite = await CareerImpactService.getCareerImpactScoreLiteAsync(
+              { event, careerProfile },
+              options
+            );
+            return {
+              ...event,
+              careerImpactLite,
+            };
+          } catch (individualError) {
+            console.warn(`Failed to calculate career impact for event ${event.id}:`, individualError);
+            return event;
+          }
+        })
+      );
+
+      return results;
+    }
   }
 
   /**

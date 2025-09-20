@@ -40,7 +40,8 @@
       "mcp__puppeteer__puppeteer_hover",
       "Bash(npm uninstall:*)",
       "Bash(npm install:*)",
-      "Read(//Users/sarmad/.nvm/versions/node/v20.17.0/lib/node_modules/@anthropic-ai/**)"
+      "Read(//Users/sarmad/.nvm/versions/node/v20.17.0/lib/node_modules/@anthropic-ai/**)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

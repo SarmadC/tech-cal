@@ -1,6 +1,6 @@
 'use client';
 
-import { Event, AppProfile, TrackedEvent } from '@/types';
+import { Event, AppProfile, TrackedEvent, SupabaseClientType } from '@/types';
 import { DiscoveryService, DiscoveryEvent, DiscoveryMetrics } from './discoveryService';
 import { BehavioralAnalyticsService, UserBehaviorPattern } from './behavioralAnalyticsService';
 import { SemanticSimilarityService } from '@/utils/semanticSimilarity';
@@ -11,11 +11,10 @@ import { capScore } from '@/utils/commonUtils';
 import { SCORING_CONFIG, TIME_CONSTANTS } from '@/config/analyticsConfig';
 import { DatabaseQueryPatterns } from '@/utils/databaseQueryPatterns';
 import { UnifiedEventUtils } from '@/utils/unifiedEventUtils';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
-import { CareerImpactUtils } from '@/utils/careerImpactUtils';
+// Removed unused imports - using SupabaseClientType from types
+// import { CareerImpactUtils } from '@/utils/careerImpactUtils'; // Now using batch service
 
-type SupabaseClientType = SupabaseClient<Database>;
+// SupabaseClientType now imported from types
 
 // =============================================
 // PERSONALIZED DISCOVERY SERVICE
@@ -121,10 +120,9 @@ export class PersonalizedDiscoveryService extends DiscoveryService {
     const careerProfile = CareerProfileService.getCareerProfile(userProfile);
     if (careerProfile) {
       try {
-        const careerEnhancedEvents = await CareerImpactUtils.enhanceEventsWithCareerImpactLite(
-          enhancedRecommendations,
-          careerProfile
-        );
+        // Use batch service instead of N+1 pattern
+        const { BatchCareerImpactService } = await import('./batchCareerImpactService');
+        const careerEnhancedEvents = await BatchCareerImpactService.enhanceEventsLite(enhancedRecommendations);
         
         // Sort by career impact score (primary) and enhanced score (secondary)
         return careerEnhancedEvents

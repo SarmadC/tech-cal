@@ -26,6 +26,7 @@
     "@fullcalendar/timegrid": "^6.1.18",
     "@hookform/resolvers": "^5.2.1",
     "@phosphor-icons/react": "^2.1.10",
+    "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
     "@sentry/nextjs": "^10.0.0",

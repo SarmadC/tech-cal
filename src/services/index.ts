@@ -20,7 +20,7 @@ export { PersonalizedDiscoveryService } from './personalizedDiscoveryService';
 export { CareerImpactService } from './careerImpactService';
 
 // Cache services
-export { getCareerImpactCache, CacheServiceHelper } from './cache';
+// export { getCareerImpactCache, CacheServiceHelper } from './cache'; // Temporarily disabled
 
 export type { ApiResponse };
 

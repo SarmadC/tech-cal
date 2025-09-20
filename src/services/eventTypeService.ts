@@ -1,11 +1,10 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
+// Removed unused imports - using SupabaseClientType from types
 // 1. UPDATE IMPORT: Use the new, canonical `EventType`.
-import type { EventType } from '@/types';
+import type { EventType, SupabaseClientType } from '@/types';
 import { eventTypeTransformer } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
 
-type SupabaseClientType = SupabaseClient<Database>;
+// SupabaseClientType now imported from types
 
 export class EventTypeService {
     /**

@@ -57,7 +57,7 @@ export async function GET(_request: NextRequest) {
       data: {
         stats: {
           totalKeys: ((stats as unknown as Record<string, unknown>).totalKeys as number) || stats.totalRequests || 0,
-          hitRate: stats.hitRate,
+          hitRate: stats.hits / (stats.hits + stats.misses) || 0,
           memoryUsage: ((stats as unknown as Record<string, unknown>).memoryUsage as string) || undefined,
           cacheType: ((stats as unknown as Record<string, unknown>).cacheType as string) || 'unknown'
         },

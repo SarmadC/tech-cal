@@ -114,7 +114,7 @@ export function useThreeScene(
             cancelAnimationFrame(animationFrameId);
             renderer.dispose();
         };
-    }, [canvasRef, scrollProgressRef]);
+    }, [canvasRef, scrollProgressRef]); // Include refs as dependencies
 }
 
 /**
@@ -223,7 +223,7 @@ export function useCardPositions(
         container.dataset.cardHeight = String(availableCardHeight);
 
         setPositions({ chaos: newChaos, order: newOrder });
-    }, [events]);
+    }, [events]); // Include events as dependency for useCallback
 
     return [positions, calculatePositions]; // 🚨 THIS WAS MISSING!
 }

@@ -1,13 +1,12 @@
 'use client';
 
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
+import type { SupabaseClientType } from '@/types';
 import { handleServiceError } from '@/utils/commonUtils';
 import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
 import { DatabaseQueryPatterns } from '@/utils/databaseQueryPatterns';
 import * as Sentry from '@sentry/nextjs';
 
-type SupabaseClientType = SupabaseClient<Database>;
+// SupabaseClientType now imported from types
 
 // =============================================
 // TYPES FOR ENHANCED ANALYTICS

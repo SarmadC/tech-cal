@@ -1,7 +1,5 @@
 // src/services/eventServices.ts
 
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
 import type {
     Event,
     EventFilters,
@@ -9,6 +7,7 @@ import type {
     SupabaseEventWithDetails,
     MultiDayEvent,
     AgendaItem,
+    SupabaseClientType,
 } from '@/types';
 import {
     eventTransformer,
@@ -18,8 +17,6 @@ import {
 } from '@/utils/transformers';
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import * as Sentry from "@sentry/nextjs";
-
-type SupabaseClientType = SupabaseClient<Database>;
 
 export class EventService {
     // Helper function to fetch and attach tags to events
@@ -80,41 +77,40 @@ export class EventService {
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
 
+            // Simplified query for better reliability - remove complex joins that might fail
             let query = supabaseClient
                 .from('events')
                 .select(`
                     *, 
                     event_type:event_type_id (*), 
-                    organizer:organizers (id, name, logo_url),
-                    event_agenda!left (
-                        id,
-                        day_number,
-                        start_time,
-                        end_time,
-                        title,
-                        description,
-                        location,
-                        agenda_type,
-                        duration_minutes,
-                        track,
-                        sort_order,
-                        agenda_speakers!left (
-                            sort_order,
-                            speakers!inner (
-                                id, name, title, company, bio, linkedin_url, twitter_url, website_url, photo_url
-                            )
-                        )
-                    )
+                    organizer:organizers (id, name, logo_url)
                 `)
                 .order('start_time', { ascending: true })
                 .range(from, to);
 
-            if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
-            if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
-            if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
+            // Apply filters with validation
+            if (filters.categories?.length) {
+                query = query.in('event_type_id', filters.categories);
+            }
+            
+            if (filters.startDate) {
+                try {
+                    query = query.gte('start_time', filters.startDate.toISOString());
+                } catch (_dateError) {
+                    console.warn('Invalid start date filter:', filters.startDate);
+                }
+            }
+            
+            if (filters.endDate) {
+                try {
+                    query = query.lte('start_time', filters.endDate.toISOString());
+                } catch (_dateError) {
+                    console.warn('Invalid end date filter:', filters.endDate);
+                }
+            }
 
-            if (filters.searchTerm) {
-                query = query.textSearch('fts', filters.searchTerm, {
+            if (filters.searchTerm && filters.searchTerm.trim()) {
+                query = query.textSearch('fts', filters.searchTerm.trim(), {
                     type: 'websearch',
                     config: 'english'
                 });
@@ -124,7 +120,22 @@ export class EventService {
             if (filters.eventIds?.length) query = query.in('id', filters.eventIds);
 
             const { data, error } = await query;
-            if (error) throw error;
+            
+            if (error) {
+                console.error('Supabase query error details:', {
+                    error,
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                    code: error.code
+                });
+                throw error;
+            }
+
+            if (!data) {
+                console.warn('No data returned from events query');
+                return [];
+            }
 
             // Fetch tags for all events
             const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);

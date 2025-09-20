@@ -1,15 +1,12 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
 // 1. UPDATE IMPORTS: Use the new, specific type names.
 import type {
     EventStatus,
     TrackedEventRecord, // Replaces AppTrackedEvent
     SupabaseTrackedEventWithDetails,
+    SupabaseClientType,
 } from '@/types';
 import { trackedEventTransformer } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
-
-type SupabaseClientType = SupabaseClient<Database>;
 
 export class UserEventService {
     /**

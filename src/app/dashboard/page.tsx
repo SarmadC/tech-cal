@@ -23,23 +23,42 @@ export default async function DashboardPage() {
     let initialUpcomingEvents: Event[] = [];
 
     try {
-        const [
-            trackedEventsData,
-            eventTypesData,
-            upcomingEventsData
-        ] = await Promise.all([
-            // These service calls now return the new types, so this works seamlessly.
+        // Load data with individual error handling for better resilience
+        const [trackedEventsResult, eventTypesResult, upcomingEventsResult] = await Promise.allSettled([
             UserEventService.getLightweightTrackedEvents(user.id, supabase),
             EventTypeService.getEventTypes(supabase),
-            EventService.getEvents({ startDate: new Date() }, supabase, 1, 100)
+            EventService.getEvents({ startDate: new Date() }, supabase, 1, 50) // Reduced page size for reliability
         ]);
 
-        initialTrackedEvents = trackedEventsData;
-        initialEventTypes = eventTypesData;
-        initialUpcomingEvents = upcomingEventsData;
+        // Handle tracked events
+        if (trackedEventsResult.status === 'fulfilled') {
+            initialTrackedEvents = trackedEventsResult.value;
+        } else {
+            console.error("Failed to load tracked events:", trackedEventsResult.reason);
+        }
+
+        // Handle event types
+        if (eventTypesResult.status === 'fulfilled') {
+            initialEventTypes = eventTypesResult.value;
+        } else {
+            console.error("Failed to load event types:", eventTypesResult.reason);
+        }
+
+        // Handle upcoming events with fallback
+        if (upcomingEventsResult.status === 'fulfilled') {
+            initialUpcomingEvents = upcomingEventsResult.value;
+        } else {
+            console.error("Failed to load upcoming events:", upcomingEventsResult.reason);
+            // Provide empty array as fallback instead of failing completely
+            initialUpcomingEvents = [];
+        }
 
     } catch (error) {
-        console.error("Failed to load initial dashboard data:", error);
+        console.error("Critical error loading dashboard data:", error);
+        // Ensure we have fallback values
+        initialTrackedEvents = [];
+        initialEventTypes = [];
+        initialUpcomingEvents = [];
     }
 
     return (

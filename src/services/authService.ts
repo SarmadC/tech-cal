@@ -1,16 +1,14 @@
 // src/services/authService.ts
-import { SupabaseClient } from '@supabase/supabase-js';
-import type { AuthResponse, OAuthProvider, LoginForm, SignupForm } from '@/types';
+// Removed unused import - using SupabaseClientType from types
+import type { AuthResponse, OAuthProvider, LoginForm, SignupForm, SupabaseClientType } from '@/types';
 import * as Sentry from "@sentry/nextjs";
 
-// 1. IMPORT THE GENERATED DATABASE TYPE
-// This is the blueprint of your database schema.
-import { Database } from '@/types/supabase';
+// Database type now included in SupabaseClientType
 
 // 2. USE THE 'Database' TYPE INSTEAD OF 'any'
 // This makes the client fully aware of your tables, columns, and RPC functions.
 // All ESLint errors will now be fixed.
-type SupabaseClientType = SupabaseClient<Database>;
+// SupabaseClientType now imported from types
 
 export class AuthService {
     /**
