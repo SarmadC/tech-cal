@@ -2,6 +2,7 @@
 
 import type { AppProfile, ProfileUpdateForm, Json, SupabaseClientType } from '@/types'; // ApiResponse is removed
 import { profileTransformer } from '@/utils/transformers';
+import { CacheInvalidationService } from '@/services/cacheInvalidationService';
 import * as Sentry from "@sentry/nextjs";
 
 export class ProfileService {
@@ -73,7 +74,20 @@ export class ProfileService {
             // This helper can remain as-is, as it handles its own errors internally.
             await this.updateAuthUserMetadata(updates, supabaseClient);
 
-            return profileTransformer.toApp(data);
+            const newProfile = profileTransformer.toApp(data);
+
+            // Simple cache invalidation based on user ID - no race conditions
+            try {
+                await CacheInvalidationService.invalidateUserCache(userId);
+            } catch (cacheError) {
+                // Log cache invalidation error but don't fail the profile update
+                console.warn('Cache invalidation failed after profile update:', cacheError);
+                Sentry.captureException(cacheError, {
+                    extra: { function: 'updateProfile:cacheInvalidation', userId }
+                });
+            }
+
+            return newProfile;
         } catch (error) {
             console.error('Error updating profile:', error);
             Sentry.captureException(error, { extra: { function: 'updateProfile', userId, updates } });

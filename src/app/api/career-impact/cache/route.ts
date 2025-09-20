@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { CareerImpactService } from '@/services/careerImpactService';
-import { CareerProfileService } from '@/services/careerProfileService';
+import { CacheInvalidationService } from '@/services/cacheInvalidationService';
+import { CareerImpactCache } from '@/services/cache/careerImpactCache';
 
 interface CacheStatsResponse {
   success: boolean;
@@ -43,7 +43,7 @@ export async function GET(_request: NextRequest) {
     }
 
     // Get cache statistics
-    const stats = await CareerImpactService.getCacheStats();
+    const stats = await CacheInvalidationService.getCacheStats();
     
     if (!stats) {
       return NextResponse.json(
@@ -123,13 +123,8 @@ export async function DELETE(request: NextRequest) {
 
     switch (type) {
       case 'profile':
-        // Invalidate user's profile cache
-        const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
-        const careerProfile = CareerProfileService.getCareerProfile(userProfile);
-        
-        if (careerProfile) {
-          invalidatedCount = await CareerImpactService.invalidateProfileCache(careerProfile);
-        }
+        // Invalidate user's cache
+        invalidatedCount = await CacheInvalidationService.invalidateUserCache(user.id);
         break;
 
       case 'event':
@@ -139,12 +134,11 @@ export async function DELETE(request: NextRequest) {
             { status: 400 }
           );
         }
-        invalidatedCount = await CareerImpactService.invalidateEventCache(id);
+        invalidatedCount = await CareerImpactCache.invalidateEvent(id);
         break;
 
       case 'all':
-        // Only allow admin users to clear all cache (could add admin check here)
-        invalidatedCount = await CareerImpactService.invalidateAllCache();
+        invalidatedCount = await CareerImpactCache.invalidateAll();
         break;
     }
 

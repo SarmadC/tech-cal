@@ -7,6 +7,7 @@ import { Suspense } from 'react';
 import type { AppProfile } from '@/types'; // Import the type for clarity
 
 import SettingsTabs from './SettingTabs';
+import { CacheInvalidationTest } from '@/components/debug/CacheInvalidationTest';
 
 export default async function SettingsPage() {
     const supabase = await createClient();
@@ -40,6 +41,19 @@ export default async function SettingsPage() {
                 {/* The `|| null` is a safeguard, ensuring we always pass a valid prop type. */}
                 <SettingsTabs profile={profile || null} />
             </Suspense>
+
+            {/* Cache Invalidation Test Component - Development Only */}
+            {process.env.NODE_ENV === 'development' && (
+                <div className="mt-12">
+                    <h2 className="text-xl font-semibold mb-4 text-foreground-primary">
+                        Cache Invalidation Testing
+                    </h2>
+                    <p className="text-sm text-foreground-secondary mb-4">
+                        This section is only visible in development mode. Test cache invalidation when profile changes occur.
+                    </p>
+                    <CacheInvalidationTest />
+                </div>
+            )}
         </div>
     );
 }

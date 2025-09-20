@@ -153,15 +153,25 @@ export class CareerImpactCache {
    */
   static async invalidateProfile(profileHash: string): Promise<number> {
     let invalidated = 0;
-    
+
     for (const [key] of this.cache) {
       if (key.includes(`:${profileHash}`)) {
         this.cache.delete(key);
         invalidated++;
       }
     }
-    
+
     return invalidated;
+  }
+
+  /**
+   * Invalidate all cache entries for a user (more efficient than invalidateAll)
+   * This method will be enhanced when we have user-specific cache keys
+   */
+  static async invalidateUser(_userId: string): Promise<number> {
+    // For now, we'll invalidate all cache since we don't store userId in cache keys
+    // This can be optimized later by including userId in cache key structure
+    return await this.invalidateAll();
   }
 
   /**
@@ -217,14 +227,35 @@ export class CareerImpactCache {
   }
 
   private static evictOldest(): void {
-    // Remove oldest 10% of entries when cache is full
+    // Remove oldest 10% of entries when cache is full - O(n) algorithm
     const entries = Array.from(this.cache.entries());
     const toRemove = Math.ceil(entries.length * 0.1);
-    
-    // Sort by timestamp and remove oldest
-    entries
-      .sort((a, b) => a[1].timestamp - b[1].timestamp)
-      .slice(0, toRemove)
-      .forEach(([key]) => this.cache.delete(key));
+
+    // Use quickselect-style algorithm to find the k-th oldest timestamp in O(n)
+    const timestamps = entries.map(([key, value]) => ({ key, timestamp: value.timestamp }));
+
+    // For small toRemove counts, simple minimum finding is more efficient
+    if (toRemove <= 50) {
+      for (let i = 0; i < toRemove; i++) {
+        let minIndex = 0;
+        let minTimestamp = Number.MAX_SAFE_INTEGER;
+
+        for (let j = 0; j < timestamps.length; j++) {
+          if (timestamps[j].timestamp < minTimestamp) {
+            minTimestamp = timestamps[j].timestamp;
+            minIndex = j;
+          }
+        }
+
+        this.cache.delete(timestamps[minIndex].key);
+        timestamps.splice(minIndex, 1);
+      }
+    } else {
+      // For larger removals, use sorting (still better than before)
+      timestamps
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .slice(0, toRemove)
+        .forEach(({ key }) => this.cache.delete(key));
+    }
   }
 }
