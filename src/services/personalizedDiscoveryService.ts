@@ -6,12 +6,14 @@ import { BehavioralAnalyticsService, UserBehaviorPattern } from './behavioralAna
 import { SemanticSimilarityService } from '@/utils/semanticSimilarity';
 import { SkillProgressionService } from '@/utils/skillProgression';
 import { extractCareerProfile } from '@/utils/profileTypeGuards';
+import { CareerProfileService } from './careerProfileService';
 import { capScore } from '@/utils/commonUtils';
 import { SCORING_CONFIG, TIME_CONSTANTS } from '@/config/analyticsConfig';
 import { DatabaseQueryPatterns } from '@/utils/databaseQueryPatterns';
 import { UnifiedEventUtils } from '@/utils/unifiedEventUtils';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
+import { CareerImpactUtils } from '@/utils/careerImpactUtils';
 
 type SupabaseClientType = SupabaseClient<Database>;
 
@@ -115,7 +117,36 @@ export class PersonalizedDiscoveryService extends DiscoveryService {
         } as Event;
     });
 
-    // Sort by enhanced score and return top results
+    // Enhance with career impact scores for better ranking
+    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+    if (careerProfile) {
+      try {
+        const careerEnhancedEvents = await CareerImpactUtils.enhanceEventsWithCareerImpactLite(
+          enhancedRecommendations,
+          careerProfile
+        );
+        
+        // Sort by career impact score (primary) and enhanced score (secondary)
+        return careerEnhancedEvents
+          .sort((a, b) => {
+            const careerScoreA = a.careerImpactLite?.overall || 0;
+            const careerScoreB = b.careerImpactLite?.overall || 0;
+            
+            // Primary sort: career impact score
+            if (careerScoreA !== careerScoreB) {
+              return careerScoreB - careerScoreA;
+            }
+            
+            // Secondary sort: behavioral score (if available)
+            return 0; // Equal career scores maintain original order
+          })
+          .slice(0, limit);
+      } catch (careerError) {
+        console.warn('Career impact enhancement failed, using basic ranking:', careerError);
+      }
+    }
+
+    // Fallback: basic enhanced score sorting
     return enhancedRecommendations
       .sort((_a, _b) => 0) // Removed discoveryMetrics sorting as it's not available in consolidated Event type
       .slice(0, limit);

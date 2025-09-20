@@ -1,6 +1,6 @@
 import { Event, CareerImpactScore } from '@/types';
 import { CareerProfile } from '@/types/career';
-import { CareerImpactCalculationOptions } from '@/types/careerImpact';
+import { CareerImpactCalculationOptions, CareerImpactScoreLite } from '@/types/careerImpact';
 import { CareerImpactService } from '@/services/careerImpactService';
 
 export interface CareerImpactEvent extends Event {
@@ -12,23 +12,50 @@ export interface CareerImpactEvent extends Event {
  */
 export class CareerImpactUtils {
   /**
-   * Enhance events with career impact scores
+   * Enhance events with career impact scores (with caching)
    */
   static async enhanceEventsWithCareerImpact(
     events: Event[],
     careerProfile: CareerProfile,
     options?: CareerImpactCalculationOptions
   ): Promise<CareerImpactEvent[]> {
+    // Use batch processing for better cache efficiency
+    const batchResult = await CareerImpactService.calculateBatchCareerImpact(
+      { events, careerProfile },
+      options
+    );
+
     return events.map(event => {
-      const careerImpact = CareerImpactService.calculateCareerImpactScore(
-        { event, careerProfile },
-        options
-      );
+      const careerImpact = batchResult.scores.get(event.id);
       return {
         ...event,
         careerImpact,
       };
     });
+  }
+
+  /**
+   * Enhance events with lightweight career impact scores (faster)
+   */
+  static async enhanceEventsWithCareerImpactLite(
+    events: Event[],
+    careerProfile: CareerProfile,
+    options?: CareerImpactCalculationOptions
+  ): Promise<(Event & { careerImpactLite?: CareerImpactScoreLite })[]> {
+    const results = await Promise.all(
+      events.map(async event => {
+        const careerImpactLite = await CareerImpactService.getCareerImpactScoreLiteAsync(
+          { event, careerProfile },
+          options
+        );
+        return {
+          ...event,
+          careerImpactLite,
+        };
+      })
+    );
+
+    return results;
   }
 
   /**

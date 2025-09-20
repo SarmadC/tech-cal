@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { FC, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { XIcon, CalendarIcon, ClockIcon, MapPinIcon, UsersIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
@@ -277,7 +279,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                     <div className="space-y-3">
                                         {speakers.map((speaker, index) => {
                                             if (!speaker) return null;
-                                            const hasLinkedIn = Boolean(speaker.socialLinks?.linkedin);
+                                            const hasLinkedIn = Boolean((speaker as any).linkedinUrl || (speaker as any).linkedin_url);
                                             return (
                                             <div 
                                                 key={speaker.id || index} 
@@ -286,7 +288,10 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                 }`}
                                                 onClick={() => {
                                                     if (hasLinkedIn) {
-                                                        window.open(speaker.socialLinks!.linkedin, '_blank', 'noopener,noreferrer');
+                                                        const linkedinUrl = (speaker as any).linkedinUrl || (speaker as any).linkedin_url;
+                                                        if (typeof linkedinUrl === 'string') {
+                                                            window.open(linkedinUrl, '_blank', 'noopener,noreferrer');
+                                                        }
                                                     }
                                                 }}
                                                 title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
@@ -372,7 +377,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                 </div>
                                                 {Array.isArray(item.speakers) && item.speakers.length > 0 ? (
                                                     item.speakers.map((speaker, speakerIndex) => {
-                                                        const hasLinkedIn = Boolean(speaker.socialLinks?.linkedin);
+                                                        const hasLinkedIn = Boolean((speaker as any).linkedinUrl || (speaker as any).linkedin_url);
                                                         return (
                                                         <div 
                                                             key={speaker.id || speakerIndex} 
@@ -381,7 +386,10 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                             }`}
                                                             onClick={() => {
                                                                 if (hasLinkedIn) {
-                                                                    window.open(speaker.socialLinks!.linkedin, '_blank', 'noopener,noreferrer');
+                                                                    const linkedinUrl = (speaker as any).linkedinUrl || (speaker as any).linkedin_url;
+                                                                    if (typeof linkedinUrl === 'string') {
+                                                                        window.open(linkedinUrl, '_blank', 'noopener,noreferrer');
+                                                                    }
                                                                 }
                                                             }}
                                                             title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
@@ -407,14 +415,15 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                 ) : item.speaker && (
                                                     <div 
                                                         className={`flex items-center gap-2 ${
-                                                            item.speaker.socialLinks?.linkedin ? 'cursor-pointer hover:bg-gray-700/30 rounded px-1 py-0.5 transition-colors' : ''
+                                                            (item.speaker as any)?.linkedinUrl || (item.speaker as any)?.linkedin_url ? 'cursor-pointer hover:bg-gray-700/30 rounded px-1 py-0.5 transition-colors' : ''
                                                         }`}
                                                         onClick={() => {
-                                                            if (item.speaker?.socialLinks?.linkedin) {
-                                                                window.open(item.speaker.socialLinks.linkedin, '_blank', 'noopener,noreferrer');
+                                                            const linkedinUrl = (item.speaker as any)?.linkedinUrl || (item.speaker as any)?.linkedin_url;
+                                                            if (typeof linkedinUrl === 'string') {
+                                                                window.open(linkedinUrl, '_blank', 'noopener,noreferrer');
                                                             }
                                                         }}
-                                                        title={item.speaker.socialLinks?.linkedin ? `View ${item.speaker.name}'s LinkedIn profile` : item.speaker.name}
+                                                        title={(item.speaker as any)?.linkedinUrl || (item.speaker as any)?.linkedin_url ? `View ${item.speaker.name}'s LinkedIn profile` : item.speaker.name}
                                                     >
                                                         <Image 
                                                             src={getSpeakerAvatarUrl(item.speaker, 24)} 
@@ -428,7 +437,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                                             }}
                                                         />
                                                         <span className="text-sm text-gray-300">{item.speaker.name}</span>
-                                                        {item.speaker.socialLinks?.linkedin && (
+                                                        {Boolean((item.speaker as any)?.linkedinUrl || (item.speaker as any)?.linkedin_url) && (
                                                             <ArrowSquareOutIcon className="w-3 h-3 text-gray-400" />
                                                         )}
                                                     </div>

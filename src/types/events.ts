@@ -35,6 +35,23 @@ export interface CareerImpactScore {
 // AGENDA TYPES
 // ============================================
 
+export interface AgendaItem {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  description?: string;
+  location?: string;
+  dayNumber?: number;
+  duration?: number;
+  durationMinutes?: number;
+  track?: string;
+  sortOrder?: number;
+  speaker?: Speaker;
+  speakers?: Speaker[];
+}
+
 // ============================================
 // BASE EVENT TYPE
 // ============================================
@@ -226,27 +243,6 @@ export interface Speaker {
     };
 }
 
-export interface AgendaItem {
-    id: string;
-    title: string;
-    description?: string;
-    startTime: string;
-    endTime: string;
-    speaker?: Speaker; // primary speaker (compat)
-    speakers?: Speaker[]; // multiple speakers
-    location?: string;
-    type: 'keynote' | 'session' | 'break' | 'networking' | 'workshop' | 'panel' | 'registration' | 'certification' | 'support' | 'exhibition' | 'meal' | 'entertainment' | 'other';
-    tags?: string[];
-    // Additional fields from database
-    dayNumber?: number;
-    durationMinutes?: number;
-    track?: string;
-    difficultyLevel?: string | null;
-    prerequisites?: string | null;
-    capacity?: number | null;
-    isRequired?: boolean;
-    sortOrder?: number;
-}
 
 // Database schema for agenda items
 export interface DatabaseAgendaItem {

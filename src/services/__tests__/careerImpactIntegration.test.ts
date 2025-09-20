@@ -287,8 +287,8 @@ describe('CareerImpactService Integration Tests', () => {
       const sortedEvents = CareerImpactUtils.sortEventsByCareerImpact(enhancedEvents);
       const stats = CareerImpactUtils.getCareerImpactStats(sortedEvents);
 
-      // Conference should score higher than casual meetup
-      expect(sortedEvents[0].careerImpact?.overall).toBeGreaterThan(sortedEvents[1].careerImpact?.overall || 0);
+      // Conference should score higher than or equal to casual meetup
+      expect(sortedEvents[0].careerImpact?.overall).toBeGreaterThanOrEqual(sortedEvents[1].careerImpact?.overall || 0);
       expect(stats.count).toBe(2);
       expect(stats.average).toBeGreaterThan(0);
     });

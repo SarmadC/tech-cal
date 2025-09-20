@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { FC, useState } from 'react';
 import Image from 'next/image';
 import { ClockIcon, MapPinIcon, UserIcon, UsersIcon, CalendarIcon, CaretDownIcon, CaretRightIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
@@ -147,7 +149,7 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                     <div className="space-y-2">
                         {Array.isArray(item.speakers) && item.speakers.length > 0 ? (
                             item.speakers.map((speaker, index) => {
-                                const hasLinkedIn = Boolean(speaker.socialLinks?.linkedin);
+                                const hasLinkedIn = Boolean((speaker as any).linkedinUrl || (speaker as any).linkedin_url);
                                 return (
                                 <div 
                                     key={speaker.id || index} 
@@ -156,7 +158,7 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                                     }`}
                                     onClick={() => {
                                         if (hasLinkedIn) {
-                                            window.open(speaker.socialLinks!.linkedin, '_blank', 'noopener,noreferrer');
+                                            window.open((speaker as any).linkedinUrl || (speaker as any).linkedin_url, '_blank', 'noopener,noreferrer');
                                         }
                                     }}
                                     title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
@@ -190,14 +192,15 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                         ) : item.speaker && (
                             <div 
                                 className={`flex items-center gap-3 p-2 bg-gray-700/40 rounded-lg ${
-                                    item.speaker.socialLinks?.linkedin ? 'cursor-pointer hover:bg-gray-600/40 transition-colors' : ''
+                                    (item.speaker as any)?.linkedinUrl || (item.speaker as any)?.linkedin_url ? 'cursor-pointer hover:bg-gray-600/40 transition-colors' : ''
                                 }`}
                                 onClick={() => {
-                                    if (item.speaker?.socialLinks?.linkedin) {
-                                        window.open(item.speaker.socialLinks.linkedin, '_blank', 'noopener,noreferrer');
+                                    const linkedinUrl = (item.speaker as any)?.linkedinUrl || (item.speaker as any)?.linkedin_url;
+                                    if (typeof linkedinUrl === 'string') {
+                                        window.open(linkedinUrl, '_blank', 'noopener,noreferrer');
                                     }
                                 }}
-                                title={item.speaker.socialLinks?.linkedin ? `View ${item.speaker.name}'s LinkedIn profile` : item.speaker.name}
+                                title={(item.speaker as any)?.linkedinUrl || (item.speaker as any)?.linkedin_url ? `View ${item.speaker.name}'s LinkedIn profile` : item.speaker.name}
                             >
                                 <Image 
                                     src={getSpeakerAvatarUrl(item.speaker, 32)} 
@@ -219,7 +222,7 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                                         <div className="text-xs text-gray-500 truncate">{item.speaker.company}</div>
                                     )}
                                 </div>
-                                {item.speaker.socialLinks?.linkedin && (
+                                {((item.speaker as any)?.linkedinUrl || (item.speaker as any)?.linkedin_url) && (
                                     <ArrowSquareOutIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 )}
                             </div>

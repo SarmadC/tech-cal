@@ -5,10 +5,43 @@ import { Database } from '@/types/supabase';
 import { CareerProfile, CareerOnboardingData } from '@/types/career';
 import { AppProfile, Json } from '@/types';
 import * as Sentry from '@sentry/nextjs';
+import { CareerImpactService } from './careerImpactService';
 
 type SupabaseClientType = SupabaseClient<Database>;
 
 export class CareerProfileService {
+  /**
+   * Get user profile by user ID
+   */
+  static async getUserProfile(
+    userId: string,
+    supabaseClient: SupabaseClientType
+  ): Promise<AppProfile> {
+    try {
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      if (!data) throw new Error('Profile not found');
+
+      // Transform to AppProfile (simplified transformation)
+      return {
+        id: data.id,
+        fullName: data.full_name,
+        avatarUrl: data.avatar_url,
+        timezone: data.timezone,
+        preferences: data.preferences
+      } as AppProfile;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      Sentry.captureException(error, { extra: { function: 'getUserProfile', userId } });
+      throw new Error('Failed to fetch user profile');
+    }
+  }
+
   /**
    * Get user's career profile from their preferences
    */
@@ -55,6 +88,11 @@ export class CareerProfileService {
         .eq('id', userId);
 
       if (updateError) throw updateError;
+
+      // Invalidate career impact cache for this profile
+      CareerImpactService.invalidateProfileCache(careerProfile).catch(error => {
+        console.warn('Failed to invalidate career impact cache after profile update:', error);
+      });
     } catch (error) {
       console.error('Error saving career profile:', error);
       Sentry.captureException(error, { 

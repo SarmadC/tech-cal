@@ -19,6 +19,9 @@ export { DiscoveryService } from './discoveryService';
 export { PersonalizedDiscoveryService } from './personalizedDiscoveryService';
 export { CareerImpactService } from './careerImpactService';
 
+// Cache services
+export { getCareerImpactCache, CacheServiceHelper } from './cache';
+
 export type { ApiResponse };
 
 type ServiceMethodResult<T> = Promise<ApiResponse<T>>;

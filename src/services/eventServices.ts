@@ -184,6 +184,44 @@ export class EventService {
         }
     }
 
+    /**
+     * Get multiple events by IDs
+     */
+    static async getEventsByIds(
+        eventIds: string[],
+        supabaseClient: SupabaseClientType
+    ): Promise<Event[]> {
+        try {
+            if (eventIds.length === 0) return [];
+
+            const { data, error } = await supabaseClient
+                .from('events')
+                .select(`
+                    *, 
+                    event_type:event_type_id (*), 
+                    organizer:organizers (id, name, logo_url)
+                `)
+                .in('id', eventIds);
+
+            if (error) throw error;
+            if (!data) return [];
+
+            // Fetch tags for all events
+            const eventsWithTags = await this.attachTagsToEvents(data, supabaseClient);
+
+            return eventsWithTags.map((eventData) => {
+                const typedData = eventData as SupabaseEventWithDetails;
+                const baseEvent = eventTransformer.toApp(typedData);
+                const eventType = typedData.event_type ? eventTypeTransformer.toApp(typedData.event_type) : undefined;
+                return enrichEvent(baseEvent, { eventType });
+            });
+        } catch (error) {
+            console.error('Error fetching events by IDs:', error);
+            Sentry.captureException(error, { extra: { function: 'getEventsByIds', eventIds } });
+            throw new Error('Failed to fetch events.');
+        }
+    }
+
     static async searchEvents(
         term: string,
         supabaseClient: SupabaseClientType,

@@ -12,10 +12,14 @@ import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/Loading';
 import { CalendarIcon, ClockIcon, StarIcon, TargetIcon, UsersIcon, MedalIcon, SparkleIcon, PlusIcon } from '@phosphor-icons/react';
 // 1. UPDATE IMPORTS: Use the new, canonical type names.
-import type { TrackedEventRecord, EventType, Event } from '@/types';
+import React from 'react';
+import type { TrackedEventRecord, EventType, Event, AppProfile } from '@/types';
+import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import CareerProfilePrompt from '@/components/calendar/mobile/discovery/CareerProfilePrompt';
 import { CareerProfileService } from '@/services/careerProfileService';
+import { CareerInsightsCard, CareerProgressCard } from '@/components/dashboard/CareerInsightsCard';
+import { CareerImpactUtils } from '@/utils/careerImpactUtils';
 import { useLightweightTrackedEvents } from '@/hooks/useTrackedEventsUnified';
 import { formatDateTime } from '@/utils/dateUtils';
 
@@ -38,6 +42,88 @@ const SectionFallback = () => (
         There was an error loading this section.
     </div>
 );
+
+/**
+ * Career Insights Section with enhanced events
+ */
+function CareerInsightsSection({ 
+  upcomingEvents, 
+  userProfile 
+}: { 
+  upcomingEvents: Event[]; 
+  userProfile: AppProfile; 
+}) {
+  const [careerOpportunities, setCareerOpportunities] = React.useState<(Event & { careerImpactLite?: CareerImpactScoreLite })[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    async function loadCareerInsights() {
+      try {
+        const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+        if (!careerProfile) {
+          setCareerOpportunities([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Get top career opportunities
+        const enhanced = await CareerImpactUtils.enhanceEventsWithCareerImpactLite(
+          upcomingEvents.slice(0, 20), // Limit for performance
+          careerProfile
+        );
+
+        // Sort by career impact and take top 10
+        const topOpportunities = enhanced
+          .filter(event => event.careerImpactLite)
+          .sort((a, b) => (b.careerImpactLite?.overall || 0) - (a.careerImpactLite?.overall || 0))
+          .slice(0, 10);
+
+        setCareerOpportunities(topOpportunities);
+      } catch (error) {
+        console.warn('Failed to load career insights:', error);
+        setCareerOpportunities([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadCareerInsights();
+  }, [upcomingEvents, userProfile]);
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="animate-pulse bg-gray-200 rounded-lg h-48"></div>
+        <div className="animate-pulse bg-gray-200 rounded-lg h-48"></div>
+      </div>
+    );
+  }
+
+  if (careerOpportunities.length === 0) {
+    return null; // Don't show section if no career opportunities
+  }
+
+  // Calculate recent scores for progress tracking
+  const recentScores = careerOpportunities
+    .slice(0, 5)
+    .map(event => event.careerImpactLite?.overall || 0)
+    .filter(score => score > 0);
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <CareerInsightsCard 
+        topOpportunities={careerOpportunities}
+        className="border-0 shadow-lg bg-white/80 backdrop-blur-sm"
+      />
+      {recentScores.length > 0 && (
+        <CareerProgressCard 
+          recentScores={recentScores}
+          className="border-0 shadow-lg bg-white/80 backdrop-blur-sm"
+        />
+      )}
+    </div>
+  );
+}
 
 export default function DashboardClientView({
     initialTrackedEvents: _initialTrackedEvents,
@@ -160,6 +246,16 @@ export default function DashboardClientView({
                 {profile && !CareerProfileService.hasCompletedOnboarding(profile) && (
                     <ErrorBoundary fallback={<SectionFallback />}>
                         <CareerProfilePrompt profile={profile} />
+                    </ErrorBoundary>
+                )}
+
+                {/* Career Insights - Show if user has completed career profile */}
+                {profile && CareerProfileService.hasCompletedOnboarding(profile) && (
+                    <ErrorBoundary fallback={<SectionFallback />}>
+                        <CareerInsightsSection 
+                            upcomingEvents={allUpcomingEvents || []}
+                            userProfile={profile}
+                        />
                     </ErrorBoundary>
                 )}
 

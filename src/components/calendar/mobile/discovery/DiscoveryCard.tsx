@@ -10,15 +10,18 @@ import {
 } from '@phosphor-icons/react';
 // Use consolidated Event type - recommendation functionality handled through EventWithCareerImpact
 import { Event } from '@/types';
+import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { Card, CardHeader } from '@/components/ui/card';
+import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 import { cn } from '@/lib/utils';
 
 export interface DiscoveryCardProps {
-  event: Event;
+  event: Event & { careerImpactLite?: CareerImpactScoreLite };
   onClick?: () => void;
   onView?: () => void;
   className?: string;
   variant?: 'default' | 'featured' | 'compact';
+  showCareerImpact?: boolean;
 }
 
 const DiscoveryCard = React.memo<DiscoveryCardProps>(({
@@ -26,7 +29,8 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   onClick,
   onView,
   className = '',
-  variant = 'default'
+  variant = 'default',
+  showCareerImpact = true
 }) => {
   const hasTrackedView = React.useRef(false);
 
@@ -149,12 +153,23 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       <CardHeader className="pb-0">
         {/* Event Header Content - Now takes full width */}
         <div className="w-full space-y-4">
-          <h3 
-            className="font-semibold text-lg leading-tight tracking-tight"
-            style={{ color: titleColor }}
-          >
-            {event.title}
-          </h3>
+          <div className="flex items-start justify-between">
+            <h3 
+              className="font-semibold text-lg leading-tight tracking-tight flex-1 pr-2"
+              style={{ color: titleColor }}
+            >
+              {event.title}
+            </h3>
+            {/* Career Impact Indicator */}
+            {showCareerImpact && event.careerImpactLite && (
+              <CareerImpactIndicator 
+                score={event.careerImpactLite.overall}
+                size="sm"
+                showValue={true}
+                className="flex-shrink-0"
+              />
+            )}
+          </div>
           
           {/* Discovery reason removed - use event description instead if needed */}
 

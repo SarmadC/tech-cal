@@ -43,6 +43,9 @@ export interface CareerImpactCalculationOptions {
   algorithmVersion?: string;
   includeExplanations?: boolean;
   debugMode?: boolean;
+  // Cache-specific options
+  skipCache?: boolean;
+  cacheTtl?: number;
 }
 
 /**
