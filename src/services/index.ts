@@ -17,6 +17,7 @@ export { AnalyticsService } from './analyticsService';
 export { BehavioralAnalyticsService } from './behavioralAnalyticsService';
 export { DiscoveryService } from './discoveryService';
 export { PersonalizedDiscoveryService } from './personalizedDiscoveryService';
+export { CareerImpactService } from './careerImpactService';
 
 export type { ApiResponse };
 
