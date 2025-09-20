@@ -2,7 +2,7 @@
 // Run this in your browser console after signing in
 
 import { createClient } from '@/utils/supabase/client';
-import { EnhancedAnalyticsService } from '@/services/enhancedAnalyticsService';
+import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import { quickHealthCheck } from '@/utils/analyticsHealthCheck';
 
 export async function quickRuntimeTest() {
@@ -14,12 +14,12 @@ export async function quickRuntimeTest() {
   try {
     // Test 1: Analytics consent
     console.log('1. Testing analytics consent...');
-    const consent = await EnhancedAnalyticsService.getAnalyticsConsent(userId, supabase);
+    const consent = await BehavioralAnalyticsService.getAnalyticsConsent(userId, supabase);
     console.log('   Current consent status:', consent);
     
     // Test 2: Track a sample interaction
     console.log('2. Testing interaction tracking...');
-    await EnhancedAnalyticsService.trackInteraction({
+    await BehavioralAnalyticsService.trackInteraction({
       userId,
       eventId: 'test-event-runtime',
       interactionType: 'view',
@@ -36,7 +36,7 @@ export async function quickRuntimeTest() {
     
     // Test 4: Get user behavior patterns
     console.log('4. Testing behavior pattern analysis...');
-    const patterns = await EnhancedAnalyticsService.getUserBehaviorPattern(userId, supabase);
+    const patterns = await BehavioralAnalyticsService.getUserBehaviorPattern(userId, supabase);
     console.log('   Behavior patterns:', patterns || 'No patterns yet (expected for new system)');
     
     console.log('🎉 All runtime tests completed successfully!');

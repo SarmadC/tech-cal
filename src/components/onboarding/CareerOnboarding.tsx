@@ -12,7 +12,7 @@ import {
   AvailableTime,
   BudgetRange,
   NetworkingGoal,
-  EventType
+  CareerEventType
 } from '@/types/career';
 
 interface CareerOnboardingProps {
@@ -424,11 +424,11 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
             <label key={type.value} className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={data.step5_networking?.preferredEventTypes?.includes(type.value as EventType) || false}
+                checked={data.step5_networking?.preferredEventTypes?.includes(type.value as CareerEventType) || false}
                 onChange={(e) => {
                   const currentTypes = data.step5_networking?.preferredEventTypes || [];
                   const newTypes = e.target.checked
-                    ? [...currentTypes, type.value as EventType]
+                    ? [...currentTypes, type.value as CareerEventType]
                     : currentTypes.filter(t => t !== type.value);
                   updateData('step5_networking', { 
                     ...data.step5_networking, 

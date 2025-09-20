@@ -10,7 +10,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, MonthViewSkeleton } from '@/components/ui/SkeletonLoader';
 import { isSameDay, getTodayDate } from '@/utils/dateUtils';
 
-export interface MobileEnhancedMonthViewProps {
+export interface MobileMonthViewProps {
   events: Event[];
   initialDate: Date;
   categories: EventType[];
@@ -36,7 +36,7 @@ interface CalendarDay {
   isWeekend: boolean;
 }
 
-const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
+const MobileMonthView: React.FC<MobileMonthViewProps> = ({
   events,
   initialDate,
   categories,
@@ -60,7 +60,7 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
 
   // Sync currentMonth with initialDate changes (e.g., from search)
   React.useEffect(() => {
-    console.log('MobileEnhancedMonthView: Received initialDate change:', initialDate);
+    console.log('MobileMonthView: Received initialDate change:', initialDate);
     setCurrentMonth(initialDate);
   }, [initialDate]);
   
@@ -446,4 +446,4 @@ const MobileEnhancedMonthView: React.FC<MobileEnhancedMonthViewProps> = ({
   );
 };
 
-export default MobileEnhancedMonthView;
+export default MobileMonthView;

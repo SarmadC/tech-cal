@@ -5,7 +5,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
-import { EnhancedAnalyticsService } from '@/services/enhancedAnalyticsService';
+import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import Navbar from "@/components/common/Navbar";
 import AnalyticsConsentBanner from '@/components/common/AnalyticsConsentBanner';
 
@@ -21,7 +21,7 @@ export default function ClientLayout({
     // Cleanup analytics buffers on page unload
     useEffect(() => {
         const handleBeforeUnload = () => {
-            EnhancedAnalyticsService.forceFlushAll();
+            BehavioralAnalyticsService.forceFlushAll();
         };
 
         window.addEventListener('beforeunload', handleBeforeUnload);

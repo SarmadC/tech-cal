@@ -4,7 +4,7 @@ import React from 'react';
 import { Clock, Lightning } from '@phosphor-icons/react';
 import { Event } from '@/types';
 import { DiscoveryService } from '@/services/discoveryService';
-import { migrateDiscoveryEvent } from '@/types/unifiedEventTypes';
+// Use consolidated Event type - migration functionality handled through EventWithCareerImpact
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 
@@ -62,7 +62,7 @@ const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
         {quickWinEvents.map((event, index) => (
           <DiscoveryCard
             key={`${event.id}-${index}`}
-            event={migrateDiscoveryEvent(event)}
+            event={event}
             onClick={() => handleEventClick(event)}
             variant="compact"
             className=""

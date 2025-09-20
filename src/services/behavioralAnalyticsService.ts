@@ -219,7 +219,7 @@ class AnalyticsBufferManager {
 // Single instance with proper lifecycle management
 const bufferManager = new AnalyticsBufferManager();
 
-export class EnhancedAnalyticsService {
+export class BehavioralAnalyticsService {
 
   private static getUserBuffer(userId: string, supabaseClient: SupabaseClientType): UserInteractionBuffer {
     return bufferManager.getUserBuffer(userId, supabaseClient);

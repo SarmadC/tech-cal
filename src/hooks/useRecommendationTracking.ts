@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/utils/supabase/client';
-import { EnhancedAnalyticsService, UserInteraction, RecommendationBatch } from '@/services/enhancedAnalyticsService';
+import { BehavioralAnalyticsService, UserInteraction, RecommendationBatch } from '@/services/behavioralAnalyticsService';
 import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
 
 // =============================================
@@ -44,7 +44,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
     }
 
     // Fetch from database
-    const hasConsent = await EnhancedAnalyticsService.getAnalyticsConsent(userId, supabase);
+    const hasConsent = await BehavioralAnalyticsService.getAnalyticsConsent(userId, supabase);
     
     // Update cache
     consentCacheRef.current = {
@@ -64,7 +64,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       }
       // Force flush any pending interactions for this user
       if (user?.id) {
-        EnhancedAnalyticsService.forceFlushUser(user.id);
+        BehavioralAnalyticsService.forceFlushUser(user.id);
       }
     };
   }, [supabase, user?.id]);
@@ -95,7 +95,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       context
     };
 
-    await EnhancedAnalyticsService.trackInteraction(interaction, supabase);
+    await BehavioralAnalyticsService.trackInteraction(interaction, supabase);
   }, [user?.id, supabase, options.enableTracking, checkConsentCached]);
 
   /**
@@ -146,7 +146,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
         durationMs
       };
 
-      await EnhancedAnalyticsService.trackInteraction(interaction, supabase);
+      await BehavioralAnalyticsService.trackInteraction(interaction, supabase);
     }
 
     // Clear timer and start time
@@ -182,7 +182,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       recommendations
     };
 
-    await EnhancedAnalyticsService.trackRecommendationBatch(batch, supabase);
+    await BehavioralAnalyticsService.trackRecommendationBatch(batch, supabase);
   }, [user?.id, supabase, options.enableTracking, checkConsentCached]);
 
   /**

@@ -4,7 +4,7 @@ import React from 'react';
 import { Fire } from '@phosphor-icons/react';
 import { Event } from '@/types';
 import { DiscoveryService } from '@/services/discoveryService';
-import { migrateDiscoveryEvent } from '@/types/unifiedEventTypes';
+// Use consolidated Event type - migration functionality handled through EventWithCareerImpact
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 
@@ -74,7 +74,7 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
         {featuredEvent && (
           <div className="featured-trending">
             <DiscoveryCard
-              event={migrateDiscoveryEvent(featuredEvent)}
+              event={featuredEvent}
               onClick={() => handleEventClick(featuredEvent)}
               variant="featured"
               className=""
@@ -88,7 +88,7 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
             {otherEvents.map((event, index) => (
               <DiscoveryCard
                 key={`${event.id}-${index}`}
-                event={migrateDiscoveryEvent(event)}
+                event={event}
                 onClick={() => handleEventClick(event)}
                 variant="compact"
                 className=""

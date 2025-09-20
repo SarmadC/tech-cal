@@ -1,16 +1,16 @@
-// src/components/calendar/EnhancedEventContent.tsx
+// src/components/calendar/EventContent.tsx
 import { FC, useRef } from 'react';
 import { EventContentArg } from '@fullcalendar/core';
 import { Event, isTrackedEvent } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { formatTime, isEventLive } from '@/utils/dateUtils';
 
-interface EnhancedEventContentProps extends EventContentArg {
+interface EventContentProps extends EventContentArg {
     onEventHover?: (event: Event, position: { x: number; y: number }) => void;
     onEventLeave?: () => void;
 }
 
-const EnhancedEventContent: FC<EnhancedEventContentProps> = ({
+const EventContent: FC<EventContentProps> = ({
     event,
     timeText,
     onEventHover,
@@ -61,4 +61,4 @@ const EnhancedEventContent: FC<EnhancedEventContentProps> = ({
     );
 };
 
-export default EnhancedEventContent;
+export default EventContent;

@@ -1,6 +1,6 @@
 // Comprehensive analytics system health check
 import { createClient } from '@/utils/supabase/client';
-import { EnhancedAnalyticsService } from '@/services/enhancedAnalyticsService';
+import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 
 export interface SystemHealthReport {
   overall: 'healthy' | 'degraded' | 'failed';
@@ -74,8 +74,8 @@ export async function performHealthCheck(userId?: string): Promise<SystemHealthR
   // Test 4: Analytics service (if user provided)
   if (userId) {
     try {
-      const consent = await EnhancedAnalyticsService.getAnalyticsConsent(userId, supabase);
-      const patterns = await EnhancedAnalyticsService.getUserBehaviorPattern(userId, supabase);
+      const consent = await BehavioralAnalyticsService.getAnalyticsConsent(userId, supabase);
+      const patterns = await BehavioralAnalyticsService.getUserBehaviorPattern(userId, supabase);
       
       if (consent === null) {
         report.recommendations.push('User should be prompted for analytics consent');

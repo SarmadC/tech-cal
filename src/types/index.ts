@@ -9,6 +9,9 @@ export type { Json }; // This makes it available to other files.
 // RE-EXPORT ALL EVENT-RELATED TYPES
 // ============================================
 export * from './events';
+export * from './career';
+export * from './careerImpact';
+export * from './supabaseCareerImpact';
 
 // ============================================
 // NON-EVENT-RELATED TYPES

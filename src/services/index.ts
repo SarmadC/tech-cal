@@ -14,9 +14,9 @@ export { EventService } from './eventServices';
 export { EventTypeService } from './eventTypeService';
 export { UserEventService } from './userEventService';
 export { AnalyticsService } from './analyticsService';
-export { EnhancedAnalyticsService } from './enhancedAnalyticsService';
+export { BehavioralAnalyticsService } from './behavioralAnalyticsService';
 export { DiscoveryService } from './discoveryService';
-export { EnhancedDiscoveryService } from './enhancedDiscoveryService';
+export { PersonalizedDiscoveryService } from './personalizedDiscoveryService';
 
 export type { ApiResponse };
 

@@ -6,15 +6,15 @@ import {
   Calendar, 
   MapPin, 
   Users, 
-  Clock, 
-  TrendUp
+  Clock
 } from '@phosphor-icons/react';
-import { RecommendationEvent } from '@/types/unifiedEventTypes';
+// Use consolidated Event type - recommendation functionality handled through EventWithCareerImpact
+import { Event } from '@/types';
 import { Card, CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 export interface DiscoveryCardProps {
-  event: RecommendationEvent;
+  event: Event;
   onClick?: () => void;
   onView?: () => void;
   className?: string;
@@ -156,11 +156,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
             {event.title}
           </h3>
           
-          {event.discoveryReason && (
-            <p className="text-sm text-gray-700 font-medium">
-              {event.discoveryReason}
-            </p>
-          )}
+          {/* Discovery reason removed - use event description instead if needed */}
 
           <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
             <div className="flex items-center gap-1">
@@ -245,12 +241,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         </div>
       </div>
 
-      {/* Trending Indicator */}
-      {event.isTrending && (
-        <div className="trending-indicator absolute top-2 right-2 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-          <TrendUp size={12} />
-        </div>
-      )}
+      {/* Trending Indicator - removed as it's not part of consolidated Event type */}
 
     </Card>
   );

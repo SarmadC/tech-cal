@@ -4,8 +4,8 @@ import React, { useRef } from 'react';
 import { User } from '@phosphor-icons/react';
 import { Event, AppProfile, TrackedEvent } from '@/types';
 import { DiscoveryService } from '@/services/discoveryService';
-import { EnhancedDiscoveryService } from '@/services/enhancedDiscoveryService';
-import { RecommendationEvent, migrateDiscoveryEvent } from '@/types/unifiedEventTypes';
+import { PersonalizedDiscoveryService } from '@/services/personalizedDiscoveryService';
+// Use consolidated Event type - recommendation functionality handled through EventWithCareerImpact
 import { useForYouTracking } from '@/hooks/useRecommendationTracking';
 import { hasCompleteCareerProfile, extractCareerProfile } from '@/utils/profileTypeGuards';
 import { createClient } from '@/utils/supabase/client';
@@ -38,7 +38,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   const hasCareerProfile = React.useMemo(() => hasCompleteCareerProfile(careerProfile), [careerProfile]);
   const supabase = React.useMemo(() => createClient(), []);
   
-  // Enhanced tracking for For You section
+  // Personalized tracking for For You section
   const tracking = useForYouTracking();
   const {
     trackForYouView,
@@ -50,7 +50,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   const trackForYouDisplayRef = useRef(tracking.trackForYouDisplay);
   trackForYouDisplayRef.current = tracking.trackForYouDisplay;
 
-  const [personalizedEvents, setPersonalizedEvents] = React.useState<RecommendationEvent[]>([]);
+  const [personalizedEvents, setPersonalizedEvents] = React.useState<Event[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [lastFetchKey, setLastFetchKey] = React.useState<string>('');
 
@@ -60,11 +60,11 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return `${userProfile.id}-${events.length}-${trackedEvents.length}-${limit}-${userLocation?.city || ''}-${userLocation?.timezone || ''}`;
   }, [hasCareerProfile, userProfile, events.length, trackedEvents.length, limit, userLocation]);
 
-  // Enhanced recommendations with behavioral data
+  // Personalized recommendations with behavioral data
   React.useEffect(() => {
     let isCancelled = false; // Prevent memory leaks
 
-    async function loadEnhancedRecommendations() {
+    async function loadPersonalizedRecommendations() {
       if (!hasCareerProfile || !userProfile) {
         if (!isCancelled) {
           setPersonalizedEvents([]);
@@ -87,11 +87,11 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
           setIsLoading(true);
         }
         
-        // Use enhanced discovery service with behavioral data
-        let enhanced: RecommendationEvent[] = [];
+        // Use personalized discovery service with behavioral data
+        let personalized: Event[] = [];
         
         try {
-          enhanced = await EnhancedDiscoveryService.getEnhancedPersonalizedRecommendations(
+          personalized = await PersonalizedDiscoveryService.getAdvancedPersonalizedRecommendations(
             events,
             userProfile,
             trackedEvents,
@@ -99,8 +99,8 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             limit,
             userLocation
           );
-        } catch (enhancedError) {
-          console.warn('Enhanced recommendations failed, falling back to basic:', enhancedError);
+        } catch (personalizedError) {
+          console.warn('Personalized recommendations failed, falling back to basic:', personalizedError);
           // Fallback to basic recommendations (migrate to unified type)
           const basicRecs = DiscoveryService.getPersonalizedRecommendations(
             events,
@@ -109,20 +109,20 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             limit,
             userLocation
           );
-          enhanced = basicRecs.map(event => migrateDiscoveryEvent(event));
+          personalized = basicRecs;
         }
 
         // Only update state if component is still mounted
         if (!isCancelled) {
-          setPersonalizedEvents(enhanced);
+          setPersonalizedEvents(personalized);
           setLastFetchKey(cacheKey);
 
           // Track recommendation display (with error handling)
-          if (isTrackingEnabled && enhanced.length > 0) {
+          if (isTrackingEnabled && personalized.length > 0) {
             try {
-              const recommendationData = enhanced.map((event, index) => ({
+              const recommendationData = personalized.map((event, index) => ({
                 eventId: event.id,
-                score: event.discoveryMetrics?.personalizedScore || 0,
+                score: 0, // Score removed as discoveryMetrics not available in consolidated Event type
                 position: index + 1
               }));
               
@@ -136,7 +136,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
 
       } catch (error) {
         if (!isCancelled) {
-          console.error('Error loading enhanced recommendations:', error);
+          console.error('Error loading personalized recommendations:', error);
           // Fallback to basic recommendations
           const basic = DiscoveryService.getPersonalizedRecommendations(
             events,
@@ -145,7 +145,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             limit,
             userLocation
           );
-          setPersonalizedEvents(basic.map(event => migrateDiscoveryEvent(event)));
+          setPersonalizedEvents(basic);
           setLastFetchKey(cacheKey);
         }
       } finally {
@@ -155,7 +155,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
       }
     }
 
-    loadEnhancedRecommendations();
+    loadPersonalizedRecommendations();
 
     // Cleanup function to prevent memory leaks
     return () => {
@@ -163,7 +163,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     };
   }, [cacheKey, hasCareerProfile, userProfile, personalizedEvents.length, lastFetchKey, events, isTrackingEnabled, limit, supabase, trackedEvents, userLocation]);
 
-  const handleEventClick = React.useCallback((event: RecommendationEvent, position: number) => {
+  const handleEventClick = React.useCallback((event: Event, position: number) => {
     // Track click interaction
     if (isTrackingEnabled) {
       trackForYouClick(event.id, position + 1);
@@ -172,7 +172,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     onEventSelect?.(event);
   }, [onEventSelect, trackForYouClick, isTrackingEnabled]);
 
-  const handleEventView = React.useCallback((event: RecommendationEvent, position: number) => {
+  const handleEventView = React.useCallback((event: Event, position: number) => {
     // Track view interaction
     if (isTrackingEnabled) {
       trackForYouView(event.id, position + 1);

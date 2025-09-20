@@ -1,5 +1,31 @@
 // src/types/events.ts
 
+// Forward declaration to avoid circular imports
+export interface CareerImpactScore {
+  overall: number;
+  confidence: number;
+  components: {
+    skillRelevance: number;
+    careerStageMatch: number;
+    networkingValue: number;
+    industryRelevance: number;
+    timingBonus: number;
+  };
+  explanation: {
+    reasons: string[];
+    matchedSkills: string[];
+    speakerHighlights: string[];
+    careerImpactCategory: 'transformative' | 'high' | 'moderate' | 'low';
+    confidenceFactors: string[];
+  };
+  metadata: {
+    algorithmVersion: string;
+    calculatedAt: string;
+    careerProfileHash: string;
+    eventDataHash: string;
+  };
+}
+
 /**
  * Consolidated Event Types for Kure-Cal
  * This replaces the multiple event type variations with a cleaner hierarchy
@@ -76,26 +102,35 @@ export interface Event {
 // EVENT ENHANCEMENTS (Using Intersection Types)
 // ============================================
 
+// ============================================
+// EVENT ENHANCEMENTS (Consolidated)
+// ============================================
+
 /**
- * Event with tracking status - replaces EnrichedAppEvent
- * Use this when you need to guarantee tracking status is known
+ * Event with tracking status
  */
-export type TrackedEvent = Event & {
+export type EventWithTracking = Event & {
     isTracked: boolean;
     trackingStatus?: EventStatus;
     trackingNotes?: string | null;
 };
 
 /**
- * Event with multi-day support - replaces EnhancedAppEvent
- * Use this for calendar views that need to handle multi-day events
+ * Event with career impact scoring
  */
-export type MultiDayEvent = Event & {
+export type EventWithCareerImpact = Event & {
+    careerImpact?: CareerImpactScore;
+    isCareerScored: boolean;
+    scoringError?: string;
+};
+
+/**
+ * Event with multi-day support
+ */
+export type EventWithMultiDay = Event & {
     isMultiDay: boolean;
     dailySchedule?: DailySchedule;
     eventPattern: 'single' | 'multi_day' | 'all_day' | 'recurring';
-
-    // For multi-day event instances
     instanceInfo?: {
         originalEventId: string;
         instanceDate: string;
@@ -107,10 +142,14 @@ export type MultiDayEvent = Event & {
 };
 
 /**
- * Event with both tracking and multi-day support
- * Use this when you need both features (e.g., calendar views with tracking)
+ * Event with all enhancements
  */
-export type FullEvent = TrackedEvent & MultiDayEvent;
+export type EnhancedEvent = Event & EventWithTracking & EventWithCareerImpact & EventWithMultiDay;
+
+// Legacy aliases for backwards compatibility
+export type TrackedEvent = EventWithTracking;
+export type MultiDayEvent = EventWithMultiDay;
+export type FullEvent = EnhancedEvent;
 
 // ============================================
 // CALENDAR-SPECIFIC TYPES

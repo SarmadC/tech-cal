@@ -67,8 +67,14 @@ export class CareerProfileService {
   /**
    * Convert onboarding data to career profile
    */
-  static onboardingDataToCareerProfile(data: CareerOnboardingData): CareerProfile {
+  static onboardingDataToCareerProfile(data: CareerOnboardingData, userId: string): CareerProfile {
     return {
+      // Required user context
+      userId,
+      profileId: `profile_${userId}_${Date.now()}`,
+      lastUpdated: new Date().toISOString(),
+      
+      // Career profile data
       currentRole: data.step1_role.currentRole,
       seniority: data.step1_role.seniority,
       industry: data.step1_role.industry || 'technology',
@@ -99,7 +105,7 @@ export class CareerProfileService {
     supabaseClient: SupabaseClientType
   ): Promise<CareerProfile> {
     try {
-      const careerProfile = this.onboardingDataToCareerProfile(onboardingData);
+      const careerProfile = this.onboardingDataToCareerProfile(onboardingData, userId);
       await this.saveCareerProfile(userId, careerProfile, supabaseClient);
       
       // Mark onboarding as completed

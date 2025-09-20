@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, BarChart3, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { EnhancedAnalyticsService } from '@/services/enhancedAnalyticsService';
+import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 
@@ -18,7 +18,7 @@ export default function AnalyticsConsentBanner() {
       if (!user?.id) return;
 
       try {
-        const hasConsent = await EnhancedAnalyticsService.getAnalyticsConsent(user.id, supabase);
+        const hasConsent = await BehavioralAnalyticsService.getAnalyticsConsent(user.id, supabase);
         
         // Show banner if user hasn't made a choice yet
         if (hasConsent === null || hasConsent === undefined) {
@@ -37,7 +37,7 @@ export default function AnalyticsConsentBanner() {
 
     setIsLoading(true);
     try {
-      await EnhancedAnalyticsService.updateAnalyticsConsent(user.id, consent, supabase);
+      await BehavioralAnalyticsService.updateAnalyticsConsent(user.id, consent, supabase);
       setShowBanner(false);
     } catch (error) {
       console.error('Error updating consent:', error);

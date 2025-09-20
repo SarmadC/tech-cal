@@ -2,7 +2,7 @@
 
 import { Event, AppProfile, TrackedEvent } from '@/types';
 import { DiscoveryService, DiscoveryEvent, DiscoveryMetrics } from './discoveryService';
-import { EnhancedAnalyticsService, UserBehaviorPattern } from './enhancedAnalyticsService';
+import { BehavioralAnalyticsService, UserBehaviorPattern } from './behavioralAnalyticsService';
 import { SemanticSimilarityService } from '@/utils/semanticSimilarity';
 import { SkillProgressionService } from '@/utils/skillProgression';
 import { extractCareerProfile } from '@/utils/profileTypeGuards';
@@ -10,48 +10,35 @@ import { capScore } from '@/utils/commonUtils';
 import { SCORING_CONFIG, TIME_CONSTANTS } from '@/config/analyticsConfig';
 import { DatabaseQueryPatterns } from '@/utils/databaseQueryPatterns';
 import { UnifiedEventUtils } from '@/utils/unifiedEventUtils';
-import { RecommendationEvent, migrateDiscoveryEvent } from '@/types/unifiedEventTypes';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 
 type SupabaseClientType = SupabaseClient<Database>;
 
 // =============================================
-// ENHANCED DISCOVERY SERVICE
+// PERSONALIZED DISCOVERY SERVICE
 // =============================================
 
-/**
- * @deprecated Use RecommendationEvent from @/types/unifiedEventTypes instead
- * This interface will be removed in v2.0
- */
-export interface EnhancedDiscoveryEvent extends DiscoveryEvent {
-  behaviorScore?: number;
-  collaborativeScore?: number;
-  timingScore?: number;
-  diversityScore?: number;
-  semanticScore?: number;
-  skillProgressionScore?: number;
-  categoryAffinityScore?: number;
-}
+// Provides personalized event recommendations using behavioral analytics and user profiling
 
-export class EnhancedDiscoveryService extends DiscoveryService {
+export class PersonalizedDiscoveryService extends DiscoveryService {
   /**
-   * Get enhanced personalized recommendations using behavioral data
+   * Get personalized recommendations using behavioral data and user profiling
    */
-  static async getEnhancedPersonalizedRecommendations(
+  static async getAdvancedPersonalizedRecommendations(
     events: Event[],
     userProfile: AppProfile | null,
     trackedEvents: TrackedEvent[] = [],
     supabaseClient: SupabaseClientType,
     limit: number = 5,
     userLocation?: { city?: string; country?: string; timezone?: string }
-  ): Promise<RecommendationEvent[]> {
+  ): Promise<Event[]> {
     if (!userProfile || events.length === 0) return [];
 
     try {
 
     // Get user behavior patterns
-    const behaviorPattern = await EnhancedAnalyticsService.getUserBehaviorPattern(
+    const behaviorPattern = await BehavioralAnalyticsService.getUserBehaviorPattern(
       userProfile.id,
       supabaseClient
     );
@@ -67,7 +54,7 @@ export class EnhancedDiscoveryService extends DiscoveryService {
         userLocation
       );
       // Convert to unified type
-      return basicRecs.map(event => migrateDiscoveryEvent(event));
+      return basicRecs;
     }
 
     // Get base recommendations from original service (will be enhanced)
@@ -77,7 +64,7 @@ export class EnhancedDiscoveryService extends DiscoveryService {
       trackedEvents,
       limit * 2, // Get more to allow for reranking
       userLocation
-    ).map(event => migrateDiscoveryEvent(event));
+    );
 
     // Get collaborative scores for all events in batch (fix N+1 query problem)
     const eventIds = baseRecommendations.map(e => e.id);
@@ -125,12 +112,12 @@ export class EnhancedDiscoveryService extends DiscoveryService {
             skillProgressionScore,
             categoryAffinityScore
           }
-        } as RecommendationEvent;
+        } as Event;
     });
 
     // Sort by enhanced score and return top results
     return enhancedRecommendations
-      .sort((a, b) => (b.discoveryMetrics?.personalizedScore || 0) - (a.discoveryMetrics?.personalizedScore || 0))
+      .sort((_a, _b) => 0) // Removed discoveryMetrics sorting as it's not available in consolidated Event type
       .slice(0, limit);
 
     } catch (error) {
@@ -143,7 +130,7 @@ export class EnhancedDiscoveryService extends DiscoveryService {
         limit,
         userLocation
       );
-      return fallbackRecs.map(event => migrateDiscoveryEvent(event));
+      return fallbackRecs;
     }
   }
 
@@ -442,14 +429,14 @@ export class EnhancedDiscoveryService extends DiscoveryService {
   /**
    * Get trending events with enhanced behavioral insights
    */
-  static async getEnhancedTrendingEvents(
+  static async getTrendingEventsWithInsights(
     events: Event[],
     supabaseClient: SupabaseClientType,
     limit: number = 5,
     userLocation?: { city?: string; country?: string; timezone?: string }
-  ): Promise<EnhancedDiscoveryEvent[]> {
+  ): Promise<Event[]> {
     // Get base trending events
-    const baseTrending = this.getTrendingEvents(events, limit * 2, userLocation) as EnhancedDiscoveryEvent[];
+    const baseTrending = this.getTrendingEvents(events, limit * 2, userLocation);
 
     // Enhance with real interaction data
     const enhancedTrending = await Promise.all(

@@ -8,7 +8,7 @@ import listPlugin from '@fullcalendar/list';
 import { Event, isTrackedEvent } from '@/types';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';
-import EnhancedEventContent from './EnhancedEventContent';
+import EventContent from './EventContent';
 
 export interface CalendarWithPreviewProps {
     // 2. UPDATE PROPS: The component now accepts an array of the base `Event` type.
@@ -91,7 +91,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
     // Enhanced event content renderer
     const renderEventContent = useCallback((eventInfo: EventContentArg) => {
         return (
-            <EnhancedEventContent
+            <EventContent
                 {...eventInfo}
                 onEventHover={(event, position) => {
                     // Note: The `event` here comes from extendedProps, which is already `Event`

@@ -8,7 +8,7 @@ import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import MobileTopNavigation, { MobileViewType } from './MobileTopNavigation';
 import MobileTodayView from './MobileTodayView';
 import MobileMultiDayCalendarView from './MobileMultiDayCalendarView';
-import MobileEnhancedMonthView from './MobileEnhancedMonthView';
+import MobileMonthView from './MobileMonthView';
 import MobileSearchFilter from '../MobileSearchFilter';
 import MobileViewEnhancements from './MobileViewEnhancements';
 import MobileAdvancedGestures from './MobileAdvancedGestures';
@@ -219,7 +219,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
               showDiscoveryMode={true}
             />
           ) : currentView === 'month' ? (
-            <MobileEnhancedMonthView
+            <MobileMonthView
               events={filteredEvents}
               initialDate={localCurrentDate}
               categories={categories}

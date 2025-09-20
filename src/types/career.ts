@@ -1,6 +1,11 @@
 // Career and Professional Development Types
 
 export interface CareerProfile {
+  // User context (required for database operations)
+  userId: string;
+  profileId: string;
+  lastUpdated: string;
+  
   // Current Role Information
   currentRole: string;
   seniority: SeniorityLevel;
@@ -23,7 +28,7 @@ export interface CareerProfile {
   
   // Networking Preferences
   networkingGoals: NetworkingGoal[];
-  preferredEventTypes: EventType[];
+  preferredEventTypes: CareerEventType[];
 }
 
 export type SeniorityLevel = 
@@ -106,7 +111,7 @@ export type NetworkingGoal =
   | 'industry-insights'  // Learn about industry trends
   | 'thought-leadership'; // Establish expertise
 
-export type EventType = 
+export type CareerEventType = 
   | 'conference'         // Large industry conferences
   | 'workshop'           // Hands-on learning sessions
   | 'meetup'             // Local networking events
@@ -191,7 +196,7 @@ export interface CareerOnboardingData {
   };
   step5_networking: {
     networkingGoals: NetworkingGoal[];
-    preferredEventTypes: EventType[];
+    preferredEventTypes: CareerEventType[];
   };
 }
 
