@@ -12,6 +12,7 @@ export * from './events';
 export * from './career';
 export * from './careerImpact';
 export * from './supabaseCareerImpact';
+export * from './cache';
 
 // ============================================
 // NON-EVENT-RELATED TYPES
