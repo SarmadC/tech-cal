@@ -278,7 +278,6 @@ export interface DailySchedule {
         start: string;
         end: string;
     }>;
-    // New: Support for custom daily schedules with different times per day
     custom_schedule?: Array<{
         day: number;
         start: string;

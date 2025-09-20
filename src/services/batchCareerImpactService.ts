@@ -185,6 +185,12 @@ export class BatchCareerImpactService {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        // Handle rate limiting gracefully
+        if (response.status === 429) {
+          const errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
+          console.warn('Batch API rate limited, will use fallback processing');
+          throw new Error(errorMessage);
+        }
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
@@ -192,13 +198,26 @@ export class BatchCareerImpactService {
       return data;
 
     } catch (error) {
-      if (retryCount < this.MAX_RETRIES && !this.isAbortError(error)) {
-        console.warn(`Batch API call failed, retrying (${retryCount + 1}/${this.MAX_RETRIES}):`, error);
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      
+      // Handle rate limiting with exponential backoff + jitter
+      if (errorObj.message.includes('Rate limit exceeded') && retryCount < this.MAX_RETRIES) {
+        const baseDelay = 1000 * Math.pow(2, retryCount); // 1s, 2s, 4s
+        const jitter = Math.random() * 500; // Add 0-500ms jitter
+        const backoffDelay = baseDelay + jitter;
+        console.warn(`Rate limited, waiting ${Math.round(backoffDelay/1000 * 10)/10}s before retry (${retryCount + 1}/${this.MAX_RETRIES})`);
+        await this.delay(backoffDelay);
+        return this.callBatchAPI(request, retryCount + 1);
+      }
+      
+      // Normal retry logic for other errors
+      if (retryCount < this.MAX_RETRIES && !this.isAbortError(errorObj)) {
+        console.warn(`Batch API call failed, retrying (${retryCount + 1}/${this.MAX_RETRIES}):`, errorObj);
         await this.delay(1000 * (retryCount + 1)); // Exponential backoff
         return this.callBatchAPI(request, retryCount + 1);
       }
       
-      throw error;
+      throw errorObj;
     }
   }
 
@@ -264,7 +283,18 @@ export class BatchCareerImpactService {
         return event;
       });
     } catch (error) {
-      console.error('Lite career impact enhancement failed:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Provide user-friendly error context
+      if (errorMessage.includes('Rate limit exceeded')) {
+        console.warn('Career impact calculation rate limited - will retry automatically');
+      } else if (errorMessage.includes('timeout')) {
+        console.warn('Career impact calculation timed out - using fallback');
+      } else {
+        console.warn('Career impact calculation failed:', errorMessage);
+      }
+      
+      // Always return events without career impact rather than failing completely
       return events;
     }
   }

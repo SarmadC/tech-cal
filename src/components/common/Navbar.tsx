@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/common/UserMenu';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -66,7 +67,8 @@ export default function Navbar() {
                     </div>
 
                     {/* Desktop User Menu / Auth Buttons */}
-                    <div className="hidden md:block">
+                    <div className="hidden md:flex items-center space-x-4">
+                        <ThemeToggle />
                         <UserMenu />
                     </div>
 
@@ -148,6 +150,12 @@ export default function Navbar() {
                                             >
                                                 Settings
                                             </Link>
+
+                                            {/* Theme Toggle for Mobile */}
+                                            <div className="flex items-center justify-between py-2">
+                                                <span className="text-sm font-medium text-foreground-secondary">Theme</span>
+                                                <ThemeToggle />
+                                            </div>
                                         </div>
                                     ) : (
                                         /* Unauthenticated Mobile Menu */

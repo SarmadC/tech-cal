@@ -1,8 +1,7 @@
-import { kv } from '@vercel/kv';
+// src/services/cache/careerImpactCache.ts
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { CareerProfile } from '@/types/career';
 import { Event } from '@/types';
-import { createHash } from 'crypto';
 
 interface CacheStats {
   hits: number;
@@ -13,145 +12,139 @@ interface CacheStats {
 }
 
 /**
- * Redis-backed cache for career impact scores
- * Simple, robust implementation with TTL and batch operations
+ * Simple in-memory cache for career impact scores
+ * Focused implementation without over-engineering
  */
 export class CareerImpactCache {
-  private static readonly CACHE_PREFIX = 'ci';
-  private static readonly PROFILE_PREFIX = 'profile';
-  private static readonly ALGORITHM_VERSION = '2.0.0';
-  private static readonly DEFAULT_TTL = 24 * 60 * 60; // 24 hours
-  private static readonly STATS_KEY = 'ci:stats';
+  private static cache = new Map<string, { 
+    data: CareerImpactScoreLite; 
+    timestamp: number; 
+    ttl: number; 
+  }>();
+  
+  private static stats: CacheStats = {
+    hits: 0,
+    misses: 0,
+    totalRequests: 0,
+    hitRate: 0,
+    lastReset: new Date().toISOString()
+  };
+
+  private static readonly DEFAULT_TTL = 12 * 60 * 60 * 1000; // 12 hours
+  private static readonly MAX_CACHE_SIZE = 1000; // Prevent memory bloat
 
   /**
-   * Generate cache key for career impact score
+   * Generate cache key from event ID and profile hash
    */
   private static generateCacheKey(eventId: string, profileHash: string): string {
-    return `${this.CACHE_PREFIX}:${eventId}:${profileHash}:${this.ALGORITHM_VERSION}`;
+    return `career_impact:${eventId}:${profileHash}`;
   }
 
   /**
    * Generate profile hash for cache key
    */
-  static generateProfileHash(profile: CareerProfile): string {
-    const profileData = {
-      primarySkills: profile.primarySkills?.sort() || [],
-      skillsToLearn: profile.skillsToLearn?.sort() || [],
-      seniority: profile.seniority || '',
-      interests: profile.interests?.sort() || [],
-      careerGoals: profile.careerGoals?.sort() || [],
-      learningStyle: profile.learningStyle?.sort() || [],
-      industry: profile.industry || ''
+  static generateProfileHash(careerProfile: CareerProfile): string {
+    // Simple hash based on key profile attributes
+    const hashData = {
+      currentRole: careerProfile.currentRole,
+      seniority: careerProfile.seniority,
+      primarySkills: careerProfile.primarySkills?.slice(0, 5), // Only first 5 skills for performance
+      industry: careerProfile.industry
     };
-
-    return createHash('md5')
-      .update(JSON.stringify(profileData))
-      .digest('hex')
-      .substring(0, 12); // Short hash for performance
+    
+    return btoa(JSON.stringify(hashData)).slice(0, 16);
   }
 
   /**
-   * Generate event hash for cache key
+   * Generate event hash for cache validation
    */
   static generateEventHash(event: Event): string {
-    const eventData = {
-      id: event.id,
-      title: event.title || '',
-      category: event.category?.name || '',
-      // Include only stable event properties that affect career impact
-      updatedAt: event.updatedAt || event.createdAt
+    // Simple hash based on event attributes that affect career impact
+    const hashData = {
+      title: event.title,
+      category: event.eventTypeId,
+      organizer: event.organizer
     };
-
-    return createHash('md5')
-      .update(JSON.stringify(eventData))
-      .digest('hex')
-      .substring(0, 8);
+    
+    return btoa(JSON.stringify(hashData)).slice(0, 12);
   }
 
   /**
-   * Get single career impact score from cache
+   * Get cached career impact score
    */
   static async get(eventId: string, profileHash: string): Promise<CareerImpactScoreLite | null> {
-    try {
-      const key = this.generateCacheKey(eventId, profileHash);
-      const cached = await kv.get<CareerImpactScoreLite>(key);
-
-      // Update stats
-      if (cached) {
-        await this.incrementStat('hits');
-      } else {
-        await this.incrementStat('misses');
-      }
-
-      return cached;
-    } catch (error) {
-      console.warn('Cache get failed:', error);
-      await this.incrementStat('misses');
+    this.stats.totalRequests++;
+    
+    const key = this.generateCacheKey(eventId, profileHash);
+    const cached = this.cache.get(key);
+    
+    if (!cached) {
+      this.stats.misses++;
+      this.updateHitRate();
       return null;
     }
-  }
 
-  /**
-   * Set single career impact score in cache
-   */
-  static async set(eventId: string, profileHash: string, score: CareerImpactScoreLite, ttl: number = this.DEFAULT_TTL): Promise<void> {
-    try {
-      const key = this.generateCacheKey(eventId, profileHash);
-      await kv.setex(key, ttl, score);
-    } catch (error) {
-      console.warn('Cache set failed:', error);
+    // Check if expired
+    if (Date.now() > cached.timestamp + cached.ttl) {
+      this.cache.delete(key);
+      this.stats.misses++;
+      this.updateHitRate();
+      return null;
     }
+
+    this.stats.hits++;
+    this.updateHitRate();
+    return cached.data;
   }
 
   /**
-   * Get multiple career impact scores (batch operation)
+   * Get multiple cached career impact scores
    */
   static async mget(eventIds: string[], profileHash: string): Promise<Map<string, CareerImpactScoreLite>> {
-    if (eventIds.length === 0) return new Map();
-
-    try {
-      const keys = eventIds.map(eventId => this.generateCacheKey(eventId, profileHash));
-      const results = await kv.mget<CareerImpactScoreLite[]>(...keys);
-
-      const cached = new Map<string, CareerImpactScoreLite>();
-      const hits = results.filter(Boolean).length;
-      const misses = eventIds.length - hits;
-
-      results.forEach((result, index) => {
-        if (result) {
-          cached.set(eventIds[index], result);
-        }
-      });
-
-      // Update stats
-      if (hits > 0) await this.incrementStat('hits', hits);
-      if (misses > 0) await this.incrementStat('misses', misses);
-
-      return cached;
-    } catch (error) {
-      console.warn('Cache mget failed:', error);
-      await this.incrementStat('misses', eventIds.length);
-      return new Map();
+    const results = new Map<string, CareerImpactScoreLite>();
+    
+    for (const eventId of eventIds) {
+      const score = await this.get(eventId, profileHash);
+      if (score) {
+        results.set(eventId, score);
+      }
     }
+    
+    return results;
   }
 
   /**
-   * Set multiple career impact scores (batch operation)
+   * Set career impact score in cache
    */
-  static async mset(scores: Map<string, { score: CareerImpactScoreLite; eventId: string }>, profileHash: string, ttl: number = this.DEFAULT_TTL): Promise<void> {
-    if (scores.size === 0) return;
+  static async set(
+    eventId: string, 
+    profileHash: string, 
+    score: CareerImpactScoreLite,
+    ttl: number = this.DEFAULT_TTL
+  ): Promise<void> {
+    // Prevent cache from growing too large
+    if (this.cache.size >= this.MAX_CACHE_SIZE) {
+      this.evictOldest();
+    }
 
-    try {
-      const pipeline = kv.pipeline();
+    const key = this.generateCacheKey(eventId, profileHash);
+    this.cache.set(key, {
+      data: score,
+      timestamp: Date.now(),
+      ttl
+    });
+  }
 
-      scores.forEach(({ score, eventId }) => {
-        const key = this.generateCacheKey(eventId, profileHash);
-        pipeline.setex(key, ttl, score);
-      });
-
-      await pipeline.exec();
-    } catch (error) {
-      console.warn('Cache mset failed:', error);
+  /**
+   * Set multiple career impact scores in cache
+   */
+  static async mset(
+    scores: Map<string, CareerImpactScoreLite>, 
+    profileHash: string,
+    ttl: number = this.DEFAULT_TTL
+  ): Promise<void> {
+    for (const [eventId, score] of scores) {
+      await this.set(eventId, profileHash, score, ttl);
     }
   }
 
@@ -159,136 +152,79 @@ export class CareerImpactCache {
    * Invalidate cache entries for a specific profile
    */
   static async invalidateProfile(profileHash: string): Promise<number> {
-    try {
-      const pattern = `${this.CACHE_PREFIX}:*:${profileHash}:*`;
-      const keys = await kv.keys(pattern);
-
-      if (keys.length === 0) return 0;
-
-      await kv.del(...keys);
-      return keys.length;
-    } catch (error) {
-      console.warn('Profile cache invalidation failed:', error);
-      return 0;
+    let invalidated = 0;
+    
+    for (const [key] of this.cache) {
+      if (key.includes(`:${profileHash}`)) {
+        this.cache.delete(key);
+        invalidated++;
+      }
     }
+    
+    return invalidated;
   }
 
   /**
    * Invalidate cache entries for a specific event
    */
   static async invalidateEvent(eventId: string): Promise<number> {
-    try {
-      const pattern = `${this.CACHE_PREFIX}:${eventId}:*`;
-      const keys = await kv.keys(pattern);
-
-      if (keys.length === 0) return 0;
-
-      await kv.del(...keys);
-      return keys.length;
-    } catch (error) {
-      console.warn('Event cache invalidation failed:', error);
-      return 0;
+    let invalidated = 0;
+    
+    for (const [key] of this.cache) {
+      if (key.includes(`:${eventId}:`)) {
+        this.cache.delete(key);
+        invalidated++;
+      }
     }
+    
+    return invalidated;
   }
 
   /**
    * Clear all cache entries
    */
   static async invalidateAll(): Promise<number> {
-    try {
-      const pattern = `${this.CACHE_PREFIX}:*`;
-      const keys = await kv.keys(pattern);
-
-      if (keys.length === 0) return 0;
-
-      await kv.del(...keys);
-      await this.resetStats();
-      return keys.length;
-    } catch (error) {
-      console.warn('Full cache invalidation failed:', error);
-      return 0;
-    }
+    const size = this.cache.size;
+    this.cache.clear();
+    this.resetStats();
+    return size;
   }
 
   /**
    * Get cache statistics
    */
   static async getStats(): Promise<CacheStats> {
-    try {
-      const stats = await kv.get<CacheStats>(this.STATS_KEY);
-
-      if (!stats) {
-        const defaultStats: CacheStats = {
-          hits: 0,
-          misses: 0,
-          totalRequests: 0,
-          hitRate: 0,
-          lastReset: new Date().toISOString()
-        };
-        await kv.set(this.STATS_KEY, defaultStats);
-        return defaultStats;
-      }
-
-      const totalRequests = stats.hits + stats.misses;
-      return {
-        ...stats,
-        totalRequests,
-        hitRate: totalRequests > 0 ? stats.hits / totalRequests : 0
-      };
-    } catch (error) {
-      console.warn('Cache stats retrieval failed:', error);
-      return {
-        hits: 0,
-        misses: 0,
-        totalRequests: 0,
-        hitRate: 0,
-        lastReset: new Date().toISOString()
-      };
-    }
+    return { ...this.stats };
   }
 
   /**
-   * Increment cache statistics
+   * Private helper methods
    */
-  private static async incrementStat(stat: 'hits' | 'misses', count: number = 1): Promise<void> {
-    try {
-      await kv.hincrby(this.STATS_KEY, stat, count);
-    } catch (_error) {
-      // Silent failure for stats - don't impact core functionality
-    }
+  private static updateHitRate(): void {
+    this.stats.hitRate = this.stats.totalRequests > 0 
+      ? this.stats.hits / this.stats.totalRequests 
+      : 0;
   }
 
-  /**
-   * Reset cache statistics
-   */
-  private static async resetStats(): Promise<void> {
-    try {
-      const freshStats: CacheStats = {
-        hits: 0,
-        misses: 0,
-        totalRequests: 0,
-        hitRate: 0,
-        lastReset: new Date().toISOString()
-      };
-      await kv.set(this.STATS_KEY, freshStats);
-    } catch (error) {
-      console.warn('Stats reset failed:', error);
-    }
+  private static resetStats(): void {
+    this.stats = {
+      hits: 0,
+      misses: 0,
+      totalRequests: 0,
+      hitRate: 0,
+      lastReset: new Date().toISOString()
+    };
   }
 
-  /**
-   * Health check for cache service
-   */
-  static async ping(): Promise<boolean> {
-    try {
-      const testKey = `${this.CACHE_PREFIX}:health:${Date.now()}`;
-      await kv.set(testKey, 'ok', { ex: 5 }); // 5 second TTL
-      const result = await kv.get(testKey);
-      await kv.del(testKey);
-      return result === 'ok';
-    } catch (_error) {
-      console.warn('Cache health check failed:', _error);
-      return false;
-    }
+  private static evictOldest(): void {
+    // Remove oldest 10% of entries when cache is full
+    const entries = Array.from(this.cache.entries());
+    const toRemove = Math.ceil(entries.length * 0.1);
+    
+    // Sort by timestamp and remove oldest
+    entries
+      .sort((a, b) => a[1].timestamp - b[1].timestamp)
+      .slice(0, toRemove)
+      .forEach(([key]) => this.cache.delete(key));
   }
 }

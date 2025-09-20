@@ -21,6 +21,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import ClientLayout from "@/components/layout/ClientLayout";
 import IconProvider from '../components/providers/IconProvider';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -38,7 +39,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" className="dark">
+        <html lang="en" suppressHydrationWarning>
             <head>
                 {/* FullCalendar monolithic CSS (v6) */}
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css" />
@@ -49,22 +50,29 @@ export default function RootLayout({
 
                 {/* Global Error Boundary */}
                 <PageErrorBoundary name="RootLayout">
-                    {/* 1. AuthProvider is the outermost context provider */}
-                    <AuthProvider>
-                        {/* 2. QueryProvider is next, it might need auth context for queries */}
-                        <QueryProvider>
-                            {/* 3. UI/UX providers can go inside */}
-                            {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
-                            {/* <SmoothScrollProvider> */}
-                                {/* 4. ClientLayout contains the Navbar, which needs auth context */}
-                                <IconProvider>
-                                    <ClientLayout>
-                                        {children}
-                                    </ClientLayout>
-                                </IconProvider>
-                            {/* </SmoothScrollProvider> */}
-                        </QueryProvider>
-                    </AuthProvider>
+                    <ThemeProvider
+                        attribute="class"
+                        defaultTheme="dark"
+                        enableSystem
+                        disableTransitionOnChange
+                    >
+                        {/* 1. AuthProvider is the outermost context provider */}
+                        <AuthProvider>
+                            {/* 2. QueryProvider is next, it might need auth context for queries */}
+                            <QueryProvider>
+                                {/* 3. UI/UX providers can go inside */}
+                                {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
+                                {/* <SmoothScrollProvider> */}
+                                    {/* 4. ClientLayout contains the Navbar, which needs auth context */}
+                                    <IconProvider>
+                                        <ClientLayout>
+                                            {children}
+                                        </ClientLayout>
+                                    </IconProvider>
+                                {/* </SmoothScrollProvider> */}
+                            </QueryProvider>
+                        </AuthProvider>
+                    </ThemeProvider>
                 </PageErrorBoundary>
             </body>
         </html>

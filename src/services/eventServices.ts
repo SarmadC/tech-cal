@@ -19,6 +19,41 @@ import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import * as Sentry from "@sentry/nextjs";
 
 export class EventService {
+    /**
+     * Get total count of events matching filters
+     */
+    static async getEventCount(
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType
+    ): Promise<number> {
+        try {
+            let query = supabaseClient
+                .from('events')
+                .select('id', { count: 'exact', head: true });
+
+            // Apply same filters as getEvents but only count
+            if (filters.startDate) {
+                query = query.gte('start_time', filters.startDate.toISOString());
+            }
+            if (filters.endDate) {
+                query = query.lte('start_time', filters.endDate.toISOString());
+            }
+            if (filters.categories?.length) {
+                query = query.in('event_type_id', filters.categories);
+            }
+            if (filters.searchTerm) {
+                query = query.textSearch('fts', sanitizeFtsQuery(filters.searchTerm));
+            }
+
+            const { count, error } = await query;
+            if (error) throw error;
+            
+            return count || 0;
+        } catch (error) {
+            console.error('Error counting events:', error);
+            return 0;
+        }
+    }
     // Helper function to fetch and attach tags to events
     private static async attachTagsToEvents<T extends Record<string, unknown>>(
         events: T[],

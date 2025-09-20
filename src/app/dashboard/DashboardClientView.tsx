@@ -19,9 +19,9 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import CareerProfilePrompt from '@/components/calendar/mobile/discovery/CareerProfilePrompt';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { CareerAnalyticsCard } from '@/components/dashboard/CareerAnalyticsCard';
+import { type CareerAnalyticsData, type CareerRecommendation } from '@/services/careerAnalyticsService';
 import { CareerRecommendationsCard, QuickCareerActionsCard } from '@/components/dashboard/CareerRecommendationsCard';
-import { CareerAnalyticsService } from '@/services/careerAnalyticsService';
-import { useOptimizedCareerImpact } from '@/hooks/useOptimizedCareerImpact';
+import { useServerSideAnalytics } from '@/hooks/useServerSideAnalytics';
 import { useLightweightTrackedEvents } from '@/hooks/useTrackedEventsUnified';
 import { formatDateTime } from '@/utils/dateUtils';
 
@@ -44,90 +44,28 @@ type PersonalInsight = {
 /**
  * Career Insights Section with enhanced events
  */
-function CareerInsightsSection({ 
-  upcomingEvents, 
+function CareerInsightsSection({
   userProfile,
-  trackedEvents
-}: { 
-  upcomingEvents: Event[]; 
+  trackedEvents: _trackedEvents
+}: {
   userProfile: AppProfile;
   trackedEvents: TrackedEventRecord[];
 }) {
-  // Use optimized career impact hook for better performance
+  // Use server-side analytics for better performance and security
   const { 
-    enhancedEvents, 
-    isLoading: careerImpactLoading, 
-    error: _careerImpactError,
-    stats: _stats 
-  } = useOptimizedCareerImpact(upcomingEvents, { enabled: true });
+    data: serverAnalytics, 
+    isLoading, 
+    error,
+    refetch
+  } = useServerSideAnalytics({ 
+    includeRecommendations: true,
+    eventLimit: 50,
+    enabled: !!userProfile 
+  });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [analyticsData, setAnalyticsData] = React.useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [recommendations, setRecommendations] = React.useState<any[]>([]);
-  const [isAnalyticsLoading, setIsAnalyticsLoading] = React.useState(true);
-
-  // Use a stable reference for events to prevent infinite re-renders
-  const stableEventsRef = React.useRef<Event[]>([]);
-  const eventsToUse = React.useMemo(() => {
-    const events = enhancedEvents.length > 0 ? enhancedEvents : upcomingEvents;
-    // Only update if the event IDs have actually changed
-    const currentEventIds = events.map(e => e.id).sort().join(',');
-    const previousEventIds = stableEventsRef.current.map(e => e.id).sort().join(',');
-    
-    if (currentEventIds !== previousEventIds) {
-      stableEventsRef.current = events;
-    }
-    
-    return stableEventsRef.current;
-  }, [enhancedEvents, upcomingEvents]); // Include full arrays as dependencies
-
-  React.useEffect(() => {
-    async function loadCareerAnalytics() {
-      try {
-        const careerProfile = CareerProfileService.getCareerProfile(userProfile);
-        if (!careerProfile) {
-          setAnalyticsData(null);
-          setRecommendations([]);
-          setIsAnalyticsLoading(false);
-          return;
-        }
-        
-        // Load comprehensive career analytics with individual error handling
-        const [analyticsResult, recommendationsResult] = await Promise.allSettled([
-          CareerAnalyticsService.generateCareerAnalytics(userProfile, trackedEvents, eventsToUse),
-          CareerAnalyticsService.generateCareerRecommendations(userProfile, trackedEvents, eventsToUse)
-        ]);
-
-        // Handle analytics result
-        if (analyticsResult.status === 'fulfilled') {
-          setAnalyticsData(analyticsResult.value);
-        } else {
-          console.warn('Failed to load career analytics:', analyticsResult.reason);
-          setAnalyticsData(null);
-        }
-
-        // Handle recommendations result
-        if (recommendationsResult.status === 'fulfilled') {
-          setRecommendations(recommendationsResult.value);
-        } else {
-          console.warn('Failed to load career recommendations:', recommendationsResult.reason);
-          setRecommendations([]);
-        }
-      } catch (error) {
-        console.warn('Failed to load career analytics:', error);
-        setAnalyticsData(null);
-        setRecommendations([]);
-      } finally {
-        setIsAnalyticsLoading(false);
-      }
-    }
-
-    loadCareerAnalytics();
-  }, [userProfile, trackedEvents, eventsToUse]); // Include all dependencies
-
-  // Show loading if either career impact or analytics are loading
-  const isLoading = careerImpactLoading || isAnalyticsLoading;
+  // Extract data from server response with proper typing
+  const analyticsData = serverAnalytics?.analytics as CareerAnalyticsData | undefined;
+  const recommendations = (serverAnalytics?.recommendations || []) as CareerRecommendation[];
 
   if (isLoading) {
     return (
@@ -138,6 +76,25 @@ function CareerInsightsSection({
         </div>
         <div className="animate-pulse bg-gray-200 rounded-lg h-64"></div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TargetIcon className="w-5 h-5 text-red-600" />
+            Analytics Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <TargetIcon className="w-12 h-12 text-red-300 mx-auto mb-4" />
+          <h3 className="font-medium text-gray-900 mb-2">Failed to load analytics</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={refetch}>Try Again</Button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -153,7 +110,8 @@ function CareerInsightsSection({
         <CardContent className="text-center py-8">
           <TargetIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="font-medium text-gray-900 mb-2">No career analytics available</h3>
-          <p className="text-gray-600">Complete your career profile to see personalized insights.</p>
+          <p className="text-gray-600 mb-4">Complete your career profile to see personalized insights.</p>
+          <Button asChild><Link href="/onboarding/career">Complete Profile</Link></Button>
         </CardContent>
       </Card>
     );
@@ -182,7 +140,24 @@ function CareerInsightsSection({
     <div className="space-y-6">
       {/* Career Analytics Overview */}
       <SectionErrorBoundary name="CareerAnalytics">
-        <CareerAnalyticsCard analyticsData={analyticsData} />
+        <CareerAnalyticsCard analyticsData={analyticsData || {
+          averageImpactScore: 0,
+          impactTrend: 'stable' as const,
+          trendPercentage: 0,
+          skillsGrowth: [],
+          careerGoalProgress: {
+            currentLevel: 'N/A',
+            targetLevel: 'N/A',
+            progress: 0
+          },
+          monthlyStats: {
+            eventsAttended: 0,
+            highImpactEvents: 0,
+            skillsImproved: 0,
+            networkingEvents: 0
+          },
+          upcomingOpportunities: []
+        } satisfies CareerAnalyticsData} />
       </SectionErrorBoundary>
       
       {/* Recommendations and Quick Actions */}
@@ -336,7 +311,6 @@ export default function DashboardClientView({
                 {profile && CareerProfileService.hasCompletedOnboarding(profile) && (
                     <SectionErrorBoundary name="DashboardSection">
                         <CareerInsightsSection 
-                            upcomingEvents={allUpcomingEvents || []}
                             userProfile={profile}
                             trackedEvents={trackedEvents || []}
                         />

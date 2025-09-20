@@ -10,10 +10,10 @@ import { kv } from '@vercel/kv';
 import { CareerImpactCache } from '@/services/cache/careerImpactCache';
 import { CareerProfile } from '@/types/career';
 
-// Rate limiter for batch career impact API
+// Rate limiter for batch career impact API - Increased for heavy usage
 const ratelimit = new Ratelimit({
   redis: kv,
-  limiter: Ratelimit.slidingWindow(10, '1 m'), // 10 requests per minute per user
+  limiter: Ratelimit.slidingWindow(30, '1 m'), // 30 requests per minute per user
   analytics: true,
   prefix: 'career-impact-batch',
 });
