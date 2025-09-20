@@ -61,6 +61,7 @@ export const WeekEventRenderer: React.FC<WeekEventRendererProps> = ({
                             viewType="week"
                             visualInfo={visualInfo}
                             agenda={'agenda' in event ? event.agenda : undefined}
+                            showCareerImpact={true}
                             style={{
                                 height: '100%',
                                 margin: '1px 2px'

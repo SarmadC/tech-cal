@@ -2,7 +2,9 @@
 
 import React, { useMemo, useState, useCallback } from 'react';
 import { Event, EventType, AppProfile } from '@/types';
+import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
+import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 import MobileEventPreview from './MobileEventPreview';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 
@@ -208,7 +210,18 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
                   })}
                 </div>
                 <div className="event-details">
-                  <div className="event-title">{event.title}</div>
+                  <div className="flex items-center justify-between">
+                    <div className="event-title flex-1">{event.title}</div>
+                    {/* Career Impact Indicator for mobile */}
+                    {(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
+                      <CareerImpactIndicator 
+                        score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall}
+                        size="sm"
+                        showValue={false}
+                        className="flex-shrink-0 ml-2"
+                      />
+                    )}
+                  </div>
                   {event.location && (
                     <div className="event-location">{event.location}</div>
                   )}

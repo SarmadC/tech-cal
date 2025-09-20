@@ -2,7 +2,9 @@
 
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
+import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
+import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 import EventPreviewCard from '../EventPreviewCard';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -291,7 +293,18 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
                         } as React.CSSProperties}
                       >
                         <div className="event-header">
-                          <div className="event-title">{event.title}</div>
+                          <div className="flex items-center justify-between">
+                            <div className="event-title flex-1">{event.title}</div>
+                            {/* Career Impact Indicator for mobile day timeline */}
+                            {(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
+                              <CareerImpactIndicator 
+                                score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall}
+                                size="sm"
+                                showValue={false}
+                                className="flex-shrink-0 ml-2"
+                              />
+                            )}
+                          </div>
                           <div className="event-time-info">
                             <div className="event-time">{formatEventTime(event)}</div>
                             {duration && <div className="event-duration">({duration})</div>}

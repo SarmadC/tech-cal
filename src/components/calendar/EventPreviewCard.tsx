@@ -7,10 +7,12 @@ import {
 } from '@phosphor-icons/react';
 // 1. UPDATE IMPORTS: Use the new types and the type guard.
 import { Event, isTrackedEvent, TrackedEvent, MultiDayEventInstance } from '@/types';
+import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
+import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
 
 // 2. UPDATE PROPS: The component can accept either a base Event or an enriched TrackedEvent.
 interface EventPreviewCardProps {
@@ -179,9 +181,22 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     </button>
                 </div>
 
-                <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-2 leading-tight">
-                    {event.title}
-                </h3>
+                <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-2 leading-tight flex-1">
+                        {event.title}
+                    </h3>
+                    {/* Career Impact Badge in Preview */}
+                    {(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
+                        <div className="flex-shrink-0">
+                            <CareerImpactBadge 
+                                score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!}
+                                variant="compact"
+                                showTooltip={false}
+                                className="text-xs"
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Content */}

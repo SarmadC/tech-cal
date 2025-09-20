@@ -152,6 +152,7 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                     visualInfo={visualInfo}
                                     isOverlapping={overlapMap.get(event.id) || false}
                                     agenda={'agenda' in event ? event.agenda || [] : []}
+                                    showCareerImpact={true}
                                 />
                             </div>
                         );

@@ -3,7 +3,9 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { EventClickArg } from '@fullcalendar/core';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
+import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
+import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 import EventPreviewCard from '../EventPreviewCard';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -322,7 +324,18 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
                     {formatEventTime(event)}
                   </div>
                   <div className="event-content">
-                    <div className="event-title">{event.title}</div>
+                    <div className="flex items-center justify-between">
+                      <div className="event-title flex-1">{event.title}</div>
+                      {/* Career Impact Indicator for mobile month view */}
+                      {(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
+                        <CareerImpactIndicator 
+                          score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall}
+                          size="sm"
+                          showValue={false}
+                          className="flex-shrink-0 ml-2"
+                        />
+                      )}
+                    </div>
                     {event.location && (
                       <div className="event-location">
                         <MaterialIcon name="location" size={12} />

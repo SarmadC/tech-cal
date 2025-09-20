@@ -232,6 +232,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                                 visualInfo={{ span, ...visualInfo }}
                                 className={spanClasses}
                                 agenda={'agenda' in event ? event.agenda : undefined}
+                                showCareerImpact={true}
                                 style={{
                                     height: '100%'
                                 }}

@@ -8,6 +8,7 @@ import { Event, MultiDayEventInstance, isEventTracked, AgendaItem } from '@/type
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { isEventLive, getEventDuration } from '@/utils/dateUtils';
 import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
+import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
 import { LearnMoreButton } from './LearnMoreButton';
 
 export interface EventCardProps {
@@ -314,14 +315,24 @@ export const EventCard: React.FC<EventCardProps> = ({
                 <div className="event-title-section">
                     <div className="flex items-start justify-between">
                         <h3 className="event-title flex-1">{event.title}</h3>
-                        {/* Career Impact Indicator */}
+                        {/* Career Impact Display */}
                         {showCareerImpact && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
-                            <CareerImpactIndicator 
-                                score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall}
-                                size={viewType === 'week' ? 'sm' : 'md'}
-                                showValue={false}
-                                className="flex-shrink-0 ml-2"
-                            />
+                            <div className="flex-shrink-0 ml-2">
+                                {cardSize >= 6 ? (
+                                    <CareerImpactBadge 
+                                        score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!}
+                                        variant="compact"
+                                        showTooltip={true}
+                                        className="text-xs"
+                                    />
+                                ) : (
+                                    <CareerImpactIndicator 
+                                        score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall}
+                                        size={viewType === 'week' ? 'sm' : 'md'}
+                                        showValue={cardSize >= 4}
+                                    />
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -581,7 +592,30 @@ export const EventCard: React.FC<EventCardProps> = ({
 
             {/* Tier 3: Rich Content (4+ hour events) */}
             <div className="event-card-rich-content">
-                {/* Additional content for larger cards can go here */}
+                {/* Career Impact Explanation for Extra Large Cards */}
+                {showCareerImpact && isExtraLarge && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
+                    <div className="career-impact-explanation">
+                        <div className="flex items-center gap-2 mb-2">
+                            <MaterialIcon name="trending-up" size={12} color="var(--category-title-color)" />
+                            <span className="text-xs font-medium text-gray-600">Career Impact</span>
+                        </div>
+                        <div className="career-impact-details">
+                            <div className="flex items-center justify-between mb-1">
+                                <CareerImpactBadge 
+                                    score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!}
+                                    variant="detailed"
+                                    className="text-xs"
+                                />
+                            </div>
+                            <div className="career-impact-reasons text-xs text-gray-600 mt-1">
+                                <div className="flex items-start gap-1">
+                                    <span className="text-green-500 mt-0.5">•</span>
+                                    <span>High relevance to your career goals</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Tier 4: Premium Content (6+ hour events) - only show if we have rich data */}

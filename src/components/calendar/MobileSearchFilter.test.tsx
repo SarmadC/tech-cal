@@ -52,6 +52,7 @@ describe('MobileSearchFilter', () => {
       availability: 'all' as const,
       popularity: 'all' as const,
       duration: 'all' as const,
+      sortBy: 'default' as const,
     },
     onUpdateFilter: vi.fn(),
     onResetFilters: vi.fn(),
