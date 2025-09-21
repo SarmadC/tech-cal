@@ -2,6 +2,33 @@
 import * as Sentry from '@sentry/nextjs';
 
 // =============================================
+// ERROR HANDLING UTILITIES
+// =============================================
+
+/**
+ * Standardized error message extraction (DRY utility)
+ * Eliminates repeated "error instanceof Error ? error.message : '...'" pattern
+ */
+export function getErrorMessage(error: unknown, fallback = 'Unknown error occurred'): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+/**
+ * Log and capture error with Sentry (DRY utility)
+ */
+export function logAndCaptureError(error: unknown, context: string, metadata?: Record<string, unknown>): string {
+  const errorMessage = getErrorMessage(error);
+  console.error(`[${context}] ${errorMessage}`, error);
+
+  Sentry.captureException(error, {
+    tags: { context },
+    extra: metadata
+  });
+
+  return errorMessage;
+}
+
+// =============================================
 // SCORE UTILITIES
 // =============================================
 

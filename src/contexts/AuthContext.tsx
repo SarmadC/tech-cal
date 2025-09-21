@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/utils/supabase/client';
 import { AuthService } from '@/services/authService';
 import { ProfileService } from '@/services/profileService';
+import { MemoizedProfileService } from '@/services/memoizedProfileService';
 import type {
     AppProfile,
     AuthResponse,
@@ -238,6 +239,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
 
             const profile = await ProfileService.updateProfile(authState.user.id, data, supabase);
+
+            // Invalidate memoized profile calculations to ensure consistency
+            MemoizedProfileService.invalidateUser(authState.user.id);
+
             setAuthState(prev => ({ ...prev, profile }));
             return { success: true };
         } catch (error: unknown) {

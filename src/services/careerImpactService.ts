@@ -378,7 +378,7 @@ export class CareerImpactService {
       metadata: {
         calculatedAt: new Date().toISOString(),
         algorithmVersion: config.version,
-        careerProfileHash: CareerImpactService.generateProfileHash(careerProfile),
+        careerProfileHash: CareerImpactCache.generateProfileHash(careerProfile),
         eventDataHash: CareerImpactService.generateEventHash(event),
       },
     };
@@ -1515,18 +1515,6 @@ export class CareerImpactService {
     };
   }
 
-  /**
-   * Generate hash for career profile data
-   */
-  private static generateProfileHash(careerProfile: CareerProfile): string {
-    const profileData = {
-      skills: careerProfile.primarySkills?.sort(),
-      goals: careerProfile.careerGoals?.sort(),
-      industry: careerProfile.industry,
-      seniority: careerProfile.seniority
-    };
-    return btoa(JSON.stringify(profileData)).substring(0, 16);
-  }
 
   /**
    * Generate hash for event data

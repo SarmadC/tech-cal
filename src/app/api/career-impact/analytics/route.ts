@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { CareerProfileService } from '@/services/careerProfileService';
+import { MemoizedProfileService } from '@/services/memoizedProfileService';
 import { EventService } from '@/services/eventServices';
 // import { CareerImpactUtils } from '@/utils/careerImpactUtils'; // Now using batch service
 import { CareerProfile } from '@/types/career';
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     // Get user profile and career profile
     const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
-    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+    const careerProfile = MemoizedProfileService.getCareerProfile(userProfile);
 
     if (!careerProfile) {
       return NextResponse.json(

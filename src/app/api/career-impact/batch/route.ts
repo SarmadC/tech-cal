@@ -7,6 +7,7 @@ import { CareerImpactCalculationOptions } from '@/types/careerImpact';
 import { Event } from '@/types';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
+import { MemoizedProfileService } from '@/services/memoizedProfileService';
 import { CareerImpactCache } from '@/services/cache/careerImpactCache';
 import { CareerProfile } from '@/types/career';
 
@@ -194,9 +195,9 @@ export async function POST(request: NextRequest) {
       setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 second timeout
     });
 
-    // Get user profile and career profile
+    // Get user profile and career profile with memoization
     const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
-    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+    const { careerProfile, profileHash } = MemoizedProfileService.getCareerProfileAndHash(userProfile);
 
     if (!careerProfile) {
       return NextResponse.json(
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest) {
     }
 
     const startTime = Date.now();
-    const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
+    // profileHash already available from memoized service
 
     // Cache-optimized batch processing
     const batchResult = await Promise.race([

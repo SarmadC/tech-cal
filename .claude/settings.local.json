@@ -41,7 +41,8 @@
       "Bash(npm uninstall:*)",
       "Bash(npm install:*)",
       "Read(//Users/sarmad/.nvm/versions/node/v20.17.0/lib/node_modules/@anthropic-ai/**)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

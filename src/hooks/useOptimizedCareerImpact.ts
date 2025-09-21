@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Event } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { BatchCareerImpactService } from '@/services/batchCareerImpactService';
@@ -49,7 +49,7 @@ export function useOptimizedCareerImpact(
   // Memoized event IDs to prevent unnecessary recalculations
   const eventIds = useRef<string>('');
   const eventsRef = useRef<Event[]>(events); // Store latest events in ref
-  const currentEventIds = events.map(e => e.id).sort().join(',');
+  const currentEventIds = useMemo(() => events.map(e => e.id).sort().join(','), [events]);
   
   // Update events ref when events change
   eventsRef.current = events;
@@ -152,8 +152,11 @@ export function useOptimizedCareerImpact(
  * Lightweight hook for career impact that only loads when needed
  */
 export function useCareerImpactOnDemand() {
-  const [cache, setCache] = useState<Map<string, CareerImpactScoreLite>>(new Map());
-  const [loading, setLoading] = useState<Set<string>>(new Set());
+  const cacheRef = useRef<Map<string, CareerImpactScoreLite>>(new Map());
+  const loadingRef = useRef<Set<string>>(new Set());
+  const [, forceUpdate] = useState({});
+
+  const MAX_CACHE_SIZE = 200; // Reasonable limit for client-side cache
 
   const getCareerImpact = useCallback(async (eventIds: string[]): Promise<Record<string, CareerImpactScoreLite>> => {
     // Check cache first
@@ -161,7 +164,7 @@ export function useCareerImpactOnDemand() {
     const missing: string[] = [];
 
     eventIds.forEach(id => {
-      const cachedScore = cache.get(id);
+      const cachedScore = cacheRef.current.get(id);
       if (cachedScore) {
         cached[id] = cachedScore;
       } else {
@@ -175,23 +178,21 @@ export function useCareerImpactOnDemand() {
     }
 
     // Mark as loading
-    setLoading(prev => {
-      const newLoading = new Set(prev);
-      missing.forEach(id => newLoading.add(id));
-      return newLoading;
-    });
+    missing.forEach(id => loadingRef.current.add(id));
+    forceUpdate({});
 
     try {
       // Fetch missing scores
       const newScores = await BatchCareerImpactService.getCareerImpactForEvents(missing, false);
       
-      // Update cache
-      setCache(prev => {
-        const newCache = new Map(prev);
-        Object.entries(newScores).forEach(([id, score]) => {
-          newCache.set(id, score);
-        });
-        return newCache;
+      // Update cache with size limit
+      Object.entries(newScores).forEach(([id, score]) => {
+        // Simple eviction if cache gets too large
+        if (cacheRef.current.size >= MAX_CACHE_SIZE) {
+          const firstKey = cacheRef.current.keys().next().value;
+          if (firstKey) cacheRef.current.delete(firstKey);
+        }
+        cacheRef.current.set(id, score);
       });
 
       // Combine cached and new results
@@ -201,26 +202,24 @@ export function useCareerImpactOnDemand() {
       return cached;
     } finally {
       // Clear loading state
-      setLoading(prev => {
-        const newLoading = new Set(prev);
-        missing.forEach(id => newLoading.delete(id));
-        return newLoading;
-      });
+      missing.forEach(id => loadingRef.current.delete(id));
+      forceUpdate({});
     }
-  }, [cache]);
+  }, []);
 
   const isEventLoading = useCallback((eventId: string): boolean => {
-    return loading.has(eventId);
-  }, [loading]);
+    return loadingRef.current.has(eventId);
+  }, []);
 
   const clearCache = useCallback(() => {
-    setCache(new Map());
+    cacheRef.current.clear();
+    forceUpdate({});
   }, []);
 
   return {
     getCareerImpact,
     isEventLoading,
     clearCache,
-    cacheSize: cache.size
+    cacheSize: cacheRef.current.size
   };
 }
