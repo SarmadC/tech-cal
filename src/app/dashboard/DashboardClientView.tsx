@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
-import { createClient } from '@/utils/supabase/client';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/Loading';
@@ -187,8 +187,8 @@ export default function DashboardClientView({
     initialEventTypes,
     initialUpcomingEvents
 }: DashboardClientViewProps) {
-    const [supabase] = useState(() => createClient());
     const { user: _user, profile } = useAuth();
+    const supabase = useSupabase();
 
     const {
         data: trackedEvents,
@@ -272,6 +272,18 @@ export default function DashboardClientView({
         const trackedEventIds = new Set((trackedEvents || []).map((te: TrackedEventRecord) => te.eventId));
         return (allUpcomingEvents || []).filter((event: Event) => !trackedEventIds.has(event.id)).slice(0, 6);
     }, [allUpcomingEvents, trackedEvents]);
+
+    // Show loading if supabase client is not ready yet
+    if (!supabase) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (isError) {
         return (

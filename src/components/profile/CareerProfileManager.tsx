@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { CareerProfile, CareerOnboardingData } from '@/types/career';
 import { CareerProfileService } from '@/services/careerProfileService';
-import { createClient } from '@/utils/supabase/client';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import { toast } from 'sonner';
 import { User, PencilSimple, CheckCircle } from '@phosphor-icons/react';
@@ -25,7 +25,19 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   const { user, profile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const supabase = createClient();
+  const supabase = useSupabase();
+
+  // Show loading if supabase client is not ready yet
+  if (!supabase) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-sm text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const currentCareerProfile = CareerProfileService.getCareerProfile(profile);
   const hasCompletedOnboarding = CareerProfileService.hasCompletedOnboarding(profile);

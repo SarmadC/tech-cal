@@ -44,6 +44,8 @@ export function useDeviceDetection(): DeviceInfo {
   });
 
   useEffect(() => {
+    let orientationTimeoutId: NodeJS.Timeout | null = null;
+
     const updateDeviceInfo = () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
@@ -78,6 +80,15 @@ export function useDeviceDetection(): DeviceInfo {
       });
     };
 
+    const handleOrientationChange = () => {
+      // Clear any existing timeout
+      if (orientationTimeoutId) {
+        clearTimeout(orientationTimeoutId);
+      }
+      // Small delay to ensure viewport dimensions are updated
+      orientationTimeoutId = setTimeout(updateDeviceInfo, 100);
+    };
+
     // Initial detection
     updateDeviceInfo();
 
@@ -85,14 +96,14 @@ export function useDeviceDetection(): DeviceInfo {
     window.addEventListener('resize', updateDeviceInfo);
     
     // Listen for orientation changes (mobile)
-    window.addEventListener('orientationchange', () => {
-      // Small delay to ensure viewport dimensions are updated
-      setTimeout(updateDeviceInfo, 100);
-    });
+    window.addEventListener('orientationchange', handleOrientationChange);
 
     return () => {
       window.removeEventListener('resize', updateDeviceInfo);
-      window.removeEventListener('orientationchange', updateDeviceInfo);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      if (orientationTimeoutId) {
+        clearTimeout(orientationTimeoutId);
+      }
     };
   }, []);
 

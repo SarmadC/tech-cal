@@ -1,4 +1,5 @@
 // src/app/dashboard/growth/page.tsx
+
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import GrowthClientView from './GrowthClientView';

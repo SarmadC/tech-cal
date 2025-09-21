@@ -2,10 +2,11 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useScrollListener } from '@/hooks/useEventListener';
 import UserMenu from '@/components/common/UserMenu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
@@ -15,13 +16,9 @@ export default function Navbar() {
     const pathname = usePathname();
     const { user, loading } = useAuth();
 
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    useScrollListener(() => {
+        setIsScrolled(window.scrollY > 10);
+    });
 
     const navLinks = [
         { href: '/#features', label: 'Features' },

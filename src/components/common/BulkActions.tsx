@@ -7,7 +7,7 @@ import { EventService } from '@/services/eventServices';
 import { LoadingButton } from '@/components/Loading';
 import { toast } from 'sonner';
 
-import { createClient } from '@/utils/supabase/client';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
 
 interface BulkActionsProps {
     selectedEvents: Set<string>;
@@ -24,13 +24,18 @@ export default function BulkActions({
     onBulkComplete: _onBulkComplete,
     className = ''
 }: BulkActionsProps) {
-    const [supabase] = useState(() => createClient());
     const { user } = useAuth();
+    const supabase = useSupabase();
     const selectedEventArray = Array.from(selectedEvents);
     const selectedCount = selectedEventArray.length;
 
     const { trackEvent, isLoading: isBulkTracking } = useTrackedEventsUnified();
     const [localLoading, setLocalLoading] = useState<LocalOperation | null>(null);
+    
+    // Return null if supabase client is not ready yet
+    if (!supabase) {
+        return null;
+    }
 
     const handleBulkTrack = async () => {
         if (!user || selectedCount === 0) return;
@@ -85,11 +90,15 @@ export default function BulkActions({
 
             const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
+            const objectUrl = URL.createObjectURL(blob);
+            link.href = objectUrl;
             link.download = `kurecal-events-${new Date().toISOString().split('T')[0]}.ics`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            
+            // Clean up the object URL to prevent memory leaks
+            URL.revokeObjectURL(objectUrl);
 
             toast.success(`Exported ${eventsToExport.length} events to .ics file.`);
 

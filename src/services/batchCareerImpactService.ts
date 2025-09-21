@@ -169,9 +169,11 @@ export class BatchCareerImpactService {
     request: BatchCareerImpactRequest,
     retryCount = 0
   ): Promise<BatchCareerImpactResponse> {
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT_MS);
+      timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT_MS);
 
       const response = await fetch('/api/career-impact/batch', {
         method: 'POST',
@@ -182,7 +184,11 @@ export class BatchCareerImpactService {
         signal: controller.signal
       });
 
-      clearTimeout(timeoutId);
+      // Clear timeout on successful response
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
 
       if (!response.ok) {
         // Handle rate limiting gracefully
@@ -218,6 +224,11 @@ export class BatchCareerImpactService {
       }
       
       throw errorObj;
+    } finally {
+      // Always clear timeout to prevent memory leaks
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     }
   }
 

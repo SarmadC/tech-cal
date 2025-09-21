@@ -149,11 +149,18 @@ export function useSwipeGestures(config: SwipeConfig) {
         rafRef.current = requestAnimationFrame(animate);
       };
       rafRef.current = requestAnimationFrame(animate);
+    } else {
+      // Cancel animation frame when not active
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
     }
 
     return () => {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
       }
     };
   }, [swipeState.isActive, enableMomentum]);

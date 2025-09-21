@@ -218,6 +218,27 @@ class AnalyticsBufferManager {
 // Single instance with proper lifecycle management
 const bufferManager = new AnalyticsBufferManager();
 
+// Ensure cleanup on process exit or module unload
+if (typeof window !== 'undefined') {
+  // Browser environment - cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    bufferManager.destroy();
+  });
+} else {
+  // Node.js environment - cleanup on process exit
+  process.on('exit', () => {
+    bufferManager.destroy();
+  });
+  process.on('SIGINT', () => {
+    bufferManager.destroy();
+    process.exit(0);
+  });
+  process.on('SIGTERM', () => {
+    bufferManager.destroy();
+    process.exit(0);
+  });
+}
+
 export class BehavioralAnalyticsService {
 
   private static getUserBuffer(userId: string, supabaseClient: SupabaseClientType): UserInteractionBuffer {

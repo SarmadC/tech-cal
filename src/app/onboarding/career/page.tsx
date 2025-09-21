@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { CareerOnboardingData } from '@/types/career';
 import { CareerProfileService } from '@/services/careerProfileService';
-import { createClient } from '@/utils/supabase/client';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import { toast } from 'sonner';
 
@@ -15,7 +15,7 @@ export default function CareerOnboardingPage() {
   const queryClient = useQueryClient();
   const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const supabase = createClient();
+  const supabase = useSupabase();
 
   // Redirect if user is not authenticated
   React.useEffect(() => {
@@ -30,6 +30,18 @@ export default function CareerOnboardingPage() {
       return;
     }
   }, [user, profile, router]);
+
+  // Show loading if supabase client is not ready yet
+  if (!supabase) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleComplete = async (data: CareerOnboardingData) => {
     if (!user?.id) {

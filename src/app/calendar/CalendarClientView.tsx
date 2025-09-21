@@ -5,6 +5,7 @@ import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useResizeListener } from '@/hooks/useEventListener';
 
 import { formatDateForURL } from '@/utils/dateUtils';
 import { CalendarLayout, type CalendarLayoutContext } from './CalendarLayout';
@@ -75,19 +76,14 @@ function useCalendarUIState() {
     }, []); // Empty dependency array - only run on mount
 
     // Handle mobile resize - close sidebar when switching to mobile
-    useEffect(() => {
-        const checkMobile = () => {
-            const isMobile = window.innerWidth < 768;
-            
-            // Only close sidebar on mobile if it's open
-            if (isMobile && state.isSidebarOpen) {
-                dispatch({ type: 'TOGGLE_SIDEBAR' }); // Close sidebar on mobile
-            }
-        };
+    useResizeListener(() => {
+        const isMobile = window.innerWidth < 768;
         
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, [state.isSidebarOpen]);
+        // Only close sidebar on mobile if it's open
+        if (isMobile && state.isSidebarOpen) {
+            dispatch({ type: 'TOGGLE_SIDEBAR' }); // Close sidebar on mobile
+        }
+    }, window, { passive: true });
 
     const actions = useMemo(() => ({
         selectEvent: (event: Event | null) => dispatch({ type: 'SELECT_EVENT', event }),

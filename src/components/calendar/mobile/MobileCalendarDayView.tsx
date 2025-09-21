@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
@@ -158,6 +158,15 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
     }, 300);
     setHideTimer(timer);
   }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+      }
+    };
+  }, [hideTimer]);
 
   // Format event duration
   const getEventDuration = useCallback((event: Event) => {

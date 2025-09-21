@@ -15,7 +15,7 @@ import {
     IndustryPulseScoreCard
 } from '@/components/growth/GrowthComponents';
 import { EventService } from '@/services/eventServices';
-import { createClient } from '@/utils/supabase/client';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
 import type { Event } from '@/types';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { AnalyticsService, type GrowthAnalytics } from '@/services/analyticsService';
@@ -35,7 +35,7 @@ export default function GrowthClientView({
 }: GrowthClientViewProps) {
     const { user, profile } = useAuth();
     const [selectedPeriod, setSelectedPeriod] = useState('Yearly');
-    const [supabase] = useState(() => createClient());
+    const supabase = useSupabase();
 
     const { data: analytics, error: analyticsError } = useQuery<GrowthAnalytics | null>({
         queryKey: ['growthAnalytics', user?.id],
@@ -62,6 +62,18 @@ export default function GrowthClientView({
         enabled: topCategories.length > 0,
         initialData: initialOpportunities,
     });
+
+    // Show loading if supabase client is not ready yet
+    if (!supabase) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        );
+    }
 
     const queryError = analyticsError || opportunitiesError;
 

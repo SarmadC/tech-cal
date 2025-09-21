@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { EventClickArg } from '@fullcalendar/core';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
@@ -172,6 +172,15 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
     }, 300);
     setHideTimer(timer);
   }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+      }
+    };
+  }, [hideTimer]);
 
   // Format time for mobile display
   const formatEventTime = useCallback((event: Event) => {

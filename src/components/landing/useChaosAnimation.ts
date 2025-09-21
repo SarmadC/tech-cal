@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, RefObject, MutableRefObject } from 'react';
+import { useEffect, useState, useCallback, RefObject, MutableRefObject, useRef } from 'react';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -21,23 +21,7 @@ export type DomCache = {
     orderSubtitle: HTMLElement | null;
 };
 
-// --- Debounce Helper Function with Improved Type Safety ---
-function debounce<F extends (...args: unknown[]) => unknown>(
-    func: F,
-    wait: number
-): (...args: Parameters<F>) => void {
-    let timeout: NodeJS.Timeout | null = null;
-    return function executedFunction(...args: Parameters<F>) {
-        const later = () => {
-            timeout = null;
-            func(...args);
-        };
-        if (timeout) {
-            clearTimeout(timeout);
-        }
-        timeout = setTimeout(later, wait);
-    };
-}
+import { debounce } from '@/utils/debounce';
 
 /**
  * Hook #1: Manages the Three.js scene and particle animation.
@@ -124,13 +108,20 @@ export function useCardPositions(
     events: { date: string }[]
 ): [AllCardPositions, (container: HTMLElement) => void] {
     const [positions, setPositions] = useState<AllCardPositions>({ chaos: [], order: [] });
+    const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const calculatePositions = useCallback((container: HTMLElement) => {
+        // Clear any existing retry timeout
+        if (retryTimeoutRef.current) {
+            clearTimeout(retryTimeoutRef.current);
+            retryTimeoutRef.current = null;
+        }
+
         // Wait for the calendar frame to be in the DOM
         const calendarFrame = container.querySelector('.calendar-frame');
         if (!calendarFrame) {
             console.warn('Calendar frame not found, retrying...');
-            setTimeout(() => calculatePositions(container), 100);
+            retryTimeoutRef.current = setTimeout(() => calculatePositions(container), 100);
             return;
         }
 
@@ -224,6 +215,15 @@ export function useCardPositions(
 
         setPositions({ chaos: newChaos, order: newOrder });
     }, [events]); // Include events as dependency for useCallback
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current);
+            }
+        };
+    }, []);
 
     return [positions, calculatePositions]; // 🚨 THIS WAS MISSING!
 }

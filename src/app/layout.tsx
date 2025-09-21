@@ -1,5 +1,8 @@
 // src/app/layout.tsx 
 
+// Force dynamic rendering to prevent SSR issues with SupabaseProvider
+export const dynamic = 'force-dynamic';
+
 import type { Metadata } from "next";
 import { Inter, DM_Sans } from "next/font/google";
 import { Toaster } from 'sonner';
@@ -17,6 +20,7 @@ import './styles/quick-date-picker.css';
 // FullCalendar styles (loaded via CDN due to package export limitations)
 
 import QueryProvider from '@/components/providers/QueryProvider';
+import { SupabaseProvider } from '@/components/providers/SupabaseProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import ClientLayout from "@/components/layout/ClientLayout";
@@ -56,10 +60,12 @@ export default function RootLayout({
                         enableSystem
                         disableTransitionOnChange
                     >
-                        {/* 1. AuthProvider is the outermost context provider */}
-                        <AuthProvider>
-                            {/* 2. QueryProvider is next, it might need auth context for queries */}
-                            <QueryProvider>
+                        {/* 1. SupabaseProvider is the outermost context provider */}
+                        <SupabaseProvider>
+                            {/* 2. AuthProvider is next, it needs supabase client */}
+                            <AuthProvider>
+                                {/* 3. QueryProvider is next, it might need auth context for queries */}
+                                <QueryProvider>
                                 {/* 3. UI/UX providers can go inside */}
                                 {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
                                 {/* <SmoothScrollProvider> */}
@@ -70,8 +76,9 @@ export default function RootLayout({
                                         </ClientLayout>
                                     </IconProvider>
                                 {/* </SmoothScrollProvider> */}
-                            </QueryProvider>
-                        </AuthProvider>
+                                </QueryProvider>
+                            </AuthProvider>
+                        </SupabaseProvider>
                     </ThemeProvider>
                 </PageErrorBoundary>
             </body>

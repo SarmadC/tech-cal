@@ -16,7 +16,7 @@ import {
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
-import { createClient } from '@/utils/supabase/client';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
 import { AuthService } from '@/services/authService';
 import { ProfileService } from '@/services/profileService';
 import { MemoizedProfileService } from '@/services/memoizedProfileService';
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         initialized: false,
     });
 
-    const supabase = createClient();
+    const supabase = useSupabase();
 
     // Helper to load profile
     const loadProfile = useCallback(async (userId: string): Promise<AppProfile | null> => {

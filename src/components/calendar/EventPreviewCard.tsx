@@ -1,10 +1,11 @@
 // src/components/calendar/EventPreviewCard.tsx
 
-import { FC, useRef, useEffect } from 'react';
+import { FC, useRef, RefObject } from 'react';
 import {
     ClockIcon, MapPinIcon, UsersIcon, ArrowSquareOutIcon, BookmarkIcon, BookmarkSimpleIcon,
     ShareNetworkIcon, PlayCircleIcon, GlobeIcon, CalendarIcon
 } from '@phosphor-icons/react';
+import { useClickOutside } from '@/hooks/useEventListener';
 // 1. UPDATE IMPORTS: Use the new types and the type guard.
 import { Event, isTrackedEvent, TrackedEvent, MultiDayEventInstance } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
@@ -39,21 +40,10 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
     // Use the tracking status directly from the event prop instead of local state
     const isTracked = isTrackedEvent(event) ? event.isTracked : false;
-    const cardRef = useRef<HTMLDivElement>(null);
+    const cardRef = useRef<HTMLDivElement>(null) as RefObject<HTMLDivElement>;
 
     // Handle click outside to close
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
-                onClose();
-            }
-        };
-
-        if (isVisible) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
-        }
-    }, [isVisible, onClose]);
+    useClickOutside(cardRef, () => onClose(), isVisible);
 
     // Position the card to avoid going off-screen
     const getCardPosition = () => {

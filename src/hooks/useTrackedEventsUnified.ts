@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { UserEventService } from '@/services/userEventService';
-import { createClient } from '@/utils/supabase/client';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
 import { TrackedEventRecord, EVENT_STATUS } from '@/types';
 
 /**
@@ -21,7 +20,7 @@ import { TrackedEventRecord, EVENT_STATUS } from '@/types';
  * - refetch: Function to manually refetch data
  */
 export function useTrackedEventsUnified() {
-  const [supabase] = useState(() => createClient());
+  const supabase = useSupabase();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -90,7 +89,7 @@ export function useTrackedEventIds() {
  * This maintains backward compatibility
  */
 export function useLightweightTrackedEvents() {
-  const [supabase] = useState(() => createClient());
+  const supabase = useSupabase();
   const { user } = useAuth();
 
   return useQuery<TrackedEventRecord[]>({

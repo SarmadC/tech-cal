@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import EventPreviewCard from './EventPreviewCard';
 import { EventCard } from './shared/EventCard';
@@ -82,6 +82,15 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
     const handlePreviewHover = () => {
         if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (hideTimerRef.current) {
+                clearTimeout(hideTimerRef.current);
+            }
+        };
+    }, []);
 
     const gridColsStyle = { gridTemplateColumns: `100px repeat(${categories.length}, 1fr)` };
 

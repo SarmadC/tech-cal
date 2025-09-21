@@ -4,20 +4,8 @@ import { useEffect, useRef, useMemo } from 'react';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { AnimatedEventCard } from './AnimatedEventCard';
 import { useThreeScene, useCardPositions, useScrollAnimation, DomCache } from './useChaosAnimation';
+import { debounce } from '@/utils/debounce';
 import '@/app/styles/ChaosToOrder.css';
-
-// Debounce helper function
-function debounce<F extends (...args: unknown[]) => unknown>(func: F, wait: number): (...args: Parameters<F>) => void {
-    let timeout: NodeJS.Timeout | null = null;
-    return function executedFunction(...args: Parameters<F>) {
-        const later = () => {
-            timeout = null;
-            func(...args);
-        };
-        if (timeout) clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
 
 const animationEventsData = [
     { company: 'Meta', date: 'May 1', title: 'Meta Con', type: 'Framework Conference' },
@@ -95,9 +83,16 @@ export function ChaosToOrderSection() {
         };
 
         // 2. Set up a debounced resize handler for position recalculations
+        let resizeTimeoutId: NodeJS.Timeout;
+        const cardTimeoutIds: NodeJS.Timeout[] = [];
+        
         const handleResize = () => {
+            // Clear any existing timeout
+            if (resizeTimeoutId) {
+                clearTimeout(resizeTimeoutId);
+            }
             // Use a small timeout to ensure the calendar DOM is ready
-            setTimeout(() => {
+            resizeTimeoutId = setTimeout(() => {
                 calculateCardPositions(container);
             }, 50);
         };
@@ -111,18 +106,26 @@ export function ChaosToOrderSection() {
         }
 
         // 4. Run the initial calculation with a small delay to ensure DOM is ready
-        setTimeout(() => {
+        const initialTimeoutId = setTimeout(() => {
             handleResize();
 
             // 5. Stagger the initial card visibility for a nice fade-in effect
             domCacheRef.current.cards?.forEach((card: HTMLElement, i: number) => {
-                setTimeout(() => card.classList.add('visible'), i * 50);
+                const cardTimeoutId = setTimeout(() => card.classList.add('visible'), i * 50);
+                cardTimeoutIds.push(cardTimeoutId);
             });
         }, 100);
 
         // Cleanup function
         return () => {
             window.removeEventListener('resize', debouncedResizeHandler);
+            if (resizeTimeoutId) {
+                clearTimeout(resizeTimeoutId);
+            }
+            if (initialTimeoutId) {
+                clearTimeout(initialTimeoutId);
+            }
+            cardTimeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
         };
     }, [calculateCardPositions]);
 
