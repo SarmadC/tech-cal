@@ -13,6 +13,7 @@ export * from './career';
 export * from './careerImpact';
 export * from './supabaseCareerImpact';
 export * from './database';
+export * from './eventImport';
 
 // ============================================
 // NON-EVENT-RELATED TYPES
