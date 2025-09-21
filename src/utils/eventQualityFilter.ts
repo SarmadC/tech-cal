@@ -54,6 +54,19 @@ const LOW_QUALITY_INDICATORS = [
   'recruitment event', 'job fair only'
 ];
 
+const NON_TECH_CATEGORIES = [
+  // Obvious non-tech categories to block
+  'cooking', 'food', 'wine', 'dining', 'restaurant', 'culinary',
+  'fitness', 'yoga', 'meditation', 'wellness', 'health', 'sports',
+  'music', 'concert', 'band', 'singing', 'dancing', 'art', 'painting',
+  'fashion', 'beauty', 'makeup', 'jewelry', 'crafts', 'knitting',
+  'real estate', 'property', 'insurance', 'finance', 'investment',
+  'travel', 'vacation', 'tourism', 'sightseeing', 'adventure',
+  'parenting', 'children', 'baby', 'pregnancy', 'family',
+  'religion', 'spiritual', 'church', 'prayer', 'meditation',
+  'politics', 'government', 'election', 'campaign', 'activism'
+];
+
 // ============================================
 // QUALITY ASSESSMENT FUNCTIONS
 // ============================================
@@ -179,14 +192,41 @@ function isTechRelevant(event: RawEvent): boolean {
     content.includes(keyword)
   ).length;
   
-  // Also check organizer name for tech companies
+  // Check organizer name for tech companies (expanded list)
   const organizerName = event.organizer.name.toLowerCase();
-  const isTechOrganizer = TECH_KEYWORDS.some(keyword => organizerName.includes(keyword)) ||
-    ['google', 'microsoft', 'amazon', 'meta', 'apple', 'netflix', 'uber', 'airbnb'].some(company => 
-      organizerName.includes(company)
-    );
+  const TECH_COMPANIES = [
+    'google', 'microsoft', 'amazon', 'meta', 'apple', 'netflix', 'uber', 'airbnb',
+    'stripe', 'shopify', 'atlassian', 'slack', 'zoom', 'salesforce', 'adobe',
+    'oracle', 'ibm', 'intel', 'nvidia', 'tesla', 'spacex', 'openai', 'anthropic',
+    'github', 'gitlab', 'docker', 'mongodb', 'redis', 'elastic', 'databricks',
+    'snowflake', 'twilio', 'sendgrid', 'auth0', 'vercel', 'netlify', 'cloudflare'
+  ];
   
-  return techKeywordCount >= 1 || isTechOrganizer;
+  const isTechOrganizer = TECH_KEYWORDS.some(keyword => organizerName.includes(keyword)) ||
+    TECH_COMPANIES.some(company => organizerName.includes(company));
+  
+  // Check for tech-specific venue names
+  const venueContent = event.location?.name?.toLowerCase() || '';
+  const isTechVenue = [
+    'google campus', 'microsoft reactor', 'amazon office', 'tech hub',
+    'innovation center', 'startup incubator', 'coding bootcamp', 'university',
+    'computer science', 'engineering school'
+  ].some(venue => venueContent.includes(venue));
+  
+  // Enhanced scoring: require stronger tech signals
+  const techScore = techKeywordCount + (isTechOrganizer ? 2 : 0) + (isTechVenue ? 1 : 0);
+  
+  // Check for non-tech category blocking
+  const hasNonTechIndicators = NON_TECH_CATEGORIES.some(category => 
+    content.includes(category) || organizerName.includes(category)
+  );
+  
+  // Block events with strong non-tech indicators
+  if (hasNonTechIndicators) {
+    return false;
+  }
+  
+  return techScore >= 2; // Require at least 2 tech signals
 }
 
 function isLowQualityEvent(event: RawEvent): boolean {
@@ -280,8 +320,61 @@ export function getQualityStats(events: RawEvent[], config: ImportConfig) {
     passed: assessments.filter(a => a.shouldImport).length,
     failed: assessments.filter(a => !a.shouldImport).length,
     averageScore: assessments.reduce((sum, a) => sum + a.score, 0) / assessments.length,
-    commonFailureReasons: getCommonFailureReasons(assessments.filter(a => !a.shouldImport))
+    commonFailureReasons: getCommonFailureReasons(assessments.filter(a => !a.shouldImport)),
+    techRelevanceStats: getTechRelevanceStats(events)
   };
+}
+
+/**
+ * Get detailed tech relevance statistics for monitoring
+ */
+export function getTechRelevanceStats(events: RawEvent[]) {
+  const techRelevant = events.filter(event => isTechRelevant(event));
+  const nonTechBlocked = events.filter(event => {
+    const content = `${event.title} ${event.description}`.toLowerCase();
+    return NON_TECH_CATEGORIES.some(category => content.includes(category));
+  });
+  
+  return {
+    totalEvents: events.length,
+    techRelevant: techRelevant.length,
+    techRelevanceRate: (techRelevant.length / events.length * 100).toFixed(1) + '%',
+    nonTechBlocked: nonTechBlocked.length,
+    topTechKeywords: getTopTechKeywords(events),
+    topOrganizers: getTopOrganizers(events)
+  };
+}
+
+function getTopTechKeywords(events: RawEvent[]): Array<{ keyword: string; count: number }> {
+  const keywordCounts = new Map<string, number>();
+  
+  events.forEach(event => {
+    const content = `${event.title} ${event.description}`.toLowerCase();
+    TECH_KEYWORDS.forEach(keyword => {
+      if (content.includes(keyword)) {
+        keywordCounts.set(keyword, (keywordCounts.get(keyword) || 0) + 1);
+      }
+    });
+  });
+  
+  return Array.from(keywordCounts.entries())
+    .map(([keyword, count]) => ({ keyword, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+}
+
+function getTopOrganizers(events: RawEvent[]): Array<{ organizer: string; count: number }> {
+  const organizerCounts = new Map<string, number>();
+  
+  events.forEach(event => {
+    const organizer = event.organizer.name;
+    organizerCounts.set(organizer, (organizerCounts.get(organizer) || 0) + 1);
+  });
+  
+  return Array.from(organizerCounts.entries())
+    .map(([organizer, count]) => ({ organizer, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
 }
 
 function getCommonFailureReasons(failedAssessments: QualityAssessment[]): Record<string, number> {

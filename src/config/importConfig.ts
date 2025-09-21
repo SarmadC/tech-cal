@@ -70,10 +70,12 @@ export const defaultImportConfig: ImportConfig = {
   },
   
   qualityThresholds: {
-    minQualityScore: 40,        // 0-100 scale
-    minDescriptionLength: 100,  // Characters
+    minQualityScore: 50,        // Raised from 40 to be more selective
+    minDescriptionLength: 150,  // Raised from 100 for better quality
     requireVenue: false,        // Online events are OK
-    requireRegistration: false  // Free events without registration are OK
+    requireRegistration: false, // Free events without registration are OK
+    minTechRelevanceScore: 2,   // Must have at least 2 tech signals
+    blockNonTechCategories: true // Block obvious non-tech categories
   },
   
   processing: {

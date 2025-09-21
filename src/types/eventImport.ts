@@ -91,6 +91,8 @@ export interface ImportConfig {
     minDescriptionLength: number;
     requireVenue: boolean;
     requireRegistration: boolean;
+    minTechRelevanceScore?: number;
+    blockNonTechCategories?: boolean;
   };
   processing: {
     batchSize: number;
@@ -225,9 +227,67 @@ export class QualityFilterError extends EventImportError {
 }
 
 // ============================================
-// UTILITY TYPES
+// WEBHOOK TYPES
 // ============================================
 
+export type WebhookAction = 
+  | 'test'               // Test webhook from Eventbrite
+  | 'event.published'
+  | 'event.unpublished'  // Event cancelled
+  | 'event.updated'
+  | 'order.placed'
+  | 'order.refunded'
+  | 'venue.updated'
+  | 'organizer.updated';
+
+export interface WebhookPayload {
+  api_url: string;
+  config: {
+    action: WebhookAction;
+    endpoint_url: string;
+    user_id: string;
+    webhook_id: string;
+  };
+}
+
+export interface WebhookEvent {
+  id: string;
+  source: EventSource;
+  webhookId?: string;
+  action: WebhookAction;
+  eventExternalId?: string;
+  eventId?: string;
+  payload: unknown;
+  signatureVerified: boolean;
+  processedAt: string;
+  processingResult: 'pending' | 'success' | 'error' | 'ignored';
+  errorMessage?: string;
+}
+
+export interface EventSyncLog {
+  id: string;
+  eventId: string;
+  syncType: 'webhook' | 'scheduled' | 'manual';
+  changesDetected: string[];
+  syncResult: 'success' | 'error' | 'no_changes';
+  errorMessage?: string;
+  syncedAt: string;
+  processingTimeMs?: number;
+}
+
+export interface WebhookProcessingResult {
+  success: boolean;
+  eventId?: string;
+  action: WebhookAction;
+  changes?: string[];
+  error?: string;
+  notifiedUsers?: number;
+  processingTimeMs: number;
+}
+
+// ============================================
+// UTILITY TYPES
+// ============================================
 
 /**
  * Import job configuration for scheduling

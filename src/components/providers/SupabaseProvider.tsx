@@ -1,11 +1,20 @@
 // src/components/providers/SupabaseProvider.tsx
 'use client';
 
-import { createContext, useContext, ReactNode, useState } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { createClient, type SupabaseClient } from '@/utils/supabase/client';
+
+// Consolidated error messages for consistency
+const ERRORS = {
+  PROVIDER_REQUIRED: 'useSupabase must be used within a SupabaseProvider',
+  PROVIDER_REQUIRED_SAFE: 'useSupabaseSafe must be used within a SupabaseProvider', 
+  CLIENT_NOT_READY: 'Supabase client is not ready yet. Make sure you are using this hook in a client component.',
+  CLIENT_FAILED: 'Supabase client failed to initialize.',
+} as const;
 
 interface SupabaseContextType {
   supabase: SupabaseClient | null;
+  isReady: boolean;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -15,21 +24,25 @@ interface SupabaseProviderProps {
 }
 
 export function SupabaseProvider({ children }: SupabaseProviderProps) {
-  const [supabase] = useState<SupabaseClient | null>(() => {
-    // Only create the client in the browser
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Initialize client only in browser environment
     if (typeof window !== 'undefined') {
       try {
-        return createClient();
+        const client = createClient();
+        setSupabase(client);
+        setIsReady(true);
       } catch (error) {
         console.warn('Failed to create Supabase client:', error);
-        return null;
+        setIsReady(true); // Still mark as ready even if failed
       }
     }
-    return null;
-  });
+  }, []);
 
   return (
-    <SupabaseContext.Provider value={{ supabase }}>
+    <SupabaseContext.Provider value={{ supabase, isReady }}>
       {children}
     </SupabaseContext.Provider>
   );
@@ -38,10 +51,22 @@ export function SupabaseProvider({ children }: SupabaseProviderProps) {
 export function useSupabase() {
   const context = useContext(SupabaseContext);
   if (context === undefined) {
-    throw new Error('useSupabase must be used within a SupabaseProvider');
+    throw new Error(ERRORS.PROVIDER_REQUIRED);
+  }
+  if (!context.isReady) {
+    throw new Error(ERRORS.CLIENT_NOT_READY);
   }
   if (context.supabase === null) {
-    throw new Error('Supabase client is not ready yet. Make sure you are using this hook in a client component.');
+    throw new Error(ERRORS.CLIENT_FAILED);
   }
   return context.supabase;
+}
+
+// Safe hook that doesn't throw when client isn't ready
+export function useSupabaseSafe() {
+  const context = useContext(SupabaseContext);
+  if (context === undefined) {
+    throw new Error(ERRORS.PROVIDER_REQUIRED_SAFE);
+  }
+  return context;
 }

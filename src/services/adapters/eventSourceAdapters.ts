@@ -66,7 +66,7 @@ abstract class BaseSourceAdapter implements SourceAdapter {
     throw new RateLimitError(this.source, resetTime, remaining);
   }
 
-  // Shared request helper (DRY)
+  // Shared request helper (DRY) - Enhanced with better rate limiting
   protected async makeRequest<T>(
     url: string, 
     options: RequestInit = {}
@@ -80,15 +80,14 @@ abstract class BaseSourceAdapter implements SourceAdapter {
         }
       });
 
+      // Update rate limit info from headers (works for most APIs)
+      this.updateRateLimitFromHeaders(response.headers);
+
       // Handle rate limiting
       if (response.status === 429) {
-        const resetTime = response.headers.get('X-RateLimit-Reset');
-        const remaining = response.headers.get('X-RateLimit-Remaining');
-        
-        this.handleRateLimit(
-          resetTime ? new Date(parseInt(resetTime) * 1000) : new Date(Date.now() + 3600000),
-          remaining ? parseInt(remaining) : 0
-        );
+        const resetTime = this.parseResetTime(response.headers);
+        const remaining = this.parseRemaining(response.headers);
+        this.handleRateLimit(resetTime || new Date(Date.now() + 3600000), remaining || 0);
       }
 
       if (!response.ok) {
@@ -100,6 +99,97 @@ abstract class BaseSourceAdapter implements SourceAdapter {
       this.handleApiError(error, 'makeRequest');
     }
   }
+
+  // Shared authentication header builder (DRY)
+  protected buildAuthHeaders(): Record<string, string> {
+    const token = this.getApiToken();
+    if (!token) {
+      throw new EventImportError(`${this.source} API token not configured`, this.source);
+    }
+
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  }
+
+  // Abstract method for getting API token (each adapter implements differently)
+  protected abstract getApiToken(): string | undefined;
+
+  // Shared transformation helper (DRY)
+  protected createBaseRawEvent(
+    externalId: string,
+    title: string,
+    description: string,
+    sourceUrl: string,
+    organizerName: string
+  ): Partial<RawEvent> {
+    return {
+      externalId,
+      source: this.source,
+      sourceUrl,
+      title: title.trim(),
+      description: description.trim(),
+      organizer: {
+        name: organizerName,
+        verified: false // Default, can be overridden
+      }
+    };
+  }
+
+  // Shared date parsing helper (DRY)
+  protected parseEventDate(dateInput: string | number | Date): string {
+    try {
+      if (typeof dateInput === 'number') {
+        // Unix timestamp (Meetup style)
+        return new Date(dateInput).toISOString();
+      }
+      if (typeof dateInput === 'string') {
+        // ISO string (Eventbrite style)
+        return new Date(dateInput).toISOString();
+      }
+      if (dateInput instanceof Date) {
+        return dateInput.toISOString();
+      }
+      return new Date().toISOString();
+    } catch {
+      return new Date().toISOString();
+    }
+  }
+
+  // Shared rate limit parsing (DRY)
+  private updateRateLimitFromHeaders(headers: Headers): void {
+    const remaining = this.parseRemaining(headers);
+    const resetTime = this.parseResetTime(headers);
+    
+    if (remaining !== undefined || resetTime) {
+      this.rateLimitInfo = {
+        remaining: remaining ?? this.rateLimitInfo.remaining,
+        resetTime: resetTime ?? this.rateLimitInfo.resetTime
+      };
+    }
+  }
+
+  private parseRemaining(headers: Headers): number | undefined {
+    const remaining = headers.get('X-RateLimit-Remaining') || 
+                     headers.get('X-Rate-Limit-Remaining') ||
+                     headers.get('RateLimit-Remaining');
+    return remaining ? parseInt(remaining) : undefined;
+  }
+
+  private parseResetTime(headers: Headers): Date | undefined {
+    const reset = headers.get('X-RateLimit-Reset') || 
+                  headers.get('X-Rate-Limit-Reset') ||
+                  headers.get('RateLimit-Reset');
+    
+    if (reset) {
+      // Try Unix timestamp first, then ISO string
+      const timestamp = parseInt(reset);
+      return isNaN(timestamp) ? new Date(reset) : new Date(timestamp * 1000);
+    }
+    
+    return new Date(Date.now() + 3600000); // Default: 1 hour from now
+  }
 }
 
 // ============================================
@@ -108,24 +198,37 @@ abstract class BaseSourceAdapter implements SourceAdapter {
 
 interface EventbriteEvent {
   id: string;
-  name: { text: string };
-  description: { text: string };
-  start: { utc: string; timezone: string };
-  end: { utc: string; timezone: string };
+  name: { text: string; html: string };
+  summary?: string;
+  description?: { text: string; html: string };
+  start: { utc: string; timezone: string; local: string };
+  end: { utc: string; timezone: string; local: string };
   url: string;
-  venue?: {
-    name: string;
-    address?: { localized_address_display: string };
-  };
-  organizer: {
-    name: string;
-    description?: { text: string };
-    url?: string;
-  };
+  status: string;
+  currency: string;
+  online_event: boolean;
   capacity?: number;
-  ticket_availability?: { has_available_tickets: boolean };
-  is_free: boolean;
+  venue?: {
+    id: string;
+    name: string;
+    address?: {
+      address_1?: string;
+      city?: string;
+      region?: string;
+      country?: string;
+      localized_address_display?: string;
+    };
+  };
+  organizer?: {
+    id: string;
+    name: string;
+    description?: { text: string; html: string };
+    url?: string;
+    logo?: { url: string };
+  };
   logo?: { url: string };
+  listed: boolean;
+  shareable: boolean;
 }
 
 interface EventbriteResponse {
@@ -139,105 +242,141 @@ interface EventbriteResponse {
 
 export class EventbriteAdapter extends BaseSourceAdapter {
   readonly source: EventSource = 'eventbrite';
-  private readonly apiToken = process.env.EVENTBRITE_API_TOKEN;
   private readonly baseUrl = 'https://www.eventbriteapi.com/v3';
 
+  protected getApiToken(): string | undefined {
+    return process.env.EVENTBRITE_API_TOKEN;
+  }
+
   async fetchEvents(config: SourceConfig): Promise<RawEvent[]> {
-    if (!this.apiToken) {
-      throw new EventImportError('Eventbrite API token not configured', this.source);
-    }
-
-    const allEvents: RawEvent[] = [];
-    let page = 1;
-    let hasMore = true;
-
     try {
-      while (hasMore && allEvents.length < config.batchSize) {
-        const url = this.buildSearchUrl(config, page);
-        const response = await this.makeRequest<EventbriteResponse>(url, {
-          headers: {
-            'Authorization': `Bearer ${this.apiToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
+      console.log('Step 1: Getting user organizations...');
+      
+      // Step 1: Get user's organizations using shared auth headers
+      const orgsResponse = await this.makeRequest<{
+        organizations: Array<{ id: string; name: string }>;
+        pagination: { has_more_items: boolean };
+      }>(`${this.baseUrl}/users/me/organizations/`, {
+        headers: this.buildAuthHeaders()
+      });
 
-        const events = response.events.map(event => this.transformEventbriteEvent(event));
-        allEvents.push(...events);
-
-        hasMore = response.pagination.has_more_items && page < response.pagination.page_count;
-        page++;
+      if (!orgsResponse.organizations || orgsResponse.organizations.length === 0) {
+        console.log('No organizations found for this user');
+        return [];
       }
 
+      console.log(`Found ${orgsResponse.organizations.length} organizations`);
+
+      // Step 2: Get events for each organization
+      const allEvents: RawEvent[] = [];
+      
+      for (const org of orgsResponse.organizations) {
+        if (allEvents.length >= config.batchSize) break;
+        
+        try {
+          console.log(`Getting events for organization: ${org.name}`);
+          const eventsUrl = this.buildEventsUrl(org.id, config);
+          
+          const eventsResponse = await this.makeRequest<EventbriteResponse>(eventsUrl, {
+            headers: this.buildAuthHeaders()
+          });
+
+          if (eventsResponse.events && Array.isArray(eventsResponse.events)) {
+            const events = eventsResponse.events.map(event => this.transformEventbriteEvent(event));
+            allEvents.push(...events);
+            console.log(`Added ${events.length} events from ${org.name}`);
+          }
+        } catch (error) {
+          console.warn(`Failed to get events for organization ${org.name}:`, error);
+          // Continue with other organizations
+        }
+      }
+
+      console.log(`Eventbrite: Total fetched ${allEvents.length} events`);
       return allEvents.slice(0, config.batchSize);
+
     } catch (error) {
+      console.error('Eventbrite fetch error:', error);
       this.handleApiError(error, 'fetchEvents');
     }
   }
 
   protected async performConnectionTest(): Promise<boolean> {
-    if (!this.apiToken) return false;
-    
     try {
+      console.log('Testing Eventbrite connection...');
       await this.makeRequest(`${this.baseUrl}/users/me/`, {
-        headers: { 'Authorization': `Bearer ${this.apiToken}` }
+        headers: this.buildAuthHeaders()
       });
+      console.log('Eventbrite connection test successful');
       return true;
-    } catch {
+    } catch (error) {
+      console.error('Eventbrite connection test failed:', error);
       return false;
     }
   }
 
-  private buildSearchUrl(config: SourceConfig, page: number): string {
+  private buildEventsUrl(organizationId: string, config: SourceConfig): string {
+    // Use the correct organization events endpoint from API docs (line 1956)
     const params = new URLSearchParams({
-      'categories': config.filters.categories?.join(',') || '102,101', // Science & Tech, Business
-      'sort_by': 'date',
-      'page': page.toString(),
       'expand': 'organizer,venue',
+      'status': 'live',
+      'order_by': 'start_asc',
+      'page_size': Math.min(config.batchSize, 50).toString(), // API limit
+      'time_filter': 'current_future'
     });
 
-    if (config.filters.keywords?.length) {
-      params.set('q', config.filters.keywords.join(' '));
-    }
-
+    // Add date filtering if specified
     if (config.filters.dateRange) {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() + config.filters.dateRange.startDays);
-      params.set('start_date.range_start', startDate.toISOString());
       
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + config.filters.dateRange.endDays);
+      
+      // Use the correct parameter names from API docs
+      params.set('start_date.range_start', startDate.toISOString());
       params.set('start_date.range_end', endDate.toISOString());
     }
 
-    return `${this.baseUrl}/events/search/?${params.toString()}`;
+    // Use the organization events endpoint (line 1956 in API docs)
+    return `${this.baseUrl}/organizations/${organizationId}/events/?${params.toString()}`;
   }
 
   private transformEventbriteEvent(event: EventbriteEvent): RawEvent {
+    // Use shared base transformation
+    const baseEvent = this.createBaseRawEvent(
+      event.id,
+      event.name?.text || 'Untitled Event',
+      event.summary || event.description?.text || '',
+      event.url,
+      event.organizer?.name || 'Unknown Organizer'
+    );
+
     return {
-      externalId: event.id,
-      source: 'eventbrite',
-      sourceUrl: event.url,
-      title: event.name?.text || 'Untitled Event',
-      description: event.description?.text || '',
-      organizer: {
-        name: event.organizer?.name || 'Unknown Organizer',
-        verified: true, // Eventbrite has some verification
-        website: event.organizer?.url,
-        logo: event.logo?.url
-      },
-      startTime: event.start?.utc || new Date().toISOString(),
-      endTime: event.end?.utc,
+      ...baseEvent,
+      startTime: this.parseEventDate(event.start?.utc),
+      endTime: event.end?.utc ? this.parseEventDate(event.end.utc) : undefined,
       timezone: event.start?.timezone || 'UTC',
-      location: event.venue ? {
-        name: event.venue.name,
-        address: event.venue.address?.localized_address_display,
+      organizer: {
+        ...baseEvent.organizer!,
+        verified: true, // Eventbrite events are verified
+        website: event.organizer?.url,
+        logo: event.organizer?.logo?.url || event.logo?.url
+      },
+      location: event.online_event ? {
+        isOnline: true
+      } : {
+        name: event.venue?.name,
+        address: event.venue?.address?.localized_address_display,
+        city: event.venue?.address?.city,
+        country: event.venue?.address?.country,
         isOnline: false
-      } : { isOnline: true },
+      },
       registrationUrl: event.url,
       capacity: event.capacity,
-      priceRange: event.is_free ? 'Free' : 'Paid',
+      priceRange: 'Unknown', // Will be determined by ticket classes
       rawData: event
-    };
+    } as RawEvent;
   }
 }
 
@@ -271,21 +410,17 @@ interface MeetupEvent {
 
 export class MeetupAdapter extends BaseSourceAdapter {
   readonly source: EventSource = 'meetup';
-  private readonly apiKey = process.env.MEETUP_API_KEY;
   private readonly baseUrl = 'https://api.meetup.com';
 
-  async fetchEvents(config: SourceConfig): Promise<RawEvent[]> {
-    if (!this.apiKey) {
-      throw new EventImportError('Meetup API key not configured', this.source);
-    }
+  protected getApiToken(): string | undefined {
+    return process.env.MEETUP_API_KEY;
+  }
 
+  async fetchEvents(config: SourceConfig): Promise<RawEvent[]> {
     try {
       const url = this.buildSearchUrl(config);
       const events = await this.makeRequest<MeetupEvent[]>(url, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        }
+        headers: this.buildAuthHeaders()
       });
 
       return events
@@ -297,11 +432,9 @@ export class MeetupAdapter extends BaseSourceAdapter {
   }
 
   protected async performConnectionTest(): Promise<boolean> {
-    if (!this.apiKey) return false;
-    
     try {
       await this.makeRequest(`${this.baseUrl}/members/self`, {
-        headers: { 'Authorization': `Bearer ${this.apiKey}` }
+        headers: this.buildAuthHeaders()
       });
       return true;
     } catch {
@@ -328,19 +461,24 @@ export class MeetupAdapter extends BaseSourceAdapter {
   }
 
   private transformMeetupEvent(event: MeetupEvent): RawEvent {
+    // Use shared base transformation
+    const baseEvent = this.createBaseRawEvent(
+      event.id,
+      event.name,
+      event.description || '',
+      event.link,
+      event.group.name
+    );
+
     return {
-      externalId: event.id,
-      source: 'meetup',
-      sourceUrl: event.link,
-      title: event.name,
-      description: event.description || '',
+      ...baseEvent,
+      startTime: this.parseEventDate(event.time),
+      endTime: event.duration ? this.parseEventDate(event.time + event.duration) : undefined,
       organizer: {
-        name: event.group.name,
+        ...baseEvent.organizer!,
         verified: event.group.members > 100, // Groups with 100+ members are more credible
         website: event.group.link
       },
-      startTime: new Date(event.time).toISOString(),
-      endTime: event.duration ? new Date(event.time + event.duration).toISOString() : undefined,
       location: event.venue ? {
         name: event.venue.name,
         address: event.venue.address_1,
@@ -353,7 +491,7 @@ export class MeetupAdapter extends BaseSourceAdapter {
       capacity: event.rsvp_limit,
       priceRange: event.fee ? `${event.fee.amount} ${event.fee.currency}` : 'Free',
       rawData: event
-    };
+    } as RawEvent;
   }
 }
 
@@ -379,21 +517,24 @@ interface GitHubEvent {
 
 export class GitHubAdapter extends BaseSourceAdapter {
   readonly source: EventSource = 'github';
-  private readonly apiToken = process.env.GITHUB_API_TOKEN;
   private readonly baseUrl = 'https://api.github.com';
+
+  protected getApiToken(): string | undefined {
+    return process.env.GITHUB_API_TOKEN;
+  }
 
   async fetchEvents(config: SourceConfig): Promise<RawEvent[]> {
     // GitHub doesn't have events API, so we search for conference/event repositories
     try {
       const url = this.buildSearchUrl(config);
-      const response = await this.makeRequest<{ items: GitHubEvent[] }>(url, {
-        headers: this.apiToken ? {
-          'Authorization': `Bearer ${this.apiToken}`,
-          'Accept': 'application/vnd.github.v3+json'
-        } : {
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      });
+      const headers = this.getApiToken() ? {
+        ...this.buildAuthHeaders(),
+        'Accept': 'application/vnd.github.v3+json'
+      } : {
+        'Accept': 'application/vnd.github.v3+json'
+      };
+
+      const response = await this.makeRequest<{ items: GitHubEvent[] }>(url, { headers });
 
       return response.items
         .slice(0, config.batchSize)
@@ -405,11 +546,8 @@ export class GitHubAdapter extends BaseSourceAdapter {
 
   protected async performConnectionTest(): Promise<boolean> {
     try {
-      await this.makeRequest(`${this.baseUrl}/rate_limit`, {
-        headers: this.apiToken ? {
-          'Authorization': `Bearer ${this.apiToken}`
-        } : {}
-      });
+      const headers = this.getApiToken() ? this.buildAuthHeaders() : {};
+      await this.makeRequest(`${this.baseUrl}/rate_limit`, { headers });
       return true;
     } catch {
       return false;
@@ -434,25 +572,28 @@ export class GitHubAdapter extends BaseSourceAdapter {
   }
 
   private transformGitHubRepo(repo: GitHubEvent): RawEvent {
-    // This is a simplified transformation - in reality, you'd parse README files
-    // or look for event-specific data in the repository
+    // Use shared base transformation
+    const baseEvent = this.createBaseRawEvent(
+      repo.id,
+      repo.name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      repo.description || 'Developer event or conference repository',
+      repo.html_url,
+      repo.owner.login
+    );
+
     return {
-      externalId: repo.id,
-      source: 'github',
-      sourceUrl: repo.html_url,
-      title: repo.name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      description: repo.description || 'Developer event or conference repository',
+      ...baseEvent,
+      startTime: this.parseEventDate(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now (placeholder)
       organizer: {
-        name: repo.owner.login,
+        ...baseEvent.organizer!,
         verified: repo.owner.type === 'Organization',
         website: repo.owner.html_url
       },
-      startTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now (placeholder)
       location: { isOnline: true },
       registrationUrl: repo.html_url,
       tags: repo.topics,
       rawData: repo
-    };
+    } as RawEvent;
   }
 }
 

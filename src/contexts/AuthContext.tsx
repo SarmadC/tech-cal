@@ -16,7 +16,7 @@ import {
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
-import { useSupabase } from '@/components/providers/SupabaseProvider';
+import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { AuthService } from '@/services/authService';
 import { ProfileService } from '@/services/profileService';
 import { MemoizedProfileService } from '@/services/memoizedProfileService';
@@ -28,6 +28,13 @@ import type {
     SignupForm,
     ProfileUpdateForm
 } from '@/types';
+
+// Consolidated error messages for consistency
+const AUTH_ERRORS = {
+  SERVICE_UNAVAILABLE: 'Authentication service not available',
+  NO_USER: 'No user logged in',
+  CONTEXT_MISSING: 'useAuth must be used within an AuthProvider',
+} as const;
 
 interface AuthState {
     user: User | null;
@@ -64,10 +71,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         initialized: false,
     });
 
-    const supabase = useSupabase();
+    const { supabase, isReady } = useSupabaseSafe();
 
     // Helper to load profile
     const loadProfile = useCallback(async (userId: string): Promise<AppProfile | null> => {
+        if (!supabase) {
+            console.warn('[AuthContext] Supabase client not available for profile loading');
+            return null;
+        }
         try {
             return await ProfileService.getProfile(userId, supabase);
         } catch (error) {
@@ -81,6 +92,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Unified auth state management - handles both initial load and subsequent changes
     useEffect(() => {
+        // Don't initialize if Supabase client isn't ready yet
+        if (!isReady || !supabase) {
+            return;
+        }
+
         let isActive = true;
         let hasInitialized = false;
         let initializationPromise: Promise<void> | null = null;
@@ -181,10 +197,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             isActive = false;
             subscription.unsubscribe();
         };
-    }, [supabase, loadProfile]);
+    }, [isReady, supabase, loadProfile]);
 
 
     const signIn = useCallback(async (credentials: LoginForm): Promise<AuthResponse> => {
+        if (!supabase) {
+            return { success: false, error: AUTH_ERRORS.SERVICE_UNAVAILABLE };
+        }
         try {
             return await AuthService.signIn(credentials, supabase);
         } catch (error: unknown) {
@@ -194,6 +213,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, [supabase]);
 
     const signUp = useCallback(async (data: SignupForm): Promise<AuthResponse> => {
+        if (!supabase) {
+            return { success: false, error: AUTH_ERRORS.SERVICE_UNAVAILABLE };
+        }
         try {
             return await AuthService.signUp(data, supabase);
         } catch (error: unknown) {
@@ -203,6 +225,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, [supabase]);
 
     const signInWithOAuth = useCallback(async (provider: OAuthProvider): Promise<AuthResponse> => {
+        if (!supabase) {
+            return { success: false, error: AUTH_ERRORS.SERVICE_UNAVAILABLE };
+        }
         try {
             return await AuthService.signInWithOAuth(provider, supabase);
         } catch (error: unknown) {
@@ -212,6 +237,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, [supabase]);
 
     const signOut = useCallback(async (): Promise<void> => {
+        if (!supabase) {
+            console.error(AUTH_ERRORS.SERVICE_UNAVAILABLE + ' for sign out');
+            return;
+        }
         try {
             await AuthService.signOut(supabase);
             // Redirect to home page after successful signout
@@ -224,6 +253,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, [supabase]);
 
     const resetPassword = useCallback(async (email: string): Promise<AuthResponse> => {
+        if (!supabase) {
+            return { success: false, error: AUTH_ERRORS.SERVICE_UNAVAILABLE };
+        }
         try {
             return await AuthService.resetPassword(email, supabase);
         } catch (error: unknown) {
@@ -235,7 +267,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const updateProfile = useCallback(async (data: ProfileUpdateForm): Promise<AuthResponse> => {
         try {
             if (!authState.user) {
-                return { success: false, error: 'No user logged in' };
+                return { success: false, error: AUTH_ERRORS.NO_USER };
+            }
+            if (!supabase) {
+                return { success: false, error: AUTH_ERRORS.SERVICE_UNAVAILABLE };
             }
 
             const profile = await ProfileService.updateProfile(authState.user.id, data, supabase);
@@ -253,7 +288,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const refreshProfile = useCallback(async (): Promise<void> => {
         try {
-            if (!authState.user) return;
+            if (!authState.user || !supabase) return;
             
             const profile = await ProfileService.getProfile(authState.user.id, supabase);
             setAuthState((prev: AuthState) => ({ ...prev, profile }));
@@ -286,7 +321,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 export function useAuth(): AuthContextType {
     const context = useContext(AuthContext);
     if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
+        throw new Error(AUTH_ERRORS.CONTEXT_MISSING);
     }
     return context;
 }

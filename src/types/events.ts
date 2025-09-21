@@ -106,6 +106,11 @@ export interface Event {
     targetAudience?: string | null;
     prerequisites?: string | null;
 
+    // Webhook sync fields (from database migration)
+    externalId?: string | null;
+    externalStatus?: string | null;
+    lastSyncedAt?: string | null;
+    syncErrorCount?: number | null;
     
     // Agenda and speaker information
     agendaUrl?: string | null;
