@@ -339,10 +339,6 @@ export type Database = {
           updated_at: string | null
           venue_id: string | null
           virtual_platform: string | null
-          external_id: string | null
-          external_status: string | null
-          last_synced_at: string | null
-          sync_error_count: number | null
         }
         Insert: {
           accessibility_features?: Json | null
@@ -1037,97 +1033,6 @@ export type Database = {
           venue_type?: string | null
         }
         Relationships: []
-      }
-      webhook_events: {
-        Row: {
-          id: string
-          source: string
-          webhook_id: string | null
-          action: string
-          event_external_id: string | null
-          event_id: string | null
-          payload: Json | null
-          signature_verified: boolean | null
-          processed_at: string | null
-          processing_result: string | null
-          error_message: string | null
-        }
-        Insert: {
-          id?: string
-          source: string
-          webhook_id?: string | null
-          action: string
-          event_external_id?: string | null
-          event_id?: string | null
-          payload?: Json | null
-          signature_verified?: boolean | null
-          processed_at?: string | null
-          processing_result?: string | null
-          error_message?: string | null
-        }
-        Update: {
-          id?: string
-          source?: string
-          webhook_id?: string | null
-          action?: string
-          event_external_id?: string | null
-          event_id?: string | null
-          payload?: Json | null
-          signature_verified?: boolean | null
-          processed_at?: string | null
-          processing_result?: string | null
-          error_message?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "webhook_events_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      event_sync_log: {
-        Row: {
-          id: string
-          event_id: string
-          sync_type: string
-          changes_detected: Json | null
-          sync_result: string
-          error_message: string | null
-          synced_at: string | null
-          processing_time_ms: number | null
-        }
-        Insert: {
-          id?: string
-          event_id: string
-          sync_type: string
-          changes_detected?: Json | null
-          sync_result: string
-          error_message?: string | null
-          synced_at?: string | null
-          processing_time_ms?: number | null
-        }
-        Update: {
-          id?: string
-          event_id?: string
-          sync_type?: string
-          changes_detected?: Json | null
-          sync_result?: string
-          error_message?: string | null
-          synced_at?: string | null
-          processing_time_ms?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_sync_log_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          }
-        ]
       }
     }
     Views: {

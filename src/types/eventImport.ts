@@ -1,126 +1,71 @@
 // src/types/eventImport.ts
 
 /**
- * Event Import Types
- * Shared types for the event import system - follows existing type patterns
+ * Simplified Event Import Types
+ * For manual event creation and RSS feed imports
  */
 
 // ============================================
-// RAW EVENT TYPES (From External APIs)
+// RSS FEED TYPES
 // ============================================
 
 /**
- * Raw event data from external APIs before transformation
- * This is the common format all adapters convert to
+ * RSS feed event data structure
  */
-export interface RawEvent {
+export interface RSSEvent {
   // Core identifiers
-  externalId: string;
-  source: EventSource;
+  id: string;
+  source: 'rss' | 'manual';
   sourceUrl: string;
 
   // Event information
   title: string;
   description: string;
-  organizer: {
-    name: string;
-    verified?: boolean;
-    website?: string;
-    logo?: string;
-  };
+  link?: string;
 
-  // Timing (ISO strings from APIs)
+  // Timing (from RSS pubDate or manual input)
   startTime: string;
   endTime?: string;
   timezone?: string;
 
-  // Location
-  location?: {
-    name?: string;
-    address?: string;
-    city?: string;
-    country?: string;
-    isOnline?: boolean;
-  };
+  // Location (if available in RSS)
+  location?: string;
+  isOnline?: boolean;
 
-  // URLs
+  // Metadata
+  category?: string;
+  tags?: string[];
+  language?: string;
+
+  // RSS-specific
+  pubDate?: string;
+  author?: string;
+  feedUrl?: string;
+}
+
+// ============================================
+// MANUAL IMPORT TYPES
+// ============================================
+
+/**
+ * Manual event creation data
+ */
+export interface ManualEventData {
+  title: string;
+  description: string;
+  startTime: string;
+  endTime?: string;
+  location?: string;
+  isOnline?: boolean;
   registrationUrl?: string;
   livestreamUrl?: string;
-
-  // Event metadata
+  organizerName?: string;
   category?: string;
   tags?: string[];
   capacity?: number;
-  attendeeCount?: number;
-  priceRange?: string;
   difficulty?: string;
   language?: string;
-
-  // Raw API response (for debugging)
-  rawData?: unknown;
-}
-
-// ============================================
-// IMPORT CONFIGURATION
-// ============================================
-
-export type EventSource = 'eventbrite' | 'meetup' | 'github';
-
-export interface SourceConfig {
-  enabled: boolean;
-  batchSize: number;
-  rateLimit: {
-    requestsPerHour: number;
-    requestsPerMinute?: number;
-  };
-  filters: {
-    categories?: string[];
-    keywords?: string[];
-    locations?: string[];
-    dateRange?: {
-      startDays: number; // Days from now
-      endDays: number;   // Days from now
-    };
-  };
-}
-
-export interface ImportConfig {
-  sources: Record<EventSource, SourceConfig>;
-  qualityThresholds: {
-    minQualityScore: number;
-    minDescriptionLength: number;
-    requireVenue: boolean;
-    requireRegistration: boolean;
-    minTechRelevanceScore?: number;
-    blockNonTechCategories?: boolean;
-  };
-  processing: {
-    batchSize: number;
-    timeoutMs: number;
-    maxRetries: number;
-  };
-}
-
-// ============================================
-// QUALITY ASSESSMENT
-// ============================================
-
-export interface QualityMetrics {
-  hasDescription: boolean;
-  hasValidDates: boolean;
-  hasVenue: boolean;
-  hasOrganizer: boolean;
-  isNotSpam: boolean;
-  isTechRelevant: boolean;
-  organizerVerified: boolean;
-  hasRegistration: boolean;
-}
-
-export interface QualityAssessment {
-  score: number; // 0-100
-  metrics: QualityMetrics;
-  reasons: string[];
-  shouldImport: boolean;
+  timezone?: string;
 }
 
 // ============================================
@@ -128,9 +73,8 @@ export interface QualityAssessment {
 // ============================================
 
 export interface ImportStats {
-  source: EventSource;
+  source: 'rss' | 'manual';
   fetched: number;
-  qualified: number;
   imported: number;
   duplicates: number;
   errors: number;
@@ -141,162 +85,62 @@ export interface ImportResult {
   success: boolean;
   stats: ImportStats;
   errors: Array<{
-    eventId: string;
+    item: string;
     error: string;
-    rawEvent?: RawEvent;
   }>;
   importedEventIds: string[];
 }
 
-export interface BatchImportResult {
-  success: boolean;
-  results: ImportResult[];
-  totalStats: {
-    totalFetched: number;
-    totalImported: number;
-    totalErrors: number;
-    totalDuplicates: number;
-    processingTimeMs: number;
-  };
-  errors: string[];
+// ============================================
+// RSS FEED CONFIGURATION
+// ============================================
+
+export interface RSSFeedConfig {
+  url: string;
+  name: string;
+  enabled: boolean;
+  categories?: string[];
+  keywords?: string[];
+  lastFetched?: string;
+  errorCount?: number;
 }
 
-// ============================================
-// SOURCE ADAPTER INTERFACE
-// ============================================
-
-export interface SourceAdapter {
-  readonly source: EventSource;
-  
-  /**
-   * Fetch raw events from external API
-   */
-  fetchEvents(config: SourceConfig): Promise<RawEvent[]>;
-  
-  /**
-   * Get rate limit information
-   */
-  getRateLimit(): {
-    remaining: number;
-    resetTime: Date;
+export interface RSSImportConfig {
+  feeds: RSSFeedConfig[];
+  processing: {
+    batchSize: number;
+    timeoutMs: number;
+    maxRetries: number;
   };
-  
-  /**
-   * Test API connection and credentials
-   */
-  testConnection(): Promise<boolean>;
+  filters: {
+    minDescriptionLength: number;
+    techKeywords: string[];
+    blockedKeywords: string[];
+  };
 }
 
 // ============================================
 // ERROR TYPES
 // ============================================
 
-export class EventImportError extends Error {
+export class RSSImportError extends Error {
   constructor(
     message: string,
-    public source: EventSource,
-    public eventId?: string,
+    public feedUrl: string,
     public cause?: Error
   ) {
     super(message);
-    this.name = 'EventImportError';
+    this.name = 'RSSImportError';
   }
 }
 
-export class RateLimitError extends EventImportError {
+export class ManualImportError extends Error {
   constructor(
-    source: EventSource,
-    public resetTime: Date,
-    public remaining: number = 0
+    message: string,
+    public eventData?: Partial<ManualEventData>,
+    public cause?: Error
   ) {
-    super(`Rate limit exceeded for ${source}. Resets at ${resetTime.toISOString()}`, source);
-    this.name = 'RateLimitError';
+    super(message);
+    this.name = 'ManualImportError';
   }
-}
-
-export class QualityFilterError extends EventImportError {
-  constructor(
-    source: EventSource,
-    eventId: string,
-    public qualityScore: number,
-    public reasons: string[]
-  ) {
-    super(`Event ${eventId} failed quality filter (score: ${qualityScore})`, source, eventId);
-    this.name = 'QualityFilterError';
-  }
-}
-
-// ============================================
-// WEBHOOK TYPES
-// ============================================
-
-export type WebhookAction = 
-  | 'test'               // Test webhook from Eventbrite
-  | 'event.published'
-  | 'event.unpublished'  // Event cancelled
-  | 'event.updated'
-  | 'order.placed'
-  | 'order.refunded'
-  | 'venue.updated'
-  | 'organizer.updated';
-
-export interface WebhookPayload {
-  api_url: string;
-  config: {
-    action: WebhookAction;
-    endpoint_url: string;
-    user_id: string;
-    webhook_id: string;
-  };
-}
-
-export interface WebhookEvent {
-  id: string;
-  source: EventSource;
-  webhookId?: string;
-  action: WebhookAction;
-  eventExternalId?: string;
-  eventId?: string;
-  payload: unknown;
-  signatureVerified: boolean;
-  processedAt: string;
-  processingResult: 'pending' | 'success' | 'error' | 'ignored';
-  errorMessage?: string;
-}
-
-export interface EventSyncLog {
-  id: string;
-  eventId: string;
-  syncType: 'webhook' | 'scheduled' | 'manual';
-  changesDetected: string[];
-  syncResult: 'success' | 'error' | 'no_changes';
-  errorMessage?: string;
-  syncedAt: string;
-  processingTimeMs?: number;
-}
-
-export interface WebhookProcessingResult {
-  success: boolean;
-  eventId?: string;
-  action: WebhookAction;
-  changes?: string[];
-  error?: string;
-  notifiedUsers?: number;
-  processingTimeMs: number;
-}
-
-// ============================================
-// UTILITY TYPES
-// ============================================
-
-/**
- * Import job configuration for scheduling
- */
-export interface ImportJob {
-  id: string;
-  sources: EventSource[];
-  config: ImportConfig;
-  scheduledAt: Date;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  result?: BatchImportResult;
 }
