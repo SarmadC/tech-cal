@@ -24,6 +24,28 @@ import { UnifiedEventUtils } from '@/utils/unifiedEventUtils';
 
 export class PersonalizedDiscoveryService extends DiscoveryService {
   /**
+   * Get fast personalized recommendations (lightweight version for better performance)
+   */
+  static async getFastPersonalizedRecommendations(
+    events: Event[],
+    userProfile: AppProfile | null,
+    trackedEvents: TrackedEvent[] = [],
+    limit: number = 5,
+    userLocation?: { city?: string; country?: string; timezone?: string }
+  ): Promise<Event[]> {
+    if (!userProfile || events.length === 0) return [];
+
+    // Use basic recommendations for fast loading
+    return this.getPersonalizedRecommendations(
+      events,
+      userProfile,
+      trackedEvents,
+      limit,
+      userLocation
+    );
+  }
+
+  /**
    * Get personalized recommendations using behavioral data and user profiling
    */
   static async getAdvancedPersonalizedRecommendations(
@@ -37,26 +59,35 @@ export class PersonalizedDiscoveryService extends DiscoveryService {
     if (!userProfile || events.length === 0) return [];
 
     try {
+      // Fast path: if user has few tracked events, use basic algorithm
+      if (trackedEvents.length < SCORING_CONFIG.MIN_TRACKED_EVENTS_FOR_ENHANCED) {
+        console.log('Cold start detected: using fast recommendations');
+        return this.getFastPersonalizedRecommendations(
+          events,
+          userProfile,
+          trackedEvents,
+          limit,
+          userLocation
+        );
+      }
 
-    // Get user behavior patterns
-    const behaviorPattern = await BehavioralAnalyticsService.getUserBehaviorPattern(
-      userProfile.id,
-      supabaseClient
-    );
-
-    // Cold start detection: if no behavior data, use basic algorithm
-    if (!behaviorPattern && trackedEvents.length < SCORING_CONFIG.MIN_TRACKED_EVENTS_FOR_ENHANCED) {
-      console.log('Cold start detected: using basic recommendations');
-      const basicRecs = this.getPersonalizedRecommendations(
-        events,
-        userProfile,
-        trackedEvents,
-        limit,
-        userLocation
+      // Get user behavior patterns (cached for performance)
+      const behaviorPattern = await BehavioralAnalyticsService.getUserBehaviorPattern(
+        userProfile.id,
+        supabaseClient
       );
-      // Convert to unified type
-      return basicRecs;
-    }
+
+      // If no behavior data available, fallback to fast recommendations
+      if (!behaviorPattern) {
+        console.log('No behavior data: using fast recommendations');
+        return this.getFastPersonalizedRecommendations(
+          events,
+          userProfile,
+          trackedEvents,
+          limit,
+          userLocation
+        );
+      }
 
     // Get base recommendations from original service (will be enhanced)
     const baseRecommendations = this.getPersonalizedRecommendations(

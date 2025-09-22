@@ -9,6 +9,7 @@ import { PersonalizedDiscoveryService } from '@/services/personalizedDiscoverySe
 import { useForYouTracking } from '@/hooks/useRecommendationTracking';
 import { hasCompleteCareerProfile, extractCareerProfile } from '@/utils/profileTypeGuards';
 import { createClient } from '@/utils/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 import CareerProfilePrompt from './CareerProfilePrompt';
@@ -50,118 +51,70 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   const trackForYouDisplayRef = useRef(tracking.trackForYouDisplay);
   trackForYouDisplayRef.current = tracking.trackForYouDisplay;
 
-  const [personalizedEvents, setPersonalizedEvents] = React.useState<Event[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [lastFetchKey, setLastFetchKey] = React.useState<string>('');
-
   // Create a stable cache key based on relevant data
   const cacheKey = React.useMemo(() => {
-    if (!hasCareerProfile || !userProfile) return '';
-    return `${userProfile.id}-${events.length}-${trackedEvents.length}-${limit}-${userLocation?.city || ''}-${userLocation?.timezone || ''}`;
+    if (!hasCareerProfile || !userProfile) return null;
+    return `for-you-${userProfile.id}-${events.length}-${trackedEvents.length}-${limit}-${userLocation?.city || ''}-${userLocation?.timezone || ''}`;
   }, [hasCareerProfile, userProfile, events.length, trackedEvents.length, limit, userLocation]);
 
-  // Personalized recommendations with behavioral data
-  React.useEffect(() => {
-    let isCancelled = false; // Prevent memory leaks
-
-    async function loadPersonalizedRecommendations() {
-      if (!hasCareerProfile || !userProfile) {
-        if (!isCancelled) {
-          setPersonalizedEvents([]);
-          setIsLoading(false);
-          setLastFetchKey('');
-        }
-        return;
-      }
-
-      // Skip if we already have data for this cache key
-      if (cacheKey === lastFetchKey && personalizedEvents.length > 0) {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
-        return;
-      }
-
+  // Use React Query for caching and performance optimization
+  const {
+    data: personalizedEvents = [],
+    isLoading,
+    error
+  } = useQuery({
+    queryKey: ['personalizedRecommendations', cacheKey],
+    queryFn: async () => {
+      if (!hasCareerProfile || !userProfile) return [];
+      
       try {
-        if (!isCancelled) {
-          setIsLoading(true);
-        }
-        
-        // Use personalized discovery service with behavioral data
-        let personalized: Event[] = [];
-        
-        try {
-          personalized = await PersonalizedDiscoveryService.getAdvancedPersonalizedRecommendations(
-            events,
-            userProfile,
-            trackedEvents,
-            supabase,
-            limit,
-            userLocation
-          );
-        } catch (personalizedError) {
-          console.warn('Personalized recommendations failed, falling back to basic:', personalizedError);
-          // Fallback to basic recommendations (migrate to unified type)
-          const basicRecs = DiscoveryService.getPersonalizedRecommendations(
-            events,
-            userProfile,
-            trackedEvents,
-            limit,
-            userLocation
-          );
-          personalized = basicRecs;
-        }
+        // Use fast personalized discovery service for better performance
+        // This will automatically choose between fast and advanced based on user data
+        const personalized = await PersonalizedDiscoveryService.getAdvancedPersonalizedRecommendations(
+          events,
+          userProfile,
+          trackedEvents,
+          supabase,
+          limit,
+          userLocation
+        );
 
-        // Only update state if component is still mounted
-        if (!isCancelled) {
-          setPersonalizedEvents(personalized);
-          setLastFetchKey(cacheKey);
-
-          // Track recommendation display (with error handling)
-          if (isTrackingEnabled && personalized.length > 0) {
-            try {
-              const recommendationData = personalized.map((event, index) => ({
-                eventId: event.id,
-                score: 0, // Score removed as discoveryMetrics not available in consolidated Event type
-                position: index + 1
-              }));
-              
-              trackForYouDisplayRef.current(recommendationData);
-            } catch (trackingError) {
-              console.warn('Recommendation tracking failed:', trackingError);
-              // Continue without tracking - don't break the UI
-            }
+        // Track recommendation display (with error handling)
+        if (isTrackingEnabled && personalized.length > 0) {
+          try {
+            const recommendationData = personalized.map((event, index) => ({
+              eventId: event.id,
+              score: 0, // Score removed as discoveryMetrics not available in consolidated Event type
+              position: index + 1
+            }));
+            
+            trackForYouDisplayRef.current(recommendationData);
+          } catch (trackingError) {
+            console.warn('Recommendation tracking failed:', trackingError);
+            // Continue without tracking - don't break the UI
           }
         }
 
-      } catch (error) {
-        if (!isCancelled) {
-          console.error('Error loading personalized recommendations:', error);
-          // Fallback to basic recommendations
-          const basic = DiscoveryService.getPersonalizedRecommendations(
-            events,
-            userProfile,
-            trackedEvents,
-            limit,
-            userLocation
-          );
-          setPersonalizedEvents(basic);
-          setLastFetchKey(cacheKey);
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
+        return personalized;
+      } catch (personalizedError) {
+        console.warn('Personalized recommendations failed, falling back to basic:', personalizedError);
+        // Fallback to basic recommendations (migrate to unified type)
+        return DiscoveryService.getPersonalizedRecommendations(
+          events,
+          userProfile,
+          trackedEvents,
+          limit,
+          userLocation
+        );
       }
-    }
-
-    loadPersonalizedRecommendations();
-
-    // Cleanup function to prevent memory leaks
-    return () => {
-      isCancelled = true;
-    };
-  }, [cacheKey, hasCareerProfile, userProfile, personalizedEvents.length, lastFetchKey, events, isTrackingEnabled, limit, supabase, trackedEvents, userLocation]); // Include all dependencies
+    },
+    enabled: !!(hasCareerProfile && userProfile && cacheKey),
+    staleTime: 5 * 60 * 1000, // 5 minutes - recommendations stay fresh
+    gcTime: 10 * 60 * 1000, // 10 minutes - cache cleanup
+    refetchOnWindowFocus: false, // Don't refetch when switching tabs
+    refetchOnMount: false, // Don't refetch when component remounts
+    retry: 1, // Only retry once on failure
+  });
 
   const handleEventClick = React.useCallback((event: Event, position: number) => {
     // Track click interaction
@@ -208,6 +161,26 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
             ))}
+          </div>
+        </div>
+      </DiscoverySection>
+    );
+  }
+
+  // Show error state with retry option
+  if (error) {
+    return (
+      <DiscoverySection
+        title="For You"
+        subtitle="Personalized Recommendations"
+        icon={<User size={20} weight="fill" />}
+        className={className}
+      >
+        <div className="discovery-empty-state">
+          <User size={48} className="empty-icon" />
+          <div className="empty-title">Unable to load recommendations</div>
+          <div className="empty-subtitle">
+            There was an issue loading your personalized recommendations. Please try refreshing the page.
           </div>
         </div>
       </DiscoverySection>

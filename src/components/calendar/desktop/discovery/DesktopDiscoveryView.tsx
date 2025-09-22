@@ -34,15 +34,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
 
   return (
     <div className={`desktop-discovery-view ${className}`} role="main" aria-label="Discover tech events">
-      {/* Discovery Header */}
-      <div className="discovery-header">
-        <div className="discovery-title-section">
-          <h1 className="discovery-title">Discover Events</h1>
-          <p className="discovery-subtitle">
-            Personalized recommendations tailored to your career and interests
-          </p>
-        </div>
-      </div>
 
       {/* Discovery Grid Layout */}
       <div className="discovery-grid">
