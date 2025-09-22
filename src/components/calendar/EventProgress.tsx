@@ -128,7 +128,7 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
                     <span className="text-gray-400">{progressData.completedItems}/{progressData.totalItems} sessions</span>
                 </div>
                 <div 
-                    className="w-full bg-zinc-700 rounded-full h-2"
+                    className="w-full bg-zinc-700 rounded h-2"
                     role="progressbar"
                     aria-valuenow={progressData.progressPercent}
                     aria-valuemin={0}
@@ -136,7 +136,7 @@ const EventProgress: FC<EventProgressProps> = ({ event, agenda }) => {
                     aria-label={`Event progress: ${progressData.completedItems} of ${progressData.totalItems} sessions completed`}
                 >
                     <div 
-                        className="bg-zinc-200 dark:bg-zinc-300 h-2 rounded-full transition-all duration-300"
+                        className="bg-zinc-200 dark:bg-zinc-300 h-2 rounded transition-all duration-300"
                         style={{ width: `${progressData.progressPercent}%` }}
                     />
                 </div>

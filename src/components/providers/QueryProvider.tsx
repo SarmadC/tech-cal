@@ -29,7 +29,7 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
               return failureCount < 2;
             },
             // Prevent stale data from being used too long
-            refetchOnMount: true,
+            refetchOnMount: false,
             // Clean up inactive queries
             refetchOnReconnect: 'always',
           },

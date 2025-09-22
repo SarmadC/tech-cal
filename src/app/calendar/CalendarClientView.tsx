@@ -112,6 +112,9 @@ function useEventData(initialEvents: (Event | MultiDayEvent)[], profile: AppProf
     const { trackedEventIds } = useTrackedEventIds();
 
     const enrichedEvents: TrackedEvent[] = useMemo(() => {
+        if (!trackedEventIds) {
+            return filteredEvents.map(event => enrichWithTracking(event, false));
+        }
 
         const result = filteredEvents.map(event => {
             const isTracked = trackedEventIds.has(event.id);

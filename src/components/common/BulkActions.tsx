@@ -7,7 +7,7 @@ import { EventService } from '@/services/eventServices';
 import { LoadingButton } from '@/components/Loading';
 import { toast } from 'sonner';
 
-import { useSupabase } from '@/components/providers/SupabaseProvider';
+import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 
 interface BulkActionsProps {
     selectedEvents: Set<string>;
@@ -25,15 +25,16 @@ export default function BulkActions({
     className = ''
 }: BulkActionsProps) {
     const { user } = useAuth();
-    const supabase = useSupabase();
+    const { supabase, isReady } = useSupabaseSafe();
+
     const selectedEventArray = Array.from(selectedEvents);
     const selectedCount = selectedEventArray.length;
 
     const { trackEvent, isLoading: isBulkTracking } = useTrackedEventsUnified();
     const [localLoading, setLocalLoading] = useState<LocalOperation | null>(null);
     
-    // Return null if supabase client is not ready yet
-    if (!supabase) {
+    // Don't render if Supabase client is not ready
+    if (!isReady || !supabase) {
         return null;
     }
 

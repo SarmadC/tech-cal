@@ -1,3 +1,13 @@
 export { CareerInsightsCard, CareerProgressCard } from './CareerInsightsCard';
 export { CareerAnalyticsCard, CareerInsightsSummary } from './CareerAnalyticsCard';
 export { CareerRecommendationsCard, QuickCareerActionsCard } from './CareerRecommendationsCard';
+export { PersonalInsightsCard } from './PersonalInsightsCard';
+export { EventCard } from './EventCard';
+export { EventList } from './EventList';
+export { MetricCard } from './MetricCard';
+export { OverviewPanel } from './OverviewPanel';
+export { DashboardCard } from './DashboardCard';
+export { QuickActions } from './QuickActions';
+export { MiniChart, MiniBarChart } from './MiniChart';
+export { ActivityFeed } from './ActivityFeed';
+export { ProgressBar } from './ProgressBar';

@@ -42,51 +42,75 @@ export interface CareerRecommendation {
 
 export class CareerAnalyticsService {
   /**
+   * Helper method to get the appropriate batch service method based on context
+   */
+  private static async enhanceEventsWithContext(
+    events: Event[],
+    userProfile?: any,
+    supabaseClient?: any
+  ): Promise<(Event & { careerImpactLite?: CareerImpactScoreLite })[]> {
+    const { BatchCareerImpactService } = await import('./batchCareerImpactService');
+    
+    const isServerContext = typeof window === 'undefined';
+    
+    return isServerContext 
+      ? await BatchCareerImpactService.enhanceEventsLiteServer(events, userProfile, supabaseClient)
+      : await BatchCareerImpactService.enhanceEventsLite(events);
+  }
+
+  /**
    * Generate comprehensive career analytics for dashboard
    */
   static async generateCareerAnalytics(
     userProfile: AppProfile,
     trackedEvents: TrackedEventRecord[],
-    upcomingEvents: Event[]
+    upcomingEvents: Event[],
+    supabaseClient?: any
   ): Promise<CareerAnalyticsData> {
-    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
-    
-    if (!careerProfile) {
+    try {
+      const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+      
+      if (!careerProfile) {
+        return this.getEmptyAnalytics();
+      }
+
+      // Calculate average impact score from recent events
+      const recentEvents = trackedEvents
+        .filter(te => te.event && new Date(te.event.startTime) > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) // Last 90 days
+        .map(te => te.event!)
+        .filter(Boolean);
+
+      const averageImpactScore = await this.calculateAverageImpactScore(recentEvents, careerProfile, userProfile, supabaseClient);
+      
+      // Calculate trend
+      const { impactTrend, trendPercentage } = await this.calculateImpactTrend(recentEvents, careerProfile, userProfile, supabaseClient);
+
+      // Analyze skills growth
+      const skillsGrowth = this.analyzeSkillsGrowth(recentEvents, careerProfile);
+
+      // Calculate career goal progress
+      const careerGoalProgress = this.calculateCareerGoalProgress(careerProfile, recentEvents);
+
+      // Generate monthly stats
+      const monthlyStats = this.calculateMonthlyStats(trackedEvents);
+
+      // Get upcoming opportunities with career impact
+      const upcomingOpportunities = await this.getUpcomingOpportunities(upcomingEvents, careerProfile, userProfile, supabaseClient);
+
+      return {
+        averageImpactScore,
+        impactTrend,
+        trendPercentage,
+        skillsGrowth,
+        careerGoalProgress,
+        monthlyStats,
+        upcomingOpportunities
+      };
+    } catch (error) {
+      console.error('Error generating career analytics:', error);
+      // Return empty analytics instead of throwing to prevent 500 errors
       return this.getEmptyAnalytics();
     }
-
-    // Calculate average impact score from recent events
-    const recentEvents = trackedEvents
-      .filter(te => te.event && new Date(te.event.startTime) > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) // Last 90 days
-      .map(te => te.event!)
-      .filter(Boolean);
-
-    const averageImpactScore = await this.calculateAverageImpactScore(recentEvents, careerProfile);
-    
-    // Calculate trend
-    const { impactTrend, trendPercentage } = await this.calculateImpactTrend(recentEvents, careerProfile);
-
-    // Analyze skills growth
-    const skillsGrowth = this.analyzeSkillsGrowth(recentEvents, careerProfile);
-
-    // Calculate career goal progress
-    const careerGoalProgress = this.calculateCareerGoalProgress(careerProfile, recentEvents);
-
-    // Generate monthly stats
-    const monthlyStats = this.calculateMonthlyStats(trackedEvents);
-
-    // Get upcoming opportunities with career impact
-    const upcomingOpportunities = await this.getUpcomingOpportunities(upcomingEvents, careerProfile);
-
-    return {
-      averageImpactScore,
-      impactTrend,
-      trendPercentage,
-      skillsGrowth,
-      careerGoalProgress,
-      monthlyStats,
-      upcomingOpportunities
-    };
   }
 
   /**
@@ -95,7 +119,8 @@ export class CareerAnalyticsService {
   static async generateCareerRecommendations(
     userProfile: AppProfile,
     trackedEvents: TrackedEventRecord[],
-    upcomingEvents: Event[]
+    upcomingEvents: Event[],
+    supabaseClient?: any
   ): Promise<CareerRecommendation[]> {
     const careerProfile = CareerProfileService.getCareerProfile(userProfile);
     
@@ -109,7 +134,9 @@ export class CareerAnalyticsService {
     const skillGapRecommendations = await this.generateSkillGapRecommendations(
       careerProfile, 
       trackedEvents, 
-      upcomingEvents
+      upcomingEvents,
+      userProfile,
+      supabaseClient
     );
     recommendations.push(...skillGapRecommendations);
 
@@ -117,21 +144,27 @@ export class CareerAnalyticsService {
     const networkingRecommendations = await this.generateNetworkingRecommendations(
       careerProfile,
       trackedEvents,
-      upcomingEvents
+      upcomingEvents,
+      userProfile,
+      supabaseClient
     );
     recommendations.push(...networkingRecommendations);
 
     // Career advancement opportunities
     const advancementRecommendations = await this.generateAdvancementRecommendations(
       careerProfile,
-      upcomingEvents
+      upcomingEvents,
+      userProfile,
+      supabaseClient
     );
     recommendations.push(...advancementRecommendations);
 
     // Trending topic recommendations
     const trendingRecommendations = await this.generateTrendingRecommendations(
       careerProfile,
-      upcomingEvents
+      upcomingEvents,
+      userProfile,
+      supabaseClient
     );
     recommendations.push(...trendingRecommendations);
 
@@ -140,14 +173,15 @@ export class CareerAnalyticsService {
 
   private static async calculateAverageImpactScore(
     events: Event[],
-    _careerProfile: any
+    _careerProfile: any,
+    userProfile?: any,
+    supabaseClient?: any
   ): Promise<number> {
     if (events.length === 0) return 0;
 
     try {
       // Use batch service instead of N+1 pattern
-      const { BatchCareerImpactService } = await import('./batchCareerImpactService');
-      const enhancedEvents = await BatchCareerImpactService.enhanceEventsLite(events);
+      const enhancedEvents = await this.enhanceEventsWithContext(events, userProfile, supabaseClient);
 
       const scores = enhancedEvents
         .map(event => event.careerImpactLite?.overall || 0)
@@ -158,13 +192,16 @@ export class CareerAnalyticsService {
         : 0;
     } catch (error) {
       console.warn('Failed to calculate average impact score:', error);
-      return 0;
+      // Return a default score instead of 0 to provide some value
+      return 0.5;
     }
   }
 
   private static async calculateImpactTrend(
     events: Event[],
-    careerProfile: any
+    careerProfile: any,
+    userProfile?: any,
+    supabaseClient?: any
   ): Promise<{ impactTrend: 'up' | 'down' | 'stable'; trendPercentage: number }> {
     if (events.length < 6) {
       return { impactTrend: 'stable', trendPercentage: 0 };
@@ -177,8 +214,8 @@ export class CareerAnalyticsService {
       const earlierEvents = sortedEvents.slice(0, halfPoint);
       const laterEvents = sortedEvents.slice(halfPoint);
 
-      const earlierAvg = await this.calculateAverageImpactScore(earlierEvents, careerProfile);
-      const laterAvg = await this.calculateAverageImpactScore(laterEvents, careerProfile);
+      const earlierAvg = await this.calculateAverageImpactScore(earlierEvents, careerProfile, userProfile, supabaseClient);
+      const laterAvg = await this.calculateAverageImpactScore(laterEvents, careerProfile, userProfile, supabaseClient);
 
       if (earlierAvg === 0 && laterAvg === 0) {
         return { impactTrend: 'stable', trendPercentage: 0 };
@@ -303,7 +340,9 @@ export class CareerAnalyticsService {
 
   private static async getUpcomingOpportunities(
     events: Event[],
-    _careerProfile: any
+    _careerProfile: any,
+    userProfile?: any,
+    supabaseClient?: any
   ): Promise<Array<Event & { careerImpactLite?: CareerImpactScoreLite }>> {
     try {
       const upcomingEvents = events.filter(event => 
@@ -312,8 +351,7 @@ export class CareerAnalyticsService {
       );
 
       // Use batch service instead of N+1 pattern
-      const { BatchCareerImpactService } = await import('./batchCareerImpactService');
-      const enhancedEvents = await BatchCareerImpactService.enhanceEventsLite(upcomingEvents);
+      const enhancedEvents = await this.enhanceEventsWithContext(upcomingEvents, userProfile, supabaseClient);
 
       return enhancedEvents
         .filter(event => event.careerImpactLite && event.careerImpactLite.overall >= 70)
@@ -328,7 +366,9 @@ export class CareerAnalyticsService {
   private static async generateSkillGapRecommendations(
     careerProfile: any,
     trackedEvents: TrackedEventRecord[],
-    upcomingEvents: Event[]
+    upcomingEvents: Event[],
+    userProfile?: any,
+    supabaseClient?: any
   ): Promise<CareerRecommendation[]> {
     const targetSkills = careerProfile?.targetSkills || [];
     const skillsGrowth = this.analyzeSkillsGrowth(
@@ -352,8 +392,7 @@ export class CareerAnalyticsService {
       if (relatedEvents.length > 0) {
         try {
           // Use batch service instead of N+1 pattern
-          const { BatchCareerImpactService } = await import('./batchCareerImpactService');
-          const enhancedEvents = await BatchCareerImpactService.enhanceEventsLite(relatedEvents);
+          const enhancedEvents = await this.enhanceEventsWithContext(relatedEvents, userProfile, supabaseClient);
 
           recommendations.push({
             id: `skill-gap-${skill}`,
@@ -379,7 +418,9 @@ export class CareerAnalyticsService {
   private static async generateNetworkingRecommendations(
     careerProfile: any,
     trackedEvents: TrackedEventRecord[],
-    upcomingEvents: Event[]
+    upcomingEvents: Event[],
+    userProfile?: any,
+    supabaseClient?: any
   ): Promise<CareerRecommendation[]> {
     const recentNetworkingEvents = trackedEvents.filter(te =>
       te.event && (
@@ -399,8 +440,7 @@ export class CareerAnalyticsService {
       if (networkingEvents.length > 0) {
         try {
           // Use batch service instead of N+1 pattern
-          const { BatchCareerImpactService } = await import('./batchCareerImpactService');
-          const enhancedEvents = await BatchCareerImpactService.enhanceEventsLite(networkingEvents);
+          const enhancedEvents = await this.enhanceEventsWithContext(networkingEvents, userProfile, supabaseClient);
 
           return [{
             id: 'networking-boost',
@@ -425,7 +465,9 @@ export class CareerAnalyticsService {
 
   private static async generateAdvancementRecommendations(
     careerProfile: any,
-    upcomingEvents: Event[]
+    upcomingEvents: Event[],
+    userProfile?: any,
+    supabaseClient?: any
   ): Promise<CareerRecommendation[]> {
     const targetRole = careerProfile?.targetRole;
     
@@ -444,8 +486,7 @@ export class CareerAnalyticsService {
     if (advancementEvents.length > 0) {
       try {
         // Use batch service instead of N+1 pattern
-        const { BatchCareerImpactService } = await import('./batchCareerImpactService');
-        const enhancedEvents = await BatchCareerImpactService.enhanceEventsLite(advancementEvents);
+        const enhancedEvents = await this.enhanceEventsWithContext(advancementEvents, userProfile, supabaseClient);
 
         return [{
           id: 'career-advancement',
@@ -469,7 +510,9 @@ export class CareerAnalyticsService {
 
   private static async generateTrendingRecommendations(
     careerProfile: any,
-    upcomingEvents: Event[]
+    upcomingEvents: Event[],
+    userProfile?: any,
+    supabaseClient?: any
   ): Promise<CareerRecommendation[]> {
     // Find events with trending tech topics
     const trendingKeywords = ['ai', 'machine learning', 'blockchain', 'cloud', 'devops', 'kubernetes'];
@@ -484,8 +527,7 @@ export class CareerAnalyticsService {
     if (trendingEvents.length > 0) {
       try {
         // Use batch service instead of N+1 pattern
-        const { BatchCareerImpactService } = await import('./batchCareerImpactService');
-        const enhancedEvents = await BatchCareerImpactService.enhanceEventsLite(trendingEvents);
+        const enhancedEvents = await this.enhanceEventsWithContext(trendingEvents, userProfile, supabaseClient);
 
         return [{
           id: 'trending-topics',

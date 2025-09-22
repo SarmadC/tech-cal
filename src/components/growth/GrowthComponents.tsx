@@ -114,8 +114,8 @@ export const TechStackCurrencyCard: FC<{ data: TechStackCurrencyData[] }> = ({ d
                         <span className="text-sm font-medium text-gray-700">{item.category}</span>
                         <span className="text-sm font-bold" style={{ color: item.color }}>{item.score}% Current</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div className="h-2.5 rounded-full" style={{ width: `${item.score}%`, backgroundColor: item.color }}></div>
+                    <div className="w-full bg-gray-200 rounded h-2.5">
+                        <div className="h-2.5 rounded" style={{ width: `${item.score}%`, backgroundColor: item.color }}></div>
                     </div>
                 </div>
             ))}

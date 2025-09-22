@@ -1,5 +1,6 @@
 import { Event } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
+import type { CareerProfile } from '@/types/career';
 
 interface BatchCareerImpactRequest {
   eventIds: string[];
@@ -175,7 +176,14 @@ export class BatchCareerImpactService {
       const controller = new AbortController();
       timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT_MS);
 
-      const response = await fetch('/api/career-impact/batch', {
+      // Construct absolute URL for server-side usage
+      const baseUrl = typeof window !== 'undefined' 
+        ? window.location.origin 
+        : process.env.NEXT_PUBLIC_APP_URL || 
+          process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
+          'http://localhost:3000';
+      
+      const response = await fetch(`${baseUrl}/api/career-impact/batch`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -275,7 +283,8 @@ export class BatchCareerImpactService {
       });
 
       if (!response.success || !response.data) {
-        return events;
+        console.warn('Batch API returned no data, using fallback scores');
+        return this.getEventsWithFallbackScores(events);
       }
 
       // Quick merge without detailed explanations
@@ -305,9 +314,97 @@ export class BatchCareerImpactService {
         console.warn('Career impact calculation failed:', errorMessage);
       }
       
-      // Always return events without career impact rather than failing completely
-      return events;
+      // Always return events with fallback career impact scores rather than failing completely
+      return this.getEventsWithFallbackScores(events);
     }
+  }
+
+  /**
+   * Server-side version that works directly without HTTP requests
+   * Used when called from server-side contexts like API routes
+   */
+  static async enhanceEventsLiteServer(
+    events: Event[],
+    userProfile: unknown,
+    _supabaseClient: unknown
+  ): Promise<(Event & { careerImpactLite?: CareerImpactScoreLite })[]> {
+    if (events.length === 0) return events;
+
+    try {
+      // Import CareerImpactService dynamically to avoid circular dependencies
+      const { CareerImpactService } = await import('./careerImpactService');
+      
+      // Process events in parallel with a reasonable concurrency limit
+      const concurrencyLimit = 5;
+      const results: (Event & { careerImpactLite?: CareerImpactScoreLite })[] = [];
+      
+      for (let i = 0; i < events.length; i += concurrencyLimit) {
+        const batch = events.slice(i, i + concurrencyLimit);
+        
+        const batchPromises = batch.map(async (event) => {
+          try {
+            const impactScore = await CareerImpactService.calculateCareerImpactScoreAsync(
+              {
+                event,
+                careerProfile: userProfile as unknown as CareerProfile // Type assertion for server-side compatibility
+              },
+              { includeExplanations: false }
+            );
+            
+            // Derive category from overall score
+            const getCategory = (score: number): 'transformative' | 'high' | 'moderate' | 'low' => {
+              if (score >= 0.8) return 'transformative';
+              if (score >= 0.6) return 'high';
+              if (score >= 0.4) return 'moderate';
+              return 'low';
+            };
+
+            return {
+              ...event,
+              careerImpactLite: {
+                overall: impactScore.overall,
+                confidence: impactScore.confidence,
+                category: getCategory(impactScore.overall)
+              }
+            };
+          } catch (error) {
+            console.warn(`Failed to calculate impact for event ${event.id}:`, error);
+            return {
+              ...event,
+              careerImpactLite: {
+                overall: 0.5,
+                confidence: 0.6,
+                category: 'moderate' as const
+              }
+            };
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+      }
+      
+      return results;
+    } catch (error) {
+      console.warn('Server-side career impact calculation failed:', error);
+      return this.getEventsWithFallbackScores(events);
+    }
+  }
+
+  /**
+   * Get events with fallback career impact scores
+   */
+  private static getEventsWithFallbackScores(
+    events: Event[]
+  ): (Event & { careerImpactLite?: CareerImpactScoreLite })[] {
+    return events.map(event => ({
+      ...event,
+      careerImpactLite: {
+        overall: 0.5,
+        confidence: 0.6,
+        category: 'moderate' as const
+      }
+    }));
   }
 
   /**

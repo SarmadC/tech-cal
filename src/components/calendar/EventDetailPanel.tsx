@@ -12,6 +12,8 @@ import EventInfo from './EventInfo';
 import EventTracking from './EventTracking';
 import AdaptiveTimeline from './AdaptiveTimeline';
 import { useEventActions } from '@/hooks/useEventActions';
+import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
+import { useAuth } from '@/contexts';
 
 // 2. UPDATE PROPS: The interface now uses the new types.
 interface EventDetailPanelProps {
@@ -27,6 +29,29 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
     const { handleShare, googleCalendarLink, handleIcsDownload } = useEventActions(event);
+    
+    // Add tracking functionality
+    const { user } = useAuth();
+    const { trackedEventIds, trackEvent, untrackEvent, isLoading: isTrackingLoading } = useTrackedEventsUnified();
+    
+    // Get the display event (with agenda if available)
+    const displayEvent = eventWithAgenda || event;
+    
+    // Check if event is tracked
+    const isTracked = trackedEventIds?.has(displayEvent.id) ?? false;
+    
+    // Handle track/untrack event
+    const handleTrackEvent = async () => {
+        if (!user) {
+            return;
+        }
+        
+        if (isTracked) {
+            await untrackEvent(displayEvent.id);
+        } else {
+            await trackEvent(displayEvent.id, 'bookmarked');
+        }
+    };
 
     // Fetch complete event details with agenda
     useEffect(() => {
@@ -65,8 +90,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [showMoreMenu]);
-
-    const displayEvent = eventWithAgenda || event;
 
     return (
         <div className="h-full bg-[#1e1e1e] border-l border-gray-800 shadow-2xl p-6 flex flex-col relative">
@@ -110,14 +133,16 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                     <div className="flex items-center gap-3">
                         {/* Primary CTA - Track Event */}
                         <button 
-                            onClick={() => {
-                                // This would need to be connected to the tracking functionality
-                                console.log('Track event clicked');
-                            }}
-                            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-zinc-200 hover:bg-zinc-300 text-zinc-900 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
+                            onClick={handleTrackEvent}
+                            disabled={isTrackingLoading || !user}
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md ${
+                                isTracked 
+                                    ? 'bg-red-100 hover:bg-red-200 text-red-800 border border-red-200' 
+                                    : 'bg-zinc-200 hover:bg-zinc-300 text-zinc-900'
+                            } ${isTrackingLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <CalendarPlusIcon className="w-4 h-4" />
-                            <span>Track Event</span>
+                            <span>{isTracked ? 'Untrack Event' : 'Track Event'}</span>
                         </button>
 
                         {/* Attendance toggle */}

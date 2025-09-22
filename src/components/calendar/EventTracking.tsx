@@ -26,7 +26,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
     const { trackedEventIds, trackEvent, untrackEvent, isLoading, error } = useTrackedEventsUnified();
 
     // Derive tracking status from the unified hook
-    const isTracked = trackingEventId ? trackedEventIds.has(trackingEventId) : false;
+    const isTracked = trackingEventId ? (trackedEventIds?.has(trackingEventId) ?? false) : false;
     const trackingStatus = { isTracked };
     const currentStatus = optimisticStatus || trackingStatus;
 

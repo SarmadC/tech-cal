@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { UserEventService } from '@/services/userEventService';
-import { useSupabase } from '@/components/providers/SupabaseProvider';
+import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { TrackedEventRecord, EVENT_STATUS } from '@/types';
 
 /**
@@ -20,7 +20,7 @@ import { TrackedEventRecord, EVENT_STATUS } from '@/types';
  * - refetch: Function to manually refetch data
  */
 export function useTrackedEventsUnified() {
-  const supabase = useSupabase();
+  const { supabase, isReady } = useSupabaseSafe();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -33,13 +33,28 @@ export function useTrackedEventsUnified() {
   } = useQuery<TrackedEventRecord[]>({
     queryKey: ['trackedEvents', user?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id || !supabase) return [];
       return UserEventService.getTrackedEvents(user.id, supabase);
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!supabase,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 2,
   });
+
+  // Return early if Supabase client is not ready
+  if (!isReady || !supabase) {
+    return {
+      trackedEvents: [],
+      isLoading: true,
+      error: null,
+      trackEvent: async () => {},
+      untrackEvent: async () => {},
+      updateEventStatus: async () => {},
+      isBulkTracking: false
+    };
+  }
 
   // Derived data - set of tracked event IDs for O(1) lookup
   const trackedEventIds = new Set(trackedEvents.map(te => te.eventId));
@@ -89,18 +104,32 @@ export function useTrackedEventIds() {
  * This maintains backward compatibility
  */
 export function useLightweightTrackedEvents() {
-  const supabase = useSupabase();
+  const { supabase, isReady } = useSupabaseSafe();
   const { user } = useAuth();
 
-  return useQuery<TrackedEventRecord[]>({
+  const queryResult = useQuery<TrackedEventRecord[]>({
     queryKey: ['lightweightTrackedEvents', user?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id || !supabase) return [];
       return UserEventService.getLightweightTrackedEvents(user.id, supabase);
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!supabase,
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 2,
   });
+
+  // Return early if Supabase client is not ready
+  if (!isReady || !supabase) {
+    return {
+      data: [],
+      isLoading: true,
+      error: null,
+      refetch: async () => {}
+    };
+  }
+
+  return queryResult;
 }
 

@@ -108,9 +108,9 @@ export function CareerImpactScore({
           <CareerImpactBadge score={score} variant="compact" />
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+          <div className="flex-1 bg-gray-200 rounded h-1.5">
             <div 
-              className={cn('h-1.5 rounded-full', getBgColorClass(scoreValue))}
+              className={cn('h-1.5 rounded', getBgColorClass(scoreValue))}
               style={{ width: `${scoreValue}%` }}
             />
           </div>

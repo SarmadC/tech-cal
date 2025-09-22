@@ -1,5 +1,3 @@
-'use client';
-
 // Removed unused imports - using SupabaseClientType from types
 import { CareerProfile, CareerOnboardingData } from '@/types/career';
 import { AppProfile, Json, SupabaseClientType } from '@/types';

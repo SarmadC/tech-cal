@@ -16,7 +16,7 @@ import { useEffect, useRef } from 'react';
 export function useEventListener<T extends keyof WindowEventMap>(
   eventName: T,
   handler: (event: WindowEventMap[T]) => void,
-  element: Window | Document | HTMLElement | null = window,
+  element: Window | Document | HTMLElement | null = typeof window !== 'undefined' ? window : null,
   options?: boolean | AddEventListenerOptions
 ) {
   // Store handler in ref to avoid re-attaching listeners on every render
@@ -51,7 +51,7 @@ export function useEventListener<T extends keyof WindowEventMap>(
  */
 export function useScrollListener(
   handler: (event: Event) => void,
-  element: Window | Document | HTMLElement | null = window,
+  element: Window | Document | HTMLElement | null = typeof window !== 'undefined' ? window : null,
   options?: boolean | AddEventListenerOptions
 ) {
   useEventListener('scroll', handler, element, options);
@@ -66,7 +66,7 @@ export function useScrollListener(
  */
 export function useResizeListener(
   handler: (event: Event) => void,
-  element: Window | Document | HTMLElement | null = window,
+  element: Window | Document | HTMLElement | null = typeof window !== 'undefined' ? window : null,
   options?: boolean | AddEventListenerOptions
 ) {
   useEventListener('resize', handler, element, options);
@@ -85,7 +85,7 @@ export function useClickOutside<T extends HTMLElement>(
   enabled: boolean = true
 ) {
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || typeof window === 'undefined') return;
 
     const handleClickOutside = (event: MouseEvent) => {
       if (ref.current && !ref.current.contains(event.target as Node)) {

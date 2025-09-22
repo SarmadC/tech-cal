@@ -17,7 +17,9 @@ export default function Navbar() {
     const { user, loading } = useAuth();
 
     useScrollListener(() => {
-        setIsScrolled(window.scrollY > 10);
+        if (typeof window !== 'undefined') {
+            setIsScrolled(window.scrollY > 10);
+        }
     });
 
     const navLinks = [

@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts';
 import { CareerOnboardingData } from '@/types/career';
 import { CareerProfileService } from '@/services/careerProfileService';
-import { useSupabase } from '@/components/providers/SupabaseProvider';
+import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import { toast } from 'sonner';
 
@@ -15,7 +15,7 @@ export default function CareerOnboardingPage() {
   const queryClient = useQueryClient();
   const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const supabase = useSupabase();
+  const { supabase, isReady } = useSupabaseSafe();
 
   // Redirect if user is not authenticated
   React.useEffect(() => {
@@ -30,6 +30,29 @@ export default function CareerOnboardingPage() {
       return;
     }
   }, [user, profile, router]);
+
+  // Listen for profile updates to handle the case where onboarding was just completed
+  React.useEffect(() => {
+    const handleProfileUpdate = () => {
+      // Force a re-render by updating a state or refetching profile data
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdate);
+  }, [queryClient, user?.id]);
+
+  // Wait for Supabase client to be ready
+  if (!isReady || !supabase) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading onboarding...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading if supabase client is not ready yet
   if (!supabase) {
