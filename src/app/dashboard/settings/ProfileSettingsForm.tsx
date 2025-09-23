@@ -11,6 +11,7 @@ import { updateUserProfileAction, FormState } from './actions';
 import type { AppProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { CircleNotchIcon } from '@phosphor-icons/react';
+import { TIMEZONE_OPTIONS } from '@/types/career';
 
 interface ProfileSettingsFormProps {
     profile: AppProfile | null;
@@ -71,14 +72,29 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                 <label htmlFor="timezone" className="block text-sm font-medium text-foreground-secondary mb-2">
                     Timezone
                 </label>
-                <input
+                <select
                     id="timezone"
                     name="timezone"
                     defaultValue={profile?.timezone || ''}
-                    placeholder="e.g., America/New_York"
-                    // Theming: Using theme variables for consistency
                     className="w-full px-4 py-2.5 bg-background-main border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary"
-                />
+                >
+                    <option value="">Select your timezone</option>
+                    {Object.entries(
+                        TIMEZONE_OPTIONS.reduce((groups, tz) => {
+                            if (!groups[tz.region]) groups[tz.region] = [];
+                            groups[tz.region].push(tz);
+                            return groups;
+                        }, {} as Record<string, typeof TIMEZONE_OPTIONS[number][]>)
+                    ).map(([region, timezones]) => (
+                        <optgroup key={region} label={region}>
+                            {timezones.map(tz => (
+                                <option key={tz.value} value={tz.value}>
+                                    {tz.label}
+                                </option>
+                            ))}
+                        </optgroup>
+                    ))}
+                </select>
                 {state.errors?.timezone && (
                     <p className="mt-2 text-sm text-red-500" role="alert">
                         {state.errors.timezone[0]}

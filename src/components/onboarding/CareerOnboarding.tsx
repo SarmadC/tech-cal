@@ -12,7 +12,11 @@ import {
   AvailableTime,
   BudgetRange,
   NetworkingGoal,
-  CareerEventType
+  CareerEventType,
+  ROLE_TAXONOMY,
+  COMPANY_SIZE_OPTIONS,
+  SENIORITY_LEVELS,
+  INDUSTRY_FOCUS
 } from '@/types/career';
 
 interface CareerOnboardingProps {
@@ -52,7 +56,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   const isStepComplete = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!(data.step1_role?.currentRole && data.step1_role?.seniority);
+        return !!(data.step1_role?.currentRole && data.step1_role?.seniority && data.step1_role?.industry);
       case 2:
         return !!(data.step2_skills?.primarySkills?.length || data.step2_skills?.skillsToLearn?.length);
       case 3:
@@ -105,21 +109,29 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       <div className="text-center mb-8">
         <User size={48} className="mx-auto mb-4 text-blue-600" />
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Tell us about your role</h2>
-        <p className="text-gray-600">This helps us recommend the most relevant events for your career level.</p>
+        <p className="text-gray-600">This helps us find your peer group and recommend relevant events.</p>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Current Role</label>
-        <input
-          type="text"
-          placeholder="e.g., Software Engineer, Product Manager, Data Scientist"
+        <select
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           value={data.step1_role?.currentRole || ''}
-          onChange={(e) => updateData('step1_role', { 
-            ...data.step1_role, 
-            currentRole: e.target.value 
+          onChange={(e) => updateData('step1_role', {
+            ...data.step1_role,
+            currentRole: e.target.value
           })}
-        />
+        >
+          <option value="">Select your role</option>
+          {Object.entries(ROLE_TAXONOMY).map(([category, roles]) => (
+            <optgroup key={category} label={category}>
+              {roles.map(role => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <p className="text-xs text-gray-500 mt-1">Choose the role that best matches your current position</p>
       </div>
 
       <div>
@@ -127,24 +139,32 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         <select
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           value={data.step1_role?.seniority || ''}
-          onChange={(e) => updateData('step1_role', { 
-            ...data.step1_role, 
-            seniority: e.target.value as SeniorityLevel 
+          onChange={(e) => updateData('step1_role', {
+            ...data.step1_role,
+            seniority: e.target.value as SeniorityLevel
           })}
         >
           <option value="">Select your level</option>
-          <option value="student">Student</option>
-          <option value="entry-level">Entry Level (0-2 years)</option>
-          <option value="junior">Junior (2-4 years)</option>
-          <option value="mid-level">Mid-level (4-7 years)</option>
-          <option value="senior">Senior (7-12 years)</option>
-          <option value="staff">Staff (12+ years)</option>
-          <option value="principal">Principal (15+ years)</option>
-          <option value="lead">Team Lead</option>
-          <option value="manager">Manager</option>
-          <option value="director">Director</option>
-          <option value="vp">VP/Executive</option>
-          <option value="founder">Founder/Entrepreneur</option>
+          {SENIORITY_LEVELS.map(level => (
+            <option key={level.value} value={level.value}>{level.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Industry Focus</label>
+        <select
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          value={data.step1_role?.industry || ''}
+          onChange={(e) => updateData('step1_role', {
+            ...data.step1_role,
+            industry: e.target.value
+          })}
+        >
+          <option value="">Select your industry</option>
+          {INDUSTRY_FOCUS.map(industry => (
+            <option key={industry} value={industry}>{industry}</option>
+          ))}
         </select>
       </div>
 
@@ -153,18 +173,15 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         <select
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           value={data.step1_role?.companySize || ''}
-          onChange={(e) => updateData('step1_role', { 
-            ...data.step1_role, 
-            companySize: e.target.value as CompanySize 
+          onChange={(e) => updateData('step1_role', {
+            ...data.step1_role,
+            companySize: e.target.value as CompanySize
           })}
         >
           <option value="">Select company size</option>
-          <option value="startup">Startup (&lt; 50 employees)</option>
-          <option value="small">Small (50-200 employees)</option>
-          <option value="medium">Medium (200-1000 employees)</option>
-          <option value="large">Large (1000-10000 employees)</option>
-          <option value="enterprise">Enterprise (10000+ employees)</option>
-          <option value="freelance">Freelance/Independent</option>
+          {COMPANY_SIZE_OPTIONS.map(size => (
+            <option key={size.value} value={size.value}>{size.label}</option>
+          ))}
         </select>
       </div>
     </div>

@@ -96,7 +96,7 @@ export async function signupAction(
         };
     }
 
-    return redirect('/onboarding/career');
+    return redirect('/dashboard');
 }
 
 export async function forgotPasswordAction(

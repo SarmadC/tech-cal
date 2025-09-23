@@ -130,7 +130,7 @@ function CareerAnalyticsSection({
           <TargetIcon className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 className="font-medium text-gray-900 dark:text-white mb-2">No career analytics available</h3>
           <p className="text-gray-600 dark:text-gray-300 mb-4">Complete your career profile to see personalized insights.</p>
-          <Button asChild><Link href="/onboarding/career">Complete Profile</Link></Button>
+          <Button asChild><Link href="/dashboard/settings?tab=career">Complete Profile</Link></Button>
         </div>
       );
     }
@@ -197,7 +197,7 @@ function CareerAnalyticsSection({
               <Link href="/calendar">Browse Events</Link>
             </Button>
             <Button asChild>
-              <Link href="/onboarding/career">Complete Profile</Link>
+              <Link href="/dashboard/settings?tab=career">Complete Profile</Link>
             </Button>
           </div>
         </div>
@@ -250,7 +250,7 @@ function CareerAnalyticsSection({
               description: 'Add skills and goals for better recommendations',
               actionText: 'Complete',
               priority: 'high' as const,
-              onAction: () => window.location.href = '/onboarding/career'
+              onAction: () => window.location.href = '/dashboard/settings?tab=career'
             },
             {
               id: 'browse-events',
@@ -379,40 +379,16 @@ export default function DashboardClientView({
                     </SectionErrorBoundary>
                 )}
 
-                {/* Overview Panel - Consolidated metrics and insights */}
+                {/* Career Intelligence Overview */}
                 <SectionErrorBoundary name="DashboardSection">
-                    <OverviewPanel 
+                    <OverviewPanel
                         allEvents={allUpcomingEvents || []}
                         trackedEvents={trackedEvents || []}
                     />
                 </SectionErrorBoundary>
 
-                {/* Career Analytics - Show if user has completed career profile */}
-                {profile && CareerProfileService.hasCompletedOnboarding(profile) && (
-                    <SectionErrorBoundary name="DashboardSection">
-                        <CareerAnalyticsSection 
-                            userProfile={profile}
-                            trackedEvents={trackedEvents || []}
-                            upcomingEvents={allUpcomingEvents || []}
-                        />
-                    </SectionErrorBoundary>
-                )}
-
-                {/* Quick Actions */}
-                <SectionErrorBoundary name="DashboardSection">
-                    <QuickActions className="mb-8" />
-                </SectionErrorBoundary>
-
-                {/* Activity Feed and Upcoming Events */}
+                {/* Your Events and Activity - Promoted to main content */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-1">
-                        <SectionErrorBoundary name="DashboardSection">
-                            <ActivityFeed 
-                                events={allUpcomingEvents || []}
-                                trackedEvents={trackedEvents || []}
-                            />
-                        </SectionErrorBoundary>
-                    </div>
                     <div className="lg:col-span-2">
                         <SectionErrorBoundary name="DashboardSection">
                             <EventList
@@ -427,7 +403,31 @@ export default function DashboardClientView({
                             />
                         </SectionErrorBoundary>
                     </div>
+                    <div className="lg:col-span-1">
+                        <SectionErrorBoundary name="DashboardSection">
+                            <ActivityFeed
+                                events={allUpcomingEvents || []}
+                                trackedEvents={trackedEvents || []}
+                            />
+                        </SectionErrorBoundary>
+                    </div>
                 </div>
+
+                {/* Quick Actions */}
+                <SectionErrorBoundary name="DashboardSection">
+                    <QuickActions />
+                </SectionErrorBoundary>
+
+                {/* Career Analytics - Show if user has completed career profile */}
+                {profile && CareerProfileService.hasCompletedOnboarding(profile) && (
+                    <SectionErrorBoundary name="DashboardSection">
+                        <CareerAnalyticsSection
+                            userProfile={profile}
+                            trackedEvents={trackedEvents || []}
+                            upcomingEvents={allUpcomingEvents || []}
+                        />
+                    </SectionErrorBoundary>
+                )}
 
             </div>
         </div>

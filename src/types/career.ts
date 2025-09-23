@@ -1,5 +1,201 @@
 // Career and Professional Development Types
 
+// Predefined Role Taxonomy for Peer Comparison
+export const ROLE_CATEGORIES = {
+  ENGINEERING: 'Engineering',
+  DATA_AI: 'Data & AI',
+  PRODUCT_DESIGN: 'Product & Design',
+  LEADERSHIP: 'Leadership & Strategy'
+} as const;
+
+export const ROLE_TAXONOMY = {
+  [ROLE_CATEGORIES.ENGINEERING]: [
+    'Frontend Engineer',
+    'Backend Engineer',
+    'Full Stack Engineer',
+    'Mobile Engineer (iOS/Android)',
+    'DevOps Engineer',
+    'Site Reliability Engineer',
+    'QA Engineer',
+    'Security Engineer'
+  ],
+  [ROLE_CATEGORIES.DATA_AI]: [
+    'Data Scientist',
+    'Data Analyst',
+    'Data Engineer',
+    'ML Engineer',
+    'AI Research Scientist'
+  ],
+  [ROLE_CATEGORIES.PRODUCT_DESIGN]: [
+    'Product Manager',
+    'Product Owner',
+    'UX Designer',
+    'UI Designer',
+    'UX Researcher',
+    'Technical Product Manager'
+  ],
+  [ROLE_CATEGORIES.LEADERSHIP]: [
+    'Engineering Manager',
+    'Technical Lead',
+    'Product Director',
+    'VP of Engineering',
+    'CTO',
+    'Solutions Architect',
+    'Developer Relations',
+    'Technical Writer'
+  ]
+} as const;
+
+// Flattened list for easy access
+export const ALL_PREDEFINED_ROLES = Object.values(ROLE_TAXONOMY).flat();
+
+// Company size categories
+export const COMPANY_SIZE_OPTIONS = [
+  { value: 'startup', label: 'Startup (< 50 employees)' },
+  { value: 'small', label: 'Small (50-200 employees)' },
+  { value: 'medium', label: 'Medium (200-1000 employees)' },
+  { value: 'large', label: 'Large (1000-10000 employees)' },
+  { value: 'enterprise', label: 'Enterprise (10000+ employees)' },
+  { value: 'freelance', label: 'Freelance/Independent' }
+] as const;
+
+// Enhanced seniority levels
+export const SENIORITY_LEVELS = [
+  { value: 'student', label: 'Student' },
+  { value: 'entry-level', label: 'Entry Level (0-2 years)' },
+  { value: 'junior', label: 'Junior (2-4 years)' },
+  { value: 'mid-level', label: 'Mid-level (4-7 years)' },
+  { value: 'senior', label: 'Senior (7-12 years)' },
+  { value: 'staff', label: 'Staff (12+ years)' },
+  { value: 'principal', label: 'Principal (15+ years)' },
+  { value: 'lead', label: 'Team Lead' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'director', label: 'Director' },
+  { value: 'vp', label: 'VP/Executive' },
+  { value: 'founder', label: 'Founder/Entrepreneur' }
+] as const;
+
+// Industry focus options
+export const INDUSTRY_FOCUS = [
+  'Technology/Software',
+  'Healthcare/Biotech',
+  'Finance/FinTech',
+  'E-commerce/Retail',
+  'Gaming/Entertainment',
+  'Education/EdTech',
+  'Energy/CleanTech',
+  'Aerospace/Defense',
+  'Consulting',
+  'Startup/Early Stage',
+  'Non-Profit/Government',
+  'Other'
+] as const;
+
+// Role-specific event scoring weights
+export const ROLE_EVENT_WEIGHTS = {
+  [ROLE_CATEGORIES.ENGINEERING]: {
+    'technical': 1.0,
+    'workshop': 0.9,
+    'conference': 0.8,
+    'hackathon': 0.8,
+    'certification': 0.7,
+    'networking': 0.4,
+    'business': 0.3
+  },
+  [ROLE_CATEGORIES.DATA_AI]: {
+    'technical': 1.0,
+    'research': 0.9,
+    'conference': 0.8,
+    'workshop': 0.8,
+    'certification': 0.7,
+    'networking': 0.5,
+    'business': 0.4
+  },
+  [ROLE_CATEGORIES.PRODUCT_DESIGN]: {
+    'business': 1.0,
+    'user-research': 0.9,
+    'design': 0.9,
+    'strategy': 0.8,
+    'conference': 0.7,
+    'networking': 0.6,
+    'technical': 0.4
+  },
+  [ROLE_CATEGORIES.LEADERSHIP]: {
+    'leadership': 1.0,
+    'strategy': 0.9,
+    'business': 0.8,
+    'management': 0.8,
+    'networking': 0.7,
+    'conference': 0.6,
+    'technical': 0.5
+  }
+} as const;
+
+// Minimum cohort sizes for reliable comparison
+export const COHORT_REQUIREMENTS = {
+  MINIMUM_VIABLE: 10,
+  SMALL_SAMPLE: 50,
+  CONFIDENT_SAMPLE: 100
+} as const;
+
+// Common timezone options organized by region
+export const TIMEZONE_OPTIONS = [
+  // North America
+  { value: 'America/New_York', label: 'Eastern Time (ET)', region: 'North America' },
+  { value: 'America/Chicago', label: 'Central Time (CT)', region: 'North America' },
+  { value: 'America/Denver', label: 'Mountain Time (MT)', region: 'North America' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)', region: 'North America' },
+  { value: 'America/Anchorage', label: 'Alaska Time (AKT)', region: 'North America' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)', region: 'North America' },
+  { value: 'America/Toronto', label: 'Toronto (Eastern)', region: 'North America' },
+  { value: 'America/Vancouver', label: 'Vancouver (Pacific)', region: 'North America' },
+
+  // Europe
+  { value: 'Europe/London', label: 'London (GMT/BST)', region: 'Europe' },
+  { value: 'Europe/Paris', label: 'Paris (CET/CEST)', region: 'Europe' },
+  { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)', region: 'Europe' },
+  { value: 'Europe/Madrid', label: 'Madrid (CET/CEST)', region: 'Europe' },
+  { value: 'Europe/Rome', label: 'Rome (CET/CEST)', region: 'Europe' },
+  { value: 'Europe/Amsterdam', label: 'Amsterdam (CET/CEST)', region: 'Europe' },
+  { value: 'Europe/Stockholm', label: 'Stockholm (CET/CEST)', region: 'Europe' },
+  { value: 'Europe/Zurich', label: 'Zurich (CET/CEST)', region: 'Europe' },
+  { value: 'Europe/Dublin', label: 'Dublin (GMT/IST)', region: 'Europe' },
+  { value: 'Europe/Helsinki', label: 'Helsinki (EET/EEST)', region: 'Europe' },
+  { value: 'Europe/Moscow', label: 'Moscow (MSK)', region: 'Europe' },
+
+  // Asia Pacific
+  { value: 'Asia/Tokyo', label: 'Tokyo (JST)', region: 'Asia Pacific' },
+  { value: 'Asia/Shanghai', label: 'Shanghai (CST)', region: 'Asia Pacific' },
+  { value: 'Asia/Hong_Kong', label: 'Hong Kong (HKT)', region: 'Asia Pacific' },
+  { value: 'Asia/Singapore', label: 'Singapore (SGT)', region: 'Asia Pacific' },
+  { value: 'Asia/Seoul', label: 'Seoul (KST)', region: 'Asia Pacific' },
+  { value: 'Asia/Taipei', label: 'Taipei (CST)', region: 'Asia Pacific' },
+  { value: 'Asia/Bangkok', label: 'Bangkok (ICT)', region: 'Asia Pacific' },
+  { value: 'Asia/Manila', label: 'Manila (PST)', region: 'Asia Pacific' },
+  { value: 'Asia/Kolkata', label: 'Mumbai/Delhi (IST)', region: 'Asia Pacific' },
+  { value: 'Asia/Dubai', label: 'Dubai (GST)', region: 'Asia Pacific' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)', region: 'Asia Pacific' },
+  { value: 'Australia/Melbourne', label: 'Melbourne (AEDT/AEST)', region: 'Asia Pacific' },
+  { value: 'Australia/Perth', label: 'Perth (AWST)', region: 'Asia Pacific' },
+  { value: 'Pacific/Auckland', label: 'Auckland (NZDT/NZST)', region: 'Asia Pacific' },
+
+  // South America
+  { value: 'America/Sao_Paulo', label: 'São Paulo (BRT)', region: 'South America' },
+  { value: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires (ART)', region: 'South America' },
+  { value: 'America/Lima', label: 'Lima (PET)', region: 'South America' },
+  { value: 'America/Bogota', label: 'Bogotá (COT)', region: 'South America' },
+
+  // Africa & Middle East
+  { value: 'Africa/Cairo', label: 'Cairo (EET)', region: 'Africa & Middle East' },
+  { value: 'Africa/Lagos', label: 'Lagos (WAT)', region: 'Africa & Middle East' },
+  { value: 'Africa/Johannesburg', label: 'Johannesburg (SAST)', region: 'Africa & Middle East' },
+  { value: 'Asia/Jerusalem', label: 'Jerusalem (IST)', region: 'Africa & Middle East' },
+  { value: 'Asia/Riyadh', label: 'Riyadh (AST)', region: 'Africa & Middle East' },
+
+  // UTC
+  { value: 'UTC', label: 'UTC (Coordinated Universal Time)', region: 'UTC' }
+] as const;
+
 export interface CareerProfile {
   // User context (required for database operations)
   userId: string;

@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const code = searchParams.get('code')
     const error = searchParams.get('error')
     const errorDescription = searchParams.get('error_description')
-    const next = searchParams.get('next') ?? '/onboarding/career'
+    const next = searchParams.get('next') ?? '/dashboard'
 
     // Handle OAuth provider errors first
     if (error) {
