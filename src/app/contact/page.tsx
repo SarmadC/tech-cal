@@ -53,7 +53,7 @@ export default function ContactPage() {
                         Get in Touch
                     </h1>
                     <p className="text-xl text-foreground-secondary max-w-3xl">
-                        Have questions about TechCalendar? Want to discuss enterprise plans?
+                        Have questions about KureCal? Want to discuss enterprise plans?
                         We are here to help.
                     </p>
                 </div>

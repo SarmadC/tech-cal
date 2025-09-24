@@ -89,7 +89,7 @@ export default function ApiDocsPage() {
                 {/* Call to Action */}
                 <div className="text-center">
                     <h3 className="text-2xl font-bold text-foreground-primary mb-4">
-                        In the meantime, explore TechCalendar
+                        In the meantime, explore KureCal
                     </h3>
                     <p className="text-foreground-secondary mb-8">
                         Start using our platform today to discover and track the tech events that matter to you.

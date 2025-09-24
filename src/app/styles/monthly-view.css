@@ -69,7 +69,7 @@
   padding: 12px 8px !important;
 }
 
-/* Day cells styling */
+/* Day cells styling - ensure equal heights */
 .tech-calendar-month-view .fc-daygrid-day {
   background: transparent;
   border-color: var(--border-subtle);
@@ -227,59 +227,69 @@
   width: calc((100% - (var(--event-gap) * 3)) / 4);
 }
 
-/* Make day frame allocate remaining space to events area */
+/* Proportional Event Height System */
 .tech-calendar-month-view .fc-daygrid-day-frame {
+  --events-count: 1; /* Default to 1 event, will be overridden by JS */
+  --available-height: calc(100% - 32px); /* Account for day number and padding */
+  --event-height: calc(var(--available-height) / var(--events-count));
+  --min-event-height: 32px; /* Minimum height for readability */
+
   display: flex;
   flex-direction: column;
   height: 100% !important;
-  min-height: 100% !important;
+  min-height: 120px; /* Ensure minimum day cell height */
+  position: relative;
 }
 
-/* Events container - use flex column with equal distribution */
+/* Day events container - stack events vertically */
 .tech-calendar-month-view .fc-daygrid-day-events {
-  flex: 1 1 auto;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   padding: var(--cell-pad);
+  gap: 2px; /* Small gap between events */
   min-height: 0;
+  overflow: hidden;
 }
 
-/* Each harness adapts to dynamic sizing instead of equal distribution */
+/* Each event harness gets proportional height */
 .tech-calendar-month-view .fc-daygrid-event-harness {
+  /* Use the calculated proportional height, but ensure minimum */
+  height: max(var(--event-height), var(--min-event-height)) !important;
   margin: 0 !important;
-  position: static !important;
   display: flex;
-  min-height: 0;
-  flex: none; /* Let dynamic sizing control the height */
-  height: auto !important; /* Allow dynamic height setting */
+  flex-direction: column;
 }
 
-/* Events respect dynamic height sizing */
+/* Event container fills the harness completely */
 .tech-calendar-month-view .fc-daygrid-event {
   margin: 0 !important;
   width: 100% !important;
-  height: auto !important; /* Let dynamic sizing control height */
+  height: 100% !important;
   display: flex;
-  min-height: 0; /* Allow flex shrinking */
-  box-sizing: border-box;
+  flex-direction: column;
+  min-height: var(--min-event-height);
 }
 
+/* Event main content fills the event container */
 .tech-calendar-month-view .fc-event .fc-event-main {
   height: 100% !important;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Center content vertically */
-  padding: 8px; /* Add some padding for better appearance */
+  justify-content: center;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-/* Ensure our mini event card respects dynamic sizing */
+/* Ensure our mini event card fills its container */
 .tech-calendar-month-view .event-card.mini {
-  height: auto !important; /* Let dynamic sizing control height */
+  height: 100% !important;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Center content vertically */
+  justify-content: center;
   box-sizing: border-box;
+  min-height: var(--min-event-height);
 }
 
 /* More link styling for overflow events */
@@ -391,7 +401,13 @@
   position: relative;
 }
 
-.tech-calendar-month-view .tracked-event::after {
+.tech-calendar-month-view .completed-event {
+  border-left: 4px solid var(--success) !important;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 50%, transparent 100%) !important;
+  position: relative;
+}
+
+.tech-calendar-month-view .completed-event::after {
   content: '✓';
   position: absolute;
   top: 2px;
@@ -513,28 +529,24 @@
     font-size: 0.7rem;
   }
   
-  /* Mobile dynamic sizing adjustments */
-  .tech-calendar-month-view .fc-event.event-single {
-    height: calc(100% - 4px);
+  /* Mobile proportional height adjustments */
+  .tech-calendar-month-view .fc-daygrid-day-frame {
+    --min-event-height: 24px; /* Smaller minimum for mobile */
+    min-height: 80px; /* Smaller day cells on mobile */
   }
-  
-  .tech-calendar-month-view .fc-event.event-half {
-    width: 100%;
-    margin-right: 0;
-    margin-bottom: 1px;
-    height: auto;
+
+  .tech-calendar-month-view .fc-event .fc-event-main {
+    padding: 4px 6px; /* Tighter padding on mobile */
   }
-  
-  .tech-calendar-month-view .fc-event.event-third,
-  .tech-calendar-month-view .fc-event.event-quarter {
-    width: 100%;
-    margin-right: 0;
-    margin-bottom: 1px;
-    height: auto;
-  }
-  
-  .month-day-cell {
-    /* Dynamic height based on content */
+
+  /* Ensure text remains readable at smaller sizes */
+  .tech-calendar-month-view .fc-event .event-title,
+  .tech-calendar-month-view .fc-event .event-time {
+    font-size: 0.65rem;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -563,9 +575,15 @@
   .tech-calendar-month-view .fc-event .fc-event-main {
     font-size: 0.65rem;
   }
-  
-  .month-day-cell {
-    /* Dynamic height based on content */
+
+  /* Very small screen proportional height adjustments */
+  .tech-calendar-month-view .fc-daygrid-day-frame {
+    --min-event-height: 20px; /* Even smaller minimum for very small screens */
+    min-height: 60px; /* Very compact day cells */
+  }
+
+  .tech-calendar-month-view .fc-event .fc-event-main {
+    padding: 3px 4px; /* Very tight padding */
   }
 }
 

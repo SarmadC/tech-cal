@@ -40,8 +40,8 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
     const router = useRouter(); // 2. INITIALIZE THE ROUTER
     const searchParams = useSearchParams(); // 3. GET CURRENT URL PARAMS
 
-    // 4. DERIVE THE CURRENT VIEW from the URL, defaulting to 'month'
-    const view = (searchParams.get('view') as CalendarViewType) || 'month';
+    // 4. DERIVE THE CURRENT VIEW from the URL, defaulting to 'discover' (matches CalendarLayout)
+    const view = (searchParams.get('view') as CalendarViewType) || 'discover';
 
     // 5. NEW HANDLER to change the view by navigating to a new URL
     const handleViewChange = useCallback((newView: CalendarViewType) => {
@@ -142,54 +142,58 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
 
     return (
         <header className="h-20 flex-shrink-0 px-4 md:px-6 flex items-center justify-between border-b border-border-subtle">
-            {/* Left Section: Month label */}
+            {/* Left Section: Month label - Hidden in discover view */}
             <div className="flex items-center space-x-4">
-                {/* Navigation arrows + Month/Year + date context */}
-                <div className="hidden md:flex items-center gap-2" aria-live="polite">
-                    <button
-                        type="button"
-                        onClick={() => onNavigate('prev')}
-                        className="p-1.5 rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
-                        aria-label="Previous period"
-                    >
-                        <MaterialIcon name="chevron_left" size={16} />
-                    </button>
-                    <div className="text-foreground-primary font-medium select-none">
-                        <span>{monthYearLabel}</span>
-                        <span className="text-foreground-secondary text-sm ml-2">• {dateContextLabel}</span>
+                {/* Navigation arrows + Month/Year + date context - Only show for non-discover views */}
+                {view !== 'discover' && (
+                    <div className="hidden md:flex items-center gap-2" aria-live="polite">
+                        <button
+                            type="button"
+                            onClick={() => onNavigate('prev')}
+                            className="p-1.5 rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
+                            aria-label="Previous period"
+                        >
+                            <MaterialIcon name="chevron_left" size={16} />
+                        </button>
+                        <div className="text-foreground-primary font-medium select-none">
+                            <span>{monthYearLabel}</span>
+                            <span className="text-foreground-secondary text-sm ml-2">• {dateContextLabel}</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => onNavigate('next')}
+                            className="p-1.5 rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
+                            aria-label="Next period"
+                        >
+                            <MaterialIcon name="chevron_right" size={16} />
+                        </button>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => onNavigate('next')}
-                        className="p-1.5 rounded-lg text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
-                        aria-label="Next period"
-                    >
-                        <MaterialIcon name="chevron_right" size={16} />
-                    </button>
-                </div>
+                )}
             </div>
 
             {/* Center Section: Calendar Controls */}
             <div className="flex items-center space-x-2 md:space-x-4">
-                {/* Keep only the Today button */}
-                <div className="flex items-center space-x-1">
-                    <button 
-                        onClick={() => onNavigate('today')} 
-                        className="text-sm px-3 py-1.5 rounded-lg hover:bg-background-tertiary transition-colors"
-                        aria-pressed={isToday}
-                        aria-label={isToday ? 'Go to today' : `Go to today, ${todayButtonLabel}`}
-                    >
-                        {todayButtonLabel}
-                    </button>
-                </div>
+                {/* Today button - Hidden in discover view */}
+                {view !== 'discover' && (
+                    <div className="flex items-center space-x-1">
+                        <button
+                            onClick={() => onNavigate('today')}
+                            className="text-sm px-3 py-1.5 rounded-lg hover:bg-background-tertiary transition-colors"
+                            aria-pressed={isToday}
+                            aria-label={isToday ? 'Go to today' : `Go to today, ${todayButtonLabel}`}
+                        >
+                            {todayButtonLabel}
+                        </button>
+                    </div>
+                )}
 
                 {/* Desktop View Switcher Buttons */}
                 <div className="hidden md:flex items-center bg-background-tertiary p-1 rounded-lg">
                     {(['discover', 'month', 'week', 'day'] as CalendarViewType[]).map(v => (
                         <button
                             key={v}
-                            onClick={() => handleViewChange(v)} // 6. USE THE NEW HANDLER
-                            className={`px-3 py-1 text-sm rounded-md transition-colors capitalize ${view === v // 7. The active state is now based on the URL-derived view
+                            onClick={() => handleViewChange(v)}
+                            className={`px-3 py-1 text-sm rounded-md transition-colors capitalize ${view === v
                                     ? 'bg-background-elevated text-foreground-primary shadow-sm'
                                     : 'text-foreground-secondary hover:text-foreground-primary'
                                 }`}
@@ -215,20 +219,22 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                     )}
                 </button>
 
-                {/* Move Go to date next to filter button */}
-                <div className="hidden md:flex items-center">
-                    <button
-                        type="button"
-                        className="flex items-center gap-2 text-sm px-3 py-1.5 bg-background-tertiary rounded-lg hover:bg-background-elevated transition-colors"
-                        onClick={openDatePicker}
-                        aria-haspopup="dialog"
-                        aria-expanded={isDatePickerOpen}
-                        aria-label="Open go to date picker"
-                    >
-                        <MaterialIcon name="event" size={16} />
-                        Go to date
-                    </button>
-                </div>
+                {/* Go to date button - Hidden in discover view */}
+                {view !== 'discover' && (
+                    <div className="hidden md:flex items-center">
+                        <button
+                            type="button"
+                            className="flex items-center gap-2 text-sm px-3 py-1.5 bg-background-tertiary rounded-lg hover:bg-background-elevated transition-colors"
+                            onClick={openDatePicker}
+                            aria-haspopup="dialog"
+                            aria-expanded={isDatePickerOpen}
+                            aria-label="Open go to date picker"
+                        >
+                            <MaterialIcon name="event" size={16} />
+                            Go to date
+                        </button>
+                    </div>
+                )}
 
                 {/* Themed Quick Date Picker Popover */}
                     <QuickDatePicker

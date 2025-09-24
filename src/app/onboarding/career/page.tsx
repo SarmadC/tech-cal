@@ -119,7 +119,7 @@ export default function CareerOnboardingPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome to TechCalendar! 🎉
+            Welcome to KureCal! 🎉
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Let&apos;s personalize your experience by learning about your career goals and interests. 

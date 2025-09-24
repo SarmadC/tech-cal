@@ -7,12 +7,13 @@ import {
 } from '@phosphor-icons/react';
 import { useClickOutside } from '@/hooks/useEventListener';
 // 1. UPDATE IMPORTS: Use the new types and the type guard.
-import { Event, isTrackedEvent, TrackedEvent, MultiDayEventInstance } from '@/types';
+import { Event, TrackedEvent, MultiDayEventInstance } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
+import { getEventStatus } from '@/utils/eventStatusUtils';
 import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
 
 // 2. UPDATE PROPS: The component can accept either a base Event or an enriched TrackedEvent.
@@ -39,7 +40,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     const { trackEvent, untrackEvent, isLoading } = useTrackedEventsUnified();
 
     // Use the tracking status directly from the event prop instead of local state
-    const isTracked = isTrackedEvent(event) ? event.isTracked : false;
+    const { isTracked } = getEventStatus(event);
     const cardRef = useRef<HTMLDivElement>(null) as RefObject<HTMLDivElement>;
 
     // Handle click outside to close

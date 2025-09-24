@@ -212,7 +212,7 @@ export default function PricingPage() {
                         Ready to Never Miss a Tech Event?
                     </h2>
                     <p className="text-xl text-foreground-secondary mb-8">
-                        Join thousands of professionals staying ahead with TechCalendar
+                        Join thousands of professionals staying ahead with KureCal
                     </p>
                     <Link
                         href="/calendar"

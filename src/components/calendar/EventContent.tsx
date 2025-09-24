@@ -1,9 +1,8 @@
 // src/components/calendar/EventContent.tsx
 import { FC, useRef } from 'react';
 import { EventContentArg } from '@fullcalendar/core';
-import { Event, isTrackedEvent } from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { formatTime, isEventLive } from '@/utils/dateUtils';
+import { Event } from '@/types';
+import { formatTime } from '@/utils/dateUtils';
 
 interface EventContentProps extends EventContentArg {
     onEventHover?: (event: Event, position: { x: number; y: number }) => void;
@@ -18,6 +17,19 @@ const EventContent: FC<EventContentProps> = ({
 }) => {
     const elementRef = useRef<HTMLDivElement>(null);
     const eventData = event.extendedProps as Event;
+    
+    // Get tracking status
+    const isTracked = ('isTracked' in eventData) && eventData.isTracked;
+    
+    // Check if event is before today's date (completed)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    const eventDate = new Date(eventData.startTime);
+    eventDate.setHours(0, 0, 0, 0); // Start of event date
+    const isCompleted = eventDate < today;
+    
+    const showStar = isTracked;
+    const showCheckmark = isCompleted;
 
     const handleMouseEnter = (_e: React.MouseEvent) => {
         if (onEventHover && elementRef.current) {
@@ -45,15 +57,15 @@ const EventContent: FC<EventContentProps> = ({
             </div>
             <div className="fc-event-title-container">
                 <div className="fc-event-title fc-sticky">
-                    {event.title}
-                    {/* 7. USE UTILITY: Call the imported `isEventLive` utility. */}
-                    {isEventLive(eventData.startTime, eventData.endTime) && (
-                        <Badge variant="destructive" className="ml-1 text-xs">
-                            LIVE
-                        </Badge>
-                    )}
-                    {isTrackedEvent(eventData) && eventData.isTracked && (
-                        <span className="ml-1 text-gray-300">★</span>
+                    {/* @ts-expect-error - event.title type issue with FullCalendar */}
+                    {event.title as string}
+                    {showStar && (
+                        <>
+                            <span className="ml-1 text-gray-300">★</span>
+                            {showCheckmark && (
+                                <span className="ml-1 text-green-500 font-bold">✓</span>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

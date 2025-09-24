@@ -96,7 +96,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
         <div className="min-h-screen bg-background-main pt-20">
             <section className="py-16 px-4 bg-background-secondary border-b border-border-color">
                 <div className="max-w-7xl mx-auto">
-                    <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">TechCalendar Blog</h1>
+                    <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">KureCal Blog</h1>
                     <p className="text-xl text-foreground-secondary max-w-3xl">Stay informed with insights, tutorials, and news from the tech world.</p>
                 </div>
             </section>

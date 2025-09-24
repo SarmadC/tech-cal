@@ -3,11 +3,12 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Event, isTrackedEvent, TrackedEvent, MultiDayEventInstance, EventType } from '@/types';
+import { Event, TrackedEvent, MultiDayEventInstance, EventType } from '@/types';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
+import { getEventStatus } from '@/utils/eventStatusUtils';
 import { CalendarPlusIcon, ShareNetworkIcon, Info, Star, ArrowDown, X, Clock, MapPin, WifiHigh, Users, Calendar } from '@phosphor-icons/react';
 import { useEventActions } from '@/hooks/useEventActions';
 import MobileEventDetailPanel from './MobileEventDetailPanel';
@@ -34,8 +35,8 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  // Use the tracking status directly from the event prop
-  const isTracked = isTrackedEvent(event) ? event.isTracked : false;
+  // Use the tracking status from our utility function
+  const { isTracked } = getEventStatus(event);
 
   // Handle click outside to close
   useEffect(() => {

@@ -4,7 +4,9 @@ import React, { useState, useCallback } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance, isTrackedEvent } from '@/types';
+import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
+import { getEventStatus } from '@/utils/eventStatusUtils';
+import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { processEventsForWeekView } from '@/utils/multiDayEventUtils';
 import { formatTimeRange } from '@/utils/dateUtils';
 import { useEventPreview } from '@/hooks/useEventPreview';
@@ -36,6 +38,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     const internalCalendarRef = React.useRef<FullCalendar | null>(null);
     const activeCalendarRef = calendarRef || internalCalendarRef;
     const [isMobile, setIsMobile] = useState(false);
+    const { trackedEventIds } = useTrackedEventsUnified();
 
     const {
         previewState,
@@ -46,6 +49,36 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     // Add refs for debouncing hover events
     const showTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
     const hideTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+
+    // Track events per day for proportional height distribution
+    const dayEventCounts = React.useRef<Map<string, number>>(new Map());
+    const mountedEvents = React.useRef<Set<string>>(new Set());
+    const totalExpectedEvents = React.useRef<number>(0);
+
+    // Apply proportional heights to day cells based on event counts
+    const applyProportionalHeights = React.useCallback(() => {
+        // Use document.querySelector to find the calendar since FullCalendar API doesn't expose el
+        const calendarEl = document.querySelector('.tech-calendar-month-view .fc');
+        if (!calendarEl) return;
+
+        // Find all day cells and apply event count as CSS custom property
+        const dayCells = calendarEl.querySelectorAll('.fc-daygrid-day');
+        dayCells.forEach((dayCell) => {
+            const dayElement = dayCell as HTMLElement;
+            const dateStr = dayElement.getAttribute('data-date');
+            if (!dateStr) return;
+
+            const eventCount = dayEventCounts.current.get(dateStr) || 0;
+            // Set CSS custom property for event count
+            dayElement.style.setProperty('--events-count', eventCount.toString());
+
+            // Also set it on the day frame for easier CSS targeting
+            const dayFrame = dayElement.querySelector('.fc-daygrid-day-frame');
+            if (dayFrame) {
+                (dayFrame as HTMLElement).style.setProperty('--events-count', eventCount.toString());
+            }
+        });
+    }, []);
 
     // Check if mobile on mount and resize
     React.useEffect(() => {
@@ -146,10 +179,19 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
 
     // Transform events for FullCalendar with dynamic colors
     const calendarEvents = React.useMemo(() => {
-        return processedEvents.map(event => {
+        // Reset tracking when events change
+        dayEventCounts.current.clear();
+        mountedEvents.current.clear();
+
+        const events = processedEvents.map(event => {
             const categoryColor = getCategoryColor(event);
             const titleColor = getPillColor(categoryColor);
-            
+
+            // Count events per day for proportional heights
+            const eventDate = new Date(event.startTime);
+            const dateStr = eventDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+            dayEventCounts.current.set(dateStr, (dayEventCounts.current.get(dateStr) || 0) + 1);
+
             return {
                 id: event.id,
                 title: event.title,
@@ -158,13 +200,18 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 color: categoryColor,
                 extendedProps: {
                     ...event,
-                    isTracked: isTrackedEvent(event) ? event.isTracked : false,
+                    isTracked: trackedEventIds?.has(event.id) ?? false,
                     categoryColor,
                     titleColor,
                 }
             };
         });
-    }, [processedEvents]);
+
+        // Track total expected events for mount completion detection
+        totalExpectedEvents.current = events.length;
+
+        return events;
+    }, [processedEvents, trackedEventIds]);
 
     // Enhanced event content renderer
     const renderEventContent = useCallback((eventInfo: EventContentArg) => {
@@ -192,8 +239,23 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     // Handle event mounting (for styling and dynamic sizing)
     const handleEventDidMount = useCallback((info: EventMountArg) => {
         const eventData = info.event.extendedProps as unknown as Event;
-        if (isTrackedEvent(eventData) && eventData.isTracked) {
+        const { isTracked } = getEventStatus(eventData);
+
+        // Track mounted events for proportional height system
+        mountedEvents.current.add(info.event.id);
+
+        // Check if event is before today's date (completed)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+        const eventDate = new Date(eventData.startTime);
+        eventDate.setHours(0, 0, 0, 0); // Start of event date
+        const isCompleted = eventDate < today;
+        
+        if (isTracked) {
             info.el.classList.add('tracked-event');
+        }
+        if (isCompleted) {
+            info.el.classList.add('completed-event');
         }
         
         // Apply base event-card classes to the FullCalendar event element
@@ -212,47 +274,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         // Ensure hover detection works across entire element
         (info.el as HTMLElement).style.pointerEvents = 'all';
         (info.el as HTMLElement).style.cursor = 'pointer';
-
-        // Dynamic sizing based on number of events in the day
-        const dayCell = info.el.closest('.fc-daygrid-day');
-        if (dayCell) {
-            const eventsInDay = dayCell.querySelectorAll('.fc-event');
-            const eventCount = eventsInDay.length;
-            const eventGap = 6; // 6px gap between events
-            
-            // Calculate available height for events (cell height minus day number and padding)
-            const dayEvents = dayCell.querySelector('.fc-daygrid-day-events') as HTMLElement;
-            if (dayEvents) {
-                const cellHeight = dayCell.getBoundingClientRect().height;
-                const dayNumber = dayCell.querySelector('.fc-daygrid-day-number') as HTMLElement;
-                const dayNumberHeight = dayNumber ? dayNumber.getBoundingClientRect().height : 20;
-                const cellPadding = 12; // 6px top + 6px bottom padding
-                
-                const availableHeight = cellHeight - dayNumberHeight - cellPadding;
-                
-                if (eventCount === 1) {
-                    // Single event: fill entire available height
-                    (info.el as HTMLElement).style.height = `${availableHeight}px`;
-                    (info.el as HTMLElement).style.minHeight = `${availableHeight}px`;
-                } else if (eventCount === 2) {
-                    // Two events: each takes exactly half with gap
-                    const eventHeight = (availableHeight - eventGap) / 2;
-                    (info.el as HTMLElement).style.height = `${eventHeight}px`;
-                    (info.el as HTMLElement).style.minHeight = `${eventHeight}px`;
-                } else if (eventCount === 3) {
-                    // Three events: each takes exactly one-third with gaps
-                    const eventHeight = (availableHeight - (eventGap * 2)) / 3;
-                    (info.el as HTMLElement).style.height = `${eventHeight}px`;
-                    (info.el as HTMLElement).style.minHeight = `${eventHeight}px`;
-                } else if (eventCount >= 4) {
-                    // Four or more events: equal portions with overflow indicator handled by FullCalendar
-                    const visibleEvents = Math.min(eventCount, 3); // Show max 3 events, rest in "+n more"
-                    const eventHeight = (availableHeight - (eventGap * (visibleEvents - 1))) / visibleEvents;
-                    (info.el as HTMLElement).style.height = `${eventHeight}px`;
-                    (info.el as HTMLElement).style.minHeight = `${eventHeight}px`;
-                }
-            }
-        }
 
         // Create/refresh multi-day dots directly on the card element
         const ep = (info.event.extendedProps || {}) as Record<string, unknown>;
@@ -273,7 +294,15 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
             }
             info.el.appendChild(dots);
         }
-    }, []);
+
+        // Apply proportional heights when all events have mounted
+        if (mountedEvents.current.size === totalExpectedEvents.current && totalExpectedEvents.current > 0) {
+            // Use setTimeout to ensure DOM is fully rendered
+            setTimeout(() => {
+                applyProportionalHeights();
+            }, 10);
+        }
+    }, [applyProportionalHeights]);
 
     const handleEventWillUnmount = useCallback((info: { el: Element }) => {
         const root = info.el as HTMLElement;
@@ -386,24 +415,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         }
     }, [initialDate, activeCalendarRef]);
 
-    // Add resize listener to recalculate event heights on window resize
-    React.useEffect(() => {
-        const handleResize = () => {
-            setTimeout(() => {
-                // Force re-render of events to recalculate sizes
-                const calendarInstance = activeCalendarRef.current;
-                if (calendarInstance) {
-                    const api = calendarInstance.getApi();
-                    api?.updateSize();
-                    // Trigger remount of events to recalculate dynamic sizes
-                    api?.refetchEvents();
-                }
-            }, 100);
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, [activeCalendarRef]);
 
     // Cleanup timeouts on unmount
     React.useEffect(() => {
@@ -469,7 +480,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                         info.el.classList.add('today-cell');
                     }
                 }}
-                // Limit to 3 events per day for consistent cell height
+                // Restore original working configuration
                 dayMaxEvents={3}
                 dayMaxEventRows={false}
                 // Custom more link handling

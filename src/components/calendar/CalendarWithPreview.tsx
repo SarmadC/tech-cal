@@ -4,8 +4,10 @@ import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from 
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import listPlugin from '@fullcalendar/list';
-// 1. UPDATE IMPORTS: Use the new `Event` type and the `isTrackedEvent` type guard.
-import { Event, isTrackedEvent } from '@/types';
+// 1. UPDATE IMPORTS: Use the new `Event` type and consolidated event status utilities.
+import { Event } from '@/types';
+import { getEventStatus } from '@/utils/eventStatusUtils';
+import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';
 import EventContent from './EventContent';
@@ -35,6 +37,9 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
     const internalCalendarRef = useRef<FullCalendar | null>(null);
     const activeCalendarRef = calendarRef || internalCalendarRef;
     const [isMobile, setIsMobile] = useState(false);
+
+    // Get tracked events to properly set isTracked property
+    const { trackedEventIds } = useTrackedEventsUnified();
 
     const {
         previewState,
@@ -82,11 +87,11 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
             color: event.color || '#3b82f6',
             extendedProps: {
                 ...event,
-                // 3. SAFELY check for `isTracked` using the type guard.
-                isTracked: isTrackedEvent(event) ? event.isTracked : false,
+                // 3. Use tracked events data to properly set isTracked
+                isTracked: trackedEventIds?.has(event.id) ?? false,
             }
         }));
-    }, [events]);
+    }, [events, trackedEventIds]);
 
     // Enhanced event content renderer
     const renderEventContent = useCallback((eventInfo: EventContentArg) => {
@@ -111,11 +116,23 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
 
     // Handle event mounting (for styling)
     const handleEventDidMount = useCallback((info: EventMountArg) => {
-        // 4. UPDATE TYPE CAST: Use the new `Event` type.
         const eventData = info.event.extendedProps as Event;
-        // 5. SAFELY check for `isTracked` before adding the class.
-        if (isTrackedEvent(eventData) && eventData.isTracked) {
+        
+        // Use consolidated utility for event status
+        const { isTracked } = getEventStatus(eventData);
+        
+        // Check if event is before today's date (completed)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+        const eventDate = new Date(eventData.startTime);
+        eventDate.setHours(0, 0, 0, 0); // Start of event date
+        const isCompleted = eventDate < today;
+        
+        if (isTracked) {
             info.el.classList.add('tracked-event');
+        }
+        if (isCompleted) {
+            info.el.classList.add('completed-event');
         }
     }, []);
 

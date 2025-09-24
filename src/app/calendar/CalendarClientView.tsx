@@ -69,6 +69,8 @@ function useCalendarUIState() {
     
     // Auto-open sidebar on desktop only on initial load
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
         const isMobile = window.innerWidth < 768;
         if (!isMobile) {
             dispatch({ type: 'TOGGLE_SIDEBAR' }); // Open sidebar on desktop initially
@@ -77,13 +79,15 @@ function useCalendarUIState() {
 
     // Handle mobile resize - close sidebar when switching to mobile
     useResizeListener(() => {
+        if (typeof window === 'undefined') return;
+
         const isMobile = window.innerWidth < 768;
-        
+
         // Only close sidebar on mobile if it's open
         if (isMobile && state.isSidebarOpen) {
             dispatch({ type: 'TOGGLE_SIDEBAR' }); // Close sidebar on mobile
         }
-    }, window, { passive: true });
+    }, typeof window !== 'undefined' ? window : null, { passive: true });
 
     const actions = useMemo(() => ({
         selectEvent: (event: Event | null) => dispatch({ type: 'SELECT_EVENT', event }),
