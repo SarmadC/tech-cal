@@ -101,7 +101,7 @@ const config: Config = {
                     'var(--font-mono)'
                 ],
                 'dm-sans': [
-                    'var(--font-dm-sans)',
+                    'var(--font-sans)',
                     'DM Sans',
                     'ui-sans-serif',
                     'system-ui',

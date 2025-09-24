@@ -72,7 +72,21 @@ export function useServerSideAnalytics(
         throw new Error(`Server error: ${response.status}`);
       }
 
-      return response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load analytics');
+      }
+      
+      // Debug logging
+      console.log('Analytics API response:', {
+        hasData: !!result.data,
+        hasAnalytics: !!result.data?.analytics,
+        hasRecommendations: !!result.data?.recommendations,
+        stats: result.data?.stats
+      });
+      
+      return result.data;
     },
     enabled: !!(user && enabled),
     staleTime: 5 * 60 * 1000, // 5 minutes - analytics don't change frequently

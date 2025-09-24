@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CaretLeft, CaretRight, User, Target, BookOpen, Network, CheckCircle } from '@phosphor-icons/react';
 import {
   CareerOnboardingData,
@@ -16,8 +16,12 @@ import {
   ROLE_TAXONOMY,
   COMPANY_SIZE_OPTIONS,
   SENIORITY_LEVELS,
-  INDUSTRY_FOCUS
+  INDUSTRY_FOCUS,
+  TECHNICAL_SKILLS,
+  INTEREST_AREAS
 } from '@/types/career';
+import MultiSelectDropdown, { MultiSelectOption } from '@/components/ui/MultiSelectDropdown';
+import { validateOnboardingData, sanitizeOnboardingData } from '@/utils/onboardingUtils';
 
 interface CareerOnboardingProps {
   onComplete: (data: CareerOnboardingData) => void;
@@ -32,14 +36,40 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<Partial<CareerOnboardingData>>({});
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const totalSteps = 5;
+
+  // Memoize dropdown options to prevent recreation on every render
+  const technicalSkillOptions: MultiSelectOption[] = useMemo(() => 
+    Object.entries(TECHNICAL_SKILLS).map(([category, skills]) => 
+      skills.map(skill => ({ value: skill, label: skill, category }))
+    ).flat(), []
+  );
+
+  const interestOptions: MultiSelectOption[] = useMemo(() => 
+    INTEREST_AREAS.map(interest => ({
+      value: interest,
+      label: interest
+    })), []
+  );
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
+      setValidationErrors([]); // Clear errors when moving to next step
     } else {
-      onComplete(data as CareerOnboardingData);
+      // Validate and sanitize data before completing
+      const validation = validateOnboardingData(data);
+      if (validation.isValid) {
+        const sanitizedData = sanitizeOnboardingData(data);
+        onComplete(sanitizedData);
+      } else {
+        // Show validation errors to user
+        setValidationErrors(validation.errors);
+        console.error('Onboarding validation failed:', validation.errors);
+        return; // Stop the completion process
+      }
     }
   };
 
@@ -58,7 +88,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       case 1:
         return !!(data.step1_role?.currentRole && data.step1_role?.seniority && data.step1_role?.industry);
       case 2:
-        return !!(data.step2_skills?.primarySkills?.length || data.step2_skills?.skillsToLearn?.length);
+        return !!(data.step2_skills?.primarySkills?.length || data.step2_skills?.skillsToLearn?.length || data.step2_skills?.interests?.length);
       case 3:
         return !!(data.step3_goals?.careerGoals?.length);
       case 4:
@@ -195,50 +225,47 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         <p className="text-gray-600">Help us understand your technical background and learning interests.</p>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Current Skills</label>
-        <input
-          type="text"
-          placeholder="e.g., React, Python, AWS, Machine Learning (comma separated)"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          value={data.step2_skills?.primarySkills?.join(', ') || ''}
-          onChange={(e) => updateData('step2_skills', { 
-            ...data.step2_skills, 
-            primarySkills: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
-          })}
-        />
-        <p className="text-xs text-gray-500 mt-1">List your strongest technical skills</p>
-      </div>
+      <MultiSelectDropdown
+        options={technicalSkillOptions}
+        selectedValues={data.step2_skills?.primarySkills || []}
+        onChange={(values) => updateData('step2_skills', { 
+          ...data.step2_skills, 
+          primarySkills: values 
+        })}
+        label="Current Skills"
+        description="Select your strongest technical skills"
+        placeholder="Choose your current skills..."
+        maxSelections={10}
+        searchable={true}
+      />
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Skills You Want to Learn</label>
-        <input
-          type="text"
-          placeholder="e.g., Kubernetes, GraphQL, Rust, Product Management"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          value={data.step2_skills?.skillsToLearn?.join(', ') || ''}
-          onChange={(e) => updateData('step2_skills', { 
-            ...data.step2_skills, 
-            skillsToLearn: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
-          })}
-        />
-        <p className="text-xs text-gray-500 mt-1">What would you like to learn next?</p>
-      </div>
+      <MultiSelectDropdown
+        options={technicalSkillOptions}
+        selectedValues={data.step2_skills?.skillsToLearn || []}
+        onChange={(values) => updateData('step2_skills', { 
+          ...data.step2_skills, 
+          skillsToLearn: values 
+        })}
+        label="Skills You Want to Learn"
+        description="What would you like to learn next?"
+        placeholder="Choose skills to learn..."
+        maxSelections={10}
+        searchable={true}
+      />
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Areas of Interest</label>
-        <input
-          type="text"
-          placeholder="e.g., AI/ML, Blockchain, DevOps, Design Systems"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          value={data.step2_skills?.interests?.join(', ') || ''}
-          onChange={(e) => updateData('step2_skills', { 
-            ...data.step2_skills, 
-            interests: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
-          })}
-        />
-        <p className="text-xs text-gray-500 mt-1">Broader topics you&apos;re curious about</p>
-      </div>
+      <MultiSelectDropdown
+        options={interestOptions}
+        selectedValues={data.step2_skills?.interests || []}
+        onChange={(values) => updateData('step2_skills', { 
+          ...data.step2_skills, 
+          interests: values 
+        })}
+        label="Areas of Interest"
+        description="Broader topics you're curious about"
+        placeholder="Choose your interests..."
+        maxSelections={8}
+        searchable={true}
+      />
     </div>
   );
 
@@ -474,6 +501,21 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         {currentStep === 4 && renderStep4()}
         {currentStep === 5 && renderStep5()}
       </div>
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h4 className="text-sm font-medium text-red-800 mb-2">Please fix the following issues:</h4>
+          <ul className="text-sm text-red-700 space-y-1">
+            {validationErrors.map((error, index) => (
+              <li key={index} className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>{error}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
         <div>

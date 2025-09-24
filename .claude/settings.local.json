@@ -42,7 +42,9 @@
       "Bash(npm install:*)",
       "Read(//Users/sarmad/.nvm/versions/node/v20.17.0/lib/node_modules/@anthropic-ai/**)",
       "Bash(npx tsc:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "WebFetch(domain:ui.shadcn.com)",
+      "Bash(npx shadcn@latest add:*)"
     ],
     "deny": [],
     "ask": []

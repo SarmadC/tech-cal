@@ -70,7 +70,23 @@ export class CareerAnalyticsService {
     try {
       const careerProfile = CareerProfileService.getCareerProfile(userProfile);
       
+      // Debug logging (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('CareerAnalyticsService - Profile analysis:', {
+          hasUserProfile: !!userProfile,
+          hasPreferences: !!userProfile?.preferences,
+          preferencesKeys: userProfile?.preferences ? Object.keys(userProfile.preferences) : [],
+          hasCareerProfile: !!careerProfile,
+          careerProfileKeys: careerProfile ? Object.keys(careerProfile) : [],
+          trackedEventsCount: trackedEvents.length,
+          upcomingEventsCount: upcomingEvents.length
+        });
+      }
+      
       if (!careerProfile) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('CareerAnalyticsService - No career profile found, returning empty analytics');
+        }
         return this.getEmptyAnalytics();
       }
 

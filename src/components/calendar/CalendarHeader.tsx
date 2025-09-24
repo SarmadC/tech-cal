@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'; // 1. IMPORT ROUTE
 import { MaterialIcon } from '@/components/ui/Icon';
 import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/common/UserMenu';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { formatDateForURL } from '@/utils/dateUtils';
 import QuickDatePicker from '@/components/calendar/QuickDatePicker';
 import { Event } from '@/types/events';
@@ -245,6 +246,9 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                         onClose={closeDatePicker}
                         events={events}
                     />
+
+                <ThemeToggle />
+
                 {user ? (
                     <UserMenu />
                 ) : (

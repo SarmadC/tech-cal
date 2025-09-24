@@ -2,18 +2,16 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
-import { Event } from '@/types';
-import { CareerImpactScoreLite } from '@/types/careerImpact';
+// import { CareerImpactBadge } from '@/components/ui/career-impact-badge'; // Removed unused import
+// import { Event } from '@/types'; // Removed unused import
+// import { CareerImpactScoreLite } from '@/types/careerImpact'; // Removed unused import
 import { 
   TrendUpIcon, 
   TrendDownIcon, 
   TargetIcon, 
   ChartLineUpIcon,
   BrainIcon,
-  RocketIcon,
-  StarIcon,
-  CalendarIcon
+  StarIcon
 } from '@phosphor-icons/react';
 
 interface CareerAnalyticsData {
@@ -36,7 +34,7 @@ interface CareerAnalyticsData {
     skillsImproved: number;
     networkingEvents: number;
   };
-  upcomingOpportunities: Array<Event & { careerImpactLite?: CareerImpactScoreLite }>;
+  // upcomingOpportunities: Array<Event & { careerImpactLite?: CareerImpactScoreLite }>; // Removed unused property
 }
 
 interface CareerAnalyticsCardProps {
@@ -54,8 +52,7 @@ export function CareerAnalyticsCard({ analyticsData, className }: CareerAnalytic
     trendPercentage,
     skillsGrowth,
     careerGoalProgress,
-    monthlyStats,
-    upcomingOpportunities
+    monthlyStats
   } = analyticsData;
 
   const TrendIcon = impactTrend === 'up' ? TrendUpIcon : 
@@ -168,54 +165,6 @@ export function CareerAnalyticsCard({ analyticsData, className }: CareerAnalytic
         </CardContent>
       </Card>
 
-      {/* Upcoming High-Impact Opportunities */}
-      <Card className="lg:col-span-3">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <RocketIcon className="w-5 h-5 text-green-600" />
-            High-Impact Opportunities This Week
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {upcomingOpportunities.slice(0, 6).map((event) => (
-              <div key={event.id} className="p-3 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="text-sm font-medium text-gray-900 line-clamp-2 flex-1">
-                    {event.title}
-                  </h4>
-                  {event.careerImpactLite && (
-                    <CareerImpactBadge 
-                      score={event.careerImpactLite}
-                      variant="compact"
-                      className="ml-2 flex-shrink-0"
-                    />
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <CalendarIcon className="w-3 h-3" />
-                  <span>
-                    {new Date(event.startTime).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric'
-                    })}
-                  </span>
-                  <span>•</span>
-                  <span>{event.category?.name || 'Event'}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {upcomingOpportunities.length > 6 && (
-            <div className="text-center pt-4 border-t border-gray-100 mt-4">
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                View all {upcomingOpportunities.length} opportunities →
-              </button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

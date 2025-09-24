@@ -8,6 +8,7 @@ import { CareerOnboardingData } from '@/types/career';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
+import OnboardingErrorBoundary from '@/components/onboarding/OnboardingErrorBoundary';
 import { toast } from 'sonner';
 
 export default function CareerOnboardingPage() {
@@ -128,22 +129,24 @@ export default function CareerOnboardingPage() {
         </div>
 
         {/* Onboarding Component */}
-        <div className="relative">
-          {isSubmitting && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-sm text-gray-600">Saving your career profile...</p>
+        <OnboardingErrorBoundary>
+          <div className="relative">
+            {isSubmitting && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-600">Saving your career profile...</p>
+                </div>
               </div>
-            </div>
-          )}
-          
-          <CareerOnboarding
-            onComplete={handleComplete}
-            onSkip={handleSkip}
-            className="bg-white/80 backdrop-blur-sm"
-          />
-        </div>
+            )}
+            
+            <CareerOnboarding
+              onComplete={handleComplete}
+              onSkip={handleSkip}
+              className="bg-white/80 backdrop-blur-sm"
+            />
+          </div>
+        </OnboardingErrorBoundary>
 
         {/* Benefits Section */}
         <div className="mt-12 text-center">

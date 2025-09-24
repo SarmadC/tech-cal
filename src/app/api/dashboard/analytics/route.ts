@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       analyticsConsentDate: profileData.analytics_consent_date,
       bookmarkCountToday: profileData.bookmark_count_today || 0,
       timezone: profileData.timezone,
-      preferences: profileData.preferences,
+      preferences: profileData.preferences || {},
       lastViewedEvent: null, // Not in profiles table
       lastViewedEventDate: null // Not in profiles table
     };
@@ -251,10 +251,22 @@ export async function POST(request: NextRequest) {
       analyticsConsentDate: profileData.analytics_consent_date,
       bookmarkCountToday: profileData.bookmark_count_today || 0,
       timezone: profileData.timezone,
-      preferences: profileData.preferences,
+      preferences: profileData.preferences || {},
       lastViewedEvent: null, // Not in profiles table
       lastViewedEventDate: null // Not in profiles table
     };
+
+    // Debug logging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Analytics API - User profile data:', {
+        userId: user.id,
+        hasPreferences: !!profileData.preferences,
+        preferencesKeys: profileData.preferences ? Object.keys(profileData.preferences) : [],
+        hasCareerProfile: !!(profileData.preferences as Record<string, unknown>)?.careerProfile,
+        trackedEventsCount: trackedEvents.length,
+        upcomingEventsCount: upcomingEvents.length
+      });
+    }
 
     // Generate analytics and recommendations server-side with better error handling
     const [analyticsResult, recommendationsResult] = await Promise.allSettled([

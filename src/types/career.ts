@@ -91,6 +91,161 @@ export const INDUSTRY_FOCUS = [
   'Other'
 ] as const;
 
+// Standardized technical skills for consistency
+export const TECHNICAL_SKILLS = {
+  PROGRAMMING_LANGUAGES: [
+    'JavaScript/TypeScript',
+    'Python',
+    'Java',
+    'C#',
+    'C++',
+    'Go',
+    'Rust',
+    'PHP',
+    'Ruby',
+    'Swift',
+    'Kotlin',
+    'Scala',
+    'R',
+    'MATLAB',
+    'Dart'
+  ],
+  FRONTEND_TECHNOLOGIES: [
+    'React',
+    'Vue.js',
+    'Angular',
+    'Svelte',
+    'Next.js',
+    'Nuxt.js',
+    'Gatsby',
+    'HTML/CSS',
+    'Tailwind CSS',
+    'Bootstrap',
+    'Sass/SCSS',
+    'Webpack',
+    'Vite',
+    'Parcel'
+  ],
+  BACKEND_TECHNOLOGIES: [
+    'Node.js',
+    'Express.js',
+    'Django',
+    'Flask',
+    'Spring Boot',
+    'ASP.NET',
+    'Laravel',
+    'Ruby on Rails',
+    'FastAPI',
+    'GraphQL',
+    'REST APIs',
+    'Microservices',
+    'Serverless'
+  ],
+  DATABASES: [
+    'PostgreSQL',
+    'MySQL',
+    'MongoDB',
+    'Redis',
+    'Elasticsearch',
+    'DynamoDB',
+    'SQLite',
+    'Oracle',
+    'SQL Server',
+    'Cassandra',
+    'Neo4j',
+    'InfluxDB'
+  ],
+  CLOUD_PLATFORMS: [
+    'AWS',
+    'Google Cloud Platform',
+    'Microsoft Azure',
+    'DigitalOcean',
+    'Heroku',
+    'Vercel',
+    'Netlify',
+    'Firebase',
+    'Supabase',
+    'Cloudflare'
+  ],
+  DEVOPS_TOOLS: [
+    'Docker',
+    'Kubernetes',
+    'Jenkins',
+    'GitLab CI/CD',
+    'GitHub Actions',
+    'Terraform',
+    'Ansible',
+    'Prometheus',
+    'Grafana',
+    'ELK Stack',
+    'Git',
+    'GitHub',
+    'GitLab',
+    'Bitbucket'
+  ],
+  DATA_AI_TOOLS: [
+    'TensorFlow',
+    'PyTorch',
+    'Scikit-learn',
+    'Pandas',
+    'NumPy',
+    'Jupyter',
+    'Apache Spark',
+    'Hadoop',
+    'Tableau',
+    'Power BI',
+    'Looker',
+    'Apache Kafka',
+    'Apache Airflow'
+  ],
+  MOBILE_TECHNOLOGIES: [
+    'React Native',
+    'Flutter',
+    'iOS Development',
+    'Android Development',
+    'Xamarin',
+    'Ionic',
+    'Cordova/PhoneGap'
+  ]
+} as const;
+
+// Flattened skills list for easy access
+export const ALL_TECHNICAL_SKILLS = Object.values(TECHNICAL_SKILLS).flat();
+
+// Standardized interest areas
+export const INTEREST_AREAS = [
+  'Artificial Intelligence & Machine Learning',
+  'Web Development',
+  'Mobile Development',
+  'Cloud Computing',
+  'DevOps & Infrastructure',
+  'Data Science & Analytics',
+  'Cybersecurity',
+  'Blockchain & Web3',
+  'Game Development',
+  'UI/UX Design',
+  'Product Management',
+  'Digital Marketing',
+  'E-commerce',
+  'FinTech',
+  'HealthTech',
+  'EdTech',
+  'CleanTech',
+  'AR/VR',
+  'IoT (Internet of Things)',
+  'Quantum Computing',
+  'Robotics',
+  'Open Source',
+  'Technical Writing',
+  'Developer Relations',
+  'Startup & Entrepreneurship',
+  'Leadership & Management',
+  'Agile & Scrum',
+  'System Design',
+  'Performance Optimization',
+  'Testing & QA'
+] as const;
+
 // Role-specific event scoring weights
 export const ROLE_EVENT_WEIGHTS = {
   [ROLE_CATEGORIES.ENGINEERING]: {

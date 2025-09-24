@@ -14,8 +14,9 @@ interface EventListProps {
   emptyDescription: string;
   emptyActionText: string;
   emptyActionHref: string;
-  variant?: 'upcoming' | 'recommended';
+  variant?: 'upcoming' | 'recommended' | 'compact';
   className?: string;
+  onEventClick?: (event: Event | TrackedEventRecord) => void;
 }
 
 /**
@@ -30,23 +31,27 @@ export function EventList({
   emptyActionText,
   emptyActionHref,
   variant = 'upcoming',
-  className = ''
+  className = '',
+  onEventClick
 }: EventListProps) {
   return (
     <Card className={`border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm ${className}`}>
-      <CardHeader>
+      <CardHeader className={variant === 'compact' ? 'pb-4' : ''}>
         <CardTitle className="text-gray-900 dark:text-white">{title}</CardTitle>
         <CardDescription className="text-gray-600 dark:text-gray-300">{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={variant === 'compact' ? 'px-6 pb-6 pt-0' : 'space-y-4'}>
         {events.length > 0 ? (
-          events.map((event) => (
-            <EventCard
-              key={'trackingId' in event ? event.trackingId : event.id}
-              event={event}
-              variant={variant}
-            />
-          ))
+          <div className={variant === 'compact' ? 'space-y-0' : 'space-y-4'}>
+            {events.map((event) => (
+              <EventCard
+                key={'trackingId' in event ? event.trackingId : event.id}
+                event={event}
+                variant={variant}
+                onClick={() => onEventClick?.(event)}
+              />
+            ))}
+          </div>
         ) : (
           <div className="text-center py-8">
             <CalendarIcon className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />

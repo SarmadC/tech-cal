@@ -1,3 +1,4 @@
+// Legacy components
 export { CareerInsightsCard, CareerProgressCard } from './CareerInsightsCard';
 export { CareerAnalyticsCard, CareerInsightsSummary } from './CareerAnalyticsCard';
 export { CareerRecommendationsCard, QuickCareerActionsCard } from './CareerRecommendationsCard';
@@ -6,8 +7,21 @@ export { EventCard } from './EventCard';
 export { EventList } from './EventList';
 export { MetricCard } from './MetricCard';
 export { OverviewPanel } from './OverviewPanel';
-export { DashboardCard } from './DashboardCard';
 export { QuickActions } from './QuickActions';
-export { MiniChart, MiniBarChart } from './MiniChart';
 export { ActivityFeed } from './ActivityFeed';
 export { ProgressBar } from './ProgressBar';
+export { EventHeatMap } from './EventHeatMap';
+export { QuickStatsCard } from './QuickStatsCard';
+export { ActivityTrendCard } from './ActivityTrendCard';
+export { EventDistributionCard } from './EventDistributionCard';
+
+// New refactored components
+export { CareerAnalyticsSection } from './CareerAnalyticsSection';
+export { DashboardHeader } from './DashboardHeader';
+export { DashboardStatsGrid } from './DashboardStatsGrid';
+export { DashboardEventsSection } from './DashboardEventsSection';
+export { DashboardErrorState } from './DashboardErrorState';
+export { DashboardCard } from './DashboardCard';
+export { DashboardGrid, DashboardSection } from './DashboardGrid';
+
+// Note: NavigationUtils should be imported directly from '@/utils/navigationUtils'

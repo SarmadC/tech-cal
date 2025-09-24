@@ -62,7 +62,7 @@ export function ActivityFeed({ events, trackedEvents, className = '' }: Activity
         title: 'Upcoming Event',
         description: event.title,
         timestamp: new Date(event.startTime),
-        icon: CalendarIcon,
+        icon: () => null,
         color: 'text-blue-600 dark:text-blue-400',
         bgColor: 'bg-blue-100 dark:bg-blue-900/30'
       }));
@@ -77,9 +77,8 @@ export function ActivityFeed({ events, trackedEvents, className = '' }: Activity
 
   if (activityItems.length === 0) {
     return (
-      <DashboardCard 
-        title="Recent Activity" 
-        icon={CalendarIcon}
+      <DashboardCard
+        title="Recent Activity"
         className={className}
       >
         <div className="text-center py-8">
@@ -94,14 +93,13 @@ export function ActivityFeed({ events, trackedEvents, className = '' }: Activity
   }
 
   return (
-    <DashboardCard 
-      title="Recent Activity" 
-      icon={CalendarIcon}
+    <DashboardCard
+      title="Recent Activity"
       className={className}
     >
         <div className="space-y-4">
-          {activityItems.map((item, index) => (
-            <div key={item.id} className="flex items-start gap-3">
+          {activityItems.map((item, _index) => (
+            <div key={item.id} className="flex items-start gap-3 relative">
               <div className={`p-2 rounded-lg ${item.bgColor} flex-shrink-0`}>
                 <item.icon className={`w-4 h-4 ${item.color}`} />
               </div>
@@ -110,11 +108,11 @@ export function ActivityFeed({ events, trackedEvents, className = '' }: Activity
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {item.title}
                   </p>
-                  <Badge 
-                    variant="secondary" 
+                  <Badge
+                    variant="secondary"
                     className={`text-xs ${item.color} ${item.bgColor} border-0`}
                   >
-                    {item.type}
+                    {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                   </Badge>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
@@ -124,9 +122,6 @@ export function ActivityFeed({ events, trackedEvents, className = '' }: Activity
                   {formatDistanceToNow(item.timestamp, { addSuffix: true })}
                 </p>
               </div>
-              {index < activityItems.length - 1 && (
-                <div className="absolute left-6 top-12 w-0.5 h-8 bg-gray-200 dark:bg-gray-700" />
-              )}
             </div>
           ))}
         </div>
