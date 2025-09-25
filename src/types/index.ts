@@ -14,6 +14,7 @@ export * from './careerImpact';
 export * from './supabaseCareerImpact';
 export * from './database';
 export * from './eventImport';
+export * from './componentProps';
 
 // ============================================
 // NON-EVENT-RELATED TYPES

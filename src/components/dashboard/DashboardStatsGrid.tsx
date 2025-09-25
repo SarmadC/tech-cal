@@ -6,16 +6,13 @@ import { ActivityTrendCard } from '@/components/dashboard/ActivityTrendCard';
 import { EventHeatMap } from '@/components/dashboard/EventHeatMap';
 import { EventDistributionCard } from '@/components/dashboard/EventDistributionCard';
 import { DashboardErrorState } from '@/components/dashboard/DashboardErrorState';
-import type { TrackedEventRecord, Event } from '@/types';
+import type { BaseEventAndTrackedProps } from '@/types/componentProps';
 
-interface DashboardStatsGridProps {
-  allUpcomingEvents: Event[];
-  trackedEvents: TrackedEventRecord[];
-}
+type DashboardStatsGridProps = BaseEventAndTrackedProps;
 
-export function DashboardStatsGrid({ allUpcomingEvents, trackedEvents }: DashboardStatsGridProps) {
+export function DashboardStatsGrid({ events, trackedEvents }: DashboardStatsGridProps) {
   // Validate data before rendering
-  if (!allUpcomingEvents || !trackedEvents) {
+  if (!events || !trackedEvents) {
     return (
       <DashboardErrorState
         title="Data not available"
@@ -39,7 +36,7 @@ export function DashboardStatsGrid({ allUpcomingEvents, trackedEvents }: Dashboa
         }
       >
         <QuickStatsCard
-          events={allUpcomingEvents}
+          events={events}
           trackedEvents={trackedEvents}
         />
       </SectionErrorBoundary>
@@ -74,26 +71,26 @@ export function DashboardStatsGrid({ allUpcomingEvents, trackedEvents }: Dashboa
             </div>
           }
         >
-          <EventHeatMap
-            events={allUpcomingEvents}
-          />
-        </SectionErrorBoundary>
-        
-        <SectionErrorBoundary 
-          name="EventDistributionCard"
-          fallback={
-            <div className="col-span-1">
-              <DashboardErrorState
-                title="Event distribution unavailable"
-                message="Unable to load event distribution data."
-                onRetry={() => window.location.reload()}
-              />
-            </div>
-          }
-        >
-          <EventDistributionCard
-            events={allUpcomingEvents}
-          />
+        <EventHeatMap
+          events={events}
+        />
+      </SectionErrorBoundary>
+      
+      <SectionErrorBoundary 
+        name="EventDistributionCard"
+        fallback={
+          <div className="col-span-1">
+            <DashboardErrorState
+              title="Event distribution unavailable"
+              message="Unable to load event distribution data."
+              onRetry={() => window.location.reload()}
+            />
+          </div>
+        }
+      >
+        <EventDistributionCard
+          events={events}
+        />
         </SectionErrorBoundary>
       </div>
     </>

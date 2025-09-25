@@ -10,23 +10,26 @@ import { CareerAnalyticsSection } from '@/components/dashboard/CareerAnalyticsSe
 import { DashboardErrorState } from '@/components/dashboard/DashboardErrorState';
 import { DashboardSection } from '@/components/dashboard/DashboardGrid';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import type { EventType, Event } from '@/types';
+import type { EventType, Event, TrackedEventRecord } from '@/types';
 
 interface DashboardClientViewProps {
     initialEventTypes: EventType[];
     initialUpcomingEvents: Event[];
+    initialTrackedEvents: TrackedEventRecord[];
 }
 
 
 
 export default function DashboardClientView({
     initialEventTypes,
-    initialUpcomingEvents
+    initialUpcomingEvents,
+    initialTrackedEvents
 }: DashboardClientViewProps) {
     const { user: _user, profile } = useAuth();
     const { trackedEvents, allUpcomingEvents, isLoading, isReady, errors } = useDashboardData({
         initialEventTypes,
-        initialUpcomingEvents
+        initialUpcomingEvents,
+        initialTrackedEvents
     });
 
     // Wait for data to be ready
@@ -74,7 +77,7 @@ export default function DashboardClientView({
                     <DashboardSection>
                         <SectionErrorBoundary name="DashboardStats">
                             <DashboardStatsGrid
-                                allUpcomingEvents={allUpcomingEvents}
+                                events={allUpcomingEvents}
                                 trackedEvents={trackedEvents}
                             />
                         </SectionErrorBoundary>
@@ -87,7 +90,7 @@ export default function DashboardClientView({
                                 <CareerAnalyticsSection
                                     userProfile={profile}
                                     trackedEvents={trackedEvents}
-                                    upcomingEvents={allUpcomingEvents}
+                                    events={allUpcomingEvents}
                                 />
                             </SectionErrorBoundary>
                         </DashboardSection>

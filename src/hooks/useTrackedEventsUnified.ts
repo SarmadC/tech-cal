@@ -103,7 +103,7 @@ export function useTrackedEventIds() {
  * Hook for getting lightweight tracked events (for dashboard)
  * This maintains backward compatibility
  */
-export function useLightweightTrackedEvents() {
+export function useLightweightTrackedEvents(initialData?: TrackedEventRecord[]) {
   const { supabase, isReady } = useSupabaseSafe();
   const { user } = useAuth();
 
@@ -118,6 +118,7 @@ export function useLightweightTrackedEvents() {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 2,
+    initialData: initialData,
   });
 
   // Return early if Supabase client is not ready

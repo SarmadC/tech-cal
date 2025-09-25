@@ -2,27 +2,17 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { XAxis, YAxis, Area, AreaChart, ReferenceLine } from 'recharts';
 import { TrendUp, TrendDown, Minus, Calendar } from '@phosphor-icons/react';
 import { format, subDays, startOfDay } from 'date-fns';
+import { ACTIVITY_CHART_CONFIG } from '@/utils/chartConfigs';
 import type { TrackedEventRecord } from '@/types';
 
 interface ActivityTrendCardProps {
   trackedEvents: TrackedEventRecord[];
   className?: string;
 }
-
-const chartConfig = {
-  events: {
-    label: "Events Tracked",
-    color: "hsl(var(--chart-1))",
-  },
-  cumulative: {
-    label: "Cumulative",
-    color: "hsl(var(--chart-2))",
-  },
-} satisfies ChartConfig;
 
 export function ActivityTrendCard({ trackedEvents, className = '' }: ActivityTrendCardProps) {
   // Generate enhanced data for the last 30 days
@@ -119,7 +109,7 @@ export function ActivityTrendCard({ trackedEvents, className = '' }: ActivityTre
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
+        <ChartContainer config={ACTIVITY_CHART_CONFIG}>
           <AreaChart
             accessibilityLayer
             data={data}

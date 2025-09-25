@@ -2,6 +2,9 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { EventService } from '@/services/eventServices';
+import { EventTypeService } from '@/services/eventTypeService';
+import { UserEventService } from '@/services/userEventService';
 import DashboardClientView from './DashboardClientView';
 
 export default async function DashboardPage() {
@@ -12,11 +15,23 @@ export default async function DashboardPage() {
         redirect('/login?redirect=/dashboard');
     }
 
-    // Simplified - let the client handle all data fetching
+    // Fetch dashboard data server-side to prevent redundant client-side fetching
+    const [eventTypesResult, upcomingEventsResult, trackedEventsResult] = await Promise.allSettled([
+        EventTypeService.getEventTypes(supabase),
+        EventService.getEvents({ startDate: new Date() }, supabase, 1, 100),
+        UserEventService.getLightweightTrackedEvents(user.id, supabase)
+    ]);
+
+    // Extract data or use empty arrays as fallbacks
+    const initialEventTypes = eventTypesResult.status === 'fulfilled' ? eventTypesResult.value : [];
+    const initialUpcomingEvents = upcomingEventsResult.status === 'fulfilled' ? upcomingEventsResult.value : [];
+    const initialTrackedEvents = trackedEventsResult.status === 'fulfilled' ? trackedEventsResult.value : [];
+
     return (
         <DashboardClientView
-            initialEventTypes={[]}
-            initialUpcomingEvents={[]}
+            initialEventTypes={initialEventTypes}
+            initialUpcomingEvents={initialUpcomingEvents}
+            initialTrackedEvents={initialTrackedEvents}
         />
     );
 }

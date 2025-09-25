@@ -6,22 +6,20 @@ import { SectionErrorBoundary } from '@/components/common/ErrorBoundary';
 import { EventList } from '@/components/dashboard/EventList';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import type { TrackedEventRecord, Event } from '@/types';
+import type { BaseEventAndTrackedProps } from '@/types/componentProps';
 
-interface DashboardEventsSectionProps {
-  allUpcomingEvents: Event[];
-  trackedEvents: TrackedEventRecord[];
-}
+type DashboardEventsSectionProps = BaseEventAndTrackedProps;
 
-export function DashboardEventsSection({ allUpcomingEvents, trackedEvents }: DashboardEventsSectionProps) {
+export function DashboardEventsSection({ events, trackedEvents }: DashboardEventsSectionProps) {
   const router = useRouter();
   
   const nextTrackedEvents = useMemo(() => {
-    if (!trackedEvents || !allUpcomingEvents) return [];
+    if (!trackedEvents || !events) return [];
     return trackedEvents
-      .map(te => allUpcomingEvents.find(e => e.id === te.eventId))
+      .map(te => events.find(e => e.id === te.eventId))
       .filter((event): event is Event => event !== undefined)
       .slice(0, 5);
-  }, [trackedEvents, allUpcomingEvents]);
+  }, [trackedEvents, events]);
 
   const handleEventClick = useCallback((event: Event | TrackedEventRecord) => {
     const eventData = 'event' in event ? event.event : event;
@@ -50,7 +48,7 @@ export function DashboardEventsSection({ allUpcomingEvents, trackedEvents }: Das
       <div className="lg:col-span-1">
         <SectionErrorBoundary name="DashboardSection">
           <ActivityFeed
-            events={allUpcomingEvents}
+            events={events}
             trackedEvents={trackedEvents}
           />
         </SectionErrorBoundary>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { CareerAnalyticsService } from '@/services/careerAnalyticsService';
+import { OptimizedAnalyticsService } from '@/services/optimizedAnalyticsService';
 import { UserEventService } from '@/services/userEventService';
 import { EventService } from '@/services/eventServices';
 import { Ratelimit } from '@upstash/ratelimit';
@@ -109,39 +109,14 @@ export async function GET(request: NextRequest) {
       lastViewedEventDate: null // Not in profiles table
     };
 
-    // Generate analytics server-side with timeout protection
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Analytics calculation timeout')), 15000); // 15 second timeout
-    });
-
-    const analyticsPromises = [
-      Promise.race([
-        CareerAnalyticsService.generateCareerAnalytics(appProfile, trackedEvents, upcomingEvents),
-        timeoutPromise
-      ])
-    ];
-
-    if (includeRecommendations) {
-      analyticsPromises.push(
-        Promise.race([
-          CareerAnalyticsService.generateCareerRecommendations(appProfile, trackedEvents, upcomingEvents),
-          timeoutPromise
-        ])
-      );
-    }
-
-    const [analyticsResult, recommendationsResult] = await Promise.allSettled(analyticsPromises);
-
-    // Handle results
-    const analytics = analyticsResult.status === 'fulfilled' ? analyticsResult.value : null;
-    const recommendations = recommendationsResult?.status === 'fulfilled' ? recommendationsResult.value as unknown[] : [];
-
-    if (!analytics) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to generate analytics' },
-        { status: 500 }
-      );
-    }
+    // Use optimized analytics service with database-first approach
+    const { analytics, recommendations } = await OptimizedAnalyticsService.getComprehensiveAnalytics(
+      appProfile,
+      trackedEvents,
+      upcomingEvents,
+      supabase,
+      includeRecommendations
+    );
 
     const processingTime = Date.now() - startTime;
 
@@ -158,9 +133,15 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    // Add cache headers for performance
+    // Add improved cache headers for better performance
     const responseWithCache = NextResponse.json(response);
-    responseWithCache.headers.set('Cache-Control', 'private, max-age=300'); // 5 minute cache
+    // More granular caching strategy
+    const cacheMaxAge = 120; // 2 minutes for analytics (more frequent updates)
+    const staleWhileRevalidate = 300; // 5 minutes stale-while-revalidate
+    
+    responseWithCache.headers.set('Cache-Control', `private, max-age=${cacheMaxAge}, stale-while-revalidate=${staleWhileRevalidate}`);
+    responseWithCache.headers.set('X-Data-Freshness', `${cacheMaxAge}s`);
+    responseWithCache.headers.set('X-Cache-Strategy', 'analytics-optimized');
     responseWithCache.headers.set('X-Processing-Time', processingTime.toString());
     
     return responseWithCache;
@@ -268,63 +249,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Generate analytics and recommendations server-side with better error handling
-    const [analyticsResult, recommendationsResult] = await Promise.allSettled([
-      CareerAnalyticsService.generateCareerAnalytics(appProfile, trackedEvents, upcomingEvents, supabase),
+    // Use optimized analytics service with database-first approach
+    const { analytics, recommendations } = await OptimizedAnalyticsService.getComprehensiveAnalytics(
+      appProfile,
+      trackedEvents,
+      upcomingEvents,
+      supabase,
       includeRecommendations
-        ? CareerAnalyticsService.generateCareerRecommendations(appProfile, trackedEvents, upcomingEvents, supabase)
-        : Promise.resolve([])
-    ]);
-
-    const analytics = analyticsResult.status === 'fulfilled' ? analyticsResult.value : null;
-    const recommendations = recommendationsResult.status === 'fulfilled' ? recommendationsResult.value : [];
-
-    // If analytics generation fails, return mock data instead of error
-    if (!analytics) {
-      console.warn('Analytics generation failed, returning mock data:', analyticsResult.status === 'rejected' ? analyticsResult.reason : 'Unknown error');
-      
-      // Return mock analytics data to prevent 500 error
-      const mockAnalytics = {
-        averageImpactScore: 0.6,
-        impactTrend: 'stable' as const,
-        trendPercentage: 0,
-        skillsGrowth: [],
-        careerGoalProgress: {
-          currentLevel: 'Intermediate',
-          targetLevel: 'Senior',
-          progress: 0.3
-        },
-        monthlyStats: {
-          eventsAttended: trackedEvents.length,
-          highImpactEvents: Math.floor(trackedEvents.length * 0.3),
-          skillsImproved: Math.floor(trackedEvents.length * 0.2),
-          networkingEvents: Math.floor(trackedEvents.length * 0.1)
-        },
-        upcomingOpportunities: upcomingEvents.slice(0, 5).map(event => ({
-          ...event,
-          careerImpactLite: {
-            overall: 0.5,
-            confidence: 0.7,
-            category: 'moderate' as const
-          }
-        }))
-      };
-
-      const response: AnalyticsResponse = {
-        success: true,
-        data: {
-          analytics: mockAnalytics,
-          recommendations: includeRecommendations ? (Array.isArray(recommendations) ? recommendations : []) : undefined,
-          stats: {
-            processingTimeMs: Date.now() - startTime,
-            eventsProcessed: upcomingEvents.length,
-            trackedEventsCount: trackedEvents.length,
-          }
-        }
-      };
-
-      return NextResponse.json(response);
-    }
+    );
 
     const processingTime = Date.now() - startTime;
 
@@ -341,9 +273,15 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    // Add cache headers for performance
+    // Add improved cache headers for better performance
     const responseWithCache = NextResponse.json(response);
-    responseWithCache.headers.set('Cache-Control', 'private, max-age=300'); // 5 minute cache
+    // More granular caching strategy
+    const cacheMaxAge = 120; // 2 minutes for analytics (more frequent updates)
+    const staleWhileRevalidate = 300; // 5 minutes stale-while-revalidate
+    
+    responseWithCache.headers.set('Cache-Control', `private, max-age=${cacheMaxAge}, stale-while-revalidate=${staleWhileRevalidate}`);
+    responseWithCache.headers.set('X-Data-Freshness', `${cacheMaxAge}s`);
+    responseWithCache.headers.set('X-Cache-Strategy', 'analytics-optimized');
     responseWithCache.headers.set('X-Processing-Time', processingTime.toString());
     
     return responseWithCache;

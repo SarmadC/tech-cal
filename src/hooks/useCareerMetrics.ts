@@ -234,8 +234,8 @@ function calculateEnhancedPeerComparison(
   // Determine confidence based on available data
   const confidence = trackedEvents.length > 12 ? 'medium' : 'low';
 
-  // Sample size simulation (would be real cohort size)
-  const sampleSize = Math.floor(Math.random() * 150) + 50;
+  // Use actual tracked events count as sample size
+  const sampleSize = trackedEvents.length;
 
   const recommendation = getRecommendationText(comparison, confidence, sampleSize);
 

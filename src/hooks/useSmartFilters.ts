@@ -76,7 +76,11 @@ export function useSmartFilters(
                 }
             }
             if (filters.cost !== 'all') {
-                const isFree = Math.random() > 0.4;
+                // Determine if event is free based on actual data
+                const isFree = !event.priceRange || 
+                              event.priceRange.toLowerCase().includes('free') || 
+                              event.priceRange === '0' || 
+                              event.priceRange.toLowerCase().includes('no cost');
                 if (filters.cost === 'free' && !isFree) return false;
                 if (filters.cost === 'paid' && isFree) return false;
             }

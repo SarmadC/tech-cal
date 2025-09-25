@@ -1,7 +1,7 @@
 // src/components/calendar/TechCalendarWeekView.tsx
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import EventPreviewCard from './EventPreviewCard';
 import { WeekHeader } from './shared/WeekHeader';
@@ -143,6 +143,15 @@ export default function TechCalendarWeekView({
         setIsPreviewVisible(false);
         setPreviewEvent(null);
     };
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+            }
+        };
+    }, [hideTimer]);
 
     return (
         <div className="tech-calendar-week-view flex-shrink-0 w-full">

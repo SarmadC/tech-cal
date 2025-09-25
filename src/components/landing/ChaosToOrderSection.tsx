@@ -125,7 +125,12 @@ export function ChaosToOrderSection() {
             if (initialTimeoutId) {
                 clearTimeout(initialTimeoutId);
             }
-            cardTimeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
+            // Clear all card animation timeouts
+            cardTimeoutIds.forEach(timeoutId => {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+            });
         };
     }, [calculateCardPositions]);
 

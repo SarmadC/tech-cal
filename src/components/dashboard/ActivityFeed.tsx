@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { DashboardCard } from './DashboardCard';
 import { CalendarIcon, StarIcon } from '@phosphor-icons/react';
 import { formatDistanceToNow } from 'date-fns';
-import type { Event, TrackedEventRecord } from '@/types';
+import type { BaseEventAndTrackedProps } from '@/types/componentProps';
 
 interface ActivityItem {
   id: string;
@@ -16,11 +16,7 @@ interface ActivityItem {
   bgColor: string;
 }
 
-interface ActivityFeedProps {
-  events: Event[];
-  trackedEvents: TrackedEventRecord[];
-  className?: string;
-}
+type ActivityFeedProps = BaseEventAndTrackedProps;
 
 /**
  * Visual activity feed showing recent user actions and upcoming events

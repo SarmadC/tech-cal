@@ -1,0 +1,235 @@
+/* src/styles/layout-utilities.css */
+
+/* ============================================
+   RESPONSIVE LAYOUT UTILITIES
+   ============================================ */
+
+/* Mobile optimization classes */
+.mobile-optimized {
+  @apply px-4 py-2;
+}
+
+@media (min-width: 768px) {
+  .mobile-optimized {
+    @apply px-6 py-4;
+  }
+}
+
+/* Responsive grid patterns */
+.responsive-grid {
+  @apply grid gap-4;
+  @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+}
+
+.responsive-grid-2 {
+  @apply grid gap-4;
+  @apply grid-cols-1 lg:grid-cols-2;
+}
+
+.responsive-grid-3 {
+  @apply grid gap-4;
+  @apply grid-cols-1 md:grid-cols-2 lg:grid-cols-3;
+}
+
+/* Common flex patterns */
+.flex-center {
+  @apply flex items-center justify-center;
+}
+
+.flex-between {
+  @apply flex items-center justify-between;
+}
+
+.flex-start {
+  @apply flex items-center justify-start;
+}
+
+.flex-end {
+  @apply flex items-center justify-end;
+}
+
+/* Common spacing patterns */
+.section-padding {
+  @apply px-4 py-8 sm:px-6 lg:px-8;
+}
+
+.card-padding {
+  @apply p-4 sm:p-6;
+}
+
+.button-padding {
+  @apply px-4 py-2 sm:px-6 sm:py-3;
+}
+
+/* Common border patterns */
+.border-subtle {
+  @apply border border-gray-200 dark:border-gray-700;
+}
+
+.border-strong {
+  @apply border-2 border-gray-300 dark:border-gray-600;
+}
+
+/* Common shadow patterns */
+.shadow-subtle {
+  @apply shadow-sm hover:shadow-md transition-shadow;
+}
+
+.shadow-strong {
+  @apply shadow-lg hover:shadow-xl transition-shadow;
+}
+
+/* Common text patterns */
+.text-muted {
+  @apply text-gray-600 dark:text-gray-400;
+}
+
+.text-subtle {
+  @apply text-gray-500 dark:text-gray-500;
+}
+
+.text-strong {
+  @apply text-gray-900 dark:text-white font-semibold;
+}
+
+/* Common background patterns */
+.bg-subtle {
+  @apply bg-gray-50 dark:bg-gray-800;
+}
+
+.bg-strong {
+  @apply bg-white dark:bg-gray-900;
+}
+
+/* Common transition patterns */
+.transition-smooth {
+  @apply transition-all duration-200 ease-in-out;
+}
+
+.transition-fast {
+  @apply transition-all duration-150 ease-in-out;
+}
+
+.transition-slow {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+/* ============================================
+   COMPONENT-SPECIFIC UTILITIES
+   ============================================ */
+
+/* Loading states */
+.loading-skeleton {
+  @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+.loading-spinner {
+  @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
+}
+
+/* Error states */
+.error-container {
+  @apply flex flex-col items-center justify-center space-y-4 p-8;
+}
+
+.error-icon {
+  @apply w-12 h-12 text-red-500 dark:text-red-400;
+}
+
+/* Card patterns */
+.card-base {
+  @apply rounded-xl border bg-card text-card-foreground shadow;
+}
+
+.card-interactive {
+  @apply card-base hover:shadow-md transition-shadow cursor-pointer;
+}
+
+.card-elevated {
+  @apply card-base shadow-lg hover:shadow-xl transition-shadow;
+}
+
+/* Button patterns */
+.button-base {
+  @apply inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+}
+
+.button-primary {
+  @apply button-base bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+.button-secondary {
+  @apply button-base bg-secondary text-secondary-foreground hover:bg-secondary/80;
+}
+
+.button-outline {
+  @apply button-base border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+}
+
+/* Form patterns */
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+}
+
+.form-input {
+  @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINT UTILITIES
+   ============================================ */
+
+/* Mobile-first responsive utilities */
+.mobile-only {
+  @apply block sm:hidden;
+}
+
+.tablet-only {
+  @apply hidden sm:block lg:hidden;
+}
+
+.desktop-only {
+  @apply hidden lg:block;
+}
+
+/* Responsive text sizes */
+.text-responsive-sm {
+  @apply text-xs sm:text-sm;
+}
+
+.text-responsive-base {
+  @apply text-sm sm:text-base;
+}
+
+.text-responsive-lg {
+  @apply text-base sm:text-lg;
+}
+
+.text-responsive-xl {
+  @apply text-lg sm:text-xl;
+}
+
+/* Responsive spacing */
+.space-responsive {
+  @apply space-y-2 sm:space-y-4;
+}
+
+.gap-responsive {
+  @apply gap-2 sm:gap-4;
+}
+
+.p-responsive {
+  @apply p-2 sm:p-4 lg:p-6;
+}
+
+.px-responsive {
+  @apply px-2 sm:px-4 lg:px-6;
+}
+
+.py-responsive {
+  @apply py-2 sm:py-4 lg:py-6;
+}

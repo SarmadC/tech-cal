@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { ChartPie, TrendUp } from '@phosphor-icons/react';
+import { DISTRIBUTION_CHART_CONFIG } from '@/utils/chartConfigs';
 import type { Event } from '@/types';
 
 interface EventDistributionCardProps {
@@ -12,44 +13,6 @@ interface EventDistributionCardProps {
   className?: string;
 }
 
-const chartConfig = {
-  conference: {
-    label: "Conferences",
-    color: "hsl(var(--chart-1))",
-  },
-  workshop: {
-    label: "Workshops",
-    color: "hsl(var(--chart-2))",
-  },
-  meetup: {
-    label: "Meetups",
-    color: "hsl(var(--chart-3))",
-  },
-  webinar: {
-    label: "Webinars",
-    color: "hsl(var(--chart-4))",
-  },
-  networking: {
-    label: "Networking",
-    color: "hsl(var(--chart-5))",
-  },
-  hackathon: {
-    label: "Hackathons",
-    color: "hsl(287 69% 50%)",
-  },
-  bootcamp: {
-    label: "Bootcamps",
-    color: "hsl(200 95% 50%)",
-  },
-  summit: {
-    label: "Summits",
-    color: "hsl(25 95% 53%)",
-  },
-  other: {
-    label: "Other",
-    color: "hsl(var(--muted-foreground))",
-  },
-} satisfies ChartConfig;
 
 export function EventDistributionCard({ events, className = '' }: EventDistributionCardProps) {
   const categorizeEvent = (event: Event): string => {
@@ -133,7 +96,7 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
   // Single category state
   if (data.length === 1) {
     const singleType = data[0];
-    const config = chartConfig[singleType.type as keyof typeof chartConfig] || chartConfig.other;
+    const config = DISTRIBUTION_CHART_CONFIG[singleType.type as keyof typeof DISTRIBUTION_CHART_CONFIG] || DISTRIBUTION_CHART_CONFIG.other;
 
     return (
       <Card className={className}>
@@ -175,7 +138,7 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
         <div className="space-y-1">
           <CardTitle className="text-lg">Event Types</CardTitle>
           <CardDescription>
-            {totalEvents} events • {topType && `${topType.percentage}% ${chartConfig[topType.type as keyof typeof chartConfig]?.label || 'Other'}`}
+            {totalEvents} events • {topType && `${topType.percentage}% ${DISTRIBUTION_CHART_CONFIG[topType.type as keyof typeof DISTRIBUTION_CHART_CONFIG]?.label || 'Other'}`}
           </CardDescription>
         </div>
         <div className="flex items-center space-x-1 text-sm">
@@ -189,14 +152,14 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
       </CardHeader>
       <CardContent>
         {shouldUseBarChart ? (
-          <ChartContainer config={chartConfig} className="h-[160px] w-full">
+          <ChartContainer config={DISTRIBUTION_CHART_CONFIG} className="h-[160px] w-full">
             <BarChart data={data} layout="horizontal" margin={{ left: 60, right: 12 }}>
               <XAxis type="number" hide />
               <YAxis
                 type="category"
                 dataKey="type"
                 tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                tickFormatter={(value) => chartConfig[value as keyof typeof chartConfig]?.label || 'Other'}
+                tickFormatter={(value) => DISTRIBUTION_CHART_CONFIG[value as keyof typeof DISTRIBUTION_CHART_CONFIG]?.label || 'Other'}
                 width={55}
               />
               <ChartTooltip
@@ -204,7 +167,7 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
                 content={<ChartTooltipContent
                   formatter={(value, name) => [
                     `${value} events (${data.find(d => d.type === name)?.percentage}%)`,
-                    chartConfig[name as keyof typeof chartConfig]?.label || 'Other'
+                    DISTRIBUTION_CHART_CONFIG[name as keyof typeof DISTRIBUTION_CHART_CONFIG]?.label || 'Other'
                   ]}
                 />}
               />
@@ -220,7 +183,7 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
           </ChartContainer>
         ) : (
           <ChartContainer
-            config={chartConfig}
+            config={DISTRIBUTION_CHART_CONFIG}
             className="mx-auto aspect-square max-h-[180px]"
           >
             <PieChart>
@@ -229,7 +192,7 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
                 content={<ChartTooltipContent
                   formatter={(value, name) => [
                     `${value} events`,
-                    chartConfig[name as keyof typeof chartConfig]?.label || 'Other'
+                    DISTRIBUTION_CHART_CONFIG[name as keyof typeof DISTRIBUTION_CHART_CONFIG]?.label || 'Other'
                   ]}
                 />}
               />
@@ -254,7 +217,7 @@ export function EventDistributionCard({ events, className = '' }: EventDistribut
 
         {/* Summary Stats */}
         <div className="flex items-center justify-between text-xs text-muted-foreground mt-3 pt-3 border-t">
-          <span>Most common: {topType && chartConfig[topType.type as keyof typeof chartConfig]?.label}</span>
+          <span>Most common: {topType && DISTRIBUTION_CHART_CONFIG[topType.type as keyof typeof DISTRIBUTION_CHART_CONFIG]?.label}</span>
           <span>{data.length} categories</span>
         </div>
       </CardContent>

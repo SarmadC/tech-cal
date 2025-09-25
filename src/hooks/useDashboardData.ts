@@ -5,21 +5,23 @@ import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { useLightweightTrackedEvents } from '@/hooks/useTrackedEventsUnified';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
-import type { EventType, Event } from '@/types';
+import type { EventType, Event, TrackedEventRecord } from '@/types';
 
 interface UseDashboardDataProps {
   initialEventTypes?: EventType[];
   initialUpcomingEvents?: Event[];
+  initialTrackedEvents?: TrackedEventRecord[];
 }
 
 export function useDashboardData({ 
   initialEventTypes = [], 
-  initialUpcomingEvents = [] 
+  initialUpcomingEvents = [],
+  initialTrackedEvents = []
 }: UseDashboardDataProps = {}) {
   const { supabase, isReady } = useSupabaseSafe();
   
-  // Get tracked events using the existing hook
-  const { data: trackedEvents, isLoading: trackedEventsLoading, error: trackedEventsError } = useLightweightTrackedEvents();
+  // Get tracked events using the existing hook with initial data
+  const { data: trackedEvents, isLoading: trackedEventsLoading, error: trackedEventsError } = useLightweightTrackedEvents(initialTrackedEvents);
   
   // Get event types with server data as initial data
   const { data: eventTypes, isLoading: eventTypesLoading, error: eventTypesError } = useQuery({
