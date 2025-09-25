@@ -4,6 +4,129 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CRITICAL: Override Tailwind's bg-card after utilities layer */
+@layer utilities {
+  .bg-card {
+    --card: 250 250 250 !important;
+    background: hsl(250, 250, 250) !important;
+    background-color: hsl(250, 250, 250) !important;
+  }
+  
+  .dark .bg-card {
+    --card: 15 20 28 !important;
+    background: hsl(15, 20, 28) !important;
+    background-color: hsl(15, 20, 28) !important;
+  }
+}
+
+/* COMPREHENSIVE DASHBOARD COLOR FIX: Override all shadcn color variables */
+@layer utilities {
+  /* Card backgrounds */
+  .bg-card {
+    background-color: #fafafa !important; /* Force explicit light gray */
+  }
+  
+  .dark .bg-card {
+    background-color: #1f2937 !important; /* Force explicit dark gray */
+  }
+  
+  /* Card text colors */
+  .text-card-foreground {
+    color: #111827 !important; /* Force explicit dark text for light mode */
+  }
+  
+  .dark .text-card-foreground {
+    color: #f9fafb !important; /* Force explicit light text for dark mode */
+  }
+  
+  /* Muted text colors */
+  .text-muted-foreground {
+    color: #6b7280 !important; /* Force explicit muted text for light mode */
+  }
+  
+  .dark .text-muted-foreground {
+    color: #9ca3af !important; /* Force explicit muted text for dark mode */
+  }
+  
+  /* Target the exact shadcn Card structure */
+  .rounded-xl.border.bg-card.text-card-foreground.shadow {
+    background-color: #fafafa !important;
+    color: #111827 !important;
+  }
+  
+  .dark .rounded-xl.border.bg-card.text-card-foreground.shadow {
+    background-color: #1f2937 !important;
+    color: #f9fafb !important;
+  }
+  
+  /* Fix all dashboard card variations */
+  .dashboard-card,
+  [class*="dashboard"] .card,
+  [class*="Dashboard"] .card {
+    background-color: #fafafa !important;
+    color: #111827 !important;
+  }
+  
+  .dark .dashboard-card,
+  .dark [class*="dashboard"] .card,
+  .dark [class*="Dashboard"] .card {
+    background-color: #1f2937 !important;
+    color: #f9fafb !important;
+  }
+  
+  /* Fix chart text colors */
+  .recharts-text {
+    fill: #6b7280 !important;
+  }
+  
+  .dark .recharts-text {
+    fill: #9ca3af !important;
+  }
+  
+  /* Fix chart tooltips - prevent yellow background */
+  .recharts-tooltip-wrapper {
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .dark .recharts-tooltip-wrapper {
+    background: #1f2937 !important;
+    border: 1px solid #374151 !important;
+  }
+  
+  .recharts-tooltip-content {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+  
+  .dark .recharts-tooltip-content {
+    background: #1f2937 !important;
+    color: #f9fafb !important;
+  }
+  
+  /* Fix chart legend colors for better visibility */
+  [style*="--color-other"] {
+    --color-other: #9ca3af !important; /* Visible gray for light mode */
+  }
+  
+  .dark [style*="--color-other"] {
+    --color-other: #6b7280 !important; /* Lighter gray for dark mode */
+  }
+  
+  /* Fix any other text elements that might be affected */
+  .font-semibold,
+  .font-medium {
+    color: #111827 !important;
+  }
+  
+  .dark .font-semibold,
+  .dark .font-medium {
+    color: #f9fafb !important;
+  }
+}
+
 /* Import utility classes */
 @import './utilities.css';
 
@@ -115,12 +238,19 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
 
-  /* Chart colors for dark theme */
+  /* Chart colors for dark theme - using explicit HSL values for better browser compatibility */
   --chart-1: 220 70% 50%;
   --chart-2: 160 60% 45%;
   --chart-3: 30 80% 55%;
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
+  
+  /* Browser-specific chart color fixes */
+  --chart-1-explicit: hsl(220, 70%, 50%);
+  --chart-2-explicit: hsl(160, 60%, 45%);
+  --chart-3-explicit: hsl(30, 80%, 55%);
+  --chart-4-explicit: hsl(280, 65%, 60%);
+  --chart-5-explicit: hsl(340, 75%, 55%);
   
     --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
@@ -170,10 +300,121 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
   --chart-3: 30 80% 55%;
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
+  
+  /* Browser-specific chart color fixes for light theme */
+  --chart-1-explicit: hsl(220, 70%, 50%);
+  --chart-2-explicit: hsl(160, 60%, 45%);
+  --chart-3-explicit: hsl(30, 80%, 55%);
+  --chart-4-explicit: hsl(280, 65%, 60%);
+  --chart-5-explicit: hsl(340, 75%, 55%);
 }
 
 /* ============================================== */
-/* 2. GLOBAL BASE & ELEMENT STYLES                */
+/* 2. BROWSER COMPATIBILITY FIXES                 */
+/* ============================================== */
+
+/* Fix for Chrome/Firefox color rendering differences */
+@supports (color: hsl(0, 0%, 0%)) {
+  /* Ensure consistent HSL rendering across browsers */
+  .chart-color-primary { color: hsl(220, 70%, 50%) !important; }
+  .chart-color-secondary { color: hsl(160, 60%, 45%) !important; }
+  .chart-color-tertiary { color: hsl(30, 80%, 55%) !important; }
+  .chart-color-quaternary { color: hsl(280, 65%, 60%) !important; }
+  .chart-color-quinary { color: hsl(340, 75%, 55%) !important; }
+}
+
+/* Force consistent color rendering for chart elements */
+.recharts-bar,
+.recharts-area,
+.recharts-line,
+.recharts-pie {
+  color-scheme: normal;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Force consistent color profile rendering across browsers */
+* {
+  color-scheme: light dark;
+  -webkit-color-scheme: light dark;
+}
+
+/* Ensure consistent HSL color rendering in Chrome */
+.bg-card,
+[class*="card"] {
+  color-profile: sRGB;
+  -webkit-color-profile: sRGB;
+}
+
+/* DEFINITIVE FIX: Ensure --card variable is never overridden with yellow values */
+:root {
+  --card: 250 250 250 !important; /* Force light gray globally - prevent yellow override */
+}
+
+.dark {
+  --card: 15 20 28 !important; /* Force dark gray globally - prevent yellow override */
+}
+
+/* Additional safety: Override any potential yellow values */
+:root {
+  --category-bg: transparent !important; /* Prevent event card color leakage */
+  --warning: #f59e0b !important; /* Keep warning color but prevent leakage */
+  --chart-3: 250 250 250 !important; /* Prevent chart color leakage */
+  --pastel-webinar: transparent !important; /* Prevent webinar color leakage */
+  
+  /* Force correct shadcn color variables globally */
+  --card: 250 250 250 !important; /* Light gray */
+  --card-foreground: 17 24 39 !important; /* Dark text */
+  --muted-foreground: 107 114 128 !important; /* Muted text */
+}
+
+.dark {
+  --card: 31 41 55 !important; /* Dark gray */
+  --card-foreground: 249 250 251 !important; /* Light text */
+  --muted-foreground: 156 163 175 !important; /* Muted text */
+}
+
+/* ULTRA-AGGRESSIVE: Override Tailwind's bg-card class directly */
+.bg-card {
+  --card: 250 250 250 !important;
+  background: hsl(250, 250, 250) !important;
+  background-color: hsl(250, 250, 250) !important;
+}
+
+.dark .bg-card {
+  --card: 15 20 28 !important;
+  background: hsl(15, 20, 28) !important;
+  background-color: hsl(15, 20, 28) !important;
+}
+
+/* Force shadcn Card components to use correct colors */
+.rounded-xl.border.bg-card {
+  --card: 250 250 250 !important;
+  background: hsl(250, 250, 250) !important;
+  background-color: hsl(250, 250, 250) !important;
+}
+
+.dark .rounded-xl.border.bg-card {
+  --card: 15 20 28 !important;
+  background: hsl(15, 20, 28) !important;
+  background-color: hsl(15, 20, 28) !important;
+}
+
+/* Nuclear option: Override any element with bg-card class */
+*[class*="bg-card"] {
+  --card: 250 250 250 !important;
+  background: hsl(250, 250, 250) !important;
+  background-color: hsl(250, 250, 250) !important;
+}
+
+.dark *[class*="bg-card"] {
+  --card: 15 20 28 !important;
+  background: hsl(15, 20, 28) !important;
+  background-color: hsl(15, 20, 28) !important;
+}
+
+/* ============================================== */
+/* 3. GLOBAL BASE & ELEMENT STYLES                */
 /* ============================================== */
 
 * {

@@ -6,17 +6,17 @@ import type { ChartConfig } from '@/components/ui/chart';
  * All chart components should use these standardized configs
  */
 
-// Base color palette for consistency
+// Base color palette for consistency - using explicit values for better browser compatibility
 export const CHART_COLORS = {
-  primary: "hsl(var(--chart-1))",
-  secondary: "hsl(var(--chart-2))",
-  tertiary: "hsl(var(--chart-3))",
-  quaternary: "hsl(var(--chart-4))",
-  quinary: "hsl(var(--chart-5))",
+  primary: "hsl(220, 70%, 50%)",      // Blue
+  secondary: "hsl(160, 60%, 45%)",    // Green
+  tertiary: "hsl(30, 80%, 55%)",      // Orange (not yellow)
+  quaternary: "hsl(280, 65%, 60%)",   // Purple
+  quinary: "hsl(340, 75%, 55%)",      // Pink
   gray: "hsl(var(--muted-foreground))",
-  success: "hsl(var(--chart-1))",
-  warning: "hsl(var(--chart-2))",
-  error: "hsl(var(--chart-3))",
+  success: "hsl(220, 70%, 50%)",      // Blue
+  warning: "hsl(160, 60%, 45%)",      // Green
+  error: "hsl(30, 80%, 55%)",         // Orange
 } as const;
 
 // Activity trend chart configuration
@@ -59,7 +59,7 @@ export const DISTRIBUTION_CHART_CONFIG = {
   },
   other: {
     label: "Other",
-    color: CHART_COLORS.gray,
+    color: "hsl(0, 0%, 60%)", // Use a visible gray color instead of muted-foreground
   },
 } satisfies ChartConfig;
 
