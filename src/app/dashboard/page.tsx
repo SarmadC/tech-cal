@@ -6,9 +6,11 @@ import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
 import { UserEventService } from '@/services/userEventService';
 import DashboardClientView from './DashboardClientView';
+import { createServerClient } from '@supabase/ssr';
+import { Database } from '@/types/supabase';
 
 export default async function DashboardPage() {
-    const supabase = await createClient();
+    const supabase: Awaited<ReturnType<typeof createServerClient<Database>>> = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
