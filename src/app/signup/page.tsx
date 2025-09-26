@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { signupAction, oauthSignInAction } from '@/app/auth/actions';
@@ -42,7 +43,7 @@ export default function SignupPage() {
                     {/* Header section remains the same */}
                     <div className="text-center mb-8">
                         <Link href="/" className="inline-flex items-center space-x-2">
-                            <img src="/logo.svg" alt="KureCal" className="w-12 h-12" />
+                            <Image src="/logo.svg" alt="KureCal" width={48} height={48} />
                             <span className="text-2xl font-bold text-foreground-primary">KureCal</span>
                         </Link>
                         <h2 className="mt-6 text-3xl font-bold text-foreground-primary">Create your account</h2>

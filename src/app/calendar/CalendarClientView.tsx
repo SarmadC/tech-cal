@@ -14,11 +14,10 @@ import Loading from '@/components/Loading';
 import SmartFilterPanel from '@/components/calendar/SmartFilterPanel';
 import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCalendarRenderer';
 
-import { useSmartFilters } from '@/hooks/useSmartFilters';
+import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 
-import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking, MultiDayEvent } from '@/types';
-import { useAuth, CalendarProvider } from '@/contexts';
-import { useTrackedEventIds } from '@/hooks/useTrackedEventsUnified';
+import { Event, EventType, AppProfile, TrackedEvent, MultiDayEvent } from '@/types';
+import { CalendarProvider } from '@/contexts';
 
 const EventDetailPanelDynamic = dynamic(
     () => import('@/components/calendar/EventDetailPanel'),
@@ -100,42 +99,34 @@ function useCalendarUIState() {
     return { state, actions };
 }
 
-// Custom hook for event data management
-function useEventData(initialEvents: (Event | MultiDayEvent)[], profile: AppProfile | null) {
-    const { user: _user } = useAuth();
-    
+// Custom hook for event data management - now uses server-side filtering
+function useEventData(profile: AppProfile | null) {
     const {
+        filteredEvents: enrichedEvents,
+        isLoading,
+        error,
         filters,
-        filteredEvents,
         updateFilter,
         resetFilters,
         applyQuickFilter,
-        activeFilterCount
-    } = useSmartFilters(initialEvents, profile);
-
-    const { trackedEventIds } = useTrackedEventIds();
-
-    const enrichedEvents: TrackedEvent[] = useMemo(() => {
-        if (!trackedEventIds) {
-            return filteredEvents.map(event => enrichWithTracking(event, false));
-        }
-
-        const result = filteredEvents.map(event => {
-            const isTracked = trackedEventIds.has(event.id);
-            const enriched = enrichWithTracking(event, isTracked);
-            return enriched;
-        });
-
-        return result;
-    }, [filteredEvents, trackedEventIds]);
+        activeFilterCount,
+        isFilterPanelOpen,
+        setIsFilterPanelOpen,
+        refetch
+    } = useUnifiedServerFiltering(profile);
 
     return {
         enrichedEvents,
+        isLoading,
+        error,
         filters,
         updateFilter,
         resetFilters,
         applyQuickFilter,
-        activeFilterCount
+        activeFilterCount,
+        isFilterPanelOpen,
+        setIsFilterPanelOpen,
+        refetch
     };
 }
 
@@ -213,7 +204,7 @@ interface CalendarClientViewProps {
 }
 
 export default function CalendarClientView({
-    initialEvents,
+    initialEvents: _initialEvents, // No longer needed with server-side filtering
     initialCategories,
     profile,
 }: CalendarClientViewProps) {
@@ -223,7 +214,7 @@ export default function CalendarClientView({
 
     // Use custom hooks for simplified state management
     const { state, actions } = useCalendarUIState();
-    const eventData = useEventData(initialEvents, profile);
+    const eventData = useEventData(profile);
     const { dayEvents, weekEvents } = useViewEvents(eventData.enrichedEvents, searchParams);
 
     // Get current date from URL params
@@ -261,6 +252,35 @@ export default function CalendarClientView({
 
     
     const renderCalendarContent = (context: CalendarLayoutContext) => {
+        // Show loading state
+        if (eventData.isLoading) {
+            return (
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading events...</p>
+                    </div>
+                </div>
+            );
+        }
+
+        // Show error state
+        if (eventData.error) {
+            return (
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="text-center">
+                        <p className="text-red-600 mb-4">Error loading events: {eventData.error}</p>
+                        <button 
+                            onClick={eventData.refetch}
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <AdaptiveCalendarRenderer
                 view={context.view}
@@ -295,8 +315,8 @@ export default function CalendarClientView({
                     // Handle navigation if needed
                 }}
                 onDateChange={handleDateSelect}
-                onToggleFilters={actions.toggleFilterPanel}
-                isFilterPanelOpen={state.isFilterPanelOpen}
+                onToggleFilters={() => eventData.setIsFilterPanelOpen(!eventData.isFilterPanelOpen)}
+                isFilterPanelOpen={eventData.isFilterPanelOpen}
                 activeFilterCount={eventData.activeFilterCount}
                 calendarRef={calendarRef}
                 isSidebarOpen={state.isSidebarOpen}
@@ -314,23 +334,41 @@ export default function CalendarClientView({
                         <div className="flex-1 relative">
                             {renderCalendarContent(context)}
                         </div>
-                        {state.isFilterPanelOpen && (
+                        {eventData.isFilterPanelOpen && (
                             <div 
                                 className="fixed inset-0 z-40 bg-black bg-opacity-50"
-                                onClick={actions.toggleFilterPanel}
+                                onClick={() => eventData.setIsFilterPanelOpen(false)}
                             >
                                 <div 
                                     className="absolute right-0 top-0 h-full w-80 transform transition-transform duration-300 ease-in-out"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <SmartFilterPanel 
-                                        filters={eventData.filters} 
-                                        onUpdateFilter={eventData.updateFilter} 
+                                        filters={{
+                                            searchTerm: eventData.filters.searchTerm,
+                                            categories: eventData.filters.categories,
+                                            dateRange: eventData.filters.dateRange,
+                                            format: eventData.filters.format,
+                                            cost: eventData.filters.cost,
+                                            difficulty: eventData.filters.difficulty,
+                                            availability: eventData.filters.availability,
+                                            popularity: eventData.filters.popularity,
+                                            duration: eventData.filters.duration,
+                                            sortBy: eventData.filters.sortBy,
+                                            myTracked: eventData.filters.myTracked,
+                                            myNetwork: eventData.filters.myNetwork,
+                                            recommended: eventData.filters.recommended
+                                        }} 
+                                        onUpdateFilter={(key: string, value: unknown) => {
+                                            // Handle pagination fields separately
+                                            if (key === 'page' || key === 'pageSize') return;
+                                            eventData.updateFilter(key as keyof typeof eventData.filters, value as never);
+                                        }} 
                                         onResetFilters={eventData.resetFilters} 
                                         onApplyQuickFilter={eventData.applyQuickFilter} 
                                         activeFilterCount={eventData.activeFilterCount} 
-                                        isOpen={state.isFilterPanelOpen} 
-                                        onClose={actions.toggleFilterPanel} 
+                                        isOpen={eventData.isFilterPanelOpen} 
+                                        onClose={() => eventData.setIsFilterPanelOpen(false)} 
                                     />
                                 </div>
                             </div>

@@ -16,6 +16,8 @@ import {
     enhancedEventTransformer
 } from '@/utils/transformers';
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
+import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
+import { CareerProfile } from '@/types/career';
 import * as Sentry from "@sentry/nextjs";
 
 export class EventService {
@@ -112,18 +114,17 @@ export class EventService {
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
 
-            // Simplified query for better reliability - remove complex joins that might fail
-            let query = supabaseClient
-                .from('events')
-                .select(`
-                    *, 
-                    event_type:event_type_id (*), 
-                    organizer:organizers (id, name, logo_url)
-                `)
-                .order('start_time', { ascending: true })
-                .range(from, to);
+            // Enhanced query with comprehensive database-level filtering
+        let query = supabaseClient
+            .from('events')
+            .select(`
+                *, 
+                event_type:event_type_id (*), 
+                organizer:organizers (id, name, logo_url)
+            `)
+            .range(from, to);
 
-            // Apply filters with validation
+            // Apply basic filters with validation
             if (filters.categories?.length) {
                 query = query.in('event_type_id', filters.categories);
             }
@@ -153,6 +154,12 @@ export class EventService {
 
             if (filters.status?.length) query = query.in('status', filters.status);
             if (filters.eventIds?.length) query = query.in('id', filters.eventIds);
+
+            // Apply enhanced database-level filters
+            query = this.applyEnhancedFilters(query, filters);
+
+            // Apply sorting
+            query = this.applySorting(query, filters.sortBy);
 
             const { data, error } = await query;
             
@@ -1008,6 +1015,292 @@ export class EventService {
                 extra: { function: 'getEventsWithAgendaAndMultiDaySupport', filters, message, stack }
             });
             throw new Error(message || 'Failed to fetch events with agenda and multi-day support.');
+        }
+    }
+
+    /**
+     * Apply enhanced database-level filters to the query
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private static applyEnhancedFilters(query: any, filters: EventFilters): any {
+        // Format filtering (virtual, in-person, hybrid) - using event_format column
+        if (filters.format && filters.format !== 'all') {
+            switch (filters.format) {
+                case 'virtual':
+                    query = query.or('event_format.eq.Remote,livestream_url.is.not.null').and('venue_id.is.null');
+                    break;
+                case 'in-person':
+                    query = query.or('event_format.eq.In-person,venue_id.is.not.null').and('livestream_url.is.null');
+                    break;
+                case 'hybrid':
+                    query = query.and('livestream_url.is.not.null,venue_id.is.not.null');
+                    break;
+            }
+        }
+
+        // Cost filtering (free, paid) - using price_min and price_max fields
+        if (filters.cost && filters.cost !== 'all') {
+            switch (filters.cost) {
+                case 'free':
+                    query = query.or('price_min.is.null,price_min.eq.0');
+                    break;
+                case 'paid':
+                    query = query.and('price_min.is.not.null,price_min.gt.0');
+                    break;
+            }
+        }
+
+        // Difficulty filtering (using difficulty_level field and title keywords)
+        if (filters.difficulty && filters.difficulty !== 'all') {
+            switch (filters.difficulty) {
+                case 'beginner':
+                    query = query.or('difficulty_level.eq.Beginner,title.ilike.%beginner%,title.ilike.%intro%,title.ilike.%101%');
+                    break;
+                case 'intermediate':
+                    query = query.or('difficulty_level.eq.Intermediate,title.ilike.%intermediate%,title.ilike.%advanced%,description.ilike.%experience required%');
+                    break;
+                case 'advanced':
+                    query = query.or('difficulty_level.eq.Advanced,title.ilike.%advanced%,title.ilike.%expert%,title.ilike.%senior%');
+                    break;
+            }
+        }
+
+        // Duration filtering
+        if (filters.duration && filters.duration !== 'all') {
+            switch (filters.duration) {
+                case 'short':
+                    query = query.and('is_multi_day.eq.false').filter('end_time', 'lte', 'start_time + interval \'2 hours\'');
+                    break;
+                case 'medium':
+                    query = query.and('is_multi_day.eq.false').filter('end_time', 'lte', 'start_time + interval \'6 hours\'');
+                    break;
+                case 'long':
+                    query = query.and('is_multi_day.eq.false').filter('end_time', 'gt', 'start_time + interval \'6 hours\'');
+                    break;
+                case 'multi-day':
+                    query = query.eq('is_multi_day', true);
+                    break;
+            }
+        }
+
+        // Popularity filtering (based on attendee count and other factors)
+        if (filters.popularity && filters.popularity !== 'all') {
+            switch (filters.popularity) {
+                case 'trending':
+                    // High attendee count OR recently created with registration
+                    query = query.or('attendee_count.gt.500,registration_url.is.not.null,created_at.gte.now() - interval \'7 days\'');
+                    break;
+                case 'high-attendance':
+                    query = query.gt('attendee_count', 100);
+                    break;
+                case 'niche':
+                    query = query.lte('attendee_count', 100);
+                    break;
+            }
+        }
+
+        // Network potential filtering
+        if (filters.myNetwork) {
+            query = query.or(
+                'event_type_id.ilike.%networking%,event_type_id.ilike.%meetup%,attendee_count.gt.500,event_type_id.ilike.%conference%,event_type_id.ilike.%summit%'
+            );
+        }
+
+        // Recommendation filtering (based on common tech terms)
+        if (filters.recommended) {
+            const techTerms = ['react', 'javascript', 'python', 'ai', 'machine learning', 'data', 'typescript', 'node', 'web development'];
+            const orConditions = techTerms.map(term => `title.ilike.%${term}%,description.ilike.%${term}%`).join(',');
+            query = query.or(orConditions);
+        }
+
+        return query;
+    }
+
+    /**
+     * Apply sorting to the query
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private static applySorting(query: any, sortBy?: string): any {
+        switch (sortBy) {
+            case 'popularity':
+                return query.order('attendee_count', { ascending: false, nullsLast: true })
+                           .order('start_time', { ascending: true });
+            case 'career-impact':
+                // For now, sort by attendee count as a proxy for career impact
+                // This can be enhanced when career impact scores are available
+                return query.order('attendee_count', { ascending: false, nullsLast: true })
+                           .order('start_time', { ascending: true });
+            case 'date':
+            default:
+                return query.order('start_time', { ascending: true });
+        }
+    }
+
+    /**
+     * Get events using Supabase RPC function for complex filtering
+     * This method uses the filter_events PostgreSQL function for optimal performance
+     * Note: RPC function needs to be created in Supabase first
+     */
+    static async getEventsWithRPC(
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<{ events: Event[]; totalCount: number }> {
+        try {
+            // For now, fallback to regular getEvents until RPC function is deployed
+            // TODO: Deploy filter_events.sql to Supabase and enable this
+            console.warn('RPC function not available, falling back to regular filtering');
+            
+            const events = await this.getEvents(filters, supabaseClient, page, pageSize);
+            const totalCount = await this.getEventCount(filters, supabaseClient);
+            
+            return { events, totalCount };
+
+            /* Uncomment when RPC function is deployed:
+            const { data, error } = await (supabaseClient as any).rpc('filter_events', {
+                search_term: filters.searchTerm || null,
+                categories: filters.categories || null,
+                start_date: filters.startDate?.toISOString() || null,
+                end_date: filters.endDate?.toISOString() || null,
+                event_format: filters.format || 'all',
+                cost_filter: filters.cost || 'all',
+                difficulty_filter: filters.difficulty || 'all',
+                popularity_filter: filters.popularity || 'all',
+                duration_filter: filters.duration || 'all',
+                my_network: filters.myNetwork || false,
+                recommended: filters.recommended || false,
+                page_num: page,
+                page_size: pageSize,
+                sort_by: filters.sortBy || 'date'
+            });
+
+            if (error) {
+                console.error('RPC filter_events error:', error);
+                throw error;
+            }
+
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                return { events: [], totalCount: 0 };
+            }
+
+            // Get total count from first row
+            const totalCount = (data[0] as any)?.total_count || 0;
+
+            // Transform the data to Event format
+            const events: Event[] = data.map((item: any) => {
+                return {
+                    id: item.id,
+                    title: item.title,
+                    description: item.description,
+                    startTime: item.start_time,
+                    endTime: item.end_time,
+                    location: item.location,
+                    livestreamUrl: item.livestream_url,
+                    cost: item.cost,
+                    attendeeCount: item.attendee_count,
+                    isMultiDay: item.is_multi_day,
+                    eventTypeId: item.event_type_id,
+                    organizerId: item.organizer_id,
+                    createdAt: item.created_at,
+                    registrationUrl: item.registration_url,
+                    // Add default values for required fields
+                    status: 'published' as const,
+                    slug: item.title?.toLowerCase().replace(/\s+/g, '-') || '',
+                    tags: []
+                };
+            });
+
+            return { events, totalCount };
+            */
+
+        } catch (error) {
+            console.error('Error in getEventsWithRPC:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventsWithRPC', filters }
+            });
+            throw new Error('Failed to fetch events with RPC filtering.');
+        }
+    }
+
+    /**
+     * Get tag-based recommended events for a user
+     */
+    static async getRecommendedEventsByTags(
+        userId: string,
+        careerProfile: CareerProfile,
+        supabaseClient: SupabaseClientType,
+        limit: number = 10
+    ): Promise<Event[]> {
+        try {
+            return await TagBasedMatchingService.getRecommendedEventsByTags(
+                userId,
+                careerProfile,
+                supabaseClient,
+                limit
+            );
+        } catch (error) {
+            console.error('Error fetching tag-based recommendations:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getRecommendedEventsByTags', userId }
+            });
+            return [];
+        }
+    }
+
+    /**
+     * Get events with tag-based career impact scores
+     */
+    static async getEventsWithTagBasedImpact(
+        events: Event[],
+        careerProfile: CareerProfile
+    ): Promise<(Event & { tagBasedImpactScore: number })[]> {
+        return events.map(event => ({
+            ...event,
+            tagBasedImpactScore: TagBasedMatchingService.calculateTagBasedCareerImpact(
+                event,
+                careerProfile
+            )
+        }));
+    }
+
+    /**
+     * Search events by tags
+     */
+    static async searchEventsByTags(
+        tagNames: string[],
+        supabaseClient: SupabaseClientType,
+        limit: number = 50
+    ): Promise<Event[]> {
+        try {
+            const { data: events, error } = await supabaseClient
+                .from('events')
+                .select(`
+                    *,
+                    event_type:event_type_id (*),
+                    organizer:organizers (*),
+                    tags:event_tag_relations (
+                        event_tags (event_tag, category, color)
+                    )
+                `)
+                .in('tags.event_tags.event_tag', tagNames)
+                .eq('status', 'confirmed')
+                .gte('start_time', new Date().toISOString())
+                .order('start_time', { ascending: true })
+                .limit(limit);
+
+            if (error) throw error;
+
+            // Transform and attach tags
+            const transformedEvents = await this.attachTagsToEvents(events || [], supabaseClient);
+            return transformedEvents.map(event => eventTransformer.toApp(event));
+
+        } catch (error) {
+            console.error('Error searching events by tags:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'searchEventsByTags', tagNames }
+            });
+            return [];
         }
     }
 }

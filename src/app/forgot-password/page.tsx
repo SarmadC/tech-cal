@@ -3,6 +3,7 @@
 
 import { useEffect, useActionState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { toast } from 'sonner';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
@@ -56,7 +57,7 @@ export default function ForgotPasswordPage() {
                     {/* Header section is unchanged */}
                     <div className="text-center mb-8">
                         <Link href="/" className="inline-flex items-center space-x-2">
-                            <img src="/logo.svg" alt="KureCal" className="w-12 h-12" />
+                            <Image src="/logo.svg" alt="KureCal" width={48} height={48} />
                             <span className="text-2xl font-bold text-foreground-primary">KureCal</span>
                         </Link>
                         <h2 className="mt-6 text-3xl font-bold text-foreground-primary">

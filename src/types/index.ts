@@ -101,7 +101,26 @@ export type CalendarView = typeof CALENDAR_VIEWS[keyof typeof CALENDAR_VIEWS];
 export const OAUTH_PROVIDERS = { GOOGLE: 'google', GITHUB: 'github' } as const;
 export type OAuthProvider = typeof OAUTH_PROVIDERS[keyof typeof OAUTH_PROVIDERS];
 
-export type EventFilters = { categories?: string[]; startDate?: Date; endDate?: Date; searchTerm?: string; collection?: string; status?: string[]; eventIds?: string[]; };
+export type EventFilters = { 
+  categories?: string[]; 
+  startDate?: Date; 
+  endDate?: Date; 
+  searchTerm?: string; 
+  collection?: string; 
+  status?: string[]; 
+  eventIds?: string[];
+  // Enhanced filtering options
+  format?: 'all' | 'virtual' | 'in-person' | 'hybrid';
+  cost?: 'all' | 'free' | 'paid';
+  difficulty?: 'all' | 'beginner' | 'intermediate' | 'advanced';
+  availability?: 'all' | 'available' | 'no-conflicts';
+  popularity?: 'all' | 'trending' | 'high-attendance' | 'niche';
+  duration?: 'all' | 'short' | 'medium' | 'long' | 'multi-day';
+  myTracked?: boolean;
+  myNetwork?: boolean;
+  recommended?: boolean;
+  sortBy?: 'date' | 'popularity' | 'career-impact';
+};
 export type SearchSuggestion = { id: string; title: string; organizer: string; startTime: string; type: 'event' | 'organizer' | 'category'; };
 export type LoginForm = { email: string; password: string; rememberMe?: boolean; };
 export type SignupForm = { name: string; email: string; password: string; confirmPassword: string; acceptTerms: boolean; };

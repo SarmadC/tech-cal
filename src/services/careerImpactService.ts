@@ -10,6 +10,7 @@ import {
   CareerImpactScoreLite
 } from '@/types/careerImpact';
 import { CareerImpactCache } from '@/services/cache/careerImpactCache';
+import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 
 export class CareerImpactService {
   static readonly EMPTY_COMPONENTS = {
@@ -499,47 +500,14 @@ export class CareerImpactService {
   }
 
   /**
-   * Calculate skill matching score between event and career profile
+   * Calculate skill matching score using tag-based matching (enhanced)
    */
   private static calculateSkillMatchingScore(event: Event, careerProfile: CareerProfile): number {
-    const primarySkills = careerProfile.primarySkills || [];
-    const skillsToLearn = careerProfile.skillsToLearn || [];
-    const allRelevantSkills = [...primarySkills, ...skillsToLearn];
-
-    if (allRelevantSkills.length === 0) return 50; // Neutral if no skills defined
-
-    const eventText = `${event.title || ''} ${event.description || ''}`.toLowerCase();
-    let matchCount = 0;
-    let totalWeight = 0;
-
-    // Check primary skills (weight: 1.0)
-    for (const skill of primarySkills) {
-      const weight = 1.0;
-      totalWeight += weight;
-      if (eventText.includes(skill.toLowerCase())) {
-        matchCount += weight;
-      }
-    }
-
-    // Check skills to learn (weight: 1.5 - higher priority)
-    for (const skill of skillsToLearn) {
-      const weight = 1.5;
-      totalWeight += weight;
-      if (eventText.includes(skill.toLowerCase())) {
-        matchCount += weight;
-      }
-    }
-
-    // Check for related technologies and frameworks
-    const techKeywords = this.getTechnologyKeywords();
-    for (const keyword of techKeywords) {
-      if (eventText.includes(keyword)) {
-        matchCount += 0.5; // Bonus for tech relevance
-        totalWeight += 0.5;
-      }
-    }
-
-    return totalWeight > 0 ? Math.min((matchCount / totalWeight) * 100, 100) : 50;
+    // Use tag-based matching for more accurate results
+    const tagMatchResult = TagBasedMatchingService.calculateTagSimilarity(event, careerProfile);
+    
+    // Return the tag-based similarity score (already 0-100)
+    return tagMatchResult.score;
   }
 
   /**

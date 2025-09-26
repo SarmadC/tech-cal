@@ -1,7 +1,7 @@
 // src/app/calendar/page.tsx
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import { EventService } from '@/services/eventServices';
+// EventService no longer needed - using server-side filtering
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import CalendarClientView from './CalendarClientView';
@@ -16,26 +16,7 @@ export default async function CalendarPage() {
     }
 
     try {
-        // Load events with robust fallback, then categories
-        let events = [] as Awaited<ReturnType<typeof EventService.getEventsWithAgendaAndMultiDaySupport>>;
-        try {
-            events = await EventService.getEventsWithAgendaAndMultiDaySupport({}, supabase);
-        } catch (_err) {
-            // Fallback to simpler queries if the combined join fails
-            try {
-                events = await EventService.getEventsWithMultiDaySupport({}, supabase);
-            } catch (__err) {
-                // Convert basic events to MultiDayEvent format for consistency
-                const basicEvents = await EventService.getEvents({}, supabase);
-                events = basicEvents.map(event => ({
-                    ...event,
-                    isMultiDay: false,
-                    eventPattern: 'single' as const,
-                    agenda: undefined
-                }));
-            }
-        }
-
+        // Load categories for filter options
         const categories = await EventTypeService.getEventTypes(supabase);
 
         // Load profile separately with error handling
@@ -50,7 +31,7 @@ export default async function CalendarPage() {
 
         return (
             <CalendarClientView
-                initialEvents={events}
+                initialEvents={[]} // No longer needed - events loaded via server-side filtering
                 initialCategories={categories}
                 profile={profile}
             />

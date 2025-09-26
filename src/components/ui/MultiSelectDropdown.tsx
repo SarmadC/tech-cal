@@ -124,6 +124,7 @@ export default function MultiSelectDropdown({
       <div
         role="combobox"
         aria-expanded={isOpen}
+        aria-controls="multiselect-listbox"
         aria-haspopup="listbox"
         aria-label={label || placeholder}
         aria-describedby={description ? `${label}-description` : undefined}
@@ -197,6 +198,7 @@ export default function MultiSelectDropdown({
 
       {isOpen && (
         <div 
+          id="multiselect-listbox"
           role="listbox"
           aria-label={`${label || 'Options'} selection`}
           className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden"

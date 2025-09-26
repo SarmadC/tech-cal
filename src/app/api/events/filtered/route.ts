@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { EventService } from '@/services/eventServices';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
+import { EventFilters } from '@/types';
 
 // Rate limiter for filtered events API
 const ratelimit = new Ratelimit({
@@ -25,6 +26,13 @@ interface FilteredEventsRequest {
   sortBy?: 'date' | 'popularity' | 'career-impact';
   page?: number;
   pageSize?: number;
+  // Additional filters from useSmartFilters
+  availability?: 'all' | 'available' | 'no-conflicts';
+  popularity?: 'all' | 'trending' | 'high-attendance' | 'niche';
+  duration?: 'all' | 'short' | 'medium' | 'long' | 'multi-day';
+  myTracked?: boolean;
+  myNetwork?: boolean;
+  recommended?: boolean;
 }
 
 interface FilteredEventsResponse {
@@ -91,7 +99,13 @@ export async function POST(request: NextRequest) {
       dateRange,
       sortBy = 'date',
       page = 1,
-      pageSize = 50
+      pageSize = 50,
+      availability: _availability = 'all',
+      popularity = 'all',
+      duration = 'all',
+      myTracked: _myTracked = false,
+      myNetwork = false,
+      recommended = false
     } = body;
 
     // Validate pagination parameters
@@ -104,102 +118,44 @@ export async function POST(request: NextRequest) {
 
     const startTime = Date.now();
 
-    // Build server-side filters
-    const eventFilters: Record<string, unknown> = {};
-    
-    if (searchTerm) {
-      eventFilters.searchTerm = searchTerm;
-    }
-    
-    if (categories.length > 0) {
-      eventFilters.categories = categories;
-    }
-    
-    if (dateRange?.start) {
-      eventFilters.startDate = new Date(dateRange.start);
-    }
-    
-    if (dateRange?.end) {
-      eventFilters.endDate = new Date(dateRange.end);
-    }
+    // Build comprehensive server-side filters
+    const eventFilters: EventFilters = {
+      categories: categories.length > 0 ? categories : undefined,
+      searchTerm: searchTerm || undefined,
+      startDate: dateRange?.start ? new Date(dateRange.start) : undefined,
+      endDate: dateRange?.end ? new Date(dateRange.end) : undefined,
+      format: format !== 'all' ? format : undefined,
+      cost: cost !== 'all' ? cost : undefined,
+      difficulty: difficulty !== 'all' ? difficulty : undefined,
+      availability: _availability !== 'all' ? _availability : undefined,
+      popularity: popularity !== 'all' ? popularity : undefined,
+      duration: duration !== 'all' ? duration : undefined,
+      myTracked: _myTracked || undefined,
+      myNetwork: myNetwork || undefined,
+      recommended: recommended || undefined,
+      sortBy: sortBy !== 'date' ? sortBy : undefined
+    };
 
-    // Get total count for pagination
-    const totalEvents = await EventService.getEventCount(eventFilters, supabase);
-    
-    // Get filtered events with pagination
-    const events = await EventService.getEvents(eventFilters, supabase, page, pageSize);
+    // Use RPC function for optimal database-level filtering and pagination
+    const { events: filteredEvents, totalCount: totalEvents } = await EventService.getEventsWithRPC(
+      eventFilters, 
+      supabase, 
+      page, 
+      pageSize
+    );
 
-    // Apply additional client-side filters that can't be done in SQL
-    let filteredEvents = events;
-
-    // Format filtering
-    if (format !== 'all') {
-      filteredEvents = filteredEvents.filter(event => {
-        const isVirtual = event.location?.toLowerCase().includes('virtual') || !!event.livestreamUrl;
-        const isInPerson = !isVirtual && event.location !== 'TBA';
-        
-        switch (format) {
-          case 'virtual': return isVirtual;
-          case 'in-person': return isInPerson;
-          case 'hybrid': return isVirtual && isInPerson;
-          default: return true;
-        }
-      });
-    }
-
-    // Cost filtering (simplified server-side implementation)
-    if (cost !== 'all') {
-      filteredEvents = filteredEvents.filter(event => {
-        // Simple heuristic - can be enhanced with actual pricing data
-        const isFree = event.title?.toLowerCase().includes('free') || 
-                      event.description?.toLowerCase().includes('free') ||
-                      !event.title?.toLowerCase().includes('$');
-        
-        return cost === 'free' ? isFree : !isFree;
-      });
-    }
-
-    // Difficulty filtering
-    if (difficulty !== 'all') {
-      filteredEvents = filteredEvents.filter(event => {
-        const title = event.title?.toLowerCase() || '';
-        const description = event.description?.toLowerCase() || '';
-        
-        switch (difficulty) {
-          case 'beginner':
-            return title.includes('beginner') || title.includes('intro') || title.includes('101');
-          case 'intermediate':
-            return title.includes('intermediate') || title.includes('advanced') || 
-                   description.includes('experience required');
-          case 'advanced':
-            return title.includes('advanced') || title.includes('expert') || 
-                   title.includes('senior');
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Server-side sorting
-    if (sortBy === 'date') {
-      filteredEvents.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-    } else if (sortBy === 'popularity') {
-      filteredEvents.sort((a, b) => (b.attendeeCount || 0) - (a.attendeeCount || 0));
-    }
-    // Note: career-impact sorting would require career impact calculation
-
-    // Generate filter statistics
+    // Generate filter statistics (simplified since filtering is now at database level)
     const availableFilters = {
       categories: await getAvailableCategories(supabase),
       difficulties: [
-        { value: 'beginner', count: events.filter(e => getEventDifficulty(e) === 'beginner').length },
-        { value: 'intermediate', count: events.filter(e => getEventDifficulty(e) === 'intermediate').length },
-        { value: 'advanced', count: events.filter(e => getEventDifficulty(e) === 'advanced').length },
+        { value: 'beginner', count: 0 }, // Would need separate queries for accurate counts
+        { value: 'intermediate', count: 0 },
+        { value: 'advanced', count: 0 },
       ],
       formats: [
-        { value: 'virtual', count: events.filter(e => isVirtualEvent(e)).length },
-        { value: 'in-person', count: events.filter(e => isInPersonEvent(e)).length },
-        { value: 'hybrid', count: events.filter(e => isHybridEvent(e)).length },
+        { value: 'virtual', count: 0 }, // Would need separate queries for accurate counts
+        { value: 'in-person', count: 0 },
+        { value: 'hybrid', count: 0 },
       ]
     };
 
@@ -258,27 +214,6 @@ async function getAvailableCategories(supabase: Awaited<ReturnType<typeof create
   }
 }
 
-function getEventDifficulty(event: { title?: string | null; description?: string | null }): string {
-  const title = event.title?.toLowerCase() || '';
-  const _description = event.description?.toLowerCase() || '';
+// Helper functions removed - all filtering now handled at database level in EventService
 
-  if (title.includes('beginner') || title.includes('intro') || title.includes('101')) {
-    return 'beginner';
-  }
-  if (title.includes('advanced') || title.includes('expert') || title.includes('senior')) {
-    return 'advanced';
-  }
-  return 'intermediate';
-}
-
-function isVirtualEvent(event: { location?: string | null; livestreamUrl?: string | null }): boolean {
-  return event.location?.toLowerCase().includes('virtual') || !!event.livestreamUrl;
-}
-
-function isInPersonEvent(event: { location?: string | null; livestreamUrl?: string | null }): boolean {
-  return !isVirtualEvent(event) && event.location !== 'TBA';
-}
-
-function isHybridEvent(event: { location?: string | null; livestreamUrl?: string | null }): boolean {
-  return isVirtualEvent(event) && isInPersonEvent(event);
-}
+// Helper functions removed - all filtering now handled at database level in EventService

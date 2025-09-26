@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScrollListener } from '@/hooks/useEventListener';
@@ -43,7 +44,7 @@ export default function Navbar() {
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
                     <Link href="/" className="flex items-center space-x-2">
-                        <img src="/logo.svg" alt="KureCal" className="w-8 h-8" />
+                        <Image src="/logo.svg" alt="KureCal" width={32} height={32} />
                         <span className="text-xl font-semibold text-foreground-primary">KureCal</span>
                     </Link>
 
