@@ -26,7 +26,15 @@ export default function DashboardClientView({
     initialTrackedEvents
 }: DashboardClientViewProps) {
     const { user: _user, profile } = useAuth();
-    const { trackedEvents, allUpcomingEvents, isLoading, isReady, errors } = useDashboardData({
+    const {
+        trackedEvents,
+        allUpcomingEvents,
+        hackathons,
+        isLoading,
+        hackathonsLoading,
+        isReady,
+        errors
+    } = useDashboardData({
         initialEventTypes,
         initialUpcomingEvents,
         initialTrackedEvents
@@ -79,6 +87,8 @@ export default function DashboardClientView({
                             <DashboardStatsGrid
                                 events={allUpcomingEvents}
                                 trackedEvents={trackedEvents}
+                                hackathons={hackathons}
+                                hackathonsLoading={hackathonsLoading}
                             />
                         </SectionErrorBoundary>
                     </DashboardSection>

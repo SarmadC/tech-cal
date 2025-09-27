@@ -3,9 +3,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { EventService } from '@/services/eventServices';
 import { EventTypeService } from '@/services/eventTypeService';
+import { HackathonService } from '@/services/hackathonService';
 import { useLightweightTrackedEvents } from '@/hooks/useTrackedEventsUnified';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
+import { useAuth } from '@/contexts/AuthContext';
 import type { EventType, Event, TrackedEventRecord } from '@/types';
+import type { HackathonEvent } from '@/types/hackathon';
 
 interface UseDashboardDataProps {
   initialEventTypes?: EventType[];
@@ -13,12 +16,13 @@ interface UseDashboardDataProps {
   initialTrackedEvents?: TrackedEventRecord[];
 }
 
-export function useDashboardData({ 
-  initialEventTypes = [], 
+export function useDashboardData({
+  initialEventTypes = [],
   initialUpcomingEvents = [],
   initialTrackedEvents = []
 }: UseDashboardDataProps = {}) {
   const { supabase, isReady } = useSupabaseSafe();
+  const { user } = useAuth();
   
   // Get tracked events using the existing hook with initial data
   const { data: trackedEvents, isLoading: trackedEventsLoading, error: trackedEventsError } = useLightweightTrackedEvents(initialTrackedEvents);
@@ -45,16 +49,29 @@ export function useDashboardData({
     initialData: initialUpcomingEvents,
   });
 
+  // Get hackathon events with user participation data
+  const { data: hackathons, isLoading: hackathonsLoading, error: hackathonsError } = useQuery({
+    queryKey: ['hackathonEvents', user?.id],
+    queryFn: () => HackathonService.getHackathonEvents(supabase!, user?.id),
+    enabled: !!supabase && isReady,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes (hackathons don't change as frequently)
+  });
+
   return {
     trackedEvents: trackedEvents || [],
     eventTypes: eventTypes || [],
     allUpcomingEvents: allUpcomingEvents || [],
+    hackathons: (hackathons || []) as HackathonEvent[],
     isLoading: trackedEventsLoading || eventTypesLoading || upcomingEventsLoading || !isReady,
+    hackathonsLoading,
     isReady: !!supabase && isReady,
     errors: {
       trackedEvents: trackedEventsError,
       eventTypes: eventTypesError,
       upcomingEvents: upcomingEventsError,
+      hackathons: hackathonsError,
     }
   };
 }

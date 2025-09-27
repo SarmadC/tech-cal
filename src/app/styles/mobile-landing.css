@@ -208,19 +208,88 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-6);
   background: var(--background-main);
   color: var(--foreground-primary);
+  overflow: hidden;
+}
+
+/* Dark mode hero section */
+.dark .mobile-hero {
+  color: white;
+}
+
+/* Mobile Theme Toggle */
+.mobile-theme-toggle {
+  position: fixed;
+  top: calc(60px + var(--space-4));
+  right: var(--space-4);
+  z-index: 10001;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius);
+  padding: var(--space-2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  pointer-events: auto;
+}
+
+/* Dark mode theme toggle */
+.dark .mobile-theme-toggle {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .mobile-hero-background {
   position: absolute;
   top: 0;
+  left: 0;
   right: 0;
-  width: 50%;
-  height: 40%;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
+  overflow: hidden;
+}
+
+.mobile-hero-bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 1;
+  filter: blur(15px);
+  transform: scale(1.1);
+}
+
+.mobile-hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.05) 50%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+  z-index: 2;
+  backdrop-filter: blur(1px);
+}
+
+/* Dark mode overlay */
+.dark .mobile-hero-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
 }
 
 .mobile-hero-gradient {
@@ -233,14 +302,17 @@
   border-radius: 0 0 0 20px;
 }
 
-.mobile-hero-content {
+.mobile-hero-text-content {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding-top: 6rem;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0;
+  height: calc(100vh - 180px);
 }
 
 .mobile-hero-title {
@@ -250,6 +322,12 @@
   margin-bottom: var(--space-12);
   letter-spacing: -0.025em;
   font-family: var(--font-sans);
+  color: var(--foreground-primary);
+}
+
+/* Dark mode title */
+.dark .mobile-hero-title {
+  color: white;
 }
 
 .mobile-hero-title .highlight-text {
@@ -258,33 +336,19 @@
   display: inline-block;
 }
 
+/* Dark mode highlight text */
+.dark .mobile-hero-title .highlight-text {
+  color: white;
+}
+
 .mobile-hero-subtitle {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
   margin-bottom: 3.5rem;
+  justify-content: flex-start;
 }
 
-.subtitle-icon {
-  color: var(--foreground-secondary);
-  margin-top: 0.125rem;
-  flex-shrink: 0;
-  transition: transform 0.3s ease;
-}
 
-.arrow-icon {
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-.animate-bounce-subtle {
-  animation: subtleBounce 2s ease-in-out infinite;
-}
-
-@keyframes subtleBounce {
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-3px); }
-  60% { transform: translateY(-1px); }
-}
 
 .subtitle-content {
   flex: 1;
@@ -299,6 +363,11 @@
   letter-spacing: -0.01em;
 }
 
+/* Dark mode subtitle main */
+.dark .subtitle-main {
+  color: white;
+}
+
 .subtitle-secondary {
   font-size: 1rem;
   line-height: 1.6;
@@ -306,12 +375,20 @@
   margin: 0;
   font-weight: 400;
 }
+/* Dark mode subtitle secondary */
+.dark .subtitle-secondary {
+  color: rgba(255, 255, 255, 0.8);
+}
 
 .mobile-hero-cta {
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  margin-bottom: 2rem;
+  margin-top: auto;
+  margin-bottom: 1rem;
+  padding: 0 var(--space-6);
 }
 
 .mobile-hero-cta.enhanced {
@@ -367,11 +444,103 @@
   letter-spacing: 0.025em;
 }
 
+/* Dark mode secondary CTA */
+.dark .mobile-secondary-cta.enhanced-secondary {
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 .mobile-secondary-cta.enhanced-secondary:hover {
   background: var(--background-secondary);
   border-color: var(--border-strong);
   color: var(--foreground-primary);
   transform: translateY(-1px);
+}
+
+/* Dark mode secondary CTA hover */
+.dark .mobile-secondary-cta.enhanced-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+}
+
+/* Glass Effect CTA Button Styles */
+.mobile-liquid-glass-cta {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-radius: var(--radius);
+  background: var(--background-secondary);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-default);
+  box-shadow: 
+    0 8px 32px var(--shadow-lg),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* Dark mode glass effect */
+.dark .mobile-liquid-glass-cta {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.mobile-liquid-glass-cta:hover {
+  background: var(--background-tertiary);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 12px 40px var(--shadow-xl),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Dark mode glass effect hover */
+.dark .mobile-liquid-glass-cta:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.mobile-primary-cta-liquid {
+  background: transparent;
+  color: var(--foreground-primary);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  letter-spacing: 0.025em;
+  width: 100%;
+  padding: var(--space-4) var(--space-6);
+  border: none;
+  outline: none;
+}
+
+/* Dark mode primary CTA liquid */
+.dark .mobile-primary-cta-liquid {
+  color: white;
+}
+
+.mobile-primary-cta-liquid:hover {
+  color: white;
+  text-decoration: none;
+}
+
+.mobile-primary-cta-liquid:focus {
+  outline: none;
 }
 
 /* ============================================== */

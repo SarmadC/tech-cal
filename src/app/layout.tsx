@@ -27,6 +27,7 @@ import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import ClientLayout from "@/components/layout/ClientLayout";
 import IconProvider from '../components/providers/IconProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { SnackbarProvider } from '@/contexts/SnackbarContext';
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -67,16 +68,18 @@ export default function RootLayout({
                             <AuthProvider>
                                 {/* 3. QueryProvider is next, it might need auth context for queries */}
                                 <QueryProvider>
-                                {/* 3. UI/UX providers can go inside */}
-                                {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
-                                {/* <SmoothScrollProvider> */}
-                                    {/* 4. ClientLayout contains the Navbar, which needs auth context */}
-                                    <IconProvider>
-                                        <ClientLayout>
-                                            {children}
-                                        </ClientLayout>
-                                    </IconProvider>
-                                {/* </SmoothScrollProvider> */}
+                                    <SnackbarProvider>
+                                        {/* 3. UI/UX providers can go inside */}
+                                        {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
+                                        {/* <SmoothScrollProvider> */}
+                                            {/* 4. ClientLayout contains the Navbar, which needs auth context */}
+                                            <IconProvider>
+                                                <ClientLayout>
+                                                    {children}
+                                                </ClientLayout>
+                                            </IconProvider>
+                                        {/* </SmoothScrollProvider> */}
+                                    </SnackbarProvider>
                                 </QueryProvider>
                             </AuthProvider>
                         </SupabaseProvider>

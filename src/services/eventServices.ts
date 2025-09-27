@@ -158,6 +158,8 @@ export class EventService {
             // Apply enhanced database-level filters
             query = this.applyEnhancedFilters(query, filters);
 
+            // Note: Hackathon filtering is now handled by dedicated HackathonService
+
             // Apply sorting
             query = this.applySorting(query, filters.sortBy);
 
@@ -1115,6 +1117,8 @@ export class EventService {
 
         return query;
     }
+
+
 
     /**
      * Apply sorting to the query

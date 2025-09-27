@@ -105,11 +105,13 @@ export function useUnifiedServerFiltering(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
+  const [requestCache, setRequestCache] = useState<Map<string, { data: FilteredEventsData; timestamp: number }>>(new Map());
 
   const { trackedEventIds } = useTrackedEventIds();
 
-  // Debounce search term to avoid excessive API calls
-  const debouncedSearchTerm = useDebounce(filters.searchTerm, 500);
+  // Debounce search term to avoid excessive API calls - increased delay for rate limiting
+  const debouncedSearchTerm = useDebounce(filters.searchTerm, 1500);
 
   // Create stable filter object for API calls
   const apiFilters = useMemo(() => ({
@@ -121,12 +123,34 @@ export function useUnifiedServerFiltering(
     } : undefined
   }), [filters, debouncedSearchTerm]);
 
-  const fetchFilteredEvents = useCallback(async (resetPagination = true) => {
+  const fetchFilteredEvents = useCallback(async (resetPagination = true, retryCount = 0) => {
+    // Check cache first (10 minute cache for better performance)
+    const cacheKey = JSON.stringify(apiFilters);
+    const cachedResult = requestCache.get(cacheKey);
+    const now = Date.now();
+
+    if (cachedResult && (now - cachedResult.timestamp) < 10 * 60 * 1000) {
+      console.log('Using cached result for:', Object.keys(apiFilters).filter(k => apiFilters[k as keyof typeof apiFilters]));
+      setData(cachedResult.data);
+      return;
+    }
+
+    // Minimum 3 seconds between requests to prevent rate limiting (30 requests/minute = ~2 seconds)
+    const timeSinceLastRequest = now - lastRequestTime;
+    const minInterval = 3000; // 3 seconds - safer margin under 30 requests/minute
+
+    if (timeSinceLastRequest < minInterval) {
+      const waitTime = minInterval - timeSinceLastRequest;
+      console.log(`Rate limiting: waiting ${waitTime}ms before next request`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+
     setIsLoading(true);
     setError(null);
+    setLastRequestTime(Date.now());
 
     try {
-      const requestFilters = resetPagination 
+      const requestFilters = resetPagination
         ? { ...apiFilters, page: 1 }
         : apiFilters;
 
@@ -140,6 +164,13 @@ export function useUnifiedServerFiltering(
 
       if (!response.ok) {
         if (response.status === 429) {
+          // Implement exponential backoff for rate limiting
+          if (retryCount < 2) { // Reduced retries to avoid overwhelming server
+            const delay = Math.pow(2, retryCount + 2) * 1000; // 4s, 8s (longer delays)
+            console.log(`Rate limited, retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return fetchFilteredEvents(resetPagination, retryCount + 1);
+          }
           throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
         }
         if (response.status === 401) {
@@ -160,17 +191,24 @@ export function useUnifiedServerFiltering(
         return enrichWithTracking(event, isTracked);
       });
 
+      const responseData = {
+        ...result.data,
+        events: enrichedEvents
+      };
+
       if (resetPagination || !data) {
-        setData({
-          ...result.data,
-          events: enrichedEvents
-        });
+        setData(responseData);
+        // Cache the response
+        setRequestCache(prev => new Map(prev).set(cacheKey, {
+          data: responseData,
+          timestamp: Date.now()
+        }));
       } else {
         // Append to existing data for pagination
         setData(prev => prev ? {
           ...result.data,
           events: [...prev.events, ...enrichedEvents]
-        } : { ...result.data, events: enrichedEvents });
+        } : responseData);
       }
 
       // Update pagination in filters
@@ -185,7 +223,7 @@ export function useUnifiedServerFiltering(
     } finally {
       setIsLoading(false);
     }
-  }, [apiFilters, data, trackedEventIds]);
+  }, [apiFilters, data, trackedEventIds, lastRequestTime, requestCache]);
 
   // Auto-fetch when filters change
   useEffect(() => {

@@ -20,6 +20,7 @@ import { MaterialIcon } from '@/components/ui/Icon';
 const items = [
   { title: 'Dashboard', url: '/dashboard', icon: () => <MaterialIcon name="dashboard" size={18} /> },
   { title: 'Calendar', url: '/calendar', icon: () => <MaterialIcon name="calendar" size={18} /> },
+  { title: 'Hackathons', url: '/hackathons', icon: () => <MaterialIcon name="event" size={18} /> },
   { title: 'Search', url: '/search', icon: () => <MaterialIcon name="search" size={18} /> },
   { title: 'Settings', url: '/dashboard/settings', icon: () => <MaterialIcon name="settings" size={18} /> },
 ] as const;

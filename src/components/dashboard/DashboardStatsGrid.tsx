@@ -5,12 +5,22 @@ import { QuickStatsCard } from '@/components/dashboard/QuickStatsCard';
 import { ActivityTrendCard } from '@/components/dashboard/ActivityTrendCard';
 import { EventHeatMap } from '@/components/dashboard/EventHeatMap';
 import { EventDistributionCard } from '@/components/dashboard/EventDistributionCard';
+import { ActiveHackathonsCard } from '@/components/dashboard/ActiveHackathonsCard';
 import { DashboardErrorState } from '@/components/dashboard/DashboardErrorState';
 import type { BaseEventAndTrackedProps } from '@/types/componentProps';
+import type { HackathonEvent } from '@/types/hackathon';
 
-type DashboardStatsGridProps = BaseEventAndTrackedProps;
+interface DashboardStatsGridProps extends BaseEventAndTrackedProps {
+  hackathons?: HackathonEvent[];
+  hackathonsLoading?: boolean;
+}
 
-export function DashboardStatsGrid({ events, trackedEvents }: DashboardStatsGridProps) {
+export function DashboardStatsGrid({
+  events,
+  trackedEvents,
+  hackathons = [],
+  hackathonsLoading = false
+}: DashboardStatsGridProps) {
   // Validate data before rendering
   if (!events || !trackedEvents) {
     return (
@@ -42,7 +52,7 @@ export function DashboardStatsGrid({ events, trackedEvents }: DashboardStatsGrid
       </SectionErrorBoundary>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        <SectionErrorBoundary 
+        <SectionErrorBoundary
           name="ActivityTrendCard"
           fallback={
             <div className="col-span-1">
@@ -58,8 +68,8 @@ export function DashboardStatsGrid({ events, trackedEvents }: DashboardStatsGrid
             trackedEvents={trackedEvents}
           />
         </SectionErrorBoundary>
-        
-        <SectionErrorBoundary 
+
+        <SectionErrorBoundary
           name="EventHeatMap"
           fallback={
             <div className="col-span-1">
@@ -75,8 +85,8 @@ export function DashboardStatsGrid({ events, trackedEvents }: DashboardStatsGrid
           events={events}
         />
       </SectionErrorBoundary>
-      
-      <SectionErrorBoundary 
+
+      <SectionErrorBoundary
         name="EventDistributionCard"
         fallback={
           <div className="col-span-1">
@@ -91,6 +101,24 @@ export function DashboardStatsGrid({ events, trackedEvents }: DashboardStatsGrid
         <EventDistributionCard
           events={events}
         />
+        </SectionErrorBoundary>
+
+        <SectionErrorBoundary
+          name="ActiveHackathonsCard"
+          fallback={
+            <div className="col-span-1">
+              <DashboardErrorState
+                title="Hackathons unavailable"
+                message="Unable to load hackathon data."
+                onRetry={() => window.location.reload()}
+              />
+            </div>
+          }
+        >
+          <ActiveHackathonsCard
+            hackathons={hackathons}
+            isLoading={hackathonsLoading}
+          />
         </SectionErrorBoundary>
       </div>
     </>

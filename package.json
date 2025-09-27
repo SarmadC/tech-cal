@@ -20,11 +20,14 @@
     "build:analyze": "ANALYZE=true npm run build"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@fullcalendar/daygrid": "^6.1.18",
     "@fullcalendar/list": "^6.1.18",
     "@fullcalendar/react": "^6.1.18",
     "@fullcalendar/timegrid": "^6.1.18",
     "@hookform/resolvers": "^5.2.1",
+    "@mui/material": "^7.3.2",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-select": "^2.2.5",
@@ -46,6 +49,7 @@
     "date-fns-tz": "^3.2.0",
     "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",
+    "liquid-glass-react": "^1.1.1",
     "lucide-react": "^0.525.0",
     "mini-svg-data-uri": "^1.4.4",
     "motion": "^12.23.12",

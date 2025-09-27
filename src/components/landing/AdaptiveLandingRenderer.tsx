@@ -13,8 +13,8 @@ const AdaptiveLandingRenderer: React.FC<AdaptiveLandingProps> = ({ className = '
   const { isMobile, isTablet, isTouchDevice } = useDeviceDetection();
 
   // Determine if we should use mobile components
-  // Consider both viewport size and touch capability
-  const useMobileVersion = isMobile || (isTablet && isTouchDevice);
+  // Use viewport size as primary factor, touch as secondary
+  const useMobileVersion = isMobile || (isTablet && isTouchDevice) || (isMobile && !isTouchDevice);
 
   // Debug logging (leave for troubleshooting; remove later if noisy)
   console.log('Device Detection:', { isMobile, isTablet, isTouchDevice, useMobileVersion });

@@ -8,7 +8,7 @@ import { EventFilters } from '@/types';
 // Rate limiter for filtered events API
 const ratelimit = new Ratelimit({
   redis: kv,
-  limiter: Ratelimit.slidingWindow(20, '1 m'), // 20 requests per minute per user
+  limiter: Ratelimit.slidingWindow(30, '1 m'), // 30 requests per minute per user
   analytics: true,
   prefix: 'events-filtered',
 });
