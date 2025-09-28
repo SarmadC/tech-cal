@@ -10,9 +10,9 @@ import type {
   HackathonStatus,
   HackathonParticipantStatus
 } from '@/types/hackathon';
+import { validateTeamCapacity as validateCapacity } from '@/utils/teamUtils';
 import {
   validateRegistrationDeadline,
-  validateTeamCapacity,
   validateTeamForm,
   validateSkills,
   validateParticipantStatus
@@ -27,7 +27,7 @@ export class HackathonService {
       .from('hackathons')
       .select(`
         *,
-        organizers(*)
+        organizers(id, name, website_url, logo_url, description)
       `);
   }
 
@@ -53,18 +53,40 @@ export class HackathonService {
         return [];
       }
 
+      // Get user participation and team data with error handling
       const hackathonIds = hackathonData.map(h => h.id);
-
-      // Get user participation and team data in parallel
-      const [userParticipationMap, teamCountMap] = await Promise.all([
+      
+      // Use Promise.allSettled to handle individual failures gracefully
+      const [userParticipationResult, participantCountResult, teamsResult] = await Promise.allSettled([
         this.getUserParticipationMap(supabase, userId, hackathonIds),
-        this.getTeamCountMap(supabase, hackathonIds)
+        this.getParticipantCountMap(supabase, hackathonIds),
+        this.getTeamsMap(supabase, hackathonIds)
       ]);
 
+      // Extract results with fallbacks
+      const userParticipationMap = userParticipationResult.status === 'fulfilled' 
+        ? userParticipationResult.value 
+        : new Map<string, HackathonParticipant>();
+      
+      const participantCountMap = participantCountResult.status === 'fulfilled' 
+        ? participantCountResult.value 
+        : new Map<string, number>();
+      
+      const teamsMap = teamsResult.status === 'fulfilled' 
+        ? teamsResult.value 
+        : new Map<string, HackathonTeam[]>();
+
       // Transform to HackathonEvent objects
-      return hackathonData.map(hackathonData => this.transformHackathon(hackathonData, userParticipationMap, teamCountMap));
+      return hackathonData.map(hackathonData => this.transformHackathon(
+        hackathonData, 
+        userParticipationMap, 
+        participantCountMap,
+        teamsMap
+      ));
     } catch (error) {
-      this.handleMethodError(error, 'getHackathonEvents');
+      console.error('Critical error in getHackathonEvents:', error);
+      // Return empty array instead of throwing to prevent page crashes
+      return [];
     }
   }
 
@@ -161,20 +183,91 @@ export class HackathonService {
       // Validate registration deadline
       await this.validateHackathonDeadline(supabase, hackathonId);
 
+      // Check if hackathon exists (foreign key constraint)
+      const { data: hackathon, error: hackathonError } = await supabase
+        .from('hackathons')
+        .select('id, title')
+        .eq('id', hackathonId)
+        .single();
+
+      if (hackathonError || !hackathon) {
+        throw new Error('Hackathon not found');
+      }
+
+      // Check if user already has a team for this hackathon
+      const { data: userTeam, error: userTeamError } = await supabase
+        .from('hackathon_teams')
+        .select('id, name')
+        .eq('hackathon_id', hackathonId)
+        .eq('created_by', userId)
+        .single();
+
+      if (userTeamError && userTeamError.code !== 'PGRST116') {
+        console.error('Error checking existing user team:', userTeamError);
+        throw new Error('Failed to validate user team status');
+      }
+
+      if (userTeam) {
+        throw new Error(`You already have a team "${userTeam.name}" for this hackathon. You can only create one team per hackathon.`);
+      }
+
+      // Check if team name already exists for this hackathon (unique constraint)
+      const trimmedName = teamData.name.trim();
+      const { data: existingTeam, error: checkError } = await supabase
+        .from('hackathon_teams')
+        .select('id')
+        .eq('hackathon_id', hackathonId)
+        .eq('name', trimmedName)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking existing team name:', checkError);
+        throw new Error('Failed to validate team name');
+      }
+
+      if (existingTeam) {
+        throw new Error(`Team name "${trimmedName}" already exists for this hackathon`);
+      }
+
+      const teamInsertData = {
+        hackathon_id: hackathonId,
+        name: trimmedName,
+        description: teamData.description?.trim() || null,
+        looking_for_members: teamData.lookingForMembers ?? true,
+        created_by: userId
+      };
+
+      console.log('Attempting to create team with data:', teamInsertData);
+
       const { data: teamResult, error: teamError } = await supabase
         .from('hackathon_teams')
-        .insert({
-          hackathon_id: hackathonId,
-          name: teamData.name.trim(),
-          description: teamData.description?.trim() || null,
-          looking_for_members: teamData.lookingForMembers,
-          created_by: userId
-        })
+        .insert(teamInsertData)
         .select()
         .single();
 
       if (teamError) {
+        console.error('Team creation failed with error:', {
+          error: teamError,
+          code: teamError.code,
+          message: teamError.message,
+          details: teamError.details,
+          hint: teamError.hint
+        });
+        
+        // Handle specific error cases
+        if (teamError.code === '23505') { // Unique constraint violation
+          throw new Error(`Team name "${trimmedName}" already exists for this hackathon`);
+        } else if (teamError.code === '23503') { // Foreign key violation
+          throw new Error('Invalid hackathon or user reference');
+        } else if (teamError.code === '23514') { // Check constraint violation
+          throw new Error('Team name cannot be empty');
+        }
+        
         this.handleDbError(teamError, 'creating team');
+      }
+
+      if (!teamResult) {
+        throw new Error('Team creation succeeded but no data returned');
       }
 
       // Add creator to the team
@@ -185,6 +278,23 @@ export class HackathonService {
       this.handleMethodError(error, 'createTeam');
     }
   }
+
+  /**
+   * Create a simple team (MVP version) - consolidated with main createTeam
+   */
+  static async createSimpleTeam(
+    supabase: SupabaseClient,
+    hackathonId: string,
+    userId: string,
+    teamName: string
+  ): Promise<HackathonTeam> {
+    return this.createTeam(supabase, hackathonId, userId, {
+      name: teamName,
+      description: '',
+      lookingForMembers: true
+    });
+  }
+
 
   /**
    * Join an existing team with validation
@@ -224,6 +334,85 @@ export class HackathonService {
   }
 
   /**
+   * Join team by team ID (simplified version)
+   */
+  static async joinTeamById(
+    supabase: SupabaseClient,
+    teamId: string,
+    userId: string
+  ): Promise<HackathonParticipant> {
+    try {
+      // Get team info first
+      const { data: team, error: teamError } = await supabase
+        .from('hackathon_teams')
+        .select('hackathon_id, hackathons!inner(max_team_size)')
+        .eq('id', teamId)
+        .single();
+
+      if (teamError || !team) {
+        throw new Error('Team not found');
+      }
+
+      // Validate team capacity
+      const { data: currentMembers, error: membersError } = await supabase
+        .from('hackathon_participants')
+        .select('id')
+        .eq('team_id', teamId);
+
+      if (membersError) {
+        this.handleDbError(membersError, 'checking team capacity');
+      }
+
+      const currentSize = currentMembers?.length || 0;
+      const maxSize = team.hackathons?.[0]?.max_team_size || 10;
+
+      const capacityCheck = validateCapacity(currentSize, maxSize);
+      if (!capacityCheck.isValid) {
+        throw new Error(capacityCheck.message);
+      }
+
+      // Check if user is already in a team for this hackathon
+      const { data: existingParticipation, error: participationError } = await supabase
+        .from('hackathon_participants')
+        .select('team_id')
+        .eq('hackathon_id', team.hackathon_id)
+        .eq('user_id', userId)
+        .single();
+
+      if (participationError && participationError.code !== 'PGRST116') {
+        this.handleDbError(participationError, 'checking existing participation');
+      }
+
+      if (existingParticipation?.team_id) {
+        throw new Error('You are already part of a team for this hackathon');
+      }
+
+      // Join the team
+      const { data, error } = await supabase
+        .from('hackathon_participants')
+        .upsert({
+          hackathon_id: team.hackathon_id,
+          user_id: userId,
+          team_id: teamId,
+          status: 'team_formed',
+          skills: []
+        }, {
+          onConflict: 'hackathon_id,user_id'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        this.handleDbError(error, 'joining team');
+      }
+
+      return this.transformParticipant(data);
+    } catch (error) {
+      this.handleMethodError(error, 'joinTeamById');
+    }
+  }
+
+  /**
    * Leave a team
    */
   static async leaveTeam(
@@ -253,6 +442,57 @@ export class HackathonService {
     }
   }
 
+  /**
+   * Delete a team (only if user is the creator)
+   */
+  static async deleteTeam(
+    supabase: SupabaseClient,
+    teamId: string,
+    userId: string
+  ): Promise<void> {
+    try {
+      // First, verify the user is the creator of the team
+      const { data: team, error: teamError } = await supabase
+        .from('hackathon_teams')
+        .select('id, hackathon_id, name, created_by')
+        .eq('id', teamId)
+        .single();
+
+      if (teamError || !team) {
+        throw new Error('Team not found');
+      }
+
+      if (team.created_by !== userId) {
+        throw new Error('You can only delete teams you created');
+      }
+
+      // Remove all participants from the team first
+      const { error: participantsError } = await supabase
+        .from('hackathon_participants')
+        .update({ team_id: null, status: 'registered' })
+        .eq('team_id', teamId);
+
+      if (participantsError) {
+        console.error('Error removing participants from team:', participantsError);
+        throw new Error('Failed to remove team members');
+      }
+
+      // Delete the team
+      const { error: deleteError } = await supabase
+        .from('hackathon_teams')
+        .delete()
+        .eq('id', teamId);
+
+      if (deleteError) {
+        this.handleDbError(deleteError, 'deleting team');
+      }
+
+      console.log(`Successfully deleted team "${team.name}"`);
+    } catch (error) {
+      this.handleMethodError(error, 'deleteTeam');
+    }
+  }
+
   // ==========================================
   // HELPER METHODS (DRY Principle Applied)
   // ==========================================
@@ -261,7 +501,11 @@ export class HackathonService {
    * Handle database operation errors consistently
    */
   private static handleDbError(error: unknown, operation: string): never {
-    console.error(`Error ${operation}:`, error);
+    console.error(`Database Error ${operation}:`, {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw error;
   }
 
@@ -269,7 +513,11 @@ export class HackathonService {
    * Handle method-level errors consistently
    */
   private static handleMethodError(error: unknown, methodName: string): never {
-    console.error(`Error in ${methodName}:`, error);
+    console.error(`Method Error in ${methodName}:`, {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw error;
   }
 
@@ -310,34 +558,102 @@ export class HackathonService {
   }
 
   /**
-   * Get team count map for multiple hackathons
+   * Get participant count map for multiple hackathons (actual participants, not teams)
    */
-  private static async getTeamCountMap(
+  private static async getParticipantCountMap(
     supabase: SupabaseClient,
     hackathonIds: string[]
   ): Promise<Map<string, number>> {
-    const teamCountMap = new Map<string, number>();
+    const participantCountMap = new Map<string, number>();
     
     if (hackathonIds.length === 0) {
-      return teamCountMap;
+      return participantCountMap;
     }
 
-    const { data: teamCounts, error } = await supabase
-      .from('hackathon_teams')
+    const { data: participantCounts, error } = await supabase
+      .from('hackathon_participants')
       .select('hackathon_id')
       .in('hackathon_id', hackathonIds);
 
     if (error) {
-      this.handleDbError(error, 'fetching team counts');
+      this.handleDbError(error, 'fetching participant counts');
     }
 
-    if (teamCounts) {
-      teamCounts.forEach(tc => {
-        teamCountMap.set(tc.hackathon_id, (teamCountMap.get(tc.hackathon_id) || 0) + 1);
+    if (participantCounts) {
+      participantCounts.forEach(pc => {
+        participantCountMap.set(pc.hackathon_id, (participantCountMap.get(pc.hackathon_id) || 0) + 1);
       });
     }
 
-    return teamCountMap;
+    return participantCountMap;
+  }
+
+  /**
+   * Get teams map for multiple hackathons
+   */
+  private static async getTeamsMap(
+    supabase: SupabaseClient,
+    hackathonIds: string[]
+  ): Promise<Map<string, HackathonTeam[]>> {
+    const teamsMap = new Map<string, HackathonTeam[]>();
+    
+    if (hackathonIds.length === 0) {
+      return teamsMap;
+    }
+
+    try {
+      // First, get basic team data
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('hackathon_teams')
+        .select('*')
+        .in('hackathon_id', hackathonIds);
+
+      if (teamsError) {
+        console.warn('Error fetching teams:', teamsError);
+        return teamsMap; // Return empty map instead of throwing
+      }
+
+      if (!teamsData || teamsData.length === 0) {
+        return teamsMap;
+      }
+
+      // Get participant counts for each team
+      const teamIds = teamsData.map(t => t.id);
+      const { data: participantCounts, error: countError } = await supabase
+        .from('hackathon_participants')
+        .select('team_id')
+        .in('team_id', teamIds);
+
+      if (countError) {
+        console.warn('Error fetching participant counts:', countError);
+      }
+
+      // Create count map
+      const countMap = new Map<string, number>();
+      if (participantCounts) {
+        participantCounts.forEach(p => {
+          if (p.team_id) {
+            countMap.set(p.team_id, (countMap.get(p.team_id) || 0) + 1);
+          }
+        });
+      }
+
+      // Transform teams with member counts
+      teamsData.forEach(teamData => {
+        const hackathonId = teamData.hackathon_id;
+        const teams = teamsMap.get(hackathonId) || [];
+        const team = this.transformTeam(teamData);
+        team.memberCount = countMap.get(team.id) || 0;
+        teams.push(team);
+        teamsMap.set(hackathonId, teams);
+      });
+
+    } catch (error) {
+      console.warn('Error in getTeamsMap:', error);
+      // Return empty map instead of throwing to prevent page crashes
+    }
+
+    return teamsMap;
   }
 
   /**
@@ -411,7 +727,7 @@ export class HackathonService {
 
     // Validate team size
     const currentSize = teamResult.data?.hackathon_participants?.length || 0;
-    const capacityValidation = validateTeamCapacity(currentSize, hackathonResult.data?.max_team_size);
+    const capacityValidation = validateCapacity(currentSize, hackathonResult.data?.max_team_size);
     if (!capacityValidation.isValid) {
       throw new Error(capacityValidation.message);
     }
@@ -426,19 +742,36 @@ export class HackathonService {
     userId: string,
     teamId: string
   ): Promise<void> {
+    const participantData = {
+      hackathon_id: hackathonId,
+      user_id: userId,
+      team_id: teamId,
+      status: 'team_formed' as HackathonParticipantStatus,
+      skills: []
+    };
+
+    console.log('Adding user to team with data:', participantData);
+
     const { error: participantError } = await supabase
       .from('hackathon_participants')
-      .upsert({
-        hackathon_id: hackathonId,
-        user_id: userId,
-        team_id: teamId,
-        status: 'team_formed',
-        skills: []
-      }, {
+      .upsert(participantData, {
         onConflict: 'hackathon_id,user_id'
       });
 
     if (participantError) {
+      console.error('Error adding user to team:', {
+        error: participantError,
+        code: participantError.code,
+        message: participantError.message,
+        details: participantError.details,
+        hint: participantError.hint
+      });
+      
+      // Handle specific error cases
+      if (participantError.code === '23503') { // Foreign key violation
+        throw new Error('Invalid hackathon, user, or team reference');
+      }
+      
       this.handleDbError(participantError, 'adding user to team');
     }
   }
@@ -453,8 +786,11 @@ export class HackathonService {
   private static transformHackathon(
     dbHackathon: DatabaseHackathon,
     userParticipationMap: Map<string, HackathonParticipant>,
-    teamCountMap: Map<string, number>
+    participantCountMap: Map<string, number>,
+    teamsMap: Map<string, HackathonTeam[]>
   ): HackathonEvent {
+    const organizerName = dbHackathon.organizers?.name || null;
+
     return {
       id: dbHackathon.id,
       title: dbHackathon.title,
@@ -463,6 +799,7 @@ export class HackathonService {
       endDate: dbHackathon.end_date,
       location: dbHackathon.location || '',
       organizerId: dbHackathon.organizer_id,
+      organizerName: organizerName || undefined,
       registrationDeadline: dbHackathon.registration_deadline,
       submissionDeadline: dbHackathon.submission_deadline,
       maxTeamSize: dbHackathon.max_team_size,
@@ -472,7 +809,8 @@ export class HackathonService {
       status: dbHackathon.status as HackathonStatus,
       isVirtual: dbHackathon.is_virtual,
       userParticipation: userParticipationMap.get(dbHackathon.id),
-      totalParticipants: teamCountMap.get(dbHackathon.id) || 0,
+      teams: teamsMap.get(dbHackathon.id) || [],
+      totalParticipants: participantCountMap.get(dbHackathon.id) || 0,
       createdAt: dbHackathon.created_at,
       updatedAt: dbHackathon.updated_at
     };
@@ -482,10 +820,6 @@ export class HackathonService {
    * Transform database team to application type
    */
   private static transformTeam(dbTeam: DatabaseTeam): HackathonTeam {
-    const members = dbTeam.hackathon_participants?.map(p =>
-      this.transformParticipant(p)
-    ) || [];
-
     return {
       id: dbTeam.id,
       hackathonId: dbTeam.hackathon_id,
@@ -495,8 +829,8 @@ export class HackathonService {
       createdBy: dbTeam.created_by,
       createdAt: dbTeam.created_at,
       updatedAt: dbTeam.updated_at,
-      memberCount: members.length,
-      members
+      memberCount: 0, // Will be set by getTeamsMap
+      members: [] // Simplified - no member details for now
     };
   }
 
@@ -554,6 +888,13 @@ interface DatabaseHackathon {
   is_virtual: boolean;
   created_at: string;
   updated_at: string;
+  organizers?: {
+    id: string;
+    name: string;
+    website_url?: string | null;
+    logo_url?: string | null;
+    description?: string | null;
+  };
 }
 
 interface DatabaseTeam {
@@ -565,7 +906,6 @@ interface DatabaseTeam {
   created_by: string;
   created_at: string;
   updated_at: string;
-  hackathon_participants?: DatabaseParticipant[];
 }
 
 interface DatabaseParticipant {

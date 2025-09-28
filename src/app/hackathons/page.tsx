@@ -1,6 +1,5 @@
 // src/app/hackathons/page.tsx
 import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
 import { HackathonService } from '@/services/hackathonService';
 import { ProfileService } from '@/services/profileService';
 import HackathonClientView from './HackathonClientView';
@@ -14,30 +13,28 @@ export default async function HackathonsPage() {
   const supabase = await createClient();
   const { data: { user }, error: _authError } = await supabase.auth.getUser();
 
-  // Require authentication for hackathon features
-  if (_authError || !user) {
-    redirect('/login');
-  }
+  // For now, allow access without authentication to test hackathon data
+  const userId = user?.id || 'anonymous';
 
   try {
     // Load hackathon events
-    const hackathons = await HackathonService.getHackathonEvents(supabase, user.id);
+    const hackathons = await HackathonService.getHackathonEvents(supabase, userId);
 
-    // Load user profile for personalization
+    // Load user profile for personalization (only if authenticated)
     let profile = null;
-    try {
-      if (user?.id) {
+    if (user?.id) {
+      try {
         profile = await ProfileService.getProfile(user.id, supabase);
+      } catch (_profileError) {
+        // This is fine - new users don't have profiles yet
       }
-    } catch (_profileError) {
-      // This is fine - new users don't have profiles yet
     }
 
     return (
       <HackathonClientView
         initialHackathons={hackathons}
         profile={profile}
-        userId={user.id}
+        userId={userId}
       />
     );
 
@@ -49,7 +46,7 @@ export default async function HackathonsPage() {
       <HackathonClientView
         initialHackathons={[]}
         profile={null}
-        userId={user.id}
+        userId={user?.id || 'anonymous'}
       />
     );
   }

@@ -40,8 +40,6 @@ interface ConfirmationOptions {
 // CONSTANTS
 // ==========================================
 
-const DEFAULT_TEAM_NAME = 'New Team';
-const DEFAULT_TEAM_DESCRIPTION = 'Ready to build amazing things!';
 const NO_TEAMS_MESSAGE = 'No teams are currently looking for members. Try creating your own team!';
 const HACKATHON_NOT_FOUND_MESSAGE = 'Hackathon not found. Please refresh and try again.';
 
@@ -276,11 +274,17 @@ export class HackathonActions {
     }
   }
 
-  async createTeam(hackathonId: string, teamName?: string, teamDescription?: string): Promise<void> {
+  async createTeam(
+    hackathonId: string, 
+    teamName: string, 
+    teamDescription: string = '', 
+    lookingForMembers: boolean = true
+  ): Promise<void> {
     try {
       const teamData = {
-        name: teamName || DEFAULT_TEAM_NAME,
-        description: teamDescription || DEFAULT_TEAM_DESCRIPTION
+        name: teamName,
+        description: teamDescription,
+        lookingForMembers
       };
 
       // Validate team form data
@@ -293,10 +297,7 @@ export class HackathonActions {
         this.supabase,
         hackathonId,
         this.userId,
-        {
-          ...teamData,
-          lookingForMembers: true
-        }
+        teamData
       );
 
       this.handleSuccess(this.formatSuccessMessage(SUCCESS_MESSAGES.TEAM_CREATION_SUCCESS, teamData.name));
@@ -343,6 +344,15 @@ export class HackathonActions {
     }
   }
 
+  async joinTeamById(teamId: string): Promise<void> {
+    try {
+      await HackathonService.joinTeamById(this.supabase, teamId, this.userId);
+      this.handleSuccess('Successfully joined the team!');
+    } catch (error) {
+      this.handleError(error, 'joining team', ERROR_MESSAGES.TEAM_JOIN_FAILED);
+    }
+  }
+
   async leaveTeam(hackathonId: string, teamName: string): Promise<void> {
     this.showConfirmation(
       'Leave Team',
@@ -356,6 +366,22 @@ export class HackathonActions {
         }
       },
       CONFIRMATION_OPTIONS.LEAVE_TEAM
+    );
+  }
+
+  async deleteTeam(teamId: string, teamName: string): Promise<void> {
+    this.showConfirmation(
+      'Delete Team',
+      `Are you sure you want to delete "${teamName}"? This will remove all team members and cannot be undone.`,
+      async () => {
+        try {
+          await HackathonService.deleteTeam(this.supabase, teamId, this.userId);
+          this.handleSuccess(`Successfully deleted team "${teamName}"`);
+        } catch (error) {
+          this.handleError(error, 'deleting team', 'Failed to delete team. Please try again.');
+        }
+      },
+      { confirmText: 'Delete Team', cancelText: 'Cancel' }
     );
   }
 

@@ -11,6 +11,7 @@ export interface HackathonEvent {
   endDate: string;
   location: string;
   organizerId: string;
+  organizerName?: string;
   registrationDeadline?: string | null;
   submissionDeadline?: string | null;
   maxTeamSize: number;

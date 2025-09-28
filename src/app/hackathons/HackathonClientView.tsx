@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { HackathonService } from '@/services/hackathonService';
@@ -10,16 +10,14 @@ import {
   HackathonEvent,
   HackathonTeam,
   isLongDurationHackathon,
-  isShortDurationHackathon,
-  formatHackathonDuration,
-  getHackathonDurationDays,
   isHackathonRunning,
   isHackathonEnded
 } from '@/types/hackathon';
 import { AppProfile } from '@/types';
 import { TeamSelectionDialog } from '@/components/hackathon/TeamSelectionDialog';
+import { TeamCreationDialog } from '@/components/hackathon/TeamCreationDialog';
 import { createHackathonActions } from '@/utils/hackathonActions';
-import { generateDefaultTeamName } from '@/utils/teamNameUtils';
+import { getUserCreatedTeam, canUserCreateTeam } from '@/utils/teamUtils';
 import { formatDate, formatTime, getDateRange, calculateProgress, formatProgress } from '@/utils/hackathonUiUtils';
 
 interface HackathonClientViewProps {
@@ -30,25 +28,45 @@ interface HackathonClientViewProps {
 
 interface HackathonCardProps {
   hackathon: HackathonEvent;
-  onRegister: (hackathonId: string) => void;
-  onCreateTeam: (hackathonId: string) => void;
+  userId: string;
+  isRegistered: boolean;
+  hasTeam: boolean;
+  hasEnded: boolean;
+  isRunning: boolean;
   onJoinTeam: (hackathonId: string) => void;
-  onLeaveTeam: (hackathonId: string) => void;
+  onJoinTeamById: (teamId: string) => Promise<void>;
+  onCreateTeam: (hackathonId: string) => void;
+  onDeleteTeam: (teamId: string, teamName: string) => Promise<void>;
+  onLeaveTeam: (hackathonId: string) => Promise<void>;
+  joiningTeamId: string | null;
 }
 
-const HackathonCard: React.FC<HackathonCardProps> = ({
+// Individual collapsible hackathon card component
+function HackathonCard({
   hackathon,
-  onRegister,
-  onCreateTeam,
+  userId,
+  isRegistered,
+  hasTeam,
+  hasEnded,
+  isRunning,
   onJoinTeam,
-  onLeaveTeam
-}) => {
-  const isRegistered = !!hackathon.userParticipation;
-  const hasTeam = !!hackathon.userParticipation?.teamId;
+  onJoinTeamById,
+  onCreateTeam,
+  onDeleteTeam,
+  onLeaveTeam,
+  joiningTeamId
+}: HackathonCardProps) {
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [contentHeight, setContentHeight] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
   const isLongDuration = isLongDurationHackathon(hackathon);
-  const durationDays = getHackathonDurationDays(hackathon);
-  const isRunning = isHackathonRunning(hackathon);
-  const hasEnded = isHackathonEnded(hackathon);
+
+  // Measure content height when expanded
+  useEffect(() => {
+    if (contentRef.current && !isCollapsed) {
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, [isCollapsed, hackathon.teams, hackathon.userParticipation]);
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-xl p-6 border transition-all hover:shadow-lg ${
@@ -63,11 +81,6 @@ const HackathonCard: React.FC<HackathonCardProps> = ({
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
               {hackathon.title}
             </h3>
-            {isLongDuration && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
-                Extended ({durationDays} days)
-              </span>
-            )}
             {isRunning && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                 <span className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
@@ -84,61 +97,74 @@ const HackathonCard: React.FC<HackathonCardProps> = ({
             {hackathon.description}
           </p>
         </div>
-        <div className="flex-shrink-0 ml-4">
-          <MaterialIcon
-            name="event"
+        
+        {/* Collapse/Expand Button */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          aria-label={isCollapsed ? 'Expand hackathon details' : 'Collapse hackathon details'}
+        >
+          <MaterialIcon 
+            name="expand-more" 
             size={24}
-            className="text-orange-500"
+            className={`transition-transform duration-200 ${isCollapsed ? 'rotate-0' : 'rotate-180'}`}
           />
-        </div>
+        </button>
       </div>
 
-      {/* Event Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <MaterialIcon name="calendar" size={16} />
-            <span>{getDateRange(hackathon)}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <MaterialIcon name="time" size={16} />
-            <span>
-              {formatTime(hackathon.startDate)}
-              {hackathon.endDate && ` - ${formatTime(hackathon.endDate)}`}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <MaterialIcon name="time" size={16} />
-            <span>{formatHackathonDuration(hackathon)}</span>
-          </div>
-        </div>
-        <div className="space-y-2">
-          {hackathon.location && (
+      {/* Collapsible Content */}
+      <div 
+        ref={contentRef}
+        className="overflow-hidden transition-all duration-500 ease-in-out"
+        style={{
+          maxHeight: isCollapsed ? '0px' : `${contentHeight}px`,
+          opacity: isCollapsed ? 0 : 1,
+        }}
+      >
+        {/* Event Details */}
+      <div className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4 transition-all duration-300 ${
+        isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+      }`}>
+        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+          Event Details
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <MaterialIcon name="location" size={16} />
-              <span className="truncate">{hackathon.location}</span>
+              <MaterialIcon name="calendar" size={16} />
+              <span>{getDateRange(hackathon)}</span>
             </div>
-          )}
-          {hackathon.organizerId && (
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <MaterialIcon name="building" size={16} />
-              <span>Organizer ID: {hackathon.organizerId}</span>
+              <MaterialIcon name="time" size={16} />
+              <span>
+                {formatTime(hackathon.startDate)}
+                {hackathon.endDate && ` - ${formatTime(hackathon.endDate)}`}
+              </span>
             </div>
-          )}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <MaterialIcon name="people" size={16} />
-            <span>{hackathon.totalParticipants} participants</span>
+            {hackathon.location && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <MaterialIcon name="location" size={16} />
+                <span className="truncate">{hackathon.location}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <MaterialIcon name="people" size={16} />
+              <span>{hackathon.totalParticipants} participants</span>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Hackathon Details */}
-      {(hackathon.registrationDeadline || hackathon.submissionDeadline || hackathon.maxTeamSize || hackathon.platformUrl) && (
-        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4">
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            Hackathon Details
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="space-y-2">
+            {hackathon.organizerName && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <MaterialIcon name="building" size={16} className="text-gray-500 dark:text-gray-400" />
+                <span>{hackathon.organizerName}</span>
+              </div>
+            )}
+            {/* Debug: Show organizer info even if name is empty */}
+            {hackathon.organizerId && !hackathon.organizerName && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <span>Organizer ID: {hackathon.organizerId}</span>
+              </div>
+            )}
             {hackathon.registrationDeadline && (
               <div>
                 <span className="text-gray-600 dark:text-gray-400">Registration Deadline:</span>
@@ -155,33 +181,111 @@ const HackathonCard: React.FC<HackathonCardProps> = ({
                 </span>
               </div>
             )}
-            {hackathon.maxTeamSize && (
-              <div>
-                <span className="text-gray-600 dark:text-gray-400">Max Team Size:</span>
-                <span className="ml-1 font-medium text-gray-900 dark:text-white">
-                  {hackathon.maxTeamSize} members
-                </span>
-              </div>
-            )}
-            {hackathon.platformUrl && (
-              <div>
-                <a
-                  href={hackathon.platformUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
-                >
-                  Platform Link ↗
-                </a>
-              </div>
-            )}
+            <div>
+              <span className="text-gray-600 dark:text-gray-400">Max Team Size:</span>
+              <span className="ml-1 font-medium text-gray-900 dark:text-white">
+                {hackathon.maxTeamSize} {hackathon.maxTeamSize === 1 ? 'member' : 'members'}
+              </span>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Teams Section - Only show if hackathon allows teams */}
+      {hackathon.maxTeamSize > 1 && (
+        <div className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4 transition-all duration-300 delay-100 ${
+          isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Teams ({(hackathon.teams?.length || 0)})
+            </h4>
+            {(() => {
+              const canCreate = canUserCreateTeam(hackathon, userId);
+              const userCreatedTeam = getUserCreatedTeam(hackathon, userId);
+              
+              if (userCreatedTeam) {
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      Your team: {userCreatedTeam.name}
+                    </span>
+                    <button
+                      onClick={() => onDeleteTeam(userCreatedTeam.id, userCreatedTeam.name)}
+                      className="px-3 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    >
+                      Delete Team
+                    </button>
+                  </div>
+                );
+              } else if (!hasTeam && !hasEnded && canCreate.canCreate) {
+                return (
+                  <button
+                    onClick={() => onCreateTeam(hackathon.id)}
+                    className="px-3 py-1 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-400 dark:bg-green-900/20 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                  >
+                    Create Team
+                  </button>
+                );
+              } else if (!canCreate.canCreate) {
+                return (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {canCreate.reason}
+                  </span>
+                );
+              }
+              return null;
+            })()}
+          </div>
+          
+          {hackathon.teams && hackathon.teams.length > 0 ? (
+            <div className="space-y-2">
+              {hackathon.teams
+                .filter(team => team.createdBy !== userId) // Don't show user's own team in the list
+                .slice(0, 3)
+                .map(team => (
+                <div key={team.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div>
+                    <div className="font-medium text-sm text-gray-900 dark:text-white">
+                      {team.name}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {team.memberCount || 0}/{hackathon.maxTeamSize} members
+                      {team.lookingForMembers && ' • Looking for members'}
+                    </div>
+                  </div>
+                  {!hasTeam && !hasEnded && team.lookingForMembers && (
+                    <button
+                      onClick={() => onJoinTeamById(team.id)}
+                      disabled={joiningTeamId === team.id}
+                      className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {joiningTeamId === team.id ? 'Joining...' : 'Join'}
+                    </button>
+                  )}
+                </div>
+              ))}
+              {hackathon.teams.filter(team => team.createdBy !== userId).length > 3 && (
+                <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
+                  +{hackathon.teams.filter(team => team.createdBy !== userId).length - 3} more teams
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                No teams available to join
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Progress bar for running hackathons */}
       {isRunning && hackathon.endDate && (
-        <div className="mb-4">
+        <div className={`mb-4 transition-all duration-300 delay-200 ${
+          isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+        }`}>
           <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
             <span>Progress</span>
             <span>{formatProgress(hackathon)}</span>
@@ -196,46 +300,60 @@ const HackathonCard: React.FC<HackathonCardProps> = ({
       )}
 
       {/* Action Buttons */}
-      <div className="flex flex-wrap gap-3">
+      <div className={`flex flex-wrap gap-3 transition-all duration-300 delay-300 ${
+        isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+      }`}>
         {!isRegistered && !hasEnded ? (
-          <button
-            onClick={() => onRegister(hackathon.id)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-          >
-            <MaterialIcon name="person" size={16} />
-            Register
-          </button>
+          <>
+            {/* External Registration Button */}
+            {hackathon.registrationUrl && (
+              <a
+                href={hackathon.registrationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                Register on Platform
+              </a>
+            )}
+            
+          </>
         ) : (
           <>
             {!hasTeam && !hasEnded ? (
-              <>
-                <button
-                  onClick={() => onCreateTeam(hackathon.id)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                >
-                  <MaterialIcon name="people" size={16} />
-                  Create Team
-                </button>
-                <button
-                  onClick={() => onJoinTeam(hackathon.id)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
-                >
-                  <MaterialIcon name="people" size={16} />
-                  Join Team
-                </button>
-              </>
+              <button
+                onClick={() => onJoinTeam(hackathon.id)}
+                className="px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+              >
+                Find a Team
+              </button>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20 rounded-lg">
-                  <MaterialIcon name="check" size={16} />
-                  {hasTeam ? (hackathon.userParticipation?.team?.name || 'Team Member') : 'Registered'}
+                <div className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  {hasTeam ? (
+                    `Team: ${hackathon.userParticipation?.team?.name || 'Team Member'}`
+                  ) : (
+                    'Registered'
+                  )}
                 </div>
+                
+                {/* Show external registration link if available and user hasn't registered externally */}
+                {hackathon.registrationUrl && (
+                  <a
+                    href={hackathon.registrationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                  >
+                    Register Externally
+                  </a>
+                )}
+                
                 {hasTeam && !hasEnded && (
                   <button
                     onClick={() => onLeaveTeam(hackathon.id)}
-                    className="flex items-center gap-2 px-3 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    className="px-3 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                   >
-                    <MaterialIcon name="close" size={12} />
                     Leave Team
                   </button>
                 )}
@@ -244,17 +362,7 @@ const HackathonCard: React.FC<HackathonCardProps> = ({
           </>
         )}
 
-        {hackathon.websiteUrl && (
-          <a
-            href={hackathon.websiteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
-          >
-            <MaterialIcon name="arrow-forward" size={16} />
-            Event Page
-          </a>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -262,16 +370,22 @@ const HackathonCard: React.FC<HackathonCardProps> = ({
 
 export default function HackathonClientView({
   initialHackathons,
-  profile,
   userId
 }: HackathonClientViewProps) {
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'running' | 'past'>('upcoming');
+  const [filter, setFilter] = useState<'all' | 'upcoming' | 'running' | 'past'>('all');
   const [showShort, setShowShort] = useState(true);
   const [teamSelection, setTeamSelection] = useState<{
     open: boolean;
     hackathonId: string;
     teams: HackathonTeam[];
   }>({ open: false, hackathonId: '', teams: [] });
+  const [joiningTeamId, setJoiningTeamId] = useState<string | null>(null);
+  const [teamCreation, setTeamCreation] = useState<{
+    open: boolean;
+    hackathonId: string;
+    hackathonTitle: string;
+    isCreating: boolean;
+  }>({ open: false, hackathonId: '', hackathonTitle: '', isCreating: false });
   const { supabase } = useSupabaseSafe();
   const queryClient = useQueryClient();
   const { showSuccess, showError, showWarning, showInfo, showConfirmation } = useSnackbar();
@@ -310,13 +424,13 @@ export default function HackathonClientView({
 
     // Apply duration filter
     if (!showShort) {
-      filtered = filtered.filter(h => !isShortDurationHackathon(h));
+      filtered = filtered.filter(h => isLongDurationHackathon(h));
     }
 
     return filtered;
   }, [hackathons, filter, showShort]);
 
-  const handleRegister = async (hackathonId: string) => {
+  const _handleRegister = async (hackathonId: string) => {
     if (!actions) {
       showWarning('Please sign in to register for hackathons.');
       return;
@@ -330,10 +444,31 @@ export default function HackathonClientView({
       showWarning('Please sign in to create teams.');
       return;
     }
-    const teamName = generateDefaultTeamName({
-      fullName: profile?.fullName || undefined
+    const hackathon = hackathons.find(h => h.id === hackathonId);
+    if (!hackathon) {
+      showError('Hackathon not found');
+      return;
+    }
+    setTeamCreation({
+      open: true,
+      hackathonId,
+      hackathonTitle: hackathon.title,
+      isCreating: false
     });
-    await actions.createTeam(hackathonId, teamName, 'Ready to build amazing things!');
+  };
+
+  const handleCreateTeamSubmit = async (teamData: { name: string; description: string; lookingForMembers: boolean }) => {
+    if (!actions) return;
+    
+    setTeamCreation(prev => ({ ...prev, isCreating: true }));
+    
+    try {
+      await actions.createTeam(teamCreation.hackathonId, teamData.name, teamData.description, teamData.lookingForMembers);
+      setTeamCreation(prev => ({ ...prev, open: false, isCreating: false }));
+    } catch (_error) {
+      setTeamCreation(prev => ({ ...prev, isCreating: false }));
+      // Error is already handled by the action
+    }
   };
 
   const handleJoinTeam = async (hackathonId: string) => {
@@ -358,10 +493,10 @@ export default function HackathonClientView({
         hackathonId,
         teams: availableTeams
       });
-    } catch (error) {
-      console.error('Error loading teams:', error);
-      showError('Failed to load available teams. Please try again.');
-    }
+  } catch (_error) {
+    console.error('Error loading teams:', _error);
+    showError('Failed to load available teams. Please try again.');
+  }
   };
 
   const handleSelectTeam = async (team: HackathonTeam) => {
@@ -377,9 +512,9 @@ export default function HackathonClientView({
           await HackathonService.joinTeam(supabase, teamSelection.hackathonId, team.id, userId);
           queryClient.invalidateQueries({ queryKey: ['hackathonEvents', userId] });
           showSuccess(`Successfully joined "${team.name}"!`);
-        } catch (error) {
-          console.error('Error joining team:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Failed to join team. Please try again.';
+        } catch (_error) {
+          console.error('Error joining team:', _error);
+          const errorMessage = _error instanceof Error ? _error.message : 'Failed to join team. Please try again.';
           showError(errorMessage);
         }
       },
@@ -395,6 +530,27 @@ export default function HackathonClientView({
     const hackathon = hackathons.find(h => h.id === hackathonId);
     const teamName = hackathon?.userParticipation?.team?.name || 'team';
     await actions.leaveTeam(hackathonId, teamName);
+  };
+
+  const handleJoinTeamById = async (teamId: string) => {
+    if (!actions) {
+      showWarning('Please sign in to join teams.');
+      return;
+    }
+    setJoiningTeamId(teamId);
+    try {
+      await actions.joinTeamById(teamId);
+    } finally {
+      setJoiningTeamId(null);
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: string, teamName: string) => {
+    if (!actions) {
+      showWarning('Please sign in to delete teams.');
+      return;
+    }
+    await actions.deleteTeam(teamId, teamName);
   };
 
   const getFilterCount = (filterType: typeof filter) => {
@@ -503,16 +659,30 @@ export default function HackathonClientView({
         </div>
       ) : (
         <div className="grid gap-6">
-          {filteredHackathons.map(hackathon => (
-            <HackathonCard
-              key={hackathon.id}
-              hackathon={hackathon}
-              onRegister={handleRegister}
-              onCreateTeam={handleCreateTeam}
-              onJoinTeam={handleJoinTeam}
-              onLeaveTeam={handleLeaveTeam}
-            />
-          ))}
+          {filteredHackathons.map(hackathon => {
+            const isRegistered = !!hackathon.userParticipation;
+            const hasTeam = !!hackathon.userParticipation?.teamId;
+            const isRunning = isHackathonRunning(hackathon);
+            const hasEnded = isHackathonEnded(hackathon);
+            
+            return (
+              <HackathonCard
+                key={hackathon.id}
+                hackathon={hackathon}
+                userId={userId}
+                isRegistered={isRegistered}
+                hasTeam={hasTeam}
+                hasEnded={hasEnded}
+                isRunning={isRunning}
+                onJoinTeam={handleJoinTeam}
+                onJoinTeamById={handleJoinTeamById}
+                onCreateTeam={handleCreateTeam}
+                onDeleteTeam={handleDeleteTeam}
+                onLeaveTeam={handleLeaveTeam}
+                joiningTeamId={joiningTeamId}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -522,6 +692,15 @@ export default function HackathonClientView({
         teams={teamSelection.teams}
         onClose={() => setTeamSelection({ open: false, hackathonId: '', teams: [] })}
         onSelectTeam={handleSelectTeam}
+      />
+
+      {/* Team Creation Dialog */}
+      <TeamCreationDialog
+        open={teamCreation.open}
+        hackathonTitle={teamCreation.hackathonTitle}
+        onClose={() => setTeamCreation(prev => ({ ...prev, open: false }))}
+        onCreateTeam={handleCreateTeamSubmit}
+        isCreating={teamCreation.isCreating}
       />
     </div>
   );

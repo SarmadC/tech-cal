@@ -14,8 +14,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { TeamSelectionDialog } from '@/components/hackathon/TeamSelectionDialog';
+import { TeamCreationDialog } from '@/components/hackathon/TeamCreationDialog';
 import { createHackathonActions } from '@/utils/hackathonActions';
-import { generateDefaultTeamName } from '@/utils/teamNameUtils';
 import type { HackathonEvent, HackathonTeam } from '@/types/hackathon';
 import { getDateRange, calculateProgress, formatProgress } from '@/utils/hackathonUiUtils';
 
@@ -26,7 +26,6 @@ interface ActiveHackathonsCardProps {
 
 interface HackathonMiniCardProps {
   hackathon: HackathonEvent;
-  onRegister: (hackathonId: string) => void;
   onCreateTeam: (hackathonId: string) => void;
   onJoinTeam: (hackathonId: string) => void;
   onLeaveTeam: (hackathonId: string) => void;
@@ -34,7 +33,6 @@ interface HackathonMiniCardProps {
 
 const HackathonMiniCard: React.FC<HackathonMiniCardProps> = ({
   hackathon,
-  onRegister,
   onCreateTeam,
   onJoinTeam,
   onLeaveTeam
@@ -70,13 +68,6 @@ const HackathonMiniCard: React.FC<HackathonMiniCardProps> = ({
             )}
           </div>
         </div>
-        <div className="flex-shrink-0 ml-2">
-          <MaterialIcon
-            name="event"
-            size={16}
-            className="text-orange-500"
-          />
-        </div>
       </div>
 
       <div className="flex items-center gap-2 mb-3">
@@ -86,47 +77,76 @@ const HackathonMiniCard: React.FC<HackathonMiniCardProps> = ({
             <span className="truncate">{hackathon.location}</span>
           </div>
         )}
+        {hackathon.organizerName && (
+          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+            <MaterialIcon name="building" size={12} className="text-gray-500 dark:text-gray-400" />
+            <span className="truncate">{hackathon.organizerName}</span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
         {!isRegistered ? (
-          <button
-            onClick={() => onRegister(hackathon.id)}
-            className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 rounded-full transition-colors"
-          >
-            <MaterialIcon name="person" size={12} />
-            Register
-          </button>
+          <>
+            {/* External Registration Button */}
+            {hackathon.registrationUrl && (
+              <a
+                href={hackathon.registrationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+              >
+                Register
+              </a>
+            )}
+            
+            {/* Find Team Button */}
+            <button
+              onClick={() => onJoinTeam(hackathon.id)}
+              className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-full transition-colors"
+            >
+              Find Team
+            </button>
+          </>
         ) : (
           <>
             {!hasTeam ? (
               <>
                 <button
                   onClick={() => onCreateTeam(hackathon.id)}
-                  className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-400 dark:bg-green-900/20 dark:hover:bg-green-900/30 rounded-full transition-colors"
+                  className="px-3 py-1 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-400 dark:bg-green-900/20 dark:hover:bg-green-900/30 rounded-full transition-colors"
                 >
-                  <MaterialIcon name="people" size={12} />
                   Create Team
                 </button>
                 <button
                   onClick={() => onJoinTeam(hackathon.id)}
-                  className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-full transition-colors"
+                  className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-full transition-colors"
                 >
-                  <MaterialIcon name="people" size={12} />
                   Join Team
                 </button>
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20 rounded-full">
-                  <MaterialIcon name="check-circle" size={12} />
-                  {teamName}
+                <div className="px-3 py-1 text-xs font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20 rounded-full border border-green-200 dark:border-green-800">
+                  {hasTeam ? teamName : 'Registered'}
                 </div>
+                
+                {/* Show external registration link if available */}
+                {hackathon.registrationUrl && (
+                  <a
+                    href={hackathon.registrationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 rounded-full transition-colors"
+                  >
+                    Register
+                  </a>
+                )}
+                
                 <button
                   onClick={() => onLeaveTeam(hackathon.id)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-full transition-colors"
+                  className="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-full transition-colors"
                 >
-                  <MaterialIcon name="logout" size={10} />
                   Leave
                 </button>
               </div>
@@ -162,6 +182,12 @@ export const ActiveHackathonsCard: React.FC<ActiveHackathonsCardProps> = ({
   const [selectedHackathon, setSelectedHackathon] = useState<HackathonEvent | null>(null);
   const [teams, setTeams] = useState<HackathonTeam[]>([]);
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const [teamCreation, setTeamCreation] = useState<{
+    open: boolean;
+    hackathonId: string;
+    hackathonTitle: string;
+    isCreating: boolean;
+  }>({ open: false, hackathonId: '', hackathonTitle: '', isCreating: false });
   const { supabase } = useSupabaseSafe();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -184,7 +210,7 @@ export const ActiveHackathonsCard: React.FC<ActiveHackathonsCardProps> = ({
     snackbar: { showSuccess, showError, showWarning, showInfo, showConfirmation }
   }) : null;
 
-  const handleRegister = async (hackathonId: string) => {
+  const _handleRegister = async (hackathonId: string) => {
     if (!actions) {
       showWarning('Please sign in to register for hackathons.');
       return;
@@ -198,8 +224,31 @@ export const ActiveHackathonsCard: React.FC<ActiveHackathonsCardProps> = ({
       showWarning('Please sign in to create teams.');
       return;
     }
-    const teamName = generateDefaultTeamName({ email: user.email });
-    await actions.createTeam(hackathonId, teamName, 'A new team ready to build amazing things!');
+    const hackathon = hackathons.find(h => h.id === hackathonId);
+    if (!hackathon) {
+      showError('Hackathon not found');
+      return;
+    }
+    setTeamCreation({
+      open: true,
+      hackathonId,
+      hackathonTitle: hackathon.title,
+      isCreating: false
+    });
+  };
+
+  const handleCreateTeamSubmit = async (teamData: { name: string; description: string; lookingForMembers: boolean }) => {
+    if (!actions) return;
+    
+    setTeamCreation(prev => ({ ...prev, isCreating: true }));
+    
+    try {
+      await actions.createTeam(teamCreation.hackathonId, teamData.name, teamData.description, teamData.lookingForMembers);
+      setTeamCreation(prev => ({ ...prev, open: false, isCreating: false }));
+    } catch (_error) {
+      setTeamCreation(prev => ({ ...prev, isCreating: false }));
+      // Error is already handled by the action
+    }
   };
 
   const handleJoinTeam = async (hackathonId: string) => {
@@ -212,6 +261,14 @@ export const ActiveHackathonsCard: React.FC<ActiveHackathonsCardProps> = ({
       setTeams,
       setTeamDialogOpen
     });
+  };
+
+  const _handleJoinTeamById = async (teamId: string) => {
+    if (!actions) {
+      showWarning('Please sign in to join teams.');
+      return;
+    }
+    await actions.joinTeamById(teamId);
   };
 
   const handleSelectTeam = async (team: HackathonTeam) => {
@@ -259,7 +316,6 @@ export const ActiveHackathonsCard: React.FC<ActiveHackathonsCardProps> = ({
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <MaterialIcon name="event" size={20} className="text-orange-500" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Active Hackathons
           </h3>
@@ -292,7 +348,6 @@ export const ActiveHackathonsCard: React.FC<ActiveHackathonsCardProps> = ({
 
       {hackathons.length === 0 ? (
         <div className="text-center py-8">
-          <MaterialIcon name="event" size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
           <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
             No active hackathons
           </h4>
@@ -303,7 +358,6 @@ export const ActiveHackathonsCard: React.FC<ActiveHackathonsCardProps> = ({
             href="/hackathons"
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
           >
-            <MaterialIcon name="event" size={16} />
             Browse Hackathons
           </Link>
         </div>
@@ -313,7 +367,6 @@ export const ActiveHackathonsCard: React.FC<ActiveHackathonsCardProps> = ({
             <HackathonMiniCard
               key={hackathon.id}
               hackathon={hackathon}
-              onRegister={handleRegister}
               onCreateTeam={handleCreateTeam}
               onJoinTeam={handleJoinTeam}
               onLeaveTeam={handleLeaveTeam}
@@ -349,6 +402,14 @@ export const ActiveHackathonsCard: React.FC<ActiveHackathonsCardProps> = ({
         teams={teams}
         onClose={() => setTeamDialogOpen(false)}
         onSelectTeam={handleSelectTeam}
+      />
+
+      <TeamCreationDialog
+        open={teamCreation.open}
+        hackathonTitle={teamCreation.hackathonTitle}
+        onClose={() => setTeamCreation(prev => ({ ...prev, open: false }))}
+        onCreateTeam={handleCreateTeamSubmit}
+        isCreating={teamCreation.isCreating}
       />
     </div>
   );
