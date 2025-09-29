@@ -44,6 +44,7 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
         title="Trending"
         subtitle="Popular events gaining momentum"
         icon={<Fire size={20} weight="fill" />}
+        iconVariant="trending"
         className={className}
       >
         <div className="discovery-empty-state">

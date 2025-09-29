@@ -42,6 +42,7 @@ const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
         title="New This Week"
         subtitle="Fresh events just added"
         icon={<Sparkle size={20} weight="fill" />}
+        iconVariant="new-this-week"
         className={className}
       >
         <div className="discovery-empty-state">
