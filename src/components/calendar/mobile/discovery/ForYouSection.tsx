@@ -149,7 +149,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
         title="For You"
         subtitle="Personalized Recommendations"
         icon={<User size={20} weight="fill" />}
-        iconVariant="for-you"
         className={className}
       >
         <CareerProfilePrompt profile={userProfile} />
@@ -164,7 +163,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
         title="For You"
         subtitle="Personalized Recommendations"
         icon={<User size={20} weight="fill" />}
-        iconVariant="for-you"
         className={className}
       >
         <div className="discovery-loading-state">
@@ -185,7 +183,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
         title="For You"
         subtitle="Personalized Recommendations"
         icon={<User size={20} weight="fill" />}
-        iconVariant="for-you"
         className={className}
       >
         <div className="discovery-empty-state">
@@ -206,7 +203,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
         title="For You"
         subtitle="Personalized Recommendations"
         icon={<User size={20} weight="fill" />}
-        iconVariant="for-you"
         className={className}
       >
         <div className="discovery-empty-state">

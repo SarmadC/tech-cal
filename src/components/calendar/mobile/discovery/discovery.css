@@ -47,66 +47,66 @@
   @apply flex items-center gap-4;
 }
 
-/* Section Icon Base Styles */
+/* Theme-aware Section Icon */
 .section-icon {
   @apply flex items-center justify-center w-12 h-12 rounded-lg;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  /* Light mode */
+  background: rgb(243, 244, 246); /* bg-gray-100 */
+  color: rgb(75, 85, 99); /* text-gray-600 */
+  border: 1px solid rgb(229, 231, 235); /* border-gray-200 */
   transition: var(--transition-standard);
-  box-shadow: var(--shadow-icon);
-  position: relative;
-  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
-.section-icon::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: inherit;
-  opacity: 0.9;
-  z-index: -1;
-}
-
-/* Section-specific icon colors */
-.section-icon.for-you {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.section-icon.trending {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.section-icon.new-this-week {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.section-icon.quick-wins {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-}
-
-/* Hover effects */
-.discovery-section:hover .section-icon {
-  transform: scale(1.05);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: var(--shadow-hover);
-}
-
-.discovery-section:hover .section-icon::before {
-  opacity: 1;
-}
-
-/* Dark mode adjustments */
+/* Dark mode section icon */
 @media (prefers-color-scheme: dark) {
   .section-icon {
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgb(31, 41, 55); /* bg-gray-800 */
+    color: rgb(209, 213, 219); /* text-gray-300 */
+    border: 1px solid rgb(55, 65, 81); /* border-gray-700 */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
   }
-  
+}
+
+/* Theme-aware section icon using CSS custom properties */
+[data-theme="light"] .section-icon {
+  background: rgb(243, 244, 246); /* bg-gray-100 */
+  color: rgb(75, 85, 99); /* text-gray-600 */
+  border: 1px solid rgb(229, 231, 235); /* border-gray-200 */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .section-icon {
+  background: rgb(31, 41, 55); /* bg-gray-800 */
+  color: rgb(209, 213, 219); /* text-gray-300 */
+  border: 1px solid rgb(55, 65, 81); /* border-gray-700 */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+.discovery-section:hover .section-icon {
+  transform: scale(1.05);
+  /* Light mode hover */
+  border-color: rgb(156, 163, 175); /* border-gray-400 */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Dark mode hover */
+@media (prefers-color-scheme: dark) {
   .discovery-section:hover .section-icon {
-    border-color: rgba(255, 255, 255, 0.25);
+    border-color: rgb(107, 114, 128); /* border-gray-500 */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   }
+}
+
+/* Theme-aware hover states */
+[data-theme="light"] .discovery-section:hover .section-icon {
+  border-color: rgb(156, 163, 175); /* border-gray-400 */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .discovery-section:hover .section-icon {
+  border-color: rgb(107, 114, 128); /* border-gray-500 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
 }
 
 .section-title {

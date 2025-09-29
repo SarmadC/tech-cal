@@ -12,7 +12,6 @@ export interface DiscoverySectionProps {
   onViewAll?: () => void;
   showViewAll?: boolean;
   className?: string;
-  iconVariant?: 'for-you' | 'trending' | 'new-this-week' | 'quick-wins';
 }
 
 const DiscoverySection: React.FC<DiscoverySectionProps> = ({
@@ -22,8 +21,7 @@ const DiscoverySection: React.FC<DiscoverySectionProps> = ({
   children,
   onViewAll,
   showViewAll = false,
-  className = '',
-  iconVariant = 'for-you'
+  className = ''
 }) => {
   const sectionId = generateSectionId(title);
   const sectionDescId = generateSectionDescId(title);
@@ -32,7 +30,7 @@ const DiscoverySection: React.FC<DiscoverySectionProps> = ({
     <section className={`discovery-section ${className}`} role="region" aria-labelledby={sectionId}>
       <div className="discovery-section-header">
         <div className="section-title-container">
-          <div className={`section-icon ${iconVariant}`}>
+          <div className="section-icon">
             {icon || <Sparkle size={20} weight="fill" />}
           </div>
           <div className="section-text">

@@ -42,7 +42,6 @@ const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
         title="Quick Wins"
         subtitle="Short events you can fit into your schedule"
         icon={<Clock size={20} weight="fill" />}
-        iconVariant="quick-wins"
         className={className}
       >
         <div className="discovery-empty-state">
@@ -60,9 +59,8 @@ const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
     <DiscoverySection
       title="Quick Wins"
       subtitle="Short sessions with high impact"
-        icon={<Lightning size={20} weight="fill" />}
-        iconVariant="quick-wins"
-        className={className}
+      icon={<Lightning size={20} weight="fill" />}
+      className={className}
     >
       <div className="discovery-cards-container quick-wins-container">
         {quickWinEvents.map((event, index) => (
