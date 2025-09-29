@@ -7,11 +7,12 @@ import { useSmartFilters } from '@/hooks/useSmartFilters';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import MobileTopNavigation, { MobileViewType } from './MobileTopNavigation';
 import MobileTodayView from './MobileTodayView';
-import MobileMultiDayCalendarView from './MobileMultiDayCalendarView';
+import MobileEnhancedWeekView from './MobileEnhancedWeekView';
 import MobileMonthView from './MobileMonthView';
 import MobileSearchFilter from '../MobileSearchFilter';
 import MobileViewEnhancements from './MobileViewEnhancements';
 import MobileAdvancedGestures from './MobileAdvancedGestures';
+import './mobile-enhanced-week.css';
 
 export interface MobileCalendarAppProps {
   events: Event[];
@@ -104,24 +105,24 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
   };
 
   // Navigation handlers
-  const handleDateChange = useCallback((date: Date) => {
-    console.log('MobileCalendarApp: Date change requested:', date);
+  const handleDateChange = useCallback((date: Date, fromSearch = false) => {
+    console.log('MobileCalendarApp: Date change requested:', date, 'fromSearch:', fromSearch);
     setLocalCurrentDate(date);
     onDateChange?.(date);
-    
-    // Auto-switch to month view when date is selected via search
-    if (currentView !== 'month') {
-      console.log('MobileCalendarApp: Switching to month view');
+
+    // Auto-switch to month view only when date is selected via search, not from within week view
+    if (fromSearch && currentView !== 'month') {
+      console.log('MobileCalendarApp: Switching to month view (from search)');
       setCurrentView('month');
-      
+
       // Update URL to reflect the view change
       const params = new URLSearchParams(searchParams.toString());
       params.set('mobileView', 'month');
-      
+
       // Add the selected date to URL
       const dateParam = date.toISOString().split('T')[0];
       params.set('date', dateParam);
-      
+
       router.push(`/calendar?${params.toString()}`, { scroll: false });
     }
   }, [onDateChange, currentView, searchParams, router]);
@@ -200,7 +201,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
             events={filteredEvents}
             categories={categories}
             profile={profile}
-            onDateChange={handleDateChange}
+            onDateChange={(date) => handleDateChange(date, false)}
             onEventSelect={onEventSelect}
           />
 
@@ -225,16 +226,16 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
               categories={categories}
               profile={profile}
               onEventSelect={onEventSelect}
-              onDateChange={handleDateChange}
+              onDateChange={(date) => handleDateChange(date, false)}
             />
           ) : (
-            <MobileMultiDayCalendarView
+            <MobileEnhancedWeekView
               events={filteredEvents}
               currentDate={localCurrentDate}
               categories={categories}
               profile={profile}
               onEventSelect={onEventSelect}
-              onDateChange={handleDateChange}
+              onDateChange={(date) => handleDateChange(date, false)}
             />
           )}
         </div>
@@ -266,7 +267,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
           // Handle suggestion selection - could filter events or navigate
           // Selected suggestion handled
         }}
-        onDateChange={onDateChange}
+        onDateChange={(date) => handleDateChange(date, true)}
       />
 
     </div>
