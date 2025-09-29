@@ -98,23 +98,49 @@ export class HackathonService {
     hackathonId: string
   ): Promise<HackathonTeam[]> {
     try {
-      const { data, error } = await supabase
+      // First get basic team data
+      const { data: teamsData, error: teamsError } = await supabase
         .from('hackathon_teams')
-        .select(`
-          *,
-          hackathon_participants!inner(
-            *,
-            profiles(id, full_name, avatar_url)
-          )
-        `)
+        .select('*')
         .eq('hackathon_id', hackathonId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        this.handleDbError(error, 'fetching hackathon teams');
+      if (teamsError) {
+        this.handleDbError(teamsError, 'fetching hackathon teams');
       }
 
-      return data ? data.map(teamData => this.transformTeam(teamData)) : [];
+      if (!teamsData || teamsData.length === 0) {
+        return [];
+      }
+
+      // Get member counts for each team
+      const teamIds = teamsData.map(team => team.id);
+      const { data: memberCounts, error: countError } = await supabase
+        .from('hackathon_participants')
+        .select('team_id')
+        .in('team_id', teamIds);
+
+      if (countError) {
+        console.warn('Error fetching team member counts:', countError);
+      }
+
+      // Count members per team
+      const memberCountMap = new Map<string, number>();
+      if (memberCounts) {
+        memberCounts.forEach(participant => {
+          if (participant.team_id) {
+            const currentCount = memberCountMap.get(participant.team_id) || 0;
+            memberCountMap.set(participant.team_id, currentCount + 1);
+          }
+        });
+      }
+
+      // Transform teams with member counts
+      return teamsData.map(teamData => {
+        const team = this.transformTeam(teamData);
+        team.memberCount = memberCountMap.get(team.id) || 0;
+        return team;
+      });
     } catch (error) {
       this.handleMethodError(error, 'getHackathonTeams');
     }

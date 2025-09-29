@@ -33,6 +33,10 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
     onEventSelect?.(event);
   }, [onEventSelect]);
 
+  const handleLearnMore = React.useCallback((event: Event) => {
+    onEventSelect?.(event);
+  }, [onEventSelect]);
+
 
   if (trendingEvents.length === 0) {
     return (
@@ -76,7 +80,9 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
             <DiscoveryCard
               event={featuredEvent}
               onClick={() => handleEventClick(featuredEvent)}
+              onLearnMore={() => handleLearnMore(featuredEvent)}
               variant="featured"
+              showLearnMore={true}
               className=""
             />
           </div>
@@ -90,7 +96,9 @@ const TrendingSection = React.memo<TrendingSectionProps>(({
                 key={`${event.id}-${index}`}
                 event={event}
                 onClick={() => handleEventClick(event)}
+                onLearnMore={() => handleLearnMore(event)}
                 variant="compact"
+                showLearnMore={true}
                 className=""
               />
             ))}

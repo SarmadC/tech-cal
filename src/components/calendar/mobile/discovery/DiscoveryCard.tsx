@@ -13,24 +13,29 @@ import { Event } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { Card, CardHeader } from '@/components/ui/card';
 import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
+import { LearnMoreButton } from '../../shared/LearnMoreButton';
 import { cn } from '@/lib/utils';
 
 export interface DiscoveryCardProps {
   event: Event & { careerImpactLite?: CareerImpactScoreLite };
   onClick?: () => void;
   onView?: () => void;
+  onLearnMore?: () => void;
   className?: string;
   variant?: 'default' | 'featured' | 'compact';
   showCareerImpact?: boolean;
+  showLearnMore?: boolean;
 }
 
 const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   event,
   onClick,
   onView,
+  onLearnMore,
   className = '',
   variant = 'default',
-  showCareerImpact = true
+  showCareerImpact = true,
+  showLearnMore = true
 }) => {
   const hasTrackedView = React.useRef(false);
 
@@ -129,7 +134,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   return (
     <Card 
       className={cn(
-        "event-card cursor-pointer transition-all duration-300 hover:shadow-lg",
+        "event-card cursor-pointer transition-all duration-300 hover:shadow-lg relative",
         "border-border/50 bg-card hover:bg-card/80",
         variant === 'featured' && "md:col-span-2",
         variant === 'compact' && "flex-row items-center gap-4",
@@ -150,30 +155,44 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         '--category-title-color': titleColor,
       } as React.CSSProperties}
     >
+      {/* Learn More Button - positioned at absolute right edge of entire card */}
+      {showLearnMore && (
+        <LearnMoreButton
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent card click
+            onLearnMore?.();
+          }}
+          showForLargeEvents={true}
+          className="discover-learn-more-absolute"
+        />
+      )}
+      
       <CardHeader className="pb-0">
         {/* Event Header Content - Now takes full width */}
         <div className="w-full space-y-4">
-          <div className="flex items-start justify-between">
+          {/* Event title on its own line */}
+          <div className="flex items-center">
             <h3 
-              className="font-semibold text-lg leading-tight tracking-tight flex-1 pr-2"
+              className="font-semibold text-lg leading-tight tracking-tight flex-1 min-w-0"
               style={{ color: titleColor }}
             >
               {event.title}
             </h3>
-            {/* Career Impact Indicator */}
-            {showCareerImpact && event.careerImpactLite && (
+          </div>
+          
+          {/* Career Impact Indicator - separate line */}
+          {showCareerImpact && event.careerImpactLite && (
+            <div className="flex items-center">
               <CareerImpactIndicator 
                 score={event.careerImpactLite.overall}
                 size="sm"
                 showValue={true}
-                className="flex-shrink-0"
               />
-            )}
-          </div>
-          
-          {/* Discovery reason removed - use event description instead if needed */}
+            </div>
+          )}
 
-          <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
+          {/* Date and time on one line */}
+          <div className="flex items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-1">
               <Calendar size={14} />
               <span>{formatEventDate(event.startTime)}</span>
@@ -185,25 +204,23 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
             </div>
           </div>
 
-          {/* Location section - moved from CardContent */}
+          {/* Location on separate line */}
           {event.location && (
-            <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
-              <div className="flex items-center gap-1">
-                <MapPin size={14} />
-                <span className="max-w-64">
-                  {event.location.length > 28
-                    ? `${event.location.substring(0, 28)}...` 
-                    : event.location
-                  }
-                </span>
-              </div>
+            <div className="flex items-center gap-1 text-sm text-gray-500">
+              <MapPin size={14} />
+              <span className="max-w-64">
+                {event.location.length > 28
+                  ? `${event.location.substring(0, 28)}...` 
+                  : event.location
+                }
+              </span>
+            </div>
+          )}
 
-              {event.attendeeCount && (
-                <div className="flex items-center gap-1">
-                  <Users size={14} />
-                  <span>{event.attendeeCount} attending</span>
-                </div>
-              )}
+          {event.attendeeCount && (
+            <div className="flex items-center gap-1 text-sm text-gray-500">
+              <Users size={14} />
+              <span>{event.attendeeCount} attending</span>
             </div>
           )}
         </div>
@@ -255,8 +272,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
           )}
         </div>
       </div>
-
-      {/* Trending Indicator - removed as it's not part of consolidated Event type */}
 
     </Card>
   );

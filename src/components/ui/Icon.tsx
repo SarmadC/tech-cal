@@ -42,6 +42,8 @@ import {
   ArrowLeftIcon,
   CaretDoubleLeftIcon,
   HouseIcon,
+  CodeIcon,
+  ArrowUpRightIcon,
 } from '@phosphor-icons/react';
 
 export type IconName = 
@@ -86,7 +88,9 @@ export type IconName =
   | 'chevron_left'
   | 'arrow_back'
   | 'chevron_double_left'
-  | 'home';
+  | 'home'
+  | 'code'
+  | 'arrow-up-right';
 
 interface IconProps {
   name: IconName;
@@ -138,6 +142,8 @@ const iconMap = {
   'arrow_back': ArrowLeftIcon,
   'chevron_double_left': CaretDoubleLeftIcon,
   'home': HouseIcon,
+  'code': CodeIcon,
+  'arrow-up-right': ArrowUpRightIcon,
 } as const;
 
 export const MaterialIcon: React.FC<IconProps> = ({ 

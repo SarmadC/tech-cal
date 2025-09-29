@@ -31,6 +31,10 @@ const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
     onEventSelect?.(event);
   }, [onEventSelect]);
 
+  const handleLearnMore = React.useCallback((event: Event) => {
+    onEventSelect?.(event);
+  }, [onEventSelect]);
+
 
   if (quickWinEvents.length === 0) {
     return (
@@ -64,7 +68,9 @@ const QuickWinsSection = React.memo<QuickWinsSectionProps>(({
             key={`${event.id}-${index}`}
             event={event}
             onClick={() => handleEventClick(event)}
+            onLearnMore={() => handleLearnMore(event)}
             variant="compact"
+            showLearnMore={true}
             className=""
           />
         ))}

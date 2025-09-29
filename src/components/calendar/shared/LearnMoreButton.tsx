@@ -6,7 +6,7 @@ import ShinyText from './ShinyText';
 import './ShinyText.css';
 
 interface LearnMoreButtonProps {
-    onClick?: () => void;
+    onClick?: (e: React.MouseEvent) => void;
     className?: string;
     showForLargeEvents?: boolean;
 }
@@ -34,7 +34,7 @@ export const LearnMoreButton: React.FC<LearnMoreButtonProps> = ({
         >
                                                     <div className="button-content">
                         <MaterialIcon 
-                            name="arrow-forward"
+                            name="arrow-up-right"
                             className={`arrow-icon ${isHovered ? 'arrow-hovered' : ''}`}
                             size="1em"
                         />

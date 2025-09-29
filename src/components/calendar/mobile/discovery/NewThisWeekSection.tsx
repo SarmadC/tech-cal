@@ -31,6 +31,10 @@ const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
     onEventSelect?.(event);
   }, [onEventSelect]);
 
+  const handleLearnMore = React.useCallback((event: Event) => {
+    onEventSelect?.(event);
+  }, [onEventSelect]);
+
 
   if (newEvents.length === 0) {
     return (
@@ -69,7 +73,9 @@ const NewThisWeekSection = React.memo<NewThisWeekSectionProps>(({
             key={`${event.id}-${index}`}
             event={event}
             onClick={() => handleEventClick(event)}
+            onLearnMore={() => handleLearnMore(event)}
             variant="default"
+            showLearnMore={true}
             className=""
           />
         ))}

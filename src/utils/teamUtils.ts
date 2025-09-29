@@ -152,3 +152,54 @@ export function canUserCreateTeam(
 
   return { canCreate: true };
 }
+
+/**
+ * Get team status information
+ */
+export function getTeamStatus(
+  team: HackathonTeam,
+  maxTeamSize: number,
+  userId: string
+): { text: string; color: string; bg: string; isFull: boolean; availableSpots: number } {
+  const isCreator = team.createdBy === userId;
+  const isFull = (team.memberCount || 0) >= maxTeamSize;
+  const availableSpots = maxTeamSize - (team.memberCount || 0);
+
+  if (isCreator) {
+    return {
+      text: 'Your Team',
+      color: 'text-green-600 dark:text-green-400',
+      bg: 'bg-green-50 dark:bg-green-900/20',
+      isFull,
+      availableSpots
+    };
+  }
+
+  if (isFull) {
+    return {
+      text: 'Full',
+      color: 'text-gray-500 dark:text-gray-400',
+      bg: 'bg-gray-50 dark:bg-gray-900/20',
+      isFull,
+      availableSpots
+    };
+  }
+
+  if (!team.lookingForMembers) {
+    return {
+      text: 'Not Looking',
+      color: 'text-orange-600 dark:text-orange-400',
+      bg: 'bg-orange-50 dark:bg-orange-900/20',
+      isFull,
+      availableSpots
+    };
+  }
+
+  return {
+    text: 'Available',
+    color: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    isFull,
+    availableSpots
+  };
+}

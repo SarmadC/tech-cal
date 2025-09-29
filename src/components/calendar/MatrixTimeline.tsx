@@ -3,18 +3,30 @@
 import React, { FC, useState } from 'react';
 import { CalendarIcon, ClockIcon, MapPinIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
-import { getSpeakerAvatarUrl } from '@/services/avatarService';
+import { useTimelineTheme } from '@/hooks/useTimelineTheme';
+import { formatTimelineTime, getEmptyState, getSpeakerAvatarUrl } from '@/utils/timelineUtils';
 
 interface MatrixTimelineProps {
     event: Event;
 }
 
 const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
+    const theme = useTimelineTheme();
     const agenda = event.agenda || [];
     const [selectedEvent, setSelectedEvent] = useState<AgendaItem | null>(null);
     const [visibleTracks, setVisibleTracks] = useState<Set<string>>(new Set());
     
-    if (agenda.length === 0) return null;
+    if (agenda.length === 0) {
+        const emptyState = getEmptyState(theme.isDark);
+        return (
+            <div className="text-center py-8">
+                <CalendarIcon className={`w-12 h-12 mx-auto mb-4 ${emptyState.iconClass}`} />
+                <p className={`text-sm ${emptyState.textClass}`}>
+                    {emptyState.message}
+                </p>
+            </div>
+        );
+    }
     
     // Get unique time slots and tracks
     const timeSlots = [...new Set(agenda.map(item => `${item.startTime}-${item.endTime}`))].sort();
@@ -43,16 +55,7 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
         };
     });
     
-    const formatTime = (timeString: string) => {
-        const [hours, minutes] = timeString.split(':');
-        const date = new Date();
-        date.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-        return date.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
+    const formatTime = formatTimelineTime;
     
     const getEventColor = (type: AgendaItem['type']) => {
         const colors: Record<AgendaItem['type'], string> = {
@@ -155,7 +158,7 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
     return (
         <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <h3 className="text-lg font-semibold text-white flex items-center">
+                <h3 className={`text-lg font-semibold flex items-center ${theme.textPrimary}`}>
                     <CalendarIcon className="w-5 h-5 mr-2" />
                     Schedule Matrix
                 </h3>
@@ -163,7 +166,7 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
                 {/* Track Filter */}
                 {allTracks.length > 3 && (
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-gray-400">Tracks:</span>
+                        <span className={`text-xs ${theme.textMuted}`}>Tracks:</span>
                         <div className="flex flex-wrap gap-1">
                             {allTracks.map(track => (
                                 <button
@@ -171,8 +174,10 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
                                     onClick={() => toggleTrack(track)}
                                     className={`px-2 py-1 text-xs rounded transition-colors ${
                                         visibleTracks.has(track)
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            ? theme.btnPrimary
+                                            : theme.isDark 
+                                                ? theme.btnSecondary
+                                                : theme.btnSecondary
                                     }`}
                                 >
                                     {formatTrackName(track)}
@@ -185,11 +190,15 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
             
             {/* Summary */}
             {visibleTracks.size !== allTracks.length && (
-                <div className="text-xs text-gray-400 bg-gray-800/30 rounded p-2">
+                <div className={`text-xs rounded p-2 ${theme.textMuted} ${theme.bgMuted}`}>
                     Showing {visibleTracks.size} of {allTracks.length} tracks. 
                     <button 
                         onClick={() => setVisibleTracks(new Set(allTracks))}
-                        className="ml-1 text-blue-400 hover:text-blue-300 underline"
+                        className={`ml-1 underline transition-colors ${
+                            theme.isDark 
+                                ? theme.statusInfo + ' hover:text-blue-300' 
+                                : theme.statusInfo + ' hover:text-blue-700'
+                        }`}
                     >
                         Show all tracks
                     </button>
@@ -199,11 +208,11 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
             <div className="overflow-x-auto">
                 <div className="grid gap-0.5 min-w-max" style={{ gridTemplateColumns: `100px repeat(${tracks.length}, 140px)` }}>
                     {/* Sticky Header */}
-                    <div className="sticky top-0 z-10 p-2 text-xs font-medium text-gray-400 bg-gray-900/95 backdrop-blur-sm border-b border-gray-700">
+                    <div className={`sticky top-0 z-10 p-2 text-xs font-medium backdrop-blur-sm border-b ${theme.textMuted} ${theme.bgElevated} ${theme.borderCard}`}>
                         Time
                     </div>
                     {tracks.map(track => (
-                        <div key={track} className="sticky top-0 z-10 p-2 text-xs font-medium text-gray-300 text-center bg-gray-800/95 backdrop-blur-sm border-b border-gray-700 rounded-t">
+                        <div key={track} className={`sticky top-0 z-10 p-2 text-xs font-medium text-center backdrop-blur-sm border-b rounded-t ${theme.textSecondary} ${theme.bgElevated} ${theme.borderCard}`}>
                             {formatTrackName(track)}
                         </div>
                     ))}
@@ -212,11 +221,11 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
                     {groupedRows.map(({ timeSlot, startTime, endTime, events }) => (
                         <React.Fragment key={timeSlot}>
                             {/* Time column */}
-                            <div className="p-1.5 text-xs text-gray-400 flex items-center bg-gray-900/30 border-r border-gray-700/30">
+                            <div className={`p-1.5 text-xs flex items-center border-r ${theme.textMuted} ${theme.bgMuted} ${theme.borderLight}`}>
                                 <ClockIcon className="w-3 h-3 mr-1 flex-shrink-0" />
                                 <div className="truncate">
                                     <div className="font-medium">{formatTime(startTime)}</div>
-                                    <div className="text-gray-500 text-[10px]">{formatTime(endTime)}</div>
+                                    <div className={`text-[10px] ${theme.textLight}`}>{formatTime(endTime)}</div>
                                 </div>
                             </div>
                             
@@ -232,7 +241,7 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
                                             <div className="truncate font-medium">{item.title}</div>
                                         </button>
                                     ) : (
-                                        <div className="w-full h-8 border border-dashed border-gray-700/20 rounded opacity-10"></div>
+                                        <div className={`w-full h-8 border border-dashed rounded opacity-10 ${theme.borderDashed}`}></div>
                                     )}
                                 </div>
                             ))}
@@ -244,20 +253,18 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
             {/* Event detail modal */}
             {selectedEvent && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedEvent(null)}>
-                    <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4" onClick={e => e.stopPropagation()}>
-                        <h4 className="text-white font-semibold mb-3">{selectedEvent.title}</h4>
+                    <div className={`rounded-lg p-6 max-w-md mx-4 ${theme.modalBg} ${theme.modalBorder}`} onClick={e => e.stopPropagation()}>
+                        <h4 className={`font-semibold mb-3 ${theme.modalText}`}>{selectedEvent.title}</h4>
                         
                         <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-gray-400">
+                            <div className={`flex items-center gap-2 ${theme.modalTextSecondary}`}>
                                 <ClockIcon className="w-4 h-4" />
                                 <span>{formatTime(selectedEvent.startTime)} - {formatTime(selectedEvent.endTime)}</span>
                             </div>
                             
                             {selectedEvent.speaker && (
                                 <div 
-                                    className={`flex items-center gap-3 p-2 bg-gray-700/30 rounded-lg ${
-                                        selectedEvent.speaker.socialLinks?.linkedin ? 'hover:bg-gray-600/30 cursor-pointer transition-colors' : ''
-                                    }`}
+                                    className={`flex items-center gap-3 p-2 rounded-lg ${theme.bgCard} ${selectedEvent.speaker.socialLinks?.linkedin ? `${theme.hoverCard} cursor-pointer transition-colors` : ''}`}
                                     onClick={() => {
                                         if (selectedEvent.speaker?.socialLinks?.linkedin) {
                                             window.open(selectedEvent.speaker.socialLinks.linkedin, '_blank', 'noopener,noreferrer');
@@ -269,36 +276,40 @@ const MatrixTimeline: FC<MatrixTimelineProps> = ({ event }) => {
                                     <img 
                                         src={getSpeakerAvatarUrl(selectedEvent.speaker, 24)} 
                                         alt={selectedEvent.speaker.name}
-                                        className="w-6 h-6 rounded-full object-cover border border-gray-600"
+                                        className={`w-6 h-6 rounded-full object-cover border ${theme.borderLight}`}
                                         onError={(e) => {
                                             const target = e.currentTarget as HTMLImageElement;
                                             target.style.display = 'none';
                                         }}
                                     />
                                     <div className="flex-1">
-                                        <div className="font-medium text-white text-sm">{selectedEvent.speaker.name}</div>
+                                        <div className={`font-medium text-sm ${theme.modalText}`}>{selectedEvent.speaker.name}</div>
                                         {selectedEvent.speaker.title && (
-                                            <div className="text-xs text-gray-400">{selectedEvent.speaker.title}</div>
+                                            <div className={`text-xs ${theme.modalTextSecondary}`}>{selectedEvent.speaker.title}</div>
                                         )}
                                     </div>
                                 </div>
                             )}
                             
                             {selectedEvent.location && (
-                                <div className="flex items-center gap-2 text-gray-400">
+                                <div className={`flex items-center gap-2 ${theme.modalTextSecondary}`}>
                                     <MapPinIcon className="w-4 h-4" />
                                     <span>{selectedEvent.location}</span>
                                 </div>
                             )}
                             
                             {selectedEvent.description && (
-                                <p className="text-gray-300 mt-3">{selectedEvent.description}</p>
+                                <p className={`mt-3 ${theme.modalTextSecondary}`}>{selectedEvent.description}</p>
                             )}
                         </div>
                         
                         <button
                             onClick={() => setSelectedEvent(null)}
-                            className="mt-4 px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
+                            className={`mt-4 px-4 py-2 rounded transition-colors ${
+                                theme.isDark 
+                                    ? theme.btnSecondary
+                                    : theme.btnSecondary
+                            }`}
                         >
                             Close
                         </button>

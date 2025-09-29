@@ -3,6 +3,7 @@
 import { FC, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { XIcon, ArrowSquareOutIcon, CalendarPlusIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
+import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
 import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';
@@ -23,6 +24,7 @@ interface EventDetailPanelProps {
 }
 
 const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categories }) => {
+    const theme = useTimelineTheme();
     const category = categories.find(c => c.id === event.eventTypeId);
     const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -92,21 +94,21 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     }, [showMoreMenu]);
 
     return (
-        <div className="h-full bg-[#1e1e1e] border-l border-gray-800 shadow-2xl p-6 flex flex-col relative">
+        <div className={`h-full ${theme.modalBg} border-l ${theme.borderCard} shadow-2xl p-6 flex flex-col relative`}>
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-white font-dm-sans">Event Details</h2>
-                <button onClick={onClose} className="p-2 hover:bg-gray-700 rounded-full transition-colors">
-                    <XIcon className="w-5 h-5 text-gray-400" />
+                <h2 className={`text-lg font-semibold ${theme.textPrimary} font-dm-sans`}>Event Details</h2>
+                <button onClick={onClose} className={`p-2 ${theme.hoverCard} rounded-full transition-colors`}>
+                    <XIcon className={`w-5 h-5 ${theme.textMuted}`} />
                 </button>
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto pr-2 -mr-2">
                 <div className="flex items-start justify-between">
-                    <h3 className="text-2xl font-bold text-white flex-1">{displayEvent.title}</h3>
+                    <h3 className={`text-2xl font-bold ${theme.textPrimary} flex-1`}>{displayEvent.title}</h3>
 
                     <Link
                         href={`/events/${displayEvent.id}`}
-                        className="ml-4 p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors"
+                        className={`ml-4 p-2 ${theme.textMuted} ${theme.hoverText} ${theme.hoverCard} rounded-full transition-colors`}
                         title="View full page"
                     >
                         <ArrowSquareOutIcon className="w-5 h-5" />
@@ -116,10 +118,10 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 <EventInfo event={displayEvent} category={category} />
                 
                 {/* Adaptive Timeline Section */}
-                <div className="mt-6 pt-6 border-t border-gray-800">
+                <div className={`mt-6 pt-6 border-t ${theme.borderCard}`}>
                     {isLoading ? (
                         <div className="flex items-center justify-center py-8">
-                            <div className="text-gray-400 text-sm">Loading agenda...</div>
+                            <div className={`${theme.textMuted} text-sm`}>Loading agenda...</div>
                         </div>
                     ) : (
                         <AdaptiveTimeline event={displayEvent} />
@@ -127,7 +129,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-800">
+            <div className={`mt-6 pt-4 border-t ${theme.borderCard}`}>
                 {/* All actions in a single container */}
                 <div className="p-4">
                     <div className="flex items-center gap-3">
@@ -136,9 +138,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                             onClick={handleTrackEvent}
                             disabled={isTrackingLoading || !user}
                             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md ${
-                                isTracked 
-                                    ? 'bg-red-100 hover:bg-red-200 text-red-800 border border-red-200' 
-                                    : 'bg-zinc-200 hover:bg-zinc-300 text-zinc-900'
+                                isTracked ? theme.btnDanger : theme.btnPrimary
                             } ${isTrackingLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <CalendarPlusIcon className="w-4 h-4" />
@@ -151,64 +151,64 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         </div>
 
                         {/* Share icon-only button */}
-                        <button 
-                            onClick={() => handleShare()}
-                            className="flex items-center justify-center px-3 py-3 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-colors border border-gray-600/30"
-                            title="Share event"
-                        >
-                            <ShareNetworkIcon className="w-3.5 h-3.5 text-gray-300" />
+                                <button
+                                    onClick={() => handleShare()}
+                                    className={`flex items-center justify-center px-3 py-3 ${theme.btnSecondary} rounded-lg transition-colors`}
+                                    title="Share event"
+                                >
+                            <ShareNetworkIcon className={`w-3.5 h-3.5 ${theme.textSecondary}`} />
                         </button>
 
                         {/* More menu */}
                         <div className="relative flex-shrink-0" ref={moreMenuRef}>
-                            <button 
-                                onClick={() => setShowMoreMenu(!showMoreMenu)}
-                                className="flex items-center justify-center px-3 py-3 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-colors border border-gray-600/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                                title="More actions"
-                                aria-expanded={showMoreMenu}
-                                aria-haspopup="true"
-                            >
-                                <DotsThreeVerticalIcon className="w-3.5 h-3.5 text-gray-300" />
+                                    <button
+                                        onClick={() => setShowMoreMenu(!showMoreMenu)}
+                                        className={`flex items-center justify-center px-3 py-3 ${theme.btnSecondary} rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${theme.isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white'}`}
+                                        title="More actions"
+                                        aria-expanded={showMoreMenu}
+                                        aria-haspopup="true"
+                                    >
+                                <DotsThreeVerticalIcon className={`w-3.5 h-3.5 ${theme.textSecondary}`} />
                             </button>
                             
                             {/* More menu dropdown */}
                             {showMoreMenu && (
                                 <div 
-                                    className="absolute right-0 top-full mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10"
+                                    className={`absolute right-0 top-full mt-2 w-48 ${theme.modalBg} ${theme.modalBorder} rounded-lg shadow-lg z-10`}
                                     role="menu"
                                     aria-orientation="vertical"
                                 >
-                                    <a 
-                                        href={googleCalendarLink} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        onClick={() => setShowMoreMenu(false)}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 rounded-t-lg transition-colors focus:outline-none focus:bg-gray-700"
-                                        role="menuitem"
-                                    >
+                                            <a
+                                                href={googleCalendarLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={() => setShowMoreMenu(false)}
+                                                className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm ${theme.modalTextSecondary} ${theme.hoverCard} rounded-t-lg transition-colors focus:outline-none`}
+                                                role="menuitem"
+                                            >
                                         <CalendarPlusIcon className="w-4 h-4" />
                                         <span>Add to Calendar</span>
                                     </a>
-                                    <button 
-                                        onClick={() => {
-                                            handleIcsDownload();
-                                            setShowMoreMenu(false);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 transition-colors focus:outline-none focus:bg-gray-700"
-                                        role="menuitem"
-                                    >
+                                            <button
+                                                onClick={() => {
+                                                    handleIcsDownload();
+                                                    setShowMoreMenu(false);
+                                                }}
+                                                className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm ${theme.modalTextSecondary} ${theme.hoverCard} transition-colors focus:outline-none`}
+                                                role="menuitem"
+                                            >
                                         <DownloadSimpleIcon className="w-4 h-4" />
                                         <span>Download .ics</span>
                                     </button>
                                     <button 
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 transition-colors focus:outline-none focus:bg-gray-700"
+                                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm ${theme.modalTextSecondary} ${theme.hoverCard} transition-colors focus:outline-none`}
                                         role="menuitem"
                                     >
                                         <DownloadSimpleIcon className="w-4 h-4" />
                                         <span>Export to PDF</span>
                                     </button>
                                     <button 
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 rounded-b-lg transition-colors focus:outline-none focus:bg-gray-700"
+                                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm ${theme.modalTextSecondary} ${theme.hoverCard} rounded-b-lg transition-colors focus:outline-none`}
                                         role="menuitem"
                                     >
                                         <DownloadSimpleIcon className="w-4 h-4" />

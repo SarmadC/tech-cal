@@ -16,6 +16,10 @@ import {
 import { AppProfile } from '@/types';
 import { TeamSelectionDialog } from '@/components/hackathon/TeamSelectionDialog';
 import { TeamCreationDialog } from '@/components/hackathon/TeamCreationDialog';
+import { TeamSearchFilter } from '@/components/hackathon/TeamSearchFilter';
+import { EnhancedTeamCard } from '@/components/hackathon/EnhancedTeamCard';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import AppSidebar from '@/components/app-sidebar';
 import { createHackathonActions } from '@/utils/hackathonActions';
 import { getUserCreatedTeam, canUserCreateTeam } from '@/utils/teamUtils';
 import { formatDate, formatTime, getDateRange, calculateProgress, formatProgress } from '@/utils/hackathonUiUtils';
@@ -58,8 +62,20 @@ function HackathonCard({
 }: HackathonCardProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [contentHeight, setContentHeight] = useState(0);
+  const [filteredTeams, setFilteredTeams] = useState<HackathonTeam[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
   const isLongDuration = isLongDurationHackathon(hackathon);
+
+  // Get available teams (excluding user's own team)
+  const availableTeams = useMemo(() => 
+    (hackathon.teams || []).filter(team => team.createdBy !== userId),
+    [hackathon.teams, userId]
+  );
+
+  // Initialize filtered teams when available teams change
+  useEffect(() => {
+    setFilteredTeams(availableTeams);
+  }, [availableTeams]);
 
   // Measure content height when expanded
   useEffect(() => {
@@ -104,7 +120,7 @@ function HackathonCard({
           className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           aria-label={isCollapsed ? 'Expand hackathon details' : 'Collapse hackathon details'}
         >
-          <MaterialIcon 
+          <MaterialIcon
             name="expand-more" 
             size={24}
             className={`transition-transform duration-200 ${isCollapsed ? 'rotate-0' : 'rotate-180'}`}
@@ -121,7 +137,7 @@ function HackathonCard({
           opacity: isCollapsed ? 0 : 1,
         }}
       >
-        {/* Event Details */}
+      {/* Event Details */}
       <div className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4 transition-all duration-300 ${
         isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
       }`}>
@@ -129,29 +145,29 @@ function HackathonCard({
           Event Details
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <MaterialIcon name="calendar" size={16} />
-              <span>{getDateRange(hackathon)}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <MaterialIcon name="time" size={16} />
-              <span>
-                {formatTime(hackathon.startDate)}
-                {hackathon.endDate && ` - ${formatTime(hackathon.endDate)}`}
-              </span>
-            </div>
-            {hackathon.location && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <MaterialIcon name="location" size={16} />
-                <span className="truncate">{hackathon.location}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <MaterialIcon name="people" size={16} />
-              <span>{hackathon.totalParticipants} participants</span>
-            </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <MaterialIcon name="calendar" size={16} />
+            <span>{getDateRange(hackathon)}</span>
           </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <MaterialIcon name="time" size={16} />
+            <span>
+              {formatTime(hackathon.startDate)}
+              {hackathon.endDate && ` - ${formatTime(hackathon.endDate)}`}
+            </span>
+          </div>
+          {hackathon.location && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <MaterialIcon name="location" size={16} />
+              <span className="truncate">{hackathon.location}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <MaterialIcon name="people" size={16} />
+            <span>{hackathon.totalParticipants} participants</span>
+          </div>
+        </div>
           <div className="space-y-2">
             {hackathon.organizerName && (
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -163,7 +179,7 @@ function HackathonCard({
             {hackathon.organizerId && !hackathon.organizerName && (
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <span>Organizer ID: {hackathon.organizerId}</span>
-              </div>
+      </div>
             )}
             {hackathon.registrationDeadline && (
               <div>
@@ -181,9 +197,9 @@ function HackathonCard({
                 </span>
               </div>
             )}
-            <div>
-              <span className="text-gray-600 dark:text-gray-400">Max Team Size:</span>
-              <span className="ml-1 font-medium text-gray-900 dark:text-white">
+              <div>
+                <span className="text-gray-600 dark:text-gray-400">Max Team Size:</span>
+                <span className="ml-1 font-medium text-gray-900 dark:text-white">
                 {hackathon.maxTeamSize} {hackathon.maxTeamSize === 1 ? 'member' : 'members'}
               </span>
             </div>
@@ -196,9 +212,9 @@ function HackathonCard({
         <div className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4 transition-all duration-300 delay-100 ${
           isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
         }`}>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-              Teams ({(hackathon.teams?.length || 0)})
+              Teams ({hackathon.teams?.length || 0})
             </h4>
             {(() => {
               const canCreate = canUserCreateTeam(hackathon, userId);
@@ -239,44 +255,61 @@ function HackathonCard({
           </div>
           
           {hackathon.teams && hackathon.teams.length > 0 ? (
-            <div className="space-y-2">
-              {hackathon.teams
-                .filter(team => team.createdBy !== userId) // Don't show user's own team in the list
-                .slice(0, 3)
-                .map(team => (
-                <div key={team.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <div>
-                    <div className="font-medium text-sm text-gray-900 dark:text-white">
-                      {team.name}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {team.memberCount || 0}/{hackathon.maxTeamSize} members
-                      {team.lookingForMembers && ' • Looking for members'}
+            <div className="space-y-4">
+              {/* Search and Filter */}
+              <TeamSearchFilter
+                teams={availableTeams}
+                onFilteredTeams={setFilteredTeams}
+                maxTeamSize={hackathon.maxTeamSize}
+              />
+              
+              {/* Team Cards */}
+              <div className="grid gap-3">
+                {filteredTeams.slice(0, 6).map(team => (
+                  <EnhancedTeamCard
+                    key={team.id}
+                    team={team}
+                    maxTeamSize={hackathon.maxTeamSize}
+                    onJoin={onJoinTeamById}
+                    isJoining={joiningTeamId === team.id}
+                    canJoin={!hasTeam && !hasEnded}
+                    userId={userId}
+                  />
+                ))}
+                
+                {filteredTeams.length > 6 && (
+                  <div className="text-center py-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      +{filteredTeams.length - 6} more teams
+                </span>
+              </div>
+            )}
+                
+                {filteredTeams.length === 0 && (
+                  <div className="text-center py-4">
+                    <MaterialIcon name="search" size={32} className="text-gray-400 mx-auto mb-2" />
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      No teams match your search criteria
                     </div>
                   </div>
-                  {!hasTeam && !hasEnded && team.lookingForMembers && (
-                    <button
-                      onClick={() => onJoinTeamById(team.id)}
-                      disabled={joiningTeamId === team.id}
-                      className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {joiningTeamId === team.id ? 'Joining...' : 'Join'}
-                    </button>
-                  )}
-                </div>
-              ))}
-              {hackathon.teams.filter(team => team.createdBy !== userId).length > 3 && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
-                  +{hackathon.teams.filter(team => team.createdBy !== userId).length - 3} more teams
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ) : (
             <div className="text-center py-4">
+              <MaterialIcon name="people" size={32} className="text-gray-400 mx-auto mb-2" />
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                 No teams available to join
               </div>
-            </div>
+              {!hasTeam && !hasEnded && (
+                <button
+                  onClick={() => onCreateTeam(hackathon.id)}
+                  className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-400 dark:bg-green-900/20 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                >
+                  Create First Team
+                </button>
+            )}
+          </div>
           )}
         </div>
       )}
@@ -321,12 +354,12 @@ function HackathonCard({
         ) : (
           <>
             {!hasTeam && !hasEnded ? (
-              <button
-                onClick={() => onJoinTeam(hackathon.id)}
+                <button
+                  onClick={() => onJoinTeam(hackathon.id)}
                 className="px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
-              >
+                >
                 Find a Team
-              </button>
+                </button>
             ) : (
               <div className="flex items-center gap-2">
                 <div className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
@@ -495,8 +528,9 @@ export default function HackathonClientView({
       });
   } catch (_error) {
     console.error('Error loading teams:', _error);
-    showError('Failed to load available teams. Please try again.');
-  }
+    const errorMessage = _error instanceof Error ? _error.message : 'Unknown error occurred';
+    showError(`Failed to load available teams: ${errorMessage}`);
+    }
   };
 
   const handleSelectTeam = async (team: HackathonTeam) => {
@@ -570,21 +604,35 @@ export default function HackathonClientView({
 
   if (isLoading && !initialHackathons.length) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64"></div>
-          <div className="grid gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
-            ))}
-          </div>
+      <SidebarProvider>
+        <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+          <AppSidebar />
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-auto">
+              <div className="max-w-7xl mx-auto px-4 py-8">
+                <div className="animate-pulse space-y-6">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64"></div>
+                  <div className="grid gap-6">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
         </div>
-      </div>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <SidebarProvider>
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+        <AppSidebar />
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -666,9 +714,9 @@ export default function HackathonClientView({
             const hasEnded = isHackathonEnded(hackathon);
             
             return (
-              <HackathonCard
-                key={hackathon.id}
-                hackathon={hackathon}
+            <HackathonCard
+              key={hackathon.id}
+              hackathon={hackathon}
                 userId={userId}
                 isRegistered={isRegistered}
                 hasTeam={hasTeam}
@@ -676,11 +724,11 @@ export default function HackathonClientView({
                 isRunning={isRunning}
                 onJoinTeam={handleJoinTeam}
                 onJoinTeamById={handleJoinTeamById}
-                onCreateTeam={handleCreateTeam}
+              onCreateTeam={handleCreateTeam}
                 onDeleteTeam={handleDeleteTeam}
-                onLeaveTeam={handleLeaveTeam}
+              onLeaveTeam={handleLeaveTeam}
                 joiningTeamId={joiningTeamId}
-              />
+            />
             );
           })}
         </div>
@@ -702,6 +750,10 @@ export default function HackathonClientView({
         onCreateTeam={handleCreateTeamSubmit}
         isCreating={teamCreation.isCreating}
       />
-    </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }

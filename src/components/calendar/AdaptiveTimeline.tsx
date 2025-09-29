@@ -3,6 +3,7 @@
 import { FC, useMemo, useState, useEffect } from 'react';
 import { CalendarIcon, ListIcon, GridNineIcon, StackIcon, TableIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
+import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import TimelineView from './TimelineView';
 import SwimLaneTimeline from './SwimLaneTimeline';
 import StackedTimeline from './StackedTimeline';
@@ -16,6 +17,7 @@ interface AdaptiveTimelineProps {
 type LayoutType = 'branching' | 'swimlane' | 'stacked' | 'matrix';
 
 const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event, forceLayout = 'auto' }) => {
+    const theme = useTimelineTheme();
     const [userLayout, setUserLayout] = useState<LayoutType | null>(null);
     const [isMobile, setIsMobile] = useState(false);
     
@@ -88,8 +90,8 @@ const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event, forceLayout = 'aut
     if (!analysis) {
         return (
             <div className="text-center py-8">
-                <CalendarIcon className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                <p className="text-gray-400 text-sm">No timeline available for this event.</p>
+                <CalendarIcon className={`w-12 h-12 ${theme.emptyStateIcon} mx-auto mb-4`} />
+                <p className={`${theme.textMuted} text-sm`}>No timeline available for this event.</p>
             </div>
         );
     }
@@ -123,7 +125,7 @@ const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event, forceLayout = 'aut
         <div className="space-y-4">
             {/* Layout selector and analysis */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm text-gray-400">
+                <div className={`flex items-center gap-2 text-sm ${theme.textMuted}`}>
                     <CalendarIcon className="w-4 h-4" />
                     <span className="truncate">
                         {analysis.totalEvents} events
@@ -140,13 +142,13 @@ const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event, forceLayout = 'aut
                         {userLayout && (
                             <button
                                 onClick={() => setUserLayout(null)}
-                                className="px-2 py-1 rounded text-xs text-gray-400 hover:text-gray-300 hover:bg-gray-800/50 transition-colors"
+                                className={`px-2 py-1 rounded text-xs ${theme.textMuted} ${theme.hoverText} ${theme.hoverCard} transition-colors`}
                                 title="Reset to auto-selection"
                             >
                                 Auto
                             </button>
                         )}
-                        <div className="flex items-center gap-1 bg-gray-800/30 rounded-lg p-1">
+                        <div className={`flex items-center gap-1 ${theme.bgMuted} rounded-lg p-1`}>
                             {layouts.map(({ id, name, icon: Icon }) => (
                                 <button
                                     key={id}
@@ -154,8 +156,8 @@ const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event, forceLayout = 'aut
                                     disabled={isMobile && id !== 'stacked' && !userLayout}
                                     className={`px-2 py-1 rounded text-xs flex items-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                         optimalLayout === id
-                                            ? 'bg-gray-700 text-white'
-                                            : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800/50'
+                                            ? `${theme.bgCard} ${theme.textPrimary}`
+                                            : `${theme.textMuted} ${theme.hoverText} ${theme.hoverCard}`
                                     }`}
                                     title={layouts.find(l => l.id === id)?.description}
                                 >

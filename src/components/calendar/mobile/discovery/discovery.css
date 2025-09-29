@@ -167,6 +167,216 @@
   box-shadow: var(--shadow-button-hover);
 }
 
+/* Learn More Button for Discovery Cards */
+.discover-learn-more {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: all 0.3s ease;
+}
+
+.discover-learn-more:hover {
+  transform: scale(1.1);
+}
+
+/* Inline Learn More Button - aligned with title */
+.discover-learn-more-inline {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  margin-left: auto; /* Push to far right */
+}
+
+/* Absolute Learn More Button - positioned at card edges */
+.discover-learn-more-absolute {
+  position: absolute !important;
+  top: 40px; /* Align with the title line (40px offset from card top) */
+  right: 0px; /* Position at the card's content edge */
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: all 0.3s ease;
+  z-index: 10;
+  transform: translateX(-15px); /* Move 15px to the left to be inside the blue region */
+}
+
+/* Override card overflow to allow button to be visible outside bounds */
+.event-card {
+  overflow: visible !important;
+}
+
+.discover-learn-more-inline:hover {
+  transform: scale(1.1);
+}
+
+.discover-learn-more-absolute:hover {
+  transform: scale(1.1);
+}
+
+/* Absolute arrow icon styling */
+.discover-learn-more-absolute .arrow-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+}
+
+/* Absolute shiny text styling */
+.discover-learn-more-absolute .learn-more-shiny {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.discover-learn-more-absolute .learn-more-shiny.text-visible {
+  opacity: 1 !important;
+}
+
+/* Make arrow icon bigger and remove borders */
+.discover-learn-more .arrow-icon {
+  font-size: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+}
+
+/* Inline arrow icon styling */
+.discover-learn-more-inline .arrow-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+}
+
+/* Override base learn-more-button styles for discover cards */
+[data-view="discovery"] .discover-learn-more .arrow-icon {
+  font-size: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+}
+
+[data-view="discovery"] .discover-learn-more-inline .arrow-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+}
+
+/* Ensure shiny text is visible */
+.discover-learn-more .learn-more-shiny {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.discover-learn-more .learn-more-shiny.text-visible {
+  opacity: 1 !important;
+}
+
+/* Inline shiny text styling */
+.discover-learn-more-inline .learn-more-shiny {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.discover-learn-more-inline .learn-more-shiny.text-visible {
+  opacity: 1 !important;
+}
+
+/* Override base shiny text styles for discover cards */
+[data-view="discovery"] .discover-learn-more .learn-more-shiny {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+[data-view="discovery"] .discover-learn-more .learn-more-shiny.text-visible {
+  opacity: 1 !important;
+}
+
+/* Enhanced shimmer for discover cards */
+[data-view="discovery"] .learn-more-shiny .shiny-text {
+  color: var(--accent-primary, #3b82f6) !important;
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+/* Dark mode support for discover learn more button */
+@media (prefers-color-scheme: dark) {
+  .discover-learn-more {
+    background: transparent;
+    border: none;
+  }
+  
+  .discover-learn-more:hover {
+    background: transparent;
+  }
+  
+  .discover-learn-more .arrow-icon {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+}
+
 
 /* Adjust position when trending indicator is present */
 [data-view="discovery"] .event-card:has(.trending-indicator) .event-arrow-corner {

@@ -5,6 +5,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { useAuth } from '@/contexts/AuthContext';
 import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import Navbar from "@/components/common/Navbar";
 import AnalyticsConsentBanner from '@/components/common/AnalyticsConsentBanner';
@@ -16,7 +17,13 @@ export default function ClientLayout({
 }) {
     const pathname = usePathname();
     const { isMobile } = useDeviceDetection();
-    const excludedPaths = ['/calendar', '/'];
+    const { user, loading } = useAuth();
+    
+    // Pages that should never show navbar (they have their own navigation)
+    const excludedPaths = ['/calendar', '/', '/hackathons', '/dashboard'];
+    
+    // Marketing pages that should always show navbar
+    const marketingPaths = ['/', '/pricing', '/blog', '/contact', '/legal'];
 
     // Cleanup analytics buffers on page unload
     useEffect(() => {
@@ -30,9 +37,16 @@ export default function ClientLayout({
         };
     }, []);
 
-    // Don't render navbar on excluded paths or on mobile devices
-    // Mobile devices should use their own navigation components
-    if (excludedPaths.includes(pathname) || isMobile) {
+    // Show navbar for:
+    // 1. Marketing pages (always)
+    // 2. Unauthenticated users on any page
+    // 3. Excluded paths on mobile (they have their own nav)
+    const shouldShowNavbar = 
+        marketingPaths.includes(pathname) || 
+        (!user && !loading) || 
+        (excludedPaths.includes(pathname) && isMobile);
+
+    if (!shouldShowNavbar) {
         return (
             <>
                 {children}
