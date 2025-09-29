@@ -18,6 +18,7 @@ export { BehavioralAnalyticsService } from './behavioralAnalyticsService';
 export { DiscoveryService } from './discoveryService';
 export { PersonalizedDiscoveryService } from './personalizedDiscoveryService';
 export { CareerImpactService } from './careerImpactService';
+export { HackathonService } from './hackathonService';
 
 // Cache services
 // export { getCareerImpactCache, CacheServiceHelper } from './cache'; // Temporarily disabled

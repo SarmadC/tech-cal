@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { CaretLeft, CaretRight, User, Target, BookOpen, Network, CheckCircle } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, User, Target, BookOpen, Network, Users, CheckCircle } from '@phosphor-icons/react';
 import {
   CareerOnboardingData,
   SeniorityLevel,
@@ -13,6 +13,10 @@ import {
   BudgetRange,
   NetworkingGoal,
   CareerEventType,
+  CollaborationStyle,
+  TeamSizePreference,
+  CommunicationPreference,
+  MentorshipPreference,
   ROLE_TAXONOMY,
   COMPANY_SIZE_OPTIONS,
   SENIORITY_LEVELS,
@@ -21,7 +25,9 @@ import {
   INTEREST_AREAS
 } from '@/types/career';
 import MultiSelectDropdown, { MultiSelectOption } from '@/components/ui/MultiSelectDropdown';
-import { validateOnboardingData, sanitizeOnboardingData } from '@/utils/onboardingUtils';
+import { SkillProficiencySelector } from './SkillProficiencySelector';
+import { TeamRoleSelector } from './TeamRoleSelector';
+import { validateOnboardingData, sanitizeOnboardingData, synchronizeSkillTags } from '@/utils/onboardingUtils';
 
 interface CareerOnboardingProps {
   onComplete: (data: CareerOnboardingData) => void;
@@ -38,7 +44,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   const [data, setData] = useState<Partial<CareerOnboardingData>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const totalSteps = 5;
+  const totalSteps = 6;
 
   // Memoize dropdown options to prevent recreation on every render
   const technicalSkillOptions: MultiSelectOption[] = useMemo(() => 
@@ -80,7 +86,22 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   };
 
   const updateData = (step: keyof CareerOnboardingData, stepData: unknown) => {
-    setData(prev => ({ ...prev, [step]: stepData }));
+    setData(prev => {
+      const newData = { ...prev, [step]: stepData };
+      
+      // Handle skill tags synchronization for step2_skills
+      if (step === 'step2_skills' && stepData && typeof stepData === 'object') {
+        const skillsData = stepData as Partial<CareerOnboardingData['step2_skills']>;
+        if (skillsData.primarySkills) {
+          const existingSkillTags = skillsData.skillTags || prev.step2_skills?.skillTags || [];
+          const synchronizedTags = synchronizeSkillTags(skillsData.primarySkills, existingSkillTags);
+          
+          (newData.step2_skills as CareerOnboardingData['step2_skills']).skillTags = synchronizedTags;
+        }
+      }
+      
+      return newData;
+    });
   };
 
   const isStepComplete = (step: number): boolean => {
@@ -88,13 +109,20 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       case 1:
         return !!(data.step1_role?.currentRole && data.step1_role?.seniority && data.step1_role?.industry);
       case 2:
-        return !!(data.step2_skills?.primarySkills?.length || data.step2_skills?.skillsToLearn?.length || data.step2_skills?.interests?.length);
+        const hasSkills = !!(data.step2_skills?.primarySkills?.length || data.step2_skills?.skillsToLearn?.length || data.step2_skills?.interests?.length);
+        const primarySkills = data.step2_skills?.primarySkills || [];
+        const skillTags = data.step2_skills?.skillTags || [];
+        const allSkillsHaveTags = primarySkills.length === 0 || 
+          primarySkills.every(skill => skillTags.some(tag => tag.skill === skill));
+        return hasSkills && allSkillsHaveTags;
       case 3:
         return !!(data.step3_goals?.careerGoals?.length);
       case 4:
         return !!(data.step4_preferences?.learningStyle?.length);
       case 5:
         return !!(data.step5_networking?.networkingGoals?.length);
+      case 6:
+        return !!(data.step6_teamBuilding?.teamRole && data.step6_teamBuilding?.collaborationStyle?.length && data.step6_teamBuilding?.teamGoals?.length);
       default:
         return false;
     }
@@ -111,7 +139,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
   const renderStepIndicator = () => (
     <div className="flex justify-center mb-8">
-      {[1, 2, 3, 4, 5].map((step) => (
+      {[1, 2, 3, 4, 5, 6].map((step) => (
         <div key={step} className="flex items-center">
           <div className={`
             w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
@@ -124,7 +152,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
           `}>
             {step < currentStep ? <CheckCircle size={16} /> : step}
           </div>
-          {step < 5 && (
+          {step < 6 && (
             <div className={`w-12 h-0.5 mx-2 ${
               step < currentStep ? 'bg-green-500' : 'bg-gray-200'
             }`} />
@@ -238,6 +266,27 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         maxSelections={10}
         searchable={true}
       />
+
+      {/* Skill Proficiency Selector - Only show if skills are selected */}
+      {data.step2_skills?.primarySkills && data.step2_skills.primarySkills.length > 0 && (
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Rate Your Proficiency</h3>
+          <SkillProficiencySelector
+            skills={data.step2_skills.primarySkills}
+            skillTags={data.step2_skills.skillTags || []}
+            onSkillsChange={(skillTags) => {
+              try {
+                updateData('step2_skills', {
+                  ...data.step2_skills,
+                  skillTags
+                });
+              } catch (error) {
+                console.error('Error updating skill tags:', error);
+              }
+            }}
+          />
+        </div>
+      )}
 
       <MultiSelectDropdown
         options={technicalSkillOptions}
@@ -489,6 +538,253 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     </div>
   );
 
+  const renderStep6 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <Users size={48} className="mx-auto mb-4 text-blue-600" />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Team Building Preferences</h2>
+        <p className="text-gray-600">Help us match you with the perfect hackathon team.</p>
+      </div>
+
+      {/* Skill Proficiency (if skills are selected) */}
+      {data.step2_skills?.primarySkills && data.step2_skills.primarySkills.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Rate Your Skills</h3>
+          <SkillProficiencySelector
+            skills={data.step2_skills.primarySkills}
+            skillTags={data.step2_skills.skillTags || []}
+            onSkillsChange={(skillTags) => updateData('step2_skills', {
+              ...(data.step2_skills || {}),
+              skillTags
+            })}
+          />
+        </div>
+      )}
+
+      {/* Team Role Selector */}
+      <div>
+        <TeamRoleSelector
+          onRoleChange={(role) => updateData('step6_teamBuilding', {
+            ...data.step6_teamBuilding,
+            teamRole: role
+          })}
+          currentRole={data.step6_teamBuilding?.teamRole || ''}
+          skills={data.step2_skills?.skillTags || []}
+        />
+      </div>
+
+      {/* Collaboration Style */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">Collaboration Style (select all that apply)</label>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { value: 'hands-on', label: 'Hands-on Coding' },
+            { value: 'strategic', label: 'Strategic Planning' },
+            { value: 'mentoring', label: 'Mentoring Others' },
+            { value: 'learning', label: 'Learning from Others' },
+            { value: 'leading', label: 'Taking Initiative' },
+            { value: 'supporting', label: 'Supporting Others' },
+            { value: 'innovating', label: 'Exploring New Ideas' },
+            { value: 'executing', label: 'Implementing Solutions' }
+          ].map((style) => (
+            <label key={style.value} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={data.step6_teamBuilding?.collaborationStyle?.includes(style.value as CollaborationStyle) || false}
+                onChange={(e) => {
+                  const currentStyles = data.step6_teamBuilding?.collaborationStyle || [];
+                  const newStyles = e.target.checked
+                    ? [...currentStyles, style.value as CollaborationStyle]
+                    : currentStyles.filter(s => s !== style.value);
+                  updateData('step6_teamBuilding', { 
+                    ...data.step6_teamBuilding, 
+                    collaborationStyle: newStyles 
+                  });
+                }}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{style.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Team Size Preference */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Team Size</label>
+        <select
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          value={data.step6_teamBuilding?.teamSizePreference || ''}
+          onChange={(e) => updateData('step6_teamBuilding', {
+            ...data.step6_teamBuilding,
+            teamSizePreference: e.target.value as TeamSizePreference
+          })}
+        >
+          <option value="">Select preferred team size</option>
+          <option value="small">Small (2-3 people)</option>
+          <option value="medium">Medium (4-5 people)</option>
+          <option value="large">Large (6+ people)</option>
+          <option value="flexible">Flexible - Any size</option>
+        </select>
+      </div>
+
+      {/* Communication Preferences */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">Communication Preferences (select all that apply)</label>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { value: 'slack', label: 'Slack' },
+            { value: 'discord', label: 'Discord' },
+            { value: 'zoom', label: 'Video Calls' },
+            { value: 'github', label: 'GitHub Discussions' },
+            { value: 'email', label: 'Email' },
+            { value: 'in-person', label: 'In-Person' },
+            { value: 'async', label: 'Async Communication' },
+            { value: 'real-time', label: 'Real-time Collaboration' }
+          ].map((pref) => (
+            <label key={pref.value} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={data.step6_teamBuilding?.communicationPreferences?.includes(pref.value as CommunicationPreference) || false}
+                onChange={(e) => {
+                  const currentPrefs = data.step6_teamBuilding?.communicationPreferences || [];
+                  const newPrefs = e.target.checked
+                    ? [...currentPrefs, pref.value as CommunicationPreference]
+                    : currentPrefs.filter(p => p !== pref.value);
+                  updateData('step6_teamBuilding', { 
+                    ...data.step6_teamBuilding, 
+                    communicationPreferences: newPrefs 
+                  });
+                }}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{pref.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Team Availability */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Availability for Team Work</label>
+        <select
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          value={data.step6_teamBuilding?.availabilityPattern?.timezone || ''}
+          onChange={(e) => updateData('step6_teamBuilding', {
+            ...data.step6_teamBuilding,
+            availabilityPattern: {
+              ...data.step6_teamBuilding?.availabilityPattern,
+              timezone: e.target.value
+            }
+          })}
+        >
+          <option value="">Select your availability</option>
+          <option value="weekends-only">Weekends Only</option>
+          <option value="evenings-only">Evenings Only</option>
+          <option value="flexible-hours">Flexible Hours</option>
+          <option value="dedicated-time">Dedicated Time Blocks</option>
+          <option value="part-time">Part-time</option>
+          <option value="full-time">Full-time During Hackathon</option>
+        </select>
+      </div>
+
+      {/* Project Types */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">Project Types You&apos;re Interested In (select all that apply)</label>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { value: 'web-application', label: 'Web Applications' },
+            { value: 'mobile-app', label: 'Mobile Apps' },
+            { value: 'ai-ml', label: 'AI/ML Projects' },
+            { value: 'blockchain', label: 'Blockchain/Web3' },
+            { value: 'iot', label: 'IoT Projects' },
+            { value: 'game', label: 'Game Development' },
+            { value: 'data-visualization', label: 'Data Visualization' },
+            { value: 'social-impact', label: 'Social Impact' },
+            { value: 'fintech', label: 'FinTech' },
+            { value: 'healthtech', label: 'HealthTech' },
+            { value: 'edtech', label: 'EdTech' },
+            { value: 'open-source', label: 'Open Source' }
+          ].map((type) => (
+            <label key={type.value} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={data.step6_teamBuilding?.projectTypePreferences?.includes(type.value) || false}
+                onChange={(e) => {
+                  const currentTypes = data.step6_teamBuilding?.projectTypePreferences || [];
+                  const newTypes = e.target.checked
+                    ? [...currentTypes, type.value]
+                    : currentTypes.filter(t => t !== type.value);
+                  updateData('step6_teamBuilding', { 
+                    ...data.step6_teamBuilding, 
+                    projectTypePreferences: newTypes 
+                  });
+                }}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{type.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Mentorship Preference */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Mentorship Preference</label>
+        <select
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          value={data.step6_teamBuilding?.mentorshipPreference || ''}
+          onChange={(e) => updateData('step6_teamBuilding', {
+            ...data.step6_teamBuilding,
+            mentorshipPreference: e.target.value as MentorshipPreference
+          })}
+        >
+          <option value="">Select your mentorship preference</option>
+          <option value="mentor">I prefer to mentor others</option>
+          <option value="mentee">I prefer to be mentored</option>
+          <option value="peer">I prefer peer-to-peer learning</option>
+          <option value="flexible">I&apos;m flexible - either mentor or mentee</option>
+        </select>
+      </div>
+
+      {/* Team Building Goals */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">Team Building Goals (select all that apply)</label>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { value: 'learn-new-skills', label: 'Learn New Skills' },
+            { value: 'build-portfolio', label: 'Build Portfolio' },
+            { value: 'network', label: 'Network & Meet People' },
+            { value: 'win-prize', label: 'Win Prizes' },
+            { value: 'startup-idea', label: 'Develop Startup Idea' },
+            { value: 'contribute-open-source', label: 'Contribute to Open Source' },
+            { value: 'career-advancement', label: 'Career Advancement' },
+            { value: 'have-fun', label: 'Have Fun' }
+          ].map((goal) => (
+            <label key={goal.value} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={data.step6_teamBuilding?.teamGoals?.includes(goal.value) || false}
+                onChange={(e) => {
+                  const currentGoals = data.step6_teamBuilding?.teamGoals || [];
+                  const newGoals = e.target.checked
+                    ? [...currentGoals, goal.value]
+                    : currentGoals.filter(g => g !== goal.value);
+                  updateData('step6_teamBuilding', { 
+                    ...data.step6_teamBuilding, 
+                    teamGoals: newGoals 
+                  });
+                }}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{goal.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className={`max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-lg ${className}`}>
       {renderProgressBar()}
@@ -500,6 +796,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         {currentStep === 3 && renderStep3()}
         {currentStep === 4 && renderStep4()}
         {currentStep === 5 && renderStep5()}
+        {currentStep === 6 && renderStep6()}
       </div>
 
       {/* Validation Errors */}

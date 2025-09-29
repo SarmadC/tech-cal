@@ -1,5 +1,7 @@
 // src/types/hackathon.ts
 
+import type { SkillTag, TeamRole, CollaborationStyle, TeamSizePreference, CommunicationPreference, MentorshipPreference } from './career';
+
 /**
  * Core hackathon event - independent from calendar events
  */
@@ -53,6 +55,15 @@ export interface HackathonParticipant {
   teamId?: string | null;
   status: HackathonParticipantStatus;
   skills: string[];
+  skillProficiencies?: SkillTag[];
+  preferredTeamRole?: TeamRole;
+  collaborationStyle?: CollaborationStyle[];
+  teamSizePreference?: TeamSizePreference;
+  communicationPreferences?: CommunicationPreference[];
+  teamGoals?: string[];
+  mentorshipPreference?: MentorshipPreference;
+  availabilityPattern?: Record<string, unknown>;
+  projectTypePreferences?: string[];
   createdAt: string;
   updatedAt: string;
   user?: {
@@ -91,6 +102,15 @@ export interface TeamFormData {
 export interface HackathonRegistrationData {
   skills: string[];
   status: HackathonParticipantStatus;
+  skillProficiencies?: SkillTag[];
+  preferredTeamRole?: string;
+  collaborationStyle?: string[];
+  teamSizePreference?: string;
+  communicationPreferences?: string[];
+  teamGoals?: string[];
+  mentorshipPreference?: string;
+  availabilityPattern?: Record<string, unknown>;
+  projectTypePreferences?: string[];
 }
 
 // ==========================================

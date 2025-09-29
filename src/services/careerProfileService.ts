@@ -1,5 +1,5 @@
 // Removed unused imports - using SupabaseClientType from types
-import { CareerProfile, CareerOnboardingData } from '@/types/career';
+import { CareerProfile, CareerOnboardingData, TeamBuildingPreferences, SkillTag } from '@/types/career';
 import { AppProfile, Json, SupabaseClientType } from '@/types';
 import * as Sentry from '@sentry/nextjs';
 import { CareerImpactService } from './careerImpactService';
@@ -118,6 +118,7 @@ export class CareerProfileService {
       primarySkills: data.step2_skills.primarySkills,
       skillsToLearn: data.step2_skills.skillsToLearn,
       interests: data.step2_skills.interests,
+      skillTags: data.step2_skills.skillTags || [],
       
       careerGoals: data.step3_goals.careerGoals,
       timeframe: data.step3_goals.timeframe,
@@ -143,6 +144,22 @@ export class CareerProfileService {
       const careerProfile = this.onboardingDataToCareerProfile(onboardingData, userId);
       await this.saveCareerProfile(userId, careerProfile, supabaseClient);
       
+      // Save team building preferences separately
+      if (onboardingData.step6_teamBuilding) {
+        const teamBuildingData: TeamBuildingPreferences = {
+          skillProficiencies: onboardingData.step2_skills?.skillTags || [],
+          teamRole: onboardingData.step6_teamBuilding.teamRole,
+          collaborationStyle: onboardingData.step6_teamBuilding.collaborationStyle || [],
+          teamSizePreference: onboardingData.step6_teamBuilding.teamSizePreference || 'flexible',
+          communicationPreferences: onboardingData.step6_teamBuilding.communicationPreferences || [],
+          teamGoals: onboardingData.step6_teamBuilding.teamGoals || [],
+          mentorshipPreference: onboardingData.step6_teamBuilding.mentorshipPreference || 'neither',
+          availabilityPattern: onboardingData.step6_teamBuilding.availabilityPattern,
+          projectTypePreferences: onboardingData.step6_teamBuilding.projectTypePreferences || []
+        };
+        await this.saveTeamBuildingPreferences(userId, teamBuildingData, supabaseClient);
+      }
+      
       // Mark onboarding as completed
       await this.markOnboardingCompleted(userId, supabaseClient);
       
@@ -154,6 +171,152 @@ export class CareerProfileService {
       });
       throw new Error('Failed to complete career onboarding.');
     }
+  }
+
+  /**
+   * Save team building preferences to user preferences
+   */
+  static async saveTeamBuildingPreferences(
+    userId: string,
+    teamBuildingPreferences: TeamBuildingPreferences,
+    supabaseClient: SupabaseClientType
+  ): Promise<void> {
+    try {
+      // Get current preferences
+      const { data: currentProfile, error: fetchError } = await supabaseClient
+        .from('profiles')
+        .select('preferences')
+        .eq('id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Merge team building preferences with existing preferences
+      const currentPreferences = (currentProfile?.preferences as Record<string, unknown>) || {};
+      const updatedPreferences = {
+        ...currentPreferences,
+        teamBuildingPreferences,
+        teamBuildingPreferencesUpdatedAt: new Date().toISOString()
+      };
+
+      // Update preferences in database
+      const { error: updateError } = await supabaseClient
+        .from('profiles')
+        .update({ 
+          preferences: updatedPreferences as unknown as Json,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (updateError) throw updateError;
+    } catch (error) {
+      console.error('Error saving team building preferences:', error);
+      Sentry.captureException(error, { 
+        extra: { function: 'saveTeamBuildingPreferences', userId } 
+      });
+      throw new Error('Failed to save team building preferences.');
+    }
+  }
+
+  /**
+   * Get team building preferences from user profile
+   */
+  static getTeamBuildingPreferences(userProfile: AppProfile | null): TeamBuildingPreferences | null {
+    if (!userProfile?.preferences) return null;
+    
+    const preferences = userProfile.preferences as Record<string, unknown>;
+    return (preferences?.teamBuildingPreferences as TeamBuildingPreferences) || null;
+  }
+
+  /**
+   * Complete team building onboarding for a specific hackathon
+   */
+  static async completeTeamBuildingOnboarding(
+    hackathonId: string,
+    userId: string,
+    teamBuildingData: TeamBuildingPreferences,
+    supabaseClient: SupabaseClientType
+  ): Promise<void> {
+    try {
+      // Validate team building data
+      this.validateTeamBuildingData(teamBuildingData);
+
+      // Store team building preferences in profiles.preferences JSON field
+      // This is a temporary solution until hackathon_participants table is created
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update({
+          preferences: {
+            teamBuildingPreferences: {
+              [hackathonId]: teamBuildingData
+            }
+          } as unknown as Json, // Temporary type assertion until proper JSON types are defined
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error completing team building onboarding:', error);
+      Sentry.captureException(error, { 
+        extra: { function: 'completeTeamBuildingOnboarding', hackathonId, userId } 
+      });
+      throw new Error('Failed to complete team building onboarding.');
+    }
+  }
+
+  /**
+   * Validate team building data
+   */
+  private static validateTeamBuildingData(data: TeamBuildingPreferences): void {
+    if (!data.skillProficiencies || !Array.isArray(data.skillProficiencies)) {
+      throw new Error('Skill proficiencies must be provided');
+    }
+
+    for (const skill of data.skillProficiencies) {
+      if (!skill.skill || typeof skill.skill !== 'string') {
+        throw new Error('Each skill must have a valid name');
+      }
+      if (!skill.proficiency || !['beginner', 'intermediate', 'advanced', 'expert'].includes(skill.proficiency)) {
+        throw new Error('Each skill must have a valid proficiency level');
+      }
+    }
+  }
+
+  /**
+   * Get skill proficiency data from career profile
+   */
+  static getSkillProficiencyData(careerProfile: CareerProfile | null): {
+    skillTags: SkillTag[];
+    proficiencyDistribution: Record<string, number>;
+    averageExperience: number;
+  } {
+    if (!careerProfile?.skillTags) {
+      return {
+        skillTags: [],
+        proficiencyDistribution: {},
+        averageExperience: 0
+      };
+    }
+
+    const skillTags = careerProfile.skillTags;
+    
+    // Count proficiency levels
+    const proficiencyDistribution = skillTags.reduce((acc, tag) => {
+      acc[tag.proficiency] = (acc[tag.proficiency] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Calculate average experience
+    const averageExperience = skillTags.length > 0 
+      ? skillTags.reduce((sum, tag) => sum + tag.yearsOfExperience, 0) / skillTags.length
+      : 0;
+
+    return {
+      skillTags,
+      proficiencyDistribution,
+      averageExperience
+    };
   }
 
   /**

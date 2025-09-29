@@ -274,6 +274,10 @@ function HackathonCard({
                     isJoining={joiningTeamId === team.id}
                     canJoin={!hasTeam && !hasEnded}
                     userId={userId}
+                    // Optional: Add simple compatibility scoring
+                    // compatibilityScore={85}
+                    // suggestedRole="frontend-developer"
+                    // missingSkills={["React", "TypeScript"]}
                   />
                 ))}
                 

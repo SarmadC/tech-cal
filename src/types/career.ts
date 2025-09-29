@@ -212,6 +212,52 @@ export const TECHNICAL_SKILLS = {
 // Flattened skills list for easy access
 export const ALL_TECHNICAL_SKILLS = Object.values(TECHNICAL_SKILLS).flat();
 
+// Skill Proficiency Types
+export type SkillProficiency = 
+  | 'beginner'      // 0-1 years experience
+  | 'intermediate'  // 1-3 years experience  
+  | 'advanced'      // 3-7 years experience
+  | 'expert';       // 7+ years experience
+
+// Proficiency level configuration
+export const PROFICIENCY_LEVELS = {
+  beginner: { label: 'Beginner', description: '0-1 years', years: 0.5 },
+  intermediate: { label: 'Intermediate', description: '1-3 years', years: 2 },
+  advanced: { label: 'Advanced', description: '3-7 years', years: 5 },
+  expert: { label: 'Expert', description: '7+ years', years: 8 }
+} as const;
+
+export interface SkillTag {
+  skill: string;
+  proficiency: SkillProficiency;
+  yearsOfExperience: number;
+  lastUsed: string; // ISO date
+  category?: string; // Skill category for organization
+  order?: number; // For drag-and-drop ordering
+}
+
+export interface TeamSkillRequirement {
+  skill: string;
+  requiredProficiency: SkillProficiency;
+  isRequired: boolean;
+  description: string; // What they'll be doing with this skill
+}
+
+// Skill suggestion types
+export interface SkillSuggestion {
+  skill: string;
+  category: string;
+  reason: string; // Why this skill is suggested
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface SkillCategory {
+  name: string;
+  skills: string[];
+  icon?: string;
+  color?: string;
+}
+
 // Standardized interest areas
 export const INTEREST_AREAS = [
   'Artificial Intelligence & Machine Learning',
@@ -367,6 +413,7 @@ export interface CareerProfile {
   primarySkills: string[];
   skillsToLearn: string[];
   interests: string[];
+  skillTags?: SkillTag[]; // Enhanced skills with proficiency
   
   // Career Goals
   careerGoals: CareerGoal[];
@@ -380,6 +427,19 @@ export interface CareerProfile {
   // Networking Preferences
   networkingGoals: NetworkingGoal[];
   preferredEventTypes: CareerEventType[];
+}
+
+// Team Building Preferences (stored separately in preferences JSON)
+export interface TeamBuildingPreferences {
+  skillProficiencies: SkillTag[];
+  teamRole: TeamRole;
+  collaborationStyle: CollaborationStyle[];
+  teamSizePreference: TeamSizePreference;
+  communicationPreferences: CommunicationPreference[];
+  teamGoals: string[];
+  mentorshipPreference: MentorshipPreference;
+  availabilityPattern?: AvailabilityPattern;
+  projectTypePreferences: string[];
 }
 
 export type SeniorityLevel = 
@@ -476,6 +536,253 @@ export type CareerEventType =
   | 'networking'         // Pure networking events
   | 'trade-show';        // Industry exhibitions
 
+// Team Building Types
+export type TeamRole = 
+  | 'frontend-developer'    // Frontend development focus
+  | 'backend-developer'     // Backend development focus
+  | 'full-stack-developer'  // Full stack development
+  | 'mobile-developer'      // Mobile app development
+  | 'ui-ux-designer'        // Design and user experience
+  | 'product-manager'       // Product management
+  | 'data-scientist'        // Data analysis and ML
+  | 'devops-engineer'       // Infrastructure and deployment
+  | 'qa-engineer'          // Quality assurance
+  | 'tech-lead'            // Technical leadership
+  | 'project-manager'      // Project coordination
+  | 'flexible';            // Can adapt to any role
+
+// Team role configuration
+export interface TeamRoleConfig {
+  role: TeamRole;
+  title: string;
+  description: string;
+  icon: string;
+  color: string;
+  requiredSkills: string[];
+  recommendedSkills: string[];
+  responsibilities: string[];
+  idealFor: string[];
+}
+
+// Role suggestion based on skills
+export interface RoleSuggestion {
+  role: TeamRole;
+  matchScore: number; // 0-100
+  reason: string;
+  missingSkills: string[];
+  strengths: string[];
+}
+
+// Team role configurations
+export const TEAM_ROLE_CONFIGS: Record<TeamRole, TeamRoleConfig> = {
+  'frontend-developer': {
+    role: 'frontend-developer',
+    title: 'Frontend Developer',
+    description: 'Build user interfaces and client-side applications',
+    icon: '🖥️',
+    color: 'blue',
+    requiredSkills: ['HTML', 'CSS', 'JavaScript', 'React'],
+    recommendedSkills: ['TypeScript', 'Vue.js', 'Angular', 'Tailwind CSS'],
+    responsibilities: ['UI Development', 'User Experience', 'Client-side Logic', 'Responsive Design'],
+    idealFor: ['Creative problem solvers', 'User-focused developers', 'Visual thinkers']
+  },
+  'backend-developer': {
+    role: 'backend-developer',
+    title: 'Backend Developer',
+    description: 'Build server-side applications and APIs',
+    icon: '⚙️',
+    color: 'green',
+    requiredSkills: ['Node.js', 'Python', 'Java', 'PostgreSQL'],
+    recommendedSkills: ['Docker', 'AWS', 'GraphQL', 'Redis'],
+    responsibilities: ['API Development', 'Database Design', 'Server Logic', 'Security'],
+    idealFor: ['System architects', 'Problem solvers', 'Performance optimizers']
+  },
+  'full-stack-developer': {
+    role: 'full-stack-developer',
+    title: 'Full Stack Developer',
+    description: 'Handle both frontend and backend development',
+    icon: '🔄',
+    color: 'purple',
+    requiredSkills: ['React', 'Node.js', 'TypeScript', 'PostgreSQL'],
+    recommendedSkills: ['Docker', 'AWS', 'Next.js', 'GraphQL'],
+    responsibilities: ['End-to-end Development', 'System Integration', 'Architecture Design'],
+    idealFor: ['Versatile developers', 'System thinkers', 'Quick learners']
+  },
+  'mobile-developer': {
+    role: 'mobile-developer',
+    title: 'Mobile Developer',
+    description: 'Build native and cross-platform mobile applications',
+    icon: '📱',
+    color: 'orange',
+    requiredSkills: ['React Native', 'Swift', 'Kotlin', 'iOS'],
+    recommendedSkills: ['Flutter', 'Android', 'Xcode', 'Firebase'],
+    responsibilities: ['Mobile App Development', 'Platform Optimization', 'User Interface'],
+    idealFor: ['Mobile enthusiasts', 'Platform experts', 'User experience focused']
+  },
+  'ui-ux-designer': {
+    role: 'ui-ux-designer',
+    title: 'UI/UX Designer',
+    description: 'Design user interfaces and user experiences',
+    icon: '🎨',
+    color: 'pink',
+    requiredSkills: ['Figma', 'Adobe XD', 'Sketch', 'User Research'],
+    recommendedSkills: ['Prototyping', 'Wireframing', 'Design Systems', 'Accessibility'],
+    responsibilities: ['User Research', 'Wireframing', 'Prototyping', 'Design Systems'],
+    idealFor: ['Creative minds', 'User advocates', 'Visual communicators']
+  },
+  'product-manager': {
+    role: 'product-manager',
+    title: 'Product Manager',
+    description: 'Define product strategy and roadmap',
+    icon: '📋',
+    color: 'indigo',
+    requiredSkills: ['Product Strategy', 'User Research', 'Analytics', 'Communication'],
+    recommendedSkills: ['Agile', 'Data Analysis', 'Stakeholder Management', 'Roadmapping'],
+    responsibilities: ['Product Strategy', 'Feature Planning', 'Stakeholder Management', 'User Research'],
+    idealFor: ['Strategic thinkers', 'User advocates', 'Cross-functional leaders']
+  },
+  'data-scientist': {
+    role: 'data-scientist',
+    title: 'Data Scientist',
+    description: 'Analyze data and build machine learning models',
+    icon: '📊',
+    color: 'teal',
+    requiredSkills: ['Python', 'R', 'SQL', 'Machine Learning'],
+    recommendedSkills: ['Pandas', 'TensorFlow', 'PyTorch', 'Statistics'],
+    responsibilities: ['Data Analysis', 'Model Building', 'Insights Generation', 'Data Visualization'],
+    idealFor: ['Analytical minds', 'Problem solvers', 'Data enthusiasts']
+  },
+  'devops-engineer': {
+    role: 'devops-engineer',
+    title: 'DevOps Engineer',
+    description: 'Manage infrastructure and deployment pipelines',
+    icon: '🚀',
+    color: 'red',
+    requiredSkills: ['Docker', 'Kubernetes', 'AWS', 'CI/CD'],
+    recommendedSkills: ['Terraform', 'Jenkins', 'Linux', 'Monitoring'],
+    responsibilities: ['Infrastructure Management', 'Deployment Automation', 'Monitoring', 'Security'],
+    idealFor: ['Infrastructure experts', 'Automation enthusiasts', 'System optimizers']
+  },
+  'qa-engineer': {
+    role: 'qa-engineer',
+    title: 'QA Engineer',
+    description: 'Ensure software quality through testing',
+    icon: '🔍',
+    color: 'yellow',
+    requiredSkills: ['Testing', 'Selenium', 'Jest', 'Bug Tracking'],
+    recommendedSkills: ['Cypress', 'Playwright', 'API Testing', 'Performance Testing'],
+    responsibilities: ['Test Planning', 'Automated Testing', 'Bug Reporting', 'Quality Assurance'],
+    idealFor: ['Detail-oriented testers', 'Quality advocates', 'System validators']
+  },
+  'tech-lead': {
+    role: 'tech-lead',
+    title: 'Tech Lead',
+    description: 'Provide technical leadership and architecture guidance',
+    icon: '👑',
+    color: 'gold',
+    requiredSkills: ['Architecture', 'Leadership', 'Code Review', 'Mentoring'],
+    recommendedSkills: ['System Design', 'Team Management', 'Technical Writing', 'Decision Making'],
+    responsibilities: ['Technical Leadership', 'Architecture Decisions', 'Team Mentoring', 'Code Quality'],
+    idealFor: ['Technical leaders', 'Mentors', 'Architecture experts']
+  },
+  'project-manager': {
+    role: 'project-manager',
+    title: 'Project Manager',
+    description: 'Coordinate projects and manage timelines',
+    icon: '📅',
+    color: 'gray',
+    requiredSkills: ['Project Management', 'Agile', 'Communication', 'Planning'],
+    recommendedSkills: ['Jira', 'Scrum', 'Risk Management', 'Stakeholder Management'],
+    responsibilities: ['Project Planning', 'Timeline Management', 'Team Coordination', 'Risk Management'],
+    idealFor: ['Organized coordinators', 'Communication experts', 'Timeline managers']
+  },
+  'flexible': {
+    role: 'flexible',
+    title: 'Flexible Role',
+    description: 'Adapt to any role based on team needs',
+    icon: '🔄',
+    color: 'slate',
+    requiredSkills: [],
+    recommendedSkills: ['Adaptability', 'Learning', 'Communication', 'Problem Solving'],
+    responsibilities: ['Role Adaptation', 'Team Support', 'Learning', 'Collaboration'],
+    idealFor: ['Adaptable team players', 'Quick learners', 'Versatile contributors']
+  }
+};
+
+export type CollaborationStyle = 
+  | 'hands-on'            // Prefer coding and building
+  | 'strategic'           // Prefer planning and architecture
+  | 'mentoring'           // Prefer teaching others
+  | 'learning'            // Prefer learning from others
+  | 'leading'             // Prefer taking initiative
+  | 'supporting'          // Prefer supporting others
+  | 'innovating'          // Prefer exploring new ideas
+  | 'executing';          // Prefer implementing solutions
+
+export type TeamSizePreference = 
+  | 'small'               // 2-3 people
+  | 'medium'              // 4-5 people
+  | 'large'               // 6+ people
+  | 'flexible';           // Any size
+
+export type MentorshipPreference = 
+  | 'mentor'              // Prefer to mentor others
+  | 'mentee'              // Prefer to be mentored
+  | 'both'                // Open to both mentoring and being mentored
+  | 'neither';            // Prefer peer-to-peer collaboration
+
+export interface AvailabilityPattern {
+  timezone: string;        // User's timezone (e.g., "America/New_York")
+  availableHours: {
+    start: string;         // Start time in HH:MM format (e.g., "09:00")
+    end: string;           // End time in HH:MM format (e.g., "17:00")
+  };
+  availableDays: string[]; // Days of the week (e.g., ["monday", "tuesday", "wednesday"])
+  timezoneOffset: number;  // Timezone offset in minutes (e.g., -300 for EST)
+}
+
+export type CommunicationPreference = 
+  | 'slack'               // Slack messaging
+  | 'discord'             // Discord voice/text
+  | 'zoom'                // Video calls
+  | 'github'              // GitHub discussions
+  | 'email'               // Email communication
+  | 'phone'               // Phone calls
+  | 'in-person'           // Face-to-face meetings
+  | 'async'               // Asynchronous communication
+  | 'real-time'           // Real-time collaboration
+  | 'other';              // Other communication methods
+
+// Team Matching Types
+export interface TeamSkillRequirement {
+  skill: string;
+  proficiency: SkillProficiency;
+  required: boolean;
+  weight: number; // 1-5, how important this skill is for the team
+}
+
+export interface UserProfile {
+  id: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+  skills: SkillTag[];
+  preferredRole?: TeamRole;
+  collaborationStyle?: CollaborationStyle[];
+  location?: string;
+}
+
+// Simplified team matching - removed complex types
+
+export interface TeamPreferences {
+  preferredTeamSize: TeamSizePreference;
+  collaborationStyle: CollaborationStyle[];
+  communicationPreferences: CommunicationPreference[];
+  teamGoals: string[];
+  mentorshipPreference: MentorshipPreference;
+  availabilityPattern?: AvailabilityPattern;
+  projectTypePreferences: string[];
+}
+
 // Career-Event Matching Logic
 export interface CareerEventMatch {
   relevanceScore: number;
@@ -535,6 +842,7 @@ export interface CareerOnboardingData {
     primarySkills: string[];
     skillsToLearn: string[];
     interests: string[];
+    skillTags?: SkillTag[]; // Enhanced skills with proficiency
   };
   step3_goals: {
     careerGoals: CareerGoal[];
@@ -548,6 +856,16 @@ export interface CareerOnboardingData {
   step5_networking: {
     networkingGoals: NetworkingGoal[];
     preferredEventTypes: CareerEventType[];
+  };
+  step6_teamBuilding: {
+    teamRole: TeamRole;
+    collaborationStyle: CollaborationStyle[];
+    teamSizePreference: TeamSizePreference;
+    communicationPreferences: CommunicationPreference[];
+    teamGoals: string[];
+    mentorshipPreference: MentorshipPreference;
+    availabilityPattern?: AvailabilityPattern;
+    projectTypePreferences: string[];
   };
 }
 

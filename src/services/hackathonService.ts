@@ -10,11 +10,11 @@ import type {
   HackathonStatus,
   HackathonParticipantStatus
 } from '@/types/hackathon';
+import type { SkillTag, TeamRole, CollaborationStyle, TeamSizePreference, CommunicationPreference, MentorshipPreference, AvailabilityPattern } from '@/types/career';
 import { validateTeamCapacity as validateCapacity } from '@/utils/teamUtils';
 import {
   validateRegistrationDeadline,
   validateTeamForm,
-  validateSkills,
   validateParticipantStatus
 } from '@/utils/hackathonValidation';
 
@@ -147,7 +147,7 @@ export class HackathonService {
   }
 
   /**
-   * Register user for a hackathon with deadline validation
+   * Register user for a hackathon with enhanced team building features
    */
   static async registerForHackathon(
     supabase: SupabaseClient,
@@ -157,9 +157,9 @@ export class HackathonService {
   ): Promise<HackathonParticipant> {
     try {
       // Validate registration data
-      const registrationValidation = validateSkills(registrationData.skills || []);
-      if (!registrationValidation.isValid) {
-        throw new Error(registrationValidation.message);
+      const skillValidation = this.validateSkillProficiencies(registrationData.skillProficiencies || []);
+      if (!skillValidation.isValid) {
+        throw new Error(skillValidation.message);
       }
 
       const statusValidation = validateParticipantStatus(registrationData.status);
@@ -176,7 +176,15 @@ export class HackathonService {
           hackathon_id: hackathonId,
           user_id: userId,
           status: registrationData.status,
-          skills: registrationData.skills || []
+          skill_proficiencies: registrationData.skillProficiencies || [],
+          preferred_team_role: registrationData.preferredTeamRole || null,
+          collaboration_style: registrationData.collaborationStyle || null,
+          team_size_preference: registrationData.teamSizePreference || null,
+          communication_preferences: registrationData.communicationPreferences || null,
+          team_goals: registrationData.teamGoals || null,
+          mentorship_preference: registrationData.mentorshipPreference || null,
+          availability_pattern: registrationData.availabilityPattern || null,
+          project_type_preferences: registrationData.projectTypePreferences || null
         }, {
           onConflict: 'hackathon_id,user_id'
         })
@@ -342,7 +350,7 @@ export class HackathonService {
           user_id: userId,
           team_id: teamId,
           status: 'team_formed',
-          skills: []
+          skill_proficiencies: []
         }, {
           onConflict: 'hackathon_id,user_id'
         })
@@ -421,7 +429,7 @@ export class HackathonService {
           user_id: userId,
           team_id: teamId,
           status: 'team_formed',
-          skills: []
+          skill_proficiencies: []
         }, {
           onConflict: 'hackathon_id,user_id'
         })
@@ -519,9 +527,66 @@ export class HackathonService {
     }
   }
 
+  /**
+   * Find compatible participants for team formation (simplified)
+   */
+  static async findCompatibleParticipants(
+    supabase: SupabaseClient,
+    hackathonId: string,
+    userId: string,
+    limit: number = 10
+  ): Promise<HackathonParticipant[]> {
+    try {
+      const { data: participants, error } = await supabase
+        .from('hackathon_participants')
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            full_name,
+            avatar_url,
+            location
+          )
+        `)
+        .eq('hackathon_id', hackathonId)
+        .neq('user_id', userId)
+        .is('team_id', null)
+        .limit(limit);
+
+      if (error) {
+        this.handleDbError(error, 'fetching compatible participants');
+      }
+
+      return participants?.map(p => this.transformParticipant(p)) || [];
+    } catch (error) {
+      this.handleMethodError(error, 'findCompatibleParticipants');
+    }
+  }
+
   // ==========================================
   // HELPER METHODS (DRY Principle Applied)
   // ==========================================
+
+  /**
+   * Validate skill proficiencies
+   */
+  private static validateSkillProficiencies(skills: SkillTag[]): { isValid: boolean; message: string } {
+    if (!Array.isArray(skills)) {
+      return { isValid: false, message: 'Skills must be an array' };
+    }
+
+    for (const skill of skills) {
+      if (!skill.skill || typeof skill.skill !== 'string') {
+        return { isValid: false, message: 'Each skill must have a valid name' };
+      }
+      if (!skill.proficiency || !['beginner', 'intermediate', 'advanced', 'expert'].includes(skill.proficiency)) {
+        return { isValid: false, message: 'Each skill must have a valid proficiency level' };
+      }
+    }
+
+    return { isValid: true, message: 'Valid' };
+  }
+
 
   /**
    * Handle database operation errors consistently
@@ -773,7 +838,7 @@ export class HackathonService {
       user_id: userId,
       team_id: teamId,
       status: 'team_formed' as HackathonParticipantStatus,
-      skills: []
+      skill_proficiencies: []
     };
 
     console.log('Adding user to team with data:', participantData);
@@ -870,7 +935,16 @@ export class HackathonService {
       userId: dbParticipant.user_id,
       teamId: dbParticipant.team_id,
       status: dbParticipant.status as HackathonParticipantStatus,
-      skills: dbParticipant.skills || [],
+      skills: [], // Will be populated from skillProficiencies if needed
+      skillProficiencies: dbParticipant.skill_proficiencies || [],
+      preferredTeamRole: dbParticipant.preferred_team_role as TeamRole || undefined,
+      collaborationStyle: dbParticipant.collaboration_style as CollaborationStyle[] || undefined,
+      teamSizePreference: dbParticipant.team_size_preference as TeamSizePreference || undefined,
+      communicationPreferences: dbParticipant.communication_preferences as CommunicationPreference[] || undefined,
+      teamGoals: dbParticipant.team_goals || undefined,
+      mentorshipPreference: dbParticipant.mentorship_preference as MentorshipPreference || undefined,
+      availabilityPattern: dbParticipant.availability_pattern as unknown as Record<string, unknown> || undefined,
+      projectTypePreferences: dbParticipant.project_type_preferences || undefined,
       createdAt: dbParticipant.created_at,
       updatedAt: dbParticipant.updated_at,
       user: dbParticipant.profiles ? {
@@ -889,6 +963,21 @@ export class HackathonService {
         updatedAt: ''
       } : undefined
     };
+  }
+
+  /**
+   * Simple compatibility scoring based on skill overlap
+   */
+  static calculateSimpleCompatibility(
+    userSkills: string[],
+    teamSkills: string[]
+  ): number {
+    if (teamSkills.length === 0) return 50; // Neutral score for teams with no skills
+    
+    const overlap = userSkills.filter(skill => teamSkills.includes(skill)).length;
+    const totalSkills = Math.max(userSkills.length, teamSkills.length);
+    
+    return Math.round((overlap / totalSkills) * 100);
   }
 }
 
@@ -940,13 +1029,22 @@ interface DatabaseParticipant {
   user_id: string;
   team_id?: string | null;
   status: string;
-  skills: string[];
+  skill_proficiencies: SkillTag[];
+  preferred_team_role?: string | null;
+  collaboration_style?: string[] | null;
+  team_size_preference?: string | null;
+  communication_preferences?: string[] | null;
+  team_goals?: string[] | null;
+  mentorship_preference?: string | null;
+  availability_pattern?: AvailabilityPattern | null;
+  project_type_preferences?: string[] | null;
   created_at: string;
   updated_at: string;
   profiles?: {
     id: string;
     full_name: string | null;
     avatar_url: string | null;
+    location?: string | null;
   };
   hackathon_teams?: {
     id: string;
