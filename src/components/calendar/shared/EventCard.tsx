@@ -585,7 +585,6 @@ export const EventCard: React.FC<EventCardProps> = ({
                         <div className="progress-bar">
                             <div className="progress-fill" style={{ width: '20%' }} />
                         </div>
-                        <div className="day-counter">Day 1 of {event.multiDaySpan}</div>
                     </div>
                 )}
             </div>

@@ -42,18 +42,18 @@
 
 /* Base Event Card Styles */
 .event-card {
-    --card-pad: var(--space-lg);
+    --card-pad: 4px;
     background: var(--category-bg, #f1f5f9) !important;
     color: var(--text-on-pastel) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: var(--radius-lg) !important;
+    border-radius: 6px !important;
     box-shadow: var(--shadow-card) !important;
     transition: all var(--transition-normal) !important;
     padding: var(--card-pad) !important;
-    margin: 2px !important;
+    margin: 1px !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: var(--space-sm) !important;
+    gap: 2px !important;
     position: relative !important;
     cursor: pointer !important;
     overflow: hidden !important;

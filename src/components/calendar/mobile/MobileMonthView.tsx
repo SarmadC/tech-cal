@@ -165,24 +165,91 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
 
   // Get events for selected date or all month events grouped by date
   const monthEvents = useMemo(() => {
+    if (!events || events.length === 0) return [];
+    
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0);
     
-    // Get all events in current month
-    const eventsInMonth = events.filter(event => {
-      const eventDate = new Date(event.startTime);
-      return eventDate.getFullYear() === year && eventDate.getMonth() === month;
-    });
+    // Process events to split multi-day events into individual day cards for the current month
+    const processedEvents: (Event | MultiDayEventInstance)[] = [];
+    
+    // Process each event in the current month
+    for (const event of events) {
+      const startDate = new Date(event.startTime);
+      const endDate = event.endTime ? new Date(event.endTime) : startDate;
+      
+      // Check if this is a multi-day event (either explicitly marked or spans multiple days)
+      const eventStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const eventEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      const daysDiff = Math.ceil((eventEndDate.getTime() - eventStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      
+      const isMultiDay = ('isMultiDay' in event && event.isMultiDay) || daysDiff > 1;
+      
+      if (isMultiDay) {
+        // Find the overlap between the event and the current month
+        const overlapStart = new Date(Math.max(eventStartDate.getTime(), monthStart.getTime()));
+        const overlapEnd = new Date(Math.min(eventEndDate.getTime(), monthEnd.getTime()));
+        
+        if (overlapStart <= overlapEnd) {
+          // Generate instances for each day in the overlap
+          const currentDay = new Date(overlapStart);
+          let dayNumber = 1;
+          
+          while (currentDay <= overlapEnd) {
+            const year = currentDay.getFullYear();
+            const month = String(currentDay.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDay.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            
+            // Create day info
+            const dayInfo = {
+              currentDay: dayNumber,
+              totalDays: daysDiff,
+              isFirstDay: dayNumber === 1,
+              isLastDay: dayNumber === daysDiff,
+              continuationType: (dayNumber === 1 ? 'start' : dayNumber === daysDiff ? 'end' : 'middle') as 'start' | 'middle' | 'end'
+            };
+            
+            // Create the instance
+            const instance: MultiDayEventInstance = {
+              ...event,
+              id: `${event.id}-${dateStr}`,
+              startTime: `${dateStr}T00:00:00`,
+              endTime: `${dateStr}T23:59:59`,
+              isInstance: true,
+              originalEventId: event.id,
+              instanceDate: dateStr,
+              dayInfo,
+              isMultiDay: true
+            };
+            
+            processedEvents.push(instance);
+            
+            // Move to next day
+            currentDay.setDate(currentDay.getDate() + 1);
+            dayNumber++;
+          }
+        }
+      } else {
+        // Single-day event - add as is if it's in the current month
+        const eventDate = new Date(event.startTime);
+        if (eventDate.getFullYear() === year && eventDate.getMonth() === month) {
+          processedEvents.push(event);
+        }
+      }
+    }
     
     // Group by date
-    const grouped = eventsInMonth.reduce((acc, event) => {
+    const grouped = processedEvents.reduce((acc, event) => {
       const dateKey = new Date(event.startTime).toDateString();
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }
       acc[dateKey].push(event);
       return acc;
-    }, {} as Record<string, Event[]>);
+    }, {} as Record<string, (Event | MultiDayEventInstance)[]>);
     
     // Convert to sorted array
     return Object.entries(grouped)

@@ -72,7 +72,7 @@
     border: none !important;
 }
 .fc .fc-daygrid-day-frame {
-    padding: 12px;
+    padding: 4px;
     background: var(--calendar-cell);
 }
 .fc .fc-daygrid-day:hover .fc-daygrid-day-frame {

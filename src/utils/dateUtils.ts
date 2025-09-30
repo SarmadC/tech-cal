@@ -27,13 +27,34 @@ function formatInTimeZone(
 ): string {
     try {
         const dateObj = typeof date === 'string' ? new Date(date) : date;
-        // Default to the user's browser timezone if the event's is missing. This is a safe fallback.
-        const timeZone = eventTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        // Validate the date object
+        if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid date');
+        }
+        
+        // Normalize timezone - some events have invalid values like "PT", "MDT", etc.
+        let timeZone = eventTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        // Handle invalid timezone abbreviations by falling back to browser timezone
+        const invalidTimezones = ['PT', 'PST', 'PDT', 'ET', 'EST', 'EDT', 'CT', 'CST', 'CDT', 'MT', 'MST', 'MDT'];
+        if (timeZone && invalidTimezones.includes(timeZone.toUpperCase())) {
+            timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        }
+        
         return formatInTimeZoneFns(dateObj, timeZone, formatString);
-    } catch (error) {
-        console.error("Error in formatInTimeZone:", { date, eventTimezone }, error);
-        // Provide a graceful fallback if formatting fails.
-        return new Date(date).toLocaleTimeString();
+    } catch (_error) {
+        // Graceful fallback for any formatting errors
+        try {
+            const dateObj = typeof date === 'string' ? new Date(date) : date;
+            return dateObj.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            });
+        } catch {
+            return 'Invalid time';
+        }
     }
 }
 

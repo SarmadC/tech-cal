@@ -62,6 +62,57 @@ const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, 
     return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
 };
 
+// Transformer for events_detailed view (flat structure with pre-joined data)
+export const eventDetailedTransformer = {
+    toApp: (viewRow: Record<string, unknown>): Event => {
+        const organizerLogo = getLogoUrl(viewRow.organizer_logo_url as string | null, viewRow.organizer_name as string);
+        
+        // Parse tags array (already aggregated in view)
+        const tags = Array.isArray(viewRow.tags) 
+            ? viewRow.tags.map((tag: string) => ({ id: tag, name: tag, color: '#3B82F6', category: '' }))
+            : [];
+
+        return {
+            id: String(viewRow.id),
+            createdAt: String(viewRow.created_at),
+            updatedAt: viewRow.updated_at as string | null,
+            title: String(viewRow.title || 'Untitled Event'),
+            description: String(viewRow.description || ''),
+            startTime: String(viewRow.start_time),
+            endTime: viewRow.end_time as string | null,
+            timezone: viewRow.timezone as string | null,
+            organizer: String(viewRow.organizer_name || 'Unknown Organizer'),
+            location: String(viewRow.location || 'Online'),
+            status: String(viewRow.status || 'confirmed'),
+            sourceUrl: String(viewRow.source_url || '#'),
+            livestreamUrl: viewRow.livestream_url as string | null,
+            registrationUrl: viewRow.registration_url as string | null,
+            eventTypeId: String(viewRow.event_type_id || ''),
+            eventImageUrl: viewRow.event_image_url as string | null,
+            priceRange: viewRow.price_range as string | null,
+            capacity: viewRow.capacity as number | null,
+            attendeeCount: viewRow.attendee_count as number | null,
+            difficulty: viewRow.difficulty_level as 'beginner' | 'intermediate' | 'advanced' | null,
+            targetAudience: viewRow.target_audience as string | null,
+            prerequisites: viewRow.prerequisites as string | null,
+            agendaUrl: viewRow.agenda_url as string | null,
+            speakerLineup: viewRow.speaker_lineup as Event['speakerLineup'],
+            ...(tags.length > 0 && { tags }),
+            category: {
+                id: String(viewRow.event_type_id || ''),
+                name: String(viewRow.event_type_name || 'Other'),
+                color: String(viewRow.event_type_color || '#808080'),
+                description: null
+            },
+            organization: {
+                id: String(viewRow.organizer_id || ''),
+                name: String(viewRow.organizer_name || 'Unknown'),
+                ...(organizerLogo && { logo: organizerLogo })
+            }
+        };
+    }
+};
+
 export const eventTransformer = {
     toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): Event => {
         const organizerData = (supabaseEvent as SupabaseEventWithDetails).organizer;

@@ -7,7 +7,6 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import { getEventStatus } from '@/utils/eventStatusUtils';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
-import { processEventsForWeekView } from '@/utils/multiDayEventUtils';
 import { formatTimeRange } from '@/utils/dateUtils';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';
@@ -172,18 +171,90 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         return `color-mix(in srgb, ${color} 40%, hsl(var(--hue, 220) 85% 45%))`;
     };
 
-    // Preprocess events: split multi-day events into separate day instances (DRY with week view)
-    const processedEvents = React.useMemo<(Event | MultiDayEvent)[]>(() => {
-        return processEventsForWeekView(events) as unknown as (Event | MultiDayEvent)[];
-    }, [events]);
+    // Month view: Process multi-day events to show individual day cards
+    const processedEvents = React.useMemo<(Event | MultiDayEventInstance)[]>(() => {
+        if (!events || events.length === 0) return [];
+        
+        const processedEvents: (Event | MultiDayEventInstance)[] = [];
+        const currentMonth = new Date(initialDate);
+        const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+        const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+        
+        // Process each event in the current month
+        for (const event of events) {
+            const startDate = new Date(event.startTime);
+            const endDate = event.endTime ? new Date(event.endTime) : startDate;
+            
+            // Check if this is a multi-day event (either explicitly marked or spans multiple days)
+            const eventStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+            const eventEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+            const daysDiff = Math.ceil((eventEndDate.getTime() - eventStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            
+            const isMultiDay = ('isMultiDay' in event && event.isMultiDay) || daysDiff > 1;
+            
+            if (isMultiDay) {
+                // Find the overlap between the event and the current month
+                const overlapStart = new Date(Math.max(eventStartDate.getTime(), monthStart.getTime()));
+                const overlapEnd = new Date(Math.min(eventEndDate.getTime(), monthEnd.getTime()));
+                
+                if (overlapStart <= overlapEnd) {
+                    // Generate instances for each day in the overlap
+                    const currentDay = new Date(overlapStart);
+                    let dayNumber = 1;
+                    
+                    while (currentDay <= overlapEnd) {
+                        const year = currentDay.getFullYear();
+                        const month = String(currentDay.getMonth() + 1).padStart(2, '0');
+                        const day = String(currentDay.getDate()).padStart(2, '0');
+                        const dateStr = `${year}-${month}-${day}`;
+                        
+                        // Create day info
+                        const dayInfo = {
+                            currentDay: dayNumber,
+                            totalDays: daysDiff,
+                            isFirstDay: dayNumber === 1,
+                            isLastDay: dayNumber === daysDiff,
+                            continuationType: (dayNumber === 1 ? 'start' : dayNumber === daysDiff ? 'end' : 'middle') as 'start' | 'middle' | 'end'
+                        };
+                        
+                        // Create the instance
+                        const instance: MultiDayEventInstance = {
+                            ...event,
+                            id: `${event.id}-${dateStr}`,
+                            startTime: `${dateStr}T00:00:00`,
+                            endTime: `${dateStr}T23:59:59`,
+                            isInstance: true,
+                            originalEventId: event.id,
+                            instanceDate: dateStr,
+                            dayInfo,
+                            isMultiDay: true
+                        };
+                        
+                        processedEvents.push(instance);
+                        
+                        // Move to next day
+                        currentDay.setDate(currentDay.getDate() + 1);
+                        dayNumber++;
+                    }
+                }
+            } else {
+                // Single-day event - add as is
+                processedEvents.push(event);
+            }
+        }
+        
+        return processedEvents;
+    }, [events, initialDate]);
 
     // Transform events for FullCalendar with dynamic colors
     const calendarEvents = React.useMemo(() => {
+        if (!processedEvents || processedEvents.length === 0) return [];
+        
         // Reset tracking when events change
         dayEventCounts.current.clear();
         mountedEvents.current.clear();
 
-        const events = processedEvents.map(event => {
+        const fcEvents = processedEvents.map(event => {
             const categoryColor = getCategoryColor(event);
             const titleColor = getPillColor(categoryColor);
 
@@ -197,6 +268,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                 title: event.title,
                 start: event.startTime,
                 end: event.endTime || undefined,
+                allDay: false, // All events are rendered as individual day cards
                 color: categoryColor,
                 extendedProps: {
                     ...event,
@@ -208,14 +280,23 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         });
 
         // Track total expected events for mount completion detection
-        totalExpectedEvents.current = events.length;
+        totalExpectedEvents.current = fcEvents.length;
 
-        return events;
+        return fcEvents;
     }, [processedEvents, trackedEventIds]);
 
     // Enhanced event content renderer
     const renderEventContent = useCallback((eventInfo: EventContentArg) => {
-        // Keep DOM minimal: event-card (outer) + event-card-basic-info (inner)
+        console.log('Rendering event content:', {
+            id: eventInfo.event.id,
+            title: eventInfo.event.title,
+            allDay: eventInfo.event.allDay,
+            start: eventInfo.event.start,
+            end: eventInfo.event.end
+        });
+
+        // Since we're now rendering individual day cards (allDay: false), 
+        // we should show the event content for all events
         const start = eventInfo.event.start as Date;
         const end = eventInfo.event.end as Date | null;
         const ep = eventInfo.event.extendedProps as Record<string, unknown>;
@@ -240,6 +321,17 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     const handleEventDidMount = useCallback((info: EventMountArg) => {
         const eventData = info.event.extendedProps as unknown as Event;
         const { isTracked } = getEventStatus(eventData);
+
+        // Debug: Log event classes and properties
+        console.log('Event mounted:', {
+            id: info.event.id,
+            title: info.event.title,
+            allDay: info.event.allDay,
+            start: info.event.start,
+            end: info.event.end,
+            classes: info.el.className,
+            isMultiDay: info.event.allDay && info.event.end
+        });
 
         // Track mounted events for proportional height system
         mountedEvents.current.add(info.event.id);
@@ -480,8 +572,8 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                         info.el.classList.add('today-cell');
                     }
                 }}
-                // Restore original working configuration
-                dayMaxEvents={3}
+                // Adaptive: Let cells expand based on event count
+                dayMaxEvents={false}
                 dayMaxEventRows={false}
                 // Custom more link handling
                 moreLinkContent={(arg) => {
