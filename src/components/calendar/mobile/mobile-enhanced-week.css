@@ -46,107 +46,127 @@
 }
 
 .weekday-headers {
-  @apply grid grid-cols-7 gap-0;
-  background: var(--background-secondary);
-  border-bottom: 1px solid var(--border-default);
+  @apply grid grid-cols-7;
+  gap: 6px;
+  background: var(--background-main);
+  padding: 16px 12px 12px;
+  border: none;
 }
 
 .weekday-header {
-  @apply py-3 text-center text-sm font-medium uppercase;
-  color: var(--foreground-secondary);
-  letter-spacing: 0.5px;
+  @apply py-1 text-center text-xs font-semibold;
+  color: var(--foreground-tertiary);
+  letter-spacing: 0.3px;
+  font-size: 11px;
+  opacity: 0.6;
+  text-transform: capitalize;
+  border: none;
+  border-right: none;
+  border-left: none;
 }
 
 .week-dates {
-  @apply grid grid-cols-7 gap-0;
+  @apply grid grid-cols-7;
+  gap: 6px;
+  padding: 0 12px;
   background: var(--background-main);
 }
 
 .date-cell {
-  @apply relative p-2 min-h-[80px] border-b border-r;
+  @apply relative;
+  aspect-ratio: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--background-main);
-  border-color: var(--border-default);
-  transition: all 0.2s ease;
-
-  &:nth-child(7n) {
-    border-right: none;
-  }
+  justify-content: center;
+  background: transparent;
+  border-radius: 16px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
 
   &.today {
+    background: var(--accent-primary);
+    box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb, 99, 102, 241), 0.25);
+    
     .date-number {
-      background: var(--accent-primary);
-      color: var(--accent-foreground, var(--foreground-primary));
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
+      color: var(--background-main);
+      font-weight: 700;
+    }
+    
+    .event-title-preview {
+      background: var(--background-main);
+      opacity: 0.9;
     }
   }
 
-  &.selected {
+  &.selected:not(.today) {
     background: var(--background-elevated);
-    box-shadow: inset 0 0 0 2px var(--accent-primary);
-
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    
     .date-number {
-      background: var(--accent-primary);
-      color: var(--accent-foreground, var(--foreground-primary));
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
+      font-weight: 700;
     }
   }
 
-  &.has-events {
+  &.has-events:not(.today):not(.selected) {
     background: var(--background-elevated);
   }
 
-  &:hover {
-    background: var(--background-tertiary);
+  &:hover:not(.today) {
+    background: var(--background-elevated);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
   &:active {
-    transform: scale(0.98);
+    transform: scale(0.95);
   }
 }
 
 .date-number {
-  @apply text-base font-medium mb-1;
+  @apply text-base font-medium;
   color: var(--foreground-primary);
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .event-indicator {
-  @apply flex-1 w-full text-xs;
+  @apply absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-row: nowrap;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
 }
 
 .event-title-preview {
-  @apply px-1 py-0.5 rounded text-center truncate;
-  background: var(--background-elevated);
-  color: var(--foreground-primary);
-  border: 1px solid var(--border-default);
-  font-size: 10px;
-  line-height: 1.2;
-  max-width: 100%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  transition: all 0.2s ease;
+  
+  .today & {
+    background: rgba(255, 255, 255, 0.95);
+  }
+  
+  &:hover {
+    transform: scale(1.2);
+  }
 }
 
 .more-events {
-  @apply text-center;
-  color: var(--foreground-tertiary);
-  font-size: 9px;
-  margin-top: 1px;
+  display: none;
 }
 
 /* Selected Date Events */

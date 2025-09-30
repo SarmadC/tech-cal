@@ -237,6 +237,37 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
               return eventDate.toDateString() === day.toDateString();
             });
 
+            // Helper to get category color for event dots
+            const getCategoryColor = (event: Event) => {
+              if (event.category?.color) {
+                return event.category.color;
+              }
+              const categoryName = event.category?.name?.toLowerCase();
+              switch (categoryName) {
+                case 'tech summit':
+                case 'summit':
+                  return '#bfdbfe';
+                case 'workshop':
+                  return '#e9d7ff';
+                case 'networking':
+                  return '#b8ffcc';
+                case 'conference':
+                  return '#a7f3d0';
+                case 'webinar':
+                  return '#fed8ae';
+                case 'startup':
+                  return '#fecaca';
+                case 'trade show':
+                  return '#faf3dd';
+                case 'product launch':
+                  return '#ffa69e';
+                case 'training':
+                  return '#b8f2e6';
+                default:
+                  return '#a78bfa'; // violet fallback
+              }
+            };
+
             return (
               <button
                 key={day.toISOString()}
@@ -253,20 +284,16 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
                 </span>
                 {dayEvents.length > 0 && (
                   <div className="event-indicator">
-                    {dayEvents.slice(0, 1).map((event) => (
+                    {dayEvents.slice(0, 3).map((event) => (
                       <div
                         key={event.id}
                         className="event-title-preview"
                         title={event.title}
-                      >
-                        {event.title}
-                      </div>
+                        style={{ 
+                          backgroundColor: getCategoryColor(event)
+                        }}
+                      />
                     ))}
-                    {dayEvents.length > 1 && (
-                      <div className="more-events">
-                        +{dayEvents.length - 1} more
-                      </div>
-                    )}
                   </div>
                 )}
               </button>

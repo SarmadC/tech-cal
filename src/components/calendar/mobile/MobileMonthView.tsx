@@ -1,14 +1,20 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { EventClickArg } from '@fullcalendar/core';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
-import { CaretLeft, CaretRight, ArrowClockwise, MapPin, User, Calendar } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, ArrowClockwise } from '@phosphor-icons/react';
+import { MaterialIcon } from '@/components/ui/Icon';
 import EventPreviewCard from '../EventPreviewCard';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, MonthViewSkeleton } from '@/components/ui/SkeletonLoader';
 import { isSameDay, getTodayDate } from '@/utils/dateUtils';
+import { getSpeakerAvatarUrl } from '@/services/avatarService';
+import { AvatarCircles } from '@/components/ui/avatar-circles';
+import { EventService } from '@/services/eventServices';
+import { createClient } from '@/utils/supabase/client';
 
 export interface MobileMonthViewProps {
   events: Event[];
@@ -57,12 +63,56 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
   const [hideTimer, setHideTimer] = useState<NodeJS.Timeout | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(initialDate);
+  const [speakerCounts, setSpeakerCounts] = useState<Record<string, number>>({});
+  const [fullSpeakerData, setFullSpeakerData] = useState<Record<string, Array<{ id: string; name: string; photoUrl?: string }>>>({});
 
   // Sync currentMonth with initialDate changes (e.g., from search)
   React.useEffect(() => {
     console.log('MobileMonthView: Received initialDate change:', initialDate);
     setCurrentMonth(initialDate);
   }, [initialDate]);
+
+  // Fetch speaker data for events (same as week view)
+  React.useEffect(() => {
+    let isCancelled = false;
+    const supabase = createClient();
+    const fetchSpeakers = async () => {
+      const toFetch = events.filter(ev => {
+        const localCount = (ev.speakerLineup?.length ?? 0);
+        const known = typeof speakerCounts[ev.id] === 'number';
+        return !known && localCount <= 4;
+      });
+      for (const ev of toFetch) {
+        try {
+          const full = await EventService.getEventWithAgenda(ev.id, supabase);
+          const fromLineup = Array.isArray(full.speakerLineup) ? full.speakerLineup : [];
+          const fromAgenda = Array.isArray(full.agenda)
+            ? full.agenda.flatMap(item => [
+                ...(item.speakers || []),
+                ...(item.speaker ? [item.speaker] : [])
+              ])
+            : [];
+          const seen = new Set<string>();
+          const all = [...fromLineup, ...fromAgenda].filter(s => {
+            if (!s) return false;
+            const key = (s.id || s.name || '').toLowerCase();
+            if (!key) return false;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          if (!isCancelled) {
+            setSpeakerCounts(prev => ({ ...prev, [ev.id]: all.length }));
+            setFullSpeakerData(prev => ({ ...prev, [ev.id]: all }));
+          }
+        } catch {
+          // ignore failed fetches
+        }
+      }
+    };
+    fetchSpeakers();
+    return () => { isCancelled = true; };
+  }, [events, speakerCounts]);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthContainerRef = useRef<HTMLDivElement>(null);
@@ -113,8 +163,37 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
     return days;
   }, [currentMonth, events, selectedDate]);
 
-  // Get events for selected date
-  const selectedDateEvents = useMemo(() => {
+  // Get events for selected date or all month events grouped by date
+  const monthEvents = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    
+    // Get all events in current month
+    const eventsInMonth = events.filter(event => {
+      const eventDate = new Date(event.startTime);
+      return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+    });
+    
+    // Group by date
+    const grouped = eventsInMonth.reduce((acc, event) => {
+      const dateKey = new Date(event.startTime).toDateString();
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(event);
+      return acc;
+    }, {} as Record<string, Event[]>);
+    
+    // Convert to sorted array
+    return Object.entries(grouped)
+      .map(([dateStr, evts]) => ({
+        date: new Date(dateStr),
+        events: evts.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+      }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [events, currentMonth]);
+
+  const _selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
     
     return events
@@ -192,7 +271,7 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
     onEventSelect?.(event);
   }, [onEventSelect]);
 
-  const handleEventHover = useCallback((event: Event, mouseEvent: React.MouseEvent) => {
+  const _handleEventHover = useCallback((event: Event, mouseEvent: React.MouseEvent) => {
     if (hideTimer) {
       clearTimeout(hideTimer);
       setHideTimer(null);
@@ -204,7 +283,7 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
     setIsPreviewVisible(true);
   }, [hideTimer]);
 
-  const handleEventLeave = useCallback(() => {
+  const _handleEventLeave = useCallback(() => {
     const timer = setTimeout(() => {
       setIsPreviewVisible(false);
       setPreviewEvent(null);
@@ -227,6 +306,37 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
     const category = categories.find(cat => cat.id === event.eventTypeId);
     return category?.color || event.color || 'var(--accent-primary)';
   }, [categories]);
+
+  // Get category color for event dots (same logic as week view)
+  const getCategoryColor = useCallback((event: Event) => {
+    if (event.category?.color) {
+      return event.category.color;
+    }
+    const categoryName = event.category?.name?.toLowerCase();
+    switch (categoryName) {
+      case 'tech summit':
+      case 'summit':
+        return '#bfdbfe';
+      case 'workshop':
+        return '#e9d7ff';
+      case 'networking':
+        return '#b8ffcc';
+      case 'conference':
+        return '#a7f3d0';
+      case 'webinar':
+        return '#fed8ae';
+      case 'startup':
+        return '#fecaca';
+      case 'trade show':
+        return '#faf3dd';
+      case 'product launch':
+        return '#ffa69e';
+      case 'training':
+        return '#b8f2e6';
+      default:
+        return '#a78bfa'; // violet fallback
+    }
+  }, []);
 
   const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -348,22 +458,19 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
             >
               <div className="day-number-modern">{day.dayNumber}</div>
               
-              {/* Modern event indicators */}
+              {/* Multi-colored event indicators by category */}
               {day.hasEvents && (
                 <div className="event-indicators-modern">
-                  {day.events.slice(0, 4).map((event, eventIndex) => (
+                  {day.events.slice(0, 3).map((event, eventIndex) => (
                     <div
                       key={`${event.id}-${eventIndex}`}
                       className="event-dot-modern mobile-event-dot"
                       style={{
-                        '--event-color': getEventColor(event),
-                      } as React.CSSProperties}
+                        backgroundColor: getCategoryColor(event),
+                      }}
                       title={event.title}
                     />
                   ))}
-                  {day.events.length > 4 && (
-                    <div className="more-events-modern">+{day.events.length - 4}</div>
-                  )}
                 </div>
               )}
             </div>
@@ -371,67 +478,153 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
         </div>
       </div>
 
-      {/* Selected Date Events */}
-      {selectedDate && (
-        <div className="selected-date-events">
-          <div className="events-header">
-            <div className="selected-date">
-              {selectedDate.toLocaleDateString('en-US', { 
-                weekday: 'long',
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </div>
-            <div className="events-count">
-              {selectedDateEvents.length} {selectedDateEvents.length === 1 ? 'event' : 'events'}
-            </div>
-          </div>
-
+      {/* Month Events - Show all events grouped by date (similar to week view) */}
+      <div className="selected-date-events">
+        {monthEvents.length > 0 ? (
           <div className="events-list">
-            {selectedDateEvents.length > 0 ? (
-              selectedDateEvents.map((event, index) => (
+            {monthEvents.map((dayData) => (
+              <div key={dayData.date.toISOString()}>
+                {/* Date Header */}
+                <div className="date-section-header">
+                  {dayData.date.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </div>
+
+                {/* Events for this date */}
+                {dayData.events.map((event, index) => (
                 <div
                   key={`${event.id}-${index}`}
-                  className="mobile-month-event mobile-event-border"
+                  className="enhanced-event-card"
                   onClick={(e) => handleEventClick(event, e)}
-                  onMouseEnter={(e) => handleEventHover(event, e)}
-                  onMouseLeave={handleEventLeave}
                   style={{
                     '--event-color': getEventColor(event),
                   } as React.CSSProperties}
                 >
-                  <div className="event-time">
-                    {formatEventTime(event)}
+                  <div className="event-card-header">
+                    <div className="event-time-badge">
+                      {formatEventTime(event)}
+                    </div>
+                    <div className="event-logo">
+                      {event.organization?.logo ? (
+                        <Image
+                          src={event.organization.logo}
+                          alt={`${event.organizer || event.title} logo`}
+                          width={40}
+                          height={40}
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="event-logo-placeholder">
+                          <MaterialIcon name="event" size={20} />
+                        </div>
+                      )}
+                    </div>
                   </div>
+
                   <div className="event-content">
-                    <div className="event-title">{event.title}</div>
-                    {event.location && (
-                      <div className="event-location">
-                        <MapPin size={12} />
-                        <span>{event.location}</span>
+                    <div className="event-title">
+                      {event.title}
+                    </div>
+
+                    <div className="event-metadata">
+                      {event.location && (
+                        <div className="event-location">
+                          <MaterialIcon name="location" size={14} />
+                          <span>{event.location}</span>
+                        </div>
+                      )}
+                      {event.organizer && (
+                        <div className="event-organizer">
+                          <MaterialIcon name="building" size={14} />
+                          <span>{event.organizer}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Speaker Avatar Circles - with fetched data */}
+                    {(() => {
+                      const fetchedSpeakers = fullSpeakerData[event.id];
+                      let speakers: Array<{ id: string; name: string; photoUrl?: string }> = [];
+                      
+                      if (fetchedSpeakers && fetchedSpeakers.length > 0) {
+                        speakers = fetchedSpeakers;
+                      } else {
+                        const fromLineup = Array.isArray(event.speakerLineup) ? event.speakerLineup : [];
+                        const fromAgenda = Array.isArray(event.agenda)
+                          ? event.agenda.flatMap((item) => {
+                              const many = item.speakers || [];
+                              const single = item.speaker ? [item.speaker] : [];
+                              return [...many, ...single];
+                            })
+                          : [];
+                        const all = [...fromLineup, ...fromAgenda].filter(Boolean);
+                        const uniqueByKey = (arr: typeof all) => {
+                          const seen = new Set<string>();
+                          const out: typeof all = [];
+                          for (const s of arr) {
+                            const key = (s.id || s.name || '').toLowerCase();
+                            if (!key) continue;
+                            if (!seen.has(key)) {
+                              seen.add(key);
+                              out.push(s);
+                            }
+                          }
+                          return out;
+                        };
+                        speakers = uniqueByKey(all);
+                      }
+                      
+                      if (speakers.length === 0) return null;
+                      
+                      const top = speakers.slice(0, 4);
+                      const totalCount = typeof speakerCounts[event.id] === 'number' ? speakerCounts[event.id]! : speakers.length;
+                      const extra = Math.max(0, totalCount - 4);
+                      
+                      return (
+                        <div className="event-speakers-section">
+                          <AvatarCircles
+                            className="avatar-circles"
+                            avatarUrls={top.map((speaker) => ({
+                              imageUrl: getSpeakerAvatarUrl(speaker, 40),
+                              profileUrl: '#',
+                            }))}
+                            numPeople={extra}
+                          />
+                          {speakers.length <= 2 && (
+                            <span className="speakers-names">
+                              {speakers.map(s => s.name).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Attendee Count */}
+                    {event.attendeeCount && event.attendeeCount > 0 && (
+                      <div className="event-attendees">
+                        <MaterialIcon name="people" size={14} />
+                        <span>{event.attendeeCount.toLocaleString()} attending</span>
                       </div>
                     )}
-                    {event.organizer && (
-                      <div className="event-organizer">
-                        <User size={12} />
-                        <span>{event.organizer}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="event-chevron">
-                    <CaretRight size={16} />
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="no-events-selected">
-                <Calendar size={24} />
-                <span>No events on this day</span>
+                ))}
               </div>
-            )}
+            ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="no-events-state">
+            <MaterialIcon name="event_available" size={48} />
+            <div className="no-events-text">No events this month</div>
+            <div className="no-events-subtext">
+              {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Event Preview */}
       {previewEvent && (
