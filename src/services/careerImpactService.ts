@@ -47,6 +47,42 @@ export class CareerImpactService {
   }
 
   /**
+   * Try to get cached score (helper for async methods)
+   */
+  private static async _tryGetCached(
+    eventId: string,
+    careerProfile: CareerProfile,
+    skipCache: boolean = false
+  ): Promise<CareerImpactScoreLite | null> {
+    if (skipCache) return null;
+
+    try {
+      const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
+      return await CareerImpactCache.get(eventId, profileHash);
+    } catch (error) {
+      console.warn('Cache lookup failed, falling back to calculation:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Cache score (helper for async methods)
+   */
+  private static _setCached(
+    eventId: string,
+    careerProfile: CareerProfile,
+    lite: CareerImpactScoreLite,
+    skipCache: boolean = false
+  ): void {
+    if (skipCache) return;
+
+    const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
+    CareerImpactCache.set(eventId, profileHash, lite).catch(error => {
+      console.warn('Cache set failed:', error);
+    });
+  }
+
+  /**
    * Calculate career impact score with caching (async version)
    */
   static async calculateCareerImpactScoreAsync(
@@ -55,52 +91,36 @@ export class CareerImpactService {
   ): Promise<CareerImpactScore> {
     const { event, careerProfile } = input;
 
-    try {
-      // Generate cache key
+    // Try cache first
+    const cached = await this._tryGetCached(event.id, careerProfile, options.skipCache);
+    if (cached) {
+      const strategy = ScoringStrategyFactory.getDefaultStrategy();
       const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
 
-      // Try cache first (unless explicitly skipped)
-      if (!options.skipCache) {
-        const cached = await CareerImpactCache.get(event.id, profileHash);
-        if (cached) {
-          // Get strategy to determine version
-          const strategy = ScoringStrategyFactory.getDefaultStrategy();
-
-          // Convert lite score to full score for compatibility
-          return {
-            overall: cached.overall,
-            confidence: cached.confidence,
-            components: this.EMPTY_COMPONENTS,
-            explanation: this.createCachedExplanation(cached.category),
-            metadata: {
-              algorithmVersion: strategy.version,
-              calculatedAt: new Date().toISOString(),
-              careerProfileHash: profileHash,
-              eventDataHash: CareerImpactCache.generateEventHash(event)
-            }
-          };
+      return {
+        overall: cached.overall,
+        confidence: cached.confidence,
+        components: this.EMPTY_COMPONENTS,
+        explanation: this.createCachedExplanation(cached.category),
+        metadata: {
+          algorithmVersion: strategy.version,
+          calculatedAt: new Date().toISOString(),
+          careerProfileHash: profileHash,
+          eventDataHash: CareerImpactCache.generateEventHash(event)
         }
-      }
-    } catch (error) {
-      console.warn('Cache lookup failed, falling back to calculation:', error);
+      };
     }
 
-    // Calculate and cache result
+    // Calculate result
     const result = this.calculateCareerImpactScore(input, options);
 
-    // Cache the lite version asynchronously (unless explicitly skipped)
-    if (!options.skipCache) {
-      const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
-      const lite: CareerImpactScoreLite = {
-        overall: result.overall,
-        confidence: result.confidence,
-        category: result.explanation.careerImpactCategory
-      };
-
-      CareerImpactCache.set(event.id, profileHash, lite).catch(error => {
-        console.warn('Cache set failed:', error);
-      });
-    }
+    // Cache the lite version
+    const lite: CareerImpactScoreLite = {
+      overall: result.overall,
+      confidence: result.confidence,
+      category: result.explanation.careerImpactCategory
+    };
+    this._setCached(event.id, careerProfile, lite, options.skipCache);
 
     return result;
   }
@@ -114,31 +134,17 @@ export class CareerImpactService {
   ): Promise<CareerImpactScoreLite> {
     const { event, careerProfile } = input;
 
-    try {
-      // Generate cache key
-      const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
-
-      // Try cache first (unless explicitly skipped)
-      if (!options.skipCache) {
-        const cached = await CareerImpactCache.get(event.id, profileHash);
-        if (cached) {
-          return cached;
-        }
-      }
-    } catch (error) {
-      console.warn('Cache lookup failed, falling back to calculation:', error);
+    // Try cache first
+    const cached = await this._tryGetCached(event.id, careerProfile, options.skipCache);
+    if (cached) {
+      return cached;
     }
 
-    // Calculate and cache result
+    // Calculate result
     const result = this.getCareerImpactScoreLite(input, options);
 
-    // Cache result asynchronously (unless explicitly skipped)
-    if (!options.skipCache) {
-      const profileHash = CareerImpactCache.generateProfileHash(careerProfile);
-      CareerImpactCache.set(event.id, profileHash, result).catch(error => {
-        console.warn('Cache set failed:', error);
-      });
-    }
+    // Cache result
+    this._setCached(event.id, careerProfile, result, options.skipCache);
 
     return result;
   }
@@ -239,13 +245,27 @@ export class CareerImpactService {
   }
 
   /**
+   * Core calculation method (private) - single source of truth
+   */
+  private static _calculateScore(
+    input: CareerImpactCalculationInput,
+    options: CareerImpactCalculationOptions = {}
+  ): CareerImpactScore {
+    const strategy = options.algorithmVersion
+      ? ScoringStrategyFactory.getStrategy(options.algorithmVersion) || ScoringStrategyFactory.getDefaultStrategy()
+      : ScoringStrategyFactory.getDefaultStrategy();
+
+    return strategy.calculate(input, options);
+  }
+
+  /**
    * Get lightweight career impact score (essential data only)
    */
   static getCareerImpactScoreLite(
     input: CareerImpactCalculationInput,
     options: CareerImpactCalculationOptions = {}
   ): CareerImpactScoreLite {
-    const fullScore = CareerImpactService.calculateCareerImpactScore(input, options);
+    const fullScore = this._calculateScore(input, options);
 
     return {
       overall: fullScore.overall,
@@ -269,12 +289,6 @@ export class CareerImpactService {
     input: CareerImpactCalculationInput,
     options: CareerImpactCalculationOptions = {}
   ): CareerImpactScore {
-    // Get the appropriate strategy
-    const strategy = options.algorithmVersion
-      ? ScoringStrategyFactory.getStrategy(options.algorithmVersion) || ScoringStrategyFactory.getDefaultStrategy()
-      : ScoringStrategyFactory.getDefaultStrategy();
-
-    // Delegate calculation to the strategy
-    return strategy.calculate(input, options);
+    return this._calculateScore(input, options);
   }
 }
