@@ -37,7 +37,7 @@ export function useCareerMetrics(
 
   return useMemo(() => {
     try {
-      const careerProfile = CareerProfileService.getCareerProfile(profile);
+      const careerProfile = CareerProfileService.getCareerProfileFromPreferences(profile);
 
       if (!careerProfile || !profile) {
         return getEmptyMetrics();

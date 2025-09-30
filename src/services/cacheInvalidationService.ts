@@ -55,8 +55,8 @@ export class CacheInvalidationService {
     if (!oldProfile) return true; // New profile always triggers invalidation
 
     // Generate career profiles and compare hashes
-    const oldCareerProfile = CareerProfileService.getCareerProfile(oldProfile);
-    const newCareerProfile = CareerProfileService.getCareerProfile(newProfile);
+    const oldCareerProfile = CareerProfileService.getCareerProfileFromPreferences(oldProfile);
+    const newCareerProfile = CareerProfileService.getCareerProfileFromPreferences(newProfile);
 
     if (!oldCareerProfile || !newCareerProfile) return true;
 

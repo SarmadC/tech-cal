@@ -1,0 +1,402 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { CareerProfileService } from '../careerProfileService';
+import { CareerProfile } from '@/types/career';
+
+// Mock Supabase client
+const mockSupabaseClient = {
+  from: vi.fn(() => ({
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        single: vi.fn()
+      }))
+    })),
+    upsert: vi.fn(),
+    update: vi.fn(() => ({
+      eq: vi.fn()
+    }))
+  })),
+  rpc: vi.fn()
+} as unknown as ReturnType<typeof import('@supabase/supabase-js').createClient>;
+
+describe('CareerProfileService Migration', () => {
+  const userId = 'test-user-123';
+  const mockCareerProfile: CareerProfile = {
+    userId,
+    profileId: 'profile_test-user-123_1234567890',
+    lastUpdated: '2024-01-01T00:00:00Z',
+    currentRole: 'Frontend Engineer',
+    seniority: 'senior',
+    industry: 'Technology/Software',
+    companySize: 'medium',
+    primarySkills: ['React', 'TypeScript', 'Node.js'],
+    skillsToLearn: ['GraphQL', 'Docker'],
+    interests: ['Web Development', 'UI/UX'],
+    skillTags: [
+      {
+        skill: 'React',
+        proficiency: 'advanced',
+        yearsOfExperience: 5,
+        lastUsed: '2024-01-01T00:00:00Z'
+      }
+    ],
+    careerGoals: ['skill-development', 'career-advancement'],
+    timeframe: 'medium-term',
+    learningStyle: ['hands-on', 'interactive'],
+    availableTime: 'moderate',
+    budget: 'moderate',
+    networkingGoals: ['find-peers', 'find-mentors'],
+    preferredEventTypes: ['conference', 'workshop']
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('transformRowToCareerProfile', () => {
+    it('should transform database row to CareerProfile', () => {
+      const mockRow = {
+        user_id: userId,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        "current_role": 'Frontend Engineer',
+        seniority: 'senior',
+        industry: 'Technology/Software',
+        company_size: 'medium',
+        primary_skills: ['React', 'TypeScript', 'Node.js'],
+        skills_to_learn: ['GraphQL', 'Docker'],
+        interests: ['Web Development', 'UI/UX'],
+        skill_tags: [
+          {
+            skill: 'React',
+            proficiency: 'advanced',
+            yearsOfExperience: 5,
+            lastUsed: '2024-01-01T00:00:00Z'
+          }
+        ],
+        career_goals: ['skill-development', 'career-advancement'],
+        timeframe: 'medium-term',
+        learning_style: ['hands-on', 'interactive'],
+        available_time: 'moderate',
+        budget: 'moderate',
+        networking_goals: ['find-peers', 'find-mentors'],
+        preferred_event_types: ['conference', 'workshop']
+      };
+
+      // Access private method for testing
+      const result = (CareerProfileService as unknown as { transformRowToCareerProfile: (row: unknown) => CareerProfile }).transformRowToCareerProfile(mockRow);
+
+      expect(result).toEqual({
+        userId: mockRow.user_id,
+        profileId: expect.stringMatching(/^profile_test-user-123_\d+$/),
+        lastUpdated: mockRow.updated_at,
+        currentRole: mockRow.current_role,
+        seniority: mockRow.seniority,
+        industry: mockRow.industry,
+        companySize: mockRow.company_size,
+        primarySkills: mockRow.primary_skills,
+        skillsToLearn: mockRow.skills_to_learn,
+        interests: mockRow.interests,
+        skillTags: mockRow.skill_tags,
+        careerGoals: mockRow.career_goals,
+        timeframe: mockRow.timeframe,
+        learningStyle: mockRow.learning_style,
+        availableTime: mockRow.available_time,
+        budget: mockRow.budget,
+        networkingGoals: mockRow.networking_goals,
+        preferredEventTypes: mockRow.preferred_event_types
+      });
+    });
+  });
+
+  describe('transformCareerProfileToRow', () => {
+    it('should transform CareerProfile to database row data', () => {
+      const result = (CareerProfileService as unknown as { transformCareerProfileToRow: (profile: CareerProfile) => unknown }).transformCareerProfileToRow(mockCareerProfile);
+
+      expect(result).toEqual({
+        current_role: mockCareerProfile.currentRole,
+        seniority: mockCareerProfile.seniority,
+        industry: mockCareerProfile.industry,
+        company_size: mockCareerProfile.companySize,
+        primary_skills: mockCareerProfile.primarySkills,
+        skills_to_learn: mockCareerProfile.skillsToLearn,
+        interests: mockCareerProfile.interests,
+        skill_tags: mockCareerProfile.skillTags,
+        career_goals: mockCareerProfile.careerGoals,
+        timeframe: mockCareerProfile.timeframe,
+        learning_style: mockCareerProfile.learningStyle,
+        available_time: mockCareerProfile.availableTime,
+        budget: mockCareerProfile.budget,
+        networking_goals: mockCareerProfile.networkingGoals,
+        preferred_event_types: mockCareerProfile.preferredEventTypes
+      });
+    });
+  });
+
+  describe('getCareerProfile', () => {
+    it('should return career profile from database', async () => {
+      const mockRow = {
+        user_id: userId,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        "current_role": 'Frontend Engineer',
+        seniority: 'senior',
+        industry: 'Technology/Software',
+        company_size: 'medium',
+        primary_skills: ['React', 'TypeScript'],
+        skills_to_learn: ['GraphQL'],
+        interests: ['Web Development'],
+        skill_tags: [],
+        career_goals: ['skill-development'],
+        timeframe: 'medium-term',
+        learning_style: ['hands-on'],
+        available_time: 'moderate',
+        budget: 'moderate',
+        networking_goals: ['find-peers'],
+        preferred_event_types: ['conference']
+      };
+
+      const mockFrom = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: mockRow,
+              error: null
+            })
+          }))
+        }))
+      }));
+
+      mockSupabaseClient.from = mockFrom;
+
+      const result = await CareerProfileService.getCareerProfile(userId, mockSupabaseClient);
+
+      expect(result).toBeDefined();
+      expect(result?.userId).toBe(userId);
+      expect(result?.currentRole).toBe('Frontend Engineer');
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('career_profiles');
+    });
+
+    it('should return null when no career profile exists', async () => {
+      const mockFrom = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { code: 'PGRST116' }
+            })
+          }))
+        }))
+      }));
+
+      mockSupabaseClient.from = mockFrom;
+
+      const result = await CareerProfileService.getCareerProfile(userId, mockSupabaseClient);
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle errors gracefully', async () => {
+      const mockFrom = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: 'Database error' }
+            })
+          }))
+        }))
+      }));
+
+      mockSupabaseClient.from = mockFrom;
+
+      const result = await CareerProfileService.getCareerProfile(userId, mockSupabaseClient);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('saveCareerProfile', () => {
+    it('should save career profile to database', async () => {
+      const mockUpsert = vi.fn().mockResolvedValue({
+        data: null,
+        error: null
+      });
+
+      const mockFrom = vi.fn(() => ({
+        upsert: mockUpsert
+      }));
+
+      mockSupabaseClient.from = mockFrom;
+
+      await CareerProfileService.saveCareerProfile(userId, mockCareerProfile, mockSupabaseClient);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('career_profiles');
+      expect(mockUpsert).toHaveBeenCalledWith({
+        user_id: userId,
+        current_role: mockCareerProfile.currentRole,
+        seniority: mockCareerProfile.seniority,
+        industry: mockCareerProfile.industry,
+        company_size: mockCareerProfile.companySize,
+        primary_skills: mockCareerProfile.primarySkills,
+        skills_to_learn: mockCareerProfile.skillsToLearn,
+        interests: mockCareerProfile.interests,
+        skill_tags: mockCareerProfile.skillTags,
+        career_goals: mockCareerProfile.careerGoals,
+        timeframe: mockCareerProfile.timeframe,
+        learning_style: mockCareerProfile.learningStyle,
+        available_time: mockCareerProfile.availableTime,
+        budget: mockCareerProfile.budget,
+        networking_goals: mockCareerProfile.networkingGoals,
+        preferred_event_types: mockCareerProfile.preferredEventTypes,
+        updated_at: expect.any(String)
+      });
+    });
+
+    it('should handle save errors', async () => {
+      const mockUpsert = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'Save failed' }
+      });
+
+      const mockFrom = vi.fn(() => ({
+        upsert: mockUpsert
+      }));
+
+      mockSupabaseClient.from = mockFrom;
+
+      await expect(
+        CareerProfileService.saveCareerProfile(userId, mockCareerProfile, mockSupabaseClient)
+      ).rejects.toThrow('Failed to save career profile.');
+    });
+  });
+
+  describe('hasCompletedOnboarding', () => {
+    it('should return true when career profile exists', async () => {
+      const mockFrom = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: { user_id: userId },
+              error: null
+            })
+          }))
+        }))
+      }));
+
+      mockSupabaseClient.from = mockFrom;
+
+      const result = await CareerProfileService.hasCompletedOnboarding(userId, mockSupabaseClient);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when no career profile exists', async () => {
+      const mockFrom = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { code: 'PGRST116' }
+            })
+          }))
+        }))
+      }));
+
+      mockSupabaseClient.from = mockFrom;
+
+      const result = await CareerProfileService.hasCompletedOnboarding(userId, mockSupabaseClient);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('migrateCareerProfileData', () => {
+    it('should migrate data from preferences to new table', async () => {
+      const mockUpsert = vi.fn().mockResolvedValue({
+        data: null,
+        error: null
+      });
+
+      const mockFrom = vi.fn()
+        .mockReturnValueOnce({
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn().mockResolvedValue({
+                data: null,
+                error: { code: 'PGRST116' }
+              })
+            }))
+          }))
+        })
+        .mockReturnValueOnce({
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn().mockResolvedValue({
+                data: { preferences: { careerProfile: mockCareerProfile } },
+                error: null
+              })
+            }))
+          }))
+        })
+        .mockReturnValueOnce({
+          upsert: mockUpsert
+        });
+
+      mockSupabaseClient.from = mockFrom;
+
+      const result = await CareerProfileService.migrateCareerProfileData(userId, mockSupabaseClient);
+
+      expect(result).toBe(true);
+      expect(mockUpsert).toHaveBeenCalled();
+    });
+
+    it('should return true if profile already migrated', async () => {
+      const mockFrom = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: { user_id: userId },
+              error: null
+            })
+          }))
+        }))
+      }));
+
+      mockSupabaseClient.from = mockFrom;
+
+      const result = await CareerProfileService.migrateCareerProfileData(userId, mockSupabaseClient);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false if no career profile to migrate', async () => {
+      const mockFrom = vi.fn()
+        .mockReturnValueOnce({
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn().mockResolvedValue({
+                data: null,
+                error: { code: 'PGRST116' }
+              })
+            }))
+          }))
+        })
+        .mockReturnValueOnce({
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn().mockResolvedValue({
+                data: { preferences: {} },
+                error: null
+              })
+            }))
+          }))
+        });
+
+      mockSupabaseClient.from = mockFrom;
+
+      const result = await CareerProfileService.migrateCareerProfileData(userId, mockSupabaseClient);
+
+      expect(result).toBe(false);
+    });
+  });
+});

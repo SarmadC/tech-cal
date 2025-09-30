@@ -1,5 +1,5 @@
 // Memoized profile calculation service to eliminate duplicate calculations
-import { AppProfile, CareerProfile } from '@/types';
+import { AppProfile, CareerProfile, SupabaseClientType } from '@/types';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { CareerImpactCache } from '@/services/cache/careerImpactCache';
 
@@ -43,24 +43,70 @@ export class MemoizedProfileService {
   }
 
   /**
-   * Get career profile with memoization
+   * Get career profile with memoization (async version using new table)
    */
-  static getCareerProfile(userProfile: AppProfile): CareerProfile | null {
+  static async getCareerProfile(
+    userProfile: AppProfile, 
+    supabaseClient: SupabaseClientType
+  ): Promise<CareerProfile | null> {
     const cacheKey = this.generateCacheKey(userProfile);
     const cached = this.getCachedData(cacheKey);
     if (cached?.careerProfile) {
       return cached.careerProfile;
     }
 
-    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+    const careerProfile = await CareerProfileService.getCareerProfile(userProfile.id, supabaseClient);
     this.setCache(cacheKey, careerProfile, '');
     return careerProfile;
   }
 
   /**
-   * Get both career profile and hash in one call (optimized)
+   * Get career profile with memoization (legacy sync version for backward compatibility)
    */
-  static getCareerProfileAndHash(userProfile: AppProfile): {
+  static getCareerProfileSync(userProfile: AppProfile): CareerProfile | null {
+    const cacheKey = this.generateCacheKey(userProfile);
+    const cached = this.getCachedData(cacheKey);
+    if (cached?.careerProfile) {
+      return cached.careerProfile;
+    }
+
+    const careerProfile = CareerProfileService.getCareerProfileFromPreferences(userProfile);
+    this.setCache(cacheKey, careerProfile, '');
+    return careerProfile;
+  }
+
+  /**
+   * Get both career profile and hash in one call (async version using new table)
+   */
+  static async getCareerProfileAndHash(
+    userProfile: AppProfile, 
+    supabaseClient: SupabaseClientType
+  ): Promise<{
+    careerProfile: CareerProfile | null;
+    profileHash: string;
+  }> {
+    const cacheKey = this.generateCacheKey(userProfile);
+    const cached = this.getCachedData(cacheKey);
+
+    if (cached?.careerProfile && cached?.profileHash) {
+      return {
+        careerProfile: cached.careerProfile,
+        profileHash: cached.profileHash
+      };
+    }
+
+    // Compute both together to avoid inconsistency
+    const careerProfile = await CareerProfileService.getCareerProfile(userProfile.id, supabaseClient);
+    const profileHash = careerProfile ? CareerImpactCache.generateProfileHash(careerProfile) : '';
+
+    this.setCache(cacheKey, careerProfile, profileHash);
+    return { careerProfile, profileHash };
+  }
+
+  /**
+   * Get both career profile and hash in one call (legacy sync version for backward compatibility)
+   */
+  static getCareerProfileAndHashSync(userProfile: AppProfile): {
     careerProfile: CareerProfile | null;
     profileHash: string;
   } {
@@ -75,7 +121,7 @@ export class MemoizedProfileService {
     }
 
     // Compute both together to avoid inconsistency
-    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+    const careerProfile = CareerProfileService.getCareerProfileFromPreferences(userProfile);
     const profileHash = careerProfile ? CareerImpactCache.generateProfileHash(careerProfile) : '';
 
     this.setCache(cacheKey, careerProfile, profileHash);

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
 
     // Get user profile and career profile
     const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
-    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+    const careerProfile = await CareerProfileService.getCareerProfile(userProfile.id, supabase);
 
     if (!careerProfile) {
       return NextResponse.json(

@@ -3,10 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts';
+import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { CareerOnboardingData } from '@/types/career';
-import { CareerProfileService } from '@/services/careerProfileService';
-import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import OnboardingErrorBoundary from '@/components/onboarding/OnboardingErrorBoundary';
 import { toast } from 'sonner';
@@ -14,73 +12,41 @@ import { toast } from 'sonner';
 export default function CareerOnboardingPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { supabase, isReady } = useSupabaseSafe();
+  
+  const {
+    hasCompletedOnboarding,
+    isLoading,
+    completeOnboarding
+  } = useCareerProfile();
 
-  // Redirect if user is not authenticated
+  // Redirect if user has already completed onboarding
   React.useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
-    // Check if user has already completed onboarding
-    if (profile && CareerProfileService.hasCompletedOnboarding(profile)) {
+    if (!isLoading && hasCompletedOnboarding) {
       router.push('/dashboard');
       return;
     }
-  }, [user, profile, router]);
+  }, [hasCompletedOnboarding, isLoading, router]);
 
   // Listen for profile updates to handle the case where onboarding was just completed
   React.useEffect(() => {
     const handleProfileUpdate = () => {
       // Force a re-render by updating a state or refetching profile data
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
     };
 
     window.addEventListener('profile-updated', handleProfileUpdate);
     return () => window.removeEventListener('profile-updated', handleProfileUpdate);
-  }, [queryClient, user?.id]);
-
-  // Wait for Supabase client to be ready
-  if (!isReady || !supabase) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading onboarding...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading if supabase client is not ready yet
-  if (!supabase) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  }, [queryClient]);
 
   const handleComplete = async (data: CareerOnboardingData) => {
-    if (!user?.id) {
-      toast.error('Authentication required');
-      router.push('/login');
-      return;
-    }
-
     setIsSubmitting(true);
     
     try {
-      await CareerProfileService.completeCareerOnboarding(user.id, data, supabase);
+      await completeOnboarding(data);
       
       // Invalidate profile queries to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
       await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
       
       // Trigger auth context refresh
@@ -103,16 +69,7 @@ export default function CareerOnboardingPage() {
     router.push('/dashboard');
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
-          <p className="text-gray-600">Please sign in to continue</p>
-        </div>
-      </div>
-    );
-  }
+  // User authentication is now handled by the useCareerProfile hook
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4">

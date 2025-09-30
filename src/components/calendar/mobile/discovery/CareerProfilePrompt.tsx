@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { User, Target, ArrowRight } from '@phosphor-icons/react';
 import { AppProfile } from '@/types';
-import { CareerProfileService } from '@/services/careerProfileService';
+import { useCareerProfile } from '@/hooks/useCareerProfile';
 
 export interface CareerProfilePromptProps {
   profile: AppProfile | null;
@@ -13,14 +13,14 @@ export interface CareerProfilePromptProps {
 }
 
 const CareerProfilePrompt: React.FC<CareerProfilePromptProps> = ({
-  profile,
+  profile: _profile,
   className = '',
   compact = false
 }) => {
-  const hasCareerProfile = profile ? CareerProfileService.hasCompletedOnboarding(profile) : false;
+  const { hasCompletedOnboarding, isLoading } = useCareerProfile();
 
-  // Don't show if user already has career profile
-  if (hasCareerProfile) {
+  // Don't show if user already has career profile or still loading
+  if (isLoading || hasCompletedOnboarding) {
     return null;
   }
 

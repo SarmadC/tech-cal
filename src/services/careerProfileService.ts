@@ -1,12 +1,94 @@
-// Removed unused imports - using SupabaseClientType from types
-import { CareerProfile, CareerOnboardingData, TeamBuildingPreferences, SkillTag } from '@/types/career';
+import { 
+  CareerProfile, 
+  CareerOnboardingData, 
+  TeamBuildingPreferences, 
+  SkillTag,
+  SeniorityLevel,
+  CompanySize,
+  CareerGoal,
+  CareerTimeframe,
+  LearningStyle,
+  AvailableTime,
+  BudgetRange,
+  NetworkingGoal,
+  CareerEventType
+} from '@/types/career';
 import { AppProfile, Json, SupabaseClientType } from '@/types';
 import * as Sentry from '@sentry/nextjs';
 import { CareerImpactService } from './careerImpactService';
 
-// SupabaseClientType now imported from types
+// Database types for career_profiles table
+interface CareerProfileRow {
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  "current_role": string;
+  seniority: string;
+  industry: string;
+  company_size: string | null;
+  primary_skills: string[];
+  skills_to_learn: string[];
+  interests: string[];
+  skill_tags: Json;
+  career_goals: string[];
+  timeframe: string | null;
+  learning_style: string[];
+  available_time: string | null;
+  budget: string | null;
+  networking_goals: string[];
+  preferred_event_types: string[];
+}
 
 export class CareerProfileService {
+  /**
+   * Transform database row to CareerProfile
+   */
+  private static transformRowToCareerProfile(row: CareerProfileRow): CareerProfile {
+    return {
+      userId: row.user_id,
+      profileId: `profile_${row.user_id}_${Date.now()}`,
+      lastUpdated: row.updated_at,
+      currentRole: row["current_role"],
+      seniority: row.seniority as SeniorityLevel,
+      industry: row.industry,
+      companySize: row.company_size as CompanySize,
+      primarySkills: row.primary_skills,
+      skillsToLearn: row.skills_to_learn,
+      interests: row.interests,
+      skillTags: (row.skill_tags as unknown as SkillTag[]) || [],
+      careerGoals: row.career_goals as CareerGoal[],
+      timeframe: row.timeframe as CareerTimeframe,
+      learningStyle: row.learning_style as LearningStyle[],
+      availableTime: row.available_time as AvailableTime,
+      budget: row.budget as BudgetRange,
+      networkingGoals: row.networking_goals as NetworkingGoal[],
+      preferredEventTypes: row.preferred_event_types as CareerEventType[]
+    };
+  }
+
+  /**
+   * Transform CareerProfile to database row data
+   */
+  private static transformCareerProfileToRow(careerProfile: CareerProfile): Partial<CareerProfileRow> {
+    return {
+      "current_role": careerProfile.currentRole,
+      seniority: careerProfile.seniority,
+      industry: careerProfile.industry,
+      company_size: careerProfile.companySize,
+      primary_skills: careerProfile.primarySkills,
+      skills_to_learn: careerProfile.skillsToLearn,
+      interests: careerProfile.interests,
+      skill_tags: careerProfile.skillTags as unknown as Json,
+      career_goals: careerProfile.careerGoals,
+      timeframe: careerProfile.timeframe,
+      learning_style: careerProfile.learningStyle,
+      available_time: careerProfile.availableTime,
+      budget: careerProfile.budget,
+      networking_goals: careerProfile.networkingGoals,
+      preferred_event_types: careerProfile.preferredEventTypes
+    };
+  }
+
   /**
    * Get user profile by user ID
    */
@@ -40,9 +122,40 @@ export class CareerProfileService {
   }
 
   /**
-   * Get user's career profile from their preferences
+   * Get user's career profile from the career_profiles table
    */
-  static getCareerProfile(userProfile: AppProfile | null): CareerProfile | null {
+  static async getCareerProfile(
+    userId: string,
+    supabaseClient: SupabaseClientType
+  ): Promise<CareerProfile | null> {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabaseClient as any)
+        .from('career_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows returned - user hasn't completed career profile
+          return null;
+        }
+        throw error;
+      }
+
+      return this.transformRowToCareerProfile(data as CareerProfileRow);
+    } catch (error) {
+      console.error('Error fetching career profile:', error);
+      Sentry.captureException(error, { extra: { function: 'getCareerProfile', userId } });
+      return null;
+    }
+  }
+
+  /**
+   * Get user's career profile from their preferences (legacy method for backward compatibility)
+   */
+  static getCareerProfileFromPreferences(userProfile: AppProfile | null): CareerProfile | null {
     if (!userProfile?.preferences) return null;
     
     const preferences = userProfile.preferences as Record<string, unknown>;
@@ -50,9 +163,45 @@ export class CareerProfileService {
   }
 
   /**
-   * Save career profile to user preferences
+   * Save career profile to the career_profiles table
    */
   static async saveCareerProfile(
+    userId: string,
+    careerProfile: CareerProfile,
+    supabaseClient: SupabaseClientType
+  ): Promise<void> {
+    try {
+      const rowData = this.transformCareerProfileToRow(careerProfile);
+      
+      // Upsert career profile
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabaseClient as any)
+        .from('career_profiles')
+        .upsert({
+          user_id: userId,
+          ...rowData,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      // Invalidate career impact cache for this profile
+      CareerImpactService.invalidateProfileCache(careerProfile).catch(error => {
+        console.warn('Failed to invalidate career impact cache after profile update:', error);
+      });
+    } catch (error) {
+      console.error('Error saving career profile:', error);
+      Sentry.captureException(error, { 
+        extra: { function: 'saveCareerProfile', userId } 
+      });
+      throw new Error('Failed to save career profile.');
+    }
+  }
+
+  /**
+   * Save career profile to user preferences (legacy method for backward compatibility)
+   */
+  static async saveCareerProfileToPreferences(
     userId: string,
     careerProfile: CareerProfile,
     supabaseClient: SupabaseClientType
@@ -93,7 +242,7 @@ export class CareerProfileService {
     } catch (error) {
       console.error('Error saving career profile:', error);
       Sentry.captureException(error, { 
-        extra: { function: 'saveCareerProfile', userId } 
+        extra: { function: 'saveCareerProfileToPreferences', userId } 
       });
       throw new Error('Failed to save career profile.');
     }
@@ -362,9 +511,87 @@ export class CareerProfileService {
   }
 
   /**
+   * Migrate career profile data from JSONB to structured table
+   */
+  static async migrateCareerProfileData(
+    userId: string,
+    supabaseClient: SupabaseClientType
+  ): Promise<boolean> {
+    try {
+      // Check if career profile already exists in new table
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existingProfile } = await (supabaseClient as any)
+        .from('career_profiles')
+        .select('user_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (existingProfile) {
+        return true; // Already migrated
+      }
+
+      // Get career profile from preferences
+      const { data: profile, error: fetchError } = await supabaseClient
+        .from('profiles')
+        .select('preferences')
+        .eq('id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const preferences = profile?.preferences as Record<string, unknown>;
+      const careerProfile = preferences?.careerProfile as CareerProfile;
+
+      if (!careerProfile) {
+        return false; // No career profile to migrate
+      }
+
+      // Save to new table
+      await this.saveCareerProfile(userId, careerProfile, supabaseClient);
+      return true;
+    } catch (error) {
+      console.error('Error migrating career profile data:', error);
+      Sentry.captureException(error, { 
+        extra: { function: 'migrateCareerProfileData', userId } 
+      });
+      return false;
+    }
+  }
+
+  /**
    * Check if user has completed career onboarding
    */
-  static hasCompletedOnboarding(userProfile: AppProfile | null): boolean {
+  static async hasCompletedOnboarding(
+    userId: string,
+    supabaseClient: SupabaseClientType
+  ): Promise<boolean> {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabaseClient as any)
+        .from('career_profiles')
+        .select('user_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return false; // No career profile found
+        }
+        throw error;
+      }
+
+      return Boolean(data);
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      Sentry.captureException(error, { extra: { function: 'hasCompletedOnboarding', userId } });
+      return false;
+    }
+  }
+
+  /**
+   * Check if user has completed career onboarding (legacy method for backward compatibility)
+   */
+  static hasCompletedOnboardingFromPreferences(userProfile: AppProfile | null): boolean {
     if (!userProfile?.preferences) return false;
     
     const preferences = userProfile.preferences as Record<string, unknown>;

@@ -10,7 +10,8 @@ import * as Sentry from "@sentry/nextjs";
 
 export class UserEventService {
     /**
-     * Track an event or update its status. Throws on failure.
+     * Track an event or update its status using atomic RPC function.
+     * This ensures both user_events and profiles tables are updated atomically.
      */
     static async trackEvent(
         userId: string,
@@ -20,25 +21,29 @@ export class UserEventService {
         supabaseClient: SupabaseClientType
     ): Promise<void> {
         try {
-            const { data: existing } = await supabaseClient
-                .from('user_events')
-                .select('id, status')
-                .eq('user_id', userId)
-                .eq('event_id', eventId)
-                .single();
+            const { data, error } = await supabaseClient.rpc('track_event_and_update_profile', {
+                p_user_id: userId,
+                p_event_id: eventId,
+                p_status: status,
+                p_notes: notes || null
+            });
 
-            if (existing) {
-                const { error } = await supabaseClient
-                    .from('user_events')
-                    .update({ status, notes, updated_at: new Date().toISOString() })
-                    .eq('id', existing.id);
-                if (error) throw error;
-            } else {
-                const { error } = await supabaseClient
-                    .from('user_events')
-                    .insert({ user_id: userId, event_id: eventId, status, notes });
-                if (error) throw error;
+            if (error) {
+                console.error('RPC error tracking event:', error);
+                throw error;
             }
+
+            if (!data || !data.success) {
+                const errorMessage = data?.message || 'Failed to track event';
+                throw new Error(errorMessage);
+            }
+
+            console.log('Event tracked successfully:', {
+                userId,
+                eventId,
+                status,
+                isNewTracking: data.is_new_tracking
+            });
         } catch (error) {
             console.error('Error tracking event:', error);
             Sentry.captureException(error, { extra: { function: 'trackEvent', userId, eventId, status } });
@@ -135,7 +140,8 @@ export class UserEventService {
     }
 
     /**
-     * Untrack an event for a user. Throws on failure.
+     * Untrack an event for a user using atomic RPC function.
+     * This ensures both user_events and profiles tables are updated atomically.
      */
     static async untrackEvent(
         userId: string,
@@ -143,12 +149,26 @@ export class UserEventService {
         supabaseClient: SupabaseClientType
     ): Promise<void> {
         try {
-            const { error } = await supabaseClient
-                .from('user_events')
-                .delete()
-                .eq('user_id', userId)
-                .eq('event_id', eventId);
-            if (error) throw error;
+            const { data, error } = await supabaseClient.rpc('untrack_event_and_update_profile', {
+                p_user_id: userId,
+                p_event_id: eventId
+            });
+
+            if (error) {
+                console.error('RPC error untracking event:', error);
+                throw error;
+            }
+
+            if (!data || !data.success) {
+                const errorMessage = data?.message || 'Failed to untrack event';
+                throw new Error(errorMessage);
+            }
+
+            console.log('Event untracked successfully:', {
+                userId,
+                eventId,
+                wasTracked: data.was_tracked
+            });
         } catch (error) {
             console.error('Error untracking event:', error);
             Sentry.captureException(error, { extra: { function: 'untrackEvent', userId, eventId } });

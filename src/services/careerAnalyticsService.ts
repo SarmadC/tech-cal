@@ -68,7 +68,9 @@ export class CareerAnalyticsService {
     supabaseClient?: any
   ): Promise<CareerAnalyticsData> {
     try {
-      const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+      const careerProfile = supabaseClient 
+        ? await CareerProfileService.getCareerProfile(userProfile.id, supabaseClient)
+        : CareerProfileService.getCareerProfileFromPreferences(userProfile);
       
       // Debug logging (only in development)
       if (process.env.NODE_ENV === 'development') {
@@ -138,7 +140,9 @@ export class CareerAnalyticsService {
     upcomingEvents: Event[],
     supabaseClient?: any
   ): Promise<CareerRecommendation[]> {
-    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+    const careerProfile = supabaseClient 
+      ? await CareerProfileService.getCareerProfile(userProfile.id, supabaseClient)
+      : CareerProfileService.getCareerProfileFromPreferences(userProfile);
     
     if (!careerProfile) {
       return [];

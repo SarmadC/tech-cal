@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
 
     // Get user profile and career profile with memoization
     const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
-    const { careerProfile, profileHash } = MemoizedProfileService.getCareerProfileAndHash(userProfile);
+    const { careerProfile, profileHash } = await MemoizedProfileService.getCareerProfileAndHash(userProfile, supabase);
 
     if (!careerProfile) {
       return NextResponse.json(

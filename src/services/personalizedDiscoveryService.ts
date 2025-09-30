@@ -148,7 +148,9 @@ export class PersonalizedDiscoveryService extends DiscoveryService {
     });
 
     // Enhance with career impact scores for better ranking
-    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+    const careerProfile = supabaseClient 
+      ? await CareerProfileService.getCareerProfile(userProfile.id, supabaseClient)
+      : CareerProfileService.getCareerProfileFromPreferences(userProfile);
     if (careerProfile) {
       try {
         // Use batch service instead of N+1 pattern

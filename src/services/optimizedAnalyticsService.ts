@@ -162,7 +162,9 @@ export class OptimizedAnalyticsService {
     upcomingEvents: Event[],
     supabaseClient: SupabaseClientType
   ): Promise<OptimizedRecommendation[]> {
-    const careerProfile = CareerProfileService.getCareerProfile(userProfile);
+    const careerProfile = supabaseClient 
+      ? await CareerProfileService.getCareerProfile(userProfile.id, supabaseClient)
+      : CareerProfileService.getCareerProfileFromPreferences(userProfile);
     if (!careerProfile) return [];
 
     const recommendations: OptimizedRecommendation[] = [];

@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     // Get user profile and career profile
     const userProfile = await CareerProfileService.getUserProfile(user.id, supabase);
-    const careerProfile = MemoizedProfileService.getCareerProfile(userProfile);
+    const careerProfile = await MemoizedProfileService.getCareerProfile(userProfile, supabase);
 
     if (!careerProfile) {
       return NextResponse.json(

@@ -3,10 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts';
 import { CareerProfile, CareerOnboardingData } from '@/types/career';
-import { CareerProfileService } from '@/services/careerProfileService';
-import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
+import { useCareerProfile } from '@/hooks/useCareerProfile';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import { toast } from 'sonner';
 import { User, PencilSimple, CheckCircle } from '@phosphor-icons/react';
@@ -22,13 +20,21 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
 }) => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, profile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { supabase, isReady } = useSupabaseSafe();
+  
+  const {
+    careerProfile: currentCareerProfile,
+    hasCompletedOnboarding,
+    isLoading,
+    error,
+    saveCareerProfile: _saveCareerProfile,
+    completeOnboarding,
+    refreshProfile
+  } = useCareerProfile();
 
-  // Show loading if supabase client is not ready yet
-  if (!isReady || !supabase) {
+  // Show loading state
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="text-center">
@@ -39,26 +45,36 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     );
   }
 
-  const currentCareerProfile = CareerProfileService.getCareerProfile(profile);
-  const hasCompletedOnboarding = CareerProfileService.hasCompletedOnboarding(profile);
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="text-center">
+          <p className="text-red-600 text-sm mb-2">Error loading profile</p>
+          <button 
+            onClick={refreshProfile}
+            className="text-blue-600 hover:text-blue-800 text-sm underline"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleComplete = async (data: CareerOnboardingData) => {
-    if (!user?.id) {
-      toast.error('Authentication required');
-      return;
-    }
-
     setIsSubmitting(true);
     
     try {
-      const careerProfile = await CareerProfileService.completeCareerOnboarding(user.id, data, supabase);
+      await completeOnboarding(data);
       
-      toast.success('Career profile updated successfully!');
       setIsEditing(false);
-      onProfileUpdate?.(careerProfile);
+      if (onProfileUpdate && currentCareerProfile) {
+        onProfileUpdate(currentCareerProfile);
+      }
       
       // Invalidate profile queries to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
       await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
       
       // Trigger auth context refresh
@@ -79,17 +95,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     setIsEditing(false);
   };
 
-  if (!user) {
-    return (
-      <div className={`career-profile-manager ${className}`}>
-        <div className="text-center py-8">
-          <User size={48} className="mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Sign in Required</h3>
-          <p className="text-gray-600">Please sign in to manage your career profile</p>
-        </div>
-      </div>
-    );
-  }
+  // This check is now handled by the useCareerProfile hook
 
   if (isEditing) {
     return (

@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { SectionErrorBoundary, PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import CareerProfilePrompt from '@/components/calendar/mobile/discovery/CareerProfilePrompt';
-import { CareerProfileService } from '@/services/careerProfileService';
+import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardStatsGrid } from '@/components/dashboard/DashboardStatsGrid';
 import { CareerAnalyticsSection } from '@/components/dashboard/CareerAnalyticsSection';
@@ -28,6 +28,7 @@ export default function DashboardClientView({
     initialTrackedEvents
 }: DashboardClientViewProps) {
     const { user: _user, profile } = useAuth();
+    const { hasCompletedOnboarding } = useCareerProfile();
     const {
         trackedEvents,
         allUpcomingEvents,
@@ -100,7 +101,7 @@ export default function DashboardClientView({
                     </SectionErrorBoundary>
 
                     {/* Career Profile Prompt */}
-                    {profile && !CareerProfileService.hasCompletedOnboarding(profile) && (
+                    {profile && !hasCompletedOnboarding && (
                         <SectionErrorBoundary name="CareerProfilePrompt">
                             <CareerProfilePrompt profile={profile} />
                         </SectionErrorBoundary>
@@ -119,7 +120,7 @@ export default function DashboardClientView({
                     </DashboardSection>
 
                     {/* Career Analytics - Show if user has completed career profile */}
-                    {profile && CareerProfileService.hasCompletedOnboarding(profile) && (
+                    {profile && hasCompletedOnboarding && (
                         <DashboardSection>
                             <SectionErrorBoundary name="CareerAnalytics">
                                 <CareerAnalyticsSection

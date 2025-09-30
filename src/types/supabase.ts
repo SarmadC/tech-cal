@@ -1195,6 +1195,32 @@ export type Database = {
         Args: { user_email: string }
         Returns: undefined
       }
+      track_event_and_update_profile: {
+        Args: {
+          p_user_id: string
+          p_event_id: string
+          p_status: string
+          p_notes: string | null
+        }
+        Returns: {
+          success: boolean
+          is_new_tracking?: boolean
+          message: string
+          error?: string
+        }
+      }
+      untrack_event_and_update_profile: {
+        Args: {
+          p_user_id: string
+          p_event_id: string
+        }
+        Returns: {
+          success: boolean
+          was_tracked?: boolean
+          message: string
+          error?: string
+        }
+      }
     }
     Enums: {
       [_ in never]: never
