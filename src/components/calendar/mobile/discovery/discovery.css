@@ -64,34 +64,17 @@
   box-shadow: var(--shadow-hover);
 }
 
-/* Dark mode specific overrides */
-@media (prefers-color-scheme: dark) {
-  .section-icon {
-    background: rgba(31, 41, 55, 0.9); /* gray-800 with higher opacity for better contrast */
-    border-color: rgba(55, 65, 81, 0.8); /* gray-700 with opacity */
-    color: rgba(255, 255, 255, 0.9); /* white with high opacity for better visibility */
-  }
-  
-  .discovery-section:hover .section-icon {
-    background: rgba(55, 65, 81, 0.9); /* gray-700 with higher opacity */
-    border-color: rgba(75, 85, 99, 0.8); /* gray-600 with opacity */
-    color: rgba(255, 255, 255, 1); /* full white on hover */
-  }
+/* Theme-aware icon styles */
+.section-icon {
+  background: var(--background-elevated);
+  border-color: var(--border-strong);
+  color: var(--foreground-primary);
 }
 
-/* Light mode specific overrides */
-@media (prefers-color-scheme: light) {
-  .section-icon {
-    background: rgba(55, 65, 81, 0.9); /* gray-700 with opacity - dark background */
-    border-color: rgba(75, 85, 99, 0.8); /* gray-600 with opacity */
-    color: rgba(255, 255, 255, 0.9); /* white for good contrast against dark background */
-  }
-  
-  .discovery-section:hover .section-icon {
-    background: rgba(31, 41, 55, 0.9); /* gray-800 with opacity - darker on hover */
-    border-color: rgba(55, 65, 81, 0.8); /* gray-700 with opacity */
-    color: rgba(255, 255, 255, 1); /* full white for maximum contrast on hover */
-  }
+.discovery-section:hover .section-icon {
+  background: var(--background-tertiary);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
 }
 
 .section-title {
@@ -438,7 +421,9 @@
 }
 
 .new-badge {
-  @apply absolute -top-2 -right-2 flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full shadow-md;
+  @apply absolute -top-2 -right-2 flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-full shadow-md;
+  background: var(--accent-primary);
+  color: var(--accent-foreground, var(--foreground-primary));
 }
 
 /* Empty States - Consolidated */
@@ -467,7 +452,9 @@
 }
 
 .discovery-algorithm-error {
-  @apply bg-red-900/20 border border-red-700/50 rounded-lg my-4;
+  @apply rounded-lg my-4;
+  background: var(--error-light);
+  border: 1px solid var(--error);
 }
 
 .error-content {
@@ -475,7 +462,8 @@
 }
 
 .error-icon {
-  @apply text-red-500 mx-auto mb-3;
+  @apply mx-auto mb-3;
+  color: var(--error);
 }
 
 .error-title {
@@ -483,11 +471,11 @@
 }
 
 .discovery-error-boundary .error-title {
-  @apply text-foreground-primary;
+  color: var(--foreground-primary);
 }
 
 .discovery-algorithm-error .error-title {
-  @apply text-red-300;
+  color: var(--error);
 }
 
 .error-message {
@@ -495,23 +483,36 @@
 }
 
 .discovery-error-boundary .error-message {
-  @apply text-gray-300;
+  color: var(--foreground-secondary);
 }
 
 .discovery-algorithm-error .error-message {
-  @apply text-red-200 max-w-md mx-auto;
+  @apply max-w-md mx-auto;
+  color: var(--error);
+  opacity: 0.9;
 }
 
 .error-retry-button {
-  @apply flex items-center gap-2 px-4 py-2 text-primary-foreground rounded-lg transition-colors mx-auto;
+  @apply flex items-center gap-2 px-4 py-2 rounded-lg transition-colors mx-auto;
+  background: var(--accent-primary);
+  color: var(--accent-foreground, var(--foreground-primary));
+}
+
+.error-retry-button:hover {
+  background: var(--accent-primary-hover);
 }
 
 .discovery-error-boundary .error-retry-button {
-  @apply bg-blue-600 hover:bg-blue-700;
+  background: var(--accent-primary);
 }
 
 .discovery-algorithm-error .error-retry-button {
-  @apply bg-red-600 hover:bg-red-700;
+  background: var(--error);
+  color: white;
+}
+
+.discovery-algorithm-error .error-retry-button:hover {
+  opacity: 0.9;
 }
 
 /* Algorithm Error Specific Styles */
@@ -520,11 +521,13 @@
 }
 
 .discovery-algorithm-error .error-suggestions {
-  @apply flex flex-col items-center gap-2 text-xs text-red-200 bg-red-900/30 rounded-lg p-3;
+  @apply flex flex-col items-center gap-2 text-xs rounded-lg p-3;
+  background: var(--error-light);
+  color: var(--error);
 }
 
 .discovery-algorithm-error .suggestion-icon {
-  @apply text-red-500;
+  color: var(--error);
 }
 
 .discovery-algorithm-error .suggestions-list {

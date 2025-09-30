@@ -104,15 +104,32 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
     preventScroll: false,
   });
 
-  // Get events for selected date
-  const selectedDateEvents = useMemo(() => {
-    return events
-      .filter(event => {
-        const eventDate = new Date(event.startTime);
-        return eventDate.toDateString() === selectedDate.toDateString();
-      })
-      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-  }, [events, selectedDate]);
+  // Get all events for the current week, grouped by date
+  const weekEvents = useMemo(() => {
+    // Get all events that fall within the current week
+    const eventsInWeek = events.filter(event => {
+      const eventDate = new Date(event.startTime);
+      return displayDays.some(day => eventDate.toDateString() === day.toDateString());
+    });
+
+    // Group events by date
+    const grouped = displayDays.map(day => {
+      const dayEvents = eventsInWeek
+        .filter(event => {
+          const eventDate = new Date(event.startTime);
+          return eventDate.toDateString() === day.toDateString();
+        })
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+      return {
+        date: day,
+        events: dayEvents,
+        isSelected: day.toDateString() === selectedDate.toDateString()
+      };
+    }).filter(dayData => dayData.events.length > 0); // Only include days with events
+
+    return grouped;
+  }, [events, displayDays, selectedDate]);
 
   // Get current month/year display
   const monthYear = useMemo(() => {
@@ -210,68 +227,78 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
         </div>
       </div>
 
-      {/* Selected Date Events */}
+      {/* Week Events */}
       <div className="selected-date-events">
-        {selectedDateEvents.length > 0 ? (
+        {weekEvents.length > 0 ? (
           <div className="events-list">
-            {selectedDateEvents.map((event) => (
-              <div
-                key={event.id}
-                className="enhanced-event-card"
-                onClick={() => handleEventTap(event)}
-              >
-                <div className="event-time">
-                  {new Date(event.startTime).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
+            {weekEvents.map((dayData) => (
+              <div key={dayData.date.toISOString()}>
+                {/* Date Header */}
+                <div className="date-section-header">
+                  {dayData.date.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
                   })}
                 </div>
-                <div className="event-content">
-                  <div className="event-title">
-                    {event.title}
+
+                {/* Events for this date */}
+                {dayData.events.map((event) => (
+                  <div
+                    key={event.id}
+                    className="enhanced-event-card"
+                    onClick={() => handleEventTap(event)}
+                  >
+                    <div className="event-time">
+                      {new Date(event.startTime).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </div>
+                    <div className="event-content">
+                      <div className="event-title">
+                        {event.title}
+                      </div>
+                      {event.location && (
+                        <div className="event-location">
+                          <MaterialIcon name="location" size={16} />
+                          {event.location}
+                        </div>
+                      )}
+                      {event.organizer && (
+                        <div className="event-organizer">
+                          <MaterialIcon name="building" size={16} />
+                          {event.organizer}
+                        </div>
+                      )}
+                    </div>
+                    <div className="event-logo">
+                      {event.organization?.logo ? (
+                        <Image
+                          src={event.organization.logo}
+                          alt={`${event.organizer || event.title} logo`}
+                          width={48}
+                          height={48}
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="event-logo-placeholder">
+                          <MaterialIcon name="event" size={24} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {event.location && (
-                    <div className="event-location">
-                      <MaterialIcon name="location" size={16} />
-                      {event.location}
-                    </div>
-                  )}
-                  {event.organizer && (
-                    <div className="event-organizer">
-                      <MaterialIcon name="building" size={16} />
-                      {event.organizer}
-                    </div>
-                  )}
-                </div>
-                <div className="event-logo">
-                  {event.organization?.logo ? (
-                    <Image
-                      src={event.organization.logo}
-                      alt={`${event.organizer || event.title} logo`}
-                      width={48}
-                      height={48}
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="event-logo-placeholder">
-                      <MaterialIcon name="event" size={24} />
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
             ))}
           </div>
         ) : (
           <div className="no-events-state">
             <MaterialIcon name="event_available" size={48} />
-            <div className="no-events-text">No events on this date</div>
+            <div className="no-events-text">No events this week</div>
             <div className="no-events-subtext">
-              {selectedDate.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric'
-              })}
+              {displayDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {displayDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
           </div>
         )}

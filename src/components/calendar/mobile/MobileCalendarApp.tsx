@@ -86,17 +86,25 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
 
   const handleViewChange = (view: MobileViewType) => {
     setCurrentView(view);
-    
+
     // Update URL with mobile view parameter
     const params = new URLSearchParams(searchParams.toString());
     params.set('mobileView', view);
-    
-    // Preserve existing date parameter if present
-    const dateParam = searchParams.get('date');
-    if (dateParam) {
-      params.set('date', dateParam);
+
+    // When switching to week view ('calendar'), reset to today's date
+    if (view === 'calendar') {
+      const today = new Date();
+      setLocalCurrentDate(today);
+      onDateChange?.(today);
+      params.set('date', today.toISOString().split('T')[0]);
+    } else {
+      // Preserve existing date parameter for other views
+      const dateParam = searchParams.get('date');
+      if (dateParam) {
+        params.set('date', dateParam);
+      }
     }
-    
+
     router.push(`/calendar?${params.toString()}`, { scroll: false });
   };
 
