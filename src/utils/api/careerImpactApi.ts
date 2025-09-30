@@ -1,9 +1,11 @@
 /**
  * Career Impact API Client
  * Provides typed client functions for career impact API endpoints
+ *
+ * Note: For React hooks, use the hooks in @/hooks/useCareerImpactApi.ts
+ * This file contains only the API client class and type definitions.
  */
 
-import React from 'react';
 import { CareerImpactCalculationOptions } from '@/types/careerImpact';
 import { Event } from '@/types';
 
@@ -269,101 +271,5 @@ export class CareerImpactApiClient {
       };
     }
   }
-}
-
-/**
- * React hook for career impact score
- */
-export function useCareerImpactScore(eventId: string | null, options: { lite?: boolean } = {}) {
-  const [data, setData] = React.useState<ScoreApiResponse | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (!eventId) {
-      setData(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function fetchScore() {
-      setLoading(true);
-      setError(null);
-
-      if (!eventId) return;
-      const result = await CareerImpactApiClient.getScore(eventId, options);
-
-      if (!cancelled) {
-        if (result.success && result.data) {
-          setData(result.data);
-        } else {
-          setError(result.error || 'Failed to fetch career impact score');
-        }
-        setLoading(false);
-      }
-    }
-
-    fetchScore();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId, options]);
-
-  return { data, loading, error };
-}
-
-/**
- * React hook for career impact analytics
- */
-export function useCareerImpactAnalytics(options: { timeframe?: number } = {}) {
-  const [data, setData] = React.useState<AnalyticsApiResponse | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    let cancelled = false;
-
-    async function fetchAnalytics() {
-      setLoading(true);
-      setError(null);
-
-      const result = await CareerImpactApiClient.getAnalytics(options);
-
-      if (!cancelled) {
-        if (result.success && result.data) {
-          setData(result.data);
-        } else {
-          setError(result.error || 'Failed to fetch career impact analytics');
-        }
-        setLoading(false);
-      }
-    }
-
-    fetchAnalytics();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [options]);
-
-  const refetch = React.useCallback(async () => {
-    if (!loading) {
-      setLoading(true);
-      setError(null);
-
-      const result = await CareerImpactApiClient.getAnalytics(options);
-
-      if (result.success && result.data) {
-        setData(result.data);
-      } else {
-        setError(result.error || 'Failed to fetch career impact analytics');
-      }
-      setLoading(false);
-    }
-  }, [loading, options]);
-
-  return { data, loading, error, refetch };
 }
 
