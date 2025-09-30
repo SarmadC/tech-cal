@@ -6,6 +6,10 @@ import { Event, EventType, AppProfile } from '@/types';
 import { MaterialIcon } from '@/components/ui/Icon';
 import MobileEventPreview from './MobileEventPreview';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
+import { getSpeakerAvatarUrl } from '@/services/avatarService';
+import { AvatarCircles } from '@/components/ui/avatar-circles';
+import { EventService } from '@/services/eventServices';
+import { createClient } from '@/utils/supabase/client';
 
 export interface MobileEnhancedWeekViewProps {
   events: Event[];
@@ -29,6 +33,8 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [speakerCounts, setSpeakerCounts] = useState<Record<string, number>>({});
+  const [fullSpeakerData, setFullSpeakerData] = useState<Record<string, Array<{ id: string; name: string; photoUrl?: string }>>>({});
 
   // Sync selectedDate with currentDate when navigating weeks
   useEffect(() => {
@@ -51,6 +57,48 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
 
     return days;
   }, [currentDate]);
+
+  // Opportunistically fetch speaker counts and full speaker data for events
+  useEffect(() => {
+    let isCancelled = false;
+    const supabase = createClient();
+    const fetchSpeakers = async () => {
+      const toFetch = events.filter(ev => {
+        const localCount = (ev.speakerLineup?.length ?? 0);
+        const known = typeof speakerCounts[ev.id] === 'number';
+        return !known && localCount <= 4; // only fetch when we might show +n
+      });
+      for (const ev of toFetch) {
+        try {
+          const full = await EventService.getEventWithAgenda(ev.id, supabase);
+          const fromLineup = Array.isArray(full.speakerLineup) ? full.speakerLineup : [];
+          const fromAgenda = Array.isArray(full.agenda)
+            ? full.agenda.flatMap(item => [
+                ...(item.speakers || []),
+                ...(item.speaker ? [item.speaker] : [])
+              ])
+            : [];
+          const seen = new Set<string>();
+          const all = [...fromLineup, ...fromAgenda].filter(s => {
+            if (!s) return false;
+            const key = (s.id || s.name || '').toLowerCase();
+            if (!key) return false;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          if (!isCancelled) {
+            setSpeakerCounts(prev => ({ ...prev, [ev.id]: all.length }));
+            setFullSpeakerData(prev => ({ ...prev, [ev.id]: all }));
+          }
+        } catch {
+          // ignore failed fetches
+        }
+      }
+    };
+    fetchSpeakers();
+    return () => { isCancelled = true; };
+  }, [events, speakerCounts]);
 
   // Navigation handlers
   const handlePreviousWeek = useCallback(() => {
@@ -249,42 +297,121 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
                     className="enhanced-event-card"
                     onClick={() => handleEventTap(event)}
                   >
-                    <div className="event-time">
-                      {new Date(event.startTime).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                      })}
+                    <div className="event-card-header">
+                      <div className="event-time-badge">
+                        {new Date(event.startTime).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </div>
+                      <div className="event-logo">
+                        {event.organization?.logo ? (
+                          <Image
+                            src={event.organization.logo}
+                            alt={`${event.organizer || event.title} logo`}
+                            width={40}
+                            height={40}
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="event-logo-placeholder">
+                            <MaterialIcon name="event" size={20} />
+                          </div>
+                        )}
+                      </div>
                     </div>
+
                     <div className="event-content">
                       <div className="event-title">
                         {event.title}
                       </div>
-                      {event.location && (
-                        <div className="event-location">
-                          <MaterialIcon name="location" size={16} />
-                          {event.location}
-                        </div>
-                      )}
-                      {event.organizer && (
-                        <div className="event-organizer">
-                          <MaterialIcon name="building" size={16} />
-                          {event.organizer}
-                        </div>
-                      )}
-                    </div>
-                    <div className="event-logo">
-                      {event.organization?.logo ? (
-                        <Image
-                          src={event.organization.logo}
-                          alt={`${event.organizer || event.title} logo`}
-                          width={48}
-                          height={48}
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="event-logo-placeholder">
-                          <MaterialIcon name="event" size={24} />
+
+                      <div className="event-metadata">
+                        {event.location && (
+                          <div className="event-location">
+                            <MaterialIcon name="location" size={14} />
+                            <span>{event.location}</span>
+                          </div>
+                        )}
+                        {event.organizer && (
+                          <div className="event-organizer">
+                            <MaterialIcon name="building" size={14} />
+                            <span>{event.organizer}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Speaker Avatar Circles (Magic UI) - only show if speakers exist */}
+                      {(() => {
+                        // Use fetched full speaker data if available, otherwise fall back to local data
+                        const fetchedSpeakers = fullSpeakerData[event.id];
+                        let speakers: Array<{ id: string; name: string; photoUrl?: string }> = [];
+                        
+                        if (fetchedSpeakers && fetchedSpeakers.length > 0) {
+                          // Use fetched data (already deduplicated)
+                          speakers = fetchedSpeakers;
+                        } else {
+                          // Fall back to local data
+                          const fromLineup = Array.isArray(event.speakerLineup) ? event.speakerLineup : [];
+                          const fromAgenda = Array.isArray(event.agenda)
+                            ? event.agenda.flatMap((item) => {
+                                const many = item.speakers || [];
+                                const single = item.speaker ? [item.speaker] : [];
+                                return [...many, ...single];
+                              })
+                            : [];
+                          const all = [...fromLineup, ...fromAgenda].filter(Boolean);
+                          // Deduplicate by id or name
+                          const uniqueByKey = (arr: typeof all) => {
+                            const seen = new Set<string>();
+                            const out: typeof all = [];
+                            for (const s of arr) {
+                              const key = (s.id || s.name || '').toLowerCase();
+                              if (!key) continue;
+                              if (!seen.has(key)) {
+                                seen.add(key);
+                                out.push(s);
+                              }
+                            }
+                            return out;
+                          };
+                          speakers = uniqueByKey(all);
+                        }
+                        
+                        // Don't render if there are no real speakers
+                        if (speakers.length === 0) {
+                          return null;
+                        }
+                        
+                        const top = speakers.slice(0, 4);
+                        const totalCount = typeof speakerCounts[event.id] === 'number' ? speakerCounts[event.id]! : speakers.length;
+                        const extra = Math.max(0, totalCount - 4);
+                        
+                        return (
+                          <div className="event-speakers-section">
+                            <AvatarCircles
+                              className="avatar-circles"
+                              avatarUrls={top.map((speaker) => ({
+                                imageUrl: getSpeakerAvatarUrl(speaker, 40),
+                                profileUrl: '#',
+                              }))}
+                              numPeople={extra}
+                            />
+                            {speakers.length <= 2 && (
+                              <span className="speakers-names">
+                                {speakers.map(s => s.name).join(', ')}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Attendee Count */}
+                      {event.attendeeCount && event.attendeeCount > 0 && (
+                        <div className="event-attendees">
+                          <MaterialIcon name="people" size={14} />
+                          <span>{event.attendeeCount.toLocaleString()} attending</span>
                         </div>
                       )}
                     </div>

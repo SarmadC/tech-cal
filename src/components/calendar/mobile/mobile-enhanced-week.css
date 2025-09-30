@@ -168,17 +168,17 @@
 }
 
 .enhanced-event-card {
-  @apply flex items-center p-4 rounded-xl border cursor-pointer;
+  @apply flex flex-col p-5 rounded-2xl border cursor-pointer;
   background: var(--background-elevated);
   border: 1px solid var(--border-default);
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
   &:hover {
     background: var(--background-secondary);
     border-color: var(--border-strong);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
   &:active {
@@ -186,11 +186,15 @@
   }
 }
 
-.event-time {
-  @apply flex-shrink-0 text-sm font-semibold;
-  color: var(--foreground-primary);
-  min-width: 80px;
-  padding-right: 16px;
+.event-card-header {
+  @apply flex items-center justify-between mb-3;
+}
+
+.event-time-badge {
+  @apply px-3 py-1.5 text-xs font-semibold rounded-full;
+  background: var(--accent-primary);
+  color: white;
+  letter-spacing: 0.3px;
 }
 
 .event-content {
@@ -198,23 +202,80 @@
 }
 
 .event-title {
-  @apply text-base font-semibold mb-1;
+  @apply text-lg font-bold mb-2;
   color: var(--foreground-primary);
   line-height: 1.3;
 }
 
+.event-metadata {
+  @apply flex flex-col gap-2 mb-3;
+}
+
 .event-location,
 .event-organizer {
-  @apply flex items-center gap-1 text-sm mb-0.5;
+  @apply flex items-center gap-1.5 text-sm;
   color: var(--foreground-secondary);
 
-  &:last-child {
-    margin-bottom: 0;
+  span {
+    @apply truncate;
   }
 }
 
+/* Avatar Circles - Magic UI Style */
+.event-speakers-section {
+  @apply flex flex-col gap-2 mt-3 pt-3;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.avatar-circles {
+  @apply flex -space-x-3;
+}
+
+.avatar-circle {
+  @apply relative w-10 h-10 rounded-full border-2 overflow-hidden;
+  border-color: var(--background-elevated, white);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+.avatar-image {
+  @apply w-full h-full object-cover;
+}
+
+.avatar-initial {
+  @apply w-full h-full flex items-center justify-center text-sm font-semibold;
+  background: var(--accent-primary);
+  color: white;
+}
+
+.avatar-count {
+  @apply flex items-center justify-center text-xs font-medium;
+  background: black;
+  color: white;
+
+  &:hover {
+    background: #374151;
+  }
+}
+
+.speakers-names {
+  @apply text-xs font-medium;
+  color: var(--foreground-secondary);
+}
+
+.avatar-overflow-count {
+  color: white !important;
+  font-weight: 500 !important;
+}
+
+/* Attendee Count */
+.event-attendees {
+  @apply flex items-center gap-1.5 text-xs font-medium mt-2;
+  color: var(--foreground-secondary);
+}
+
 .event-logo {
-  @apply flex-shrink-0 ml-3;
+  @apply flex-shrink-0;
   width: 40px;
   height: 40px;
 
