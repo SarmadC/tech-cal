@@ -5,15 +5,16 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import {
-  Navbar,
-  NavBody,
-  NavItems,
-  MobileNav,
-  NavbarLogo,
-  NavbarButton,
-  MobileNavHeader,
-  MobileNavToggle,
-  MobileNavMenu,
+    Navbar,
+    NavBody,
+    NavItems,
+    MobileNav,
+    NavbarLogo,
+    NavbarButton,
+    MobileNavHeader,
+    MobileNavToggle,
+    MobileNavMenu,
+    NavbarThemeToggle,
 } from "@/components/ui/resizable-navbar";
 
 const ChaosToOrderSection = dynamic(
@@ -80,6 +81,7 @@ export default function LandingPage() {
                             <NavbarLogo />
                             <NavItems items={navItems} />
                             <div className="flex items-center gap-4">
+                                <NavbarThemeToggle />
                                 <NavbarButton 
                                     variant="secondary"
                                     onClick={() => router.push("/login")}
@@ -101,10 +103,13 @@ export default function LandingPage() {
                         <MobileNav>
                             <MobileNavHeader>
                                 <NavbarLogo />
-                                <MobileNavToggle
-                                    isOpen={isMobileMenuOpen}
-                                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                />
+                                <div className="flex items-center gap-3">
+                                    <NavbarThemeToggle />
+                                    <MobileNavToggle
+                                        isOpen={isMobileMenuOpen}
+                                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                    />
+                                </div>
                             </MobileNavHeader>
 
                             <MobileNavMenu

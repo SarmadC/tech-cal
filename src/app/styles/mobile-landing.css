@@ -396,8 +396,8 @@
 }
 
 .mobile-primary-cta.enhanced-primary {
-  background: var(--accent-primary);
-  color: var(--background-main);
+  background: linear-gradient(135deg, #000103 0%, #1e2631 100%);
+  color: #ffffff;
   text-decoration: none;
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius);
@@ -405,20 +405,35 @@
   font-size: 1rem;
   text-align: center;
   transition: all 0.3s ease;
-  border: 1px solid var(--border-default);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   letter-spacing: 0.025em;
 }
 
 .mobile-primary-cta.enhanced-primary:hover {
   transform: translateY(-2px);
-  background: var(--accent-primary-hover);
-  box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, #1e2631 0%, #2d3748 100%);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Light mode mobile primary CTA */
+:root:not(.dark) .mobile-primary-cta.enhanced-primary {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+:root:not(.dark) .mobile-primary-cta.enhanced-primary:hover {
+  background: linear-gradient(135deg, #2d2d2d 0%, #404040 100%);
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .cta-arrow {
@@ -431,7 +446,7 @@
 
 .mobile-secondary-cta.enhanced-secondary {
   background: transparent;
-  color: var(--foreground-secondary);
+  color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
   padding: var(--space-4) var(--space-6);
   border-radius: var(--radius);
@@ -439,29 +454,28 @@
   font-size: 0.875rem;
   text-align: center;
   transition: all 0.3s ease;
-  border: 1px solid var(--border-default);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   cursor: pointer;
   letter-spacing: 0.025em;
 }
 
-/* Dark mode secondary CTA */
-.dark .mobile-secondary-cta.enhanced-secondary {
-  color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
 .mobile-secondary-cta.enhanced-secondary:hover {
-  background: var(--background-secondary);
-  border-color: var(--border-strong);
-  color: var(--foreground-primary);
-  transform: translateY(-1px);
-}
-
-/* Dark mode secondary CTA hover */
-.dark .mobile-secondary-cta.enhanced-secondary:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.5);
   color: white;
+  transform: translateY(-1px);
+}
+
+/* Light mode mobile secondary CTA */
+:root:not(.dark) .mobile-secondary-cta.enhanced-secondary {
+  color: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+:root:not(.dark) .mobile-secondary-cta.enhanced-secondary:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.3);
+  color: rgba(0, 0, 0, 0.9);
 }
 
 /* Glass Effect CTA Button Styles */
@@ -473,45 +487,44 @@
   justify-content: center;
   position: relative;
   border-radius: var(--radius);
-  background: var(--background-secondary);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border-default);
-  box-shadow: 
-    0 8px 32px var(--shadow-lg),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-}
-
-/* Dark mode glass effect */
-.dark .mobile-liquid-glass-cta {
   background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 
     0 8px 32px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
 }
 
 .mobile-liquid-glass-cta:hover {
-  background: var(--background-tertiary);
-  border-color: var(--border-strong);
-  transform: translateY(-1px);
-  box-shadow: 
-    0 12px 40px var(--shadow-xl),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-/* Dark mode glass effect hover */
-.dark .mobile-liquid-glass-cta:hover {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
   box-shadow: 
     0 12px 40px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
+/* Light mode glass effect */
+:root:not(.dark) .mobile-liquid-glass-cta {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+:root:not(.dark) .mobile-liquid-glass-cta:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
 .mobile-primary-cta-liquid {
   background: transparent;
-  color: var(--foreground-primary);
+  color: white;
   text-decoration: none;
   font-weight: 500;
   font-size: 0.875rem;
@@ -529,14 +542,18 @@
   outline: none;
 }
 
-/* Dark mode primary CTA liquid */
-.dark .mobile-primary-cta-liquid {
-  color: white;
-}
-
 .mobile-primary-cta-liquid:hover {
   color: white;
   text-decoration: none;
+}
+
+/* Light mode primary CTA liquid */
+:root:not(.dark) .mobile-primary-cta-liquid {
+  color: rgba(0, 0, 0, 0.9);
+}
+
+:root:not(.dark) .mobile-primary-cta-liquid:hover {
+  color: rgba(0, 0, 0, 1);
 }
 
 .mobile-primary-cta-liquid:focus {

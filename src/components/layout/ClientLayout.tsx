@@ -16,14 +16,14 @@ export default function ClientLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
-    const { isMobile } = useDeviceDetection();
+    const { isMobile: _isMobile } = useDeviceDetection();
     const { user, loading } = useAuth();
     
     // Pages that should never show navbar (they have their own navigation)
     const excludedPaths = ['/calendar', '/', '/hackathons', '/dashboard'];
     
-    // Marketing pages that should always show navbar
-    const marketingPaths = ['/', '/pricing', '/blog', '/contact', '/legal'];
+    // Marketing pages that should always show navbar (excluding landing page which has custom nav)
+    const marketingPaths = ['/pricing', '/blog', '/contact', '/legal'];
 
     // Cleanup analytics buffers on page unload
     useEffect(() => {
@@ -38,13 +38,12 @@ export default function ClientLayout({
     }, []);
 
     // Show navbar for:
-    // 1. Marketing pages (always)
-    // 2. Unauthenticated users on any page
-    // 3. Excluded paths on mobile (they have their own nav)
+    // 1. Marketing pages (always) - excluding landing page
+    // 2. Unauthenticated users on non-excluded pages
+    // 3. Note: Landing page uses its own custom resizable navbar
     const shouldShowNavbar = 
         marketingPaths.includes(pathname) || 
-        (!user && !loading) || 
-        (excludedPaths.includes(pathname) && isMobile);
+        (!user && !loading && !excludedPaths.includes(pathname));
 
     if (!shouldShowNavbar) {
         return (

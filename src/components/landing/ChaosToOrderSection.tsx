@@ -15,7 +15,7 @@ const animationEventsData = [
     { company: 'Microsoft', date: 'May 13', title: 'Microsoft Build', type: 'Developer Conference' },
     { company: 'GitHub', date: 'May 15', title: 'GitHub Universe', type: 'Developer Conference' },
     { company: 'Docker', date: 'May 19', title: 'DockerCon', type: 'DevOps Conference' },
-    { company: 'Vercel', date: 'May 21', title: 'Next.js Conf', type: 'Framework Conference' },
+    { company: 'NVIDIA', date: 'May 21', title: 'GTC 2025', type: 'AI Conference' },
     { company: 'Amazon', date: 'May 30', title: 'AWS re:Invent', type: 'Cloud Conference' }
 ];
 

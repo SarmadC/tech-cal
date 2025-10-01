@@ -9,7 +9,7 @@
         fill: #000000;
       }
       
-      /* Dark mode styles */
+      /* Dark mode styles - using .dark class for manual theme toggle */
       @media (prefers-color-scheme: dark) {
         .logo-bg {
           fill: #000000;

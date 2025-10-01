@@ -46,6 +46,25 @@
     transform: translate(-50%, -50%);
 }
 
+/* Theme-aware adjustments */
+.dark .orbit-path {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .orbit-icon {
+    color: rgba(255, 255, 255, 0.9);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+}
+
+:root:not(.dark) .orbit-path {
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+:root:not(.dark) .orbit-icon {
+    color: rgba(0, 0, 0, 0.85);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.10));
+}
+
 @keyframes orbit {
     0% {
         transform: rotate(calc(var(--angle) * 1deg))

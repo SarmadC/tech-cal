@@ -131,11 +131,27 @@ export function useCardPositions(
         const DAY_NUMBER_HEIGHT = 24; // Height reserved for day number
 
         // --- Calculate calendar dimensions and position it ---
-        const calendarWidth = window.innerWidth > 768
-            ? Math.min(900, window.innerWidth * 0.8)
-            : window.innerWidth * 0.9;
+        // Adaptive sizing based on viewport with better space utilization
+        let calendarWidth: number;
+        let calendarHeight: number;
 
-        const calendarHeight = window.innerWidth > 768 ? 450 : 350;
+        if (window.innerWidth >= 1440) {
+            // Large desktop: use more space
+            calendarWidth = Math.min(1200, window.innerWidth * 0.75);
+            calendarHeight = Math.min(600, window.innerHeight * 0.65);
+        } else if (window.innerWidth >= 1024) {
+            // Desktop: balanced size
+            calendarWidth = Math.min(1000, window.innerWidth * 0.80);
+            calendarHeight = Math.min(550, window.innerHeight * 0.60);
+        } else if (window.innerWidth >= 768) {
+            // Tablet: moderate size
+            calendarWidth = window.innerWidth * 0.85;
+            calendarHeight = Math.min(500, window.innerHeight * 0.55);
+        } else {
+            // Mobile: maximize screen usage
+            calendarWidth = window.innerWidth * 0.92;
+            calendarHeight = Math.min(450, window.innerHeight * 0.50);
+        }
 
         const calendarX = (window.innerWidth - calendarWidth) / 2;
         const calendarY = Math.max(20, (window.innerHeight - calendarHeight) / 2);

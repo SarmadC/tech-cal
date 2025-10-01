@@ -1,6 +1,5 @@
 "use client";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 import { IconMenu2, IconX } from "@tabler/icons-react";
 import {
   motion,
@@ -9,7 +8,11 @@ import {
   useMotionValueEvent,
 } from "motion/react";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import { useTheme } from "next-themes";
+import { Sun, Moon } from "@phosphor-icons/react";
+import { ThemeLogo } from "@/components/ui/ThemeLogo";
+import "@/app/styles/resizable-navbar.css";
 
 
 interface NavbarProps {
@@ -103,6 +106,7 @@ export const NavBody = ({ children, visible }: NavBodyProps) => {
       }}
     >
       <div
+        className="navbar-container"
         style={{
           display: "flex",
           flexDirection: "row",
@@ -110,11 +114,8 @@ export const NavBody = ({ children, visible }: NavBodyProps) => {
           justifyContent: "space-between",
           gap: "4px",
           padding: "6px",
-          backgroundColor: "rgba(0, 0, 0, 0.9)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
           borderRadius: "9999px",
           backdropFilter: "blur(16px)",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)",
           zIndex: 60,
           position: "relative",
           margin: 0,
@@ -153,10 +154,10 @@ export const NavItems = ({ items, onItemClick }: NavItemsProps) => {
           onClick={onItemClick}
           key={`link-${idx}`}
           href={item.link}
+          className="navbar-link"
           style={{
             position: "relative",
             padding: "6px 12px",
-            color: "rgba(255, 255, 255, 0.9)",
             fontSize: "14px",
             fontWeight: "500",
             textDecoration: "none",
@@ -167,25 +168,23 @@ export const NavItems = ({ items, onItemClick }: NavItemsProps) => {
             display: "block",
             whiteSpace: "nowrap",
           }}
-          onMouseOver={(e) => {
+          onMouseOver={(_e) => {
             setHovered(idx);
-            e.currentTarget.style.color = "rgba(255, 255, 255, 1)";
           }}
-          onMouseOut={(e) => {
+          onMouseOut={(_e) => {
             setHovered(null);
-            e.currentTarget.style.color = "rgba(255, 255, 255, 0.9)";
           }}
         >
           {hovered === idx && (
             <motion.div
               layoutId="hovered"
+              className="navbar-hover-bg"
               style={{
                 position: "absolute",
                 top: 0,
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: "rgba(255, 255, 255, 0.15)",
                 borderRadius: "9999px",
                 zIndex: 1,
               }}
@@ -291,6 +290,7 @@ export const NavbarLogo = () => {
   return (
     <a
       href="#"
+      className="navbar-logo"
       style={{
         position: "relative",
         zIndex: 20,
@@ -300,29 +300,15 @@ export const NavbarLogo = () => {
         padding: "6px 12px",
         fontSize: "14px",
         fontWeight: "500",
-        color: "rgba(255, 255, 255, 1)",
         textDecoration: "none",
         borderRadius: "9999px",
         transition: "background-color 0.2s ease",
         margin: 0,
       }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.backgroundColor = "transparent";
-      }}
     >
-      <Image
-        src="/logo.svg"
-        alt="Kure-Cal logo"
-        width={24}
-        height={24}
-        style={{ objectFit: "contain", borderRadius: 4 }}
-      />
-      <span style={{
+      <ThemeLogo width={24} height={24} />
+      <span className="navbar-logo-text" style={{
         fontWeight: "500",
-        color: "rgba(255, 255, 255, 1)",
         margin: 0,
         padding: 0,
         fontSize: "14px",
@@ -348,7 +334,7 @@ export const NavbarButton = ({
   | React.ComponentPropsWithoutRef<"a">
   | React.ComponentPropsWithoutRef<"button">
 )) => {
-  const getVariantStyles = (variant: string) => {
+  const getVariantStyles = (_variant: string) => {
     const styles: React.CSSProperties = {
       position: "relative",
       padding: "6px 12px",
@@ -365,57 +351,80 @@ export const NavbarButton = ({
       border: "none",
     };
 
-    switch (variant) {
-      case "primary":
-        return {
-          ...styles,
-          backgroundColor: "rgba(255, 255, 255, 1)",
-          color: "rgba(0, 0, 0, 1)",
-        };
-      case "secondary":
-        return {
-          ...styles,
-          backgroundColor: "transparent",
-          color: "rgba(255, 255, 255, 0.9)",
-        };
-      case "dark":
-        return {
-          ...styles,
-          backgroundColor: "rgba(0, 0, 0, 1)",
-          color: "rgba(255, 255, 255, 1)",
-        };
-      default:
-        return styles;
-    }
-  };
-
-  const handleMouseOver = (e: React.MouseEvent<HTMLElement>) => {
-    if (variant === "primary") {
-      e.currentTarget.style.backgroundColor = "rgba(245, 245, 245, 1)";
-    } else if (variant === "secondary") {
-      e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-      e.currentTarget.style.color = "rgba(255, 255, 255, 1)";
-    }
-  };
-
-  const handleMouseOut = (e: React.MouseEvent<HTMLElement>) => {
-    if (variant === "primary") {
-      e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 1)";
-    } else if (variant === "secondary") {
-      e.currentTarget.style.backgroundColor = "transparent";
-      e.currentTarget.style.color = "rgba(255, 255, 255, 0.9)";
-    }
+    // Base styles only, theme-specific colors will be handled by CSS classes
+    return styles;
   };
 
   return (
     <Tag
       href={href || undefined}
+      className={`navbar-button navbar-button-${variant}`}
       style={getVariantStyles(variant)}
-      onMouseOver={handleMouseOver}
-      onMouseOut={handleMouseOut}
       {...props}
     >
       {children}
     </Tag>
+  );
+};
+
+export const NavbarThemeToggle = () => {
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <button
+        style={{
+          width: "36px",
+          height: "36px",
+          padding: "0",
+          borderRadius: "9999px",
+          transition: "all 0.2s ease",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "transparent",
+          border: "none",
+          cursor: "pointer",
+          margin: 0,
+        }}
+      >
+        <div style={{ height: "16px", width: "16px" }} />
+        <span className="sr-only">Loading theme toggle</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="navbar-theme-toggle"
+      style={{
+        width: "36px",
+        height: "36px",
+        padding: "0",
+        borderRadius: "9999px",
+        transition: "all 0.2s ease",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "transparent",
+        border: "none",
+        cursor: "pointer",
+        margin: 0,
+      }}
+      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+    >
+      {theme === "dark" ? (
+        <Sun size={20} weight="regular" />
+      ) : (
+        <Moon size={20} weight="regular" />
+      )}
+      <span className="sr-only">Toggle theme</span>
+    </button>
   );
 };
