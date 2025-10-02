@@ -170,10 +170,11 @@ export async function updatePasswordAction(
 
 
 
-export async function oauthSignInAction(provider: OAuthProvider) {
+export async function oauthSignInAction(provider: OAuthProvider, next?: string) {
     const { getOAuthRedirectUrl } = await import('@/utils/authUtils');
 
-    const redirectTo = getOAuthRedirectUrl();
+    const baseRedirectUrl = getOAuthRedirectUrl();
+    const redirectTo = next ? `${baseRedirectUrl}?next=${encodeURIComponent(next)}` : baseRedirectUrl;
     // --- FIX 3: USE STRUCTURED LOGGING ---
 
     if (!redirectTo || (redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production')) {

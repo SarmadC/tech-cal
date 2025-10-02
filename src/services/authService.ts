@@ -84,7 +84,8 @@ export class AuthService {
      */
     static async signInWithOAuth(
         provider: OAuthProvider,
-        supabaseClient: SupabaseClientType
+        supabaseClient: SupabaseClientType,
+        next?: string
     ): Promise<AuthResponse> {
         try {
             // Use the consistent redirect URL utility
@@ -92,7 +93,8 @@ export class AuthService {
             
             logAuthUrls(`signInWithOAuth-${provider}`);
             
-            const redirectTo = getOAuthRedirectUrl();
+            const baseRedirectUrl = getOAuthRedirectUrl();
+            const redirectTo = next ? `${baseRedirectUrl}?next=${encodeURIComponent(next)}` : baseRedirectUrl;
             
             const { error } = await supabaseClient.auth.signInWithOAuth({ 
                 provider, 
