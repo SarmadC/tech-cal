@@ -24,7 +24,7 @@
 
 /* Enhanced Features Section */
 .features-enhanced {
-    padding: var(--space-24) var(--space-8);
+    padding: var(--space-24) 0;
     max-width: 1400px;
     margin: 0 auto;
     position: relative;
@@ -32,6 +32,92 @@
     min-height: 100vh;
     margin-top: 0;
     color: var(--landing-text-primary);
+}
+
+/* Sticky two-column layout */
+.features-sticky .features-sticky-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+    padding: 0 var(--space-12);
+}
+
+@media (min-width: 1024px) {
+    .features-sticky .features-sticky-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: var(--space-16);
+        padding: 0 var(--space-6);
+    }
+}
+
+@media (min-width: 768px) {
+    .features-sticky .features-sticky-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: var(--space-16);
+        padding: 0 var(--space-6);
+    }
+}
+
+@media (max-width: 640px) {
+    .features-sticky .features-sticky-grid {
+        padding: 0 var(--space-5);
+    }
+}
+
+@media (max-width: 480px) {
+    .features-sticky .features-sticky-grid {
+        padding: 0 var(--space-4);
+    }
+}
+
+@media (max-width: 360px) {
+    .features-sticky .features-sticky-grid {
+        padding: 0 var(--space-3);
+    }
+}
+
+.features-sticky .features-left {
+    position: relative;
+}
+
+@media (min-width: 768px) {
+    .features-sticky .features-left {
+        position: sticky;
+        top: 30vh;
+        align-self: start;
+    }
+}
+
+.features-tagline {
+    margin-bottom: var(--space-3);
+    font-weight: 600;
+}
+
+.features-sticky .features-right {
+    position: relative;
+}
+
+.feature-sticky-card {
+    position: sticky;
+    top: 30%;
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--landing-border);
+    background: linear-gradient(135deg, rgba(20, 25, 45, 0.95) 0%, rgba(30, 35, 55, 0.98) 50%, rgba(20, 25, 45, 0.95) 100%);
+    padding: var(--space-8);
+    box-shadow: 
+        0 1px 3px rgba(0, 0, 0, 0.12),
+        0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+:root:not(.dark) .feature-sticky-card {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.feature-sticky-icon { 
+    margin-bottom: var(--space-4);
 }
 
 /* Subtle section background pattern aligned with hero */
@@ -69,7 +155,7 @@
     font-size: 1.125rem;
     color: var(--foreground-secondary);
     max-width: 600px;
-    margin: 0 auto;
+    margin: 0;
     line-height: 1.65;
     font-weight: 400;
     letter-spacing: -0.01em;

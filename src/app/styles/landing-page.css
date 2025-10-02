@@ -807,7 +807,7 @@
     font-size: 1.125rem;
     color: var(--foreground-secondary);
     max-width: 600px;
-    margin: 0 auto;
+    margin: 0;
     line-height: 1.65;
     font-weight: 400;
     letter-spacing: -0.01em;

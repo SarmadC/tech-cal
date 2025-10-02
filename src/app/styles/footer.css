@@ -10,11 +10,22 @@
     overflow: hidden;
 }
 
+/* Light mode footer container */
+:root:not(.dark) .footer-container {
+    background: transparent;
+    color: #1a1a1a;
+}
+
 /* Main Footer Section */
 .footer-main {
     padding: 80px 40px;
     position: relative;
     border-top: 1px solid var(--landing-border-light);
+}
+
+/* Light mode footer main */
+:root:not(.dark) .footer-main {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .footer-content {
@@ -46,12 +57,26 @@
     font-feature-settings: 'liga' 1, 'kern' 1;
 }
 
+/* Light mode footer intro title */
+:root:not(.dark) .footer-intro-title {
+    color: #1a1a1a;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+}
+
 .text-accent {
     background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.8) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     position: relative;
+}
+
+/* Light mode text accent */
+:root:not(.dark) .text-accent {
+    background: linear-gradient(135deg, #1a1a1a 0%, rgba(26, 26, 26, 0.8) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 /* Prominent CTA Section - Left Aligned */
@@ -65,6 +90,11 @@
     backdrop-filter: blur(10px);
 }
 
+/* Light mode CTA section */
+:root:not(.dark) .footer-cta-section {
+    background: rgba(255, 255, 255, 0.8);
+}
+
 
 .cta-title {
     font-family: var(--font-sans);
@@ -75,6 +105,11 @@
     letter-spacing: -0.015em;
 }
 
+/* Light mode CTA title */
+:root:not(.dark) .cta-title {
+    color: #1a1a1a;
+}
+
 .cta-subtitle {
     font-family: var(--font-sans);
     color: var(--landing-text-secondary);
@@ -83,6 +118,11 @@
     line-height: 1.6;
     font-weight: 400;
     letter-spacing: -0.01em;
+}
+
+/* Light mode CTA subtitle */
+:root:not(.dark) .cta-subtitle {
+    color: rgba(26, 26, 26, 0.7);
 }
 
 .cta-button {
@@ -149,6 +189,12 @@
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* Light mode footer credits */
+:root:not(.dark) .footer-credits {
+    color: rgba(26, 26, 26, 0.6);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 /* Simple Card Design - No Glass Effect */
 .footer-card {
     padding: 8px 0;
@@ -167,6 +213,11 @@
     color: var(--landing-text-primary);
     margin-bottom: 24px;
     letter-spacing: -0.01em;
+}
+
+/* Light mode footer section title */
+:root:not(.dark) .footer-section-title {
+    color: #1a1a1a;
 }
 
 .footer-nav {
@@ -194,6 +245,15 @@
     transform: translateX(4px);
 }
 
+/* Light mode footer links */
+:root:not(.dark) .footer-link {
+    color: rgba(26, 26, 26, 0.6);
+}
+
+:root:not(.dark) .footer-link:hover {
+    color: #1a1a1a;
+}
+
 .footer-email {
     font-weight: 500;
     color: var(--landing-text-primary) !important;
@@ -210,12 +270,30 @@
     color: var(--landing-text-primary) !important;
 }
 
+/* Light mode footer email */
+:root:not(.dark) .footer-email {
+    color: #1a1a1a !important;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:root:not(.dark) .footer-email:hover {
+    background: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #1a1a1a !important;
+}
+
 .footer-community-text {
     color: var(--landing-text-tertiary);
     font-size: 0.95rem;
     line-height: 1.6;
     margin-bottom: 24px;
     font-family: var(--font-sans);
+}
+
+/* Light mode footer community text */
+:root:not(.dark) .footer-community-text {
+    color: rgba(26, 26, 26, 0.6);
 }
 
 /* Enhanced Social Icons with Orange Accents */
@@ -247,6 +325,19 @@
     border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* Light mode footer social icons */
+:root:not(.dark) .footer-social-icon {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: rgba(26, 26, 26, 0.6);
+}
+
+:root:not(.dark) .footer-social-icon:hover {
+    color: #1a1a1a;
+    background: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
 
 /* Subtle Background Logo */
 .footer-logo-bg {
@@ -264,6 +355,11 @@
     font-family: var(--font-sans);
 }
 
+/* Light mode footer logo */
+:root:not(.dark) .footer-logo-bg {
+    color: rgba(0, 0, 0, 0.03);
+}
+
 /* Footer Bottom */
 .footer-bottom {
     background: rgba(0, 0, 0, 0.2);
@@ -272,6 +368,13 @@
     padding: 32px 40px;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
+}
+
+/* Light mode footer bottom */
+:root:not(.dark) .footer-bottom {
+    background: rgba(0, 0, 0, 0.05);
+    color: rgba(26, 26, 26, 0.6);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .footer-copyright {
@@ -293,6 +396,16 @@
 .footer-bottom-link:hover {
     color: var(--landing-text-primary);
     background: rgba(255, 255, 255, 0.1);
+}
+
+/* Light mode footer bottom links */
+:root:not(.dark) .footer-bottom-link {
+    color: rgba(26, 26, 26, 0.7);
+}
+
+:root:not(.dark) .footer-bottom-link:hover {
+    color: #1a1a1a;
+    background: rgba(0, 0, 0, 0.1);
 }
 
 /* Enhanced Responsive Design */
