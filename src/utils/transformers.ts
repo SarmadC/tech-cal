@@ -137,6 +137,7 @@ export const eventTransformer = {
             sourceUrl: supabaseEvent.source_url || '#',
             livestreamUrl: supabaseEvent.livestream_url,
             eventTypeId: supabaseEvent.event_type_id || '',
+            agendaUrl: (supabaseEvent as { agenda_url?: string | null }).agenda_url as string | null,
             ...(eventTags.length > 0 && { tags: eventTags }),
             organization: {
                 id: (supabaseEvent as SupabaseEventWithDetails).organizer?.id || '',

@@ -1,0 +1,200 @@
+/* Event Type Color System - CSS Custom Properties */
+/* This ensures colors are always available regardless of Tailwind purging */
+
+:root {
+  /* Registration */
+  --event-registration-bg: #e0e7ff;
+  --event-registration-border: #c7d2fe;
+  --event-registration-text: #3730a3;
+  
+  /* Certification */
+  --event-certification-bg: #fef3c7;
+  --event-certification-border: #fde68a;
+  --event-certification-text: #92400e;
+  
+  /* Support */
+  --event-support-bg: #d1fae5;
+  --event-support-border: #a7f3d0;
+  --event-support-text: #065f46;
+  
+  /* Exhibition */
+  --event-exhibition-bg: #fce7f3;
+  --event-exhibition-border: #f9a8d4;
+  --event-exhibition-text: #be185d;
+  
+  /* Panel */
+  --event-panel-bg: #cffafe;
+  --event-panel-border: #67e8f9;
+  --event-panel-text: #155e75;
+  
+  /* Entertainment */
+  --event-entertainment-bg: #ede9fe;
+  --event-entertainment-border: #c4b5fd;
+  --event-entertainment-text: #6b21a8;
+  
+  /* Keynote */
+  --event-keynote-bg: #dbeafe;
+  --event-keynote-border: #93c5fd;
+  --event-keynote-text: #1e40af;
+  
+  /* Session */
+  --event-session-bg: #dcfce7;
+  --event-session-border: #86efac;
+  --event-session-text: #166534;
+  
+  /* Workshop */
+  --event-workshop-bg: #f3e8ff;
+  --event-workshop-border: #c4b5fd;
+  --event-workshop-text: #7c3aed;
+  
+  /* Break */
+  --event-break-bg: #fed7aa;
+  --event-break-border: #fdba74;
+  --event-break-text: #c2410c;
+  
+  /* Networking */
+  --event-networking-bg: #fce7f3;
+  --event-networking-border: #f9a8d4;
+  --event-networking-text: #be185d;
+  
+  /* Default */
+  --event-default-bg: #f1f5f9;
+  --event-default-border: #cbd5e1;
+  --event-default-text: #475569;
+}
+
+/* Dark mode overrides */
+.dark {
+  /* Registration */
+  --event-registration-bg: #312e81;
+  --event-registration-border: #4338ca;
+  --event-registration-text: #c7d2fe;
+  
+  /* Certification */
+  --event-certification-bg: #78350f;
+  --event-certification-border: #d97706;
+  --event-certification-text: #fde68a;
+  
+  /* Support */
+  --event-support-bg: #064e3b;
+  --event-support-border: #059669;
+  --event-support-text: #a7f3d0;
+  
+  /* Exhibition */
+  --event-exhibition-bg: #831843;
+  --event-exhibition-border: #ec4899;
+  --event-exhibition-text: #f9a8d4;
+  
+  /* Panel */
+  --event-panel-bg: #164e63;
+  --event-panel-border: #0891b2;
+  --event-panel-text: #67e8f9;
+  
+  /* Entertainment */
+  --event-entertainment-bg: #581c87;
+  --event-entertainment-border: #8b5cf6;
+  --event-entertainment-text: #c4b5fd;
+  
+  /* Keynote */
+  --event-keynote-bg: #1e3a8a;
+  --event-keynote-border: #3b82f6;
+  --event-keynote-text: #93c5fd;
+  
+  /* Session */
+  --event-session-bg: #14532d;
+  --event-session-border: #22c55e;
+  --event-session-text: #86efac;
+  
+  /* Workshop */
+  --event-workshop-bg: #6b21a8;
+  --event-workshop-border: #a855f7;
+  --event-workshop-text: #c4b5fd;
+  
+  /* Break */
+  --event-break-bg: #9a3412;
+  --event-break-border: #ea580c;
+  --event-break-text: #fdba74;
+  
+  /* Networking */
+  --event-networking-bg: #831843;
+  --event-networking-border: #ec4899;
+  --event-networking-text: #f9a8d4;
+  
+  /* Default */
+  --event-default-bg: #1e293b;
+  --event-default-border: #475569;
+  --event-default-text: #cbd5e1;
+}
+
+/* Event type tag classes */
+.event-tag-registration {
+  background-color: var(--event-registration-bg);
+  border-color: var(--event-registration-border);
+  color: var(--event-registration-text);
+}
+
+.event-tag-certification {
+  background-color: var(--event-certification-bg);
+  border-color: var(--event-certification-border);
+  color: var(--event-certification-text);
+}
+
+.event-tag-support {
+  background-color: var(--event-support-bg);
+  border-color: var(--event-support-border);
+  color: var(--event-support-text);
+}
+
+.event-tag-exhibition {
+  background-color: var(--event-exhibition-bg);
+  border-color: var(--event-exhibition-border);
+  color: var(--event-exhibition-text);
+}
+
+.event-tag-panel {
+  background-color: var(--event-panel-bg);
+  border-color: var(--event-panel-border);
+  color: var(--event-panel-text);
+}
+
+.event-tag-entertainment {
+  background-color: var(--event-entertainment-bg);
+  border-color: var(--event-entertainment-border);
+  color: var(--event-entertainment-text);
+}
+
+.event-tag-keynote {
+  background-color: var(--event-keynote-bg);
+  border-color: var(--event-keynote-border);
+  color: var(--event-keynote-text);
+}
+
+.event-tag-session {
+  background-color: var(--event-session-bg);
+  border-color: var(--event-session-border);
+  color: var(--event-session-text);
+}
+
+.event-tag-workshop {
+  background-color: var(--event-workshop-bg);
+  border-color: var(--event-workshop-border);
+  color: var(--event-workshop-text);
+}
+
+.event-tag-break {
+  background-color: var(--event-break-bg);
+  border-color: var(--event-break-border);
+  color: var(--event-break-text);
+}
+
+.event-tag-networking {
+  background-color: var(--event-networking-bg);
+  border-color: var(--event-networking-border);
+  color: var(--event-networking-text);
+}
+
+.event-tag-default {
+  background-color: var(--event-default-bg);
+  border-color: var(--event-default-border);
+  color: var(--event-default-text);
+}

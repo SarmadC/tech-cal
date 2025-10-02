@@ -4,7 +4,7 @@ import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { MemoizedProfileService } from '@/services/memoizedProfileService';
 import { CareerProfile, CareerOnboardingData } from '@/types/career';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 interface UseCareerProfileReturn {
   careerProfile: CareerProfile | null;
@@ -23,6 +23,7 @@ interface UseCareerProfileReturn {
 export function useCareerProfile(): UseCareerProfileReturn {
   const { user, profile } = useAuth();
   const { supabase, isReady } = useSupabaseSafe();
+  const { showSuccess } = useSnackbar();
   const [careerProfile, setCareerProfile] = useState<CareerProfile | null>(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,7 +107,7 @@ export function useCareerProfile(): UseCareerProfileReturn {
       // Invalidate cache
       MemoizedProfileService.invalidateUser(user.id);
       
-      toast.success('Career profile completed successfully!');
+      showSuccess('Career profile completed successfully!');
     } catch (err) {
       console.error('Error completing onboarding:', err);
       throw new Error('Failed to complete onboarding');

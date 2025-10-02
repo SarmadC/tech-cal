@@ -39,6 +39,9 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     // Get the display event (with agenda if available)
     const displayEvent = eventWithAgenda || event;
     
+    // Debug: Log the agendaUrl to see if it's populated
+    console.log('EventDetailPanel - displayEvent.agendaUrl:', displayEvent.agendaUrl);
+    
     // Check if event is tracked
     const isTracked = trackedEventIds?.has(displayEvent.id) ?? false;
     
@@ -106,13 +109,25 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 <div className="flex items-start justify-between">
                     <h3 className={`text-2xl font-bold ${theme.textPrimary} flex-1`}>{displayEvent.title}</h3>
 
-                    <Link
-                        href={`/events/${displayEvent.id}`}
-                        className={`ml-4 p-2 ${theme.textMuted} ${theme.hoverText} ${theme.hoverCard} rounded-full transition-colors`}
-                        title="View full page"
-                    >
-                        <ArrowSquareOutIcon className="w-5 h-5" />
-                    </Link>
+                    {displayEvent.agendaUrl ? (
+                        <a
+                            href={displayEvent.agendaUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`ml-4 p-2 ${theme.textMuted} ${theme.hoverText} ${theme.hoverCard} rounded-full transition-colors`}
+                            title="View full agenda"
+                        >
+                            <ArrowSquareOutIcon className="w-5 h-5" />
+                        </a>
+                    ) : (
+                        <Link
+                            href={`/events/${displayEvent.id}`}
+                            className={`ml-4 p-2 ${theme.textMuted} ${theme.hoverText} ${theme.hoverCard} rounded-full transition-colors`}
+                            title="View full page"
+                        >
+                            <ArrowSquareOutIcon className="w-5 h-5" />
+                        </Link>
+                    )}
                 </div>
 
                 <EventInfo event={displayEvent} category={category} />

@@ -28,7 +28,7 @@ export default function UserMenu() {
     // Don't render anything if loading
     if (loading) {
         return (
-            <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
         );
     }
 
@@ -44,7 +44,7 @@ export default function UserMenu() {
                 </Link>
                 <Link
                     href="/signup"
-                    className="bg-accent-primary hover:bg-accent-primary-hover text-white font-medium py-2 px-4 rounded-lg transition-all text-sm"
+                    className="bg-accent-primary hover:bg-accent-primary-hover !text-accent-primary-foreground font-medium py-2 px-4 rounded-lg transition-all text-sm"
                 >
                     Sign Up
                 </Link>

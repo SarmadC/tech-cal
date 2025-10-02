@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { EventService } from '@/services/eventServices';
 import { LoadingButton } from '@/components/Loading';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 
@@ -26,6 +26,7 @@ export default function BulkActions({
 }: BulkActionsProps) {
     const { user } = useAuth();
     const { supabase, isReady } = useSupabaseSafe();
+    const { showSuccess, showError, showInfo } = useSnackbar();
 
     const selectedEventArray = Array.from(selectedEvents);
     const selectedCount = selectedEventArray.length;
@@ -46,18 +47,18 @@ export default function BulkActions({
             for (const eventId of selectedEventArray) {
                 await trackEvent(eventId);
             }
-            toast.success(`Successfully tracked ${selectedCount} events`);
+            showSuccess(`Successfully tracked ${selectedCount} events`);
             onClearSelection();
         } catch (error) {
             console.error('Bulk track error:', error);
-            toast.error('Failed to track some events');
+            showError('Failed to track some events');
         } finally {
             setLocalLoading(null);
         }
     };
 
     const handleBulkUntrack = () => {
-        toast.info("Bulk untrack functionality is not yet available.");
+        showInfo("Bulk untrack functionality is not yet available.");
     };
 
     const handleBulkExport = async () => {
@@ -101,10 +102,10 @@ export default function BulkActions({
             // Clean up the object URL to prevent memory leaks
             URL.revokeObjectURL(objectUrl);
 
-            toast.success(`Exported ${eventsToExport.length} events to .ics file.`);
+            showSuccess(`Exported ${eventsToExport.length} events to .ics file.`);
 
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : 'Failed to export events.');
+            showError(err instanceof Error ? err.message : 'Failed to export events.');
         } finally {
             setLocalLoading(null);
         }
@@ -116,9 +117,9 @@ export default function BulkActions({
         try {
             const shareUrl = `${window.location.origin}/calendar?events=${selectedEventArray.join(',')}`;
             await navigator.clipboard.writeText(shareUrl);
-            toast.success('Share link copied to clipboard!');
+            showSuccess('Share link copied to clipboard!');
         } catch (_err) {
-            toast.error('Failed to copy share link.');
+            showError('Failed to copy share link.');
         } finally {
             setLocalLoading(null);
         }

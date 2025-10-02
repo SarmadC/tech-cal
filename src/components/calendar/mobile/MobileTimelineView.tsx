@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { ClockIcon, MapPinIcon, UserIcon, UsersIcon, CalendarIcon, CaretDownIcon, CaretRightIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
 import { getSpeakerAvatarUrl } from '@/services/avatarService';
+import { getTypeColor } from '@/utils/timelineUtils';
 
 interface MobileTimelineViewProps {
     event: Event;
@@ -93,22 +94,6 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
         return acc;
     }, {} as Record<number, AgendaItem[]>);
 
-    const getTypeColor = (type: AgendaItem['type']) => {
-        switch (type) {
-            case 'keynote':
-                return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-            case 'session':
-                return 'bg-green-500/20 text-green-300 border-green-500/30';
-            case 'workshop':
-                return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-            case 'break':
-                return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-            case 'networking':
-                return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
-            default:
-                return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
-        }
-    };
 
     const renderEventCard = (item: AgendaItem) => (
         <div className="bg-gray-800/40 border border-gray-700/60 rounded-lg p-4 mb-3">
@@ -117,7 +102,7 @@ const MobileTimelineView: FC<MobileTimelineViewProps> = ({ event }) => {
                     <ClockIcon className="w-4 h-4" />
                     <span>{safeFormatTime(item.startTime)} - {safeFormatTime(item.endTime)}</span>
                 </div>
-                <span className={`px-2 py-1 text-xs font-medium rounded-md border ${getTypeColor(item.type)}`}>
+                <span className={`px-2 py-1 text-xs font-medium rounded-md border ${getTypeColor(item.type, true).className}`}>
                     {item.type}
                 </span>
             </div>

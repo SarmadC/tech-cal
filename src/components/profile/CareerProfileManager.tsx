@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CareerProfile, CareerOnboardingData } from '@/types/career';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import { User, PencilSimple, CheckCircle } from '@phosphor-icons/react';
 
 export interface CareerProfileManagerProps {
@@ -20,6 +20,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
 }) => {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { showError } = useSnackbar();
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -81,7 +82,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
       window.dispatchEvent(new CustomEvent('profile-updated'));
     } catch (error) {
       console.error('Career profile update error:', error);
-      toast.error('Failed to update career profile. Please try again.');
+      showError('Failed to update career profile. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

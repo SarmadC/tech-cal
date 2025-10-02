@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic';
 
 import type { Metadata } from "next";
 import { Inter, DM_Sans } from "next/font/google";
-import { Toaster } from 'sonner';
 
 import "./styles/globals.css";
 import './styles/premium-animation.css';
@@ -51,8 +50,6 @@ export default function RootLayout({
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/main.min.css" />
             </head>
             <body className={`${inter.className} ${dmSans.variable}`}>
-                {/* Toaster should be high-level to be independent of other re-renders */}
-                <Toaster position="top-center" richColors />
 
                 {/* Global Error Boundary */}
                 <PageErrorBoundary name="RootLayout">

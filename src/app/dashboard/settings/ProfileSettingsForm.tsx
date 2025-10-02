@@ -5,7 +5,7 @@
 import { useEffect, useActionState } from 'react';      // Core hooks from 'react'
 import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
 
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 import { updateUserProfileAction, FormState } from './actions';
 import type { AppProfile } from '@/types';
@@ -30,6 +30,7 @@ function SaveButton() {
 }
 
 export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
+    const { showSuccess, showError } = useSnackbar();
     const initialState: FormState = {
         message: '',
         errors: {},
@@ -39,14 +40,14 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
     // 2. RENAME useFormState to useActionState
     const [state, formAction] = useActionState(updateUserProfileAction, initialState);
 
-    // Use useEffect to show toast notifications based on the server's response.
+    // Use useEffect to show snackbar notifications based on the server's response.
     useEffect(() => {
         if (state.success) {
-            toast.success(state.message);
+            showSuccess(state.message);
         } else if (state.message && (state.errors?._form || state.errors?.fullName || state.errors?.timezone)) {
-            toast.error(state.errors?._form?.[0] || state.errors?.fullName?.[0] || state.errors?.timezone?.[0] || state.message);
+            showError(state.errors?._form?.[0] || state.errors?.fullName?.[0] || state.errors?.timezone?.[0] || state.message);
         }
-    }, [state]);
+    }, [state, showSuccess, showError]);
 
     return (
         <form action={formAction} className="space-y-6">

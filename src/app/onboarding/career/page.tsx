@@ -7,11 +7,12 @@ import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { CareerOnboardingData } from '@/types/career';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import OnboardingErrorBoundary from '@/components/onboarding/OnboardingErrorBoundary';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 export default function CareerOnboardingPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { showSuccess, showError, showInfo } = useSnackbar();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const {
@@ -52,20 +53,20 @@ export default function CareerOnboardingPage() {
       // Trigger auth context refresh
       window.dispatchEvent(new CustomEvent('profile-updated'));
       
-      toast.success('Career profile completed! Discovering personalized events...');
+      showSuccess('Career profile completed! Discovering personalized events...');
       
-      // Redirect to calendar with discovery view
-      router.push('/calendar?view=discover');
+      // Redirect to discover page
+      router.push('/discover');
     } catch (error) {
       console.error('Career onboarding error:', error);
-      toast.error('Failed to save career profile. Please try again.');
+      showError('Failed to save career profile. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSkip = () => {
-    toast.info('You can complete your career profile later in settings');
+    showInfo('You can complete your career profile later in settings');
     router.push('/dashboard');
   };
 

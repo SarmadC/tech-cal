@@ -12,6 +12,23 @@ const config: Config = {
     // 👇 FIX: Use "class" for manual dark mode toggling.
     darkMode: "class",
 
+    // Safelist to prevent purging of dynamic color classes
+    safelist: [
+        // Event type tag colors
+        'bg-indigo-500/20', 'border-indigo-500/30', 'text-indigo-300', 'text-indigo-700',
+        'bg-amber-500/20', 'border-amber-500/30', 'text-amber-300', 'text-amber-700',
+        'bg-emerald-500/20', 'border-emerald-500/30', 'text-emerald-300', 'text-emerald-700',
+        'bg-rose-500/20', 'border-rose-500/30', 'text-rose-300', 'text-rose-700',
+        'bg-cyan-500/20', 'border-cyan-500/30', 'text-cyan-300', 'text-cyan-700',
+        'bg-violet-500/20', 'border-violet-500/30', 'text-violet-300', 'text-violet-700',
+        'bg-blue-500/20', 'border-blue-500/30', 'text-blue-300', 'text-blue-700',
+        'bg-green-500/20', 'border-green-500/30', 'text-green-300', 'text-green-700',
+        'bg-purple-500/20', 'border-purple-500/30', 'text-purple-300', 'text-purple-700',
+        'bg-orange-500/20', 'border-orange-500/30', 'text-orange-300', 'text-orange-700',
+        'bg-pink-500/20', 'border-pink-500/30', 'text-pink-300', 'text-pink-700',
+        'bg-gray-500/20', 'border-gray-500/30', 'text-gray-300', 'text-gray-700',
+    ],
+
     theme: {
         extend: {
             colors: {

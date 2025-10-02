@@ -1,7 +1,7 @@
 'use client';
 
-import { FC } from 'react';
-import { ClockIcon, MapPinIcon, UserIcon, UsersIcon, CalendarIcon } from '@phosphor-icons/react';
+import { FC, useState } from 'react';
+import { ClockIcon, MapPinIcon, UserIcon, UsersIcon, CalendarIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import { formatTimelineTime, getTypeColor, getEmptyState, eventsOverlap, getSpeakerAvatarUrl } from '@/utils/timelineUtils';
@@ -12,9 +12,32 @@ interface TimelineViewProps {
 
 const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     const theme = useTimelineTheme();
-    
     // Get agenda from event
     const agenda = event.agenda || [];
+    
+    // Initialize with all days collapsed by default
+    const [collapsedDays, setCollapsedDays] = useState<Set<number>>(() => {
+        const allDays = new Set<number>();
+        agenda.forEach(item => {
+            if (item.dayNumber) {
+                allDays.add(item.dayNumber);
+            }
+        });
+        return allDays;
+    });
+    
+    // Toggle day collapse state
+    const toggleDayCollapse = (day: number) => {
+        setCollapsedDays(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(day)) {
+                newSet.delete(day);
+            } else {
+                newSet.add(day);
+            }
+            return newSet;
+        });
+    };
     
     if (agenda.length === 0) {
         const emptyState = getEmptyState(theme.isDark);
@@ -107,19 +130,27 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     }>>);
     
     // Helper function to render individual event cards
-    const renderEventCard = (item: AgendaItem) => (
+    const renderEventCard = (item: AgendaItem, showIndividualTime: boolean = false) => (
         <>
             {/* Tag positioned absolutely in top-right */}
             <div className="absolute top-3 right-3">
-                <span className={`px-2 py-1 text-xs font-medium rounded-md border ${getTypeColor(item.type, theme.isDark).background} ${getTypeColor(item.type, theme.isDark).text}`}>
+                <span className={`px-2 py-1 text-xs font-medium rounded-md border ${getTypeColor(item.type, theme.isDark).className}`}>
                     {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                 </span>
             </div>
             
-            {/* Title */}
-            <h5 className={`font-medium mb-2 pr-20 ${theme.textPrimary}`}>
-                {item.title}
-            </h5>
+            {/* Title and individual time */}
+            <div className="pr-20">
+                <h5 className={`font-medium mb-1 ${theme.textPrimary}`}>
+                    {item.title}
+                </h5>
+                {showIndividualTime && (
+                    <div className={`flex items-center gap-1 text-xs ${theme.textMuted} mb-2`}>
+                        <ClockIcon className="w-3 h-3" />
+                        <span>{formatTime(item.startTime)} - {formatTime(item.endTime)}</span>
+                    </div>
+                )}
+            </div>
             
             {/* Description */}
             {item.description && (
@@ -242,17 +273,41 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
             
             {Object.entries(timelineClusters)
                 .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                .map(([day, clusters]) => (
-                    <div key={day} className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <h4 className={`text-md font-medium ${theme.textPrimary}`}>
-                                Day {day}
-                            </h4>
-                            <div className={`flex-1 h-px ${theme.timelineLine}`}></div>
-                        </div>
+                .map(([day, clusters]) => {
+                    const dayNumber = parseInt(day);
+                    const isCollapsed = collapsedDays.has(dayNumber);
+                    const totalEvents = clusters.reduce((sum, cluster) => sum + cluster.items.length, 0);
+                    
+                    return (
+                        <div key={day} className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => toggleDayCollapse(dayNumber)}
+                                    className={`flex items-center gap-2 ${theme.textPrimary} hover:${theme.textSecondary} transition-colors group`}
+                                >
+                                    <div className={`transform transition-transform duration-200 ease-in-out ${
+                                        isCollapsed ? 'rotate-0' : 'rotate-90'
+                                    }`}>
+                                        <CaretRightIcon className="w-4 h-4" />
+                                    </div>
+                                    <h4 className="text-md font-medium">
+                                        Day {day}
+                                    </h4>
+                                    <span className={`text-xs px-2 py-1 rounded-full transition-all duration-200 ${theme.bgMuted} ${theme.textMuted} group-hover:scale-105`}>
+                                        {totalEvents} event{totalEvents !== 1 ? 's' : ''}
+                                    </span>
+                                </button>
+                                <div className={`flex-1 h-px ${theme.timelineLine}`}></div>
+                            </div>
                         
-                        <div className="space-y-6">
-                            {clusters.map((cluster, clusterIndex) => (
+                        {/* Collapsible content with smooth animation */}
+                        <div 
+                            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[2000px] opacity-100'
+                            }`}
+                        >
+                            <div className="space-y-6">
+                                {clusters.map((cluster, clusterIndex) => (
                                 <div key={clusterIndex} className="flex gap-4">
                                     {/* Timeline connector */}
                                     <div className="flex flex-col items-center">
@@ -282,20 +337,20 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                         {/* Parallel events layout */}
                                         {cluster.items.length === 1 ? (
                                             /* Single event */
-                                            <div className={`relative rounded-lg p-4 ${theme.bgCard} ${theme.borderCard}`}>
-                                                {renderEventCard(cluster.items[0])}
+                                            <div className={`relative rounded-lg p-4 transition-all duration-200 hover:shadow-md ${theme.bgCard} ${theme.borderCard}`}>
+                                                {renderEventCard(cluster.items[0], false)}
                                             </div>
                                         ) : (
                                             /* Multiple parallel events */
                                             <div className="space-y-3">
                                                 {cluster.items.map((item, itemIndex) => (
-                                                    <div key={item.id || itemIndex} className="relative">
+                                                    <div key={item.id || itemIndex} className="relative animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${itemIndex * 50}ms` }}>
                                                         {/* Branch connector for parallel events */}
                                                         {itemIndex > 0 && (
                                                             <div className={`absolute -left-8 top-6 w-6 h-px ${theme.timelineLine}`}></div>
                                                         )}
-                                                        <div className={`relative rounded-lg p-4 ml-4 ${theme.bgCard} ${theme.borderCard}`}>
-                                                            {renderEventCard(item)}
+                                                        <div className={`relative rounded-lg p-4 ml-4 transition-all duration-200 hover:shadow-md ${theme.bgCard} ${theme.borderCard} border-l-2 ${theme.borderLight}`}>
+                                                            {renderEventCard(item, true)}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -304,9 +359,11 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                     </div>
                                 </div>
                             ))}
+                            </div>
                         </div>
                     </div>
-                ))}
+                );
+                })}
         </div>
     );
 };

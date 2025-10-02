@@ -11,7 +11,7 @@ import { Event, TrackedEvent, MultiDayEventInstance } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
 import { getEventStatus } from '@/utils/eventStatusUtils';
 import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
@@ -37,6 +37,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     isPinned = false
 }) => {
     const { user } = useAuth();
+    const { showError, showSuccess } = useSnackbar();
     const { trackEvent, untrackEvent, isLoading } = useTrackedEventsUnified();
 
     // Use the tracking status directly from the event prop instead of local state
@@ -74,7 +75,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     const handleTrackEvent = async () => {
         
         if (!user) {
-            toast.error('Please sign in to track events');
+            showError('Please sign in to track events');
             return;
         }
 
@@ -106,7 +107,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
         }
 
         await navigator.clipboard.writeText(shareUrl);
-        toast.success('Event link copied to clipboard');
+        showSuccess('Event link copied to clipboard');
     };
 
     if (!isVisible) return null;

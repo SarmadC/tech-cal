@@ -5,7 +5,7 @@
 import { useEffect, useRef, useActionState } from 'react'; // Core hooks from 'react'
 import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
 
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import { subscribeToAction, type SubscribeFormState } from './actions';
 import { CircleNotchIcon } from '@phosphor-icons/react';
 
@@ -16,7 +16,7 @@ function SubmitButton() {
         <button
             type="submit"
             disabled={pending}
-            className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+            className="bg-accent-primary hover:bg-accent-primary-hover !text-accent-primary-foreground font-semibold py-3 px-6 rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
         >
             {pending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
             {pending ? 'Subscribing...' : 'Subscribe'}
@@ -26,6 +26,7 @@ function SubmitButton() {
 
 export default function SubscribeForm() {
     const formRef = useRef<HTMLFormElement>(null);
+    const { showSuccess, showError } = useSnackbar();
 
     const initialState: SubscribeFormState = {
         message: '',
@@ -35,15 +36,15 @@ export default function SubscribeForm() {
     // 2. RENAME useFormState to useActionState
     const [state, formAction] = useActionState(subscribeToAction, initialState);
 
-    // Use useEffect to show toast notifications based on the form's state
+    // Use useEffect to show snackbar notifications based on the form's state
     useEffect(() => {
         if (state.status === 'success') {
-            toast.success(state.message);
+            showSuccess(state.message);
             formRef.current?.reset(); // Clear the form on success
         } else if (state.status === 'error') {
-            toast.error(state.message);
+            showError(state.message);
         }
-    }, [state]);
+    }, [state, showSuccess, showError]);
 
     return (
         <form ref={formRef} action={formAction} className="mt-8">

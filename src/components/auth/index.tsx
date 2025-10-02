@@ -23,7 +23,9 @@ export function SimpleForm({
     return (
         <form action={action} className={className}>
             {children}
-            <SubmitButton className="w-full">
+            <SubmitButton 
+                className="w-full bg-accent-primary hover:bg-accent-primary-hover !text-accent-primary-foreground"
+            >
                 {submitButtonText}
             </SubmitButton>
         </form>

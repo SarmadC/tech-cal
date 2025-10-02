@@ -36,44 +36,39 @@ export function formatTimelineTime(timeString: string): string {
  * Centralized type color system for agenda items
  * Provides consistent theme-aware colors across all timeline components
  */
-export function getTypeColor(type: AgendaItem['type'], isDark: boolean): {
+export function getTypeColor(type: AgendaItem['type'], _isDark: boolean): {
     background: string;
     border: string;
     text: string;
+    className: string;
 } {
-    const baseClasses = {
-        keynote: 'bg-blue-500/20 border-blue-500/30',
-        session: 'bg-green-500/20 border-green-500/30',
-        workshop: 'bg-purple-500/20 border-purple-500/30',
-        break: 'bg-orange-500/20 border-orange-500/30',
-        networking: 'bg-pink-500/20 border-pink-500/30',
-        default: 'bg-gray-500/20 border-gray-500/30'
+    // Normalize the type to lowercase for consistent matching
+    const normalizedType = (type || '').toLowerCase();
+    
+    // Map types to CSS class names
+    const typeClassMap: Record<string, string> = {
+        keynote: 'event-tag-keynote',
+        session: 'event-tag-session',
+        workshop: 'event-tag-workshop',
+        break: 'event-tag-break',
+        networking: 'event-tag-networking',
+        registration: 'event-tag-registration',
+        certification: 'event-tag-certification',
+        support: 'event-tag-support',
+        exhibition: 'event-tag-exhibition',
+        panel: 'event-tag-panel',
+        entertainment: 'event-tag-entertainment',
+        default: 'event-tag-default'
     };
     
-    const textClasses = isDark 
-        ? {
-            keynote: 'text-blue-300',
-            session: 'text-green-300',
-            workshop: 'text-purple-300',
-            break: 'text-orange-300',
-            networking: 'text-pink-300',
-            default: 'text-gray-300'
-        }
-        : {
-            keynote: 'text-blue-700',
-            session: 'text-green-700',
-            workshop: 'text-purple-700',
-            break: 'text-orange-700',
-            networking: 'text-pink-700',
-            default: 'text-gray-700'
-        };
+    const className = typeClassMap[normalizedType] || typeClassMap.default;
     
-    const typeKey = type as keyof typeof baseClasses || 'default';
-    
+    // Return CSS class name for use with custom CSS properties
     return {
-        background: baseClasses[typeKey],
-        border: baseClasses[typeKey],
-        text: textClasses[typeKey]
+        background: '', // Will be handled by CSS class
+        border: '', // Will be handled by CSS class
+        text: '', // Will be handled by CSS class
+        className: className
     };
 }
 

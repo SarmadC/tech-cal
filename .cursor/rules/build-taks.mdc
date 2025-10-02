@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Dont run "npm run build" until I say so

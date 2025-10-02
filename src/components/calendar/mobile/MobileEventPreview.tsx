@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Event, TrackedEvent, MultiDayEventInstance, EventType } from '@/types';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
 import { getEventStatus } from '@/utils/eventStatusUtils';
 import { CalendarPlusIcon, ShareNetworkIcon, Info, Star, ArrowDown, X, Clock, MapPin, WifiHigh, Users, Calendar } from '@phosphor-icons/react';
@@ -29,7 +29,8 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
   categories = []
 }) => {
   const { user } = useAuth();
-    const { trackEvent, untrackEvent, isLoading } = useTrackedEventsUnified();
+  const { showError } = useSnackbar();
+  const { trackEvent, untrackEvent, isLoading } = useTrackedEventsUnified();
   const { handleShare: originalHandleShare, googleCalendarLink, handleIcsDownload } = useEventActions(event);
   const previewRef = useRef<HTMLDivElement>(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
@@ -75,7 +76,7 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
   // Actions
   const handleTrackEvent = async () => {
     if (!user) {
-      toast.error('Please sign in to track events');
+      showError('Please sign in to track events');
       return;
     }
 

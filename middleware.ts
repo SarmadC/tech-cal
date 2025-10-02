@@ -32,15 +32,15 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     // RULE 1: If user is not logged in, and they are trying to access a protected route, redirect to /login
-    if (!user && (pathname.startsWith('/calendar') || pathname.startsWith('/dashboard'))) {
+    if (!user && (pathname.startsWith('/calendar') || pathname.startsWith('/dashboard') || pathname.startsWith('/discover'))) {
         // User not found, redirecting to login
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // RULE 2: If user is logged in, and they are trying to access a public-only route, redirect to /calendar
+    // RULE 2: If user is logged in, and they are trying to access a public-only route, redirect to /discover
     if (user && (pathname === '/login' || pathname === '/signup')) {
-        // User is logged in, redirecting to calendar
-        return NextResponse.redirect(new URL('/calendar', request.url))
+        // User is logged in, redirecting to discover page
+        return NextResponse.redirect(new URL('/discover', request.url))
     }
 
     // Middleware processing complete

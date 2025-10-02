@@ -622,3 +622,109 @@
     outline: 2px solid var(--landing-text-primary);
     outline-offset: 2px;
 }
+
+/* Enhanced Responsive Design - Additional Breakpoints */
+@media (max-width: 1440px) {
+    .footer-container {
+        padding: var(--space-20) var(--space-12);
+    }
+    
+    .footer-content {
+        gap: var(--space-10);
+    }
+}
+
+@media (max-width: 1024px) {
+    .footer-intro-title {
+        font-size: clamp(1.5rem, 4vw, 2rem);
+    }
+    
+    .footer-cta-section {
+        padding: 22px 18px;
+    }
+    
+    .cta-title {
+        font-size: 1.25rem;
+    }
+    
+    .cta-subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .cta-button {
+        padding: 15px 26px;
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .footer-container {
+        padding: var(--space-12) var(--space-5);
+    }
+    
+    .footer-content {
+        gap: var(--space-5);
+    }
+    
+    .footer-intro-title {
+        font-size: clamp(1.125rem, 6vw, 1.5rem);
+    }
+    
+    .footer-cta-section {
+        padding: 18px 14px;
+    }
+    
+    .cta-title {
+        font-size: 1.1rem;
+    }
+    
+    .cta-subtitle {
+        font-size: 0.85rem;
+    }
+    
+    .cta-button {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .footer-container {
+        padding: var(--space-8) var(--space-3);
+    }
+    
+    .footer-main {
+        padding: 32px 12px;
+    }
+
+    .footer-bottom {
+        padding: 16px 12px;
+    }
+    
+    .footer-intro-title {
+        font-size: clamp(0.9rem, 8vw, 1.125rem);
+    }
+    
+    .footer-cta-section {
+        padding: 14px 10px;
+    }
+    
+    .cta-title {
+        font-size: 0.95rem;
+    }
+    
+    .cta-subtitle {
+        font-size: 0.75rem;
+    }
+    
+    .cta-button {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+    }
+    
+    .footer-logo-bg {
+        font-size: 5rem;
+        right: -10px;
+        bottom: -25px;
+    }
+}

@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthNotifications } from '@/hooks/useAuthNotifications';
 import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import Navbar from "@/components/common/Navbar";
 import AnalyticsConsentBanner from '@/components/common/AnalyticsConsentBanner';
@@ -18,6 +19,9 @@ export default function ClientLayout({
     const pathname = usePathname();
     const { isMobile: _isMobile } = useDeviceDetection();
     const { user, loading } = useAuth();
+    
+    // Handle auth notifications using snackbar
+    useAuthNotifications();
     
     // Pages that should never show navbar (they have their own navigation)
     const excludedPaths = ['/calendar', '/', '/hackathons', '/dashboard'];

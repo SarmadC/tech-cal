@@ -253,7 +253,7 @@ const CalendarHeader: FC<CalendarHeaderProps> = ({
                     <UserMenu />
                 ) : (
                     <Link href="/login">
-                        <button className="text-sm px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary-hover transition-colors">
+                        <button className="text-sm px-4 py-2 bg-accent-primary !text-accent-primary-foreground rounded-lg hover:bg-accent-primary-hover transition-colors">
                             Sign In
                         </button>
                     </Link>

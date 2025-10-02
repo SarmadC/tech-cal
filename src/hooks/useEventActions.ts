@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 // 1. UPDATE IMPORT: Use the new, canonical `Event` type.
 import { Event } from '@/types';
 // Note: You might have moved formatToUTC to dateUtils.ts. If so, update this path.
@@ -13,6 +13,7 @@ import { formatToUTC } from '@/utils/dateUtils';
  */
 // 2. UPDATE SIGNATURE: The hook now accepts the `Event` type.
 export function useEventActions(event: Event) {
+    const { showSuccess, showError } = useSnackbar();
     /**
      * Enhanced share function with Web Share API support for all devices
      */
@@ -37,10 +38,10 @@ export function useEventActions(event: Event) {
         // Fallback to clipboard if Web Share API not supported or failed
         try {
             await navigator.clipboard.writeText(shareUrl);
-            toast.success('Event link copied to clipboard');
+            showSuccess('Event link copied to clipboard');
         } catch (err) {
             console.error('Failed to copy text: ', err);
-            toast.error('Could not copy link to clipboard.');
+            showError('Could not copy link to clipboard.');
         }
     };
 
@@ -84,11 +85,11 @@ export function useEventActions(event: Event) {
             link.click();
             document.body.removeChild(link);
 
-            toast.success('Calendar file (.ics) download started.');
+            showSuccess('Calendar file (.ics) download started.');
 
         } catch (error) {
             console.error("Failed to generate .ics file:", error);
-            toast.error("Could not create calendar file.");
+            showError("Could not create calendar file.");
         }
     };
 

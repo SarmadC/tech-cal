@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 import { loginAction, oauthSignInAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
@@ -16,6 +16,7 @@ import type { AuthFormState } from '@/app/auth/actions';
 export default function LoginPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { showError, showInfo } = useSnackbar();
     const [isOAuthLoading, setIsOAuthLoading] = useState(false);
     const [oauthStartTime, setOauthStartTime] = useState<number | null>(null);
     const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(null);
@@ -25,7 +26,7 @@ export default function LoginPage() {
     // Debounced redirect to prevent multiple rapid redirects
     useEffect(() => {
         if (initialized && user && !hasRedirected && !loading) {
-            const redirectTo = searchParams.get('redirect') || '/calendar';
+            const redirectTo = searchParams.get('redirect') || '/discover';
             setHasRedirected(true);
             
             // Small delay to ensure auth state has fully settled
@@ -80,10 +81,7 @@ export default function LoginPage() {
                     break;
             }
             
-            toast.error(errorTitle, {
-                description: errorDescription,
-                duration: 6000,
-            });
+            showError(`${errorTitle}: ${errorDescription}`);
             
             // Clean up URL
             router.replace('/login', { scroll: false });
@@ -102,10 +100,7 @@ export default function LoginPage() {
             setOauthStartTime(null);
             setPendingProvider(null);
             
-            toast.error("Sign-in Timeout", {
-                description: "The sign-in process is taking longer than expected. Please try again.",
-                duration: 5000,
-            });
+            showError("Sign-in Timeout: The sign-in process is taking longer than expected. Please try again.");
         }, 30000); // 30 second timeout
 
         return () => clearTimeout(timeoutId);
@@ -127,9 +122,8 @@ export default function LoginPage() {
         setOauthStartTime(Date.now());
         setPendingProvider(provider);
         
-        const toastId = toast.loading(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`, {
-            duration: 30000,
-        });
+        // Show info message for OAuth redirect
+        showInfo(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
 
         try {
             await oauthSignInAction(provider);
@@ -138,16 +132,12 @@ export default function LoginPage() {
                 setIsOAuthLoading(false);
                 setOauthStartTime(null);
                 setPendingProvider(null);
-                toast.dismiss(toastId);
-                toast.error("Sign-in Error", {
-                    description: "The sign-in process didn't complete as expected. Please try again.",
-                });
+                showError("Sign-in Error: The sign-in process didn't complete as expected. Please try again.");
             }, 1000);
         } catch (error) {
             // Check if this is a Next.js redirect (which is expected)
             if (error instanceof Error && (error.message === 'NEXT_REDIRECT' || error.message.includes('NEXT_REDIRECT'))) {
                 // This is expected - the user is being redirected to OAuth provider
-                toast.dismiss(toastId);
                 return;
             }
             
@@ -156,10 +146,7 @@ export default function LoginPage() {
             setIsOAuthLoading(false);
             setOauthStartTime(null);
             setPendingProvider(null);
-            toast.dismiss(toastId);
-            toast.error("Sign-in Error", {
-                description: "Failed to start the sign-in process. Please try again.",
-            });
+            showError("Sign-in Error: Failed to start the sign-in process. Please try again.");
         }
     };
 

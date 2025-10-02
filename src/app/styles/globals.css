@@ -4,6 +4,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import event type colors */
+@import './event-type-colors.css';
+
 /* CRITICAL: Override Tailwind's bg-card after utilities layer */
 @layer utilities {
   .bg-card {
@@ -198,6 +201,7 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
   --accent-primary: #ffffff; /* white accent for dark surfaces */
   --accent-primary-hover: #e5e5e5; /* slightly dimmed white */
   --accent-primary-light: rgba(255, 255, 255, 0.12);
+  --accent-primary-foreground: #000000; /* black text on white accent */
   --accent-border: rgba(255, 255, 255, 0.28);
   
   /* Secondary/Tertiary accents map to neutral variants */
@@ -280,6 +284,7 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
   --accent-primary: #000000; /* black accent for light surfaces */
   --accent-primary-hover: #111111;
   --accent-primary-light: rgba(0, 0, 0, 0.08);
+  --accent-primary-foreground: #ffffff; /* white text on black accent */
   --accent-secondary: #000000;
   --accent-secondary-hover: #111111;
   --accent-secondary-light: rgba(0, 0, 0, 0.08);
@@ -580,6 +585,13 @@ input::placeholder, textarea::placeholder {
   .bg-accent-primary-light { background-color: var(--accent-primary-light); }
   .text-accent-primary { color: var(--accent-primary); }
   .text-accent-primary-hover { color: var(--accent-primary-hover); }
+  .text-accent-primary-foreground { color: var(--accent-primary-foreground) !important; }
+  
+  /* Override Button component text color for accent buttons */
+  .bg-accent-primary.text-accent-primary-foreground,
+  .bg-accent-primary.hover\:bg-accent-primary-hover.text-accent-primary-foreground {
+    color: var(--accent-primary-foreground) !important;
+  }
   .border-accent-primary { border-color: var(--accent-primary); }
   .border-accent-border { border-color: var(--accent-border); }
   

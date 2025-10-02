@@ -542,9 +542,38 @@
    Responsive Design
    ========================================================================== */
 
+/* Large Desktop (1440px+) */
+@media (max-width: 1440px) {
+  .chaos-section {
+    height: 240vh;
+  }
+  
+  .calendar-frame.clean-calendar {
+    max-width: 85%;
+  }
+  
+  .text-overlay-container {
+    width: 85%;
+    max-width: 750px;
+  }
+  
+  .calendar-grid {
+    min-height: 450px;
+  }
+  
+  .event-card-animated {
+    width: 240px;
+    height: 100px;
+  }
+}
+
 @media (max-width: 1200px) {
   .chaos-section {
     height: 220vh;
+  }
+  
+  .calendar-frame.clean-calendar {
+    max-width: 88%;
   }
   
   .event-card-animated {
@@ -555,6 +584,10 @@
   .text-overlay-container {
     width: 85%;
     max-width: 700px;
+  }
+  
+  .calendar-grid {
+    min-height: 420px;
   }
   
   .chaos-title,
@@ -581,6 +614,16 @@
     width: 88%;
     max-width: 600px;
   }
+  
+  .calendar-grid {
+    min-height: 400px;
+    gap: 6px;
+    padding: 10px;
+  }
+  
+  .calendar-cell {
+    min-height: 75px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -605,6 +648,16 @@
   
   .event-card-animated.calendar-view {
     padding: var(--space-1);
+  }
+
+  .calendar-frame.clean-calendar {
+    max-width: 95%;
+  }
+
+  .calendar-grid {
+    min-height: 350px;
+    gap: 5px;
+    padding: 8px;
   }
 
   .calendar-header {
@@ -671,6 +724,20 @@
     padding: var(--space-2);
   }
   
+  .calendar-frame.clean-calendar {
+    max-width: 98%;
+  }
+  
+  .calendar-grid {
+    min-height: 300px;
+    gap: 4px;
+    padding: 6px;
+  }
+  
+  .calendar-cell {
+    min-height: 60px;
+  }
+  
   .text-overlay-container {
     width: 92%;
     max-width: 400px;
@@ -708,6 +775,16 @@
   
   .event-card-animated.calendar-view {
     padding: 6px;
+  }
+
+  .calendar-frame.clean-calendar {
+    max-width: 98%;
+  }
+
+  .calendar-grid {
+    min-height: 250px;
+    gap: 3px;
+    padding: 4px;
   }
 
   .calendar-cell {
@@ -751,6 +828,16 @@
   
   .event-card-company {
     font-size: 0.45rem;
+  }
+  
+  .calendar-frame.clean-calendar {
+    max-width: 99%;
+  }
+
+  .calendar-grid {
+    min-height: 200px;
+    gap: 2px;
+    padding: 3px;
   }
   
   .calendar-cell {

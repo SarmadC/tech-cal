@@ -143,7 +143,7 @@ export default function PricingPage() {
                     block w-full text-center font-semibold py-3 px-6 rounded-lg transition-all
                     ${plan.highlighted
                                             ? 'bg-white text-accent-primary hover:bg-gray-100'
-                                            : 'bg-accent-primary text-white hover:bg-accent-primary-hover'
+                                            : 'bg-accent-primary !text-accent-primary-foreground hover:bg-accent-primary-hover'
                                         }
                   `}
                                 >

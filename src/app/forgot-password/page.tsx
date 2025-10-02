@@ -4,7 +4,7 @@
 import { useEffect, useActionState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { SimpleForm } from '@/components/auth/index';
@@ -39,16 +39,17 @@ const SuccessDisplay = ({ message }: { message: string }) => (
 
 
 export default function ForgotPasswordPage() {
+    const { showError } = useSnackbar();
     const [state, formAction] = useActionState(forgotPasswordAction, initialState);
 
     useEffect(() => {
         if (state.success) {
             // Success UI is shown, no toast needed.
         } else if (state.message) {
-            // Show toast for any error message that comes back.
-            toast.error(state.errors?._form?.[0] || state.errors?.email?.[0] || state.message);
+            // Show snackbar for any error message that comes back.
+            showError(state.errors?._form?.[0] || state.errors?.email?.[0] || state.message);
         }
-    }, [state]);
+    }, [state, showError]);
 
     return (
         <ProtectedRoute allowUnauthenticated>

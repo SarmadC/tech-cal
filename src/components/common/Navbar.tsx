@@ -38,7 +38,7 @@ export default function Navbar() {
     const allNavLinks = [...navLinks, ...authenticatedLinks];
 
     return (
-        <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm' : 'bg-transparent'
+        <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md shadow-sm' : 'bg-transparent'
             }`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
@@ -71,7 +71,7 @@ export default function Navbar() {
                     {/* Mobile Menu Button */}
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             {isMobileMenuOpen ? (
@@ -86,7 +86,7 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
+                <div className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
                     <div className="px-4 py-4 space-y-3">
                         {/* Navigation Links */}
                         {allNavLinks.map((link) => (
@@ -101,7 +101,7 @@ export default function Navbar() {
                         ))}
 
                         {/* Divider */}
-                        <div className="border-t border-gray-200 pt-4">
+                        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                             {!loading && (
                                 <>
                                     {user ? (
@@ -166,7 +166,7 @@ export default function Navbar() {
                                             <Link
                                                 href="/signup"
                                                 onClick={() => setIsMobileMenuOpen(false)}
-                                                className="block w-full bg-accent-primary hover:bg-accent-primary-hover text-white font-medium py-2 px-4 rounded-lg transition-all text-sm text-center"
+                                                className="block w-full bg-accent-primary hover:bg-accent-primary-hover !text-accent-primary-foreground font-medium py-2 px-4 rounded-lg transition-all text-sm text-center"
                                             >
                                                 Sign Up
                                             </Link>

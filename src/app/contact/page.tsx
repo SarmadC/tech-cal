@@ -6,7 +6,7 @@ import { useEffect, useRef, useActionState } from 'react'; // Core hooks from 'r
 import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
 
 import { submitContactFormAction, type ContactFormState } from './actions';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Button } from '@/components/ui/button';
 import { CircleNotchIcon } from '@phosphor-icons/react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +15,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 function SubmitButton() {
     const { pending } = useFormStatus();
     return (
-        <Button type="submit" disabled={pending} className="w-full">
+        <Button 
+            type="submit" 
+            disabled={pending} 
+            className="w-full bg-accent-primary hover:bg-accent-primary-hover !text-accent-primary-foreground"
+        >
             {pending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
             {pending ? 'Sending...' : 'Send Message'}
         </Button>
@@ -24,25 +28,26 @@ function SubmitButton() {
 
 export default function ContactPage() {
     const formRef = useRef<HTMLFormElement>(null);
+    const { showSuccess, showError } = useSnackbar();
     const initialState: ContactFormState = { message: '', success: false, errors: {} };
 
     // 2. RENAME useFormState to useActionState
     const [state, formAction] = useActionState(submitContactFormAction, initialState);
 
-    // Effect to show toasts based on the form action's state
+    // Effect to show snackbar notifications based on the form action's state
     useEffect(() => {
         if (state.message) {
             if (state.success) {
-                toast.success("Message Sent!", { description: state.message });
+                showSuccess(`Message Sent! ${state.message}`);
                 // Reset the form on successful submission
                 formRef.current?.reset();
             } else {
-                // Combine all errors for a more descriptive toast
+                // Combine all errors for a more descriptive snackbar
                 const errorDescription = Object.values(state.errors || {}).flat().join(' ');
-                toast.error("Submission Failed", { description: errorDescription || state.message });
+                showError(`Submission Failed: ${errorDescription || state.message}`);
             }
         }
-    }, [state]);
+    }, [state, showSuccess, showError]);
 
     return (
         <div className="min-h-screen bg-background-main pt-20">

@@ -5,7 +5,7 @@ import { useEffect, useActionState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { toast } from 'sonner';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 import { SimpleForm } from '@/components/auth';  // Only import what you use
 import { updatePasswordAction } from '@/app/auth/actions';
@@ -36,19 +36,20 @@ const SuccessDisplay = () => (
 
 export default function ResetPasswordClientView() {
     const router = useRouter();
+    const { showSuccess, showError } = useSnackbar();
     const [state, formAction] = useActionState(updatePasswordAction, initialState);
 
     useEffect(() => {
         if (state.success) {
-            toast.success(state.message || 'Password updated successfully!');
+            showSuccess(state.message || 'Password updated successfully!');
             const timer = setTimeout(() => {
                 router.push('/dashboard');
             }, 2000);
             return () => clearTimeout(timer);
         } else if (state.message) {
-            toast.error(state.errors?._form?.[0] || state.message);
+            showError(state.errors?._form?.[0] || state.message);
         }
-    }, [state, router]);
+    }, [state, router, showSuccess, showError]);
 
     return (
         <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
