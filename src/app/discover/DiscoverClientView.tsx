@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Event, EventType, AppProfile } from '@/types';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
@@ -9,6 +9,7 @@ import { CalendarLayout } from '../calendar/CalendarLayout';
 import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
+import { CalendarProvider } from '@/contexts/CalendarContext';
 
 interface DiscoverClientViewProps {
     initialCategories: EventType[];
@@ -22,13 +23,19 @@ export default function DiscoverClientView({
     const router = useRouter();
     const nav = useNavigation(router);
     const eventData = useUnifiedServerFiltering(profile);
+    
+    // Calendar state
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [_selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const currentDate = new Date();
 
     // Navigation handlers
     const handleEventSelect = useCallback((event: Event) => {
-        nav.toEvent(event.id);
-    }, [nav]);
+        setSelectedEvent(event);
+    }, []);
 
     const handleDateSelect = useCallback((date: Date) => {
+        setSelectedDate(date);
         nav.toDate(date);
     }, [nav]);
 
@@ -39,6 +46,10 @@ export default function DiscoverClientView({
     const handleToggleFilters = useCallback(() => {
         nav.toCalendar();
     }, [nav]);
+
+    const handleCloseEventDetail = useCallback(() => {
+        setSelectedEvent(null);
+    }, []);
 
     // Loading skeleton
     const loadingSkeleton = <EventsLoadingSkeleton />;
@@ -55,26 +66,37 @@ export default function DiscoverClientView({
     );
 
     return (
-        <CalendarLayout
-            onNavigate={handleNavigate}
-            onDateChange={handleDateSelect}
-            onToggleFilters={handleToggleFilters}
-            isFilterPanelOpen={false}
-            activeFilterCount={0}
+        <CalendarProvider
+            selectedDate={selectedDate}
+            currentDate={currentDate}
             events={eventData.filteredEvents}
             categories={initialCategories}
             profile={profile}
+            onDateSelect={handleDateSelect}
             onEventSelect={handleEventSelect}
-            renderContent={() => (
-                <SmartLoader
-                    loading={eventData.isLoading}
-                    error={eventData.error}
-                    onRetry={eventData.refetch}
-                    skeleton={loadingSkeleton}
-                >
-                    {mainContent}
-                </SmartLoader>
-            )}
-        />
+            onCloseEventDetail={handleCloseEventDetail}
+        >
+            <CalendarLayout
+                onNavigate={handleNavigate}
+                onDateChange={handleDateSelect}
+                onToggleFilters={handleToggleFilters}
+                isFilterPanelOpen={false}
+                activeFilterCount={0}
+                events={eventData.filteredEvents}
+                categories={initialCategories}
+                profile={profile}
+                onEventSelect={handleEventSelect}
+                renderContent={() => (
+                    <SmartLoader
+                        loading={eventData.isLoading}
+                        error={eventData.error}
+                        onRetry={eventData.refetch}
+                        skeleton={loadingSkeleton}
+                    >
+                        {mainContent}
+                    </SmartLoader>
+                )}
+            />
+        </CalendarProvider>
     );
 }
