@@ -6,10 +6,10 @@ import { Event, EventType, AppProfile } from '@/types';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
 import { CalendarLayout } from '../calendar/CalendarLayout';
+import { CalendarProvider } from '@/contexts/CalendarContext';
 import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
-import { CalendarProvider } from '@/contexts/CalendarContext';
 
 interface DiscoverClientViewProps {
     initialCategories: EventType[];
@@ -24,19 +24,14 @@ export default function DiscoverClientView({
     const nav = useNavigation(router);
     const eventData = useUnifiedServerFiltering(profile);
     
-    // Calendar state
+    // Calendar state for CalendarProvider
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [_selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const currentDate = new Date();
 
     // Navigation handlers
     const handleEventSelect = useCallback((event: Event) => {
-        setSelectedEvent(event);
-    }, []);
-
-    const handleDateSelect = useCallback((date: Date) => {
-        setSelectedDate(date);
-        nav.toDate(date);
+        nav.toEvent(event.id);
     }, [nav]);
 
     const handleNavigate = useCallback(() => {
@@ -45,6 +40,17 @@ export default function DiscoverClientView({
 
     const handleToggleFilters = useCallback(() => {
         nav.toCalendar();
+    }, [nav]);
+
+    // Calendar context handlers
+    const handleDateSelect = useCallback((date: Date) => {
+        setSelectedDate(date);
+        nav.toDate(date);
+    }, [nav]);
+
+    const handleEventSelectForContext = useCallback((event: Event) => {
+        setSelectedEvent(event);
+        nav.toEvent(event.id);
     }, [nav]);
 
     const handleCloseEventDetail = useCallback(() => {
@@ -73,7 +79,7 @@ export default function DiscoverClientView({
             categories={initialCategories}
             profile={profile}
             onDateSelect={handleDateSelect}
-            onEventSelect={handleEventSelect}
+            onEventSelect={handleEventSelectForContext}
             onCloseEventDetail={handleCloseEventDetail}
         >
             <CalendarLayout
@@ -81,7 +87,7 @@ export default function DiscoverClientView({
                 onDateChange={handleDateSelect}
                 onToggleFilters={handleToggleFilters}
                 isFilterPanelOpen={false}
-                activeFilterCount={0}
+                activeFilterCount={eventData.activeFilterCount}
                 events={eventData.filteredEvents}
                 categories={initialCategories}
                 profile={profile}

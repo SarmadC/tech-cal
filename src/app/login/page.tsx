@@ -86,7 +86,7 @@ export default function LoginPage() {
             // Clean up URL
             router.replace('/login', { scroll: false });
         }
-    }, [searchParams, router, showError]);
+    }, [searchParams, router]);
 
     // OAuth timeout handler
     useEffect(() => {
@@ -104,7 +104,7 @@ export default function LoginPage() {
         }, 30000); // 30 second timeout
 
         return () => clearTimeout(timeoutId);
-    }, [oauthStartTime, isOAuthLoading, showError]);
+    }, [oauthStartTime, isOAuthLoading]);
 
     // Monitor auth state changes to clear OAuth loading
     useEffect(() => {
@@ -126,8 +126,7 @@ export default function LoginPage() {
         showInfo(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
 
         try {
-            const redirectTo = searchParams.get('redirect') || '/discover';
-            await oauthSignInAction(provider, redirectTo);
+            await oauthSignInAction(provider);
             // If we reach this point without a redirect, something is wrong
             setTimeout(() => {
                 setIsOAuthLoading(false);
@@ -152,7 +151,7 @@ export default function LoginPage() {
     };
 
     const handleLoginSuccess = () => {
-        const redirectTo = searchParams.get('redirect') || '/discover';
+        const redirectTo = searchParams.get('redirect') || '/calendar';
         router.push(redirectTo);
     };
 

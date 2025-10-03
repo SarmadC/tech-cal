@@ -112,7 +112,7 @@ export function useCareerProfile(): UseCareerProfileReturn {
       console.error('Error completing onboarding:', err);
       throw new Error('Failed to complete onboarding');
     }
-  }, [user?.id, supabase, showSuccess]);
+  }, [user?.id, supabase]);
 
   // Refresh profile
   const refreshProfile = useCallback(async () => {
