@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback, useRef, useReducer, useEffect } from 'react';
+import { useMemo, useCallback, useRef, useReducer } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
 import dynamic from 'next/dynamic';
@@ -66,15 +66,15 @@ function useCalendarUIState() {
         isSidebarOpen: false, // Start with sidebar closed to prevent mobile intrusion
     });
     
-    // Auto-open sidebar on desktop only on initial load
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
+    // Sidebar starts closed by default - no auto-open behavior
+    // useEffect(() => {
+    //     if (typeof window === 'undefined') return;
 
-        const isMobile = window.innerWidth < 768;
-        if (!isMobile) {
-            dispatch({ type: 'TOGGLE_SIDEBAR' }); // Open sidebar on desktop initially
-        }
-    }, []); // Empty dependency array - only run on mount
+    //     const isMobile = window.innerWidth < 768;
+    //     if (!isMobile) {
+    //         dispatch({ type: 'TOGGLE_SIDEBAR' }); // Open sidebar on desktop initially
+    //     }
+    // }, []); // Empty dependency array - only run on mount
 
     // Handle mobile resize - close sidebar when switching to mobile
     useResizeListener(() => {

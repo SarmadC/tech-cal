@@ -7,6 +7,7 @@ import { Suspense } from 'react';
 import type { AppProfile } from '@/types'; // Import the type for clarity
 
 import SettingsTabs from './SettingTabs';
+import SettingsNavigation from './SettingsNavigation';
 
 export default async function SettingsPage() {
     const supabase = await createClient();
@@ -31,16 +32,33 @@ export default async function SettingsPage() {
     // --- CHANGED SECTION END ---
 
     return (
-        <div className="max-w-5xl mx-auto py-12 px-4 font-sans-all">
-            <header className="mb-8">
-                <h1 className="text-3xl font-bold text-foreground-primary">Settings</h1>
-                <p className="text-md text-foreground-secondary mt-1">Manage your account and subscription settings.</p>
-            </header>
-            <Suspense fallback={<div>Loading settings...</div>}>
-                {/* The `|| null` is a safeguard, ensuring we always pass a valid prop type. */}
-                <SettingsTabs profile={profile || null} />
-            </Suspense>
+        <div className="min-h-screen" style={{ backgroundColor: 'var(--background-main)' }}>
+            {/* Navigation Header */}
+            <SettingsNavigation />
 
+            {/* Main Content */}
+            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground-primary)' }}>Settings</h1>
+                    <p className="text-lg mt-2" style={{ color: 'var(--foreground-secondary)' }}>
+                        Manage your account preferences, profile, and subscription settings.
+                    </p>
+                </div>
+                
+                <Suspense fallback={
+                    <div className="flex items-center justify-center py-12">
+                        <div className="flex items-center space-x-2" style={{ color: 'var(--foreground-secondary)' }}>
+                            <div 
+                                className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" 
+                                style={{ borderColor: 'var(--foreground-secondary)' }}
+                            />
+                            <span>Loading settings...</span>
+                        </div>
+                    </div>
+                }>
+                    <SettingsTabs profile={profile || null} />
+                </Suspense>
+            </div>
         </div>
     );
 }

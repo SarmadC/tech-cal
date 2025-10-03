@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   Sidebar,
   SidebarContent,
@@ -31,14 +30,7 @@ export function AppSidebar() {
       {open ? (
         <>
           <SidebarHeader>
-            <div className="flex items-center justify-between">
-              <Image 
-                src="/logo.svg" 
-                alt="Tech-Cal" 
-                width={32} 
-                height={32}
-                className="w-8 h-8"
-              />
+            <div className="flex items-center justify-end">
               <button
                 type="button"
                 title="Collapse sidebar"
@@ -78,13 +70,6 @@ export function AppSidebar() {
           {/* Collapsed: top-aligned icon rail */}
           <SidebarContent className="flex h-full items-start justify-start">
             <div className="flex flex-col items-center justify-start gap-6 w-full pt-5">
-              <Image 
-                src="/logo.svg" 
-                alt="Tech-Cal" 
-                width={28} 
-                height={28}
-                className="w-7 h-7"
-              />
               <button
                 type="button"
                 title="Expand sidebar"

@@ -14,7 +14,7 @@ export interface SidebarProviderProps extends React.HTMLAttributes<HTMLDivElemen
   defaultOpen?: boolean;
 }
 
-export function SidebarProvider({ defaultOpen = true, style, children, ...rest }: SidebarProviderProps) {
+export function SidebarProvider({ defaultOpen = false, style, children, ...rest }: SidebarProviderProps) {
   const [open, setOpen] = React.useState(defaultOpen);
 
   const value = React.useMemo(() => ({
