@@ -140,31 +140,34 @@ export async function POST(request: NextRequest) {
       sortBy: sortBy !== 'date' ? sortBy : undefined
     };
 
-    // Use RPC function for optimal database-level filtering and pagination
-    const { events: filteredEvents, totalCount: totalEvents } = await EventService.getEventsWithRPC(
-      eventFilters, 
-      supabase, 
-      page, 
-      pageSize
-    );
-
-    // Get user's career profile for scoring
+    // Get user's career profile for scoring and cold start detection
     let careerProfile = null;
     try {
-      // Get the career profile directly
       careerProfile = await CareerProfileService.getCareerProfile(user.id, supabase);
     } catch (_error) {
       // Profile might not exist for new users - this is fine
       console.log('No career profile found for user, skipping career impact scoring');
     }
 
-    // Enrich events with career impact scores
-    const enrichedEvents = await EventService.enrichEventsWithCareerImpact(
-      filteredEvents,
-      careerProfile,
+    // Get events with cold start handling
+    const { events: filteredEvents, totalCount: totalEvents, isColdStart } = await EventService.getEventsWithColdStartHandling(
+      eventFilters,
       supabase,
-      user.id
+      careerProfile,
+      user.id,
+      page,
+      pageSize
     );
+
+    // Enrich events with career impact scores (skip for cold start users to avoid double processing)
+    const enrichedEvents = isColdStart 
+      ? filteredEvents // Cold start events already have metadata
+      : await EventService.enrichEventsWithCareerImpact(
+          filteredEvents,
+          careerProfile,
+          supabase,
+          user.id
+        );
 
     // Generate filter statistics (simplified since filtering is now at database level)
     const availableFilters = {

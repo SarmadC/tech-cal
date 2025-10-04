@@ -20,6 +20,7 @@ import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { CareerProfile } from '@/types/career';
 import { EnhancedScoringService } from './enhancedScoringService';
+import { LookalikeUserService } from './lookalikeUserService';
 import * as Sentry from "@sentry/nextjs";
 
 export class EventService {
@@ -1212,6 +1213,211 @@ export class EventService {
             });
             return [];
         }
+    }
+
+    /**
+     * Get events with cold start handling for new users
+     * 
+     * @param filters - Event filters
+     * @param supabaseClient - Supabase client
+     * @param careerProfile - User's career profile
+     * @param userId - User ID
+     * @param page - Page number
+     * @param pageSize - Page size
+     * @returns Events with cold start recommendations if applicable
+     */
+    static async getEventsWithColdStartHandling(
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType,
+        careerProfile: CareerProfile | null,
+        userId?: string,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<{ events: Event[]; totalCount: number; isColdStart: boolean }> {
+        try {
+            // Validate inputs
+            if (page < 1) page = 1;
+            if (pageSize < 1 || pageSize > 1000) pageSize = 100;
+            
+            // Check if user is in cold start state
+            const isColdStart = userId ? await LookalikeUserService.isColdStartUser(userId, supabaseClient) : false;
+            
+            if (isColdStart && careerProfile && !filters.searchTerm && !filters.categories?.length) {
+                // Use lookalike recommendations for cold start users
+                return await this.getColdStartRecommendations(
+                    careerProfile,
+                    supabaseClient,
+                    page,
+                    pageSize
+                );
+            }
+
+            // Use normal filtering for users with interaction history or specific filters
+            const result = await this.getEventsWithRPC(filters, supabaseClient, page, pageSize);
+            return {
+                ...result,
+                isColdStart: false
+            };
+        } catch (error) {
+            console.error('Error in getEventsWithColdStartHandling:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventsWithColdStartHandling', filters, userId }
+            });
+            
+            // Fallback to normal filtering with error recovery
+            try {
+                const result = await this.getEventsWithRPC(filters, supabaseClient, page, pageSize);
+                return {
+                    ...result,
+                    isColdStart: false
+                };
+            } catch (fallbackError) {
+                console.error('Fallback filtering also failed:', fallbackError);
+                return {
+                    events: [],
+                    totalCount: 0,
+                    isColdStart: false
+                };
+            }
+        }
+    }
+
+    /**
+     * Get cold start recommendations using lookalike users
+     */
+    private static async getColdStartRecommendations(
+        careerProfile: CareerProfile,
+        supabaseClient: SupabaseClientType,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<{ events: Event[]; totalCount: number; isColdStart: boolean }> {
+        try {
+            // Find lookalike users
+            const lookalikeUsers = await LookalikeUserService.findLookalikeUsers(
+                careerProfile,
+                supabaseClient,
+                20 // Get up to 20 similar users
+            );
+
+            if (lookalikeUsers.length === 0) {
+                return await this.getFallbackPopularEvents(supabaseClient, page, pageSize);
+            }
+
+            // Get recommendations from lookalike users
+            const lookalikeRecommendations = await LookalikeUserService.getLookalikeRecommendations(
+                lookalikeUsers,
+                supabaseClient,
+                pageSize * 2 // Get more to account for filtering
+            );
+
+            if (lookalikeRecommendations.length === 0) {
+                return await this.getFallbackPopularEvents(supabaseClient, page, pageSize);
+            }
+
+            // Get and transform events with lookalike metadata
+            const eventIds = lookalikeRecommendations.map(rec => rec.eventId);
+            const events = await this.getEventsByIds(eventIds, supabaseClient);
+            const appEvents = await this.transformEventsWithLookalikeMetadata(events as any[], lookalikeRecommendations, supabaseClient); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+            // Sort by popularity score and paginate
+            const sortedEvents = this.sortEventsByPopularity(appEvents);
+            const paginatedEvents = this.paginateEvents(sortedEvents, page, pageSize);
+
+            return {
+                events: paginatedEvents,
+                totalCount: sortedEvents.length,
+                isColdStart: true
+            };
+        } catch (error) {
+            console.error('Error getting cold start recommendations:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getColdStartRecommendations', userId: careerProfile.userId }
+            });
+            
+            return await this.getFallbackPopularEvents(supabaseClient, page, pageSize);
+        }
+    }
+
+    /**
+     * Get fallback popular events when lookalike system fails
+     */
+    private static async getFallbackPopularEvents(
+        supabaseClient: SupabaseClientType,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<{ events: Event[]; totalCount: number; isColdStart: boolean }> {
+        try {
+            const { data: events, error } = await (supabaseClient as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                .from('events_detailed')
+                .select('*')
+                .gte('start_time', new Date().toISOString())
+                .order('attendee_count', { ascending: false })
+                .range((page - 1) * pageSize, page * pageSize - 1);
+
+            if (error) throw error;
+
+            const transformedEvents = await this.attachTagsToEvents(events || [], supabaseClient);
+            const appEvents = transformedEvents.map(event => eventTransformer.toApp(event as any)); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+            return {
+                events: appEvents,
+                totalCount: appEvents.length,
+                isColdStart: true
+            };
+        } catch (error) {
+            console.error('Error getting fallback popular events:', error);
+            return {
+                events: [],
+                totalCount: 0,
+                isColdStart: true
+            };
+        }
+    }
+
+
+    /**
+     * Transform events with lookalike metadata (DRY helper)
+     */
+    private static async transformEventsWithLookalikeMetadata(
+        events: any[], // eslint-disable-line @typescript-eslint/no-explicit-any
+        lookalikeRecommendations: any[], // eslint-disable-line @typescript-eslint/no-explicit-any
+        supabaseClient: SupabaseClientType
+    ): Promise<Event[]> {
+        const transformedEvents = await this.attachTagsToEvents(events, supabaseClient);
+        
+        return transformedEvents.map(event => {
+            const appEvent = eventTransformer.toApp(event as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+            const recommendation = lookalikeRecommendations.find(rec => rec.eventId === event.id);
+            
+            if (recommendation) {
+                (appEvent as any).coldStartMetadata = { // eslint-disable-line @typescript-eslint/no-explicit-any
+                    reason: recommendation.reason,
+                    popularityScore: recommendation.popularityScore,
+                    lookalikeUsers: recommendation.lookalikeUsers.length
+                };
+            }
+            
+            return appEvent;
+        });
+    }
+
+    /**
+     * Sort events by popularity score (DRY helper)
+     */
+    private static sortEventsByPopularity(events: Event[]): Event[] {
+        return events.sort((a, b) => {
+            const aScore = (a as any).coldStartMetadata?.popularityScore || 0; // eslint-disable-line @typescript-eslint/no-explicit-any
+            const bScore = (b as any).coldStartMetadata?.popularityScore || 0; // eslint-disable-line @typescript-eslint/no-explicit-any
+            return bScore - aScore;
+        });
+    }
+
+    /**
+     * Paginate events (DRY helper)
+     */
+    private static paginateEvents(events: Event[], page: number, pageSize: number): Event[] {
+        const startIndex = (page - 1) * pageSize;
+        return events.slice(startIndex, startIndex + pageSize);
     }
 
     /**

@@ -48,6 +48,7 @@ interface FilteredEventsData {
     filteredCount: number;
     totalCount: number;
   };
+  isColdStart?: boolean;
 }
 
 interface UseUnifiedServerFilteringResult {
@@ -55,6 +56,7 @@ interface UseUnifiedServerFilteringResult {
   filteredEvents: TrackedEvent[];
   isLoading: boolean;
   error: string | null;
+  isColdStart: boolean;
 
   // Filter state
   filters: UnifiedFilterOptions;
@@ -244,7 +246,8 @@ export function useUnifiedServerFiltering(
 
       const responseData = {
         ...result.data,
-        events: enrichedEvents
+        events: enrichedEvents,
+        isColdStart: result.data.isColdStart || false
       };
 
       if (resetPagination || !data) {
@@ -395,6 +398,7 @@ export function useUnifiedServerFiltering(
     filteredEvents: data?.events || [],
     isLoading,
     error,
+    isColdStart: data?.isColdStart || false,
 
     // Filter state
     filters,
