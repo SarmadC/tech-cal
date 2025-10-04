@@ -21,6 +21,8 @@ import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { CareerProfile } from '@/types/career';
 import { EnhancedScoringService } from './enhancedScoringService';
 import { LookalikeUserService } from './lookalikeUserService';
+import { DiversityEnhancementService } from './diversityEnhancementService';
+import { DIVERSITY_CONFIG } from '@/utils/diversityUtils';
 import * as Sentry from "@sentry/nextjs";
 
 export class EventService {
@@ -1319,9 +1321,10 @@ export class EventService {
             const events = await this.getEventsByIds(eventIds, supabaseClient);
             const appEvents = await this.transformEventsWithLookalikeMetadata(events as any[], lookalikeRecommendations, supabaseClient); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-            // Sort by popularity score and paginate
+            // Sort by popularity score and apply diversity enhancement
             const sortedEvents = this.sortEventsByPopularity(appEvents);
-            const paginatedEvents = this.paginateEvents(sortedEvents, page, pageSize);
+            const diverseEvents = this.applyDiversityEnhancement(sortedEvents, pageSize * 2);
+            const paginatedEvents = this.paginateEvents(diverseEvents, page, pageSize);
 
             return {
                 events: paginatedEvents,
@@ -1421,36 +1424,74 @@ export class EventService {
     }
 
     /**
-     * Enrich events with career impact scores
+     * Enrich events with career impact scores and diversity enhancement
      * 
      * @param events - Events to enrich
      * @param careerProfile - User's career profile
      * @param supabaseClient - Supabase client
      * @param userId - User ID for behavioral context
-     * @returns Events with career impact scores
+     * @param applyDiversityEnhancement - Whether to apply diversity enhancement
+     * @returns Events with career impact scores and diversity enhancement
      */
     static async enrichEventsWithCareerImpact(
         events: Event[],
         careerProfile: CareerProfile | null,
         supabaseClient: SupabaseClientType,
-        userId?: string
+        userId?: string,
+        applyDiversityEnhancement: boolean = true
     ): Promise<Event[]> {
         if (!careerProfile || events.length === 0) {
             return events;
         }
 
         try {
-            return await EnhancedScoringService.enrichEventsWithScores(
+            // First, enrich with career impact scores
+            const enrichedEvents = await EnhancedScoringService.enrichEventsWithScores(
                 events,
                 careerProfile,
                 { userId, supabaseClient }
             );
+
+            // Apply diversity enhancement if requested and we have enough events
+            if (applyDiversityEnhancement && enrichedEvents.length >= DIVERSITY_CONFIG.MIN_EVENTS_FOR_DIVERSITY) {
+                const diversityResult = DiversityEnhancementService.enhanceRecommendations(enrichedEvents);
+                return diversityResult.enhancedRanking;
+            }
+
+            return enrichedEvents;
         } catch (error) {
             console.error('Error enriching events with career impact:', error);
             Sentry.captureException(error, {
                 extra: { function: 'enrichEventsWithCareerImpact', eventCount: events.length }
             });
             return events; // Return original events if enrichment fails
+        }
+    }
+
+    /**
+     * Apply diversity enhancement to events (standalone method)
+     * 
+     * @param events - Events to enhance
+     * @param maxResults - Maximum number of results to enhance
+     * @returns Events with diversity enhancement applied
+     */
+    static applyDiversityEnhancement(
+        events: Event[],
+        maxResults: number = 20
+    ): Event[] {
+        try {
+            if (events.length <= 1) {
+                return events;
+            }
+
+            const diversityResult = DiversityEnhancementService.enhanceRecommendations(events, maxResults);
+            return diversityResult.enhancedRanking;
+        } catch (error) {
+            console.error('Error applying diversity enhancement:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'applyDiversityEnhancement', eventCount: events.length }
+            });
+            return events; // Return original events if enhancement fails
         }
     }
 }

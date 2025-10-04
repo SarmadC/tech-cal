@@ -238,7 +238,3 @@ async function getAvailableCategories(supabase: Awaited<ReturnType<typeof create
     return [];
   }
 }
-
-// Helper functions removed - all filtering now handled at database level in EventService
-
-// Helper functions removed - all filtering now handled at database level in EventService
