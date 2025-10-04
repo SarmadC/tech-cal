@@ -245,6 +245,15 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
         { value: 'paid', label: 'Paid Events' }
     ];
 
+    const budgetOptions = [
+        { value: 'all', label: 'All Budgets' },
+        { value: 'free-only', label: 'Free Only' },
+        { value: 'low', label: 'Low (≤ $100)' },
+        { value: 'moderate', label: 'Moderate (≤ $500)' },
+        { value: 'high', label: 'High (≤ $2000)' },
+        { value: 'unlimited', label: 'Unlimited' }
+    ];
+
     const difficultyOptions = [
         { value: 'all', label: 'All Levels' },
         { value: 'beginner', label: 'Beginner' },
@@ -290,6 +299,12 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
         if (filters.cost !== 'all') {
             const costLabel = costOptions.find(opt => opt.value === filters.cost)?.label || filters.cost;
             chips.push({ key: 'cost', label: costLabel, type: 'cost' });
+        }
+
+        if ((filters as any).budget && (filters as any).budget !== 'all') { // eslint-disable-line @typescript-eslint/no-explicit-any
+            const b = (filters as any).budget as string; // eslint-disable-line @typescript-eslint/no-explicit-any
+            const label = budgetOptions.find(opt => opt.value === b)?.label || b;
+            chips.push({ key: 'budget', label, type: 'budget' });
         }
         
         if (filters.difficulty !== 'all') {
@@ -341,6 +356,9 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                 break;
             case 'cost':
                 onUpdateFilter('cost', 'all');
+                break;
+            case 'budget':
+                onUpdateFilter('budget' as any, 'all' as any); // eslint-disable-line @typescript-eslint/no-explicit-any
                 break;
             case 'difficulty':
                 onUpdateFilter('difficulty', 'all');
@@ -646,6 +664,28 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                                 value={option.value}
                                                 checked={filters.cost === option.value}
                                                 onChange={(e) => onUpdateFilter('cost', e.target.value as SmartFilterOptions['cost'])}
+                                                className="mobile-filter-radio"
+                                            />
+                                            <div className="mobile-filter-option-content">
+                                                <span>{option.label}</span>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Budget Filter */}
+                            <div className="mobile-filter-section">
+                                <h3 className="mobile-section-title">Budget</h3>
+                                <div className="mobile-filter-options">
+                                    {budgetOptions.map((option) => (
+                                        <label key={option.value} className="mobile-filter-option">
+                                            <input
+                                                type="radio"
+                                                name="budget"
+                                                value={option.value}
+                                                checked={(filters as any).budget === (option.value as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
+                                                onChange={(e) => onUpdateFilter('budget' as any, e.target.value as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
                                                 className="mobile-filter-radio"
                                             />
                                             <div className="mobile-filter-option-content">

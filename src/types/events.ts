@@ -23,6 +23,14 @@ export interface CareerImpactScore {
     calculatedAt: string;
     careerProfileHash: string;
     eventDataHash: string;
+    scoringTriggers?: string[]; // Triggers that affected this score (e.g., 'type_pref_gate', 'beginner_boost')
+    appliedAdjustments?: {
+      typePreferenceGate?: number; // Multiplier applied (e.g., 0.75)
+      beginnerBoost?: number; // Points added for beginner-friendly content
+      workshopKeywordBoost?: boolean; // Workshop keyword detected
+      webinarPenalty?: boolean; // Webinar penalty applied
+      behavioralBoost?: number; // Points added based on interaction history (Phase 3)
+    };
   };
 }
 

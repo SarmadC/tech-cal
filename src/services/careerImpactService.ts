@@ -112,7 +112,7 @@ export class CareerImpactService {
     }
 
     // Calculate result
-    const result = this.calculateCareerImpactScore(input, options);
+    const result = await this.calculateCareerImpactScore(input, options);
 
     // Cache the lite version
     const lite: CareerImpactScoreLite = {
@@ -141,7 +141,7 @@ export class CareerImpactService {
     }
 
     // Calculate result
-    const result = this.getCareerImpactScoreLite(input, options);
+    const result = await this.getCareerImpactScoreLite(input, options);
 
     // Cache result
     this._setCached(event.id, careerProfile, result, options.skipCache);
@@ -157,23 +157,23 @@ export class CareerImpactService {
     options: CareerImpactCalculationOptions = {}
   ): Promise<BatchCareerImpactResult> {
     // Use direct calculation for now (cache optimization will be added later)
-    return this.calculateBatchCareerImpactDirect(input, options);
+    return await this.calculateBatchCareerImpactDirect(input, options);
   }
 
   /**
    * Direct batch calculation without caching (fallback method)
    */
-  private static calculateBatchCareerImpactDirect(
+  private static async calculateBatchCareerImpactDirect(
     input: BatchCareerImpactInput,
     options: CareerImpactCalculationOptions = {}
-  ): BatchCareerImpactResult {
+  ): Promise<BatchCareerImpactResult> {
     const startTime = Date.now();
     const results = new Map<string, CareerImpactScore>();
     const errors: Array<{ eventId: string; error: string }> = [];
 
     for (const event of input.events) {
       try {
-        const score = this.calculateCareerImpactScore(
+        const score = await this.calculateCareerImpactScore(
           { event, careerProfile: input.careerProfile },
           options
         );
@@ -247,25 +247,25 @@ export class CareerImpactService {
   /**
    * Core calculation method (private) - single source of truth
    */
-  private static _calculateScore(
+  private static async _calculateScore(
     input: CareerImpactCalculationInput,
     options: CareerImpactCalculationOptions = {}
-  ): CareerImpactScore {
+  ): Promise<CareerImpactScore> {
     const strategy = options.algorithmVersion
       ? ScoringStrategyFactory.getStrategy(options.algorithmVersion) || ScoringStrategyFactory.getDefaultStrategy()
       : ScoringStrategyFactory.getDefaultStrategy();
 
-    return strategy.calculate(input, options);
+    return await strategy.calculate(input, options);
   }
 
   /**
    * Get lightweight career impact score (essential data only)
    */
-  static getCareerImpactScoreLite(
+  static async getCareerImpactScoreLite(
     input: CareerImpactCalculationInput,
     options: CareerImpactCalculationOptions = {}
-  ): CareerImpactScoreLite {
-    const fullScore = this._calculateScore(input, options);
+  ): Promise<CareerImpactScoreLite> {
+    const fullScore = await this._calculateScore(input, options);
 
     return {
       overall: fullScore.overall,
@@ -285,10 +285,10 @@ export class CareerImpactService {
    * calculateCareerImpactScore(input, { algorithmVersion: 'v2.0.0' })
    * ```
    */
-  static calculateCareerImpactScore(
+  static async calculateCareerImpactScore(
     input: CareerImpactCalculationInput,
     options: CareerImpactCalculationOptions = {}
-  ): CareerImpactScore {
-    return this._calculateScore(input, options);
+  ): Promise<CareerImpactScore> {
+    return await this._calculateScore(input, options);
   }
 }

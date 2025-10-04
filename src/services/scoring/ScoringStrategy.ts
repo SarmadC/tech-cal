@@ -43,7 +43,7 @@ export interface ScoringStrategy {
   calculate(
     input: CareerImpactCalculationInput,
     options?: CareerImpactCalculationOptions
-  ): CareerImpactScore;
+  ): Promise<CareerImpactScore>;
 
   /**
    * Get the algorithm configuration used by this strategy
@@ -72,7 +72,7 @@ export abstract class BaseScoringStrategy implements ScoringStrategy {
   abstract calculate(
     input: CareerImpactCalculationInput,
     options?: CareerImpactCalculationOptions
-  ): CareerImpactScore;
+  ): Promise<CareerImpactScore>;
 
   abstract getConfig(): ScoringAlgorithmConfig;
 

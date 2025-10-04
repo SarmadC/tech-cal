@@ -1,10 +1,11 @@
 // src/hooks/useUnifiedServerFiltering.ts
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useDebounce } from './useDebounce';
 import { Event, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { useTrackedEventIds } from './useTrackedEventsUnified';
+import { FILTERING_CONSTANTS } from '@/config/filteringConstants';
 
 interface UnifiedFilterOptions {
   // Basic filters
@@ -13,6 +14,7 @@ interface UnifiedFilterOptions {
   dateRange: { start: Date | null; end: Date | null; };
   
   // Event properties
+  budget: 'all' | 'free-only' | 'low' | 'moderate' | 'high' | 'unlimited';
   format: 'all' | 'virtual' | 'in-person' | 'hybrid';
   cost: 'all' | 'free' | 'paid';
   difficulty: 'all' | 'beginner' | 'intermediate' | 'advanced';
@@ -53,27 +55,29 @@ interface UseUnifiedServerFilteringResult {
   filteredEvents: TrackedEvent[];
   isLoading: boolean;
   error: string | null;
-  
+
   // Filter state
   filters: UnifiedFilterOptions;
   activeFilterCount: number;
-  
+
   // Actions
   updateFilter: <K extends keyof UnifiedFilterOptions>(key: K, value: UnifiedFilterOptions[K]) => void;
   resetFilters: () => void;
   loadMore: () => void;
   refetch: () => void;
   applyQuickFilter: (filterType: string) => void;
-  
+
   // UI state
   isFilterPanelOpen: boolean;
   setIsFilterPanelOpen: (open: boolean) => void;
+  rateLimitWaitMs: number;
 }
 
 const DEFAULT_FILTERS: UnifiedFilterOptions = {
   searchTerm: '',
   categories: [],
   dateRange: { start: null, end: null },
+  budget: 'all',
   format: 'all',
   cost: 'all',
   difficulty: 'all',
@@ -93,7 +97,7 @@ const DEFAULT_FILTERS: UnifiedFilterOptions = {
  * Handles all filtering logic on the server with pagination
  */
 export function useUnifiedServerFiltering(
-  userProfile: AppProfile | null,
+  _userProfile: AppProfile | null,
   initialFilters: Partial<UnifiedFilterOptions> = {}
 ): UseUnifiedServerFilteringResult {
   const [filters, setFilters] = useState<UnifiedFilterOptions>({
@@ -107,11 +111,31 @@ export function useUnifiedServerFiltering(
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [lastRequestTime, setLastRequestTime] = useState(0);
   const [requestCache, setRequestCache] = useState<Map<string, { data: FilteredEventsData; timestamp: number }>>(new Map());
+  const [rateLimitWaitMs, setRateLimitWaitMs] = useState(0);
 
   const { trackedEventIds } = useTrackedEventIds();
+  const isMountedRef = useRef(true);
+  const rateLimitTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Debounce search term to avoid excessive API calls - increased delay for rate limiting
-  const debouncedSearchTerm = useDebounce(filters.searchTerm, 1500);
+  // Debounce search term to avoid excessive API calls
+  const debouncedSearchTerm = useDebounce(filters.searchTerm, FILTERING_CONSTANTS.SEARCH_DEBOUNCE_MS);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      setRateLimitWaitMs(0); // Clear wait state
+      if (rateLimitTimerRef.current) {
+        clearTimeout(rateLimitTimerRef.current);
+        rateLimitTimerRef.current = null;
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
 
   // Create stable filter object for API calls
   const apiFilters = useMemo(() => ({
@@ -124,30 +148,56 @@ export function useUnifiedServerFiltering(
   }), [filters, debouncedSearchTerm]);
 
   const fetchFilteredEvents = useCallback(async (resetPagination = true, retryCount = 0) => {
-    // Check cache first (10 minute cache for better performance)
+    // Cancel previous request if in flight
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    // Clear previous rate limit timer (coalesce to latest request)
+    if (rateLimitTimerRef.current) {
+      clearTimeout(rateLimitTimerRef.current);
+      rateLimitTimerRef.current = null;
+    }
+
+    // Check cache first
     const cacheKey = JSON.stringify(apiFilters);
     const cachedResult = requestCache.get(cacheKey);
     const now = Date.now();
 
-    if (cachedResult && (now - cachedResult.timestamp) < 10 * 60 * 1000) {
+    if (cachedResult && (now - cachedResult.timestamp) < FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS) {
       console.log('Using cached result for:', Object.keys(apiFilters).filter(k => apiFilters[k as keyof typeof apiFilters]));
       setData(cachedResult.data);
       return;
     }
 
-    // Minimum 3 seconds between requests to prevent rate limiting (30 requests/minute = ~2 seconds)
+    // Rate limiting with breadcrumb logging
     const timeSinceLastRequest = now - lastRequestTime;
-    const minInterval = 3000; // 3 seconds - safer margin under 30 requests/minute
+    if (timeSinceLastRequest < FILTERING_CONSTANTS.RATE_LIMIT_INTERVAL_MS) {
+      const waitTime = FILTERING_CONSTANTS.RATE_LIMIT_INTERVAL_MS - timeSinceLastRequest;
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`[RateLimit] Waiting ${waitTime}ms before next request`);
+      }
+      setRateLimitWaitMs(waitTime);
 
-    if (timeSinceLastRequest < minInterval) {
-      const waitTime = minInterval - timeSinceLastRequest;
-      console.log(`Rate limiting: waiting ${waitTime}ms before next request`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+      await new Promise(resolve => {
+        rateLimitTimerRef.current = setTimeout(resolve, waitTime);
+      });
+
+      if (!isMountedRef.current) return; // Exit early if unmounted
+
+      rateLimitTimerRef.current = null;
+      setRateLimitWaitMs(0);
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[RateLimit] Wait complete, proceeding with request');
+      }
     }
 
     setIsLoading(true);
     setError(null);
     setLastRequestTime(Date.now());
+
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
 
     try {
       const requestFilters = resetPagination
@@ -159,7 +209,8 @@ export function useUnifiedServerFiltering(
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestFilters)
+        body: JSON.stringify(requestFilters),
+        signal: abortControllerRef.current.signal
       });
 
       if (!response.ok) {
@@ -217,11 +268,27 @@ export function useUnifiedServerFiltering(
       }
 
     } catch (err) {
+      // Ignore abort errors (user initiated)
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+
       const errorMessage = err instanceof Error ? err.message : 'Failed to filter events';
       setError(errorMessage);
+      setRateLimitWaitMs(0); // Clear wait state on error
+
+      // Clear timer on error
+      if (rateLimitTimerRef.current) {
+        clearTimeout(rateLimitTimerRef.current);
+        rateLimitTimerRef.current = null;
+      }
+
       console.error('Server-side filtering error:', err);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+      abortControllerRef.current = null;
     }
   }, [apiFilters, data, trackedEventIds, lastRequestTime, requestCache]);
 
@@ -231,6 +298,7 @@ export function useUnifiedServerFiltering(
   }, [
     debouncedSearchTerm, 
     filters.categories, 
+    filters.budget,
     filters.format, 
     filters.cost, 
     filters.difficulty, 
@@ -273,6 +341,7 @@ export function useUnifiedServerFiltering(
     if (filters.categories.length > 0) count++;
     if (filters.searchTerm) count++;
     if (filters.dateRange.start || filters.dateRange.end) count++;
+    if (filters.budget !== 'all') count++;
     if (filters.format !== 'all') count++;
     if (filters.cost !== 'all') count++;
     if (filters.difficulty !== 'all') count++;
@@ -326,20 +395,21 @@ export function useUnifiedServerFiltering(
     filteredEvents: data?.events || [],
     isLoading,
     error,
-    
+
     // Filter state
     filters,
     activeFilterCount,
-    
+
     // Actions
     updateFilter,
     resetFilters,
     loadMore,
     refetch,
     applyQuickFilter,
-    
+
     // UI state
     isFilterPanelOpen,
-    setIsFilterPanelOpen
+    setIsFilterPanelOpen,
+    rateLimitWaitMs
   };
 }

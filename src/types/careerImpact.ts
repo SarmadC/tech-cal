@@ -3,6 +3,7 @@
 
 import { Event, CareerImpactScore } from './events';
 import { CareerProfile } from './career';
+import type { SupabaseClientType } from './index';
 
 // ============================================
 // CORE CAREER IMPACT TYPES
@@ -46,6 +47,10 @@ export interface CareerImpactCalculationOptions {
   // Cache-specific options
   skipCache?: boolean;
   cacheTtl?: number;
+  // Behavioral boost options (Phase 3)
+  userId?: string;
+  supabaseClient?: SupabaseClientType;
+  interactedEvents?: Event[];
 }
 
 /**

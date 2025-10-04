@@ -45,9 +45,44 @@ export class ScoringStrategyFactory {
     // Register all available strategies
     this.register(new DeterministicV2Strategy());
 
+    // Conditionally register upcoming variants behind env flags
+    try {
+      if (process.env.NEXT_PUBLIC_ENABLE_SCORING_V210 === 'true') {
+        // For now, reuse DeterministicV2Strategy with version label preserved
+        // Future: create a dedicated class e.g., DeterministicV2_1_0
+        const v210 = new DeterministicV2Strategy();
+        (v210 as any).version = 'v2.1.0'; // eslint-disable-line @typescript-eslint/no-explicit-any
+        this.register(v210);
+      }
+      if (process.env.NEXT_PUBLIC_ENABLE_SCORING_V220 === 'true') {
+        const v220 = new DeterministicV2Strategy();
+        (v220 as any).version = 'v2.2.0'; // eslint-disable-line @typescript-eslint/no-explicit-any
+        this.register(v220);
+      }
+      if (process.env.NEXT_PUBLIC_ENABLE_SCORING_V230 === 'true') {
+        const v230 = new DeterministicV2Strategy();
+        (v230 as any).version = 'v2.3.0'; // eslint-disable-line @typescript-eslint/no-explicit-any
+        this.register(v230);
+      }
+    } catch {
+      // no-op if env access fails in some contexts
+    }
+
     // Future strategies can be added here:
     // this.register(new MLBasedV3Strategy());
     // this.register(new HybridV4Strategy());
+
+    // Optionally set default version via env if registered
+    try {
+      const desiredDefault = process.env.NEXT_PUBLIC_SCORING_DEFAULT_VERSION;
+      if (desiredDefault && this.strategies.has(desiredDefault)) {
+        this.defaultStrategyVersion = desiredDefault;
+        // eslint-disable-next-line no-console
+        console.log(`Default scoring strategy set from env: ${desiredDefault}`);
+      }
+    } catch {
+      // no-op
+    }
 
     this.initialized = true;
   }

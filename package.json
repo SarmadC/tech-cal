@@ -17,7 +17,12 @@
     "type-check": "tsc --noEmit",
     "audit": "npm audit --audit-level=moderate",
     "audit:fix": "npm audit fix",
-    "build:analyze": "ANALYZE=true npm run build"
+    "build:analyze": "ANALYZE=true npm run build",
+    "analyze-recommendations": "tsx scripts/analyze-recommendation-data.ts",
+    "verify:production": "tsx scripts/verify-production.ts",
+    "test:budget": "tsx scripts/test-budget-filtering.ts",
+    "validate:analytics": "tsx scripts/validate-analytics.ts",
+    "verify:all": "npm run verify:production && npm run test:budget && npm run validate:analytics"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

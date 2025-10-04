@@ -8,7 +8,7 @@ import { CareerRecommendationsCard, QuickCareerActionsCard } from '@/components/
 import { Button } from '@/components/ui/button';
 import { TargetIcon, SpinnerIcon } from '@phosphor-icons/react';
 import { NavigationUtils } from '@/utils/navigationUtils';
-import { calculateBasicAnalytics, calculateUpcomingOpportunities } from '@/utils/analyticsUtils';
+import { calculateBasicAnalytics } from '@/utils/analyticsUtils';
 import type { AppProfile, TrackedEventRecord, Event } from '@/types';
 import type { OptimizedAnalyticsData, OptimizedRecommendation } from '@/services/optimizedAnalyticsService';
 
@@ -31,10 +31,10 @@ export function ProgressiveAnalytics({
     return calculateBasicAnalytics(trackedEvents, upcomingEvents);
   }, [trackedEvents, upcomingEvents]);
 
-  // Calculate upcoming opportunities from props
-  const upcomingOpportunities = useMemo(() => {
-    return calculateUpcomingOpportunities(upcomingEvents);
-  }, [upcomingEvents]);
+  // Calculate upcoming opportunities from props (currently unused)
+  // const upcomingOpportunities = useMemo(() => {
+  //   return calculateUpcomingOpportunities(upcomingEvents);
+  // }, [upcomingEvents]);
 
   // Load detailed analytics only when requested or after delay
   const { 
@@ -94,27 +94,27 @@ export function ProgressiveAnalytics({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {Math.round(basicAnalytics.averageImpactScore * 100)}%
+                {basicAnalytics.completedEvents}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Impact Score</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Events Completed</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {basicAnalytics.monthlyStats.eventsAttended}
+                {basicAnalytics.totalTracked}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Events Attended</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {basicAnalytics.monthlyStats.highImpactEvents}
+                {basicAnalytics.upcomingEvents}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">High Impact</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Upcoming Events</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">
-                {basicAnalytics.monthlyStats.skillsImproved}
+                {Math.round(basicAnalytics.averageAttendees)}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Skills Improved</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Avg Attendees</div>
             </div>
           </div>
 
@@ -172,7 +172,7 @@ export function ProgressiveAnalytics({
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <CareerInsightsCard 
-              topOpportunities={upcomingOpportunities}
+              topOpportunities={upcomingEvents}
             />
           </div>
           <div>

@@ -25,6 +25,11 @@ import {
 import { BaseScoringStrategy } from '../ScoringStrategy';
 import { CareerImpactCache } from '@/services/cache/careerImpactCache';
 import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
+import { BehavioralBoostService } from '@/services/behavioralBoostService';
+import { calculateTypePreferenceScore, normalizeEventType } from '@/utils/eventTypeUtils';
+import { hasSeniorSpeaker } from '@/utils/speakerUtils';
+import * as Sentry from '@sentry/nextjs';
+import { AnalyticsService } from '@/services/analyticsService';
 
 export class DeterministicV2Strategy extends BaseScoringStrategy {
   readonly version = 'v2.0.0';
@@ -63,6 +68,11 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
     LOW: 0.1
   } as const;
 
+  // Shared beginner keyword list (DRY across methods)
+  private static readonly BEGINNER_KEYWORDS = [
+    'beginner', 'intro', 'introduction', '101', 'fundamentals', 'basics', 'getting started', 'learn'
+  ];
+
   /**
    * Get the algorithm configuration
    */
@@ -73,15 +83,23 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
   /**
    * Calculate career impact score for an event
    */
-  calculate(
+  async calculate(
     input: CareerImpactCalculationInput,
-    _options?: CareerImpactCalculationOptions
-  ): CareerImpactScore {
+    options?: CareerImpactCalculationOptions
+  ): Promise<CareerImpactScore> {
     const { event, careerProfile } = input;
+    const scoringTriggers: string[] = [];
+    const appliedAdjustments: {
+      typePreferenceGate?: number;
+      beginnerBoost?: number;
+      workshopKeywordBoost?: boolean;
+      webinarPenalty?: boolean;
+      behavioralBoost?: number;
+    } = {};
 
     // Calculate component scores
     const componentScores = {
-      skillRelevance: this.calculateSkillRelevanceScore(event, careerProfile),
+      skillRelevance: this.calculateSkillRelevanceScore(event, careerProfile, scoringTriggers, appliedAdjustments),
       careerStageMatch: this.calculateCareerStageMatchScore(event, careerProfile),
       networkingValue: this.calculateNetworkingValueScore(event, careerProfile),
       industryRelevance: this.calculateIndustryRelevanceScore(event, careerProfile),
@@ -98,10 +116,42 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
     };
 
     // Calculate weighted overall score
-    const overallScore = Object.entries(rawComponents).reduce(
+    let overallScore = Object.entries(rawComponents).reduce(
       (total, [key, score]) => total + (score * this.config.weights[key as keyof typeof this.config.weights]),
       0
     );
+
+    // Apply behavioral boost if enabled and data available
+    let behavioralBoost = 0;
+    if (options?.supabaseClient && options?.userId && options?.interactedEvents) {
+      try {
+        const boostResult = await BehavioralBoostService.calculateBehavioralBoost(
+          options.userId,
+          event,
+          options.interactedEvents,
+          options.supabaseClient
+        );
+
+        behavioralBoost = boostResult.boost;
+        if (behavioralBoost > 0) {
+          overallScore += behavioralBoost;
+          scoringTriggers.push('behavioral_boost');
+          appliedAdjustments.behavioralBoost = behavioralBoost;
+
+          // Log boost application for analytics
+          if (boostResult.application) {
+            await BehavioralBoostService.logBoostApplication(
+              boostResult.application,
+              options.userId,
+              options.supabaseClient
+            );
+          }
+        }
+      } catch (error) {
+        // Don't fail scoring if behavioral boost fails
+        console.warn('Behavioral boost calculation failed:', error);
+      }
+    }
 
     // Calculate confidence based on component confidences and data completeness
     const confidence = this.calculateOverallConfidence(
@@ -116,8 +166,46 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
     // Determine impact category
     const category = this.determineImpactCategory(overallScore);
 
+    // Minimal instrumentation for version visibility and component logging
+    try {
+      Sentry.addBreadcrumb({
+        category: 'scoring',
+        level: 'info',
+        message: `Scored with ${this.version}`,
+        data: { eventId: event.id }
+      });
+      if (process.env.NODE_ENV !== 'production') {
+        // Keep lightweight to avoid console noise in production
+        // eslint-disable-next-line no-console
+        console.debug('ScoringStrategy', { version: this.version, eventId: event.id });
+
+        if (process.env.NEXT_PUBLIC_LOG_SCORING === 'true') {
+          const primaryReason = Array.isArray(explanation.reasons) && explanation.reasons.length > 0
+            ? explanation.reasons[0]
+            : null;
+          // eslint-disable-next-line no-console
+          console.debug('ScoringComponents', {
+            version: this.version,
+            eventId: event.id,
+            components: rawComponents,
+            primaryReason
+          });
+
+          // Centralized analytics logging for triggers
+          AnalyticsService.logScoringDebug({
+            eventId: event.id,
+            version: this.version,
+            triggers: scoringTriggers,
+            components: rawComponents
+          });
+        }
+      }
+    } catch {
+      // no-op
+    }
+
     return {
-      overall: this.roundDecimal(overallScore),
+      overall: this.roundDecimal(Math.min(overallScore, 100)), // Cap at 100 with behavioral boost
       confidence: this.roundDecimal(confidence),
       components: rawComponents,
       explanation: {
@@ -129,9 +217,11 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       },
       metadata: {
         calculatedAt: new Date().toISOString(),
-        algorithmVersion: this.config.version,
+        algorithmVersion: this.version,
         careerProfileHash: CareerImpactCache.generateProfileHash(careerProfile),
         eventDataHash: this.generateEventHash(event),
+        scoringTriggers, // Include triggers for UI/logs/API consistency
+        appliedAdjustments: Object.keys(appliedAdjustments).length > 0 ? appliedAdjustments : undefined,
       },
     };
   }
@@ -175,31 +265,67 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
 
   private calculateSkillRelevanceScore(
     event: Event,
-    careerProfile: CareerProfile
+    careerProfile: CareerProfile,
+    scoringTriggers: string[],
+    appliedAdjustments: Record<string, unknown>
   ): ComponentScore {
     let score = 0;
     let explanation = '';
     let confidence = 0.3;
     const details: Record<string, unknown> = {};
 
-    // 1. Event Type & Format Analysis (40% of score)
+    // Early type preference computation for gating (no double-counting):
+    // If user has strong preferences and this event type does not match, we softly gate
+    const preferredTypes = careerProfile.preferredEventTypes || [];
+    const earlyTypePreferenceRawScore = calculateTypePreferenceScore(
+      event.category?.name,
+      preferredTypes
+    );
+    // Env-configurable gate strength (0<g<1), default 0.75
+    let gateStrength = 0.75;
+    try {
+      const gateEnv = process.env.NEXT_PUBLIC_TYPE_PREF_GATE;
+      if (gateEnv) {
+        const parsed = Number(gateEnv);
+        if (Number.isFinite(parsed) && parsed > 0 && parsed < 1) {
+          gateStrength = parsed;
+        }
+      }
+      if (process.env.NEXT_PUBLIC_DISABLE_TYPE_PREF_GATE === 'true') {
+        gateStrength = 1.0;
+      }
+    } catch {
+      // no-op
+    }
+    const typePreferenceGate = preferredTypes.length > 0 && earlyTypePreferenceRawScore <= 50 ? gateStrength : 1.0;
+    if (typePreferenceGate < 1) {
+      scoringTriggers.push('type_pref_gate');
+      appliedAdjustments.typePreferenceGate = typePreferenceGate;
+    }
+
+    // 1. Event Type & Format Analysis (35% of score - reduced from 40% to accommodate event type preference)
     const eventTypeScores: Record<string, number> = {
+      // Canonical types (normalized)
       'workshop': 95,      // Hands-on learning
-      'training': 90,      // Structured skill building
-      'course': 85,        // Comprehensive learning
       'conference': 75,    // Knowledge sharing
       'webinar': 70,       // Focused learning
       'meetup': 60,        // Community learning
+      // Non-canonical fallbacks
+      'training': 90,      // Structured skill building
+      'course': 85,        // Comprehensive learning
       'networking': 35,    // Limited skill focus
       'social': 15,        // Minimal skill development
     };
 
-    const eventTypeName = event.category?.name?.toLowerCase() || 'unknown';
-    const eventTypeScore = eventTypeScores[eventTypeName] || 30;
+    const rawEventType = (event.category?.name || '').toLowerCase();
+    const canonicalEventType = normalizeEventType(rawEventType);
+    const eventTypeKey = canonicalEventType || rawEventType || 'unknown';
+    const eventTypeScore = eventTypeScores[eventTypeKey] || eventTypeScores[rawEventType] || 30;
+    const eventTypeName = eventTypeKey;
 
     const eventTypeResult = this.applyScoreComponent(
       eventTypeScore,
-      0.4,
+      0.35,
       details,
       'eventTypeScore',
       explanation,
@@ -209,12 +335,12 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       `Limited skill development (${eventTypeName})`
     );
 
-    score += eventTypeResult.weightedScore;
+    score += eventTypeResult.weightedScore * typePreferenceGate;
     explanation = eventTypeResult.updatedExplanation;
     confidence = eventTypeResult.updatedConfidence;
 
     // 2. Skill Matching Analysis (35% of score)
-    const skillMatchScore = this.calculateSkillMatchingScore(event, careerProfile);
+    const skillMatchScore = this.calculateSkillMatchingScore(event, careerProfile, scoringTriggers, appliedAdjustments);
 
     const skillMatchResult = this.applyScoreComponent(
       skillMatchScore,
@@ -228,16 +354,16 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       '. Limited skill alignment'
     );
 
-    score += skillMatchResult.weightedScore;
+    score += skillMatchResult.weightedScore * typePreferenceGate;
     explanation = skillMatchResult.updatedExplanation;
     confidence = skillMatchResult.updatedConfidence;
 
-    // 3. Content Depth Analysis (15% of score)
+    // 3. Content Depth Analysis (10% of score - reduced from 15% to accommodate event type preference)
     const contentScore = this.analyzeContentDepth(event);
 
     const contentResult = this.applyScoreComponent(
       contentScore,
-      0.15,
+      0.10,
       details,
       'contentScore',
       explanation,
@@ -247,7 +373,7 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       '. Basic content level'
     );
 
-    score += contentResult.weightedScore;
+    score += contentResult.weightedScore * typePreferenceGate;
     explanation = contentResult.updatedExplanation;
     confidence = contentResult.updatedConfidence;
 
@@ -266,9 +392,50 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       '. Suboptimal format'
     );
 
-    score += formatResult.weightedScore;
+    score += formatResult.weightedScore * typePreferenceGate;
     explanation = formatResult.updatedExplanation;
     confidence = formatResult.updatedConfidence;
+
+    // 5. Event Type Preference (10% of score)
+    // Use previously computed earlyTypePreferenceRawScore to avoid recompute
+    const typePreferenceRawScore = earlyTypePreferenceRawScore;
+
+    const typePreferenceResult = this.applyScoreComponent(
+      typePreferenceRawScore,
+      0.10,
+      details,
+      'eventTypePreference',
+      explanation,
+      confidence,
+      '. Matches your preferred event format',
+      '. Related to your event preferences',
+      ''
+    );
+
+    score += typePreferenceResult.weightedScore;
+    explanation = typePreferenceResult.updatedExplanation;
+    confidence = typePreferenceResult.updatedConfidence;
+
+    // Add explanatory note when we gated due to preference mismatch
+    if (typePreferenceGate < 1) {
+      explanation += '. De-prioritized due to format preference mismatch';
+      details.typePreferenceGate = typePreferenceGate;
+      try {
+        Sentry.addBreadcrumb({
+          category: 'scoring',
+          level: 'info',
+          message: 'Type preference gate applied',
+          data: {
+            eventId: event.id,
+            gate: typePreferenceGate,
+            prefScore: earlyTypePreferenceRawScore,
+            preferredTypes: preferredTypes
+          }
+        });
+      } catch {
+        // no-op
+      }
+    }
 
     // Cap score at 100
     score = Math.min(score, 100);
@@ -283,10 +450,151 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
     };
   }
 
-  private calculateSkillMatchingScore(event: Event, careerProfile: CareerProfile): number {
-    // Use tag-based matching for more accurate results
+  private calculateSkillMatchingScore(
+    event: Event,
+    careerProfile: CareerProfile,
+    scoringTriggers: string[],
+    appliedAdjustments: Record<string, unknown>
+  ): number {
+    const primarySkills = careerProfile.primarySkills || [];
+    const skillsToLearn = careerProfile.skillsToLearn || [];
+    const learningStyle = careerProfile.learningStyle || [];
+
+    // Determine if user is a beginner
+    const isBeginner = learningStyle.includes('hands-on') || primarySkills.length < 3;
+
+    // 1. Tag-based matching (primary approach)
     const tagMatchResult = TagBasedMatchingService.calculateTagSimilarity(event, careerProfile);
-    return tagMatchResult.score;
+    let score = tagMatchResult.score;
+
+    // 2. Apply 60/40 split for skills to learn (already handled in TagBasedMatchingService)
+    // The service applies 67% weight for beginners, 40% for others
+
+    // 3. Keyword fallback for sparse tags (guard: only if <5 tags)
+    const hasRichTags = (event.tags?.length || 0) >= 5;
+
+    if (!hasRichTags && skillsToLearn.length > 0) {
+      const keywordScore = this.calculateKeywordMatchScore(
+        event,
+        skillsToLearn,
+        isBeginner
+      );
+      // Cap keyword contribution at 20 points, weight at 0.25x
+      score += Math.min(keywordScore * 0.25, 20);
+
+      // Small, bounded boost for canonical workshops when tags are sparse
+      // and we had at least one keyword match (no double counting scaling)
+      const canonicalTypeForSkills = normalizeEventType((event.category?.name || '').toLowerCase());
+      if (keywordScore > 0 && !hasRichTags && canonicalTypeForSkills === 'workshop') {
+        const workshopKeywordBoost = 3; // bounded, fixed
+        score += workshopKeywordBoost;
+        scoringTriggers.push('workshop_keyword_boost');
+      }
+
+      // Additional tiny boost for beginner-friendly workshops when user isn't marked beginner
+      // to avoid overlap with calculateBeginnerBoost. Conditions: sparse tags, canonical workshop,
+      // beginner keywords present, skillsToLearn non-empty.
+      const beginnerFriendly = DeterministicV2Strategy.BEGINNER_KEYWORDS.some(
+        kw => ((event.title || '') + ' ' + (event.description || '')).toLowerCase().includes(kw)
+      );
+      if (!isBeginner && beginnerFriendly && !hasRichTags && canonicalTypeForSkills === 'workshop' && skillsToLearn.length > 0) {
+        const nonBeginnerWorkshopFriendlyBoost = 2; // tiny, bounded
+        score += nonBeginnerWorkshopFriendlyBoost;
+        scoringTriggers.push('workshop_beginner_friendly_nudge');
+      }
+
+      // Modest negative adjustment for canonical webinars when tags are sparse and no keyword match
+      if (keywordScore === 0 && canonicalTypeForSkills === 'webinar') {
+        const webinarNoKeywordPenalty = 3; // bounded, fixed
+        score -= webinarNoKeywordPenalty;
+        scoringTriggers.push('webinar_no_keyword_penalty');
+      }
+    }
+
+    // 4. Beginner boost heuristics
+    if (isBeginner && skillsToLearn.length > 0) {
+      const beginnerBoost = this.calculateBeginnerBoost(event);
+      if (beginnerBoost > 0) {
+        score += beginnerBoost;
+        scoringTriggers.push('beginner_boost');
+        appliedAdjustments.beginnerBoost = beginnerBoost;
+      }
+    }
+
+    return Math.min(score, 100);
+  }
+
+  /**
+   * Calculate keyword-based matching for events with sparse tags
+   * Returns raw score (will be weighted and capped by caller)
+   */
+  private calculateKeywordMatchScore(
+    event: Event,
+    skillsToLearn: string[],
+    isBeginner: boolean
+  ): number {
+    const searchText = `${event.title || ''} ${event.description || ''}`.toLowerCase();
+    let matchCount = 0;
+
+    for (const skill of skillsToLearn) {
+      const skillLower = skill.toLowerCase();
+      if (searchText.includes(skillLower)) {
+        matchCount++;
+      }
+    }
+
+    // Base: 20 points per match (will be weighted by caller)
+    let score = matchCount * 20;
+
+    // Bonus for beginners if event explicitly mentions learning/beginner
+    if (isBeginner) {
+      const hasBeginnerKeywords = DeterministicV2Strategy.BEGINNER_KEYWORDS.some(kw => searchText.includes(kw));
+      if (hasBeginnerKeywords) {
+        score += 10;
+      }
+    }
+
+    return score;
+  }
+
+  /**
+   * Calculate beginner-friendly boost based on event characteristics
+   * Capped at 15 points total
+   */
+  private calculateBeginnerBoost(event: Event): number {
+    let boost = 0;
+    const title = (event.title || '').toLowerCase();
+    const description = (event.description || '').toLowerCase();
+    const searchText = title + ' ' + description;
+
+    // 1. Explicit beginner keywords (+8 points)
+    if (DeterministicV2Strategy.BEGINNER_KEYWORDS.some(kw => searchText.includes(kw))) {
+      boost += 8;
+    }
+
+    // 2. Prerequisites: No prerequisites or "no experience required" (+5 points)
+    if (!event.prerequisites || event.prerequisites.toLowerCase().includes('no experience')) {
+      boost += 5;
+    }
+
+    // 3. Event type: Workshop/Training/Bootcamp (+4 points)
+    const beginnerFriendlyTypes = ['workshop', 'training', 'bootcamp', 'tutorial'];
+    const eventType = (event.category?.name || '').toLowerCase();
+    if (beginnerFriendlyTypes.some(type => eventType.includes(type))) {
+      boost += 4;
+    }
+
+    // 4. Duration: 2-6 hours is ideal for beginners (+3 points)
+    if (event.startTime && event.endTime) {
+      const duration = new Date(event.endTime).getTime() - new Date(event.startTime).getTime();
+      const hours = duration / (1000 * 60 * 60);
+      if (hours >= 2 && hours <= 6) {
+        boost += 3;
+      }
+    }
+
+    // Cap total boost at 15
+    return Math.min(boost, 15);
   }
 
   private analyzeContentDepth(event: Event): number {
@@ -439,8 +747,9 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       score += Math.min(keywordMatches.length * 5, 20);
     }
 
-    const eventType = event.category?.name?.toLowerCase() || '';
-    if (match.eventTypes.includes(eventType)) {
+    const rawTypeSeniority = (event.category?.name || '').toLowerCase();
+    const canonicalSeniority = normalizeEventType(rawTypeSeniority);
+    if (match.eventTypes.includes(canonicalSeniority) || match.eventTypes.includes(rawTypeSeniority)) {
       score += 10;
     }
 
@@ -572,6 +881,10 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
     score += (scaleScore * 0.1);
     details.scaleScore = scaleScore;
 
+    // 5. Goal-specific boosts (bounded)
+    const goalBoost = this.applyNetworkingGoalBoosts(event, careerProfile);
+    score += goalBoost;
+
     // Cap score at 100
     score = Math.min(score, 100);
     confidence = Math.min(confidence, 1.0);
@@ -629,25 +942,29 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       score += Math.min(speakerScore, 100);
     }
 
-    return Math.min(score / speakers.length, 100);
+    const averaged = score / speakers.length;
+    // Senior presence bonus (small, additive, bounded) applied after averaging
+    const seniorBonus = hasSeniorSpeaker(speakers) ? 10 : 0;
+    return Math.min(averaged + seniorBonus, 100);
   }
 
   private analyzeNetworkingOpportunities(event: Event): number {
     let score = 40;
-
-    const eventType = event.category?.name?.toLowerCase() || '';
-    const networkingTypes: Record<string, number> = {
-      'conference': 90,
-      'meetup': 85,
-      'networking': 95,
-      'workshop': 60,
-      'training': 50,
-      'course': 40,
-      'webinar': 20,
-      'social': 80
+    const rawType = (event.category?.name || '').toLowerCase();
+    const canonical = normalizeEventType(rawType);
+    const networkingBase: Record<string, number> = {
+      conference: 90,
+      meetup: 85,
+      workshop: 60,
+      webinar: 20,
     };
-
-    score = Math.max(score, networkingTypes[eventType] || 40);
+    if (canonical in networkingBase) {
+      score = Math.max(score, networkingBase[canonical]);
+    } else if (rawType.includes('social')) {
+      score = Math.max(score, 80);
+    } else if (rawType.includes('training') || rawType.includes('course')) {
+      score = Math.max(score, 50);
+    }
 
     const attendeeCount = event.attendeeCount || 0;
     if (attendeeCount >= 50 && attendeeCount <= 200) {
@@ -666,6 +983,64 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
     }
 
     return Math.min(score, 100);
+  }
+
+  private applyNetworkingGoalBoosts(event: Event, careerProfile: CareerProfile): number {
+    const goals = careerProfile.networkingGoals || [];
+    if (!goals.length) return 0;
+
+    const rawType = (event.category?.name || '').toLowerCase();
+    const canonical = normalizeEventType(rawType);
+    const speakers = event.speakerLineup || [];
+    const attendees = event.attendeeCount || 0;
+    const description = (event.description || '').toLowerCase();
+
+    let boost = 0;
+
+    for (const goal of goals) {
+      switch (goal) {
+        case 'find-mentors': {
+          if (hasSeniorSpeaker(speakers)) boost += 12;
+          if (['summit', 'executive', 'leadership'].some(t => rawType.includes(t))) boost += 8;
+          break;
+        }
+        case 'find-peers': {
+          if (canonical === 'meetup') boost += 12;
+          if (attendees >= 50 && attendees <= 200) boost += 10;
+          else if (attendees > 200 && attendees <= 500) boost += 6;
+          // Small alignment nudge for meetups in a narrower sweet spot
+          if (canonical === 'meetup') {
+            if (attendees >= 30 && attendees <= 80) boost += 2; // intimate groups
+            else if (attendees > 80 && attendees <= 150) boost += 1; // still conducive
+          }
+          break;
+        }
+        case 'find-collaborators': {
+          if (canonical === 'workshop' || rawType.includes('project')) boost += 15; // hackathon/bootcamp alias → workshop
+          if (description.includes('team') || description.includes('collaborate')) boost += 6;
+          break;
+        }
+        case 'find-employers': {
+          if (['career', 'fair', 'recruiting', 'hiring', 'job'].some(t => rawType.includes(t))) boost += 16;
+          if (description.includes('hiring') || description.includes('recruiting')) boost += 8;
+          break;
+        }
+        case 'industry-insights': {
+          if (canonical === 'conference' || rawType.includes('summit') || rawType.includes('panel')) boost += 12;
+          if (speakers.length >= 3) boost += 6;
+          break;
+        }
+        case 'thought-leadership': {
+          if (canonical === 'conference' || rawType.includes('summit')) boost += 12;
+          if (description.includes('call for speakers') || description.includes('speaking opportunity')) boost += 10;
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    return boost;
   }
 
   private analyzeIndustryNetworking(event: Event, careerProfile: CareerProfile): number {
@@ -799,6 +1174,8 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
     if (!industry) return 50;
 
     const eventText = `${event.title || ""} ${event.description || ""}`.toLowerCase();
+    const rawType = (event.category?.name || '').toLowerCase();
+    const canonicalType = normalizeEventType(rawType);
 
     const industryMappings: Record<string, { keywords: string[], score: number }> = {
       "technology": {
@@ -842,6 +1219,17 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       if (company.includes(industry)) {
         score += 10;
         matchCount++;
+      }
+    }
+
+    // Modest, non-overlapping boost when industry keywords co-occur with
+    // role-relevant canonical event types. Avoid double-counting by keeping
+    // this small and bounded.
+    if (matchCount >= 1) {
+      if (canonicalType === 'workshop' || canonicalType === 'conference') {
+        score += 5;
+      } else if (canonicalType === 'meetup') {
+        score += 3;
       }
     }
 
@@ -1014,25 +1402,94 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
     const availableTime = careerProfile.availableTime || "moderate";
     let score = 60;
 
-    if (event.startTime && event.endTime) {
-      const duration = new Date(event.endTime).getTime() - new Date(event.startTime).getTime();
-      const hours = duration / (1000 * 60 * 60);
+    const hours = this.estimateDurationHours(event);
 
-      if (availableTime === "limited") {
-        if (hours <= 2) score += 20;
-        else if (hours <= 4) score += 10;
-        else score -= 10;
-      } else if (availableTime === "flexible") {
-        if (hours >= 4) score += 15;
-        else score += 5;
-      } else {
-        if (hours >= 2 && hours <= 6) score += 15;
-        else if (hours <= 2) score += 5;
-        else score -= 5;
-      }
+    if (availableTime === "limited") {
+      if (hours <= 2) score += 20;
+      else if (hours <= 4) score += 10;
+      else score -= 10;
+    } else if (availableTime === "flexible") {
+      if (hours >= 4) score += 15;
+      else score += 5;
+    } else {
+      if (hours >= 2 && hours <= 6) score += 15;
+      else if (hours <= 2) score += 5;
+      else score -= 5;
     }
 
     return Math.min(score, 100);
+  }
+
+  /**
+   * Estimate event duration in hours using fallback order:
+   * 1) endTime - startTime
+   * 2) isMultiDay flag (assume 8h/day baseline)
+   * 3) dailySchedule fields (dailyStart/dailyEnd or first schedule entry)
+   * 4) default 2 hours
+   */
+  private estimateDurationHours(event: Event): number {
+    try {
+      if (event.startTime && event.endTime) {
+        const durationMs = new Date(event.endTime).getTime() - new Date(event.startTime).getTime();
+        if (Number.isFinite(durationMs) && durationMs > 0) {
+          return durationMs / (1000 * 60 * 60);
+        }
+      }
+
+      const anyEvent = event as unknown as {
+        isMultiDay?: boolean;
+        dailySchedule?: {
+          dailyStart?: string;
+          dailyEnd?: string;
+          schedule?: Array<{ start: string; end: string; date?: string }>;
+        };
+      };
+
+      if (anyEvent.isMultiDay === true) {
+        return 8; // assume full-day baseline for multi-day events
+      }
+
+      const ds = anyEvent.dailySchedule;
+      if (ds) {
+        // Prefer explicit dailyStart/dailyEnd if present
+        if (ds.dailyStart && ds.dailyEnd) {
+          const hours = this.hoursBetween(ds.dailyStart, ds.dailyEnd, event.startTime);
+          if (hours > 0) return hours;
+        }
+        // Otherwise use first scheduled block
+        const first = Array.isArray(ds.schedule) && ds.schedule.length > 0 ? ds.schedule[0] : undefined;
+        if (first?.start && first?.end) {
+          const hours = this.hoursBetween(first.start, first.end, first.date || event.startTime);
+          if (hours > 0) return hours;
+        }
+      }
+    } catch {
+      // ignore and fall through to default
+    }
+
+    return 2; // sensible default
+  }
+
+  /**
+   * Calculate hours between two time strings. Accepts ISO or HH:mm.
+   */
+  private hoursBetween(start: string, end: string, base?: string): number {
+    const startDate = this.parseTimeToDate(start, base);
+    const endDate = this.parseTimeToDate(end, base);
+    const diff = endDate.getTime() - startDate.getTime();
+    return diff > 0 ? diff / (1000 * 60 * 60) : 0;
+  }
+
+  private parseTimeToDate(time: string, base?: string): Date {
+    if (time.includes('T')) {
+      return new Date(time);
+    }
+    // HH:mm case - attach to base date (or today)
+    const baseDate = base ? new Date(base) : new Date();
+    const [hh, mm] = time.split(':').map((s) => parseInt(s, 10));
+    const d = new Date(baseDate);
+    d.setHours(Number.isFinite(hh) ? hh : 0, Number.isFinite(mm) ? mm : 0, 0, 0);
+    return d;
   }
 
   // =================================================================

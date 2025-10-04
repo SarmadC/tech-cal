@@ -47,7 +47,8 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(find:*)",
       "Bash(git checkout:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

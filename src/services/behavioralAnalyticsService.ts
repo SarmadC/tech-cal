@@ -262,6 +262,16 @@ export class BehavioralAnalyticsService {
       const userBuffer = this.getUserBuffer(interaction.userId, supabaseClient);
       await userBuffer.add(enhancedInteraction);
 
+      // Additionally log a simple metric row for click interactions
+      if (interaction.interactionType === 'click' && interaction.eventId) {
+        await this.logCareerImpactMetric({
+          userId: interaction.userId,
+          eventId: interaction.eventId,
+          metricType: 'click',
+          algorithmVersion: enhancedInteraction.algorithmVersion || 'v1.0'
+        }, supabaseClient);
+      }
+
     } catch (error) {
       console.error('Error tracking interaction:', error);
       Sentry.captureException(error, {
@@ -584,6 +594,33 @@ export class BehavioralAnalyticsService {
     } catch (error) {
       console.error('Error getting evolved preferences:', error);
       return null;
+    }
+  }
+
+  /**
+   * Write a minimal metric to career_impact_analytics
+   */
+  static async logCareerImpactMetric(
+    args: { userId: string; eventId: string; metricType: 'click' | 'save'; algorithmVersion: string },
+    supabaseClient: SupabaseClientType
+  ): Promise<void> {
+    try {
+      const { error } = await (supabaseClient as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .from('career_impact_analytics')
+        .insert({
+          user_id: args.userId,
+          event_id: args.eventId,
+          metric_type: args.metricType,
+          metric_value: 1,
+          algorithm_version: args.algorithmVersion,
+          measured_at: new Date().toISOString()
+        });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error logging career impact metric:', error);
+      Sentry.captureException(error, {
+        extra: { function: 'logCareerImpactMetric', args }
+      });
     }
   }
 }

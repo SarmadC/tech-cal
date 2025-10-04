@@ -5,6 +5,9 @@ import { useAuth } from '@/contexts';
 import { UserEventService } from '@/services/userEventService';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { TrackedEventRecord, EVENT_STATUS } from '@/types';
+import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
+import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
+import { extractAlgorithmContext } from '@/utils/analyticsUtils';
 
 /**
  * UNIFIED tracked events management hook
@@ -60,10 +63,29 @@ export function useTrackedEventsUnified() {
   const trackedEventIds = new Set(trackedEvents.map(te => te.eventId));
 
   // Track an event
-  const trackEvent = async (eventId: string, status: typeof EVENT_STATUS[keyof typeof EVENT_STATUS] = EVENT_STATUS.BOOKMARKED) => {
+  const trackEvent = async (
+    eventId: string, 
+    status: typeof EVENT_STATUS[keyof typeof EVENT_STATUS] = EVENT_STATUS.BOOKMARKED,
+    event?: Record<string, unknown> // Optional event object for context extraction
+  ) => {
     if (!user?.id) throw new Error('User not authenticated');
     
     await UserEventService.trackEvent(user.id, eventId, status, undefined, supabase);
+    
+    // Log save metric to career_impact_analytics with context
+    try {
+      const { algorithmVersion } = event ? extractAlgorithmContext(event) : { algorithmVersion: ANALYTICS_CONFIG.CURRENT_ALGORITHM_VERSION };
+      
+      await BehavioralAnalyticsService.logCareerImpactMetric({
+        userId: user.id,
+        eventId,
+        metricType: 'save',
+        algorithmVersion
+      }, supabase);
+    } catch (error) {
+      // Don't fail the main operation if analytics fails
+      console.warn('Failed to log save metric:', error);
+    }
     
     // Invalidate and refetch tracked events
     await queryClient.invalidateQueries({ queryKey: ['trackedEvents', user.id] });

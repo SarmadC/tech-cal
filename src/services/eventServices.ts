@@ -929,7 +929,7 @@ export class EventService {
      * Apply enhanced database-level filters to the query
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private static applyEnhancedFilters(query: any, filters: EventFilters): any {
+    private static applyEnhancedFilters(query: any, filters: EventFilters): any { // eslint-disable-line @typescript-eslint/no-explicit-any
         // Format filtering (virtual, in-person, hybrid) - using event_format column
         if (filters.format && filters.format !== 'all') {
             switch (filters.format) {
@@ -945,7 +945,31 @@ export class EventService {
             }
         }
 
-        // Cost filtering (free, paid) - using price_min and price_max fields
+        // Budget tiering (new) - using price_min; treat NULL as free only for 'free-only'
+        // Gate to USD until currency conversion exists
+        if (filters.budget && filters.budget !== 'all') {
+            query = query.eq('currency', 'USD');
+
+            switch (filters.budget) {
+                case 'free-only':
+                    query = query.or('price_min.is.null,price_min.eq.0');
+                    break;
+                case 'low':
+                    query = query.and('price_min.is.not.null').lte('price_min', 100);
+                    break;
+                case 'moderate':
+                    query = query.and('price_min.is.not.null').lte('price_min', 500);
+                    break;
+                case 'high':
+                    query = query.and('price_min.is.not.null').lte('price_min', 2000);
+                    break;
+                case 'unlimited':
+                default:
+                    break;
+            }
+        }
+
+        // Cost filtering (legacy free/paid) - using price_min
         if (filters.cost && filters.cost !== 'all') {
             switch (filters.cost) {
                 case 'free':
@@ -1029,7 +1053,7 @@ export class EventService {
      * Apply sorting to the query
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private static applySorting(query: any, sortBy?: string): any {
+    private static applySorting(query: any, sortBy?: string): any { // eslint-disable-line @typescript-eslint/no-explicit-any
         switch (sortBy) {
             case 'popularity':
                 return query.order('attendee_count', { ascending: false, nullsLast: true })
@@ -1057,72 +1081,48 @@ export class EventService {
         pageSize: number = 100
     ): Promise<{ events: Event[]; totalCount: number }> {
         try {
-            // For now, fallback to regular getEvents until RPC function is deployed
-            // TODO: Deploy filter_events.sql to Supabase and enable this
-            console.warn('RPC function not available, falling back to regular filtering');
-            
-            const events = await this.getEvents(filters, supabaseClient, page, pageSize);
-            const totalCount = await this.getEventCount(filters, supabaseClient);
-            
-            return { events, totalCount };
-
-            /* Uncomment when RPC function is deployed:
-            const { data, error } = await (supabaseClient as any).rpc('filter_events', {
-                search_term: filters.searchTerm || null,
-                categories: filters.categories || null,
-                start_date: filters.startDate?.toISOString() || null,
-                end_date: filters.endDate?.toISOString() || null,
-                event_format: filters.format || 'all',
-                cost_filter: filters.cost || 'all',
-                difficulty_filter: filters.difficulty || 'all',
-                popularity_filter: filters.popularity || 'all',
-                duration_filter: filters.duration || 'all',
-                my_network: filters.myNetwork || false,
-                recommended: filters.recommended || false,
-                page_num: page,
-                page_size: pageSize,
-                sort_by: filters.sortBy || 'date'
+            const { data, error } = await (supabaseClient as any).rpc('filter_events', { // eslint-disable-line @typescript-eslint/no-explicit-any
+                p_search_term: filters.searchTerm || null,
+                p_categories: filters.categories || null,
+                p_start_date: filters.startDate?.toISOString() || null,
+                p_end_date: filters.endDate?.toISOString() || null,
+                p_event_format: filters.format || 'all',
+                p_budget: filters.budget || 'all',
+                p_currency: filters.budget && filters.budget !== 'all' ? 'USD' : null, // USD gate for budget filtering
+                p_cost: filters.cost || 'all',
+                p_popularity: filters.popularity || 'all',
+                p_duration: filters.duration || 'all',
+                p_my_network: filters.myNetwork || false,
+                p_recommended: filters.recommended || false,
+                p_page_num: page,
+                p_page_size: pageSize,
+                p_sort_by: filters.sortBy || 'date'
             });
 
             if (error) {
                 console.error('RPC filter_events error:', error);
-                throw error;
+                // Fallback to regular filtering if RPC fails
+                const events = await this.getEvents(filters, supabaseClient, page, pageSize);
+                const totalCount = await this.getEventCount(filters, supabaseClient);
+                return { events, totalCount };
             }
 
             if (!data || !Array.isArray(data) || data.length === 0) {
                 return { events: [], totalCount: 0 };
             }
 
-            // Get total count from first row
-            const totalCount = (data[0] as any)?.total_count || 0;
+            const totalCount = (data[0] as any)?.total_count || 0; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-            // Transform the data to Event format
-            const events: Event[] = data.map((item: any) => {
-                return {
-                    id: item.id,
-                    title: item.title,
-                    description: item.description,
-                    startTime: item.start_time,
-                    endTime: item.end_time,
-                    location: item.location,
-                    livestreamUrl: item.livestream_url,
-                    cost: item.cost,
-                    attendeeCount: item.attendee_count,
-                    isMultiDay: item.is_multi_day,
-                    eventTypeId: item.event_type_id,
-                    organizerId: item.organizer_id,
-                    createdAt: item.created_at,
-                    registrationUrl: item.registration_url,
-                    // Add default values for required fields
-                    status: 'published' as const,
-                    slug: item.title?.toLowerCase().replace(/\s+/g, '-') || '',
-                    tags: []
-                };
-            });
+            // Hydrate full event objects using events_detailed for consistency
+            const ids = (data as any[]).map(r => r.id).filter(Boolean); // eslint-disable-line @typescript-eslint/no-explicit-any
+            const events = ids.length ? await this.getEventsByIds(ids, supabaseClient) : [];
+            if (events.length && ids.length) {
+                const order = new Map<string, number>();
+                ids.forEach((id, idx) => order.set(id, idx));
+                events.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+            }
 
             return { events, totalCount };
-            */
-
         } catch (error) {
             console.error('Error in getEventsWithRPC:', error);
             Sentry.captureException(error, {

@@ -1,5 +1,6 @@
 // src/services/analyticsService.ts
 import type { SupabaseClientType } from '@/types';
+import * as Sentry from '@sentry/nextjs';
 
 export interface GrowthAnalytics {
     followThroughRate: number;
@@ -47,5 +48,34 @@ export class AnalyticsService {
             industryPulseScore: 82,
             networkExpansion: 15
         };
+    }
+
+    /**
+     * Lightweight scoring analytics for tuning (dev/staging only)
+     */
+    static logScoringDebug(payload: {
+        eventId: string;
+        version: string;
+        triggers: string[];
+        components: Record<string, number>;
+    }) {
+        try {
+            Sentry.addBreadcrumb({
+                category: 'scoring-analytics',
+                level: 'info',
+                message: 'Scoring triggers',
+                data: payload
+            });
+        } catch {
+            // no-op
+        }
+        try {
+            if (process.env.NODE_ENV !== 'production') {
+                // eslint-disable-next-line no-console
+                console.info('ScoringAnalytics', payload);
+            }
+        } catch {
+            // no-op
+        }
     }
 }

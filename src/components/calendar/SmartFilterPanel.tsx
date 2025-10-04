@@ -116,6 +116,33 @@ const SmartFilterPanel: FC<SmartFilterPanelProps> = ({
                         </div>
                     </div>
 
+                    {/* Budget Filter */}
+                    <div>
+                        <h4 className="text-sm font-medium text-foreground-primary mb-3">Budget</h4>
+                        <div className="space-y-2">
+                            {([
+                                { value: 'all', label: 'All Budgets' },
+                                { value: 'free-only', label: 'Free Only' },
+                                { value: 'low', label: 'Low (≤ $100)' },
+                                { value: 'moderate', label: 'Moderate (≤ $500)' },
+                                { value: 'high', label: 'High (≤ $2000)' },
+                                { value: 'unlimited', label: 'Unlimited' }
+                            ] as const).map(option => (
+                                <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="budget"
+                                        value={option.value}
+                                        checked={(filters as any).budget === option.value} // eslint-disable-line @typescript-eslint/no-explicit-any
+                                        onChange={(e) => onUpdateFilter('budget' as any, e.target.value as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
+                                        className="text-foreground-secondary"
+                                    />
+                                    <span className="text-sm text-foreground-secondary">{option.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Cost Filter */}
                     <div>
                         <h4 className="text-sm font-medium text-foreground-primary mb-3">Cost</h4>

@@ -10,11 +10,13 @@ import { useClickOutside } from '@/hooks/useEventListener';
 import { Event, TrackedEvent, MultiDayEventInstance } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
+import { useRecommendationTracking } from '@/hooks/useRecommendationTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
 import { getEventStatus } from '@/utils/eventStatusUtils';
 import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
+import { createAnalyticsContext } from '@/utils/analyticsUtils';
 
 // 2. UPDATE PROPS: The component can accept either a base Event or an enriched TrackedEvent.
 interface EventPreviewCardProps {
@@ -39,6 +41,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     const { user } = useAuth();
     const { showError, showSuccess } = useSnackbar();
     const { trackEvent, untrackEvent, isLoading } = useTrackedEventsUnified();
+    const { trackClick } = useRecommendationTracking({ enableTracking: true });
 
     // Use the tracking status directly from the event prop instead of local state
     const { isTracked } = getEventStatus(event);
@@ -108,6 +111,11 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
         await navigator.clipboard.writeText(shareUrl);
         showSuccess('Event link copied to clipboard');
+    };
+
+    const handleOutboundClick = () => {
+        const context = createAnalyticsContext(event as unknown as Record<string, unknown>);
+        trackClick(event.id, 'for_you', undefined, context);
     };
 
     if (!isVisible) return null;
@@ -259,7 +267,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     </button>
                     {event.sourceUrl && (
                         <button
-                            onClick={() => window.open(event.sourceUrl, '_blank')}
+                            onClick={() => { handleOutboundClick(); window.open(event.sourceUrl, '_blank'); }}
                             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                             title="View event details"
                         >

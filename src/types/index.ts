@@ -111,6 +111,7 @@ export type EventFilters = {
   status?: string[]; 
   eventIds?: string[];
   // Enhanced filtering options
+  budget?: 'all' | 'free-only' | 'low' | 'moderate' | 'high' | 'unlimited';
   format?: 'all' | 'virtual' | 'in-person' | 'hybrid';
   cost?: 'all' | 'free' | 'paid';
   difficulty?: 'all' | 'beginner' | 'intermediate' | 'advanced';

@@ -17,6 +17,7 @@ interface FilteredEventsRequest {
   searchTerm?: string;
   categories?: string[];
   format?: 'all' | 'virtual' | 'in-person' | 'hybrid';
+  budget?: 'all' | 'free-only' | 'low' | 'moderate' | 'high' | 'unlimited';
   cost?: 'all' | 'free' | 'paid';
   difficulty?: 'all' | 'beginner' | 'intermediate' | 'advanced';
   dateRange?: {
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
       searchTerm,
       categories = [],
       format = 'all',
+    budget = 'all',
       cost = 'all',
       difficulty = 'all',
       dateRange,
@@ -125,6 +127,7 @@ export async function POST(request: NextRequest) {
       startDate: dateRange?.start ? new Date(dateRange.start) : undefined,
       endDate: dateRange?.end ? new Date(dateRange.end) : undefined,
       format: format !== 'all' ? format : undefined,
+    budget: budget !== 'all' ? budget : undefined,
       cost: cost !== 'all' ? cost : undefined,
       difficulty: difficulty !== 'all' ? difficulty : undefined,
       availability: _availability !== 'all' ? _availability : undefined,

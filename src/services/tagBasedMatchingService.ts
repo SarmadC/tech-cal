@@ -69,6 +69,9 @@ export class TagBasedMatchingService {
 
   /**
    * Calculate tag-based similarity between user profile and event
+   *
+   * For beginners: Applies 60/40 split between primary skills and skills to learn
+   * For intermediate/advanced: Focuses primarily on existing skills
    */
   static calculateTagSimilarity(
     event: Event,
@@ -78,34 +81,58 @@ export class TagBasedMatchingService {
     const userSkills = careerProfile.primarySkills || [];
     const userInterests = careerProfile.interests || [];
     const userGoals = careerProfile.careerGoals || [];
-    
-    const allUserTerms = [...userSkills, ...userInterests, ...userGoals];
-    
+    const skillsToLearn = careerProfile.skillsToLearn || [];
+    const learningStyle = careerProfile.learningStyle || [];
+
+    // Determine if user is a beginner (for weighted skill matching)
+    const isBeginner = learningStyle.includes('hands-on') || userSkills.length < 3;
+
     let totalScore = 0;
     const matchedTags: string[] = [];
     const matchedCategories: string[] = [];
     const explanations: string[] = [];
 
-    // Direct tag matches (highest priority)
-    const directMatches = this.findDirectMatches(eventTags, allUserTerms);
+    // Match on primary skills, interests, and goals (always 100% weight)
+    const primaryTerms = [...userSkills, ...userInterests, ...userGoals];
+
+    const directMatches = this.findDirectMatches(eventTags, primaryTerms);
     totalScore += directMatches.score;
     matchedTags.push(...directMatches.tags);
     matchedCategories.push(...directMatches.categories);
     explanations.push(...directMatches.explanations);
 
-    // Similarity-based matches (medium priority)
-    const similarityMatches = this.findSimilarityMatches(eventTags, allUserTerms);
+    const similarityMatches = this.findSimilarityMatches(eventTags, primaryTerms);
     totalScore += similarityMatches.score;
     matchedTags.push(...similarityMatches.tags);
     matchedCategories.push(...similarityMatches.categories);
     explanations.push(...similarityMatches.explanations);
 
-    // Category-based matches (lower priority)
-    const categoryMatches = this.findCategoryMatches(eventTags, allUserTerms);
+    const categoryMatches = this.findCategoryMatches(eventTags, primaryTerms);
     totalScore += categoryMatches.score;
     matchedTags.push(...categoryMatches.tags);
     matchedCategories.push(...categoryMatches.categories);
     explanations.push(...categoryMatches.explanations);
+
+    // Match on skillsToLearn (weighted based on experience level)
+    if (skillsToLearn.length > 0) {
+      const learnWeight = isBeginner ? 0.67 : 0.4; // 40% for beginners (60/40 split), 40% for others
+
+      const learnDirectMatches = this.findDirectMatches(eventTags, skillsToLearn);
+      totalScore += learnDirectMatches.score * learnWeight;
+      matchedTags.push(...learnDirectMatches.tags);
+      matchedCategories.push(...learnDirectMatches.categories);
+      if (learnDirectMatches.explanations.length > 0) {
+        explanations.push(`Learning: ${learnDirectMatches.explanations[0]}`);
+      }
+
+      const learnSimilarityMatches = this.findSimilarityMatches(eventTags, skillsToLearn);
+      totalScore += learnSimilarityMatches.score * learnWeight;
+      matchedTags.push(...learnSimilarityMatches.tags);
+      matchedCategories.push(...learnSimilarityMatches.categories);
+      if (learnSimilarityMatches.explanations.length > 0) {
+        explanations.push(`Learning: ${learnSimilarityMatches.explanations[0]}`);
+      }
+    }
 
     // Cap score at 100
     const finalScore = Math.min(totalScore, 100);
@@ -238,7 +265,8 @@ export class TagBasedMatchingService {
   ): Promise<Event[]> {
     const userSkills = careerProfile.primarySkills || [];
     const userInterests = careerProfile.interests || [];
-    const allUserTerms = [...userSkills, ...userInterests];
+    const skillsToLearn = careerProfile.skillsToLearn || [];
+    const allUserTerms = [...userSkills, ...userInterests, ...skillsToLearn];
 
     if (allUserTerms.length === 0) {
       return [];
