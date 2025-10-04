@@ -10,6 +10,8 @@ import type { CareerProfile } from '@/types/career';
 // import type { SupabaseClientType } from '@/types'; // Unused for now
 import type { CareerImpactCalculationInput, CareerImpactCalculationOptions } from '@/types/careerImpact';
 import { getUserInteractedEvents, isBehavioralBoostEnabled } from '@/utils/behavioralBoostUtils';
+import { BehavioralBoostService } from './behavioralBoostService';
+import { BehavioralAnalyticsService } from './behavioralAnalyticsService';
 import { ScoringStrategy } from './scoring/ScoringStrategy';
 
 /**
@@ -55,16 +57,40 @@ export class BehavioralScoringEnhancer {
         30 // 30 days
       );
 
-      // Enhanced options with behavioral data
-      const enhancedOptions: CareerImpactCalculationOptions = {
-        ...options,
-        userId: options.userId,
-        supabaseClient: options.supabaseClient,
-        interactedEvents
+      // Get user context for behavioral boost
+      const userContext = await BehavioralAnalyticsService.getUserContext(
+        options.userId!,
+        options.supabaseClient!
+      );
+
+      // Calculate behavioral boost with context
+      const behavioralBoost = await BehavioralBoostService.calculateBehavioralBoost(
+        options.userId!,
+        input.event,
+        interactedEvents,
+        options.supabaseClient!,
+        userContext || undefined
+      );
+
+      // Get base score from strategy
+      const baseScore = await this.baseStrategy.calculate(input, options);
+
+      // Apply behavioral boost
+      const enhancedScore: CareerImpactScore = {
+        ...baseScore,
+        overall: Math.min(100, Math.max(0, baseScore.overall + behavioralBoost.boost)),
+        metadata: {
+          ...baseScore.metadata,
+          // Add behavioral boost info to appliedAdjustments
+          appliedAdjustments: {
+            ...baseScore.metadata.appliedAdjustments,
+            behavioralBoost: behavioralBoost.boost,
+            behavioralSimilarEvents: behavioralBoost.similarities.map(s => s.eventId)
+          }
+        }
       };
 
-      // Use enhanced strategy
-      return this.baseStrategy.calculate(input, enhancedOptions);
+      return enhancedScore;
 
     } catch (error) {
       console.warn('Behavioral boost enhancement failed, falling back to base strategy:', error);
@@ -82,37 +108,82 @@ export class BehavioralScoringEnhancer {
     careerProfile: CareerProfile,
     options: BehavioralScoringOptions = {}
   ): Promise<Array<{ event: Event; score: CareerImpactScore }>> {
-    // Get interaction history once for all events
-    let interactedEvents: Event[] = [];
-    if (options.userId && options.supabaseClient && isBehavioralBoostEnabled()) {
-      try {
-        interactedEvents = await getUserInteractedEvents(
-          options.userId,
-          options.supabaseClient,
-          30
+    // Check if behavioral boost is enabled
+    const shouldApplyBoost =
+      isBehavioralBoostEnabled() &&
+      options.enableBehavioralBoost !== false &&
+      options.userId &&
+      options.supabaseClient;
+
+    if (!shouldApplyBoost) {
+      // Use base strategy without enhancement
+      const scorePromises = events.map(async (event) => {
+        const score = await this.baseStrategy.calculate(
+          { event, careerProfile },
+          options
         );
-      } catch (error) {
-        console.warn('Failed to get interaction history for batch scoring:', error);
-      }
+        return { event, score };
+      });
+      return Promise.all(scorePromises);
     }
 
-    const enhancedOptions: CareerImpactCalculationOptions = {
-      ...options,
-      userId: options.userId,
-      supabaseClient: options.supabaseClient,
-      interactedEvents
-    };
+    try {
+      // Get interaction history and user context once for all events
+      const [interactedEvents, userContext] = await Promise.all([
+        getUserInteractedEvents(options.userId!, options.supabaseClient!, 30),
+        BehavioralAnalyticsService.getUserContext(options.userId!, options.supabaseClient!)
+      ]);
 
-    // Calculate scores in parallel
-    const scorePromises = events.map(async (event) => {
-      const score = await this.baseStrategy.calculate(
-        { event, careerProfile },
-        enhancedOptions
-      );
-      return { event, score };
-    });
+      // Calculate scores in parallel with behavioral boost
+      const scorePromises = events.map(async (event) => {
+        // Get base score
+        const baseScore = await this.baseStrategy.calculate(
+          { event, careerProfile },
+          options
+        );
 
-    return Promise.all(scorePromises);
+        // Calculate behavioral boost
+        const behavioralBoost = await BehavioralBoostService.calculateBehavioralBoost(
+          options.userId!,
+          event,
+          interactedEvents,
+          options.supabaseClient!,
+          userContext || undefined
+        );
+
+        // Apply boost
+        const enhancedScore: CareerImpactScore = {
+          ...baseScore,
+          overall: Math.min(100, Math.max(0, baseScore.overall + behavioralBoost.boost)),
+          metadata: {
+            ...baseScore.metadata,
+            // Add behavioral boost info to appliedAdjustments
+            appliedAdjustments: {
+              ...baseScore.metadata.appliedAdjustments,
+              behavioralBoost: behavioralBoost.boost,
+              behavioralSimilarEvents: behavioralBoost.similarities.map(s => s.eventId)
+            }
+          }
+        };
+
+        return { event, score: enhancedScore };
+      });
+
+      return Promise.all(scorePromises);
+
+    } catch (error) {
+      console.warn('Behavioral boost enhancement failed for batch scoring, falling back to base strategy:', error);
+      
+      // Fallback to base strategy
+      const scorePromises = events.map(async (event) => {
+        const score = await this.baseStrategy.calculate(
+          { event, careerProfile },
+          options
+        );
+        return { event, score };
+      });
+      return Promise.all(scorePromises);
+    }
   }
 
   /**

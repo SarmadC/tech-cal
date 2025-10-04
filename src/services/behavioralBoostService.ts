@@ -18,7 +18,7 @@ import { handleServiceError } from '@/utils/commonUtils';
 
 interface UserInteractionRecord {
   event_id: string;
-  interaction_type: 'click' | 'save';
+  interaction_type: 'click' | 'save' | 'dismiss';
   created_at: string;
 }
 
@@ -199,7 +199,12 @@ export class BehavioralBoostService {
     userId: string,
     targetEvent: Event,
     interactedEvents: Event[],
-    supabaseClient: SupabaseClientType
+    supabaseClient: SupabaseClientType,
+    context?: {
+      timeOfDay?: number; // 0-23
+      dayOfWeek?: number; // 0-6 (Sunday = 0)
+      deviceType?: 'mobile' | 'desktop' | 'tablet';
+    }
   ): Promise<{
     boost: number;
     application: BoostApplication | null;
@@ -219,7 +224,7 @@ export class BehavioralBoostService {
         };
       }
 
-      // Check minimum interactions requirement
+      // Get user interactions with temporal decay
       const recentInteractions = await this.getUserInteractions(userId, supabaseClient);
       if (recentInteractions.length < BEHAVIORAL_CONFIG.MIN_INTERACTIONS_FOR_BOOST) {
         return {
@@ -229,10 +234,23 @@ export class BehavioralBoostService {
         };
       }
 
-      // Find similar events
-      const similarities = this.findSimilarEvents(targetEvent, interactedEvents);
+      // Separate positive and negative interactions
+      const positiveInteractions = recentInteractions.filter(i => 
+        i.interaction_type === 'click' || i.interaction_type === 'save'
+      );
+      const negativeInteractions = recentInteractions.filter(i => 
+        i.interaction_type === 'dismiss'
+      );
 
-      if (similarities.length === 0) {
+      // Find similar events for both positive and negative interactions
+      const positiveSimilarities = this.findSimilarEvents(targetEvent, interactedEvents);
+      const negativeSimilarities = negativeInteractions.length > 0 
+        ? this.findSimilarEvents(targetEvent, interactedEvents.filter(e => 
+            negativeInteractions.some(ni => ni.event_id === e.id)
+          ))
+        : [];
+
+      if (positiveSimilarities.length === 0 && negativeSimilarities.length === 0) {
         return {
           boost: 0,
           application: null,
@@ -240,14 +258,64 @@ export class BehavioralBoostService {
         };
       }
 
-      // Calculate boost based on similarity scores
-      const avgSimilarity = similarities.reduce((sum, sim) => sum + sim.score, 0) / similarities.length;
-      const boost = Math.round(maxBoostStrength * avgSimilarity);
+      // Calculate temporal decay weights
+      const now = new Date();
+      const temporalDecay = (interactionDate: string) => {
+        const daysDiff = (now.getTime() - new Date(interactionDate).getTime()) / (1000 * 60 * 60 * 24);
+        return Math.exp(-daysDiff / 30); // e^(-t/30) decay
+      };
+
+      // Calculate weighted similarity scores with temporal decay
+      let weightedPositiveScore = 0;
+      let weightedNegativeScore = 0;
+      let totalPositiveWeight = 0;
+      let totalNegativeWeight = 0;
+
+      // Process positive interactions
+      for (const interaction of positiveInteractions) {
+        const decayWeight = temporalDecay(interaction.created_at);
+        const similarity = positiveSimilarities.find(s => s.eventId === interaction.event_id);
+        if (similarity) {
+          weightedPositiveScore += similarity.score * decayWeight;
+          totalPositiveWeight += decayWeight;
+        }
+      }
+
+      // Process negative interactions
+      for (const interaction of negativeInteractions) {
+        const decayWeight = temporalDecay(interaction.created_at);
+        const similarity = negativeSimilarities.find(s => s.eventId === interaction.event_id);
+        if (similarity) {
+          weightedNegativeScore += similarity.score * decayWeight;
+          totalNegativeWeight += decayWeight;
+        }
+      }
+
+      // Calculate contextual awareness boost
+      let contextualBoost = 0;
+      if (context?.timeOfDay !== undefined && targetEvent.startTime) {
+        const eventHour = new Date(targetEvent.startTime).getHours();
+        const timeDiff = Math.abs(eventHour - context.timeOfDay);
+        // Boost if event time is within 2 hours of user's typical activity time
+        if (timeDiff <= 2) {
+          contextualBoost = 0.1; // 10% boost for good timing
+        }
+      }
+
+      // Calculate final boost with positive, negative, and contextual components
+      const avgPositiveSimilarity = totalPositiveWeight > 0 ? weightedPositiveScore / totalPositiveWeight : 0;
+      const avgNegativeSimilarity = totalNegativeWeight > 0 ? weightedNegativeScore / totalNegativeWeight : 0;
+      
+      // Apply negative penalty (reduce boost if similar to dismissed events)
+      const negativePenalty = avgNegativeSimilarity * 0.5; // 50% penalty for dismissed similar events
+      
+      const baseBoost = avgPositiveSimilarity - negativePenalty + contextualBoost;
+      const boost = Math.round(maxBoostStrength * Math.max(0, Math.min(1, baseBoost))); // Clamp between 0 and 1
 
       const application: BoostApplication = {
         eventId: targetEvent.id,
         boostAmount: boost,
-        similarEvents: similarities.map(s => s.eventId),
+        similarEvents: [...positiveSimilarities, ...negativeSimilarities].map(s => s.eventId),
         abGroup,
         appliedAt: new Date().toISOString()
       };
@@ -255,7 +323,7 @@ export class BehavioralBoostService {
       return {
         boost,
         application,
-        similarities
+        similarities: [...positiveSimilarities, ...negativeSimilarities]
       };
 
     } catch (error) {

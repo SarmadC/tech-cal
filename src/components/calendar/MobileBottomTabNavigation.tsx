@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useState } from 'react';
+import { FC, useState, useMemo } from 'react';
 import { MaterialIcon, IconName } from '@/components/ui/Icon';
 import QuickDatePicker from './QuickDatePicker';
 import MobileSearchFilter from './MobileSearchFilter';
@@ -44,6 +44,10 @@ const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
+
+    // Memoize empty arrays to prevent re-creation on every render
+    const emptyEvents = useMemo(() => [], []);
+    const emptyCategories = useMemo(() => [], []);
     const viewOptions: Array<{ key: CalendarViewType; label: string; icon: IconName }> = [
         { key: 'month', label: 'Month', icon: 'calendar' },
         { key: 'week', label: 'Week', icon: 'event' },
@@ -135,8 +139,8 @@ const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({
                 activeFilterCount={activeFilterCount}
                 isOpen={isSearchFilterOpen}
                 onClose={() => setIsSearchFilterOpen(false)}
-                events={[]}
-                categories={[]}
+                events={emptyEvents}
+                categories={emptyCategories}
                 onSearchSuggestionSelect={onSearchSuggestionSelect}
             />
         </>

@@ -1,5 +1,3 @@
-'use client';
-
 import type { SupabaseClientType } from '@/types';
 import { handleServiceError } from '@/utils/commonUtils';
 import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
@@ -262,12 +260,12 @@ export class BehavioralAnalyticsService {
       const userBuffer = this.getUserBuffer(interaction.userId, supabaseClient);
       await userBuffer.add(enhancedInteraction);
 
-      // Additionally log a simple metric row for click interactions
-      if (interaction.interactionType === 'click' && interaction.eventId) {
+      // Additionally log a simple metric row for click and dismiss interactions
+      if ((interaction.interactionType === 'click' || interaction.interactionType === 'dismiss') && interaction.eventId) {
         await this.logCareerImpactMetric({
           userId: interaction.userId,
           eventId: interaction.eventId,
-          metricType: 'click',
+          metricType: interaction.interactionType === 'click' ? 'click' : 'dismiss',
           algorithmVersion: enhancedInteraction.algorithmVersion || 'v1.0'
         }, supabaseClient);
       }
@@ -383,6 +381,48 @@ export class BehavioralAnalyticsService {
       console.error('Error getting user behavior pattern:', error);
       Sentry.captureException(error, {
         extra: { function: 'getUserBehaviorPattern', userId }
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Get user context for behavioral boost calculations
+   */
+  static async getUserContext(
+    userId: string,
+    supabaseClient: SupabaseClientType
+  ): Promise<{
+    timeOfDay?: number;
+    dayOfWeek?: number;
+    deviceType?: 'mobile' | 'desktop' | 'tablet';
+    mostActiveHours: number[];
+  } | null> {
+    try {
+      const behaviorPattern = await this.getUserBehaviorPattern(userId, supabaseClient);
+      if (!behaviorPattern) {
+        return null;
+      }
+
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentDayOfWeek = now.getDay();
+
+      // Determine if current time aligns with user's active hours
+      const _isActiveTime = behaviorPattern.mostActiveHours.includes(currentHour) ||
+        behaviorPattern.mostActiveHours.some(hour => Math.abs(hour - currentHour) <= 2);
+
+      return {
+        timeOfDay: currentHour,
+        dayOfWeek: currentDayOfWeek,
+        deviceType: 'desktop', // TODO: Detect from user agent or pass from client
+        mostActiveHours: behaviorPattern.mostActiveHours
+      };
+
+    } catch (error) {
+      console.error('Error getting user context:', error);
+      Sentry.captureException(error, {
+        extra: { function: 'getUserContext', userId }
       });
       return null;
     }
@@ -601,7 +641,7 @@ export class BehavioralAnalyticsService {
    * Write a minimal metric to career_impact_analytics
    */
   static async logCareerImpactMetric(
-    args: { userId: string; eventId: string; metricType: 'click' | 'save'; algorithmVersion: string },
+    args: { userId: string; eventId: string; metricType: 'click' | 'save' | 'dismiss'; algorithmVersion: string },
     supabaseClient: SupabaseClientType
   ): Promise<void> {
     try {

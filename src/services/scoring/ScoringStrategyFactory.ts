@@ -23,6 +23,7 @@
 
 import { ScoringStrategy } from './ScoringStrategy';
 import { DeterministicV2Strategy } from './strategies/DeterministicV2Strategy';
+import { BehavioralScoringEnhancer } from '../behavioralScoringEnhancer';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 
@@ -245,6 +246,24 @@ export class ScoringStrategyFactory {
   static getAllStrategies(): ScoringStrategy[] {
     this.initialize();
     return Array.from(this.strategies.values());
+  }
+
+  /**
+   * Get enhanced behavioral strategy for a user
+   * 
+   * This wraps the base strategy with behavioral boost capabilities
+   * 
+   * @param userId - User ID for behavioral context
+   * @param supabaseClient - Supabase client for data access
+   * @returns Enhanced strategy with behavioral boosts
+   */
+  static getEnhancedBehavioralStrategy(
+    _userId: string,
+    _supabaseClient: SupabaseClientType
+  ): BehavioralScoringEnhancer {
+    this.initialize();
+    const baseStrategy = this.getDefaultStrategy();
+    return new BehavioralScoringEnhancer(baseStrategy);
   }
 
   /**

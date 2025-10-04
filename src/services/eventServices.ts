@@ -19,6 +19,7 @@ import {
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { CareerProfile } from '@/types/career';
+import { EnhancedScoringService } from './enhancedScoringService';
 import * as Sentry from "@sentry/nextjs";
 
 export class EventService {
@@ -1210,6 +1211,40 @@ export class EventService {
                 extra: { function: 'searchEventsByTags', tagNames }
             });
             return [];
+        }
+    }
+
+    /**
+     * Enrich events with career impact scores
+     * 
+     * @param events - Events to enrich
+     * @param careerProfile - User's career profile
+     * @param supabaseClient - Supabase client
+     * @param userId - User ID for behavioral context
+     * @returns Events with career impact scores
+     */
+    static async enrichEventsWithCareerImpact(
+        events: Event[],
+        careerProfile: CareerProfile | null,
+        supabaseClient: SupabaseClientType,
+        userId?: string
+    ): Promise<Event[]> {
+        if (!careerProfile || events.length === 0) {
+            return events;
+        }
+
+        try {
+            return await EnhancedScoringService.enrichEventsWithScores(
+                events,
+                careerProfile,
+                { userId, supabaseClient }
+            );
+        } catch (error) {
+            console.error('Error enriching events with career impact:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'enrichEventsWithCareerImpact', eventCount: events.length }
+            });
+            return events; // Return original events if enrichment fails
         }
     }
 }

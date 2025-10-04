@@ -30,6 +30,7 @@ export interface CareerImpactScore {
       workshopKeywordBoost?: boolean; // Workshop keyword detected
       webinarPenalty?: boolean; // Webinar penalty applied
       behavioralBoost?: number; // Points added based on interaction history (Phase 3)
+      behavioralSimilarEvents?: string[]; // Event IDs that influenced the behavioral boost
     };
   };
 }

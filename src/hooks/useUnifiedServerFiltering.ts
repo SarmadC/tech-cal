@@ -309,8 +309,8 @@ export function useUnifiedServerFiltering(
     filters.myTracked,
     filters.myNetwork,
     filters.recommended,
-    filters.sortBy,
-    fetchFilteredEvents
+    filters.sortBy
+    // Note: fetchFilteredEvents is intentionally excluded to prevent infinite re-renders
   ]);
 
   const updateFilter = useCallback(<K extends keyof UnifiedFilterOptions>(
@@ -329,11 +329,11 @@ export function useUnifiedServerFiltering(
       setFilters(prev => ({ ...prev, page: prev.page + 1 }));
       fetchFilteredEvents(false);
     }
-  }, [data?.pagination.hasMore, isLoading, fetchFilteredEvents]);
+  }, [data?.pagination.hasMore, isLoading]); // fetchFilteredEvents excluded to prevent infinite re-renders
 
   const refetch = useCallback(() => {
     fetchFilteredEvents(true);
-  }, [fetchFilteredEvents]);
+  }, []); // fetchFilteredEvents excluded to prevent infinite re-renders
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {

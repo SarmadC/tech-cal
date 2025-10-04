@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { EventService } from '@/services/eventServices';
+import { CareerProfileService } from '@/services/careerProfileService';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
 import { EventFilters } from '@/types';
@@ -147,6 +148,24 @@ export async function POST(request: NextRequest) {
       pageSize
     );
 
+    // Get user's career profile for scoring
+    let careerProfile = null;
+    try {
+      // Get the career profile directly
+      careerProfile = await CareerProfileService.getCareerProfile(user.id, supabase);
+    } catch (_error) {
+      // Profile might not exist for new users - this is fine
+      console.log('No career profile found for user, skipping career impact scoring');
+    }
+
+    // Enrich events with career impact scores
+    const enrichedEvents = await EventService.enrichEventsWithCareerImpact(
+      filteredEvents,
+      careerProfile,
+      supabase,
+      user.id
+    );
+
     // Generate filter statistics (simplified since filtering is now at database level)
     const availableFilters = {
       categories: await getAvailableCategories(supabase),
@@ -167,7 +186,7 @@ export async function POST(request: NextRequest) {
     const response: FilteredEventsResponse = {
       success: true,
       data: {
-        events: filteredEvents,
+        events: enrichedEvents,
         pagination: {
           page,
           pageSize,
@@ -180,7 +199,7 @@ export async function POST(request: NextRequest) {
         },
         stats: {
           processingTimeMs: processingTime,
-          filteredCount: filteredEvents.length,
+          filteredCount: enrichedEvents.length,
           totalCount: totalEvents
         }
       }
