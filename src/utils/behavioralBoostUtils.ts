@@ -1,98 +1,141 @@
 /**
  * Behavioral Boost Utilities
- *
- * Helper functions for Phase 3 behavioral layer implementation
+ * 
+ * Utility functions for managing behavioral boost features
  */
 
-import type { Event } from '@/types';
-import type { SupabaseClientType } from '@/types';
-import { BehavioralBoostService } from '@/services/behavioralBoostService';
+import type { Event, SupabaseClientType } from '@/types';
 
 /**
- * Get events user has interacted with in the past
+ * Check if behavioral boost feature is enabled
+ */
+export function isBehavioralBoostEnabled(): boolean {
+  try {
+    // Check environment variable first
+    if (process.env.NEXT_PUBLIC_ENABLE_BEHAVIORAL_BOOST === 'false') {
+      return false;
+    }
+    
+    // Default to enabled in development, disabled in production until fully tested
+    if (process.env.NODE_ENV === 'production') {
+      return process.env.NEXT_PUBLIC_ENABLE_BEHAVIORAL_BOOST === 'true';
+    }
+    
+    return true; // Enabled by default in development
+  } catch {
+    return false; // Safe fallback
+  }
+}
+
+/**
+ * Get user's interacted events for behavioral analysis
  */
 export async function getUserInteractedEvents(
   userId: string,
   supabaseClient: SupabaseClientType,
-  days: number = 30
+  daysBack: number = 30
 ): Promise<Event[]> {
   try {
-    // Get user's interaction history
-    const interactions = await BehavioralBoostService.getUserInteractions(
-      userId,
-      supabaseClient,
-      days
-    );
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
 
-    if (interactions.length === 0) {
+    const { data, error } = await supabaseClient
+      .from('user_events')
+      .select(`
+        events (
+          id,
+          title,
+          description,
+          start_time,
+          end_time,
+          event_type_id,
+          organizer_id,
+          attendee_count,
+          location,
+          created_at,
+          source_url,
+          livestream_url
+        )
+      `)
+      .eq('user_id', userId)
+      .gte('created_at', cutoffDate.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Failed to fetch user interacted events:', error);
       return [];
     }
 
-    // Get event details for interacted events
-    const eventIds = [...new Set(interactions.map(i => i.event_id))];
-
-    const { data: events, error } = await supabaseClient
-      .from('events')
-      .select(`
-        id,
-        title,
-        description,
-        category:categories(name),
-        location
-      `)
-      .in('id', eventIds);
-
-    if (error) throw error;
-
-    return (events as any) || []; // eslint-disable-line @typescript-eslint/no-explicit-any
-
+    return (data || [])
+      .map(item => item.events)
+      .filter(event => event !== null)
+      .map(event => ({
+        id: event.id,
+        title: event.title || 'Untitled Event',
+        description: event.description || '',
+        startTime: event.start_time,
+        endTime: event.end_time,
+        eventTypeId: event.event_type_id || '',
+        organizerId: event.organizer_id,
+        attendeeCount: event.attendee_count || 0,
+        location: event.location || '',
+        format: 'virtual', // Default format
+        cost: 'free', // Default cost
+        difficulty: 'beginner', // Default difficulty
+        color: '#3B82F6', // Default color
+        tags: [], // Default empty tags
+        careerImpactScore: 0, // Default score
+        careerImpactComponents: {}, // Default components
+        createdAt: event.created_at,
+        status: 'upcoming' as const,
+        sourceUrl: event.source_url || '',
+        livestreamUrl: event.livestream_url || '',
+        organizer: '' // Default empty organizer
+      }));
   } catch (error) {
-    console.error('Error getting user interacted events:', error);
+    console.warn('Error fetching user interacted events:', error);
     return [];
   }
 }
 
 /**
- * Create behavioral boosts table if not exists (for migration)
+ * Check if user is in cold start state (no interaction history)
  */
-export const BEHAVIORAL_BOOSTS_TABLE_SQL = `
-  CREATE TABLE IF NOT EXISTS behavioral_boosts (
-    id BIGSERIAL PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES profiles(id),
-    event_id TEXT NOT NULL,
-    boost_amount INTEGER NOT NULL,
-    similar_event_ids TEXT[] DEFAULT '{}',
-    ab_group TEXT NOT NULL,
-    applied_at TIMESTAMPTZ DEFAULT NOW(),
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  );
+export async function isColdStartUser(
+  userId: string,
+  supabaseClient: SupabaseClientType
+): Promise<boolean> {
+  try {
+    const { count, error } = await supabaseClient
+      .from('user_events')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
 
-  -- Index for performance
-  CREATE INDEX IF NOT EXISTS idx_behavioral_boosts_user_id
-    ON behavioral_boosts(user_id);
-  CREATE INDEX IF NOT EXISTS idx_behavioral_boosts_applied_at
-    ON behavioral_boosts(applied_at);
-  CREATE INDEX IF NOT EXISTS idx_behavioral_boosts_ab_group
-    ON behavioral_boosts(ab_group);
-`;
+    if (error) {
+      console.warn('Failed to check cold start status:', error);
+      return true; // Assume cold start on error
+    }
 
-/**
- * Helper to check if behavioral boost is enabled for environment
- */
-export function isBehavioralBoostEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_ENABLE_BEHAVIORAL_BOOST !== 'false';
+    return (count || 0) < 3; // Cold start if less than 3 interactions
+  } catch (error) {
+    console.warn('Error checking cold start status:', error);
+    return true; // Assume cold start on error
+  }
 }
 
 /**
- * Get user's AB test group assignment (for display/debugging)
+ * Get behavioral boost configuration
  */
-export function getUserABGroup(userId: string): string {
-  return BehavioralBoostService.getABTestGroup(userId);
-}
-
-/**
- * Calculate simple event similarity score (public utility)
- */
-export function calculateEventSimilarity(eventA: Event, eventB: Event): number {
-  return BehavioralBoostService.calculateSimilarity(eventA, eventB);
+export function getBehavioralBoostConfig(): {
+  enabled: boolean;
+  maxBoost: number;
+  minInteractions: number;
+  daysBack: number;
+} {
+  return {
+    enabled: isBehavioralBoostEnabled(),
+    maxBoost: 15, // Maximum boost percentage
+    minInteractions: 3, // Minimum interactions needed for boost
+    daysBack: 30 // Days of history to consider
+  };
 }

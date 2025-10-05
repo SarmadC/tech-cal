@@ -1294,20 +1294,9 @@ export class EventService {
         pageSize: number = 100
     ): Promise<{ events: Event[]; totalCount: number; isColdStart: boolean }> {
         try {
-            // Find lookalike users
-            const lookalikeUsers = await LookalikeUserService.findLookalikeUsers(
-                careerProfile,
-                supabaseClient,
-                20 // Get up to 20 similar users
-            );
-
-            if (lookalikeUsers.length === 0) {
-                return await this.getFallbackPopularEvents(supabaseClient, page, pageSize);
-            }
-
-            // Get recommendations from lookalike users
+            // Get lookalike recommendations directly
             const lookalikeRecommendations = await LookalikeUserService.getLookalikeRecommendations(
-                lookalikeUsers,
+                careerProfile.userId,
                 supabaseClient,
                 pageSize * 2 // Get more to account for filtering
             );
@@ -1316,10 +1305,8 @@ export class EventService {
                 return await this.getFallbackPopularEvents(supabaseClient, page, pageSize);
             }
 
-            // Get and transform events with lookalike metadata
-            const eventIds = lookalikeRecommendations.map(rec => rec.eventId);
-            const events = await this.getEventsByIds(eventIds, supabaseClient);
-            const appEvents = await this.transformEventsWithLookalikeMetadata(events as any[], lookalikeRecommendations, supabaseClient); // eslint-disable-line @typescript-eslint/no-explicit-any
+            // Transform events with lookalike metadata
+            const appEvents = await this.transformEventsWithLookalikeMetadata(lookalikeRecommendations as any[], [], supabaseClient); // eslint-disable-line @typescript-eslint/no-explicit-any
 
             // Sort by popularity score and apply diversity enhancement
             const sortedEvents = this.sortEventsByPopularity(appEvents);

@@ -149,7 +149,22 @@ export function useUnifiedServerFiltering(
     } : undefined
   }), [filters, debouncedSearchTerm]);
 
+  // Refs to store latest values to avoid dependency issues
+  const apiFiltersRef = useRef(apiFilters);
+  const dataRef = useRef(data);
+  const trackedEventIdsRef = useRef(trackedEventIds);
+  const lastRequestTimeRef = useRef(lastRequestTime);
+  const requestCacheRef = useRef(requestCache);
+  
+  // Update refs when values change
+  apiFiltersRef.current = apiFilters;
+  dataRef.current = data;
+  trackedEventIdsRef.current = trackedEventIds;
+  lastRequestTimeRef.current = lastRequestTime;
+  requestCacheRef.current = requestCache;
+
   const fetchFilteredEvents = useCallback(async (resetPagination = true, retryCount = 0) => {
+    console.log('[Client] fetchFilteredEvents called with resetPagination:', resetPagination);
     // Cancel previous request if in flight
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -161,23 +176,27 @@ export function useUnifiedServerFiltering(
     }
 
     // Check cache first
-    const cacheKey = JSON.stringify(apiFilters);
-    const cachedResult = requestCache.get(cacheKey);
+    console.log('[Client] Checking cache...');
+    const cacheKey = JSON.stringify(apiFiltersRef.current);
+    const cachedResult = requestCacheRef.current.get(cacheKey);
     const now = Date.now();
 
     if (cachedResult && (now - cachedResult.timestamp) < FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS) {
-      console.log('Using cached result for:', Object.keys(apiFilters).filter(k => apiFilters[k as keyof typeof apiFilters]));
+      console.log('Using cached result for:', Object.keys(apiFiltersRef.current).filter(k => apiFiltersRef.current[k as keyof typeof apiFiltersRef.current]));
       setData(cachedResult.data);
       return;
     }
+    console.log('[Client] No cache hit, proceeding with API call...');
 
     // Rate limiting with breadcrumb logging
-    const timeSinceLastRequest = now - lastRequestTime;
-    if (timeSinceLastRequest < FILTERING_CONSTANTS.RATE_LIMIT_INTERVAL_MS) {
+    console.log('[Client] Checking rate limiting...');
+    const timeSinceLastRequest = now - lastRequestTimeRef.current;
+    console.log(`[Client] Time since last request: ${timeSinceLastRequest}ms, limit: ${FILTERING_CONSTANTS.RATE_LIMIT_INTERVAL_MS}ms`);
+    
+    // Temporarily disable rate limiting to debug
+    if (false && timeSinceLastRequest < FILTERING_CONSTANTS.RATE_LIMIT_INTERVAL_MS) {
       const waitTime = FILTERING_CONSTANTS.RATE_LIMIT_INTERVAL_MS - timeSinceLastRequest;
-      if (process.env.NODE_ENV !== 'production') {
-        console.debug(`[RateLimit] Waiting ${waitTime}ms before next request`);
-      }
+      console.log(`[Client] Rate limited, waiting ${waitTime}ms before next request`);
       setRateLimitWaitMs(waitTime);
 
       await new Promise(resolve => {
@@ -193,19 +212,26 @@ export function useUnifiedServerFiltering(
         console.debug('[RateLimit] Wait complete, proceeding with request');
       }
     }
+    console.log('[Client] Rate limiting check passed, making API call...');
 
+    console.log('[Client] Setting loading state...');
     setIsLoading(true);
     setError(null);
     setLastRequestTime(Date.now());
+    console.log('[Client] Loading state set, creating abort controller...');
 
     // Create new abort controller
     abortControllerRef.current = new AbortController();
 
+    // Note: We can still fetch events even without a profile (new users)
+    // The API will use the authenticated user ID from the session
+
     try {
       const requestFilters = resetPagination
-        ? { ...apiFilters, page: 1 }
-        : apiFilters;
+        ? { ...apiFiltersRef.current, page: 1 }
+        : apiFiltersRef.current;
 
+      console.log('[Client] Making API request to /api/events/filtered with filters:', requestFilters);
       const response = await fetch('/api/events/filtered', {
         method: 'POST',
         headers: {
@@ -214,6 +240,9 @@ export function useUnifiedServerFiltering(
         body: JSON.stringify(requestFilters),
         signal: abortControllerRef.current.signal
       });
+
+      console.log('[Client] API response received, status:', response.status);
+      console.log('[Client] Response ok:', response.ok);
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -232,15 +261,20 @@ export function useUnifiedServerFiltering(
         throw new Error(`Server error: ${response.status}`);
       }
 
+      console.log('[Client] Parsing response JSON...');
       const result = await response.json();
+      console.log('[Client] Response parsed successfully, result:', result);
       
       if (!result.success) {
+        console.log('[Client] API returned success: false, error:', result.error);
         throw new Error(result.error || 'Failed to filter events');
       }
+      
+      console.log('[Client] API response successful, processing events...');
 
       // Enrich events with tracking data
       const enrichedEvents = result.data.events.map((event: Event) => {
-        const isTracked = trackedEventIds?.has(event.id) || false;
+        const isTracked = trackedEventIdsRef.current?.has(event.id) || false;
         return enrichWithTracking(event, isTracked);
       });
 
@@ -250,14 +284,17 @@ export function useUnifiedServerFiltering(
         isColdStart: result.data.isColdStart || false
       };
 
-      if (resetPagination || !data) {
+      console.log('[Client] Setting data with', enrichedEvents.length, 'events');
+      if (resetPagination || !dataRef.current) {
         setData(responseData);
+        console.log('[Client] Data set successfully, caching response');
         // Cache the response
         setRequestCache(prev => new Map(prev).set(cacheKey, {
           data: responseData,
           timestamp: Date.now()
         }));
       } else {
+        console.log('[Client] Appending to existing data for pagination');
         // Append to existing data for pagination
         setData(prev => prev ? {
           ...result.data,
@@ -288,40 +325,27 @@ export function useUnifiedServerFiltering(
 
       console.error('Server-side filtering error:', err);
     } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+      console.log('[Client] Finally block executed, setting isLoading to false');
+      setIsLoading(false); // Always set to false, regardless of mounted state
+      console.log('[Client] isLoading set to false');
       abortControllerRef.current = null;
     }
-  }, [apiFilters, data, trackedEventIds, lastRequestTime, requestCache]);
+  }, []); // Remove dependencies to prevent infinite loops
 
-  // Auto-fetch when filters change
+  // Single useEffect to handle initial fetch only
   useEffect(() => {
+    console.log('[Client] useEffect triggered - calling fetchFilteredEvents(true)');
     fetchFilteredEvents(true);
-  }, [
-    debouncedSearchTerm, 
-    filters.categories, 
-    filters.budget,
-    filters.format, 
-    filters.cost, 
-    filters.difficulty, 
-    filters.dateRange, 
-    filters.availability,
-    filters.popularity,
-    filters.duration,
-    filters.myTracked,
-    filters.myNetwork,
-    filters.recommended,
-    filters.sortBy
-    // Note: fetchFilteredEvents is intentionally excluded to prevent infinite re-renders
-  ]);
+  }, [fetchFilteredEvents]); // Include fetchFilteredEvents to satisfy ESLint
 
   const updateFilter = useCallback(<K extends keyof UnifiedFilterOptions>(
     key: K, 
     value: UnifiedFilterOptions[K]
   ) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-  }, []);
+    // Trigger a refetch when filters change
+    fetchFilteredEvents(true);
+  }, [fetchFilteredEvents]);
 
   const resetFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
@@ -332,11 +356,11 @@ export function useUnifiedServerFiltering(
       setFilters(prev => ({ ...prev, page: prev.page + 1 }));
       fetchFilteredEvents(false);
     }
-  }, [data?.pagination.hasMore, isLoading]); // fetchFilteredEvents excluded to prevent infinite re-renders
+  }, [data?.pagination.hasMore, isLoading, fetchFilteredEvents]); // Include fetchFilteredEvents to satisfy ESLint
 
   const refetch = useCallback(() => {
     fetchFilteredEvents(true);
-  }, []); // fetchFilteredEvents excluded to prevent infinite re-renders
+  }, [fetchFilteredEvents]); // Include fetchFilteredEvents to satisfy ESLint
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {

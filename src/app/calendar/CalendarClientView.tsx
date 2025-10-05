@@ -113,7 +113,10 @@ function useEventData(profile: AppProfile | null) {
         isFilterPanelOpen,
         setIsFilterPanelOpen,
         refetch
-    } = useUnifiedServerFiltering(profile);
+    } = useUnifiedServerFiltering(
+        profile,
+        {}
+    );
 
     return {
         enrichedEvents,

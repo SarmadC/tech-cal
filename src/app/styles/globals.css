@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+/* FullCalendar CSS - using unpkg CDN to avoid MIME type issues */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,9 +18,9 @@
   }
   
   .dark .bg-card {
-    --card: 15 20 28 !important;
-    background: hsl(15, 20, 28) !important;
-    background-color: hsl(15, 20, 28) !important;
+    --card: 30 30 30 !important;
+    background: hsl(30, 30, 30) !important;
+    background-color: hsl(30, 30, 30) !important;
   }
 }
 
@@ -30,7 +32,7 @@
   }
   
   .dark .bg-card {
-    background-color: #1f2937 !important; /* Force explicit dark gray */
+    background-color: #1e1e1e !important; /* Premium dark surface */
   }
   
   /* Card text colors */
@@ -39,7 +41,7 @@
   }
   
   .dark .text-card-foreground {
-    color: #f9fafb !important; /* Force explicit light text for dark mode */
+    color: #ffffff !important; /* Premium white text for dark mode */
   }
   
   /* Muted text colors */
@@ -48,7 +50,7 @@
   }
   
   .dark .text-muted-foreground {
-    color: #9ca3af !important; /* Force explicit muted text for dark mode */
+    color: #b3b3b3 !important; /* Premium muted text for dark mode */
   }
   
   /* Target the exact shadcn Card structure */
@@ -58,8 +60,8 @@
   }
   
   .dark .rounded-xl.border.bg-card.text-card-foreground.shadow {
-    background-color: #1f2937 !important;
-    color: #f9fafb !important;
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
   }
   
   /* Fix all dashboard card variations */
@@ -73,8 +75,8 @@
   .dark .dashboard-card,
   .dark [class*="dashboard"] .card,
   .dark [class*="Dashboard"] .card {
-    background-color: #1f2937 !important;
-    color: #f9fafb !important;
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
   }
   
   /* Fix chart text colors */
@@ -83,7 +85,7 @@
   }
   
   .dark .recharts-text {
-    fill: #9ca3af !important;
+    fill: #b3b3b3 !important;
   }
   
   /* Fix chart tooltips - prevent yellow background */
@@ -95,8 +97,8 @@
   }
   
   .dark .recharts-tooltip-wrapper {
-    background: #1f2937 !important;
-    border: 1px solid #374151 !important;
+    background: #1e1e1e !important;
+    border: 1px solid #333333 !important;
   }
   
   .recharts-tooltip-content {
@@ -105,8 +107,8 @@
   }
   
   .dark .recharts-tooltip-content {
-    background: #1f2937 !important;
-    color: #f9fafb !important;
+    background: #1e1e1e !important;
+    color: #ffffff !important;
   }
   
   /* Fix chart legend colors for better visibility */
@@ -115,7 +117,7 @@
   }
   
   .dark [style*="--color-other"] {
-    --color-other: #6b7280 !important; /* Lighter gray for dark mode */
+    --color-other: #808080 !important; /* Premium gray for dark mode */
   }
   
   /* Fix any other text elements that might be affected */
@@ -186,16 +188,16 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
 }
 
 :root {
-  /* --- Minimal Dark Theme (Neutral-first) --- */
-  --background-main: #0B0F14;
-  --background-secondary: #0F141C;
-  --background-tertiary: #121924;
-  --background-elevated: #141C27;
+  /* --- Premium Dark Theme (#121212 based) --- */
+  --background-main: #121212;
+  --background-secondary: #1e1e1e;
+  --background-tertiary: #2a2a2a;
+  --background-elevated: #333333;
   
-  --foreground-primary: #E7ECF3;
-  --foreground-secondary: #AAB6C6;
-  --foreground-tertiary: #7B8798;
-  --foreground-muted: #637082;
+  --foreground-primary: #ffffff;
+  --foreground-secondary: #e0e0e0;
+  --foreground-tertiary: #b3b3b3;
+  --foreground-muted: #808080;
   
   /* Monochrome Accents */
   --accent-primary: #ffffff; /* white accent for dark surfaces */
@@ -231,10 +233,10 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
   --gradient-secondary: linear-gradient(135deg, #141C27 0%, #0F141C 100%);
   --gradient-accent: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.06) 100%);
   
-  --border-subtle: rgba(231, 236, 243, 0.06);
-  --border-default: rgba(231, 236, 243, 0.10);
-  --border-strong: rgba(231, 236, 243, 0.16);
-  --border-accent: var(--accent-border);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.20);
+  --border-accent: rgba(255, 255, 255, 0.28);
   
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.1);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);

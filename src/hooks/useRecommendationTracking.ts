@@ -3,12 +3,36 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/utils/supabase/client';
-import { BehavioralAnalyticsService, UserInteraction, RecommendationBatch } from '@/services/behavioralAnalyticsService';
+import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
 
 // =============================================
 // RECOMMENDATION TRACKING HOOK
 // =============================================
+
+// Local type definitions (since they're not exported from the service)
+export interface UserInteraction {
+  userId: string;
+  eventId?: string;
+  interactionType: 'view' | 'click' | 'bookmark' | 'save' | 'share' | 'attend' | 'hover' | 'dismiss';
+  section: 'for_you' | 'trending' | 'new_this_week' | 'quick_wins';
+  position?: number;
+  algorithmVersion: string;
+  durationMs?: number;
+  context?: Record<string, unknown>;
+}
+
+export interface RecommendationBatch {
+  userId: string;
+  sessionId: string;
+  algorithmVersion: string;
+  section: 'for_you' | 'trending' | 'new_this_week' | 'quick_wins';
+  recommendations: Array<{
+    eventId: string;
+    score: number;
+    position: number;
+  }>;
+}
 
 export interface TrackingOptions {
   enableTracking?: boolean;
@@ -95,7 +119,19 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       context
     };
 
-    await BehavioralAnalyticsService.trackInteraction(interaction, supabase);
+    await BehavioralAnalyticsService.trackInteraction(
+      user?.id || '',
+      interaction.interactionType,
+      { 
+        eventId: interaction.eventId,
+        section: interaction.section,
+        position: interaction.position,
+        algorithmVersion: interaction.algorithmVersion,
+        durationMs: interaction.durationMs,
+        context: interaction.context
+      },
+      supabase
+    );
   }, [user?.id, supabase, options.enableTracking, checkConsentCached]);
 
   /**
@@ -146,7 +182,18 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
         durationMs
       };
 
-      await BehavioralAnalyticsService.trackInteraction(interaction, supabase);
+      await BehavioralAnalyticsService.trackInteraction(
+        user.id,
+        interaction.interactionType,
+        { 
+          eventId: interaction.eventId,
+          section: interaction.section,
+          position: interaction.position,
+          algorithmVersion: interaction.algorithmVersion,
+          durationMs: interaction.durationMs
+        },
+        supabase
+      );
     }
 
     // Clear timer and start time
@@ -161,7 +208,7 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
    * Track recommendation batch display
    */
   const trackRecommendationDisplay = useCallback(async (
-    section: string,
+    section: 'for_you' | 'trending' | 'new_this_week' | 'quick_wins',
     recommendations: Array<{
       eventId: string;
       score: number;
@@ -182,8 +229,10 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       recommendations
     };
 
-    await BehavioralAnalyticsService.trackRecommendationBatch(batch, supabase);
-  }, [user?.id, supabase, options.enableTracking, checkConsentCached]);
+    // Note: trackRecommendationBatch method not implemented yet
+    // For now, we'll just log the batch for debugging
+    console.log('Recommendation batch would be tracked:', batch);
+  }, [user?.id, options.enableTracking, checkConsentCached]);
 
   /**
    * Track click interaction

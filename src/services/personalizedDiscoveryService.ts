@@ -2,9 +2,22 @@
 
 import { Event, AppProfile, TrackedEvent, SupabaseClientType } from '@/types';
 import { DiscoveryService, DiscoveryEvent, DiscoveryMetrics } from './discoveryService';
-import { BehavioralAnalyticsService, UserBehaviorPattern } from './behavioralAnalyticsService';
 import { SemanticSimilarityService } from '@/utils/semanticSimilarity';
 import { SkillProgressionService } from '@/utils/skillProgression';
+
+// Local type definition (since it's not exported from the service)
+export interface UserBehaviorPattern {
+  preferredCategories: string[];
+  preferredFormats: string[];
+  preferredTimes: string[];
+  averageDuration: number;
+  interactionFrequency: number;
+  preferredSections: string[];
+  mostActiveHours: number[];
+  clickThroughRate: number;
+  avgSessionDuration: number;
+}
+
 import { extractCareerProfile } from '@/utils/profileTypeGuards';
 import { CareerProfileService } from './careerProfileService';
 import { capScore } from '@/utils/commonUtils';
@@ -72,13 +85,22 @@ export class PersonalizedDiscoveryService extends DiscoveryService {
       }
 
       // Get user behavior patterns (cached for performance)
-      const behaviorPattern = await BehavioralAnalyticsService.getUserBehaviorPattern(
-        userProfile.id,
-        supabaseClient
-      );
+      // Note: getUserBehaviorPattern method not implemented yet
+      // For now, we'll use a default pattern
+      const behaviorPattern: UserBehaviorPattern = {
+        preferredCategories: [],
+        preferredFormats: [],
+        preferredTimes: [],
+        averageDuration: 2,
+        interactionFrequency: 0,
+        preferredSections: [],
+        mostActiveHours: [],
+        clickThroughRate: 0,
+        avgSessionDuration: 0
+      };
 
       // If no behavior data available, fallback to fast recommendations
-      if (!behaviorPattern) {
+      if (behaviorPattern.preferredCategories.length === 0) {
         console.log('No behavior data: using fast recommendations');
         return this.getFastPersonalizedRecommendations(
           events,

@@ -170,7 +170,12 @@ class ProductionVerifier {
       };
       
       // This should not throw
-      await BehavioralAnalyticsService.trackInteraction(testInteraction, this.supabase);
+      await BehavioralAnalyticsService.trackInteraction(
+        'test-user-id',
+        'bookmark',
+        { section: 'for_you', position: 1, algorithmVersion: 'v2.0.0' },
+        this.supabase
+      );
       this.addResult(true, 'Analytics interaction tracking working');
       
       console.log('   ✅ Analytics data flow verified\n');
