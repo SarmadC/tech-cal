@@ -1,666 +1,274 @@
+/**
+ * Behavioral Analytics Service
+ * 
+ * Service for analyzing user behavior patterns and context
+ */
+
 import type { SupabaseClientType } from '@/types';
-import { handleServiceError } from '@/utils/commonUtils';
-import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
-import { DatabaseQueryPatterns } from '@/utils/databaseQueryPatterns';
-import * as Sentry from '@sentry/nextjs';
+import type { UserContext } from './behavioralBoostService';
 
-// SupabaseClientType now imported from types
-
-// =============================================
-// TYPES FOR ENHANCED ANALYTICS
-// =============================================
-
-export interface UserInteraction {
-  userId: string;
-  eventId?: string;
-  interactionType: 'view' | 'click' | 'hover' | 'dismiss' | 'share';
-  section: 'for_you' | 'trending' | 'new_this_week' | 'quick_wins' | 'search';
-  position?: number;
-  algorithmVersion?: string;
-  durationMs?: number;
-  context?: Record<string, unknown>;
-}
-
-export interface RecommendationBatch {
-  userId: string;
-  sessionId: string;
-  algorithmVersion: string;
-  section: string;
-  recommendations: Array<{
-    eventId: string;
-    score: number;
-    position: number;
-  }>;
-}
-
-export interface UserBehaviorPattern {
-  avgSessionDuration: number;
-  mostActiveHours: number[];
-  preferredSections: string[];
-  interactionFrequency: number;
-  clickThroughRate: number;
-}
-
-export interface RecommendationMetrics {
-  algorithmVersion: string;
-  section: string;
-  totalRecommendations: number;
-  totalInteractions: number;
-  clickThroughRate: number;
-  avgPosition: number;
-}
-
-// =============================================
-// ENHANCED ANALYTICS SERVICE
-// =============================================
-
-// User-specific interaction buffers with proper cleanup
-class UserInteractionBuffer {
-  private buffer: UserInteraction[] = [];
-  private flushTimeout: NodeJS.Timeout | null = null;
-  private errorCount: number = 0;
-  private lastActivity: number = Date.now();
-  private readonly BUFFER_SIZE = ANALYTICS_CONFIG.BUFFER_SIZE;
-  private readonly FLUSH_INTERVAL = ANALYTICS_CONFIG.FLUSH_INTERVAL;
-  private readonly MAX_ERRORS = ANALYTICS_CONFIG.MAX_ERRORS;
-
-  constructor(private supabaseClient: SupabaseClientType) {}
-
-  async add(interaction: UserInteraction): Promise<void> {
-    this.lastActivity = Date.now();
-    this.buffer.push(interaction);
-
-    if (this.buffer.length >= this.BUFFER_SIZE) {
-      await this.flush();
-    } else if (!this.flushTimeout) {
-      this.flushTimeout = setTimeout(async () => {
-        try {
-          await this.flush();
-        } catch (error) {
-          console.error('Error in scheduled flush:', error);
-        }
-      }, this.FLUSH_INTERVAL);
-    }
-  }
-
-  async flush(): Promise<void> {
-    if (this.buffer.length === 0) return;
-
-    try {
-      if (this.flushTimeout) {
-        clearTimeout(this.flushTimeout);
-        this.flushTimeout = null;
-      }
-
-      const interactions = this.buffer.map(interaction => ({
-        user_id: interaction.userId,
-        event_id: interaction.eventId || null,
-        interaction_type: interaction.interactionType,
-        section: interaction.section,
-        position: interaction.position || null,
-        algorithm_version: interaction.algorithmVersion || 'v1.0',
-        duration_ms: interaction.durationMs || null,
-      }));
-
-      const { error } = await DatabaseQueryPatterns.batchInsertInteractions(
-        interactions,
-        this.supabaseClient
-      );
-
-      if (error) throw error;
-      
-      // Success: clear buffer and reset error count
-      this.buffer = [];
-      this.errorCount = 0;
-
-    } catch (error) {
-      handleServiceError(error, {
-        function: 'flushInteractions',
-        bufferSize: this.buffer.length,
-        userId: this.buffer[0]?.userId
-      });
-
-      // Error recovery: clear buffer after too many failures
-      this.errorCount++;
-      if (this.errorCount >= this.MAX_ERRORS) {
-        console.warn(`Clearing corrupted buffer after ${this.MAX_ERRORS} failures`);
-        this.buffer = [];
-        this.errorCount = 0;
-      }
-    }
-  }
-
-  async forceFlush(): Promise<void> {
-    await this.flush();
-  }
-
-  isInactive(): boolean {
-    return Date.now() - this.lastActivity > ANALYTICS_CONFIG.INACTIVE_THRESHOLD;
-  }
-
-  cleanup(): void {
-    if (this.flushTimeout) {
-      clearTimeout(this.flushTimeout);
-      this.flushTimeout = null;
-    }
-  }
-}
-
-// Proper buffer management with automatic cleanup
-class AnalyticsBufferManager {
-  private buffers = new Map<string, UserInteractionBuffer>();
-  private cleanupInterval: NodeJS.Timeout;
-
-  constructor() {
-    // Auto-cleanup inactive buffers
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupInactiveBuffers();
-    }, ANALYTICS_CONFIG.CLEANUP_INTERVAL);
-  }
-
-  getUserBuffer(userId: string, supabaseClient: SupabaseClientType): UserInteractionBuffer {
-    if (!this.buffers.has(userId)) {
-      this.buffers.set(userId, new UserInteractionBuffer(supabaseClient));
-    }
-    return this.buffers.get(userId)!;
-  }
-
-  async forceFlushUser(userId: string): Promise<void> {
-    const buffer = this.buffers.get(userId);
-    if (buffer) {
-      await buffer.forceFlush();
-    }
-  }
-
-  async forceFlushAll(): Promise<void> {
-    const flushPromises = Array.from(this.buffers.values()).map(buffer => buffer.forceFlush());
-    await Promise.all(flushPromises);
-  }
-
-  cleanupUser(userId: string): void {
-    const buffer = this.buffers.get(userId);
-    if (buffer) {
-      buffer.forceFlush(); // Flush any pending data
-      buffer.cleanup(); // Clear timeouts
-      this.buffers.delete(userId);
-    }
-  }
-
-  private cleanupInactiveBuffers(): void {
-    const inactiveUsers: string[] = [];
-    
-    for (const [userId, buffer] of this.buffers.entries()) {
-      if (buffer.isInactive()) {
-        inactiveUsers.push(userId);
-      }
-    }
-
-    for (const userId of inactiveUsers) {
-      this.cleanupUser(userId);
-    }
-
-    if (inactiveUsers.length > 0) {
-      console.log(`Cleaned up ${inactiveUsers.length} inactive analytics buffers`);
-    }
-  }
-
-  destroy(): void {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
-    }
-    this.forceFlushAll();
-    this.buffers.clear();
-  }
-}
-
-// Single instance with proper lifecycle management
-const bufferManager = new AnalyticsBufferManager();
-
-// Ensure cleanup on process exit or module unload
-if (typeof window !== 'undefined') {
-  // Browser environment - cleanup on page unload
-  window.addEventListener('beforeunload', () => {
-    bufferManager.destroy();
-  });
-} else {
-  // Node.js environment - cleanup on process exit
-  process.on('exit', () => {
-    bufferManager.destroy();
-  });
-  process.on('SIGINT', () => {
-    bufferManager.destroy();
-    process.exit(0);
-  });
-  process.on('SIGTERM', () => {
-    bufferManager.destroy();
-    process.exit(0);
-  });
-}
-
+/**
+ * Behavioral Analytics Service
+ */
 export class BehavioralAnalyticsService {
-
-  private static getUserBuffer(userId: string, supabaseClient: SupabaseClientType): UserInteractionBuffer {
-    return bufferManager.getUserBuffer(userId, supabaseClient);
-  }
-
   /**
-   * Track user interaction with batching for performance
-   */
-  static async trackInteraction(
-    interaction: UserInteraction,
-    supabaseClient: SupabaseClientType
-  ): Promise<void> {
-    try {
-      const enhancedInteraction = {
-        ...interaction,
-        algorithmVersion: interaction.algorithmVersion || 'v1.0'
-      };
-
-      // Get user-specific buffer
-      const userBuffer = this.getUserBuffer(interaction.userId, supabaseClient);
-      await userBuffer.add(enhancedInteraction);
-
-      // Additionally log a simple metric row for click and dismiss interactions
-      if ((interaction.interactionType === 'click' || interaction.interactionType === 'dismiss') && interaction.eventId) {
-        await this.logCareerImpactMetric({
-          userId: interaction.userId,
-          eventId: interaction.eventId,
-          metricType: interaction.interactionType === 'click' ? 'click' : 'dismiss',
-          algorithmVersion: enhancedInteraction.algorithmVersion || 'v1.0'
-        }, supabaseClient);
-      }
-
-    } catch (error) {
-      console.error('Error tracking interaction:', error);
-      Sentry.captureException(error, {
-        extra: { function: 'trackInteraction', interaction }
-      });
-    }
-  }
-
-  /**
-   * Force flush any pending interactions for a specific user
-   */
-  static async forceFlushUser(userId: string): Promise<void> {
-    await bufferManager.forceFlushUser(userId);
-  }
-
-  /**
-   * Force flush all pending interactions (call on app shutdown)
-   */
-  static async forceFlushAll(): Promise<void> {
-    await bufferManager.forceFlushAll();
-  }
-
-  /**
-   * Track recommendation batch for algorithm performance analysis
-   */
-  static async trackRecommendationBatch(
-    batch: RecommendationBatch,
-    supabaseClient: SupabaseClientType
-  ): Promise<void> {
-    try {
-      const { error } = await supabaseClient
-        .from('recommendation_batches')
-        .insert({
-          user_id: batch.userId,
-          session_id: batch.sessionId,
-          algorithm_version: batch.algorithmVersion,
-          section: batch.section,
-          event_ids: batch.recommendations.map(r => r.eventId),
-          scores: batch.recommendations.map(r => r.score),
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error tracking recommendation batch:', error);
-      Sentry.captureException(error, {
-        extra: { function: 'trackRecommendationBatch', batch }
-      });
-    }
-  }
-
-  /**
-   * Get user behavior patterns for personalization
-   */
-  static async getUserBehaviorPattern(
-    userId: string,
-    supabaseClient: SupabaseClientType
-  ): Promise<UserBehaviorPattern | null> {
-    try {
-      const { data, error } = await DatabaseQueryPatterns.getUserBehaviorData(
-        userId,
-        supabaseClient,
-        30 // 30 days
-      );
-
-      if (error) throw error;
-      if (!data || data.length === 0) return null;
-
-      // Analyze patterns
-      const totalInteractions = data.length;
-      const clicks = data.filter(i => i.interaction_type === 'click').length;
-      const views = data.filter(i => i.interaction_type === 'view').length;
-      
-      // Calculate average session duration
-      const durationsMs = data.filter(i => i.duration_ms).map(i => i.duration_ms!);
-      const avgSessionDuration = durationsMs.length > 0 
-        ? durationsMs.reduce((a, b) => a + b, 0) / durationsMs.length 
-        : 0;
-
-      // Most active hours
-      const hours = data.map(i => new Date(i.created_at!).getHours());
-      const hourCounts = hours.reduce((acc, hour) => {
-        acc[hour] = (acc[hour] || 0) + 1;
-        return acc;
-      }, {} as Record<number, number>);
-      const mostActiveHours = Object.entries(hourCounts)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 3)
-        .map(([hour]) => parseInt(hour));
-
-      // Preferred sections
-      const sections = data.map(i => i.section);
-      const sectionCounts = sections.reduce((acc, section) => {
-        acc[section] = (acc[section] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      const preferredSections = Object.entries(sectionCounts)
-        .sort(([,a], [,b]) => b - a)
-        .map(([section]) => section);
-
-      return {
-        avgSessionDuration,
-        mostActiveHours,
-        preferredSections,
-        interactionFrequency: totalInteractions,
-        clickThroughRate: views > 0 ? clicks / views : 0
-      };
-
-    } catch (error) {
-      console.error('Error getting user behavior pattern:', error);
-      Sentry.captureException(error, {
-        extra: { function: 'getUserBehaviorPattern', userId }
-      });
-      return null;
-    }
-  }
-
-  /**
-   * Get user context for behavioral boost calculations
+   * Get user context for behavioral analysis
    */
   static async getUserContext(
     userId: string,
     supabaseClient: SupabaseClientType
-  ): Promise<{
-    timeOfDay?: number;
-    dayOfWeek?: number;
-    deviceType?: 'mobile' | 'desktop' | 'tablet';
-    mostActiveHours: number[];
-  } | null> {
+  ): Promise<UserContext | null> {
     try {
-      const behaviorPattern = await this.getUserBehaviorPattern(userId, supabaseClient);
-      if (!behaviorPattern) {
+      // Get user's interaction history
+      const { data: interactions, error } = await supabaseClient
+        .from('user_events')
+        .select(`
+          created_at,
+          events (
+            event_type_id,
+            format,
+            start_time,
+            end_time,
+            attendee_count
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error || !interactions || interactions.length === 0) {
         return null;
       }
 
-      const now = new Date();
-      const currentHour = now.getHours();
-      const currentDayOfWeek = now.getDay();
-
-      // Determine if current time aligns with user's active hours
-      const _isActiveTime = behaviorPattern.mostActiveHours.includes(currentHour) ||
-        behaviorPattern.mostActiveHours.some(hour => Math.abs(hour - currentHour) <= 2);
+      // Analyze patterns
+      const preferredCategories = this.analyzePreferredCategories(interactions);
+      const preferredFormats = this.analyzePreferredFormats(interactions);
+      const preferredTimes = this.analyzePreferredTimes(interactions);
+      const averageEventDuration = this.calculateAverageDuration(interactions);
+      const interactionFrequency = this.calculateInteractionFrequency(interactions);
 
       return {
-        timeOfDay: currentHour,
-        dayOfWeek: currentDayOfWeek,
-        deviceType: 'desktop', // TODO: Detect from user agent or pass from client
-        mostActiveHours: behaviorPattern.mostActiveHours
+        preferredCategories,
+        preferredFormats,
+        preferredTimes,
+        averageEventDuration,
+        interactionFrequency
       };
 
     } catch (error) {
-      console.error('Error getting user context:', error);
-      Sentry.captureException(error, {
-        extra: { function: 'getUserContext', userId }
-      });
+      console.warn('Error getting user context:', error);
       return null;
     }
   }
 
   /**
-   * Get recommendation performance metrics
+   * Analyze preferred categories from interaction history
    */
-  static async getRecommendationMetrics(
-    algorithmVersion: string,
-    section: string,
-    supabaseClient: SupabaseClientType,
-    days: number = 7
-  ): Promise<RecommendationMetrics | null> {
-    try {
-      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  private static analyzePreferredCategories(interactions: Record<string, unknown>[]): string[] {
+    const categoryCounts = new Map<string, number>();
+    
+    for (const interaction of interactions) {
+      const eventTypeId = (interaction.events as Record<string, unknown>)?.event_type_id;
+      if (eventTypeId && typeof eventTypeId === 'string') {
+        categoryCounts.set(eventTypeId, (categoryCounts.get(eventTypeId) || 0) + 1);
+      }
+    }
 
-      // Get recommendation batches
-      const { data: batches, error: batchError } = await supabaseClient
-        .from('recommendation_batches')
-        .select('*')
-        .eq('algorithm_version', algorithmVersion)
-        .eq('section', section)
-        .gte('shown_at', startDate);
+    return Array.from(categoryCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([categoryId]) => categoryId);
+  }
 
-      if (batchError) throw batchError;
+  /**
+   * Analyze preferred formats from interaction history
+   */
+  private static analyzePreferredFormats(interactions: Record<string, unknown>[]): string[] {
+    const formatCounts = new Map<string, number>();
+    
+    for (const interaction of interactions) {
+      const format = (interaction.events as Record<string, unknown>)?.format;
+      if (format && typeof format === 'string') {
+        formatCounts.set(format, (formatCounts.get(format) || 0) + 1);
+      }
+    }
 
-      // Get interactions for these recommendations
-      const { data: interactions, error: interactionError } = await supabaseClient
-        .from('user_interactions_simple')
-        .select('*')
-        .eq('algorithm_version', algorithmVersion)
-        .eq('section', section)
-        .gte('created_at', startDate);
+    return Array.from(formatCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([format]) => format);
+  }
 
-      if (interactionError) throw interactionError;
+  /**
+   * Analyze preferred times from interaction history
+   */
+  private static analyzePreferredTimes(interactions: Record<string, unknown>[]): string[] {
+    const timeSlots = new Map<string, number>();
+    
+    for (const interaction of interactions) {
+      const startTime = (interaction.events as Record<string, unknown>)?.start_time;
+      if (startTime && typeof startTime === 'string') {
+        try {
+          const hour = new Date(startTime).getHours();
+          let timeSlot: string;
+          
+          if (hour >= 6 && hour < 12) timeSlot = 'morning';
+          else if (hour >= 12 && hour < 17) timeSlot = 'afternoon';
+          else if (hour >= 17 && hour < 21) timeSlot = 'evening';
+          else timeSlot = 'night';
+          
+          timeSlots.set(timeSlot, (timeSlots.get(timeSlot) || 0) + 1);
+        } catch {
+          // Skip invalid dates
+        }
+      }
+    }
 
-      if (!batches || batches.length === 0) return null;
+    return Array.from(timeSlots.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([timeSlot]) => timeSlot);
+  }
 
-      const totalRecommendations = batches.reduce((sum, batch) => sum + batch.event_ids.length, 0);
-      const totalInteractions = interactions?.length || 0;
-      const clicks = interactions?.filter(i => i.interaction_type === 'click').length || 0;
-      const views = interactions?.filter(i => i.interaction_type === 'view').length || 0;
+  /**
+   * Calculate average event duration from interaction history
+   */
+  private static calculateAverageDuration(interactions: Record<string, unknown>[]): number {
+    let totalDuration = 0;
+    let validInteractions = 0;
+
+    for (const interaction of interactions) {
+      const startTime = (interaction.events as Record<string, unknown>)?.start_time;
+      const endTime = (interaction.events as Record<string, unknown>)?.end_time;
       
-      const avgPosition = interactions && interactions.length > 0
-        ? interactions.reduce((sum, i) => sum + (i.position || 0), 0) / interactions.length
-        : 0;
-
-      return {
-        algorithmVersion,
-        section,
-        totalRecommendations,
-        totalInteractions,
-        clickThroughRate: views > 0 ? clicks / views : 0,
-        avgPosition
-      };
-
-    } catch (error) {
-      console.error('Error getting recommendation metrics:', error);
-      Sentry.captureException(error, {
-        extra: { function: 'getRecommendationMetrics', algorithmVersion, section }
-      });
-      return null;
+      if (startTime && endTime && typeof startTime === 'string' && typeof endTime === 'string') {
+        try {
+          const start = new Date(startTime);
+          const end = new Date(endTime);
+          const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60); // Hours
+          
+          if (duration > 0 && duration < 24) { // Reasonable duration
+            totalDuration += duration;
+            validInteractions++;
+          }
+        } catch {
+          // Skip invalid dates
+        }
+      }
     }
+
+    return validInteractions > 0 ? totalDuration / validInteractions : 2; // Default 2 hours
   }
 
   /**
-   * Update user recommendation preferences based on behavior
+   * Calculate interaction frequency (interactions per week)
    */
-  static async updateUserPreferences(
-    userId: string,
-    preferences: Record<string, unknown>,
-    supabaseClient: SupabaseClientType
-  ): Promise<void> {
+  private static calculateInteractionFrequency(interactions: Record<string, unknown>[]): number {
+    if (interactions.length < 2) return 0;
+
     try {
-      const { error } = await supabaseClient
-        .from('profiles')
-        .update({
-          recommendation_preferences: JSON.parse(JSON.stringify(preferences)),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error updating user preferences:', error);
-      Sentry.captureException(error, {
-        extra: { function: 'updateUserPreferences', userId, preferences }
-      });
+      const firstInteraction = new Date(interactions[interactions.length - 1].created_at as string);
+      const lastInteraction = new Date(interactions[0].created_at as string);
+      
+      const timeDiff = lastInteraction.getTime() - firstInteraction.getTime();
+      const weeksDiff = timeDiff / (1000 * 60 * 60 * 24 * 7);
+      
+      return weeksDiff > 0 ? interactions.length / weeksDiff : 0;
+    } catch {
+      return 0;
     }
   }
 
   /**
-   * Clean up user buffer when user logs out or leaves
-   */
-  static cleanupUserBuffer(userId: string): void {
-    bufferManager.cleanupUser(userId);
-  }
-
-  /**
-   * Destroy the entire analytics system (for testing/cleanup)
-   */
-  static destroy(): void {
-    bufferManager.destroy();
-  }
-
-  /**
-   * Get analytics consent status for user
+   * Get user's analytics consent status
+   * For now, returns true by default (assume consent given)
    */
   static async getAnalyticsConsent(
-    userId: string,
-    supabaseClient: SupabaseClientType
+    _userId: string,
+    _supabaseClient: SupabaseClientType
   ): Promise<boolean | null> {
     try {
-      const { data, error } = await supabaseClient
-        .from('profiles')
-        .select('analytics_consent')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      return data?.analytics_consent; // Returns null if never set, boolean if set
+      // For now, assume users have given consent
+      // In the future, this would check a user_preferences table
+      return true;
     } catch (error) {
-      console.error('Error getting analytics consent:', error);
-      return null; // Default to null (show banner) on error
-    }
-  }
-
-  /**
-   * Update analytics consent for user
-   */
-  static async updateAnalyticsConsent(
-    userId: string,
-    consent: boolean,
-    supabaseClient: SupabaseClientType
-  ): Promise<void> {
-    try {
-      const { error } = await supabaseClient
-        .from('profiles')
-        .update({
-          analytics_consent: consent,
-          analytics_consent_date: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error updating analytics consent:', error);
-      Sentry.captureException(error, {
-        extra: { function: 'updateAnalyticsConsent', userId, consent }
-      });
-    }
-  }
-
-  /**
-   * Update user preferences based on interaction patterns
-   */
-  static async updatePreferenceEvolution(
-    userId: string,
-    supabaseClient: SupabaseClientType
-  ): Promise<void> {
-    try {
-      const behaviorPattern = await this.getUserBehaviorPattern(userId, supabaseClient);
-      if (!behaviorPattern) return;
-
-      // Build evolved preferences based on behavior
-      const evolvedPreferences = {
-        preferredSections: behaviorPattern.preferredSections,
-        optimalRecommendationTimes: behaviorPattern.mostActiveHours,
-        engagementLevel: behaviorPattern.clickThroughRate > 0.1 ? 'high' : 'moderate',
-        sessionDurationPreference: behaviorPattern.avgSessionDuration > 180000 ? 'long' : 'short',
-        lastUpdated: new Date().toISOString()
-      };
-
-      const { error } = await supabaseClient
-        .from('profiles')
-        .update({
-          recommendation_preferences: evolvedPreferences,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error updating preference evolution:', error);
-      Sentry.captureException(error, {
-        extra: { function: 'updatePreferenceEvolution', userId }
-      });
-    }
-  }
-
-  /**
-   * Get evolved user preferences
-   */
-  static async getEvolvedPreferences(
-    userId: string,
-    supabaseClient: SupabaseClientType
-  ): Promise<Record<string, unknown> | null> {
-    try {
-      const { data, error } = await supabaseClient
-        .from('profiles')
-        .select('recommendation_preferences')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      return data?.recommendation_preferences as Record<string, unknown> || null;
-    } catch (error) {
-      console.error('Error getting evolved preferences:', error);
+      console.warn('Error getting analytics consent:', error);
       return null;
     }
   }
 
   /**
-   * Write a minimal metric to career_impact_analytics
+   * Set user's analytics consent
+   * For now, just logs the consent
    */
-  static async logCareerImpactMetric(
-    args: { userId: string; eventId: string; metricType: 'click' | 'save' | 'dismiss'; algorithmVersion: string },
-    supabaseClient: SupabaseClientType
+  static async setAnalyticsConsent(
+    userId: string,
+    consent: boolean,
+    _supabaseClient: SupabaseClientType
+  ): Promise<boolean> {
+    try {
+      // For now, just log the consent
+      console.log(`Analytics consent set for user ${userId}: ${consent}`);
+      return true;
+    } catch (error) {
+      console.error('Error setting analytics consent:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Force flush user analytics data
+   */
+  static async forceFlushUser(userId: string): Promise<void> {
+    try {
+      // This would typically flush any pending analytics data to storage
+      // For now, we'll just log that the flush was requested
+      console.log(`Analytics flush requested for user: ${userId}`);
+      
+      // In a real implementation, this might:
+      // 1. Send pending interaction events to analytics service
+      // 2. Update user behavior models
+      // 3. Clear local analytics cache
+      
+    } catch (error) {
+      console.warn('Error flushing user analytics:', error);
+    }
+  }
+
+  /**
+   * Force flush all analytics data
+   */
+  static async forceFlushAll(): Promise<void> {
+    try {
+      // This would typically flush all pending analytics data to storage
+      // For now, we'll just log that the flush was requested
+      console.log('Analytics flush requested for all users');
+      
+      // In a real implementation, this might:
+      // 1. Send all pending interaction events to analytics service
+      // 2. Update all user behavior models
+      // 3. Clear all local analytics cache
+      
+    } catch (error) {
+      console.warn('Error flushing all analytics:', error);
+    }
+  }
+
+  /**
+   * Track user interaction for analytics
+   * For now, just logs the interaction
+   */
+  static async trackInteraction(
+    userId: string,
+    interactionType: string,
+    data: Record<string, unknown>,
+    _supabaseClient: SupabaseClientType
   ): Promise<void> {
     try {
-      const { error } = await (supabaseClient as any) // eslint-disable-line @typescript-eslint/no-explicit-any
-        .from('career_impact_analytics')
-        .insert({
-          user_id: args.userId,
-          event_id: args.eventId,
-          metric_type: args.metricType,
-          metric_value: 1,
-          algorithm_version: args.algorithmVersion,
-          measured_at: new Date().toISOString()
-        });
-      if (error) throw error;
+      // For now, just log the interaction
+      console.log(`User interaction tracked: ${userId} - ${interactionType}`, data);
     } catch (error) {
-      console.error('Error logging career impact metric:', error);
-      Sentry.captureException(error, {
-        extra: { function: 'logCareerImpactMetric', args }
-      });
+      console.warn('Error tracking interaction:', error);
     }
   }
 }

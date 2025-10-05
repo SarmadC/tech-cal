@@ -28,7 +28,6 @@ export default async function CalendarPage() {
         } catch (_profileError) {
             // This is fine - new users don't have profiles yet
         }
-
         return (
             <CalendarClientView
                 initialEvents={[]} // No longer needed - events loaded via server-side filtering

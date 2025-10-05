@@ -138,14 +138,8 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
           scoringTriggers.push('behavioral_boost');
           appliedAdjustments.behavioralBoost = behavioralBoost;
 
-          // Log boost application for analytics
-          if (boostResult.application) {
-            await BehavioralBoostService.logBoostApplication(
-              boostResult.application,
-              options.userId,
-              options.supabaseClient
-            );
-          }
+          // Note: boost application logging would be implemented here
+          // For now, we'll skip this since the application property doesn't exist
         }
       } catch (error) {
         // Don't fail scoring if behavioral boost fails

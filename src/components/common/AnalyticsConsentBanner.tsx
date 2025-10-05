@@ -37,7 +37,7 @@ export default function AnalyticsConsentBanner() {
 
     setIsLoading(true);
     try {
-      await BehavioralAnalyticsService.updateAnalyticsConsent(user.id, consent, supabase);
+      await BehavioralAnalyticsService.setAnalyticsConsent(user.id, consent, supabase);
       setShowBanner(false);
     } catch (error) {
       console.error('Error updating consent:', error);

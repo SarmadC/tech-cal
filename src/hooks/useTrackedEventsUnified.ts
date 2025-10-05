@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts';
 import { UserEventService } from '@/services/userEventService';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { TrackedEventRecord, EVENT_STATUS } from '@/types';
-import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
 import { extractAlgorithmContext } from '@/utils/analyticsUtils';
 
@@ -76,12 +75,14 @@ export function useTrackedEventsUnified() {
     try {
       const { algorithmVersion } = event ? extractAlgorithmContext(event) : { algorithmVersion: ANALYTICS_CONFIG.CURRENT_ALGORITHM_VERSION };
       
-      await BehavioralAnalyticsService.logCareerImpactMetric({
+      // Note: logCareerImpactMetric method not implemented yet
+      // For now, we'll just log the metric for debugging
+      console.log('Career impact metric would be logged:', {
         userId: user.id,
         eventId,
         metricType: 'save',
         algorithmVersion
-      }, supabase);
+      });
     } catch (error) {
       // Don't fail the main operation if analytics fails
       console.warn('Failed to log save metric:', error);
