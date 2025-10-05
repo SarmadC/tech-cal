@@ -1,3 +1,6 @@
+// ISR for blog page - revalidate every hour for fresh content
+export const revalidate = 3600; // 1 hour
+
 import Link from 'next/link';
 import BlogFilters from './BlogFilters';
 import { createClient } from '@/utils/supabase/server';

@@ -1,5 +1,8 @@
 // src/app/dashboard/page.tsx
 
+// This route needs dynamic rendering for user authentication and data fetching
+export const dynamic = 'force-dynamic';
+
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { EventService } from '@/services/eventServices';

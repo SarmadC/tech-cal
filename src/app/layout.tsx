@@ -1,7 +1,7 @@
 // src/app/layout.tsx 
 
-// Force dynamic rendering to prevent SSR issues with SupabaseProvider
-export const dynamic = 'force-dynamic';
+// Dynamic rendering only for authenticated routes that need SupabaseProvider
+// Static routes (landing, pricing, legal, blog) will be statically generated
 
 import type { Metadata } from "next";
 import { Inter, DM_Sans } from "next/font/google";

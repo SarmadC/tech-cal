@@ -1,5 +1,8 @@
 // src/app/legal/terms/page.tsx
 
+// Static generation for legal pages - static content
+export const dynamic = 'force-static';
+
 export default function TermsOfServicePage() {
     return (
         <div className="max-w-4xl mx-auto py-12 px-4 prose prose-invert font-sans-all">

@@ -2,6 +2,9 @@
 
 'use client';
 
+// Static generation for pricing page - pure client component with static content
+export const dynamic = 'force-static';
+
 import Link from 'next/link';
 
 const plans = [

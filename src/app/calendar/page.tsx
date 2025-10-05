@@ -1,4 +1,8 @@
 // src/app/calendar/page.tsx
+
+// This route needs dynamic rendering for user authentication and data fetching
+export const dynamic = 'force-dynamic';
+
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 // EventService no longer needed - using server-side filtering
