@@ -63,7 +63,6 @@ const nextConfig: NextConfig = {
   images: {
     domains: [
       'mddgtexrnnlctttbcpsy.supabase.co', // Your Supabase storage domain
-      'img.logo.dev', // Logo.dev API for transparent PNGs
       'upload.wikimedia.org', // Wikipedia SVG logos (transparent)
       'cdn.freebiesupply.com', // High-quality transparent logos
       'logo.clearbit.com', // Clearbit logo API (fallback)

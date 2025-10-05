@@ -37,7 +37,7 @@ const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, 
         return logoUrl;
     }
     
-    // If it's a domain name (contains a dot but no file extension), use Logo.dev API
+    // If it's a domain name (contains a dot but no file extension), use special handling
     if (logoUrl.includes('.') && !logoUrl.includes('/') && !logoUrl.match(/\.(png|jpg|jpeg|svg|webp)$/i)) {
         // Special handling for known companies with better transparent logos
         const specialLogos: Record<string, string> = {
@@ -49,8 +49,8 @@ const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, 
             return specialLogos[logoUrl];
         }
         
-        // Logo.dev API with SVG format for better scalability
-        return `https://img.logo.dev/${logoUrl}?token=pk_GQL0xmfkStGE1eRKNPXh4A&format=svg&size=24`;
+        // No longer using img.logo.dev API - return undefined to skip logo
+        return undefined;
     }
     
     // If it's a filename (including SVG), construct Supabase storage URL
