@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { 
   Calendar, 
@@ -13,8 +13,9 @@ import { Event } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { Card, CardHeader } from '@/components/ui/card';
 import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
-import { LearnMoreButton } from '../../shared/LearnMoreButton';
 import { cn } from '@/lib/utils';
+import ShinyText from '../../shared/ShinyText';
+import '../../shared/ShinyText.css';
 
 export interface DiscoveryCardProps {
   event: Event & { careerImpactLite?: CareerImpactScoreLite };
@@ -38,6 +39,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   showLearnMore = true
 }) => {
   const hasTrackedView = React.useRef(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Track view only once when component mounts
   React.useEffect(() => {
@@ -155,33 +157,54 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         '--category-title-color': titleColor,
       } as React.CSSProperties}
     >
-      {/* Learn More Button - positioned at absolute right edge of entire card */}
-      {showLearnMore && (
-        <LearnMoreButton
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent card click
-            onLearnMore?.();
-          }}
-          showForLargeEvents={true}
-          className="discover-learn-more-absolute"
-        />
-      )}
       
-      <CardHeader className="pb-0">
-        {/* Event Header Content - Now takes full width */}
-        <div className="w-full space-y-4">
-          {/* Event title on its own line */}
-          <div className="flex items-center">
-            <h3 
-              className="font-semibold text-lg leading-tight tracking-tight flex-1 min-w-0"
-              style={{ color: titleColor }}
-            >
-              {event.title}
-            </h3>
-          </div>
+      <CardHeader className="pb-0 relative">
+         {/* Event Header Content - Now takes full width */}
+         <div className="w-full space-y-4">
+           {/* Event title and arrow button on the same line */}
+           <div className="flex items-center justify-between">
+             <h3 
+               className="font-semibold text-lg leading-tight tracking-tight flex-1 min-w-0"
+               style={{ color: titleColor }}
+             >
+               {event.title}
+             </h3>
+             {showLearnMore && (
+               <button
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   onLearnMore?.();
+                 }}
+                 onMouseEnter={() => setIsHovered(true)}
+                 onMouseLeave={() => setIsHovered(false)}
+                 className="learn-more-button z-10 flex-shrink-0"
+                 title="Learn More"
+                 type="button"
+               >
+                 <div className="button-content">
+                   <svg 
+                     xmlns="http://www.w3.org/2000/svg" 
+                     width="18" 
+                     height="18" 
+                     fill="currentColor" 
+                     viewBox="0 0 256 256"
+                     className={`arrow-icon ${isHovered ? 'arrow-hovered' : ''}`}
+                   >
+                     <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"/>
+                   </svg>
+                   <ShinyText 
+                     text="Learn More" 
+                     disabled={!isHovered} 
+                     speed={3} 
+                     className={`learn-more-shiny ${isHovered ? 'text-visible' : ''}`}
+                   />
+                 </div>
+               </button>
+             )}
+           </div>
           
           {/* Career Impact Indicator - separate line */}
-          {showCareerImpact && event.careerImpactLite && (
+          {showCareerImpact && event.careerImpactLite && event.careerImpactLite.overall > 0 && (
             <div className="flex items-center">
               <CareerImpactIndicator 
                 score={event.careerImpactLite.overall}
@@ -217,7 +240,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
             </div>
           )}
 
-          {event.attendeeCount && (
+          {event.attendeeCount > 0 && (
             <div className="flex items-center gap-1 text-sm text-gray-500">
               <Users size={14} />
               <span>{event.attendeeCount} attending</span>
