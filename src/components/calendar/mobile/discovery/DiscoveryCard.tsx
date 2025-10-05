@@ -240,7 +240,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
             </div>
           )}
 
-          {event.attendeeCount > 0 && (
+          {event.attendeeCount && event.attendeeCount > 0 && (
             <div className="flex items-center gap-1 text-sm text-gray-500">
               <Users size={14} />
               <span>{event.attendeeCount} attending</span>
