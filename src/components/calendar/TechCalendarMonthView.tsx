@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import FullCalendar from '@fullcalendar/react';
+import { FullCalendarCSSLoader } from './FullCalendarCSSLoader';
 import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
@@ -527,6 +528,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
 
     return (
         <div className={`tech-calendar-month-view ${className}`}>
+            <FullCalendarCSSLoader />
             <FullCalendar
                 ref={activeCalendarRef}
                 plugins={[dayGridPlugin]}

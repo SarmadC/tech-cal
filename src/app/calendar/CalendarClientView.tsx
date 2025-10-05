@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useCallback, useRef, useReducer } from 'react';
-import FullCalendar from '@fullcalendar/react';
 import { EventClickArg } from '@fullcalendar/core';
+import type FullCalendar from '@fullcalendar/react';
 import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useResizeListener } from '@/hooks/useEventListener';

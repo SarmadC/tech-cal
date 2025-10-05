@@ -46,8 +46,7 @@ export default function RootLayout({
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
-                {/* FullCalendar CSS - using jsdelivr CDN with proper CSP allowance */}
-                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.css" />
+                {/* FullCalendar CSS moved to calendar-specific components for better performance */}
             </head>
             <body className={`${inter.className} ${dmSans.variable}`}>
 

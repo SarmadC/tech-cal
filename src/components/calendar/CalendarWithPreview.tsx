@@ -1,5 +1,6 @@
 import { FC, useMemo, useRef, useCallback, useEffect, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
+import { FullCalendarCSSLoader } from './FullCalendarCSSLoader';
 import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -155,6 +156,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
 
     return (
         <div className={`calendar-container relative h-full ${className}`}>
+            <FullCalendarCSSLoader />
             <FullCalendar
                 ref={activeCalendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
