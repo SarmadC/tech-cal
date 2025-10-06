@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { EventClickArg } from '@fullcalendar/core';
-import type FullCalendar from '@fullcalendar/react';
+import { EventClickArg } from '@/types/fullcalendar';
+import { FullCalendar } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';

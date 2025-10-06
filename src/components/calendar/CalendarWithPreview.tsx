@@ -1,6 +1,5 @@
 import { FC, useMemo, useRef, useEffect, useState } from 'react';
-import { EventClickArg } from '@fullcalendar/core';
-import type FullCalendar from '@fullcalendar/react';
+import { EventClickArg, FullCalendar } from '@/types/fullcalendar';
 import DynamicFullCalendar from './DynamicFullCalendar';
 import { Event } from '@/types';
 import { useEventPreview } from '@/hooks/useEventPreview';

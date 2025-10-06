@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { EventClickArg } from '@fullcalendar/core';
-import type FullCalendar from '@fullcalendar/react';
+import { EventClickArg, FullCalendar } from '@/types/fullcalendar';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance, TrackedEvent } from '@/types';
 

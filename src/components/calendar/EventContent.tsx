@@ -1,6 +1,6 @@
 // src/components/calendar/EventContent.tsx
 import { FC, useRef } from 'react';
-import { EventContentArg } from '@fullcalendar/core';
+import { EventContentArg } from '@/types/fullcalendar';
 import { Event, MultiDayEventInstance } from '@/types';
 import { formatTime } from '@/utils/dateUtils';
 import { getCategoryColor, isMultiDayEvent, getMultiDayDuration } from '@/utils/eventUtils';

@@ -2,7 +2,7 @@
 
 import React, { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type FullCalendar from '@fullcalendar/react';
+import { FullCalendar } from '@/types/fullcalendar';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';

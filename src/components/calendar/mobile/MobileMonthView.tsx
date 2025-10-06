@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { EventClickArg } from '@fullcalendar/core';
+import { EventClickArg } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import { CaretLeft, CaretRight, ArrowClockwise } from '@phosphor-icons/react';
 import { MaterialIcon } from '@/components/ui/Icon';

@@ -12,7 +12,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import listPlugin from '@fullcalendar/list';
 
-import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@fullcalendar/core';
+import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@/types/fullcalendar';
 import { Event } from '@/types';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventContent from './EventContent';
