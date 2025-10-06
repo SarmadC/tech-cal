@@ -12,7 +12,7 @@ export class NavigationUtils {
      * Navigate to calendar with event selected
      */
     toEvent(eventId: string) {
-        this.router.push(`/calendar?eventId=${eventId}`);
+        this.router.push(`/calendar?eventId=${eventId}&view=month`);
     }
 
     /**
