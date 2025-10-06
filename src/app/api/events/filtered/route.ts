@@ -163,117 +163,19 @@ export async function POST(request: NextRequest) {
       console.log('No career profile found for user, skipping career impact scoring:', error);
     }
 
-    // Get events with cold start handling
+    // Get events using EventService.getEvents (includes event type data)
     let filteredEvents, totalEvents, isColdStart;
     try {
-      console.log('[API] Attempting to fetch events with filters:', JSON.stringify(eventFilters, null, 2));
+      console.log('[API] Fetching events with EventService.getEvents:', JSON.stringify(eventFilters, null, 2));
       
-      // Try the simplest possible query first
-      try {
-        const { data: simpleEvents, error: simpleError } = await supabase
-          .from('events')
-          .select(`
-            *,
-            organizers (
-              id,
-              name,
-              logo_url
-            )
-          `)
-          .gte('start_time', new Date().toISOString())
-          .order('start_time', { ascending: true })
-          .limit(pageSize);
-          
-        if (simpleError) {
-          console.error('[API] Simple events query failed:', simpleError);
-          throw simpleError;
-        }
-        
-        console.log('[API] Simple query successful, events count:', simpleEvents?.length || 0);
-        filteredEvents = (simpleEvents || []).map((event: Record<string, unknown>) => {
-          // Helper function to get logo URL (similar to transformers.ts)
-          const getLogoUrl = (logoUrl: string | null | undefined, _organizerName?: string): string | undefined => {
-            if (!logoUrl) return undefined;
-            
-            // If it's already a full URL (starts with http), return as-is
-            if (logoUrl.startsWith('http')) {
-              return logoUrl;
-            }
-            
-            // If it's a domain name (contains a dot but no file extension), use special handling
-            if (logoUrl.includes('.') && !logoUrl.includes('/') && !logoUrl.match(/\.(png|jpg|jpeg|svg|webp)$/i)) {
-              // Special handling for known companies with better transparent logos
-              const specialLogos: Record<string, string> = {
-                'meta.com': 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg',
-                'facebook.com': 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg',
-              };
-              
-              if (specialLogos[logoUrl]) {
-                return specialLogos[logoUrl];
-              }
-              
-              // No longer using img.logo.dev API - return undefined to skip logo
-              return undefined;
-            }
-            
-            // If it's a filename (including SVG), construct Supabase storage URL
-            const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            if (!baseUrl) {
-              return undefined;
-            }
-            return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
-          };
-
-          // Extract organizer data from the nested structure
-          const organizer = event.organizers as { id: string; name: string; logo_url?: string } | null;
-          const organizerLogo = getLogoUrl(organizer?.logo_url, organizer?.name);
-
-          return {
-            id: event.id as string,
-            title: (event.title as string) || 'Untitled Event',
-            description: (event.description as string) || '',
-            startTime: event.start_time as string,
-            endTime: event.end_time as string,
-            eventTypeId: (event.event_type_id as string) || '',
-            organizerId: event.organizer_id as string,
-            attendeeCount: (event.attendee_count as number) || 0,
-            location: (event.location as string) || '',
-            format: (event.event_format as string) || 'virtual', // Use actual event_format column
-            cost: (event.pricing_type as string) === 'free' ? 'free' : 'paid', // Map pricing_type to cost
-            difficulty: ((event.difficulty_level as string) || 'beginner') as 'beginner' | 'intermediate' | 'advanced', // Use actual difficulty_level column
-            color: '#3B82F6', // Default color
-            tags: [], // Default empty tags
-            careerImpactScore: 0, // Default score
-            careerImpactComponents: {}, // Default components
-            createdAt: event.created_at as string,
-            status: ((event.status_enum as string) || 'upcoming') as 'upcoming' | 'live' | 'ended' | 'cancelled', // Use actual status_enum
-            sourceUrl: (event.source_url as string) || '',
-            livestreamUrl: (event.livestream_url as string) || '',
-            organizer: organizer?.name || 'Unknown Organizer',
-            organization: {
-              id: organizer?.id || '',
-              name: organizer?.name || 'Unknown',
-              ...(organizerLogo && { logo: organizerLogo })
-            }
-          };
-        });
-        
-        totalEvents = filteredEvents.length;
-        isColdStart = false;
-        
-      } catch (simpleError) {
-        console.error('[API] Simple query also failed, trying EventService.getEvents:', simpleError);
-        
-        // Fallback to EventService.getEvents
-        const basicResult = await EventService.getEvents(eventFilters, supabase, page, pageSize);
-        console.log('[API] EventService.getEvents successful, count:', basicResult.length);
-        
-        filteredEvents = basicResult;
-        totalEvents = await EventService.getEventCount(eventFilters, supabase);
-        console.log('[API] Total events count:', totalEvents);
-        
-        isColdStart = false;
-      }
+      // Use EventService.getEvents which includes event type attachment
+      filteredEvents = await EventService.getEvents(eventFilters, supabase, page, pageSize);
+      console.log('[API] EventService.getEvents successful, count:', filteredEvents.length);
+      
+      totalEvents = await EventService.getEventCount(eventFilters, supabase);
+      console.log('[API] Total events count:', totalEvents);
+      
+      isColdStart = false;
       
     } catch (error) {
       console.error('[API] All event fetching methods failed:', error);

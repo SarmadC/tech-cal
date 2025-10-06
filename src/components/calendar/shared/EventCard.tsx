@@ -6,10 +6,10 @@ import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Event, MultiDayEventInstance, isEventTracked, AgendaItem } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
-import { isEventLive, getEventDuration } from '@/utils/dateUtils';
+import { isEventLive } from '@/utils/dateUtils';
+import { isMultiDayEvent, getMultiDayDuration } from '@/utils/eventUtils';
 import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
-import { LearnMoreButton } from './LearnMoreButton';
 
 export interface EventCardProps {
     event: Event | MultiDayEventInstance | (Event & { careerImpactLite?: CareerImpactScoreLite });
@@ -92,11 +92,54 @@ export const EventCard: React.FC<EventCardProps> = ({
         return <MaterialIcon name="location" size={10} color={iconColor} />;
     };
 
+    // Multi-day dots helper
+    const getMultiDayDots = () => {
+        // Check if this is a multi-day event instance
+        if ('isInstance' in event && event.isInstance) {
+            const instance = event as MultiDayEventInstance;
+            if (instance.dayInfo) {
+                const { currentDay, totalDays } = instance.dayInfo;
+                const maxDots = Math.min(totalDays, 5); // Max 5 dots
+                
+                return (
+                    <div className="multi-day-dots">
+                        {Array.from({ length: maxDots }, (_, i) => (
+                            <div 
+                                key={i} 
+                                className={`multi-day-dot ${i < currentDay ? 'active' : ''}`}
+                            />
+                        ))}
+                    </div>
+                );
+            }
+        }
+        
+        // Fallback for regular multi-day events
+        if (isMultiDayEvent(event)) {
+            const totalDays = Math.min(getMultiDayDuration(event), 5); // Max 5 dots
+            
+            return (
+                <div className="multi-day-dots">
+                    {Array.from({ length: totalDays }, (_, i) => (
+                        <div key={i} className="multi-day-dot" />
+                    ))}
+                </div>
+            );
+        }
+        
+        return null;
+    };
+
     // Get category-based background color from the event type
     const getCategoryColor = () => {
-        // If we have a category with a color, use it directly
+        // First priority: Use the event type color from the database
         if (event.category?.color) {
             return event.category.color;
+        }
+        
+        // Second priority: Use the direct color property (for backwards compatibility)
+        if (event.color) {
+            return event.color;
         }
         
         // Fallback to category name matching if no color is set
@@ -252,7 +295,7 @@ export const EventCard: React.FC<EventCardProps> = ({
     // Day view specific content display
     const showDayTime = isDayView;
     // Hide duration for medium (5–6) and extra-large (>8) day cards to match CSS
-    const showDayDuration = isDayView && !((cardSize >= 5 && cardSize <= 6) || (cardSize > 8));
+    const _showDayDuration = isDayView && !((cardSize >= 5 && cardSize <= 6) || (cardSize > 8));
     const showDayLocation = isDayView && event.location;
     const showDayOrganizer = isDayView && event.organizer;
     // Align with design: Day description only for large (span >= 7)
@@ -337,13 +380,6 @@ export const EventCard: React.FC<EventCardProps> = ({
                     </div>
                 </div>
                 
-                {/* Arrow icon in top-right corner */}
-                <div className="event-arrow-corner">
-                    <LearnMoreButton 
-                        onClick={onClick} 
-                        showForLargeEvents={true}
-                    />
-                </div>
 
                 {/* Day view specific content - Time, Duration, Location */}
                 {isDayView && (
@@ -400,19 +436,14 @@ export const EventCard: React.FC<EventCardProps> = ({
                                          hour: 'numeric', 
                                          minute: '2-digit', 
                                          hour12: true 
-                                     })}
+                                     }).toLowerCase()}
                                      {event.endTime && ` - ${new Date(event.endTime).toLocaleTimeString('en-US', { 
                                          hour: 'numeric', 
                                          minute: '2-digit', 
                                          hour12: true 
-                                     })}`}
+                                     }).toLowerCase()}`}
                                  </span>
                              )}
-                            {showDayDuration && (
-                                <span className="event-duration">
-                                    • {getEventDuration(event.startTime, event.endTime)}
-                                </span>
-                            )}
                         </div>
                         
                         {/* Location and Organizer */}
@@ -421,13 +452,13 @@ export const EventCard: React.FC<EventCardProps> = ({
                                 {showDayLocation && (
                                     <span className="event-location">
                                         {getLocationIcon(event.location)}
-                                        {event.location}
+                                        {event.location.toLowerCase()}
                                     </span>
                                 )}
                                 {showDayOrganizer && (
                                     <span className="event-organizer">
                                         <MaterialIcon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
-                                        {event.organizer}
+                                        {event.organizer.toLowerCase()}
                                     </span>
                                 )}
                             </div>
@@ -566,13 +597,13 @@ export const EventCard: React.FC<EventCardProps> = ({
                     {showWeekLocation && event.location && (
                         <span className="event-location-text">
                             {getLocationIcon(event.location)}
-                            {event.location}
+                            {event.location.toLowerCase()}
                         </span>
                     )}
                     {showWeekOrganizer && event.organizer && (
                         <span className="event-organizer-text">
                             <MaterialIcon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
-                            {event.organizer}
+                            {event.organizer.toLowerCase()}
                         </span>
                     )}
                 </div>
@@ -625,6 +656,9 @@ export const EventCard: React.FC<EventCardProps> = ({
 
             {/* Day view content - time removed since calendar grid already shows time slots */}
             </div>
+
+            {/* Multi-day dots */}
+            {getMultiDayDots()}
         </div>
     );
 };

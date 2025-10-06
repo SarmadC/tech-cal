@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { EventClickArg } from '@fullcalendar/core';
 import type FullCalendar from '@fullcalendar/react';
-import DynamicFullCalendar from './DynamicFullCalendar';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';
+import { EventCard } from './shared/EventCard';
 import '@/app/styles/event-card.css';
 import '@/app/styles/monthly-view.css';
 
@@ -26,14 +26,172 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     initialDate,
     categories: _categories,
     profile: _profile,
-    onEventClick,
+    onEventSelect,
+    onEventClick: _onEventClick,
     calendarRef,
     className = '',
 }) => {
     const internalCalendarRef = React.useRef<FullCalendar | null>(null);
-    const activeCalendarRef = calendarRef || internalCalendarRef;
-    const [isMobile, setIsMobile] = useState(false);
-    const { hidePreview, previewState } = useEventPreview();
+    const _activeCalendarRef = calendarRef || internalCalendarRef;
+    const [_isMobile, setIsMobile] = useState(false);
+    const { hidePreview, previewState, showPreview } = useEventPreview();
+
+    // Custom month grid component for individual day instances
+    const CustomMonthGrid: React.FC = () => {
+        const monthStart = new Date(initialDate.getFullYear(), initialDate.getMonth(), 1);
+        const _monthEnd = new Date(initialDate.getFullYear(), initialDate.getMonth() + 1, 0);
+        const startDate = new Date(monthStart);
+        startDate.setDate(startDate.getDate() - startDate.getDay()); // Start from Sunday
+        
+        const days = [];
+        const currentDate = new Date(startDate);
+        
+        // Generate 42 days (6 weeks)
+        for (let i = 0; i < 42; i++) {
+            days.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        // Group events by date
+        const eventsByDate = useMemo(() => {
+            const grouped = new Map<string, (Event | MultiDayEventInstance)[]>();
+            
+            processedEvents.forEach(event => {
+                let eventDate: Date;
+                
+                if ('isInstance' in event && event.isInstance) {
+                    // For multi-day instances, use the instance date
+                    const [year, month, day] = event.instanceDate.split('-').map(Number);
+                    eventDate = new Date(year, month - 1, day);
+                } else {
+                    // For regular events, use the start time
+                    eventDate = new Date(event.startTime);
+                }
+                
+                const dateKey = eventDate.toISOString().split('T')[0];
+                if (!grouped.has(dateKey)) {
+                    grouped.set(dateKey, []);
+                }
+                grouped.get(dateKey)!.push(event);
+            });
+            
+            return grouped;
+        }, [events]);
+        
+        return (
+            <div className="custom-month-grid">
+                {/* Header */}
+                <div className="month-grid-header">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                        <div key={day} className="month-grid-day-header">
+                            {day}
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Days grid */}
+                <div className="month-grid-days">
+                    {days.map((day, index) => {
+                        const dateKey = day.toISOString().split('T')[0];
+                        const dayEvents = eventsByDate.get(dateKey) || [];
+                        const isCurrentMonth = day.getMonth() === initialDate.getMonth();
+                        const isToday = day.toDateString() === new Date().toDateString();
+                        
+                        return (
+                            <div 
+                                key={index} 
+                                className={`month-grid-day ${isCurrentMonth ? 'current-month' : 'other-month'} ${isToday ? 'today' : ''}`}
+                            >
+                                <div className="month-grid-day-number">
+                                    {day.getDate()}
+                                </div>
+                                
+                                {/* Events for this day */}
+                                <div className="month-grid-day-events">
+                                    {dayEvents.map((event, eventIndex) => (
+                                        <div key={`${event.id}-${eventIndex}`} className="month-grid-event">
+                                            <EventCard
+                                                event={event}
+                                                onClick={() => onEventSelect?.(event)}
+                                                onHover={(e: React.MouseEvent) => {
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const position = {
+                                                        x: rect.left + rect.width / 2,
+                                                        y: rect.top
+                                                    };
+                                                    showPreview(event as Event, position);
+                                                }}
+                                                onLeave={hidePreview}
+                                                viewType="day"
+                                                showCareerImpact={false}
+                                                style={{
+                                                    height: 'auto',
+                                                    minHeight: '24px',
+                                                    fontSize: '0.75rem',
+                                                    padding: '2px 4px'
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    // Process events for multi-day support - create individual day instances
+    const processedEvents = useMemo(() => {
+        const processed: (Event | MultiDayEventInstance)[] = [];
+        
+        events.forEach(event => {
+            // Check if this is a multi-day event (spans more than 1 day)
+            const startDate = new Date(event.startTime);
+            const endDate = event.endTime ? new Date(event.endTime) : new Date(event.startTime);
+            const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff > 0) {
+                // Create individual day instances for multi-day events
+                for (let dayOffset = 0; dayOffset <= daysDiff; dayOffset++) {
+                    const dayDate = new Date(startDate);
+                    dayDate.setDate(startDate.getDate() + dayOffset);
+                    
+                    const year = dayDate.getFullYear();
+                    const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(dayDate.getDate()).padStart(2, '0');
+                    const dateStr = `${year}-${month}-${day}`;
+                    
+                    // Create day instance
+                    const dayInstance: MultiDayEventInstance = {
+                        ...event,
+                        id: `${event.id}-day-${dayOffset + 1}`,
+                        startTime: `${dateStr}T00:00:00`,
+                        endTime: `${dateStr}T23:59:59`,
+                        isInstance: true,
+                        originalEventId: event.id,
+                        instanceDate: dateStr,
+                        dayInfo: {
+                            currentDay: dayOffset + 1,
+                            totalDays: daysDiff + 1,
+                            isFirstDay: dayOffset === 0,
+                            isLastDay: dayOffset === daysDiff,
+                            continuationType: dayOffset === 0 ? 'start' : 
+                                            dayOffset === daysDiff ? 'end' : 'middle'
+                        }
+                    };
+                    
+                    processed.push(dayInstance);
+                }
+            } else {
+                // Single-day event - add as is
+                processed.push(event);
+            }
+        });
+        
+        return processed;
+    }, [events]);
 
     // Mobile detection
     React.useEffect(() => {
@@ -48,32 +206,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
 
     return (
         <div className={`tech-calendar-month-view ${className}`}>
-            <DynamicFullCalendar
-                ref={activeCalendarRef}
-                events={events as Event[]}
-                onEventClick={onEventClick}
-                view="month"
-                initialDate={initialDate}
-                className=""
-                initialView="dayGridMonth"
-                headerToolbar={false}
-                height="100%"
-                moreLinkClick="popover"
-                eventDisplay="block"
-                displayEventTime={!isMobile}
-                slotMinTime="06:00:00"
-                slotMaxTime="22:00:00"
-                expandRows={true}
-                stickyHeaderDates={true}
-                nowIndicator={true}
-                aspectRatio={isMobile ? 0.8 : undefined}
-                scrollTime={isMobile ? "06:00:00" : "08:00:00"}
-                scrollTimeReset={false}
-                {...(isMobile && {
-                    contentHeight: 'auto',
-                    aspectRatio: undefined
-                })}
-            />
+            <CustomMonthGrid />
 
             {/* Event Preview Card */}
             {previewState.event && (

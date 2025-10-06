@@ -1,6 +1,125 @@
 /* ==========================================================================
-   MONTHLY CALENDAR VIEW STYLES
+   MONTHLY CALENDAR VIEW STYLES - CONSOLIDATED & DRY
    ========================================================================== */
+
+/* ==========================================================================
+   CUSTOM MONTH GRID STYLES
+   ========================================================================== */
+
+.custom-month-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--background-main);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.month-grid-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.month-grid-day-header {
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  border-right: 1px solid var(--border-color);
+}
+
+.month-grid-day-header:last-child {
+  border-right: none;
+}
+
+.month-grid-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.month-grid-day {
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 4px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.month-grid-day:last-child {
+  border-right: none;
+}
+
+.month-grid-day.other-month {
+  background: var(--background-muted);
+  color: var(--text-muted);
+}
+
+.month-grid-day.current-month {
+  background: var(--background-main);
+  color: var(--text-primary);
+}
+
+.month-grid-day.today {
+  background: var(--accent-50);
+  border-color: var(--accent-200);
+}
+
+.month-grid-day.today .month-grid-day-number {
+  background: var(--accent-500);
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.month-grid-day-number {
+  font-weight: 500;
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+  padding: 2px 4px;
+}
+
+.month-grid-day-events {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.month-grid-event {
+  flex-shrink: 0;
+  min-height: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .month-grid-day {
+    min-height: 80px;
+    padding: 2px;
+  }
+  
+  .month-grid-day-number {
+    font-size: 0.75rem;
+  }
+  
+  .month-grid-day-header {
+    padding: 8px 4px;
+    font-size: 0.75rem;
+  }
+}
 
 .tech-calendar-month-view {
   height: 100%;
@@ -8,11 +127,13 @@
   border-radius: 8px;
   --event-gap: 6px;
   --cell-pad: 6px;
-  /* Nudge dots further inward from the bottom-right */
   --dots-offset: calc(var(--card-pad, 0.375rem) + 4px);
 }
 
-/* Ensure FullCalendar stretches to fill the container */
+/* ==========================================================================
+   FULLCALENDAR CONTAINER STYLES
+   ========================================================================== */
+
 .tech-calendar-month-view .fc,
 .tech-calendar-month-view .fc-view-harness,
 .tech-calendar-month-view .fc-view-harness-active,
@@ -21,33 +142,34 @@
   height: 100% !important;
 }
 
-/* Enhanced FullCalendar styling for month view */
 .tech-calendar-month-view .fc {
   height: 100%;
   background: transparent;
 }
 
-/* Month view grid container */
 .tech-calendar-month-view .fc-daygrid {
   background: transparent;
 }
+
 .tech-calendar-month-view .fc-daygrid-day {
-  /* default rows per day; updated dynamically via JS */
   --rows: 1;
 }
 
-/* Remove inner padding so cards can reach cell edges */
+/* ==========================================================================
+   CALENDAR GRID STYLES
+   ========================================================================== */
+
 .tech-calendar-month-view .fc-daygrid-day-frame {
   padding: 0 !important;
 }
 
-/* Ensure harness and event span the full width */
 .tech-calendar-month-view .fc-daygrid-event-harness {
   width: 100% !important;
 }
 
-/* Day headers styling */
-.tech-calendar-month-view .fc-col-header-cell {
+/* Day headers */
+.tech-calendar-month-view .fc-col-header-cell,
+.month-day-header {
   background: var(--background-secondary);
   border-color: var(--border-subtle);
   color: var(--foreground-primary);
@@ -58,18 +180,7 @@
   padding: 12px 8px;
 }
 
-.month-day-header {
-  background: var(--background-secondary) !important;
-  border-color: var(--border-subtle) !important;
-  color: var(--foreground-primary) !important;
-  font-weight: 600 !important;
-  font-size: 0.875rem !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  padding: 12px 8px !important;
-}
-
-/* Day cells styling - ensure equal heights */
+/* Day cells */
 .tech-calendar-month-view .fc-daygrid-day {
   background: transparent;
   border-color: var(--border-subtle);
@@ -130,42 +241,125 @@
   color: var(--foreground-primary);
 }
 
-/* Enhanced Event Card Styling with Dynamic Sizing */
-/* Month view events inherit base .event-card styles; remove glass/extra decorations */
+/* ==========================================================================
+   EVENT CARD STYLES
+   ========================================================================== */
+
+/* FullCalendar event container */
 .tech-calendar-month-view .fc-event {
-  padding: 0; /* Let .event-card control padding */
+  padding: 0;
   border: none;
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
-  display: block; /* allow width:100% to truly fill */
+  display: block;
   vertical-align: top;
   box-sizing: border-box;
   width: 100% !important;
-  position: relative !important; /* anchor for absolute children */
-}
-
-/* Ensure FC inner wrapper does not capture positioning context */
-.tech-calendar-month-view .fc-event .fc-event-main { position: static !important; }
-
-/* Ensure consistent pointer and avoid text selection flicker */
-.tech-calendar-month-view .event-card,
-.tech-calendar-month-view .event-card * {
-  cursor: pointer;
-}
-
-/* Ensure the entire FullCalendar event element is hoverable */
-.tech-calendar-month-view .fc-event {
+  position: relative !important;
   cursor: pointer !important;
   pointer-events: all !important;
 }
 
-/* Ensure all child elements of event cards allow hover detection */
+.tech-calendar-month-view .fc-event .fc-event-main {
+  position: static !important;
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Event card styling - inherits from base event-card.css */
+.tech-calendar-month-view .fc-event .event-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.tech-calendar-month-view .fc-event .event-card.mini {
+  --card-pad: 0.375rem;
+  margin: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: var(--min-event-height);
+}
+
+/* Event content styling */
+.tech-calendar-month-view .fc-event .event-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Event logo styling */
+.tech-calendar-month-view .fc-event .event-logo {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tech-calendar-month-view .fc-event .event-logo .logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+/* Multi-day dots styling */
+.tech-calendar-month-view .fc-event .multi-day-dots {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.tech-calendar-month-view .fc-event .multi-day-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--category-title-color, #1e293b);
+  opacity: 0.3;
+  transition: all 0.2s ease;
+}
+
+.tech-calendar-month-view .fc-event .multi-day-dot.active {
+  opacity: 1;
+  background-color: var(--category-title-color, #1e293b);
+  transform: scale(1.2);
+}
+
+/* Hover effects */
+.tech-calendar-month-view .fc-event:hover .event-card {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Pointer events for child elements */
 .tech-calendar-month-view .fc-event .fc-event-main,
 .tech-calendar-month-view .fc-event .event-card-basic-info,
 .tech-calendar-month-view .fc-event .event-title,
 .tech-calendar-month-view .fc-event .event-time {
-  pointer-events: none !important; /* Let parent handle hover */
+  pointer-events: none !important;
 }
 
 .tech-calendar-month-view .event-card .event-title,
@@ -174,47 +368,50 @@
   -webkit-user-select: none;
 }
 
-/* Month view: slightly tighter mini card padding for denser grid */
-.tech-calendar-month-view .event-card.mini {
-  --card-pad: 0.375rem; /* tighter padding for dense month cells */
-  margin: 0 !important; /* remove default 2px margin */
-  width: 100% !important;
-}
+/* ==========================================================================
+   EVENT SIZING & LAYOUT
+   ========================================================================== */
 
-/* Ensure absolutely-positioned children (dots) anchor to the card */
-.tech-calendar-month-view .event-card { position: relative; }
-
-/* Month view positioning for day-dots similar to week/day */
-.tech-calendar-month-view .event-card .event-day-dots {
-  position: absolute;
-  bottom: var(--dots-offset);
-  right: var(--dots-offset);
+.tech-calendar-month-view .fc-daygrid-day-frame {
+  --events-count: 1;
+  --available-height: calc(100% - 32px);
+  --event-height: calc(var(--available-height) / var(--events-count));
+  --min-event-height: 40px;
   display: flex;
-  gap: 3px;
-  z-index: 10;
-  pointer-events: none; /* keep card clickable */
+  flex-direction: column;
+  height: auto !important;
+  min-height: 200px;
+  position: relative;
 }
 
-.tech-calendar-month-view .event-card .day-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  opacity: 0.8;
-  transform: scale(1);
-  transition: transform 120ms ease;
+.tech-calendar-month-view .fc-daygrid-day-events {
+  display: flex;
+  flex-direction: column;
+  padding: 2px;
+  gap: 1px;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+  flex: 1 1 auto;
 }
 
-.tech-calendar-month-view .event-card .day-dot.active {
-  width: 8px;
-  height: 8px;
-  opacity: 1;
-  transform: scale(1.15);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+.tech-calendar-month-view .fc-daygrid-event-harness {
+  height: max(var(--event-height), var(--min-event-height)) !important;
+  margin: 0 !important;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Dynamic Event Sizing */
-.tech-calendar-month-view .fc-event.event-single { }
+.tech-calendar-month-view .fc-daygrid-event {
+  margin: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+  min-height: var(--min-event-height);
+}
 
+/* Dynamic event sizing */
 .tech-calendar-month-view .fc-event.event-half {
   width: calc((100% - var(--event-gap)) / 2);
 }
@@ -227,241 +424,10 @@
   width: calc((100% - (var(--event-gap) * 3)) / 4);
 }
 
-/* Proportional Event Height System - Adaptive */
-.tech-calendar-month-view .fc-daygrid-day-frame {
-  --events-count: 1;
-  --available-height: calc(100% - 32px);
-  --event-height: calc(var(--available-height) / var(--events-count));
-  --min-event-height: 40px;
+/* ==========================================================================
+   MORE EVENTS LINK
+   ========================================================================== */
 
-  display: flex;
-  flex-direction: column;
-  height: auto !important;
-  min-height: 200px;
-  position: relative;
-}
-
-/* Day events container - adaptive height based on content */
-.tech-calendar-month-view .fc-daygrid-day-events {
-  display: flex;
-  flex-direction: column;
-  padding: 2px;
-  gap: 1px;
-  min-height: auto;
-  max-height: none;
-  overflow: visible;
-  flex: 1 1 auto;
-}
-
-/* Each event harness gets proportional height */
-.tech-calendar-month-view .fc-daygrid-event-harness {
-  /* Use the calculated proportional height, but ensure minimum */
-  height: max(var(--event-height), var(--min-event-height)) !important;
-  margin: 0 !important;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Event container fills the harness completely */
-.tech-calendar-month-view .fc-daygrid-event {
-  margin: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  display: flex;
-  flex-direction: column;
-  min-height: var(--min-event-height);
-}
-
-/* Event main content fills the event container */
-.tech-calendar-month-view .fc-event .fc-event-main {
-  height: 100% !important;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 6px 8px;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* Ensure our mini event card fills its container */
-.tech-calendar-month-view .event-card.mini {
-  height: 100% !important;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  box-sizing: border-box;
-  min-height: var(--min-event-height);
-}
-
-/* More link styling for overflow events */
-.tech-calendar-month-view .fc-more-link {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--foreground-secondary);
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-top: 2px;
-  display: inline-block;
-  transition: all 0.2s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(4px);
-}
-
-.tech-calendar-month-view .fc-more-link:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--foreground-primary);
-  transform: translateY(-1px);
-}
-
-.tech-calendar-month-view .fc-event::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.tech-calendar-month-view .fc-event:hover { transform: translateY(-1px); }
-
-.tech-calendar-month-view .fc-event:hover::before { opacity: 0; }
-
-/* Event text styling with dynamic colors */
-/* We render month content using base .event-card markup; no need for fc-event-main overrides */
-
-/* Ensure dynamic title/time colors take precedence */
-/* Titles/times inherit dynamic color from base card */
-
-/* Special styling for single events that fill the day */
-.tech-calendar-month-view .fc-event.event-single .fc-event-main {
-  text-align: left;
-  font-size: 0.8rem;
-  font-weight: 600;
-  line-height: 1.3;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  height: 100%;
-  padding: 12px;
-  gap: 4px;
-  color: var(--category-title-color, #1f2937);
-}
-
-/* Event title styling for single events */
-.tech-calendar-month-view .fc-event.event-single .fc-event-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--category-title-color, #1f2937);
-  margin-bottom: 2px;
-  line-height: 1.2;
-}
-
-/* Event time styling for single events */
-.tech-calendar-month-view .fc-event.event-single .fc-event-time {
-  font-size: 0.75rem;
-  font-weight: 500;
-  opacity: 0.9;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--category-title-color, #1f2937);
-}
-
-/* Clock icon removed - clean time display */
-
-/* Event time display */
-/* Time/title sizing mirrors base mini card; no extra overrides necessary */
-
-/* Event title styling */
-/* Title inherits from base card */
-
-/* Multi-day event styling */
-.tech-calendar-month-view .fc-daygrid-event.fc-event-start .fc-event-main {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.tech-calendar-month-view .fc-daygrid-event.fc-event-end .fc-event-main {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.tech-calendar-month-view .fc-daygrid-event:not(.fc-event-start):not(.fc-event-end) .fc-event-main {
-  border-radius: 0;
-}
-
-/* Enhanced Event Status Indicators */
-.tech-calendar-month-view .tracked-event {
-  border-left: 4px solid var(--success) !important;
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 50%, transparent 100%) !important;
-  position: relative;
-}
-
-.tech-calendar-month-view .completed-event {
-  border-left: 4px solid var(--success) !important;
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 50%, transparent 100%) !important;
-  position: relative;
-}
-
-.tech-calendar-month-view .completed-event::after {
-  content: '✓';
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 0.6rem;
-  color: var(--success);
-  font-weight: 700;
-  opacity: 0.8;
-}
-
-.tech-calendar-month-view .virtual-event {
-  border-right: 4px solid var(--virtual-event) !important;
-  background: linear-gradient(270deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.05) 50%, transparent 100%) !important;
-  position: relative;
-}
-
-.tech-calendar-month-view .virtual-event::after {
-  content: '📹';
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 0.6rem;
-  opacity: 0.8;
-}
-
-.tech-calendar-month-view .priority-event {
-  box-shadow: 0 0 12px 2px var(--warning), 0 0 24px 4px rgba(245, 158, 11, 0.2) !important;
-  border: 2px solid var(--warning) !important;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%) !important;
-  position: relative;
-  animation: priority-pulse 2s ease-in-out infinite;
-}
-
-.tech-calendar-month-view .priority-event::after {
-  content: '⚡';
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 0.6rem;
-  opacity: 0.9;
-}
-
-.tech-calendar-month-view .priority-event:hover {
-  box-shadow: 0 0 16px 3px var(--warning), 0 0 32px 6px rgba(245, 158, 11, 0.3) !important;
-  animation: none;
-}
-
-@keyframes priority-pulse {
-  0%, 100% { box-shadow: 0 0 12px 2px var(--warning), 0 0 24px 4px rgba(245, 158, 11, 0.2); }
-  50% { box-shadow: 0 0 16px 3px var(--warning), 0 0 32px 6px rgba(245, 158, 11, 0.3); }
-}
-
-/* Enhanced More Events Link with Dynamic Sizing */
 .tech-calendar-month-view .fc-more-link {
   color: var(--foreground-secondary);
   font-size: 0.75rem;
@@ -503,7 +469,10 @@
   left: 100%;
 }
 
-/* Mobile optimizations */
+/* ==========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================== */
+
 @media (max-width: 768px) {
   .tech-calendar-month-view .fc {
     font-size: 12px;
@@ -528,19 +497,14 @@
   
   .tech-calendar-month-view .fc-event .fc-event-main {
     font-size: 0.7rem;
+    padding: 4px 6px;
   }
   
-  /* Mobile proportional height adjustments */
   .tech-calendar-month-view .fc-daygrid-day-frame {
-    --min-event-height: 24px; /* Smaller minimum for mobile */
-    min-height: 80px; /* Smaller day cells on mobile */
+    --min-event-height: 24px;
+    min-height: 80px;
   }
 
-  .tech-calendar-month-view .fc-event .fc-event-main {
-    padding: 4px 6px; /* Tighter padding on mobile */
-  }
-
-  /* Ensure text remains readable at smaller sizes */
   .tech-calendar-month-view .fc-event .event-title,
   .tech-calendar-month-view .fc-event .event-time {
     font-size: 0.65rem;
@@ -551,7 +515,6 @@
   }
 }
 
-/* Very small screens */
 @media (max-width: 480px) {
   .tech-calendar-month-view .fc {
     font-size: 10px;
@@ -575,20 +538,19 @@
   
   .tech-calendar-month-view .fc-event .fc-event-main {
     font-size: 0.65rem;
+    padding: 3px 4px;
   }
 
-  /* Very small screen proportional height adjustments */
   .tech-calendar-month-view .fc-daygrid-day-frame {
-    --min-event-height: 20px; /* Even smaller minimum for very small screens */
-    min-height: 60px; /* Very compact day cells */
-  }
-
-  .tech-calendar-month-view .fc-event .fc-event-main {
-    padding: 3px 4px; /* Very tight padding */
+    --min-event-height: 20px;
+    min-height: 60px;
   }
 }
 
-/* Accessibility improvements */
+/* ==========================================================================
+   ACCESSIBILITY
+   ========================================================================== */
+
 @media (prefers-reduced-motion: reduce) {
   .tech-calendar-month-view * {
     transition: none !important;
@@ -596,12 +558,7 @@
   }
 }
 
-/* Focus styles for keyboard navigation */
-.tech-calendar-month-view .fc-event:focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 2px;
-}
-
+.tech-calendar-month-view .fc-event:focus-visible,
 .tech-calendar-month-view .fc-more-link:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;

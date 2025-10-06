@@ -65,6 +65,47 @@ export class EventService {
             return 0;
         }
     }
+    // Helper function to fetch and attach event types to events
+    private static async attachEventTypesToEvents(
+        events: Event[],
+        supabaseClient: SupabaseClientType
+    ): Promise<Event[]> {
+        if (!events || events.length === 0) return events;
+
+        // Get unique event type IDs from events
+        const eventTypeIds = [...new Set(events.map(event => event.eventTypeId as string).filter(Boolean))];
+        if (eventTypeIds.length === 0) return events;
+
+        // Fetch event types
+        const { data: eventTypes, error } = await supabaseClient
+            .from('event_type')
+            .select('id, name, color, icon, description')
+            .in('id', eventTypeIds);
+
+        if (error) {
+            console.error('Error fetching event types:', error);
+            return events;
+        }
+
+        // Create a map of event_type_id to event type
+        const eventTypeMap = new Map();
+        eventTypes?.forEach(eventType => {
+            eventTypeMap.set(eventType.id, {
+                id: eventType.id,
+                name: eventType.name,
+                color: eventType.color || '#6b7280',
+                description: eventType.description,
+                icon: eventType.icon
+            });
+        });
+
+        // Attach event types to events
+        return events.map(event => ({
+            ...event,
+            category: eventTypeMap.get(event.eventTypeId as string) || undefined
+        }));
+    }
+
     // Helper function to fetch and attach tags to events
     private static async attachTagsToEvents<T extends Record<string, unknown>>(
         events: T[],
@@ -151,7 +192,11 @@ export class EventService {
                 throw error;
             }
 
-            return (data || []).map(eventDetailedTransformer.toApp);
+            // Transform events and attach event types
+            const transformedEvents = (data || []).map(eventDetailedTransformer.toApp);
+            const eventsWithTypes = await this.attachEventTypesToEvents(transformedEvents, supabaseClient);
+            
+            return eventsWithTypes;
         } catch (error) {
             console.error('Error fetching events:', error);
             Sentry.captureException(error, {

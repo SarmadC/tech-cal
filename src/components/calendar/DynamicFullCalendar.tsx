@@ -76,7 +76,13 @@ const DynamicFullCalendar = forwardRef<any, DynamicFullCalendarProps>(({
                 `event-${event.eventTypeId}`, 
                 'custom-event',
                 isTracked ? 'tracked-event' : 'untracked-event'
-            ]
+            ],
+            // Add CSS custom properties for styling
+            style: {
+                '--category-bg': backgroundColor,
+                '--category-title-color': '#1e293b',
+                '--text-on-pastel': '#1e293b'
+            } as React.CSSProperties
         };
     });
 
