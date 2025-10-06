@@ -93,7 +93,7 @@
     "audit-ci": "^7.1.0",
     "autoprefixer": "^10.4.21",
     "codecov": "^3.8.2",
-    "dotenv": "^17.2.1",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
     "jsdom": "^26.1.0",
