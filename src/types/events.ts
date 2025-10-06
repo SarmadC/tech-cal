@@ -198,25 +198,7 @@ export interface CalendarEventData {
     };
 }
 
-/**
- * FullCalendar-specific event format
- */
-export interface FullCalendarEvent {
-    id: string;
-    title: string;
-    start: string;
-    end?: string;
-    color?: string;
-    allDay?: boolean;
-    extendedProps: {
-        description: string;
-        location: string;
-        organizer: string;
-        isTracked?: boolean;
-        eventTypeId: string;
-        livestreamUrl?: string | null;
-    };
-}
+// FullCalendar event interface moved to utils/transformers.ts to avoid duplication
 
 // ============================================
 // SUPPORTING TYPES
@@ -388,27 +370,7 @@ export function enrichWithMultiDay(
     };
 }
 
-/**
- * Convert event to FullCalendar format
- */
-export function toFullCalendarEvent(event: Event | TrackedEvent): FullCalendarEvent {
-    return {
-        id: event.id,
-        title: event.title,
-        start: event.startTime,
-        end: event.endTime || undefined,
-        color: event.color || event.category?.color,
-        allDay: false,
-        extendedProps: {
-            description: event.description,
-            location: event.location,
-            organizer: event.organizer,
-            isTracked: isTrackedEvent(event) ? event.isTracked : undefined,
-            eventTypeId: event.eventTypeId,
-            livestreamUrl: event.livestreamUrl,
-        },
-    };
-}
+// FullCalendar event conversion moved to utils/transformers.ts to avoid duplication
 
 /**
  * Convert event to minimal calendar data
