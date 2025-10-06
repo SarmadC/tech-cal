@@ -1,20 +1,12 @@
-import { FC, useMemo, useRef, useCallback, useEffect, useState } from 'react';
-import FullCalendar from '@fullcalendar/react';
-import { FullCalendarCSSLoader } from './FullCalendarCSSLoader';
-import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from '@fullcalendar/core';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import listPlugin from '@fullcalendar/list';
-// 1. UPDATE IMPORTS: Use the new `Event` type and consolidated event status utilities.
+import { FC, useMemo, useRef, useEffect, useState } from 'react';
+import { EventClickArg } from '@fullcalendar/core';
+import type FullCalendar from '@fullcalendar/react';
+import DynamicFullCalendar from './DynamicFullCalendar';
 import { Event } from '@/types';
-import { getEventStatus } from '@/utils/eventStatusUtils';
-import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';
-import EventContent from './EventContent';
 
 export interface CalendarWithPreviewProps {
-    // 2. UPDATE PROPS: The component now accepts an array of the base `Event` type.
     events: Event[];
     onEventClick?: (clickInfo: EventClickArg) => void;
     view?: string;
@@ -35,20 +27,14 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
     calendarRef,
     className = '',
 }) => {
-    const internalCalendarRef = useRef<FullCalendar | null>(null);
-    const activeCalendarRef = calendarRef || internalCalendarRef;
+    const activeCalendarRef = useRef<FullCalendar | null>(null);
+    const { hidePreview, previewState } = useEventPreview();
     const [isMobile, setIsMobile] = useState(false);
 
-    // Get tracked events to properly set isTracked property
-    const { trackedEventIds } = useTrackedEventsUnified();
+    // Use the passed ref or the internal ref
+    const calendarRefToUse = calendarRef || activeCalendarRef;
 
-    const {
-        previewState,
-        showPreview,
-        hidePreview
-    } = useEventPreview();
-
-    // Check if mobile on mount and resize
+    // Mobile detection
     useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth <= 768);
@@ -59,118 +45,34 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    // Determine the appropriate FullCalendar view
     const fullCalendarView = useMemo(() => {
         switch (view) {
             case 'week':
                 return 'timeGridWeek';
+            case 'day':
+                return 'timeGridDay';
+            case 'list':
+                return 'listWeek';
             case 'month':
             default:
                 return 'dayGridMonth';
         }
     }, [view]);
 
-    useEffect(() => {
-        const calendarApi = calendarRef?.current?.getApi();
-        if (calendarApi && calendarApi.view.type !== fullCalendarView) {
-            setTimeout(() => {
-                calendarApi.changeView(fullCalendarView);
-            }, 0);
-        }
-    }, [fullCalendarView, calendarRef]);
-
-    // Transform events for FullCalendar
-    const calendarEvents = useMemo(() => {
-        return events.map(event => ({
-            id: event.id,
-            title: event.title,
-            start: event.startTime,
-            end: event.endTime || undefined,
-            color: event.color || '#3b82f6',
-            extendedProps: {
-                ...event,
-                // 3. Use tracked events data to properly set isTracked
-                isTracked: trackedEventIds?.has(event.id) ?? false,
-            }
-        }));
-    }, [events, trackedEventIds]);
-
-    // Enhanced event content renderer
-    const renderEventContent = useCallback((eventInfo: EventContentArg) => {
-        return (
-            <EventContent
-                {...eventInfo}
-                onEventHover={(event, position) => {
-                    // Note: The `event` here comes from extendedProps, which is already `Event`
-                    showPreview(event, position);
-                }}
-                onEventLeave={hidePreview}
-            />
-        );
-    }, [showPreview, hidePreview]);
-
-    // Handle event clicks
-    const handleEventClick = useCallback((clickInfo: EventClickArg) => {
-        clickInfo.jsEvent.preventDefault();
-        hidePreview();
-        onEventClick?.(clickInfo);
-    }, [onEventClick, hidePreview]);
-
-    // Handle event mounting (for styling)
-    const handleEventDidMount = useCallback((info: EventMountArg) => {
-        const eventData = info.event.extendedProps as Event;
-        
-        // Use consolidated utility for event status
-        const { isTracked } = getEventStatus(eventData);
-        
-        // Check if event is before today's date (completed)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Start of today
-        const eventDate = new Date(eventData.startTime);
-        eventDate.setHours(0, 0, 0, 0); // Start of event date
-        const isCompleted = eventDate < today;
-        
-        if (isTracked) {
-            info.el.classList.add('tracked-event');
-        }
-        if (isCompleted) {
-            info.el.classList.add('completed-event');
-        }
-    }, []);
-
-    // Handle event mouse enter
-    const handleEventMouseEnter = useCallback((info: EventHoveringArg) => {
-        // 6. UPDATE TYPE CAST: Use the new `Event` type.
-        const event = info.event.extendedProps as Event;
-        const rect = info.el.getBoundingClientRect();
-        const position = {
-            x: rect.left + rect.width / 2,
-            y: rect.top
-        };
-        showPreview(event, position);
-    }, [showPreview]);
-
-    // Handle date changes (from calendar navigation)
-    const handleDatesSet = useCallback((dateInfo: { start: Date }) => {
-        onDateChange?.(dateInfo.start);
-    }, [onDateChange]);
-
     return (
-        <div className={`calendar-container relative h-full ${className}`}>
-            <FullCalendarCSSLoader />
-            <FullCalendar
-                ref={activeCalendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
+        <>
+            <DynamicFullCalendar
+                ref={calendarRefToUse}
+                events={events}
+                onEventClick={onEventClick}
+                view={view}
+                date={date}
+                onDateChange={onDateChange}
+                className={className}
                 initialView={fullCalendarView}
-                initialDate={date}
-                events={calendarEvents}
-                eventContent={renderEventContent}
-                eventClick={handleEventClick}
-                eventDidMount={handleEventDidMount}
-                eventMouseEnter={handleEventMouseEnter}
-                eventMouseLeave={hidePreview}
-                datesSet={handleDatesSet}
-                headerToolbar={false}
                 height="100%"
+                headerToolbar={false}
                 dayMaxEvents={isMobile ? 1 : 3}
                 moreLinkClick="popover"
                 eventDisplay="block"
@@ -181,15 +83,12 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
                 stickyHeaderDates={true}
                 nowIndicator={true}
                 dayMaxEventRows={isMobile ? 1 : 3}
-                moreLinkContent={(arg) => {
+                moreLinkContent={(arg: { num: number }) => {
                     return isMobile ? `+${arg.num}` : `+${arg.num} more`;
                 }}
-                // Mobile viewport optimizations - remove restrictive aspectRatio
                 aspectRatio={isMobile ? (fullCalendarView === 'dayGridMonth' ? 0.8 : undefined) : undefined}
-                // Mobile scrolling improvements
                 scrollTime={isMobile ? "06:00:00" : "08:00:00"}
                 scrollTimeReset={false}
-                // Enable horizontal scrolling for mobile week/day views
                 {...(isMobile && fullCalendarView !== 'dayGridMonth' && {
                     contentHeight: 'auto',
                     aspectRatio: undefined
@@ -205,7 +104,7 @@ const CalendarWithPreview: FC<CalendarWithPreviewProps> = ({
                     onClose={hidePreview}
                 />
             )}
-        </div>
+        </>
     );
 };
 

@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Event, EventType, AppProfile, TrackedEvent } from '@/types';
+import './mobile-calendar.css';
 import { Calendar } from '@phosphor-icons/react';
 import TodayTaskCard from './components/TodayTaskCard';
 import MobileEventPreview from './MobileEventPreview';

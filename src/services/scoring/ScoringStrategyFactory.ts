@@ -78,7 +78,6 @@ export class ScoringStrategyFactory {
       const desiredDefault = process.env.NEXT_PUBLIC_SCORING_DEFAULT_VERSION;
       if (desiredDefault && this.strategies.has(desiredDefault)) {
         this.defaultStrategyVersion = desiredDefault;
-        // eslint-disable-next-line no-console
         console.log(`Default scoring strategy set from env: ${desiredDefault}`);
       }
     } catch {

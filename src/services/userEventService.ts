@@ -34,7 +34,14 @@ export class UserEventService {
             }
 
             if (!data || !data.success) {
-                const errorMessage = data?.message || 'Failed to track event';
+                const errorMessage = data?.message || data?.error || 'Failed to track event';
+                console.error('❌ Function returned failure:', {
+                    data,
+                    errorMessage,
+                    userId,
+                    eventId,
+                    status
+                });
                 throw new Error(errorMessage);
             }
 
@@ -160,7 +167,13 @@ export class UserEventService {
             }
 
             if (!data || !data.success) {
-                const errorMessage = data?.message || 'Failed to untrack event';
+                const errorMessage = data?.message || data?.error || 'Failed to untrack event';
+                console.error('❌ Function returned failure:', {
+                    data,
+                    errorMessage,
+                    userId,
+                    eventId
+                });
                 throw new Error(errorMessage);
             }
 

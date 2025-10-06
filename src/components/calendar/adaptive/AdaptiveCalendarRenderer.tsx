@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { EventClickArg } from '@fullcalendar/core';
-import FullCalendar from '@fullcalendar/react';
+import type FullCalendar from '@fullcalendar/react';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance, TrackedEvent } from '@/types';
 

@@ -12,7 +12,7 @@ import './styles/premium-colors.css';
 import './styles/smart-filters.css';
 import './styles/utilities.css';
 import '@/styles/layout-utilities.css';
-import '@/components/calendar/mobile/mobile-calendar.css';
+// Calendar CSS moved to calendar-specific components for better performance
 import './styles/landing-page.css';
 import './styles/ChaosToOrder.css';   
 import './styles/orbiting-circles.css';

@@ -2,7 +2,7 @@
 
 import React, { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import FullCalendar from '@fullcalendar/react';
+import type FullCalendar from '@fullcalendar/react';
 import CalendarHeader from '@/components/calendar/CalendarHeader';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
@@ -11,7 +11,7 @@ import MobileCalendarApp from '@/components/calendar/mobile/MobileCalendarApp';
 import CalendarTransitionWrapper from '@/components/calendar/CalendarTransitionWrapper';
 /* removed legacy calendar-sidebar.css */
 import '@/app/styles/calendar-heatmap.css';
-import '@/components/calendar/mobile/mobile-calendar.css';
+// Mobile calendar CSS moved to individual mobile components
 
 // Removed unused type imports
 import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';

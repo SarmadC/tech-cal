@@ -170,14 +170,12 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       });
       if (process.env.NODE_ENV !== 'production') {
         // Keep lightweight to avoid console noise in production
-        // eslint-disable-next-line no-console
         console.debug('ScoringStrategy', { version: this.version, eventId: event.id });
 
         if (process.env.NEXT_PUBLIC_LOG_SCORING === 'true') {
           const primaryReason = Array.isArray(explanation.reasons) && explanation.reasons.length > 0
             ? explanation.reasons[0]
             : null;
-          // eslint-disable-next-line no-console
           console.debug('ScoringComponents', {
             version: this.version,
             eventId: event.id,

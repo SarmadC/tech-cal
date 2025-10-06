@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import './mobile-calendar.css';
 import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { useSmartFilters } from '@/hooks/useSmartFilters';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';

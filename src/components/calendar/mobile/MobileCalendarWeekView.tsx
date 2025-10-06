@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
+import './mobile-calendar.css';
 import { MaterialIcon } from '@/components/ui/Icon';
 import EventPreviewCard from '../EventPreviewCard';
 import { getWeekDays } from '@/utils/eventViewUtils';

@@ -128,9 +128,7 @@ export function useSearchSuggestions({
             setSuggestions([]);
             setIsLoading(false);
         }
-    }, [debouncedSearchTerm]); // Only depend on debouncedSearchTerm to prevent infinite re-renders
-    // Note: events, categories, and maxSuggestions are intentionally excluded from dependencies
-    // to prevent infinite re-renders when these arrays are recreated on every render
+    }, [debouncedSearchTerm, events, categories, maxSuggestions]);
 
     return {
         suggestions,

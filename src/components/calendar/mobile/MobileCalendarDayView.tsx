@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
+import './mobile-calendar.css';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';

@@ -9,6 +9,10 @@ import type {
     AgendaItem,
     SupabaseClientType,
 } from '@/types';
+// Type alias for Supabase query builder - using any for practical reasons
+// Supabase's query builder types are complex and change between versions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EventQueryBuilder = any;
 import {
     eventTransformer,
     eventDetailedTransformer,
@@ -932,8 +936,10 @@ export class EventService {
     /**
      * Apply enhanced database-level filters to the query
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private static applyEnhancedFilters(query: any, filters: EventFilters): any { // eslint-disable-line @typescript-eslint/no-explicit-any
+    private static applyEnhancedFilters(
+        query: EventQueryBuilder, 
+        filters: EventFilters
+    ): EventQueryBuilder {
         // Format filtering (virtual, in-person, hybrid) - using event_format column
         if (filters.format && filters.format !== 'all') {
             switch (filters.format) {
@@ -1056,8 +1062,10 @@ export class EventService {
     /**
      * Apply sorting to the query
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private static applySorting(query: any, sortBy?: string): any { // eslint-disable-line @typescript-eslint/no-explicit-any
+    private static applySorting(
+        query: EventQueryBuilder, 
+        sortBy?: string
+    ): EventQueryBuilder {
         switch (sortBy) {
             case 'popularity':
                 return query.order('attendee_count', { ascending: false, nullsLast: true })

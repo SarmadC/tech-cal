@@ -86,7 +86,7 @@ export default function LoginPage() {
             // Clean up URL
             router.replace('/login', { scroll: false });
         }
-    }, [searchParams, router]);
+    }, [searchParams, router, showError]);
 
     // OAuth timeout handler
     useEffect(() => {
@@ -104,7 +104,7 @@ export default function LoginPage() {
         }, 30000); // 30 second timeout
 
         return () => clearTimeout(timeoutId);
-    }, [oauthStartTime, isOAuthLoading]);
+    }, [oauthStartTime, isOAuthLoading, showError]);
 
     // Monitor auth state changes to clear OAuth loading
     useEffect(() => {
