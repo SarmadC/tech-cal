@@ -138,17 +138,18 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     return (
         <div
             ref={cardRef}
-            className={`fixed z-50 w-80 bg-white dark:bg-gray-800 border rounded-lg shadow-xl overflow-hidden ${
+            className={`fixed z-[9999] w-80 bg-white dark:bg-gray-800 border rounded-lg shadow-xl overflow-hidden pointer-events-auto ${
                 isPinned 
                     ? 'border-zinc-300 dark:border-zinc-400 shadow-zinc-200 dark:shadow-black/40' 
                     : 'border-gray-200 dark:border-gray-600'
-            } ${isVisible && hasAnimated ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+            } ${isVisible && hasAnimated ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
             style={{
                 left: `${cardPosition.x}px`,
                 top: `${cardPosition.y}px`,
                 transformOrigin: 'top center',
                 // Smooth animation for opacity and scale with ease-out for natural feel
                 transition: 'opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                pointerEvents: isVisible && hasAnimated ? 'auto' : 'none',
             }}
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
