@@ -15,6 +15,7 @@ import AdaptiveTimeline from './AdaptiveTimeline';
 import { useEventActions } from '@/hooks/useEventActions';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useAuth } from '@/contexts';
+import { generateEventSlug } from '@/utils/slugUtils';
 
 // 2. UPDATE PROPS: The interface now uses the new types.
 interface EventDetailPanelProps {
@@ -158,7 +159,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         </a>
                     ) : (
                         <Link
-                            href={`/events/${displayEvent.id}`}
+                            href={`/events/${generateEventSlug(displayEvent.title, displayEvent.id)}`}
                             className={`ml-4 p-2 ${theme.textMuted} ${theme.hoverText} ${theme.hoverCard} rounded-full transition-colors`}
                             title="View full page"
                         >

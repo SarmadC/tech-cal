@@ -6,6 +6,7 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Event } from '@/types';
 // Note: You might have moved formatToUTC to dateUtils.ts. If so, update this path.
 import { formatToUTC } from '@/utils/dateUtils';
+import { generateEventSlug } from '@/utils/slugUtils';
 
 /**
  * A custom hook to manage event-related actions like sharing and adding to external calendars.
@@ -18,7 +19,8 @@ export function useEventActions(event: Event) {
      * Enhanced share function with Web Share API support for all devices
      */
     const handleShare = async () => {
-        const shareUrl = event.sourceUrl || `${window.location.origin}/events/${event.id}`;
+        const slug = generateEventSlug(event.title, event.id);
+        const shareUrl = event.sourceUrl || `${window.location.origin}/events/${slug}`;
 
         // Check if Web Share API is supported (works on both mobile and desktop)
         if (navigator.share) {

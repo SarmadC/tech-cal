@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SectionErrorBoundary } from '@/components/common/ErrorBoundary';
 import { EventList } from '@/components/dashboard/EventList';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
+import { NavigationUtils } from '@/utils/navigationUtils';
 import type { TrackedEventRecord, Event } from '@/types';
 import type { BaseEventAndTrackedProps } from '@/types/componentProps';
 
@@ -24,7 +25,7 @@ export function DashboardEventsSection({ events, trackedEvents }: DashboardEvent
   const handleEventClick = useCallback((event: Event | TrackedEventRecord) => {
     const eventData = 'event' in event ? event.event : event;
     if (eventData) {
-      router.push(`/events/${eventData.id}`);
+      router.push(NavigationUtils.goToEvent(eventData.id, eventData.title));
     }
   }, [router]);
 

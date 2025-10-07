@@ -201,7 +201,7 @@ export function ProgressiveAnalytics({
           <CareerRecommendationsCard
             recommendations={recommendations}
             userProfile={userProfile}
-            onEventSelect={(event) => window.location.href = NavigationUtils.goToEvent(event.id)}
+            onEventSelect={(event) => window.location.href = NavigationUtils.goToEvent(event.id, event.title)}
             onRecommendationAction={(rec) => console.log('Action for recommendation:', rec)}
           />
         )}

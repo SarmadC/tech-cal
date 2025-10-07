@@ -45,7 +45,7 @@ export default function DiscoverClientView({
 
     // Navigation handlers
     const handleEventSelect = useCallback((event: Event) => {
-        nav.toEvent(event.id);
+        nav.toEvent(event.id, event.title);
     }, [nav]);
 
     const handleNavigate = useCallback(() => {
@@ -64,7 +64,7 @@ export default function DiscoverClientView({
 
     const handleEventSelectForContext = useCallback((event: Event) => {
         setSelectedEvent(event);
-        nav.toEvent(event.id);
+        nav.toEvent(event.id, event.title);
     }, [nav]);
 
     const handleCloseEventDetail = useCallback(() => {

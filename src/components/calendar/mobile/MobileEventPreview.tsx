@@ -12,6 +12,7 @@ import { getEventStatus } from '@/utils/eventStatusUtils';
 import { CalendarPlusIcon, ShareNetworkIcon, Info, Star, ArrowDown, X, Clock, MapPin, WifiHigh, Users, Calendar } from '@phosphor-icons/react';
 import { useEventActions } from '@/hooks/useEventActions';
 import MobileEventDetailPanel from './MobileEventDetailPanel';
+import { generateEventSlug } from '@/utils/slugUtils';
 
 interface MobileEventPreviewProps {
   event: Event | TrackedEvent | MultiDayEventInstance;
@@ -109,10 +110,11 @@ const MobileEventPreview: React.FC<MobileEventPreviewProps> = ({
   };
 
   const handleWebShare = async () => {
+    const slug = generateEventSlug(event.title, event.id);
     const shareData = {
       title: event.title,
       text: `Check out this event: ${event.title}${event.description ? `\n\n${event.description}` : ''}`,
-      url: `${window.location.origin}/events/${event.id}`
+      url: `${window.location.origin}/events/${slug}`
     };
 
     // Check if Web Share API is supported (mobile devices)

@@ -10,6 +10,7 @@ import { ClockIcon, MapPinIcon, UsersIcon, TagIcon, ArrowLeftIcon } from '@phosp
 // Use the new `Event` type and import your date formatting utilities.
 import type { Event } from '@/types';
 import { formatDate, formatTime } from '@/utils/dateUtils';
+import { extractIdFromSlug } from '@/utils/slugUtils';
 
 import EventTracking from '@/components/calendar/EventTracking';
 import EventActions from '@/components/calendar/EventActions';
@@ -22,13 +23,15 @@ type EventDetailPageProps = {
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
     const supabase = await createClient();
 
-    const { id: eventId } = await params;
+    const { id: slugOrId } = await params;
 
-    // 2. UPDATE TYPE ANNOTATION:
-    // The `event` variable is now correctly typed as `Event`.
+    // Extract UUID from slug or use as-is if already a UUID
+    // Supports: /events/react-summit-2024--550e8400-e29b-41d4-a716-446655440000
+    // And: /events/550e8400-e29b-41d4-a716-446655440000 (backward compatibility)
+    const eventId = extractIdFromSlug(slugOrId);
+
     let event: Event;
     try {
-        // This works because EventService.getEventById now returns an `Event`.
         event = await EventService.getEventById(eventId, supabase);
     } catch (error) {
         console.error('Failed to fetch event:', eventId, error);

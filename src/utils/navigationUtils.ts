@@ -2,11 +2,21 @@
  * Unified navigation utilities for consistent routing across the application
  */
 
+import { generateEventSlug } from './slugUtils';
+
 export const NavigationUtils = {
   /**
-   * Navigate to event details page
+   * Navigate to event details page with SEO-friendly slug
+   * @param eventId - The event ID (UUID)
+   * @param eventTitle - Optional event title for generating a readable slug
    */
-  goToEvent: (eventId: string) => `/events/${eventId}`,
+  goToEvent: (eventId: string, eventTitle?: string) => {
+    if (eventTitle) {
+      const slug = generateEventSlug(eventTitle, eventId);
+      return `/events/${slug}`;
+    }
+    return `/events/${eventId}`;
+  },
   
   /**
    * Navigate to calendar with specific date

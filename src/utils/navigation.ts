@@ -1,6 +1,7 @@
 // src/utils/navigation.ts
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { formatDateForURL } from './dateUtils';
+import { NavigationUtils as NavUtils } from './navigationUtils';
 
 /**
  * Navigation utilities for consistent routing patterns
@@ -9,10 +10,10 @@ export class NavigationUtils {
     constructor(private router: AppRouterInstance) {}
 
     /**
-     * Navigate to calendar with event selected
+     * Navigate to event detail page
      */
-    toEvent(eventId: string) {
-        this.router.push(`/calendar?eventId=${eventId}&view=month`);
+    toEvent(eventId: string, eventTitle?: string) {
+        this.router.push(NavUtils.goToEvent(eventId, eventTitle));
     }
 
     /**
