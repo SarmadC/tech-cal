@@ -126,7 +126,8 @@ export default function LoginPage() {
         showInfo(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
 
         try {
-            await oauthSignInAction(provider);
+            const intendedNext = searchParams.get('redirect') || '/discover';
+            await oauthSignInAction(provider, intendedNext);
             // If we reach this point without a redirect, something is wrong
             setTimeout(() => {
                 setIsOAuthLoading(false);

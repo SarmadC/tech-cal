@@ -8,7 +8,21 @@ export async function GET(request: Request) {
     const code = searchParams.get('code')
     const error = searchParams.get('error')
     const errorDescription = searchParams.get('error_description')
-    const next = searchParams.get('next') ?? '/discover'
+    const rawNext = searchParams.get('next') ?? '/discover'
+    // Sanitize next to avoid open-redirects; ensure leading slash and strip domain
+    let next = '/discover'
+    try {
+        if (typeof rawNext === 'string') {
+            if (rawNext.startsWith('http://') || rawNext.startsWith('https://')) {
+                const url = new URL(rawNext)
+                next = url.pathname + (url.search || '') + (url.hash || '')
+            } else if (rawNext.startsWith('/')) {
+                next = rawNext
+            }
+        }
+    } catch (_) {
+        next = '/discover'
+    }
 
     // Handle OAuth provider errors first
     if (error) {
