@@ -40,17 +40,18 @@
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(6, 1fr);
   flex: 1;
-  min-height: 0;
+  min-height: 960px; /* Increased minimum height for 6 rows × 160px */
 }
 
 .month-grid-day {
   border-right: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
   padding: 4px;
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
+  min-height: 160px; /* Increased from 120px to give more space */
+  display: flex !important;
+  flex-direction: column !important;
   position: relative;
+  height: 100% !important;
 }
 
 .month-grid-day:last-child {
@@ -92,23 +93,33 @@
 }
 
 .month-grid-day-events {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
   gap: 2px;
-  overflow: hidden;
+  height: 100% !important;
+  /* Allow decorative elements (e.g., multi-day dots, shadows) to render fully */
+  overflow: visible;
 }
 
 .month-grid-event {
-  flex-shrink: 0;
-  min-height: 20px;
+  flex: 1;
+  min-height: 80px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .month-grid-day {
-    min-height: 80px;
+    min-height: 120px; /* Proportionally smaller for mobile */
     padding: 2px;
+  }
+  
+  .tech-calendar-month-view .event-card {
+    min-height: 60px;
+    padding: 8px;
   }
   
   .month-grid-day-number {
@@ -153,6 +164,7 @@
 
 .tech-calendar-month-view .fc-daygrid-day {
   --rows: 1;
+  overflow: visible !important;
 }
 
 /* ==========================================================================
@@ -161,6 +173,7 @@
 
 .tech-calendar-month-view .fc-daygrid-day-frame {
   padding: 0 !important;
+  overflow: visible !important; /* Prevent clipping inside the cell frame */
 }
 
 .tech-calendar-month-view .fc-daygrid-event-harness {
@@ -175,8 +188,9 @@
   color: var(--foreground-primary);
   font-weight: 600;
   font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  /* Use natural casing for day names */
+  text-transform: none;
+  letter-spacing: 0.01em;
   padding: 12px 8px;
 }
 
@@ -266,22 +280,86 @@
   height: 100% !important;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* Top-align content to prevent vertical centering */
+  justify-content: flex-start;
   padding: 0;
   box-sizing: border-box;
-  overflow: hidden;
+  /* Allow positioned children (e.g., dots) to be fully visible */
+  overflow: visible !important;
 }
 
 /* Event card styling - inherits from base event-card.css */
-.tech-calendar-month-view .fc-event .event-card {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  height: 100%;
-  width: 100%;
-  position: relative;
+
+/* Month view event card typography cleanup */
+/* Ensure event cards in month view do not inherit any forced uppercase */
+.tech-calendar-month-view .event-card,
+.tech-calendar-month-view .event-card * {
+  text-transform: none !important;
+}
+
+.tech-calendar-month-view .event-card .event-category-badge .event-category-pill,
+.tech-calendar-month-view .event-card .event-category-pill,
+.tech-calendar-month-view .event-card .event-session-type {
+  letter-spacing: 0.015em !important;
+}
+
+/* Clean Month Event Card - Reference Design */
+.tech-calendar-month-view .event-card {
+  padding: 12px !important;
+  border-radius: 8px !important;
+  width: 100% !important;
+  position: relative !important;
+  display: block !important; /* Changed from flex to block for absolute positioning */
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  /* Let the card grow naturally with the larger cell */
+  min-height: 80px !important;
+  height: 100px !important; /* Force larger height */
+  flex: 1 !important;
+}
+
+/* Month grid day - ensure it allows events to fill space */
+.tech-calendar-month-view .month-grid-day {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Month grid day events container - fill full available space */
+.tech-calendar-month-view .month-grid-day-events {
+  height: 100% !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 1 !important;
+}
+
+/* Month grid event container - allow larger cards */
+.tech-calendar-month-view .month-grid-event {
+  height: auto !important;
+  min-height: 100px !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 1 !important;
+}
+
+/* Clean event card styling - no more aggressive overrides */
+.tech-calendar-month-view .event-card {
+  overflow: visible;
+}
+
+/* Hover effects - match week view */
+.tech-calendar-month-view .fc-event .event-card:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  z-index: 15 !important;
 }
 
 .tech-calendar-month-view .fc-event .event-card.mini {
@@ -291,45 +369,211 @@
   height: 100% !important;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* Align content to the top/left for single-line elements */
+  justify-content: flex-start;
   box-sizing: border-box;
   min-height: var(--min-event-height);
 }
 
-/* Event content styling */
-.tech-calendar-month-view .fc-event .event-content {
-  flex: 1;
+/* Event content - removed, using absolute positioning instead */
+
+/* Ensure all common content sections align left and take full width */
+.tech-calendar-month-view .event-title-section,
+.tech-calendar-month-view .event-time-duration,
+.tech-calendar-month-view .event-location-organizer,
+.tech-calendar-month-view .event-tags-section {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: 100%;
+  text-align: left;
 }
 
-/* Event logo styling */
-.tech-calendar-month-view .fc-event .event-logo {
-  flex-shrink: 0;
+/* Event title - top left positioning (reference design) */
+.tech-calendar-month-view .event-title {
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute !important;
+  top: 12px !important;
+  left: 8px !important;
+  right: 56px !important; /* Leave space for larger logo */
+  /* Ensure title doesn't overflow */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Hide location and organizer on month view cards */
+.tech-calendar-month-view .event-location-organizer,
+.tech-calendar-month-view .event-location,
+.tech-calendar-month-view .event-organizer {
+  display: none !important;
+}
+
+/* Show a compact category pill in month view */
+.tech-calendar-month-view .event-category-badge .event-category-pill,
+.tech-calendar-month-view .event-category-pill {
+  /* Allow component inline styles to control background, padding, borders, etc. */
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Force each primary element to a single line with ellipsis (works for FC and custom grid) */
+.tech-calendar-month-view .fc-event .event-time,
+.tech-calendar-month-view .fc-event .event-title,
+.tech-calendar-month-view .fc-event .event-location,
+.tech-calendar-month-view .fc-event .event-organizer,
+.tech-calendar-month-view .event-time,
+.tech-calendar-month-view .event-title,
+.tech-calendar-month-view .event-location,
+.tech-calendar-month-view .event-organizer {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* Event time - below title (reference design) */
+.tech-calendar-month-view .event-time {
+  font-size: 0.7rem !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute !important;
+  top: 32px !important; /* Below the title */
+  left: 8px !important;
+  right: 56px !important; /* Leave space for larger logo */
+  /* Ensure time doesn't overflow */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Ensure the time container itself stays on one line and allows ellipsis */
+.tech-calendar-month-view .fc-event .event-time-duration,
+.tech-calendar-month-view .event-time-duration {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Title-case for location and organizer in month view */
+.tech-calendar-month-view .event-location,
+.tech-calendar-month-view .event-organizer,
+.tech-calendar-month-view .fc-event .event-location,
+.tech-calendar-month-view .fc-event .event-organizer {
+  text-transform: capitalize !important;
+}
+
+/* Tags/sub-elements: keep to a single line and prevent wrapping */
+.tech-calendar-month-view .fc-event .event-tags-section {
+  width: 100%;
+  overflow: hidden;
+}
+
+.tech-calendar-month-view .fc-event .event-tags-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.tech-calendar-month-view .fc-event .event-session-type,
+.tech-calendar-month-view .fc-event .event-category-pill {
+  white-space: nowrap;
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+
+/* Event logo styling - positioned in top right corner */
+.tech-calendar-month-view .fc-event .event-logo,
+.tech-calendar-month-view .event-card .event-logo {
+  position: absolute;
+  top: var(--space-xs);
+  right: var(--space-xs);
   width: 16px;
   height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 20;
 }
 
-.tech-calendar-month-view .fc-event .event-logo .logo-image {
+.tech-calendar-month-view .fc-event .event-logo .logo-image,
+.tech-calendar-month-view .event-card .event-logo .logo-image {
   width: 100%;
   height: 100%;
   object-fit: contain;
   border-radius: 2px;
 }
 
-/* Multi-day dots styling */
-.tech-calendar-month-view .fc-event .multi-day-dots {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  display: flex;
-  gap: 2px;
-  align-items: center;
+/* Organizer logo - top right corner (reference design) */
+.tech-calendar-month-view .event-organizer-logo-corner {
+  position: absolute !important;
+  top: 12px !important;
+  right: 12px !important;
+  width: 28px !important;
+  height: 28px !important;
+  z-index: 20 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 2px !important;
+  box-sizing: border-box !important;
+}
+
+.tech-calendar-month-view .organizer-logo-corner-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+/* Multi-day dots styling - hide duplicate dots in month view */
+.tech-calendar-month-view .fc-event .multi-day-dots,
+.tech-calendar-month-view .event-card .multi-day-dots {
+  display: none !important; /* Hide duplicate dots, use event-day-dots instead */
+}
+
+/* Event day dots - bottom right corner (reference design) */
+.tech-calendar-month-view .event-day-dots {
+  position: absolute !important;
+  bottom: 12px !important;
+  right: 12px !important;
+  display: flex !important;
+  gap: 4px !important;
+  z-index: 10 !important;
+}
+
+.tech-calendar-month-view .day-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+/* Ensure dots respect the card padding even when custom values are set */
+.tech-calendar-month-view .fc-event .event-card .multi-day-dots {
+  bottom: max(var(--space-xs), var(--card-pad, var(--space-sm)));
+  right: max(var(--space-xs), var(--card-pad, var(--space-sm)));
+  z-index: 40 !important;
 }
 
 .tech-calendar-month-view .fc-event .multi-day-dot {
@@ -337,14 +581,15 @@
   height: 4px;
   border-radius: 50%;
   background-color: var(--category-title-color, #1e293b);
-  opacity: 0.3;
+  opacity: 0.5;
   transition: all 0.2s ease;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 
 .tech-calendar-month-view .fc-event .multi-day-dot.active {
   opacity: 1;
   background-color: var(--category-title-color, #1e293b);
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 
 /* Hover effects */
@@ -376,7 +621,7 @@
   --events-count: 1;
   --available-height: calc(100% - 32px);
   --event-height: calc(var(--available-height) / var(--events-count));
-  --min-event-height: 40px;
+  --min-event-height: 56px;
   display: flex;
   flex-direction: column;
   height: auto !important;
@@ -400,6 +645,7 @@
   margin: 0 !important;
   display: flex;
   flex-direction: column;
+  overflow: visible !important;
 }
 
 .tech-calendar-month-view .fc-daygrid-event {
@@ -409,6 +655,7 @@
   display: flex;
   flex-direction: column;
   min-height: var(--min-event-height);
+  overflow: visible !important;
 }
 
 /* Dynamic event sizing */
@@ -501,7 +748,7 @@
   }
   
   .tech-calendar-month-view .fc-daygrid-day-frame {
-    --min-event-height: 24px;
+    --min-event-height: 32px;
     min-height: 80px;
   }
 
@@ -518,6 +765,11 @@
 @media (max-width: 480px) {
   .tech-calendar-month-view .fc {
     font-size: 10px;
+  }
+  
+  .tech-calendar-month-view .event-card {
+    min-height: 50px;
+    padding: 6px;
   }
   
   .tech-calendar-month-view .fc-col-header-cell {
@@ -542,7 +794,7 @@
   }
 
   .tech-calendar-month-view .fc-daygrid-day-frame {
-    --min-event-height: 20px;
+    --min-event-height: 28px;
     min-height: 60px;
   }
 }

@@ -6,7 +6,7 @@ import { FullCalendar } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';
-import { EventCard } from './shared/EventCard';
+import { MonthEventCard } from './MonthEventCard';
 import '@/app/styles/event-card.css';
 import '@/app/styles/monthly-view.css';
 
@@ -110,7 +110,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                 <div className="month-grid-day-events">
                                     {dayEvents.map((event, eventIndex) => (
                                         <div key={`${event.id}-${eventIndex}`} className="month-grid-event">
-                                            <EventCard
+                                            <MonthEventCard
                                                 event={event}
                                                 onClick={() => onEventSelect?.(event)}
                                                 onHover={(e: React.MouseEvent) => {
@@ -122,13 +122,10 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                     showPreview(event as Event, position);
                                                 }}
                                                 onLeave={hidePreview}
-                                                viewType="day"
-                                                showCareerImpact={false}
                                                 style={{
                                                     height: 'auto',
                                                     minHeight: '24px',
-                                                    fontSize: '0.75rem',
-                                                    padding: '2px 4px'
+                                                    fontSize: '0.75rem'
                                                 }}
                                             />
                                         </div>
