@@ -1,6 +1,6 @@
 // src/components/calendar/EventPreviewCard.tsx
 
-import { FC, useRef, RefObject } from 'react';
+import { FC, useRef, RefObject, useMemo, useState, useEffect } from 'react';
 import {
     ClockIcon, MapPinIcon, UsersIcon, ArrowSquareOutIcon, BookmarkIcon, BookmarkSimpleIcon,
     ShareNetworkIcon, PlayCircleIcon, GlobeIcon, CalendarIcon
@@ -46,12 +46,27 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     // Use the tracking status directly from the event prop instead of local state
     const { isTracked } = getEventStatus(event);
     const cardRef = useRef<HTMLDivElement>(null) as RefObject<HTMLDivElement>;
+    
+    // Track if this is the first render to enable smooth initial animation
+    const [hasAnimated, setHasAnimated] = useState(false);
+
+    // Trigger animation on mount and when visibility changes
+    useEffect(() => {
+        if (isVisible && !hasAnimated) {
+            // Small delay to ensure the initial state is rendered before animating
+            requestAnimationFrame(() => {
+                setHasAnimated(true);
+            });
+        } else if (!isVisible) {
+            setHasAnimated(false);
+        }
+    }, [isVisible, hasAnimated]);
 
     // Handle click outside to close
     useClickOutside(cardRef, () => onClose(), isVisible);
 
-    // Position the card to avoid going off-screen
-    const getCardPosition = () => {
+    // Memoize card position to avoid recalculating on every render
+    const cardPosition = useMemo(() => {
         const cardWidth = 320;
         const cardHeight = 400;
         const padding = 20;
@@ -68,9 +83,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
         }
 
         return { x: Math.max(padding, x), y: Math.max(padding, y) };
-    };
-
-    const cardPosition = getCardPosition();
+    }, [position.x, position.y]);
 
     const isVirtual = event.livestreamUrl || event.location?.toLowerCase().includes('virtual');
 
@@ -118,19 +131,24 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
         trackClick(event.id, 'for_you', undefined, context);
     };
 
-    if (!isVisible) return null;
+    // Keep component mounted to allow fade-out animation
+    // Only unmount if there's no event at all
+    if (!event) return null;
 
     return (
         <div
             ref={cardRef}
-            className={`fixed z-50 w-80 bg-white dark:bg-gray-800 border rounded-lg shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 ${
+            className={`fixed z-50 w-80 bg-white dark:bg-gray-800 border rounded-lg shadow-xl overflow-hidden ${
                 isPinned 
                     ? 'border-zinc-300 dark:border-zinc-400 shadow-zinc-200 dark:shadow-black/40' 
                     : 'border-gray-200 dark:border-gray-600'
-            }`}
+            } ${isVisible && hasAnimated ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
             style={{
                 left: `${cardPosition.x}px`,
                 top: `${cardPosition.y}px`,
+                transformOrigin: 'top center',
+                // Smooth animation for opacity and scale with ease-out for natural feel
+                transition: 'opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             onMouseEnter={onHover}
             onMouseLeave={onLeave}

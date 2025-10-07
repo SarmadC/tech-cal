@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import Image from 'next/image';
 import { Event, MultiDayEventInstance } from '@/types';
 
@@ -13,7 +13,7 @@ interface MonthEventCardProps {
     style?: React.CSSProperties;
 }
 
-export const MonthEventCard: React.FC<MonthEventCardProps> = ({
+const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     event,
     onClick,
     onHover,
@@ -124,6 +124,9 @@ export const MonthEventCard: React.FC<MonthEventCardProps> = ({
         margin: 0,
         border: '2px solid white',
         borderRadius: '8px',
+        cursor: 'pointer',
+        // No transitions on the card itself - hover effects are instant
+        // This prevents flickering and provides immediate visual feedback
         ...style
     };
 
@@ -283,3 +286,20 @@ export const MonthEventCard: React.FC<MonthEventCardProps> = ({
         </div>
     );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+// Only re-render if the event ID or handlers actually change
+export const MonthEventCard = memo(MonthEventCardComponent, (prevProps, nextProps) => {
+    // Custom comparison function for better performance
+    return (
+        prevProps.event.id === nextProps.event.id &&
+        prevProps.event.title === nextProps.event.title &&
+        prevProps.onClick === nextProps.onClick &&
+        prevProps.onHover === nextProps.onHover &&
+        prevProps.onLeave === nextProps.onLeave &&
+        prevProps.className === nextProps.className
+        // Note: We deliberately don't compare style as it's often a new object
+    );
+});
+
+MonthEventCard.displayName = 'MonthEventCard';

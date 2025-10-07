@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { EventClickArg } from '@/types/fullcalendar';
 import { FullCalendar } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
@@ -34,7 +34,29 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     const internalCalendarRef = React.useRef<FullCalendar | null>(null);
     const _activeCalendarRef = calendarRef || internalCalendarRef;
     const [_isMobile, setIsMobile] = useState(false);
-    const { hidePreview, previewState, showPreview } = useEventPreview();
+    const { hidePreview, previewState, showPreview, cancelHide } = useEventPreview();
+
+    // Event click handler
+    const handleEventClick = useCallback((event: Event | MultiDayEventInstance) => {
+        onEventSelect?.(event);
+    }, [onEventSelect]);
+
+    // Event hover handler
+    const handleEventHover = useCallback((event: Event | MultiDayEventInstance, e: React.MouseEvent) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const position = {
+            x: rect.left + rect.width / 2,
+            y: rect.top
+        };
+        showPreview(event as Event, position);
+    }, [showPreview]);
+
+    // Memoize the card style to prevent new object creation on every render
+    const cardStyle = useMemo(() => ({
+        height: 'auto',
+        minHeight: '24px',
+        fontSize: '0.75rem'
+    }), []);
 
     // Custom month grid component for individual day instances
     const CustomMonthGrid: React.FC = () => {
@@ -82,8 +104,11 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
             <div className="custom-month-grid">
                 {/* Header */}
                 <div className="month-grid-header">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="month-grid-day-header">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                        <div 
+                            key={day} 
+                            className={`month-grid-day-header ${index === 0 || index === 6 ? 'weekend' : ''}`}
+                        >
                             {day}
                         </div>
                     ))}
@@ -112,21 +137,10 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                         <div key={`${event.id}-${eventIndex}`} className="month-grid-event">
                                             <MonthEventCard
                                                 event={event}
-                                                onClick={() => onEventSelect?.(event)}
-                                                onHover={(e: React.MouseEvent) => {
-                                                    const rect = e.currentTarget.getBoundingClientRect();
-                                                    const position = {
-                                                        x: rect.left + rect.width / 2,
-                                                        y: rect.top
-                                                    };
-                                                    showPreview(event as Event, position);
-                                                }}
+                                                onClick={() => handleEventClick(event)}
+                                                onHover={(e) => handleEventHover(event, e)}
                                                 onLeave={hidePreview}
-                                                style={{
-                                                    height: 'auto',
-                                                    minHeight: '24px',
-                                                    fontSize: '0.75rem'
-                                                }}
+                                                style={cardStyle}
                                             />
                                         </div>
                                     ))}
@@ -212,6 +226,8 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     isVisible={previewState.isVisible}
                     position={previewState.position}
                     onClose={hidePreview}
+                    onHover={cancelHide}
+                    onLeave={hidePreview}
                 />
             )}
         </div>

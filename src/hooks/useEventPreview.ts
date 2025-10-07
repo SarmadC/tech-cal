@@ -1,6 +1,6 @@
 // src/hooks/useEventPreview.ts
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 // 1. UPDATE IMPORT: Use the new, canonical `Event` type.
 import { Event } from '@/types';
 
@@ -16,6 +16,10 @@ interface Position {
     y: number;
 }
 
+const HOVER_DELAY = 200; // Delay before showing preview (ms)
+const HIDE_DELAY = 150; // Delay before hiding preview (ms)
+const ANIMATION_DURATION = 250; // Duration of fade-out animation (ms) - matches CSS transition
+
 export function useEventPreview() {
     const [previewState, setPreviewState] = useState<PreviewState>({
         event: null,
@@ -23,23 +27,102 @@ export function useEventPreview() {
         position: { x: 0, y: 0 }
     });
 
-    // 3. UPDATE SIGNATURE: The `showPreview` function now accepts an `Event`.
-    const showPreview = useCallback((event: Event, position: Position) => {
-        setPreviewState({
-            event,
-            isVisible: true,
-            position
-        });
+    const showTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Cleanup timers on unmount
+    useEffect(() => {
+        return () => {
+            if (showTimerRef.current) clearTimeout(showTimerRef.current);
+            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+        };
     }, []);
 
+    // 3. UPDATE SIGNATURE: The `showPreview` function now accepts an `Event`.
+    // Add hover delay to prevent jank when moving mouse across events
+    const showPreview = useCallback((event: Event, position: Position) => {
+        // Clear any pending hide timer
+        if (hideTimerRef.current) {
+            clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = null;
+        }
+
+        // Clear any pending show timer
+        if (showTimerRef.current) {
+            clearTimeout(showTimerRef.current);
+        }
+
+        // If already showing the same event, just update position immediately
+        if (previewState.isVisible && previewState.event?.id === event.id) {
+            setPreviewState(prev => ({
+                ...prev,
+                position
+            }));
+            return;
+        }
+
+        // Delay showing preview to avoid jank when quickly moving over events
+        showTimerRef.current = setTimeout(() => {
+            setPreviewState({
+                event,
+                isVisible: true,
+                position
+            });
+            showTimerRef.current = null;
+        }, HOVER_DELAY);
+    }, [previewState.isVisible, previewState.event?.id]);
+
     const hidePreview = useCallback(() => {
-        setPreviewState(prev => ({
-            ...prev,
-            isVisible: false
-        }));
+        // Clear any pending show timer
+        if (showTimerRef.current) {
+            clearTimeout(showTimerRef.current);
+            showTimerRef.current = null;
+        }
+
+        // Don't hide if already hidden
+        if (!previewState.isVisible) {
+            return;
+        }
+
+        // Two-step hiding process for smooth animation:
+        // 1. First, set isVisible to false to trigger fade-out animation
+        hideTimerRef.current = setTimeout(() => {
+            setPreviewState(prev => ({
+                ...prev,
+                isVisible: false
+            }));
+            
+            // 2. Then, clear the event after animation completes
+            setTimeout(() => {
+                setPreviewState({
+                    event: null,
+                    isVisible: false,
+                    position: { x: 0, y: 0 }
+                });
+            }, ANIMATION_DURATION);
+            
+            hideTimerRef.current = null;
+        }, HIDE_DELAY);
+    }, [previewState.isVisible]);
+
+    const cancelHide = useCallback(() => {
+        if (hideTimerRef.current) {
+            clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = null;
+        }
     }, []);
 
     const forceHidePreview = useCallback(() => {
+        // Clear all timers
+        if (showTimerRef.current) {
+            clearTimeout(showTimerRef.current);
+            showTimerRef.current = null;
+        }
+        if (hideTimerRef.current) {
+            clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = null;
+        }
+
         setPreviewState({
             event: null,
             isVisible: false,
@@ -51,6 +134,7 @@ export function useEventPreview() {
         previewState,
         showPreview,
         hidePreview,
+        cancelHide,
         forceHidePreview
     };
 }
