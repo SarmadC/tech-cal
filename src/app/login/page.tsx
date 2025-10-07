@@ -151,7 +151,7 @@ export default function LoginPage() {
     };
 
     const handleLoginSuccess = () => {
-        const redirectTo = searchParams.get('redirect') || '/calendar';
+        const redirectTo = searchParams.get('redirect') || '/discover';
         router.push(redirectTo);
     };
 

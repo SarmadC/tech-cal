@@ -59,7 +59,7 @@ export async function loginAction(
         };
     }
 
-    return redirect('/dashboard');
+    return redirect('/discover');
 }
 
 export async function signupAction(
@@ -96,7 +96,7 @@ export async function signupAction(
         };
     }
 
-    return redirect('/dashboard');
+    return redirect('/discover');
 }
 
 export async function forgotPasswordAction(
