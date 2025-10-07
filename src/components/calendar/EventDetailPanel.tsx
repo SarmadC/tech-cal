@@ -60,23 +60,60 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
     // Fetch complete event details with agenda
     useEffect(() => {
+        let isMounted = true;
+        let timeoutId: NodeJS.Timeout;
+        
         const fetchEventWithAgenda = async () => {
             try {
                 setIsLoading(true);
+                
+                // Set a timeout to ensure loading state doesn't get stuck
+                timeoutId = setTimeout(() => {
+                    if (isMounted) {
+                        console.warn('[EventDetailPanel] Agenda fetch timeout, using basic event data');
+                        setEventWithAgenda(event);
+                        setIsLoading(false);
+                    }
+                }, 10000); // 10 second timeout
+                
                 const supabase = createClient();
+                
                 // Use originalEventId for multi-day instances, otherwise the regular id
                 const fetchEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
+                
+                console.log('[EventDetailPanel] Fetching agenda for event:', fetchEventId);
                 const fullEvent = await EventService.getEventWithAgenda(fetchEventId, supabase);
-                setEventWithAgenda(fullEvent);
+                
+                // Clear the timeout since we got a response
+                clearTimeout(timeoutId);
+                
+                if (isMounted) {
+                    console.log('[EventDetailPanel] Agenda fetched successfully:', fullEvent.agenda?.length || 0, 'items');
+                    setEventWithAgenda(fullEvent);
+                }
             } catch (error) {
-                console.warn('Failed to fetch event agenda, using basic event data:', error);
-                setEventWithAgenda(event);
+                clearTimeout(timeoutId);
+                console.warn('[EventDetailPanel] Failed to fetch event agenda, using basic event data:', error);
+                if (isMounted) {
+                    // Set the event anyway so we at least show something
+                    setEventWithAgenda(event);
+                }
             } finally {
-                setIsLoading(false);
+                if (isMounted) {
+                    console.log('[EventDetailPanel] Setting isLoading to false');
+                    setIsLoading(false);
+                }
             }
         };
 
         fetchEventWithAgenda();
+        
+        return () => {
+            isMounted = false;
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
     }, [event.id, event]);
 
     // Close more menu when clicking outside

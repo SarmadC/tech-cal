@@ -14,7 +14,6 @@ import { useRecommendationTracking } from '@/hooks/useRecommendationTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
-import { getEventStatus } from '@/utils/eventStatusUtils';
 import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
 import { createAnalyticsContext } from '@/utils/analyticsUtils';
 
@@ -40,11 +39,14 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 }) => {
     const { user } = useAuth();
     const { showError, showSuccess } = useSnackbar();
-    const { trackEvent, untrackEvent, isLoading } = useTrackedEventsUnified();
+    const { trackEvent, untrackEvent, isLoading, trackedEventIds } = useTrackedEventsUnified();
     const { trackClick } = useRecommendationTracking({ enableTracking: true });
 
-    // Use the tracking status directly from the event prop instead of local state
-    const { isTracked } = getEventStatus(event);
+    // Use originalEventId for multi-day event instances, otherwise use the regular id
+    const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
+    
+    // Check tracking status from the hook's trackedEventIds Set
+    const isTracked = trackingEventId ? (trackedEventIds?.has(trackingEventId) ?? false) : false;
     const cardRef = useRef<HTMLDivElement>(null) as RefObject<HTMLDivElement>;
     
     // Track if this is the first render to enable smooth initial animation
@@ -94,15 +96,18 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
             showError('Please sign in to track events');
             return;
         }
-
-        // Use originalEventId for multi-day event instances, otherwise use the regular id
-        const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
         
-
-        if (isTracked) {
-            await untrackEvent(trackingEventId);
-        } else {
-            await trackEvent(trackingEventId);
+        try {
+            if (isTracked) {
+                await untrackEvent(trackingEventId);
+                showSuccess('Event removed from your calendar');
+            } else {
+                await trackEvent(trackingEventId);
+                showSuccess('Event added to your calendar');
+            }
+        } catch (error) {
+            console.error('Error tracking event:', error);
+            showError(isTracked ? 'Failed to add event. Please try again.' : 'Failed to remove event. Please try again.');
         }
     };
 
