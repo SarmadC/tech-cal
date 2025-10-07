@@ -449,7 +449,7 @@
   margin: 0 !important;
   padding: 0 !important;
   position: absolute !important;
-  top: 32px !important; /* Below the title */
+  top: 34px !important; /* Below the title with more spacing */
   left: 8px !important;
   right: 56px !important; /* Leave space for larger logo */
   /* Ensure time doesn't overflow */
@@ -566,7 +566,7 @@
 .tech-calendar-month-view .day-dot {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
+  border-radius: 0;
 }
 
 /* Ensure dots respect the card padding even when custom values are set */
@@ -579,7 +579,7 @@
 .tech-calendar-month-view .fc-event .multi-day-dot {
   width: 4px;
   height: 4px;
-  border-radius: 50%;
+  border-radius: 0;
   background-color: var(--category-title-color, #1e293b);
   opacity: 0.5;
   transition: all 0.2s ease;

@@ -457,7 +457,7 @@
 .event-card .day-dot {
     width: 6px;
     height: 6px;
-    border-radius: 50%;
+    border-radius: 0;
     /* Background color is set dynamically via inline style */
     transition: all var(--transition-fast);
     opacity: 0.7;

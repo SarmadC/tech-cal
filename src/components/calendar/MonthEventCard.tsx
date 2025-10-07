@@ -90,12 +90,8 @@ export const MonthEventCard: React.FC<MonthEventCardProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '20px',
-                        height: '20px',
-                        border: '2px solid white',
-                        borderRadius: '50%',
-                        zIndex: 10,
-                        gap: '2px'
+                        gap: '2px',
+                        zIndex: 10
                     }}
                 >
                     {Array.from({ length: maxDots }, (_, i) => (
@@ -105,7 +101,7 @@ export const MonthEventCard: React.FC<MonthEventCardProps> = ({
                             style={{ 
                                 width: '3px',
                                 height: '3px',
-                                borderRadius: '50%',
+                                borderRadius: '0',
                                 backgroundColor: i + 1 === currentDay ? 'white' : 'rgba(255, 255, 255, 0.5)'
                             }}
                         />
@@ -119,8 +115,8 @@ export const MonthEventCard: React.FC<MonthEventCardProps> = ({
     const cardStyle: React.CSSProperties = {
         backgroundColor: categoryColor,
         padding: '12px',
-        height: '100px',
-        minHeight: '100px',
+        height: '120px',
+        minHeight: '120px',
         position: 'relative',
         display: 'block',
         boxSizing: 'border-box',
@@ -177,7 +173,7 @@ export const MonthEventCard: React.FC<MonthEventCardProps> = ({
                 style={{ 
                     color: 'white',
                     position: 'absolute',
-                    top: '32px',
+                    top: '34px',
                     left: '8px',
                     right: '50px',
                     fontSize: '0.7rem',
@@ -240,17 +236,19 @@ export const MonthEventCard: React.FC<MonthEventCardProps> = ({
                 </div>
             )}
 
-            {/* Category pill - bottom left, uses categoryColor for background */}
+            {/* Category pill - below time, left-aligned with title and time */}
             {event.category?.name && (
                 <div
                     className="event-category-badge"
                     style={{
                         position: 'absolute',
                         left: '8px',
-                        right: '44px',
-                        bottom: '12px',
+                        top: '58px',
                         zIndex: 30,
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        margin: 0,
+                        padding: 0,
+                        textAlign: 'left'
                     }}
                 >
                     <span
@@ -270,7 +268,9 @@ export const MonthEventCard: React.FC<MonthEventCardProps> = ({
                             maxWidth: '100%',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
-                            textOverflow: 'ellipsis'
+                            textOverflow: 'ellipsis',
+                            textAlign: 'center',
+                            margin: 0
                         }}
                     >
                         {event.category.name}
