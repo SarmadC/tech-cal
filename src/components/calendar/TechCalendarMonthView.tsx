@@ -34,12 +34,13 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     const internalCalendarRef = React.useRef<FullCalendar | null>(null);
     const _activeCalendarRef = calendarRef || internalCalendarRef;
     const [_isMobile, setIsMobile] = useState(false);
-    const { hidePreview, previewState, showPreview, cancelHide } = useEventPreview();
+    const { hidePreview, previewState, showPreview, cancelHide, forceHidePreview } = useEventPreview();
 
-    // Event click handler
+    // Event click handler - force hide preview immediately to prevent double-click issue
     const handleEventClick = useCallback((event: Event | MultiDayEventInstance) => {
+        forceHidePreview(); // Immediately hide preview to avoid click interference
         onEventSelect?.(event);
-    }, [onEventSelect]);
+    }, [onEventSelect, forceHidePreview]);
 
     // Event hover handler
     const handleEventHover = useCallback((event: Event | MultiDayEventInstance, e: React.MouseEvent) => {

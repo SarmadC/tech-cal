@@ -130,14 +130,22 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
         ...style
     };
 
+    // Handle click with proper event propagation
+    const handleClick = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent event bubbling
+        onLeave(); // Immediately hide preview on click
+        onClick();
+    };
+
     return (
         <div
             style={cardStyle}
             className={`event-card event-card-v8 ${className}`}
-            onClick={onClick}
+            onClick={handleClick}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
+                    onLeave(); // Hide preview before triggering click
                     onClick();
                 }
             }}
