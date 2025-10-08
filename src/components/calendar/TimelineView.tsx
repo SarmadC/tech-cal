@@ -301,12 +301,13 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                             </div>
                         
                         {/* Collapsible content with smooth animation */}
-                        <div 
-                            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[2000px] opacity-100'
+                        <div
+                            className={`grid transition-all duration-300 ease-in-out ${
+                                isCollapsed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
                             }`}
                         >
-                            <div className="space-y-6">
+                            <div className="overflow-hidden">
+                                <div className="space-y-6">
                                 {clusters.map((cluster, clusterIndex) => (
                                 <div key={clusterIndex} className="flex gap-4">
                                     {/* Timeline connector */}
@@ -359,6 +360,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                     </div>
                                 </div>
                             ))}
+                                </div>
                             </div>
                         </div>
                     </div>
