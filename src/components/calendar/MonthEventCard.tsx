@@ -102,7 +102,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
                                 width: '3px',
                                 height: '3px',
                                 borderRadius: '0',
-                                backgroundColor: i + 1 === currentDay ? 'white' : 'rgba(255, 255, 255, 0.5)'
+                                backgroundColor: i + 1 === currentDay ? textColor : `${textColor}80`
                             }}
                         />
                     ))}
@@ -147,11 +147,11 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
             role="button"
             aria-label={`Event: ${event.title}${event.location ? ` at ${event.location}` : ''}${event.organizer ? ` by ${event.organizer}` : ''}`}
         >
-            {/* Event name - top left (white text like mockup) */}
+            {/* Event name - top left */}
             <div 
                 className="event-title" 
                 style={{ 
-                    color: 'white',
+                    color: textColor,
                     position: 'absolute',
                     top: '12px',
                     left: '8px',
@@ -170,11 +170,11 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
                 {event.title}
             </div>
             
-            {/* Time - below event name (white text like mockup) */}
+            {/* Time - below event name */}
             <div 
                 className="event-time" 
                 style={{ 
-                    color: 'white',
+                    color: textColor,
                     position: 'absolute',
                     top: '34px',
                     left: '8px',
