@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Event, MultiDayEventInstance, isEventTracked, AgendaItem } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
-import { isEventLive } from '@/utils/dateUtils';
+import { isEventLive, isEventPast } from '@/utils/dateUtils';
 import { isMultiDayEvent, getMultiDayDuration } from '@/utils/eventUtils';
 import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
@@ -45,6 +45,7 @@ export const EventCard: React.FC<EventCardProps> = ({
     showCareerImpact = true
 }) => {
     const live = isEventLive(event.startTime, event.endTime);
+    const isPast = isEventPast(event.startTime, event.endTime);
 
     // Size bucket helper derived from span
     const getSizeBucket = (span: number) => {
@@ -227,6 +228,7 @@ export const EventCard: React.FC<EventCardProps> = ({
         'event-card',
         'event-card-v8', // New V8 styling class
         live ? 'live' : '',
+        isPast ? 'past completed-event' : '',
         isEventTracked(event) ? 'tracked' : '',
         isOverlapping ? 'overlapping' : '',
         event.category?.name?.toLowerCase().replace(/\s+/g, '-') || 'default', // Add category class

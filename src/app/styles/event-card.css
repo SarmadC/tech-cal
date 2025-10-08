@@ -816,6 +816,34 @@
     50% { opacity: 0.6; }
 }
 
+/* Past/Completed Event Styling */
+.event-card.past,
+.event-card.completed-event {
+    opacity: 0.6;
+    filter: saturate(0.5);
+    transition: opacity 0.2s ease, filter 0.2s ease;
+    border-left: 3px solid var(--success, #10b981) !important;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 50%, transparent 100%) !important;
+}
+
+.event-card.past:hover,
+.event-card.completed-event:hover {
+    opacity: 0.75;
+    filter: saturate(0.7);
+}
+
+/* Ensure past events maintain readability */
+.event-card.past .event-title,
+.event-card.past .event-time,
+.event-card.past .event-location,
+.event-card.past .event-organizer,
+.event-card.completed-event .event-title,
+.event-card.completed-event .event-time,
+.event-card.completed-event .event-location,
+.event-card.completed-event .event-organizer {
+    opacity: 0.9;
+}
+
 /* Event Card Size Variants */
 
 /* Compact View */

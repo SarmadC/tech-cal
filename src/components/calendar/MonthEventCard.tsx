@@ -3,6 +3,7 @@
 import React, { memo } from 'react';
 import Image from 'next/image';
 import { Event, MultiDayEventInstance } from '@/types';
+import { isEventPast } from '@/utils/dateUtils';
 
 interface MonthEventCardProps {
     event: Event | MultiDayEventInstance;
@@ -73,6 +74,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
 
     const categoryColor = getCategoryColor();
     const textColor = getVibrantColor(categoryColor);
+    const isPast = isEventPast(event.startTime, event.endTime);
 
     // Get multi-day dots if applicable
     const getMultiDayDots = () => {
@@ -140,7 +142,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     return (
         <div
             style={cardStyle}
-            className={`event-card event-card-v8 ${className}`}
+            className={`event-card event-card-v8 ${isPast ? 'past completed-event' : ''} ${className}`}
             onClick={handleClick}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
