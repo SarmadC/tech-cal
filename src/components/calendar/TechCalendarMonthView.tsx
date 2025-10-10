@@ -99,7 +99,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
             });
             
             return grouped;
-        }, [events]);
+        }, []);
         
         return (
             <div className="custom-month-grid">

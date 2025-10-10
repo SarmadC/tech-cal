@@ -35,7 +35,7 @@ export function EventList({
   onEventClick
 }: EventListProps) {
   return (
-    <Card className={`border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm ${className}`}>
+    <Card className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm ${className}`}>
       <CardHeader className={variant === 'compact' ? 'pb-4' : ''}>
         <CardTitle className="text-gray-900 dark:text-white">{title}</CardTitle>
         <CardDescription className="text-gray-600 dark:text-gray-300">{description}</CardDescription>

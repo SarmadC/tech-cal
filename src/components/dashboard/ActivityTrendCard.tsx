@@ -7,6 +7,7 @@ import { XAxis, YAxis, Area, AreaChart, ReferenceLine } from 'recharts';
 import { TrendUp, TrendDown, Minus, Calendar } from '@phosphor-icons/react';
 import { format, subDays, startOfDay } from 'date-fns';
 import { ACTIVITY_CHART_CONFIG } from '@/utils/chartConfigs';
+import { cn } from '@/lib/utils';
 import type { TrackedEventRecord } from '@/types';
 
 interface ActivityTrendCardProps {
@@ -74,16 +75,16 @@ export function ActivityTrendCard({ trackedEvents, className = '' }: ActivityTre
   // Handle empty state
   if (totalEvents === 0) {
     return (
-      <Card className={className}>
+      <Card className={cn("bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm", className)}>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Activity Trend</CardTitle>
-          <CardDescription>Events tracked over the last 30 days</CardDescription>
+          <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Activity Trend</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">Events tracked over the last 30 days</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[200px]">
-          <div className="text-center text-muted-foreground">
-            <Calendar className="w-8 h-8 mx-auto mb-3 opacity-50" />
-            <h3 className="font-medium text-foreground mb-1">No tracking activity yet</h3>
-            <p className="text-sm">Start tracking events to see your activity trend here</p>
+          <div className="text-center">
+            <Calendar className="w-8 h-8 mx-auto mb-3 opacity-50 text-gray-400" />
+            <h3 className="font-medium mb-1 text-gray-900 dark:text-white">No tracking activity yet</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Start tracking events to see your activity trend here</p>
           </div>
         </CardContent>
       </Card>
@@ -91,11 +92,11 @@ export function ActivityTrendCard({ trackedEvents, className = '' }: ActivityTre
   }
 
   return (
-    <Card className={className}>
+    <Card className={cn("bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <div className="space-y-1">
-          <CardTitle className="text-lg">Activity Trend</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Activity Trend</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
             {totalEvents} event{totalEvents !== 1 ? 's' : ''} tracked •
             {avgDaily > 0 ? ` ${avgDaily.toFixed(1)} avg/day` : ' Getting started'}
           </CardDescription>
@@ -105,7 +106,7 @@ export function ActivityTrendCard({ trackedEvents, className = '' }: ActivityTre
           <span className={`font-medium ${getTrendColor()}`}>
             {weeklyChange > 0 ? '+' : ''}{weeklyChange}%
           </span>
-          <span className="text-muted-foreground">vs last week</span>
+          <span className="text-gray-600 dark:text-gray-400">vs last week</span>
         </div>
       </CardHeader>
       <CardContent>

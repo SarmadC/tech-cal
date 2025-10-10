@@ -27,12 +27,12 @@ export function DashboardCard({
   error,
   onRetry
 }: DashboardCardProps) {
-  const baseClasses = "transition-all duration-200 hover:shadow-md";
-  
+  const baseClasses = "transition-all duration-200";
+
   const variantClasses = {
-    default: "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-gray-200 dark:border-gray-700",
-    elevated: "bg-white dark:bg-gray-800 shadow-lg border-0",
-    outlined: "bg-transparent border-2 border-gray-300 dark:border-gray-600"
+    default: "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md",
+    elevated: "bg-white dark:bg-gray-900 shadow-md hover:shadow-lg border border-gray-200 dark:border-gray-800",
+    outlined: "bg-transparent border-2 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600"
   };
 
   const sizeClasses = {
@@ -43,12 +43,12 @@ export function DashboardCard({
 
   if (loading) {
     return (
-      <Card className={cn(baseClasses, variantClasses[variant], sizeClasses[size], className)}>
+      <Card className={cn(baseClasses, variantClasses[variant], className)}>
         <CardHeader className="pb-4">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
           {description && <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2 w-3/4" />}
         </CardHeader>
-        <CardContent>
+        <CardContent className={sizeClasses[size]}>
           <div className="space-y-3">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-5/6" />
@@ -61,19 +61,19 @@ export function DashboardCard({
 
   if (error) {
     return (
-      <Card className={cn(baseClasses, variantClasses[variant], sizeClasses[size], className)}>
+      <Card className={cn(baseClasses, variantClasses[variant], className)}>
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg text-gray-900 dark:text-white">{title}</CardTitle>
-          {description && <CardDescription className="text-gray-600 dark:text-gray-300">{description}</CardDescription>}
+          <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">{title}</CardTitle>
+          {description && <CardDescription className="text-gray-600 dark:text-gray-400">{description}</CardDescription>}
         </CardHeader>
-        <CardContent>
+        <CardContent className={sizeClasses[size]}>
           <div className="text-center py-8">
-            <div className="text-red-500 text-4xl mb-4">⚠️</div>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
+            <div className="text-4xl mb-4">⚠️</div>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
             {onRetry && (
-              <button 
+              <button
                 onClick={onRetry}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors font-medium"
               >
                 Try Again
               </button>
@@ -85,12 +85,12 @@ export function DashboardCard({
   }
 
   return (
-    <Card className={cn(baseClasses, variantClasses[variant], sizeClasses[size], className)}>
+    <Card className={cn(baseClasses, variantClasses[variant], className)}>
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg text-gray-900 dark:text-white">{title}</CardTitle>
-        {description && <CardDescription className="text-gray-600 dark:text-gray-300">{description}</CardDescription>}
+        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">{title}</CardTitle>
+        {description && <CardDescription className="text-gray-600 dark:text-gray-400">{description}</CardDescription>}
       </CardHeader>
-      <CardContent>
+      <CardContent className={sizeClasses[size]}>
         {children}
       </CardContent>
     </Card>

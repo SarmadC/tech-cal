@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { TrendUp, TrendDown, Target, Calendar, Clock, ArrowUpRight } from '@phosphor-icons/react';
 import { format, isThisMonth, addDays } from 'date-fns';
+import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import { cn } from '@/lib/utils';
 import type { Event, TrackedEventRecord } from '@/types';
 
@@ -13,6 +14,7 @@ interface QuickStatsCardProps {
 }
 
 export function QuickStatsCard({ events, trackedEvents, className = '' }: QuickStatsCardProps) {
+  const _theme = useTimelineTheme();
   const now = new Date();
 
   // Calculate various time-based metrics
@@ -52,9 +54,8 @@ export function QuickStatsCard({ events, trackedEvents, className = '' }: QuickS
       subtitle: `${recentlyTracked.length} this week`,
       icon: Target,
       description: 'Total events you\'re following',
-      color: 'text-emerald-600',
-      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
-      borderColor: 'border-emerald-200 dark:border-emerald-800',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      iconBg: 'bg-emerald-50 dark:bg-emerald-900/20',
       progress: Math.min((trackedCount / 50) * 100, 100),
       trend: recentlyTracked.length > 0 ? 'up' : 'neutral',
       trendValue: recentlyTracked.length
@@ -65,9 +66,8 @@ export function QuickStatsCard({ events, trackedEvents, className = '' }: QuickS
       subtitle: thisWeekEvents.length > 0 ? format(new Date(thisWeekEvents[0]?.startTime), 'MMM d') : 'None scheduled',
       icon: Calendar,
       description: 'Events in the next 7 days',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-800',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      iconBg: 'bg-blue-50 dark:bg-blue-900/20',
       progress: Math.min((thisWeekEvents.length / 10) * 100, 100),
       trend: thisWeekEvents.length > thisMonthEvents.length / 4 ? 'up' : 'neutral',
       trendValue: thisWeekEvents.length
@@ -78,9 +78,8 @@ export function QuickStatsCard({ events, trackedEvents, className = '' }: QuickS
       subtitle: `${engagementRate}% tracked`,
       icon: Clock,
       description: 'Events available this month',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      borderColor: 'border-purple-200 dark:border-purple-800',
+      iconColor: 'text-purple-600 dark:text-purple-400',
+      iconBg: 'bg-purple-50 dark:bg-purple-900/20',
       progress: engagementRate,
       trend: engagementRate > 50 ? 'up' : 'neutral',
       trendValue: engagementRate
@@ -88,39 +87,35 @@ export function QuickStatsCard({ events, trackedEvents, className = '' }: QuickS
   ];
 
   return (
-    <Card className={cn("bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg", className)}>
+    <Card className={cn("bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm", className)}>
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">Dashboard Overview</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-300">Your event tracking activity</CardDescription>
+            <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">Dashboard Overview</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">Your event tracking activity</CardDescription>
           </div>
           <ArrowUpRight className="w-5 h-5 text-gray-400" />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             const trendIcon = stat.trend === 'up' ? (
-              <TrendUp className="w-4 h-4 text-green-500" />
+              <TrendUp className="w-4 h-4 text-green-600 dark:text-green-400" />
             ) : stat.trend === 'down' ? (
-              <TrendDown className="w-4 h-4 text-red-500" />
+              <TrendDown className="w-4 h-4 text-red-600 dark:text-red-400" />
             ) : null;
 
             return (
-              <div key={index} className={cn(
-                "relative p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md",
-                stat.bgColor,
-                stat.borderColor
-              )}>
+              <div key={index} className="relative p-5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <div className={cn("p-2 rounded-lg", stat.bgColor, stat.borderColor, "border")}>
-                      <Icon className={cn("w-5 h-5", stat.color)} />
+                    <div className={cn("p-2.5 rounded-lg", stat.iconBg)}>
+                      <Icon className={cn("w-5 h-5", stat.iconColor)} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {stat.title}
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">

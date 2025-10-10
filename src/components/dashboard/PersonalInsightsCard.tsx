@@ -20,7 +20,7 @@ export function PersonalInsightsCard({ insights, className = '' }: PersonalInsig
   return (
     <div className={`grid gap-6 md:grid-cols-2 lg:grid-cols-4 ${className}`}>
       {insights.map((insight, index) => (
-        <Card key={index} className="relative overflow-hidden border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card key={index} className="relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
           <CardHeader className="pb-2">
             <div className="p-2 bg-gray-100 rounded-lg w-fit">{insight.icon}</div>
           </CardHeader>

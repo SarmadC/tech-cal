@@ -9,128 +9,7 @@
 /* Import event type colors */
 @import './event-type-colors.css';
 
-/* CRITICAL: Override Tailwind's bg-card after utilities layer */
-@layer utilities {
-  .bg-card {
-    --card: 250 250 250 !important;
-    background: hsl(250, 250, 250) !important;
-    background-color: hsl(250, 250, 250) !important;
-  }
-  
-  .dark .bg-card {
-    --card: 30 30 30 !important;
-    background: hsl(30, 30, 30) !important;
-    background-color: hsl(30, 30, 30) !important;
-  }
-}
-
-/* COMPREHENSIVE DASHBOARD COLOR FIX: Override all shadcn color variables */
-@layer utilities {
-  /* Card backgrounds */
-  .bg-card {
-    background-color: #fafafa !important; /* Force explicit light gray */
-  }
-  
-  .dark .bg-card {
-    background-color: #1e1e1e !important; /* Premium dark surface */
-  }
-  
-  /* Card text colors */
-  .text-card-foreground {
-    color: #111827 !important; /* Force explicit dark text for light mode */
-  }
-  
-  .dark .text-card-foreground {
-    color: #ffffff !important; /* Premium white text for dark mode */
-  }
-  
-  /* Muted text colors */
-  .text-muted-foreground {
-    color: #6b7280 !important; /* Force explicit muted text for light mode */
-  }
-  
-  .dark .text-muted-foreground {
-    color: #b3b3b3 !important; /* Premium muted text for dark mode */
-  }
-  
-  /* Target the exact shadcn Card structure */
-  .rounded-xl.border.bg-card.text-card-foreground.shadow {
-    background-color: #fafafa !important;
-    color: #111827 !important;
-  }
-  
-  .dark .rounded-xl.border.bg-card.text-card-foreground.shadow {
-    background-color: #1e1e1e !important;
-    color: #ffffff !important;
-  }
-  
-  /* Fix all dashboard card variations */
-  .dashboard-card,
-  [class*="dashboard"] .card,
-  [class*="Dashboard"] .card {
-    background-color: #fafafa !important;
-    color: #111827 !important;
-  }
-  
-  .dark .dashboard-card,
-  .dark [class*="dashboard"] .card,
-  .dark [class*="Dashboard"] .card {
-    background-color: #1e1e1e !important;
-    color: #ffffff !important;
-  }
-  
-  /* Fix chart text colors */
-  .recharts-text {
-    fill: #6b7280 !important;
-  }
-  
-  .dark .recharts-text {
-    fill: #b3b3b3 !important;
-  }
-  
-  /* Fix chart tooltips - prevent yellow background */
-  .recharts-tooltip-wrapper {
-    background: #ffffff !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 6px !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
-  }
-  
-  .dark .recharts-tooltip-wrapper {
-    background: #1e1e1e !important;
-    border: 1px solid #333333 !important;
-  }
-  
-  .recharts-tooltip-content {
-    background: #ffffff !important;
-    color: #111827 !important;
-  }
-  
-  .dark .recharts-tooltip-content {
-    background: #1e1e1e !important;
-    color: #ffffff !important;
-  }
-  
-  /* Fix chart legend colors for better visibility */
-  [style*="--color-other"] {
-    --color-other: #9ca3af !important; /* Visible gray for light mode */
-  }
-  
-  .dark [style*="--color-other"] {
-    --color-other: #808080 !important; /* Premium gray for dark mode */
-  }
-  
-  /* Fix any other text elements that might be affected */
-  .font-semibold,
-  .font-medium {
-    color: #111827 !important;
-  }
-  
-  .dark .font-semibold,
-  .dark .font-medium {
-    color: #f9fafb !important;
-  }
-}
+/* Removed problematic color overrides - colors now controlled by @layer base below */
 
 /* Import utility classes */
 @import './utilities.css';
@@ -169,8 +48,9 @@
   background-color: var(--background-elevated) !important;
 }
 
-/* Remove all yellow/orange borders globally - but exclude FullCalendar elements */
-*:not([class*="fc-"]) {
+/* Remove all yellow/orange borders globally - but exclude FullCalendar elements
+   and DO NOT override glass card borders */
+*:not([class*="fc-"]):not(.glass-card):not(.glass-card *) {
   border-color: var(--border-default) !important;
 }
 
@@ -340,84 +220,120 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
   print-color-adjust: exact;
 }
 
-/* Force consistent color profile rendering across browsers */
-* {
-  color-scheme: light dark;
-  -webkit-color-scheme: light dark;
-}
+/* Removed additional problematic color overrides */
 
-/* Ensure consistent HSL color rendering in Chrome */
-.bg-card,
-[class*="card"] {
-  color-profile: sRGB;
-  -webkit-color-profile: sRGB;
-}
+/* ============================================== */
+/* GLASSMORPHISM UTILITIES                        */
+/* ============================================== */
 
-/* DEFINITIVE FIX: Ensure --card variable is never overridden with yellow values */
-:root {
-  --card: 250 250 250 !important; /* Force light gray globally - prevent yellow override */
-}
+@layer utilities {
+  /* Base glass card effect - matching css.glass inspiration */
+  .glass-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-.dark {
-  --card: 15 20 28 !important; /* Force dark gray globally - prevent yellow override */
-}
+  .glass-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+  }
 
-/* Additional safety: Override any potential yellow values */
-:root {
-  --category-bg: transparent !important; /* Prevent event card color leakage */
-  --warning: #f59e0b !important; /* Keep warning color but prevent leakage */
-  --chart-3: 250 250 250 !important; /* Prevent chart color leakage */
-  --pastel-webinar: transparent !important; /* Prevent webinar color leakage */
-  
-  /* Force correct shadcn color variables globally */
-  --card: 250 250 250 !important; /* Light gray */
-  --card-foreground: 17 24 39 !important; /* Dark text */
-  --muted-foreground: 107 114 128 !important; /* Muted text */
-}
+  /* Light mode glass variant - matching css.glass inspiration */
+  .light .glass-card {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  }
 
-.dark {
-  --card: 31 41 55 !important; /* Dark gray */
-  --card-foreground: 249 250 251 !important; /* Light text */
-  --muted-foreground: 156 163 175 !important; /* Muted text */
-}
+  .light .glass-card:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.08);
+  }
 
-/* ULTRA-AGGRESSIVE: Override Tailwind's bg-card class directly */
-.bg-card {
-  --card: 250 250 250 !important;
-  background: hsl(250, 250, 250) !important;
-  background-color: hsl(250, 250, 250) !important;
-}
+  /* Gradient border effect for premium cards */
+  .glass-border-gradient {
+    position: relative;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 16px;
+  }
 
-.dark .bg-card {
-  --card: 15 20 28 !important;
-  background: hsl(15, 20, 28) !important;
-  background-color: hsl(15, 20, 28) !important;
-}
+  .glass-border-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
 
-/* Force shadcn Card components to use correct colors */
-.rounded-xl.border.bg-card {
-  --card: 250 250 250 !important;
-  background: hsl(250, 250, 250) !important;
-  background-color: hsl(250, 250, 250) !important;
-}
+  .light .glass-border-gradient::before {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.04));
+  }
 
-.dark .rounded-xl.border.bg-card {
-  --card: 15 20 28 !important;
-  background: hsl(15, 20, 28) !important;
-  background-color: hsl(15, 20, 28) !important;
-}
+  /* Subtle glow effect on hover */
+  .glass-glow {
+    position: relative;
+    transition: all 0.3s ease;
+  }
 
-/* Nuclear option: Override any element with bg-card class */
-*[class*="bg-card"] {
-  --card: 250 250 250 !important;
-  background: hsl(250, 250, 250) !important;
-  background-color: hsl(250, 250, 250) !important;
-}
+  .glass-glow:hover {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  }
 
-.dark *[class*="bg-card"] {
-  --card: 15 20 28 !important;
-  background: hsl(15, 20, 28) !important;
-  background-color: hsl(15, 20, 28) !important;
+  .light .glass-glow:hover {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Gradient background for dashboard - subtle like inspiration */
+  .glass-bg-gradient {
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+  }
+
+  .light .glass-bg-gradient {
+    background: radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.02) 0%, transparent 50%);
+  }
+
+  /* Monochrome text variations */
+  .text-glass-primary {
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .text-glass-secondary {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .text-glass-tertiary {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .light .text-glass-primary {
+    color: rgba(0, 0, 0, 0.9);
+  }
+
+  .light .text-glass-secondary {
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .light .text-glass-tertiary {
+    color: rgba(0, 0, 0, 0.4);
+  }
 }
 
 /* ============================================== */
@@ -642,63 +558,62 @@ input::placeholder, textarea::placeholder {
 
 @layer base {
   :root {
-    /* --- Monochrome Dark Theme Shadcn Mapping --- */
-    --background: 11 15 20; /* matches --background-main */
-    --foreground: 231 236 243;
-    --card: 15 20 28; /* background-secondary - darker, less orange */
-    --card-foreground: 231 236 243;
-    --popover: 20 26 38;
-    --popover-foreground: 231 236 243;
-    --primary: 0 0 0; /* black */
-    --primary-foreground: 255 255 255; /* white text on black */
-    --secondary: 18 25 36; /* background-tertiary */
-    --secondary-foreground: 170 182 198;
-    --muted: 18 25 36;
-    --muted-foreground: 123 135 152;
-    --accent: 255 255 255; /* neutral accent */
-    --accent-foreground: 0 0 0;
-    --destructive: 239 68 68; /* keep error for clarity */
-    --destructive-foreground: 255 255 255;
-    --border: 80 80 80; /* neutral border */
-    --input: 20 26 38;
-    --ring: 255 255 255; /* neutral focus ring */
+    /* --- Premium Dark Theme (shadcn/ui format: H S% L%) --- */
+    --background: 0 0% 7%; /* #121212 - dark background */
+    --foreground: 0 0% 98%; /* #fafafa - white text */
+    --card: 0 0% 12%; /* #1e1e1e - card background */
+    --card-foreground: 0 0% 98%; /* #fafafa - card text */
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%; /* white primary */
+    --primary-foreground: 0 0% 9%; /* dark text on white */
+    --secondary: 0 0% 15%; /* #262626 - secondary surfaces */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%; /* #999999 - muted text */
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%; /* red for errors */
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 18%; /* #2e2e2e - subtle borders */
+    --input: 0 0% 15%;
+    --ring: 0 0% 83%; /* light ring for focus */
     --radius: 0.5rem;
 
     /* Sidebar theme tokens (oklch l c h[/a]) */
-    /* Deep neutral-blue surface with subtle accent */
-    --sidebar: 0.22 0.02 260;
+    --sidebar: 0.12 0 0;
     --sidebar-foreground: 0.98 0 0;
-    --sidebar-border: 0.6 0.02 260/18%;
-    --sidebar-accent: 0.27 0.03 260;
+    --sidebar-border: 0.18 0 0;
+    --sidebar-accent: 0.15 0 0;
   }
  
   .light {
-    /* --- Monochrome Light Theme Shadcn Override --- */
-    --background: 255 255 255;
-    --foreground: 15 15 15;
-    --card: 250 250 250;
-    --card-foreground: 15 15 15;
-    --popover: 248 250 252;
-    --popover-foreground: 15 15 15;
-    --primary: 0 0 0; /* black */
-    --primary-foreground: 255 255 255; /* white text on black */
-    --secondary: 226 232 240;
-    --secondary-foreground: 30 30 30;
-    --muted: 241 245 249;
-    --muted-foreground: 100 100 100;
-    --accent: 0 0 0; /* neutral accent */
-    --accent-foreground: 255 255 255;
-    --destructive: 239 68 68;
-    --destructive-foreground: 255 255 255;
-    --border: 226 232 240;
-    --input: 226 232 240;
-    --ring: 0 0 0; /* black focus ring */
+    /* --- Premium Light Theme (shadcn/ui format: H S% L%) --- */
+    --background: 0 0% 100%; /* #ffffff - white background */
+    --foreground: 0 0% 9%; /* #171717 - dark text */
+    --card: 0 0% 98%; /* #fafafa - card background */
+    --card-foreground: 0 0% 9%; /* #171717 - card text */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 0 0% 9%; /* black primary */
+    --primary-foreground: 0 0% 98%; /* white text on black */
+    --secondary: 0 0% 96%; /* #f5f5f5 - secondary surfaces */
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%; /* #737373 - muted text */
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%; /* red for errors */
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 90%; /* #e5e5e5 - subtle borders */
+    --input: 0 0% 90%;
+    --ring: 0 0% 9%; /* dark ring for focus */
 
     /* Sidebar theme tokens (light) */
     --sidebar: 0.98 0 0;
-    --sidebar-foreground: 0.17 0 0;
-    --sidebar-border: 0.88 0 0/35%;
-    --sidebar-accent: 0.92 0 0;
+    --sidebar-foreground: 0.09 0 0;
+    --sidebar-border: 0.90 0 0;
+    --sidebar-accent: 0.96 0 0;
   }
 
   /* --- Final Base Apply Rules --- */
@@ -820,10 +735,41 @@ input::placeholder, textarea::placeholder {
 }
 
 @media print {
-  /* [REMOVED] calendar-container and event-badge styles. They should live in `calendar.css` */
+  /* Print-friendly dashboard styles for PDF export */
   body {
     background: white !important;
     color: black !important;
+  }
+  
+  /* Hide interactive elements */
+  button, .hover\:shadow-lg, [role="button"] {
+    box-shadow: none !important;
+  }
+  
+  /* Optimize charts for printing */
+  .recharts-wrapper {
+    page-break-inside: avoid;
+  }
+  
+  /* Hide sidebar when printing dashboard */
+  aside, nav {
+    display: none !important;
+  }
+  
+  main {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Ensure cards print properly */
+  .rounded-xl {
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+  }
+  
+  /* Page breaks */
+  .grid {
+    page-break-inside: avoid;
   }
 }
 
