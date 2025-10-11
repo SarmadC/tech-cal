@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Event, EventType, AppProfile } from '@/types';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
@@ -11,6 +12,12 @@ import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import Loading from '@/components/Loading';
+
+const EventDetailPanelDynamic = dynamic(
+    () => import('@/components/calendar/EventDetailPanel'),
+    { loading: () => <Loading /> }
+);
 
 interface DiscoverClientViewProps {
     initialCategories: EventType[];
@@ -40,13 +47,13 @@ export default function DiscoverClientView({
     
     // Calendar state for CalendarProvider
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const [_selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const currentDate = new Date();
 
     // Navigation handlers
     const handleEventSelect = useCallback((event: Event) => {
-        nav.toEvent(event.id, event.title);
-    }, [nav]);
+        setSelectedEvent(event);
+    }, []);
 
     const handleNavigate = useCallback(() => {
         nav.toCalendar();
@@ -64,8 +71,7 @@ export default function DiscoverClientView({
 
     const handleEventSelectForContext = useCallback((event: Event) => {
         setSelectedEvent(event);
-        nav.toEvent(event.id, event.title);
-    }, [nav]);
+    }, []);
 
     const handleCloseEventDetail = useCallback(() => {
         setSelectedEvent(null);
@@ -123,61 +129,82 @@ export default function DiscoverClientView({
                 profile={profile}
                 onEventSelect={handleEventSelect}
                 renderContent={() => (
-                    <SmartLoader
-                        loading={eventData.isLoading}
-                        error={eventData.error}
-                        onRetry={eventData.refetch}
-                        skeleton={loadingSkeleton}
-                    >
-                        <div aria-busy={eventData.rateLimitWaitMs > 0 || eventData.isLoading}>
-                            {/* Rate limit wait feedback */}
-                            {eventData.rateLimitWaitMs > 0 && (
-                                <div
-                                    className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3 text-sm text-text-secondary"
-                                    role="status"
-                                    aria-live="polite"
-                                >
-                                    Fetching results... (waiting {Math.ceil(eventData.rateLimitWaitMs / 1000)}s to avoid rate limit)
-                                </div>
-                            )}
-
-                            {/* Cold start indicator */}
-                            {eventData.isColdStart && !eventData.isLoading && (
-                                <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                                    <div className="flex items-start">
-                                        <div className="flex-shrink-0">
-                                            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                            </svg>
+                    <div className="flex h-full relative">
+                        <div className="flex-1 relative">
+                            <SmartLoader
+                                loading={eventData.isLoading}
+                                error={eventData.error}
+                                onRetry={eventData.refetch}
+                                skeleton={loadingSkeleton}
+                            >
+                                <div aria-busy={eventData.rateLimitWaitMs > 0 || eventData.isLoading}>
+                                    {/* Rate limit wait feedback */}
+                                    {eventData.rateLimitWaitMs > 0 && (
+                                        <div
+                                            className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3 text-sm text-text-secondary"
+                                            role="status"
+                                            aria-live="polite"
+                                        >
+                                            Fetching results... (waiting {Math.ceil(eventData.rateLimitWaitMs / 1000)}s to avoid rate limit)
                                         </div>
-                                        <div className="ml-3">
-                                            <h3 className="text-sm font-medium text-blue-800">Personalized for You</h3>
-                                            <p className="mt-1 text-sm text-blue-700">
-                                                We&apos;re showing you events that similar professionals found valuable. 
-                                                As you interact with events, we&apos;ll learn your preferences and improve recommendations.
-                                            </p>
+                                    )}
+
+                                    {/* Cold start indicator */}
+                                    {eventData.isColdStart && !eventData.isLoading && (
+                                        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                                            <div className="flex items-start">
+                                                <div className="flex-shrink-0">
+                                                    <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                                <div className="ml-3">
+                                                    <h3 className="text-sm font-medium text-blue-800">Personalized for You</h3>
+                                                    <p className="mt-1 text-sm text-blue-700">
+                                                        We&apos;re showing you events that similar professionals found valuable. 
+                                                        As you interact with events, we&apos;ll learn your preferences and improve recommendations.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                {/* Empty-results hint for budget tiers */}
+                                {!eventData.isLoading && eventData.filteredEvents.length === 0 && eventData.filters.budget !== 'all' && (
+                                    <div className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3">
+                                        <p className="text-sm text-foreground-secondary">No events found for the selected budget tier. Budget filtering is USD-only.</p>
+                                        <div className="mt-2">
+                                            <button
+                                                onClick={() => eventData.updateFilter('budget', 'all' as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
+                                                className="inline-flex items-center rounded-md border border-border-default px-3 py-1 text-sm text-foreground-primary hover:bg-background-muted"
+                                            >
+                                                Show all budgets
+                                            </button>
                                         </div>
                                     </div>
+                                )}
+                                {mainContent}
                                 </div>
-                            )}
-
-                        {/* Empty-results hint for budget tiers */}
-                        {!eventData.isLoading && eventData.filteredEvents.length === 0 && eventData.filters.budget !== 'all' && (
-                            <div className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3">
-                                <p className="text-sm text-foreground-secondary">No events found for the selected budget tier. Budget filtering is USD-only.</p>
-                                <div className="mt-2">
-                                    <button
-                                        onClick={() => eventData.updateFilter('budget', 'all' as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
-                                        className="inline-flex items-center rounded-md border border-border-default px-3 py-1 text-sm text-foreground-primary hover:bg-background-muted"
-                                    >
-                                        Show all budgets
-                                    </button>
+                            </SmartLoader>
+                        </div>
+                        {selectedEvent && (
+                            <div 
+                                className="fixed inset-0 z-50 bg-black bg-opacity-50"
+                                onClick={handleCloseEventDetail}
+                            >
+                                <div 
+                                    className="absolute right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform transition-transform duration-300 ease-in-out"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <EventDetailPanelDynamic 
+                                        event={selectedEvent} 
+                                        onClose={handleCloseEventDetail} 
+                                        categories={initialCategories} 
+                                    />
                                 </div>
                             </div>
                         )}
-                        {mainContent}
-                        </div>
-                    </SmartLoader>
+                    </div>
                 )}
             />
         </CalendarProvider>
