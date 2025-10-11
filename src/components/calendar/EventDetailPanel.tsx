@@ -28,7 +28,7 @@ interface EventDetailPanelProps {
 const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categories, variant = 'sidebar' }) => {
     const theme = useTimelineTheme();
     const category = categories.find(c => c.id === event.eventTypeId);
-    const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] } | null>(null);
+    const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] }>(event);
     const [isLoading, setIsLoading] = useState(true);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -39,7 +39,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const { trackedEventIds, trackEvent, untrackEvent, isLoading: isTrackingLoading } = useTrackedEventsUnified();
     
     // Get the display event (with agenda if available)
-    const displayEvent = eventWithAgenda || event;
+    const displayEvent = eventWithAgenda;
     
     // Debug: Log the agendaUrl to see if it's populated
     console.log('EventDetailPanel - displayEvent.agendaUrl:', displayEvent.agendaUrl);
@@ -66,6 +66,13 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         let timeoutId: NodeJS.Timeout;
         
         const fetchEventWithAgenda = async () => {
+            // If event already has agenda, no need to fetch
+            if (event.agenda && event.agenda.length > 0) {
+                console.log('[EventDetailPanel] Event already has agenda, skipping fetch');
+                setIsLoading(false);
+                return;
+            }
+            
             try {
                 setIsLoading(true);
                 
@@ -73,7 +80,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 timeoutId = setTimeout(() => {
                     if (isMounted) {
                         console.warn('[EventDetailPanel] Agenda fetch timeout, using basic event data');
-                        setEventWithAgenda(event);
                         setIsLoading(false);
                     }
                 }, 10000); // 10 second timeout
@@ -91,15 +97,20 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 
                 if (isMounted) {
                     console.log('[EventDetailPanel] Agenda fetched successfully:', fullEvent.agenda?.length || 0, 'items');
-                    setEventWithAgenda(fullEvent);
+                    // Only merge in the agenda, keep original event data (including tags) to prevent flash
+                    if (fullEvent.agenda && fullEvent.agenda.length > 0) {
+                        setEventWithAgenda(prev => ({
+                            ...prev,
+                            agenda: fullEvent.agenda
+                        }));
+                    }
+                    
+                    // Ensure minimum loading time for smooth transition (300ms)
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
             } catch (error) {
                 clearTimeout(timeoutId);
                 console.warn('[EventDetailPanel] Failed to fetch event agenda, using basic event data:', error);
-                if (isMounted) {
-                    // Set the event anyway so we at least show something
-                    setEventWithAgenda(event);
-                }
             } finally {
                 if (isMounted) {
                     console.log('[EventDetailPanel] Setting isLoading to false');
@@ -177,18 +188,24 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 <EventInfo event={displayEvent} category={category} />
                 
                 {/* Adaptive Timeline Section */}
-                {/* Timeline Section - Only show if agenda is available */}
-                {displayEvent.agenda && displayEvent.agenda.length > 0 && (
-                    <div className={`mt-6 pt-6 border-t ${theme.borderCard}`}>
-                        {isLoading ? (
-                            <div className="flex items-center justify-center py-8">
-                                <div className={`${theme.textMuted} text-sm`}>Loading agenda...</div>
+                {/* Show loading skeleton while fetching, then timeline if agenda exists */}
+                <div className={`mt-6 pt-6 border-t ${theme.borderCard}`}>
+                    {isLoading ? (
+                        <div className="space-y-4 animate-pulse">
+                            <div className="flex items-center gap-2">
+                                <div className={`h-4 w-32 bg-white/10 rounded`}></div>
+                                <div className={`h-3 w-48 bg-white/5 rounded`}></div>
                             </div>
-                        ) : (
-                            <AdaptiveTimeline event={displayEvent} />
-                        )}
-                    </div>
-                )}
+                            <div className="space-y-3">
+                                <div className={`h-20 bg-white/10 rounded`}></div>
+                                <div className={`h-20 bg-white/8 rounded`}></div>
+                                <div className={`h-20 bg-white/5 rounded`}></div>
+                            </div>
+                        </div>
+                    ) : displayEvent.agenda && displayEvent.agenda.length > 0 ? (
+                        <AdaptiveTimeline event={displayEvent} />
+                    ) : null}
+                </div>
             </div>
 
             <div className={`mt-6 pt-4 border-t ${theme.borderCard}`}>
