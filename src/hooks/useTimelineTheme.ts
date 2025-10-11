@@ -41,7 +41,7 @@ export function useTimelineTheme() {
         emptyStateIcon: isDark ? 'text-gray-500' : 'text-gray-400',
         
         // Modal/Dialog
-        modalBg: isDark ? 'bg-gray-800' : 'bg-white',
+        modalBg: isDark ? 'bg-[#030303]' : 'bg-white',
         modalBorder: isDark ? 'border-gray-700' : 'border-gray-200',
         modalText: isDark ? 'text-white' : 'text-gray-900',
         modalTextSecondary: isDark ? 'text-gray-300' : 'text-gray-600',

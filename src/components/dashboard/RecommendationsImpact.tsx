@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { Sparkle } from '@phosphor-icons/react';
+import { cn } from '@/lib/utils';
 import type { TrackedEventRecord } from '@/types';
 
 interface RecommendationsImpactProps {
@@ -75,7 +76,7 @@ export function RecommendationsImpact({ trackedEvents, className = '' }: Recomme
   };
 
   return (
-    <Card className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg transition-all duration-200 ${className}`}>
+    <Card className={cn(className)}>
       <CardHeader className="pb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

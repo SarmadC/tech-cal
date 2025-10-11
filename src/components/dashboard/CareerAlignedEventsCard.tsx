@@ -2,17 +2,14 @@
 
 import React, { useMemo, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { useTimelineTheme } from '@/hooks/useTimelineTheme';
-import { Target, TrendUp, Users, BookOpen, Sparkle, ArrowRight, X } from '@phosphor-icons/react';
+import { Target, TrendUp, Users, BookOpen, Sparkle, ArrowRight, X, Info } from '@phosphor-icons/react';
 import type { CareerProfile, Event, EventType } from '@/types';
 import dynamic from 'next/dynamic';
 
-// Dynamically import EventDetailPanel to avoid SSR issues
-const EventDetailPanel = dynamic(
-  () => import('@/components/calendar/EventDetailPanel'),
+// Dynamically import DashboardEventDetailModal to avoid SSR issues
+const DashboardEventDetailModal = dynamic(
+  () => import('@/components/dashboard/DashboardEventDetailModal'),
   { ssr: false }
 );
 
@@ -30,6 +27,7 @@ interface EventCareerAlignment {
     reason: string;
     icon: React.ComponentType<{ className?: string }>;
     color: string;
+    contribution: number;
   }>;
   matchedSkills: string[];
   matchedGoals: string[];
@@ -40,9 +38,10 @@ export function CareerAlignedEventsCard({
   upcomingEvents,
   eventTypes
 }: CareerAlignedEventsCardProps) {
-  const theme = useTimelineTheme();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'perfect' | 'strong' | 'good' | 'fair'>('all');
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
 
   // Function to calculate alignment for any event (memoized to prevent useMemo warnings)
   const calculateEventAlignment = useCallback((event: Event): EventCareerAlignment => {
@@ -58,13 +57,15 @@ export function CareerAlignedEventsCard({
     // Check skill alignment (skills to learn = higher priority)
     careerProfile.skillsToLearn.forEach(skill => {
       if (eventText.includes(skill.toLowerCase())) {
-        alignmentScore += 20;
+        const contribution = 20;
+        alignmentScore += contribution;
         matchedSkills.push(skill);
         alignmentReasons.push({
           type: 'skill',
           reason: `Learn ${skill}`,
           icon: BookOpen,
-          color: 'text-blue-600 dark:text-blue-400'
+          color: 'text-blue-600 dark:text-blue-400',
+          contribution
         });
       }
     });
@@ -72,13 +73,15 @@ export function CareerAlignedEventsCard({
     // Check primary skills (maintenance/advancement)
     careerProfile.primarySkills.slice(0, 5).forEach(skill => {
       if (eventText.includes(skill.toLowerCase())) {
-        alignmentScore += 10;
+        const contribution = 10;
+        alignmentScore += contribution;
         matchedSkills.push(skill);
         alignmentReasons.push({
           type: 'skill',
           reason: `Advance ${skill} skills`,
           icon: TrendUp,
-          color: 'text-green-600 dark:text-green-400'
+          color: 'text-green-600 dark:text-green-400',
+          contribution
         });
       }
     });
@@ -100,13 +103,15 @@ export function CareerAlignedEventsCard({
       const hasMatch = keywords.some(keyword => eventText.includes(keyword));
 
       if (hasMatch) {
-        alignmentScore += 15;
+        const contribution = 15;
+        alignmentScore += contribution;
         matchedGoals.push(goal);
         alignmentReasons.push({
           type: 'goal',
           reason: `Supports ${goal.replace('-', ' ')}`,
           icon: Target,
-          color: 'text-purple-600 dark:text-purple-400'
+          color: 'text-purple-600 dark:text-purple-400',
+          contribution
         });
       }
     });
@@ -114,12 +119,14 @@ export function CareerAlignedEventsCard({
     // Check interests alignment
     careerProfile.interests.slice(0, 5).forEach(interest => {
       if (eventText.includes(interest.toLowerCase())) {
-        alignmentScore += 8;
+        const contribution = 8;
+        alignmentScore += contribution;
         alignmentReasons.push({
           type: 'interest',
           reason: `Matches interest: ${interest}`,
           icon: Sparkle,
-          color: 'text-pink-600 dark:text-pink-400'
+          color: 'text-pink-600 dark:text-pink-400',
+          contribution
         });
       }
     });
@@ -131,7 +138,7 @@ export function CareerAlignedEventsCard({
       'interactive': ['panel', 'discussion', 'q&a', 'interactive'],
       'networking': ['networking', 'meetup', 'mixer', 'social'],
       'case-studies': ['case study', 'real-world', 'example', 'demo'],
-      'peer-learning': ['community', 'peer', 'group', 'collaborative']
+      'peer': ['community', 'peer', 'group', 'collaborative']
     };
 
     careerProfile.learningStyle.forEach(style => {
@@ -139,12 +146,14 @@ export function CareerAlignedEventsCard({
       const hasMatch = keywords.some(keyword => eventText.includes(keyword));
 
       if (hasMatch) {
-        alignmentScore += 5;
+        const contribution = 5;
+        alignmentScore += contribution;
         alignmentReasons.push({
           type: 'learning-style',
           reason: `Fits ${style.replace('-', ' ')} learning`,
           icon: BookOpen,
-          color: 'text-orange-600 dark:text-orange-400'
+          color: 'text-orange-600 dark:text-orange-400',
+          contribution
         });
       }
     });
@@ -152,12 +161,14 @@ export function CareerAlignedEventsCard({
     // Check networking goals alignment
     if (careerProfile.networkingGoals.length > 0 &&
         (eventText.includes('networking') || eventText.includes('meetup') || eventText.includes('community'))) {
-      alignmentScore += 10;
+      const contribution = 10;
+      alignmentScore += contribution;
       alignmentReasons.push({
         type: 'networking',
         reason: 'Networking opportunity',
         icon: Users,
-        color: 'text-teal-600 dark:text-teal-400'
+        color: 'text-teal-600 dark:text-teal-400',
+        contribution
       });
     }
 
@@ -167,7 +178,7 @@ export function CareerAlignedEventsCard({
     return {
       event,
       alignmentScore: normalizedScore,
-      alignmentReasons: alignmentReasons.slice(0, 4), // Top 4 reasons
+      alignmentReasons: alignmentReasons, // Show all reasons
       matchedSkills: [...new Set(matchedSkills)],
       matchedGoals: [...new Set(matchedGoals)]
     };
@@ -197,24 +208,57 @@ export function CareerAlignedEventsCard({
   const categoryStats = useMemo(() => {
     const perfect = alignedEvents.filter(e => e.alignmentScore >= 80).length;
     const strong = alignedEvents.filter(e => e.alignmentScore >= 50 && e.alignmentScore < 80).length;
-    const moderate = alignedEvents.filter(e => e.alignmentScore >= 20 && e.alignmentScore < 50).length;
+    const good = alignedEvents.filter(e => e.alignmentScore >= 20 && e.alignmentScore < 50).length;
+    const fair = alignedEvents.filter(e => e.alignmentScore > 0 && e.alignmentScore < 20).length;
 
-    return { perfect, strong, moderate, total: alignedEvents.length };
+    return { perfect, strong, good, fair, total: alignedEvents.length };
   }, [alignedEvents]);
+
+  // Filter events based on active filter
+  const filteredEvents = useMemo(() => {
+    switch (activeFilter) {
+      case 'perfect':
+        return alignedEvents.filter(e => e.alignmentScore >= 80);
+      case 'strong':
+        return alignedEvents.filter(e => e.alignmentScore >= 50 && e.alignmentScore < 80);
+      case 'good':
+        return alignedEvents.filter(e => e.alignmentScore >= 20 && e.alignmentScore < 50);
+      case 'fair':
+        return alignedEvents.filter(e => e.alignmentScore > 0 && e.alignmentScore < 20);
+      default:
+        return alignedEvents;
+    }
+  }, [alignedEvents, activeFilter]);
+
+  // Get match quality label
+  const getMatchQuality = (score: number) => {
+    if (score >= 80) return 'Perfect';
+    if (score >= 50) return 'Strong';
+    if (score >= 20) return 'Good';
+    return 'Fair';
+  };
+
+  // Get match quality color
+  const getMatchColor = (score: number) => {
+    if (score >= 80) return 'text-green-400';
+    if (score >= 50) return 'text-blue-400';
+    if (score >= 20) return 'text-blue-400';
+    return 'text-gray-400';
+  };
 
   if (alignedEvents.length === 0) {
     return (
-      <Card className={`border ${theme.borderCard}`}>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle className={`text-lg ${theme.textPrimary}`}>Career-Aligned Events</CardTitle>
-          <CardDescription className={theme.textSecondary}>
+          <CardTitle className="text-lg font-bold text-glass-primary">Career-Aligned Events</CardTitle>
+          <CardDescription className="text-glass-secondary">
             No upcoming events match your career profile yet
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center py-8">
-          <Target className={`w-12 h-12 ${theme.textMuted} mx-auto mb-3`} />
-          <p className={`text-sm ${theme.textPrimary} mb-2`}>Check back soon</p>
-          <p className={`text-xs ${theme.textMuted}`}>
+          <Target className="w-12 h-12 text-glass-tertiary mx-auto mb-3" />
+          <p className="text-sm text-glass-primary mb-2">Check back soon</p>
+          <p className="text-xs text-glass-tertiary">
             New events are added regularly
           </p>
         </CardContent>
@@ -223,95 +267,134 @@ export function CareerAlignedEventsCard({
   }
 
   return (
-    <Card className="border ${theme.borderCard} glass-card">
+    <Card className="glass-card">
       <CardHeader className="pb-4">
         <div>
-          <CardTitle className="text-lg text-glass-primary">Career-Aligned Events</CardTitle>
+          <CardTitle className="text-lg font-bold text-glass-primary">Career-Aligned Events</CardTitle>
           <CardDescription className="text-glass-secondary">
             {categoryStats.total} events matched to your career goals
           </CardDescription>
         </div>
         
-        {/* Simplified Category Stats - Horizontal */}
-        <div className="flex items-center gap-6 pt-3">
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${categoryStats.perfect > 0 ? 'bg-green-500' : 'bg-glass-accent'}`} />
-            <span className="text-sm text-glass-tertiary">{categoryStats.perfect} Perfect</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${categoryStats.strong > 0 ? 'bg-blue-500' : 'bg-glass-accent'}`} />
-            <span className="text-sm text-glass-tertiary">{categoryStats.strong} Strong</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${categoryStats.moderate > 0 ? 'bg-glass-accent' : 'bg-glass-accent'}`} />
-            <span className="text-sm text-glass-tertiary">{categoryStats.moderate} Good</span>
-          </div>
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-2 pt-3">
+          <button
+            onClick={() => setActiveFilter('all')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeFilter === 'all'
+                ? 'bg-white/20 text-glass-primary backdrop-blur-sm'
+                : 'text-glass-tertiary hover:text-glass-secondary'
+            }`}
+          >
+            All ({categoryStats.total})
+          </button>
+          <button
+            onClick={() => setActiveFilter('perfect')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeFilter === 'perfect'
+                ? 'bg-white/20 text-glass-primary backdrop-blur-sm'
+                : 'text-glass-tertiary hover:text-glass-secondary'
+            }`}
+          >
+            Perfect ({categoryStats.perfect})
+          </button>
+          <button
+            onClick={() => setActiveFilter('strong')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeFilter === 'strong'
+                ? 'bg-white/20 text-glass-primary backdrop-blur-sm'
+                : 'text-glass-tertiary hover:text-glass-secondary'
+            }`}
+          >
+            Strong ({categoryStats.strong})
+          </button>
+          <button
+            onClick={() => setActiveFilter('good')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeFilter === 'good'
+                ? 'bg-white/20 text-glass-primary backdrop-blur-sm'
+                : 'text-glass-tertiary hover:text-glass-secondary'
+            }`}
+          >
+            Good ({categoryStats.good})
+          </button>
+          <button
+            onClick={() => setActiveFilter('fair')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeFilter === 'fair'
+                ? 'bg-white/20 text-glass-primary backdrop-blur-sm'
+                : 'text-glass-tertiary hover:text-glass-secondary'
+            }`}
+          >
+            Fair ({categoryStats.fair})
+          </button>
         </div>
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Cleaner Event Cards */}
-        <div className="space-y-3">
-          {alignedEvents.map(({ event, alignmentScore, alignmentReasons, matchedSkills }) => (
-            <div
-              key={event.id}
-              onClick={() => setSelectedEvent(event)}
-              className="block p-4 rounded-lg bg-glass-accent-light border border-glass-border hover:bg-glass-accent transition-all group cursor-pointer"
-            >
-              {/* Event Header - Cleaner Layout */}
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex-1 min-w-0">
-                  <h5 className="text-sm font-semibold text-glass-primary mb-1 line-clamp-1 group-hover:underline">
+        {/* Event Cards */}
+        <div className="space-y-0">
+          {filteredEvents.map(({ event, alignmentScore, alignmentReasons }, index) => (
+            <div key={event.id}>
+              {index > 0 && (
+                <div className="border-b border-white/10 my-4" />
+              )}
+              <div
+                onClick={() => setSelectedEvent(event)}
+                className="flex items-center justify-between p-4 hover:bg-white/5 transition-all group cursor-pointer rounded-lg"
+              >
+                {/* Event Info */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <h5 className="text-sm font-semibold text-glass-primary line-clamp-1 group-hover:underline">
                     {event.title}
                   </h5>
-                  <p className="text-xs text-glass-tertiary">
+                  <p className="text-xs text-glass-tertiary flex-shrink-0">
                     {new Date(event.startTime).toLocaleDateString('en-US', {
                       month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
+                      day: 'numeric'
                     })}
                   </p>
                 </div>
+
+                {/* Match Score and Info */}
                 <div className="flex items-center gap-2">
-                  <Badge
-                    variant={alignmentScore >= 80 ? "default" : alignmentScore >= 50 ? "secondary" : "outline"}
-                    className="text-xs font-medium"
-                  >
-                    {alignmentScore}%
-                  </Badge>
+                  <div className={`w-2 h-2 rounded-full ${getMatchColor(alignmentScore)}`} />
+                  <span className={`text-sm font-medium ${getMatchColor(alignmentScore)}`}>
+                    {getMatchQuality(alignmentScore)} - {alignmentScore}%
+                  </span>
+                  <div className="relative">
+                    <Info 
+                      className="w-4 h-4 text-glass-tertiary cursor-help" 
+                      onMouseEnter={() => setHoveredEventId(event.id)}
+                      onMouseLeave={() => setHoveredEventId(null)}
+                    />
+                    {hoveredEventId === event.id && alignmentReasons.length > 0 && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-3 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg z-10 max-h-80 overflow-y-auto">
+                        <div className="text-xs text-white">
+                          <div className="font-medium mb-2">Why this event matches:</div>
+                          <ul className="space-y-1">
+                            {alignmentReasons.map((reason, idx) => (
+                              <li key={idx} className="flex items-center justify-between">
+                                <span>{reason.reason}</span>
+                                <span className="text-white/70">+{reason.contribution}%</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="mt-3 pt-2 border-t border-white/20">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">Total Match:</span>
+                              <span className={`font-medium ${getMatchColor(alignmentScore)}`}>
+                                {getMatchQuality(alignmentScore)} - {alignmentScore}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-black/90"></div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Match Score Bar - Thinner */}
-              <div className="mb-3">
-                <Progress value={alignmentScore} className="h-1" />
-              </div>
-
-              {/* Key Reasons - Clean Text Only */}
-              <div className="flex flex-wrap gap-3">
-                {/* Show top 2 most important reasons */}
-                {alignmentReasons.slice(0, 2).map((reason, idx) => (
-                  <span
-                    key={idx}
-                    className="text-xs text-glass-tertiary px-2 py-1 rounded-full border border-glass-border"
-                  >
-                    {reason.reason}
-                  </span>
-                ))}
-                
-                {/* Show skills if any */}
-                {matchedSkills.length > 0 && (
-                  <span className="text-xs text-glass-tertiary px-2 py-1 rounded-full border border-glass-border">
-                    {matchedSkills.length === 1 ? matchedSkills[0] : `${matchedSkills.length} skills`}
-                  </span>
-                )}
-                
-                {/* Show count if more reasons exist */}
-                {alignmentReasons.length > 2 && (
-                  <span className="text-xs text-glass-tertiary px-2 py-1 rounded-full border border-glass-border">
-                    +{alignmentReasons.length - 2} more
-                  </span>
-                )}
               </div>
             </div>
           ))}
@@ -337,10 +420,10 @@ export function CareerAlignedEventsCard({
                   onClick={() => setIsModalOpen(false)}
                 />
                 
-                {/* Modal Content - Glass Effect */}
+                {/* Modal Content */}
                 <div className="relative glass-card max-w-4xl w-full max-h-[80vh] overflow-hidden">
                   {/* Header */}
-                  <div className="flex items-center justify-between p-6 border-b border-glass-border">
+                  <div className="flex items-center justify-between p-6 border-b border-white/20">
                     <h2 className="text-xl font-semibold text-glass-primary">
                       All Career-Aligned Events
                     </h2>
@@ -348,7 +431,7 @@ export function CareerAlignedEventsCard({
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsModalOpen(false)}
-                      className="p-2 text-glass-secondary hover:text-glass-primary"
+                      className="p-2 text-glass-tertiary hover:text-glass-secondary"
                     >
                       <X className="w-5 h-5" />
                     </Button>
@@ -356,71 +439,75 @@ export function CareerAlignedEventsCard({
                   
                   {/* Content */}
                   <div className="p-6 overflow-y-auto max-h-[60vh]">
-                    <div className="space-y-4">
-                      {allAlignedEvents.map(({ event, alignmentScore, alignmentReasons, matchedSkills }) => (
-                        <div
-                          key={event.id}
-                          onClick={() => {
-                            setSelectedEvent(event);
-                            setIsModalOpen(false);
-                          }}
-                          className="block p-4 rounded-lg bg-glass-accent-light border border-glass-border hover:bg-glass-accent transition-all group cursor-pointer"
-                        >
-                          {/* Event Header - Cleaner Layout */}
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="flex-1 min-w-0">
-                              <h5 className="text-sm font-semibold text-glass-primary mb-1 line-clamp-1 group-hover:underline">
+                    <div className="space-y-0">
+                      {allAlignedEvents.map(({ event, alignmentScore, alignmentReasons }, index) => (
+                        <div key={event.id}>
+                          {index > 0 && (
+                            <div className="border-b border-white/10 my-4" />
+                          )}
+                          <div
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              setIsModalOpen(false);
+                            }}
+                            className="flex items-center justify-between p-4 hover:bg-white/5 transition-all group cursor-pointer rounded-lg"
+                          >
+                            {/* Event Info */}
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                              <h5 className="text-sm font-semibold text-glass-primary line-clamp-1 group-hover:underline">
                                 {event.title}
                               </h5>
-                              <p className="text-xs text-glass-tertiary">
+                              <p className="text-xs text-glass-tertiary flex-shrink-0">
                                 {new Date(event.startTime).toLocaleDateString('en-US', {
                                   month: 'short',
-                                  day: 'numeric',
-                                  year: 'numeric'
+                                  day: 'numeric'
                                 })}
                               </p>
                             </div>
+
+                            {/* Match Score and Info */}
                             <div className="flex items-center gap-2">
-                              <Badge
-                                variant={alignmentScore >= 80 ? "default" : alignmentScore >= 50 ? "secondary" : "outline"}
-                                className="text-xs font-medium"
-                              >
-                                {alignmentScore}%
-                              </Badge>
+                              <div className={`w-2 h-2 rounded-full ${getMatchColor(alignmentScore)}`} />
+                              <span className={`text-sm font-medium ${getMatchColor(alignmentScore)}`}>
+                                {getMatchQuality(alignmentScore)} - {alignmentScore}%
+                              </span>
+                              <div className="relative">
+                                <Info 
+                                  className="w-4 h-4 text-glass-tertiary cursor-help" 
+                                  onMouseEnter={() => setHoveredEventId(event.id)}
+                                  onMouseLeave={() => setHoveredEventId(null)}
+                                />
+                                {hoveredEventId === event.id && alignmentReasons.length > 0 && (
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-3 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg z-10 max-h-80 overflow-y-auto">
+                                    <div className="text-xs text-white">
+                                      <div className="font-medium mb-2">Why this event matches:</div>
+                                      <ul className="space-y-1">
+                                        {alignmentReasons.map((reason, idx) => (
+                                          <li key={idx} className="flex items-center justify-between">
+                                            <span>{reason.reason}</span>
+                                            <span className="text-white/70">+{reason.contribution}%</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                      <div className="mt-3 pt-2 border-t border-white/20">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium">Total Match:</span>
+                                          <span className={`font-medium ${getMatchColor(alignmentScore)}`}>
+                                            {getMatchQuality(alignmentScore)} - {alignmentScore}%
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-black/90"></div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center ml-2">
                               <ArrowRight className="w-4 h-4 text-glass-tertiary group-hover:translate-x-0.5 transition-transform" />
                             </div>
-                          </div>
-
-                          {/* Match Score Bar - Thinner */}
-                          <div className="mb-3">
-                            <Progress value={alignmentScore} className="h-1" />
-                          </div>
-
-                          {/* Key Reasons - Condensed */}
-                          <div className="flex flex-wrap gap-3">
-                            {/* Show top 2 most important reasons */}
-                            {alignmentReasons.slice(0, 2).map((reason, idx) => (
-                              <span
-                                key={idx}
-                                className="text-xs text-glass-tertiary px-2 py-1 rounded-full border border-glass-border"
-                              >
-                                {reason.reason}
-                              </span>
-                            ))}
-                            
-                            {/* Show skills if any */}
-                            {matchedSkills.length > 0 && (
-                              <span className="text-xs text-glass-tertiary px-2 py-1 rounded-full border border-glass-border">
-                                {matchedSkills.length === 1 ? matchedSkills[0] : `${matchedSkills.length} skills`}
-                              </span>
-                            )}
-                            
-                            {/* Show count if more reasons exist */}
-                            {alignmentReasons.length > 2 && (
-                              <span className="text-xs text-glass-tertiary px-2 py-1 rounded-full border border-glass-border">
-                                +{alignmentReasons.length - 2} more
-                              </span>
-                            )}
                           </div>
                         </div>
                       ))}
@@ -433,27 +520,14 @@ export function CareerAlignedEventsCard({
         )}
       </CardContent>
       
-      {/* EventDetailPanel */}
-      {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setSelectedEvent(null)}
-          />
-          
-          {/* EventDetailPanel - Scrollable */}
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
-            <div className="min-h-full flex items-center justify-center py-8">
-              <EventDetailPanel
-                event={selectedEvent}
-                onClose={() => setSelectedEvent(null)}
-                categories={eventTypes}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* EventDetailPanel Modal */}
+      <DashboardEventDetailModal
+        isOpen={selectedEvent !== null}
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        categories={eventTypes}
+      />
     </Card>
   );
 }
+

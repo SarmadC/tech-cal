@@ -22,9 +22,10 @@ interface EventDetailPanelProps {
     event: Event;
     onClose: () => void;
     categories: EventType[];
+    variant?: 'sidebar' | 'modal';
 }
 
-const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categories }) => {
+const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categories, variant = 'sidebar' }) => {
     const theme = useTimelineTheme();
     const category = categories.find(c => c.id === event.eventTypeId);
     const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] } | null>(null);
@@ -134,8 +135,13 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         };
     }, [showMoreMenu]);
 
+    // Conditional styling based on variant
+    const containerClasses = variant === 'modal'
+        ? `max-h-[85vh] ${theme.modalBg} rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/10 p-6 flex flex-col relative overflow-hidden`
+        : `h-full ${theme.modalBg} border-l ${theme.borderCard} shadow-2xl p-6 flex flex-col relative`;
+
     return (
-        <div className={`h-full ${theme.modalBg} border-l ${theme.borderCard} shadow-2xl p-6 flex flex-col relative`}>
+        <div className={containerClasses}>
             <div className="flex items-center justify-between mb-6">
                 <h2 className={`text-lg font-semibold ${theme.textPrimary} font-dm-sans`}>Event Details</h2>
                 <button onClick={onClose} className={`p-2 ${theme.hoverCard} rounded-full transition-colors`}>
@@ -171,15 +177,18 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 <EventInfo event={displayEvent} category={category} />
                 
                 {/* Adaptive Timeline Section */}
-                <div className={`mt-6 pt-6 border-t ${theme.borderCard}`}>
-                    {isLoading ? (
-                        <div className="flex items-center justify-center py-8">
-                            <div className={`${theme.textMuted} text-sm`}>Loading agenda...</div>
-                        </div>
-                    ) : (
-                        <AdaptiveTimeline event={displayEvent} />
-                    )}
-                </div>
+                {/* Timeline Section - Only show if agenda is available */}
+                {displayEvent.agenda && displayEvent.agenda.length > 0 && (
+                    <div className={`mt-6 pt-6 border-t ${theme.borderCard}`}>
+                        {isLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <div className={`${theme.textMuted} text-sm`}>Loading agenda...</div>
+                            </div>
+                        ) : (
+                            <AdaptiveTimeline event={displayEvent} />
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className={`mt-6 pt-4 border-t ${theme.borderCard}`}>

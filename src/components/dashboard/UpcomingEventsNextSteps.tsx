@@ -1,47 +1,55 @@
 'use client';
 
-import React, { useMemo, useState, memo } from 'react';
+import React, { useMemo, useState, memo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   CalendarPlus, 
-  Bell, 
   MapPin, 
   Clock, 
-  ArrowRight, 
-  DotsThree,
-  ArrowSquareOut,
-  ShareNetwork
+  ArrowRight
 } from '@phosphor-icons/react';
 import { format, formatDistanceToNow, differenceInDays } from 'date-fns';
-import { scoreAttendanceLikelihood } from '@/utils/predictionUtils';
+import { scoreAttendanceLikelihood, PREDICTION_WEIGHTS, type AttendancePrediction } from '@/utils/predictionUtils';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { EVENT_STATUS } from '@/types/events';
-import { generateICS, downloadICS } from '@/utils/calendarUtils';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import type { TrackedEventRecord, Event } from '@/types';
+import type { TrackedEventRecord, Event, EventType } from '@/types';
+import { cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
 
+// Dynamically import DashboardEventDetailModal to avoid SSR issues
+const DashboardEventDetailModal = dynamic(
+  () => import('@/components/dashboard/DashboardEventDetailModal'),
+  { ssr: false }
+);
+
+/**
+ * UpcomingEventsNextSteps Component
+ * 
+ * Performance Optimizations:
+ * 1. Memoization: Likelihood scores computed once and cached per event
+ * 2. Stable Callbacks: useCallback prevents unnecessary EventRow re-renders
+ * 3. Memo'd EventRow: Child component only re-renders when props actually change
+ * 4. Pre-computed Data: All expensive calculations done once in useMemo
+ * 
+ * This ensures clicks and interactions don't trigger full section re-renders.
+ */
 interface UpcomingEventsNextStepsProps {
   trackedEvents: TrackedEventRecord[];
   upcomingEvents: Event[];
+  eventTypes?: EventType[];
   className?: string;
 }
 
 // Configuration constants - single source of truth
 const CONFIG = {
   maxVisibleEvents: 5,
-  reminderMinutesBefore: 15,
   urgentThresholdDays: 30,
   soonThresholdDays: 7,
   bookmarkConversionMultiplier: 2,
-  maxTimeoutMs: 2 ** 31 - 1,
-  defaultEventName: 'event',
-  notificationIcon: '/favicon.svg',
-  prepTasksTotal: 3,
   // UI dimensions
   locationMaxWidth: 120, // px
   likelihoodBadgeMinWidth: 52, // px
-  // Toast message truncation
-  toastTitleMaxLength: 30,
-  toastReminderMaxLength: 25,
   // Likelihood styling
   likelihood: {
     high: { threshold: 70, label: 'High', color: 'text-emerald-300', bg: 'bg-emerald-500/20', border: 'border-emerald-400/30' },
@@ -50,55 +58,184 @@ const CONFIG = {
   }
 } as const;
 
-// Overflow menu action config
-const OVERFLOW_ACTIONS = [
-  { 
-    key: 'open-site', 
-    label: 'Open Site', 
-    icon: ArrowSquareOut, 
-    action: (event: Event) => window.open(event.sourceUrl, '_blank') 
-  },
-  { 
-    key: 'share', 
-    label: 'Share', 
-    icon: ShareNetwork, 
-    action: (event: Event) => navigator.clipboard.writeText(event.sourceUrl) 
-  }
-] as const;
+// Likelihood Tooltip Component (matching CareerImpactTooltip style)
+interface LikelihoodTooltipProps {
+  prediction: AttendancePrediction;
+  isVisible: boolean;
+  position?: { x: number; y: number };
+  className?: string;
+}
+
+const LikelihoodTooltip = ({ prediction, isVisible, position, className }: LikelihoodTooltipProps) => {
+  if (!isVisible || !position) return null;
+
+  const category = {
+    label: prediction.level.charAt(0).toUpperCase() + prediction.level.slice(1),
+    color: prediction.color // Use the actual color from prediction
+  };
+
+  // Convert breakdown to weighted contributions for rendering (using centralized weights)
+  const breakdownFactors = [
+    { name: 'Event type match', value: Math.round(prediction.breakdown.eventTypeMatch * PREDICTION_WEIGHTS.eventTypeMatch) },
+    { name: 'Topic match', value: Math.round(prediction.breakdown.tagMatch * PREDICTION_WEIGHTS.tagMatch) },
+    { name: 'Skills alignment', value: Math.round(prediction.breakdown.skillsAlignment * PREDICTION_WEIGHTS.skillsAlignment) },
+    { name: 'Past attendance', value: Math.round(prediction.breakdown.pastAttendance * PREDICTION_WEIGHTS.pastAttendance) },
+    { name: 'Schedule fit', value: Math.round(prediction.breakdown.scheduleFit * PREDICTION_WEIGHTS.scheduleFit) }
+  ];
+
+  return (
+    <div 
+      className={cn(
+        'fixed z-[9999] w-80 p-4 rounded-lg shadow-2xl',
+        className
+      )}
+      style={{ 
+        left: `${position.x}px`, 
+        top: `${position.y - 10}px`,
+        transform: 'translate(-50%, -100%)',
+        backgroundColor: '#030303',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-semibold text-white">Attendance Likelihood</h4>
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-bold text-white">{prediction.score}</span>
+          <span className="text-sm text-gray-400">%</span>
+        </div>
+      </div>
+
+      {/* Category and Confidence */}
+      <div className="flex items-center justify-between mb-3 text-sm">
+        <span className={cn('px-2 py-1 rounded-md bg-gray-800 text-gray-200', category.color)}>
+          {category.label} Likelihood
+        </span>
+        <span className="text-gray-400">
+          Based on your profile
+        </span>
+      </div>
+
+      {/* Explanation */}
+      <div className="mb-3">
+        <p className="text-sm text-gray-300">{prediction.explanation}</p>
+      </div>
+
+      {/* Factor Breakdown */}
+      <div className="space-y-2 mb-3">
+        <h5 className="text-sm font-medium text-gray-200">Score Breakdown:</h5>
+        {breakdownFactors.map((factor, index) => {
+          const rawValues = [
+            prediction.breakdown.eventTypeMatch,
+            prediction.breakdown.tagMatch,
+            prediction.breakdown.skillsAlignment, 
+            prediction.breakdown.pastAttendance,
+            prediction.breakdown.scheduleFit
+          ];
+          const rawValue = rawValues[index];
+          const weights = [
+            PREDICTION_WEIGHTS.eventTypeMatch,
+            PREDICTION_WEIGHTS.tagMatch,
+            PREDICTION_WEIGHTS.skillsAlignment,
+            PREDICTION_WEIGHTS.pastAttendance,
+            PREDICTION_WEIGHTS.scheduleFit
+          ];
+          const weight = weights[index];
+          const contribution = Math.round(rawValue * weight);
+          
+          return (
+            <div key={index} className="flex items-center justify-between text-sm">
+              <span className="text-gray-300">
+                {factor.name}
+              </span>
+              <div className="flex items-center gap-2">
+                <div className="w-12 bg-gray-700 rounded h-1.5">
+                  <div 
+                    className="h-1.5 rounded bg-blue-400"
+                    style={{ width: `${Math.min(contribution, 100)}%` }}
+                  />
+                </div>
+                <span className="w-8 text-right text-white font-medium">
+                  {contribution}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Key Factors */}
+      <div className="mb-3">
+        <h5 className="text-sm font-medium text-gray-200 mb-2">Key factors:</h5>
+        <ul className="text-sm text-gray-300 space-y-1">
+          {prediction.keyFactors.map((factor, index) => (
+            <li key={index} className="flex items-start gap-2">
+              <span className="text-blue-400 mt-0.5">•</span>
+              <span>{factor}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Arrow pointer */}
+      <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+        <div 
+          className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent"
+          style={{ borderTopColor: 'rgba(255, 255, 255, 0.1)' }}
+        />
+        <div 
+          className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent absolute -top-px left-1/2 transform -translate-x-1/2"
+          style={{ borderTopColor: '#030303' }}
+        />
+      </div>
+    </div>
+  );
+};
 
 // Memoized event row component for performance
 const EventRow = memo(({ 
   event, 
   tracked: _tracked,
-  likelihoodScore,
-  prepState,
-  onToggleCalendar,
-  onToggleReminder,
-  onClickRow,
-  isLoading
+  likelihoodPrediction,
+  onClickRow
 }: {
   event: Event;
   tracked?: TrackedEventRecord;
-  likelihoodScore: number;
-  prepState: { calendar: boolean; reminder: boolean; tasks: number; completedTasks: number };
-  onToggleCalendar: () => void;
-  onToggleReminder: () => void;
+  likelihoodPrediction: AttendancePrediction;
   onClickRow: () => void;
-  isLoading: boolean;
 }) => {
-  const [showOverflow, setShowOverflow] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | undefined>();
   const eventDate = new Date(event.startTime);
   const daysUntil = differenceInDays(eventDate, new Date());
   const isSoon = daysUntil <= CONFIG.soonThresholdDays;
   
-  // Likelihood color mapping (inverted - higher is better, uses centralized config)
-  const getLikelihoodStyle = (score: number) => {
-    if (score >= CONFIG.likelihood.high.threshold) return CONFIG.likelihood.high;
-    if (score >= CONFIG.likelihood.medium.threshold) return CONFIG.likelihood.medium;
-    return CONFIG.likelihood.low;
+  // Use the prediction object's styling
+  const likelihoodStyle = {
+    threshold: likelihoodPrediction.score,
+    label: likelihoodPrediction.level.charAt(0).toUpperCase() + likelihoodPrediction.level.slice(1),
+    color: likelihoodPrediction.color,
+    bg: likelihoodPrediction.bgColor,
+    border: likelihoodPrediction.level === 'high' ? 'border-emerald-400/30' : 
+           likelihoodPrediction.level === 'medium' ? 'border-amber-400/30' : 'border-red-400/30'
   };
-  
-  const likelihoodStyle = getLikelihoodStyle(likelihoodScore);
+
+  const handleTooltipMouseEnter = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    const rect = e.currentTarget.getBoundingClientRect();
+    const position = {
+      x: rect.left + rect.width / 2,
+      y: rect.top
+    };
+    console.log('[UpcomingEventsNextSteps] Tooltip hover:', { position, score: likelihoodPrediction.score });
+    setTooltipPosition(position);
+    setShowTooltip(true);
+  };
+
+  const handleTooltipMouseLeave = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    setShowTooltip(false);
+  };
   
   return (
     <div
@@ -106,25 +243,25 @@ const EventRow = memo(({
       onKeyDown={(e) => e.key === 'Enter' && onClickRow()}
       role="button"
       tabIndex={0}
-      className="group relative flex items-center gap-3 p-3 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/30 motion-reduce:transition-none"
-      aria-label={`${event.title}, ${format(eventDate, 'MMMM d')}, ${likelihoodScore}% likelihood`}
+      className="group relative flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/30 motion-reduce:transition-none"
+      aria-label={`${event.title}, ${format(eventDate, 'MMMM d')}, ${likelihoodPrediction.score}% likelihood`}
     >
       {/* Date Token */}
-      <div className="flex-shrink-0">
-        <div className="w-12 h-12 glass-card flex flex-col items-center justify-center">
-          <span className="text-[10px] font-medium text-white/60 uppercase">
+      <div className="flex-shrink-0 flex items-center">
+        <div className="w-11 h-11 glass-card flex flex-col items-center justify-center">
+          <span className="text-[9px] font-medium text-white/60 uppercase leading-tight">
             {format(eventDate, 'MMM')}
           </span>
-          <span className="text-base font-bold text-white/95 leading-none">
+          <span className="text-base font-bold text-white/95 leading-none mt-0.5">
             {format(eventDate, 'd')}
           </span>
         </div>
       </div>
 
-      {/* Center: Title + Meta (Single Line) */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2 mb-1">
-          <h4 className="text-sm font-semibold text-white/95 truncate">
+      {/* Center: Title + Meta - Baseline aligned */}
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <div className="flex items-baseline gap-2 leading-tight">
+          <h4 className="text-sm font-semibold text-white/95 truncate leading-tight">
             {event.title}
           </h4>
           {isSoon && (
@@ -133,7 +270,7 @@ const EventRow = memo(({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-white/60">
+        <div className="flex items-center gap-2 text-xs text-white/60 mt-1 leading-tight">
           <div 
             className="flex items-center gap-1" 
             title={formatDistanceToNow(eventDate, { addSuffix: true })}
@@ -141,7 +278,7 @@ const EventRow = memo(({
           >
             <Clock className="w-3 h-3" weight="regular" />
             <span className="truncate">
-              {format(eventDate, 'MMM d')} · in {Math.abs(daysUntil)}d
+              in {Math.abs(daysUntil)}d
             </span>
           </div>
           {event.location && (
@@ -156,118 +293,62 @@ const EventRow = memo(({
         </div>
       </div>
 
-      {/* Right: Actions + Likelihood */}
-      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-        {/* Prep Status Micro-badge - Aligned with icon row */}
-        {prepState.tasks > 0 && (
-          <div 
-            className="px-1.5 py-1 rounded text-[10px] font-medium bg-white/10 text-white/70 mr-1"
-            title={`${prepState.completedTasks} of ${prepState.tasks} preparation tasks completed`}
-            aria-label={`${prepState.completedTasks} of ${prepState.tasks} preparation tasks completed`}
-          >
-            {prepState.completedTasks}/{prepState.tasks}
-          </div>
-        )}
-
-        {/* Inline Toggle: Calendar */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleCalendar();
-          }}
-          disabled={isLoading}
-          className={`p-2 rounded-lg transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-50 disabled:cursor-not-allowed ${
-            prepState.calendar 
-              ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30' 
-              : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/90'
-          }`}
-          title={prepState.calendar ? 'Added to calendar - Click to remove' : 'Add event to your calendar'}
-          aria-label={prepState.calendar ? 'Remove from calendar' : 'Add to calendar'}
-        >
-          <CalendarPlus className="w-4 h-4" weight={prepState.calendar ? 'fill' : 'regular'} />
-        </button>
-
-        {/* Inline Toggle: Reminder */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleReminder();
-          }}
-          disabled={isLoading}
-          className={`p-2 rounded-lg transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-50 disabled:cursor-not-allowed ${
-            prepState.reminder 
-              ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30' 
-              : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/90'
-          }`}
-          title={prepState.reminder ? 'Reminder set - Click to remove' : 'Set reminder 15 minutes before event'}
-          aria-label={prepState.reminder ? 'Remove reminder' : 'Set reminder for 15 minutes before event starts'}
-        >
-          <Bell className="w-4 h-4" weight={prepState.reminder ? 'fill' : 'regular'} />
-        </button>
-
-        {/* Likelihood Badge */}
+      {/* Right: Likelihood Badge with Tooltip */}
+      <div className="flex items-center">
         <div 
-          className={`px-2 py-1 rounded-full text-[10px] font-medium border text-center ${likelihoodStyle.bg} ${likelihoodStyle.color} ${likelihoodStyle.border}`}
+          data-likelihood-badge
+          className={`flex-shrink-0 px-2 py-1 rounded-full text-[10px] font-medium border text-center cursor-help ${likelihoodStyle.bg} ${likelihoodStyle.color} ${likelihoodStyle.border}`}
           style={{ minWidth: `${CONFIG.likelihoodBadgeMinWidth}px` }}
-          title={`${likelihoodScore}% attendance likelihood`}
+          onMouseEnter={handleTooltipMouseEnter}
+          onMouseLeave={handleTooltipMouseLeave}
+          onClick={(e) => e.stopPropagation()}
         >
           {likelihoodStyle.label}
         </div>
-
-        {/* Overflow Menu */}
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowOverflow(!showOverflow);
-            }}
-            className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/90 transition-all focus:outline-none focus:ring-2 focus:ring-white/20"
-            aria-label="More actions"
-          >
-            <DotsThree className="w-4 h-4" weight="bold" />
-          </button>
-          
-          {showOverflow && (
-            <>
-              <div 
-                className="fixed inset-0 z-40" 
-                onClick={() => setShowOverflow(false)}
-              />
-              <div className="absolute right-0 top-full mt-1 w-40 glass-card border border-white/20 rounded-lg shadow-xl z-50 overflow-hidden">
-                {OVERFLOW_ACTIONS.map(({ key, label, icon: Icon, action }) => (
-                  <button
-                    key={key}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      action(event);
-                      setShowOverflow(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/80 hover:bg-white/10 transition-colors"
-                  >
-                    <Icon className="w-3.5 h-3.5" weight="regular" />
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
       </div>
+      
+      {/* Tooltip - rendered via portal to document body */}
+      {typeof document !== 'undefined' && createPortal(
+        <LikelihoodTooltip
+          prediction={likelihoodPrediction}
+          isVisible={showTooltip}
+          position={tooltipPosition}
+        />,
+        document.body
+      )}
     </div>
   );
 });
 EventRow.displayName = 'EventRow';
 
-export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, className = '' }: UpcomingEventsNextStepsProps) {
-  const [prepState, setPrepState] = useState<Record<string, { calendar: boolean; reminder: boolean }>>({});
+export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, eventTypes = [], className = '' }: UpcomingEventsNextStepsProps) {
   const { trackEvent } = useTrackedEventsUnified();
   const [isConverting, setIsConverting] = useState(false);
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const { showSuccess, showError, showInfo } = useSnackbar();
 
-  // Helper to truncate text for toast messages (DRY)
-  const truncateForToast = (text: string, maxLength: number) => 
-    text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+  // Handle event card click to open EventDetailPanel
+  const handleEventClick = useCallback((event: Event) => {
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+  }, []);
+
+  // Handle modal close
+  const handleModalClose = useCallback(() => {
+    setIsModalOpen(false);
+    setSelectedEvent(null);
+  }, []);
+
+  // Memoize likelihood predictions per event to prevent expensive re-computations
+  const eventLikelihoodMap = useMemo(() => {
+    const map = new Map<string, AttendancePrediction>();
+    upcomingEvents.forEach(event => {
+      const prediction = scoreAttendanceLikelihood(event, trackedEvents);
+      map.set(event.id, prediction);
+    });
+    return map;
+  }, [upcomingEvents, trackedEvents]);
 
   const data = useMemo(() => {
     // Get tracked event IDs
@@ -278,7 +359,7 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, classNa
       .filter(event => trackedIds.has(event.id))
       .map(event => ({
         event,
-        likelihood: scoreAttendanceLikelihood(event, trackedEvents),
+        likelihoodPrediction: eventLikelihoodMap.get(event.id) || { score: 0, level: 'low' as const, color: '', bgColor: '', breakdown: { eventTypeMatch: 0, tagMatch: 0, skillsAlignment: 0, pastAttendance: 0, scheduleFit: 0 }, explanation: '', keyFactors: [] },
         daysUntil: differenceInDays(new Date(event.startTime), new Date())
       }))
       .sort((a, b) => {
@@ -286,10 +367,10 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, classNa
         const dateCompare = a.daysUntil - b.daysUntil;
         if (dateCompare !== 0) return dateCompare;
         // Then by likelihood (higher first)
-        return b.likelihood.score - a.likelihood.score;
+        return b.likelihoodPrediction.score - a.likelihoodPrediction.score;
       })
       .slice(0, CONFIG.maxVisibleEvents)
-      .map(item => item.event);
+      .map(item => ({ event: item.event, likelihoodPrediction: item.likelihoodPrediction }));
 
     // Bookmarks convertible to RSVP
     const upcomingIds = new Set(upcomingEvents.map(e => e.id));
@@ -306,7 +387,7 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, classNa
       nextBestAction = {
         title: 'Convert Bookmarks to RSVPs',
         description: `${bookmarkedCount} bookmarked event${bookmarkedCount === 1 ? '' : 's'} ready to RSVP`,
-        icon: Bell,
+        icon: CalendarPlus,
         action: 'Convert Now',
         actionFn: async () => {
           setIsConverting(true);
@@ -323,22 +404,32 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, classNa
         }
       };
     } else if (registeredCount > 0) {
-      const upcomingSoon = nextTracked.filter(e => 
-        differenceInDays(new Date(e.startTime), new Date()) <= CONFIG.urgentThresholdDays
+      const upcomingSoon = nextTracked.filter(({ event }) => 
+        differenceInDays(new Date(event.startTime), new Date()) <= CONFIG.urgentThresholdDays
       ).length;
       nextBestAction = {
-        title: 'Set Prep Checklist',
-        description: `Add reminders, travel, and materials for ${upcomingSoon || registeredCount} upcoming event${registeredCount === 1 ? '' : 's'}`,
+        title: 'Review Upcoming Events',
+        description: `${upcomingSoon || registeredCount} upcoming event${registeredCount === 1 ? '' : 's'} to prepare for`,
         icon: CalendarPlus,
-        action: 'Prepare Now',
+        action: 'View Events',
         actionFn: () => {
-          showInfo('Scroll down to add calendar events and reminders');
+          // Scroll to the upcoming events section
+          const eventsSection = document.querySelector('[data-upcoming-events-list]');
+          if (eventsSection) {
+            eventsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // Briefly highlight the section
+            eventsSection.classList.add('ring-2', 'ring-blue-400/50', 'rounded-lg');
+            setTimeout(() => {
+              eventsSection.classList.remove('ring-2', 'ring-blue-400/50', 'rounded-lg');
+            }, 2000);
+          }
+          showInfo('Click on an event to view details and take action');
         }
       };
     }
 
     return { nextTracked, nextBestAction, bookmarkedCount };
-  }, [trackedEvents, upcomingEvents, trackEvent, showSuccess, showError, showInfo]);
+  }, [trackedEvents, upcomingEvents, trackEvent, showSuccess, showError, showInfo, eventLikelihoodMap]);
 
   const eventIdToTracked = useMemo(() => {
     const map = new Map<string, TrackedEventRecord>();
@@ -346,69 +437,10 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, classNa
     return map;
   }, [trackedEvents]);
 
-  // Consolidated toggle handler (DRY principle)
-  const handleToggle = (
-    eventId: string,
-    event: Event,
-    type: 'calendar' | 'reminder'
-  ) => {
-    const current = prepState[eventId]?.[type] || false;
-    const otherType = type === 'calendar' ? 'reminder' : 'calendar';
-    
-    if (!current) {
-      setLoadingStates(prev => ({ ...prev, [eventId]: true }));
-      try {
-        if (type === 'calendar') {
-          const ics = generateICS(event);
-          downloadICS(`${event.title || CONFIG.defaultEventName}.ics`, ics);
-          setPrepState(prev => ({
-            ...prev,
-            [eventId]: { ...prev[eventId], [type]: true, [otherType]: prev[eventId]?.[otherType] || false }
-          }));
-          showSuccess(`✓ ${truncateForToast(event.title, CONFIG.toastTitleMaxLength)} added to calendar`);
-        } else {
-          const start = new Date(event.startTime).getTime();
-          const fireAt = start - CONFIG.reminderMinutesBefore * 60 * 1000;
-          const now = Date.now();
-          
-          if (fireAt > now) {
-            const timeoutMs = Math.min(fireAt - now, CONFIG.maxTimeoutMs);
-            window.setTimeout(() => {
-              if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification(`Reminder: ${event.title}`, {
-                  body: `Starts in ${CONFIG.reminderMinutesBefore} minutes`,
-                  icon: CONFIG.notificationIcon
-                });
-              }
-            }, timeoutMs);
-            
-            setPrepState(prev => ({
-              ...prev,
-              [eventId]: { ...prev[eventId], [type]: true, [otherType]: prev[eventId]?.[otherType] || false }
-            }));
-            showSuccess(`✓ Reminder set for ${CONFIG.reminderMinutesBefore} min before ${truncateForToast(event.title, CONFIG.toastReminderMaxLength)}`);
-          } else {
-            showInfo('Event is too soon to schedule a reminder');
-          }
-        }
-      } catch {
-        showError(`Failed to ${type === 'calendar' ? 'create calendar file' : 'schedule reminder'}`);
-      } finally {
-        setLoadingStates(prev => ({ ...prev, [eventId]: false }));
-      }
-    } else {
-      setPrepState(prev => ({
-        ...prev,
-        [eventId]: { ...prev[eventId], [type]: false }
-      }));
-      showInfo(type === 'calendar' ? 'Removed from calendar' : 'Reminder removed');
-    }
-  };
-
-  const handleRowClick = (event: Event) => {
-    // Navigate to event detail page
-    window.location.href = `/events/${event.id}`;
-  };
+  const handleRowClick = useCallback((event: Event) => {
+    // Open EventDetailPanel modal
+    handleEventClick(event);
+  }, [handleEventClick]);
 
   return (
     <div className={`glass-card glass-glow p-6 ${className}`}>
@@ -428,17 +460,28 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, classNa
           <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-3">
             Next Best Step
             </p>
-            <button
-            onClick={() => data.nextBestAction?.actionFn()}
-              disabled={isConverting}
-            className="w-full group relative overflow-hidden rounded-xl border border-white/20 bg-gradient-to-br from-white/10 to-white/5 p-4 text-left transition-all hover:border-white/30 hover:from-white/15 hover:to-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-60 disabled:cursor-not-allowed"
+            <div
+            onClick={() => !isConverting && data.nextBestAction?.actionFn()}
+            onKeyDown={(e) => {
+              if ((e.key === 'Enter' || e.key === ' ') && !isConverting) {
+                e.preventDefault();
+                data.nextBestAction?.actionFn();
+              }
+            }}
+              role="button"
+              tabIndex={isConverting ? -1 : 0}
+            className={`w-full group relative overflow-hidden rounded-xl border border-white/20 bg-gradient-to-br from-white/10 to-white/5 p-4 text-left transition-all hover:border-white/30 hover:from-white/15 hover:to-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 focus-visible:border-blue-400/50 cursor-pointer ${
+              isConverting ? 'opacity-60 cursor-not-allowed' : ''
+            }`}
+              aria-label={`${data.nextBestAction.title}: ${data.nextBestAction.description}`}
+              aria-disabled={isConverting}
             >
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-white/10 backdrop-blur-sm">
+            <div className="relative z-10 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="p-2.5 rounded-lg bg-white/10 backdrop-blur-sm flex-shrink-0">
                   <data.nextBestAction.icon className="w-5 h-5 text-white/95" weight="bold" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-bold text-white/95 mb-0.5">
                     {data.nextBestAction.title}
                   </p>
@@ -447,12 +490,20 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, classNa
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-white/80 group-hover:text-white/95 transition-colors">
-                <span>{isConverting ? 'Processing…' : data.nextBestAction.action}</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" weight="bold" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  data.nextBestAction?.actionFn();
+                }}
+                disabled={isConverting}
+                className="flex-shrink-0 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white/90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 focus-visible:bg-white/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                aria-label={data.nextBestAction.action}
+                tabIndex={0}
+              >
+                {isConverting ? 'Processing…' : data.nextBestAction.action}
+              </button>
               </div>
               </div>
-            </button>
           </div>
         )}
 
@@ -472,30 +523,18 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, classNa
           )}
         </div>
 
-        <div className="space-y-2">
+        <div className="divide-y divide-white/[0.08]" data-upcoming-events-list>
           {data.nextTracked.length > 0 ? (
-            data.nextTracked.map((event) => {
-              const likelihood = scoreAttendanceLikelihood(event, trackedEvents);
+            data.nextTracked.map(({ event, likelihoodPrediction }) => {
               const tracked = eventIdToTracked.get(event.id);
-              const eventPrep = prepState[event.id] || { calendar: false, reminder: false };
-              
-              // Mock prep tasks (in production, fetch from backend)
-              const prepTasks = {
-                tasks: CONFIG.prepTasksTotal,
-                completedTasks: (eventPrep.calendar ? 1 : 0) + (eventPrep.reminder ? 1 : 0)
-              };
               
               return (
                 <EventRow
                   key={event.id}
                   event={event}
                   tracked={tracked}
-                  likelihoodScore={likelihood.score}
-                  prepState={{ ...eventPrep, ...prepTasks }}
-                  onToggleCalendar={() => handleToggle(event.id, event, 'calendar')}
-                  onToggleReminder={() => handleToggle(event.id, event, 'reminder')}
+                  likelihoodPrediction={likelihoodPrediction}
                   onClickRow={() => handleRowClick(event)}
-                  isLoading={loadingStates[event.id] || false}
                 />
               );
             })
@@ -522,6 +561,14 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, classNa
           )}
         </div>
       </div>
+
+      {/* EventDetailPanel Modal */}
+      <DashboardEventDetailModal
+        isOpen={isModalOpen}
+        event={selectedEvent}
+        onClose={handleModalClose}
+        categories={eventTypes}
+      />
     </div>
   );
 }

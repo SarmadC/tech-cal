@@ -202,7 +202,22 @@ export class UserEventService {
         try {
             let query = supabaseClient
                 .from('user_events')
-                .select(`*, events (*, event_type:event_type_id (*), organizer:organizers (id, name))`)
+                .select(`
+                    *, 
+                    events (
+                        *, 
+                        event_type:event_type_id (*), 
+                        organizer:organizers (id, name, logo_url),
+                        event_tag_relations (
+                            event_tags (
+                                id,
+                                event_tag,
+                                color,
+                                category
+                            )
+                        )
+                    )
+                `)
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 

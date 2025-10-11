@@ -26,7 +26,68 @@ import {
     getEventTimeStatus as getEventTimeStatusUtil
 } from '@/utils/dateUtils';
 
-// --- Event Transformers ---
+// ==========================================================
+// Tag Transformation Utilities
+// ==========================================================
+
+/**
+ * Centralized tag extraction from nested event_tag_relations structure
+ * Handles various input formats from different query patterns
+ */
+export const extractEventTags = (
+    rawData: unknown
+): EventTag[] => {
+    const eventTags: EventTag[] = [];
+    
+    // Handle nested event_tag_relations structure (from Supabase joins)
+    const dataWithRelations = rawData as {
+        event_tag_relations?: Array<{
+            event_tags?: {
+                id: string;
+                event_tag: string;
+                color: string | null;
+                category: string | null;
+            } | null;
+        }>;
+    };
+    
+    if (dataWithRelations.event_tag_relations && Array.isArray(dataWithRelations.event_tag_relations)) {
+        dataWithRelations.event_tag_relations.forEach(relation => {
+            if (relation.event_tags) {
+                eventTags.push({
+                    id: relation.event_tags.id,
+                    name: relation.event_tags.event_tag,
+                    color: relation.event_tags.color || '#3B82F6',
+                    category: relation.event_tags.category || 'general'
+                });
+            }
+        });
+    }
+    
+    // Handle pre-aggregated tags array (from materialized views)
+    const dataWithTags = rawData as { tags?: Array<string | EventTag> };
+    if (dataWithTags.tags && Array.isArray(dataWithTags.tags)) {
+        dataWithTags.tags.forEach(tag => {
+            if (typeof tag === 'string') {
+                eventTags.push({
+                    id: tag,
+                    name: tag,
+                    color: '#3B82F6',
+                    category: 'general'
+                });
+            } else if (tag && typeof tag === 'object' && 'name' in tag) {
+                eventTags.push(tag as EventTag);
+            }
+        });
+    }
+    
+    return eventTags;
+};
+
+// ==========================================================
+// Event Transformers
+// ==========================================================
+
 // 2. UPDATE SIGNATURES: The transformer now correctly returns the base `Event` type.
 // Helper function to convert logo URL to appropriate format
 const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, supabaseUrl?: string): string | undefined => {
@@ -67,10 +128,8 @@ export const eventDetailedTransformer = {
     toApp: (viewRow: Record<string, unknown>): Event => {
         const organizerLogo = getLogoUrl(viewRow.organizer_logo_url as string | null, viewRow.organizer_name as string);
         
-        // Parse tags array (already aggregated in view)
-        const tags = Array.isArray(viewRow.tags) 
-            ? viewRow.tags.map((tag: string) => ({ id: tag, name: tag, color: '#3B82F6', category: '' }))
-            : [];
+        // Use centralized tag extraction utility
+        const tags = extractEventTags(viewRow);
 
         return {
             id: String(viewRow.id),
@@ -210,7 +269,14 @@ export const trackedEventTransformer = {
             const appEventType = joinedEventTypeData
                 ? eventTypeTransformer.toApp(joinedEventTypeData)
                 : undefined;
-            appEvent = enrichEvent(baseAppEvent, { eventType: appEventType });
+            
+            // Use centralized tag extraction utility
+            const eventTags = extractEventTags(joinedEventData);
+            
+            appEvent = enrichEvent(baseAppEvent, { 
+                eventType: appEventType,
+                tags: eventTags.length > 0 ? eventTags : undefined
+            });
         }
         return {
             trackingId: supabaseTrackedEvent.id,
@@ -239,6 +305,7 @@ export const enrichEvent = (
     options: {
         eventType?: EventType;
         isTracked?: boolean;
+        tags?: EventTag[];
     } = {}
 ): Event => ({
     ...event,
@@ -246,7 +313,8 @@ export const enrichEvent = (
         color: options.eventType.color,
         category: options.eventType
     }),
-    ...(options.isTracked !== undefined && { isTracked: options.isTracked })
+    ...(options.isTracked !== undefined && { isTracked: options.isTracked }),
+    ...(options.tags && { tags: options.tags })
 });
 
 export const enrichEventType = (

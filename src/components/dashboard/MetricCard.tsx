@@ -45,7 +45,7 @@ export function MetricCard({
   const progressValue = progress ? (progress.value / (progress.max || 100)) * 100 : undefined;
 
   return (
-    <Card className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 transition-all ${className}`}>
+    <Card className={className}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">

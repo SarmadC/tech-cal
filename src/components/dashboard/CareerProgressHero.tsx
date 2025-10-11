@@ -63,7 +63,7 @@ export function CareerProgressHero({
   const companySizeLabel = COMPANY_SIZE_OPTIONS.find(c => c.value === careerProfile.companySize)?.label || careerProfile.companySize;
 
   return (
-    <Card className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-900/50 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
+    <Card>
       <CardHeader className="pb-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">

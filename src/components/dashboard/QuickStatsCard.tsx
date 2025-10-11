@@ -87,7 +87,7 @@ export function QuickStatsCard({ events, trackedEvents, className = '' }: QuickS
   ];
 
   return (
-    <Card className={cn("bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm", className)}>
+    <Card className={cn(className)}>
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div>

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { Stack } from '@phosphor-icons/react';
+import { cn } from '@/lib/utils';
 import type { TrackedEventRecord, Event } from '@/types';
 
 interface CategoryCoverageProps {
@@ -69,7 +70,7 @@ export function CategoryCoverage({ trackedEvents, upcomingEvents, className = ''
   };
 
   return (
-    <Card className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg transition-all duration-200 ${className}`}>
+    <Card className={cn(className)}>
       <CardHeader className="pb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-teal-50 dark:bg-teal-900/20 rounded-lg">

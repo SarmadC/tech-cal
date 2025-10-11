@@ -11,7 +11,7 @@ interface AdaptiveTimelineProps {
 }
 
 const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event }) => {
-    const theme = useTimelineTheme();
+    const _theme = useTimelineTheme();
     
     // Simple analysis for display purposes only
     const analysis = useMemo(() => {
@@ -39,12 +39,7 @@ const AdaptiveTimeline: FC<AdaptiveTimelineProps> = ({ event }) => {
     }, [event.agenda]);
     
     if (!analysis) {
-        return (
-            <div className="text-center py-8">
-                <CalendarIcon className={`w-12 h-12 ${theme.emptyStateIcon} mx-auto mb-4`} />
-                <p className={`${theme.textMuted} text-sm`}>No timeline available for this event.</p>
-            </div>
-        );
+        return null; // Don't render anything if no agenda data
     }
     
     return (

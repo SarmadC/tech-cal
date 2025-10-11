@@ -97,7 +97,7 @@ export function CareerGoalProgressChart({
 
   if (chartData.length === 0) {
     return (
-      <Card className={cn("bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm", className)}>
+      <Card className={cn(className)}>
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
             Career Goal Progress
@@ -130,7 +130,7 @@ export function CareerGoalProgressChart({
   };
 
   return (
-    <Card className={cn("bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm", className)}>
+    <Card className={cn(className)}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">

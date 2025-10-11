@@ -75,7 +75,7 @@ export function ActivityTrendCard({ trackedEvents, className = '' }: ActivityTre
   // Handle empty state
   if (totalEvents === 0) {
     return (
-      <Card className={cn("bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm", className)}>
+      <Card className={cn(className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Activity Trend</CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">Events tracked over the last 30 days</CardDescription>
@@ -92,7 +92,7 @@ export function ActivityTrendCard({ trackedEvents, className = '' }: ActivityTre
   }
 
   return (
-    <Card className={cn("bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm", className)}>
+    <Card className={cn(className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <div className="space-y-1">
           <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Activity Trend</CardTitle>
