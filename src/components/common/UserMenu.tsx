@@ -144,6 +144,24 @@ export default function UserMenu() {
                     {/* Main Menu Items */}
                     <div className="py-2">
                         <Link
+                            href="/discover"
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
+                        >
+                            <MaterialIcon name="compass" size={16} className="text-foreground-tertiary" />
+                            <span className="text-sm text-foreground-primary">Discover</span>
+                        </Link>
+
+                        <Link
+                            href="/calendar?view=month"
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
+                        >
+                            <MaterialIcon name="calendar" size={16} className="text-foreground-tertiary" />
+                            <span className="text-sm text-foreground-primary">Calendar</span>
+                        </Link>
+
+                        <Link
                             href="/dashboard"
                             onClick={() => setIsOpen(false)}
                             className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
@@ -159,17 +177,6 @@ export default function UserMenu() {
                         >
                             <MaterialIcon name="trending-up" size={16} className="text-foreground-tertiary" />
                             <span className="text-sm text-foreground-primary">Growth</span>
-                        </Link>
-
-
-
-                        <Link
-                            href="/calendar"
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
-                        >
-                            <MaterialIcon name="calendar" size={16} className="text-foreground-tertiary" />
-                            <span className="text-sm text-foreground-primary">Calendar</span>
                         </Link>
                     </div>
 

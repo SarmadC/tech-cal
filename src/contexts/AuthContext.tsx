@@ -93,7 +93,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Unified auth state management - handles both initial load and subsequent changes
     useEffect(() => {
         // Don't initialize if Supabase client isn't ready yet
-        if (!isReady || !supabase) {
+        if (!isReady) {
+            return;
+        }
+
+        // If Supabase client failed to initialize, set initialized state without user
+        if (!supabase) {
+            console.warn('[AuthContext] Supabase client not available - initializing auth context without user');
+            setAuthState({
+                user: null,
+                session: null,
+                profile: null,
+                loading: false,
+                initialized: true,
+            });
             return;
         }
 

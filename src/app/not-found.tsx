@@ -36,10 +36,10 @@ export default function NotFound() {
                         Go to Homepage
                     </Link>
                     <Link
-                        href="/calendar"
+                        href="/discover"
                         className="bg-background-secondary hover:bg-background-tertiary text-foreground-primary font-semibold py-3 px-6 rounded-lg transition-all border border-border-color"
                     >
-                        View Calendar
+                        Discover Events
                     </Link>
                 </div>
 
@@ -52,21 +52,23 @@ export default function NotFound() {
                         <Link href="/" className="text-accent-primary hover:underline">
                             Home
                         </Link>
-                        <Link href="/calendar" className="text-accent-primary hover:underline">
+                        <Link href="/discover" className="text-accent-primary hover:underline">
+                            Discover
+                        </Link>
+                        <Link href="/calendar?view=month" className="text-accent-primary hover:underline">
                             Calendar
+                        </Link>
+                        <Link href="/dashboard" className="text-accent-primary hover:underline">
+                            Dashboard
                         </Link>
                         <Link href="/pricing" className="text-accent-primary hover:underline">
                             Pricing
                         </Link>
-                        {/* REMOVED: <Link href="/api-docs" className="text-accent-primary hover:underline"> API Docs </Link> */}
                         <Link href="/blog" className="text-accent-primary hover:underline">
                             Blog
                         </Link>
                         <Link href="/contact" className="text-accent-primary hover:underline">
                             Contact
-                        </Link>
-                        <Link href="/dashboard" className="text-accent-primary hover:underline">
-                            Dashboard
                         </Link>
                         <Link href="/login" className="text-accent-primary hover:underline">
                             Login

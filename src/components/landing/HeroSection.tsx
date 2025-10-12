@@ -125,11 +125,11 @@ export function HeroSection() {
                 {/* CTA Buttons */}
                 <div className="hero-cta">
                     <Link
-                        href="/calendar"
-                        aria-label="Open the live tech events calendar"
+                        href="/discover"
+                        aria-label="Discover personalized tech events"
                         className={`hero-primary-btn inline-flex ${isMobile ? 'h-14' : 'h-12'} animate-shimmer motion-reduce:animate-none items-center justify-center rounded-md ${isMobile ? 'px-6 py-4' : 'px-8 py-4'} font-medium transition-colors focus:outline-none focus:ring-2 ${isMobile ? 'text-base' : 'text-sm'}`}
                     >
-                        See Live Calendar
+                        Discover Events
                     </Link>
                     <Link 
                         href="#features"

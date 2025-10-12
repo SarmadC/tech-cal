@@ -38,7 +38,8 @@ export function Footer() {
                     <div className="footer-card">
                         <h3 className="footer-section-title">Quick Links</h3>
                         <nav className="footer-nav">
-                            <Link href="/calendar" className="footer-link">Calendar</Link>
+                            <Link href="/discover" className="footer-link">Discover</Link>
+                            <Link href="/calendar?view=month" className="footer-link">Calendar</Link>
                             <Link href="/dashboard" className="footer-link">Dashboard</Link>
                             <Link href="/pricing" className="footer-link">Pricing</Link>
                             <Link href="/blog" className="footer-link">Blog</Link>

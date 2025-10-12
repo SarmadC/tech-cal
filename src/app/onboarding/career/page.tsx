@@ -24,7 +24,7 @@ export default function CareerOnboardingPage() {
   // Redirect if user has already completed onboarding
   React.useEffect(() => {
     if (!isLoading && hasCompletedOnboarding) {
-      router.push('/dashboard');
+      router.push('/discover');
       return;
     }
   }, [hasCompletedOnboarding, isLoading, router]);
@@ -67,7 +67,7 @@ export default function CareerOnboardingPage() {
 
   const handleSkip = () => {
     showInfo('You can complete your career profile later in settings');
-    router.push('/dashboard');
+    router.push('/discover');
   };
 
   // User authentication is now handled by the useCareerProfile hook

@@ -24,10 +24,12 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ className = '' }) => {
           </Link>
         </div>
 
-        {/* Essential links (2x2) */}
+        {/* Essential links (2x3) */}
         <nav className="mobile-footer-compact" aria-label="Footer">
           <ul className="mobile-footer-links-grid" role="list">
-            <li><Link href="/calendar" className="grid-link">Calendar</Link></li>
+            <li><Link href="/discover" className="grid-link">Discover</Link></li>
+            <li><Link href="/calendar?view=month" className="grid-link">Calendar</Link></li>
+            <li><Link href="/dashboard" className="grid-link">Dashboard</Link></li>
             <li><Link href="/pricing" className="grid-link">Pricing</Link></li>
             <li><Link href="/blog" className="grid-link">Blog</Link></li>
             <li><Link href="/contact" className="grid-link">Contact</Link></li>

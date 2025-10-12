@@ -17,8 +17,9 @@ import {
 import { MaterialIcon } from '@/components/ui/Icon';
 
 const items = [
+        { title: 'Discover', url: '/discover', icon: () => <MaterialIcon name="compass" size={18} /> },
+  { title: 'Calendar', url: '/calendar?view=month', icon: () => <MaterialIcon name="calendar" size={18} /> },
   { title: 'Dashboard', url: '/dashboard', icon: () => <MaterialIcon name="bar-chart" size={18} /> },
-  { title: 'Calendar', url: '/calendar', icon: () => <MaterialIcon name="calendar" size={18} /> },
   { title: 'Hackathons', url: '/hackathons', icon: () => <MaterialIcon name="code" size={18} /> },
   { title: 'Settings', url: '/dashboard/settings', icon: () => <MaterialIcon name="settings" size={18} /> },
 ] as const;

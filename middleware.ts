@@ -31,8 +31,12 @@ export async function middleware(request: NextRequest) {
 
     const { pathname } = request.nextUrl
 
+    // Protected routes that require authentication
+    const protectedRoutes = ['/discover', '/calendar', '/dashboard', '/hackathons', '/onboarding'];
+    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+
     // RULE 1: If user is not logged in, and they are trying to access a protected route, redirect to /login
-    if (!user && (pathname.startsWith('/calendar') || pathname.startsWith('/dashboard') || pathname.startsWith('/discover'))) {
+    if (!user && isProtectedRoute) {
         // User not found, redirecting to login
         return NextResponse.redirect(new URL('/login', request.url))
     }

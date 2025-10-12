@@ -1,12 +1,11 @@
 import { defineConfig } from '@playwright/test';
+import dotenv from 'dotenv';
 
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config({ path: '.env.local' });
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -39,19 +38,20 @@ export default defineConfig({
 
     /* Configure projects for major browsers */
     projects: [
-        // You would add projects here if you were using the 'devices' helper
-        // For example:
-        // {
-        //   name: 'chromium',
-        //   use: { ...devices['Desktop Chrome'] },
-        // },
+        {
+            name: 'chromium',
+            use: { 
+                ...{ channel: 'chromium' },
+            },
+        },
     ],
 
     /* Optional: Run your local dev server before starting the tests */
+    // Note: webServer is commented out - start dev server manually with: npm run dev
     // webServer: {
-    //   command: 'npm run dev', // Use 'dev' instead of 'start' for hot-reloading
+    //   command: 'npm run dev',
     //   url: 'http://localhost:3000',
     //   reuseExistingServer: !process.env.CI,
-    //   timeout: 120 * 1000, // Increase timeout for dev server to start
+    //   timeout: 120 * 1000,
     // },
 });

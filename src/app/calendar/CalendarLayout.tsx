@@ -129,7 +129,7 @@ export function CalendarLayout({
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    const view = (searchParams.get('view') as CalendarViewType) || 'discover';
+    const view = (searchParams.get('view') as CalendarViewType) || 'month';
 
     const dateParam = searchParams.get('date');
 

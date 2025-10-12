@@ -10,13 +10,24 @@ import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
 import CalendarClientView from './CalendarClientView';
 
-export default async function CalendarPage() {
+export default async function CalendarPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
     const supabase = await createClient();
     const { data: { user }, error: _authError } = await supabase.auth.getUser();
 
     // Re-enable authentication
     if (_authError || !user) {
         redirect('/login');
+    }
+
+    // Enforce view parameter - redirect to month view if missing
+    const params = await searchParams;
+    const view = params.view;
+    if (!view) {
+        redirect('/calendar?view=month');
     }
 
     try {

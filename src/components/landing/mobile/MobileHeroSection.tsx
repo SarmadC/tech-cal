@@ -79,10 +79,10 @@ const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({
       <div className="mobile-hero-cta enhanced">
         <div className="mobile-liquid-glass-cta">
           <Link 
-            href="/signup" 
+            href="/discover" 
             className="mobile-primary-cta-liquid"
           >
-            <span>CREATE ACCOUNT</span>
+            <span>DISCOVER EVENTS</span>
           </Link>
         </div>
         
