@@ -153,6 +153,73 @@ export class EventService {
         })) as (T & { tags: Array<{ id: string; name: string; color: string; category: string }> })[];
     }
 
+    // Get events with multi-day support - uses main events table for multi-day fields
+    static async getEventsWithMultiDay(
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType,
+        page: number = 1,
+        pageSize: number = 100
+    ): Promise<(Event | MultiDayEvent)[]> {
+        try {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            let query = supabaseClient
+                .from('events')
+                .select(`
+                    *,
+                    event_type (
+                        id,
+                        name,
+                        color,
+                        description
+                    ),
+                    organizers (
+                        id,
+                        name,
+                        logo_url,
+                        website_url
+                    )
+                `)
+                .range(from, to);
+
+            // Apply filters (same logic, cleaner code)
+            if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
+            if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
+            if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
+            if (filters.searchTerm?.trim()) {
+                query = query.textSearch('fts', filters.searchTerm.trim(), {
+                    type: 'websearch',
+                    config: 'english'
+                });
+            }
+            if (filters.status?.length) query = query.in('status', filters.status);
+            if (filters.eventIds?.length) query = query.in('id', filters.eventIds);
+
+            query = this.applyEnhancedFilters(query, filters);
+
+            const { data, error } = await query;
+
+            if (error) throw error;
+
+            // Transform events using enhanced transformer to include multi-day data
+            const transformedEvents = (data || []).map((eventData: any) => {
+                return enhancedEventTransformer.toApp(eventData);
+            });
+
+            // Attach tags to events
+            const eventsWithTags = await this.attachTagsToEvents(transformedEvents as any[], supabaseClient);
+
+            return eventsWithTags;
+        } catch (error) {
+            console.error('Error fetching events with multi-day support:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventsWithMultiDay', filters, page, pageSize }
+            });
+            throw new Error('Failed to fetch events with multi-day support');
+        }
+    }
+
     // Refactored: Use events_detailed view (60% less code, tags pre-aggregated)
     static async getEvents(
         filters: EventFilters = {},

@@ -43,25 +43,37 @@
 /* Base Event Card Styles */
 .event-card {
     --card-pad: 4px;
-    background: var(--category-bg, #f1f5f9) !important;
-    color: var(--text-on-pastel) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 6px !important;
-    box-shadow: var(--shadow-card) !important;
-    transition: all var(--transition-normal) !important;
-    padding: var(--card-pad) !important;
-    margin: 1px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 2px !important;
-    position: relative !important;
-    cursor: pointer !important;
-    overflow: hidden !important;
-    z-index: 5 !important;
+    background: var(--category-bg, #f1f5f9);
+    color: var(--text-on-pastel);
+    border-radius: 6px;
+    transition: all var(--transition-normal);
+    padding: var(--card-pad);
+    margin: 1px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    z-index: 5;
     align-items: flex-start;
     justify-content: flex-start;
-    backdrop-filter: blur(1px);
 }
+
+/* Discovery Card Override - Use theme-aware backgrounds */
+[data-view="discovery"] .event-card,
+.discovery-card.event-card,
+.event-card-v8 {
+    background: transparent !important;
+    color: var(--text-card-foreground) !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* Glass-card effects removed - handled by view-specific styles */
+
+/* Glass-card overrides moved to view-specific styles */
+
+/* Glass-card styles moved to view-specific CSS files */
 
 /* ULTRA-SPECIFIC FIX: Target shadcn Card components directly */
 .rounded-xl.border.bg-card.text-card-foreground.shadow {
@@ -176,7 +188,7 @@
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-organizer {
     font-size: 0.8rem !important;
     font-weight: 500 !important; /* Reduced from 600 to 500 for better hierarchy */
-    color: #475569 !important; /* Consistent color */
+    color: #ffffff !important; /* White color for better visibility */
     letter-spacing: 0.005em !important; /* Subtle spacing */
     line-height: 1.35 !important; /* Optimal line height for metadata */
     margin-bottom: 0.125rem !important; /* Small spacing between location and organizer */
@@ -223,7 +235,7 @@
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-duration {
     font-size: 0.85rem !important;
     font-weight: 600 !important;
-    color: #475569 !important; /* Consistent color for all event-info elements */
+    color: #ffffff !important; /* White color for better visibility */
     flex-shrink: 0 !important; /* Prevent duration from shrinking */
     white-space: nowrap !important; /* Keep duration on single line */
     transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
@@ -237,7 +249,7 @@
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-organizer {
     font-size: 0.85rem !important;
     font-weight: 600 !important;
-    color: #475569 !important; /* Consistent color for all event-info elements */
+    color: #ffffff !important; /* White color for better visibility */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-category-badge .event-category-pill {
@@ -246,11 +258,6 @@
     padding: 4px 10px !important;
 }
 
-/* Ensure consistent styling for event description in large cards */
-.event-card[data-span-gt-6]:not([data-span-gt-8]) .event-description {
-    color: #475569 !important; /* Consistent color for all event-info elements */
-    font-weight: 500 !important; /* Consistent font weight */
-}
 
 /* Dynamic Font Sizing for Extra Large Cards (span 9+) */
 /* Extra large cards get maximum font sizes */
@@ -274,7 +281,7 @@
 .event-card[data-span-gt-8] .event-duration {
     font-size: 0.9rem !important;
     font-weight: 600 !important;
-    color: #475569 !important; /* Maintain medium color for contrast */
+    color: #ffffff !important; /* White color for better visibility */
     transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
 }
 
@@ -286,6 +293,7 @@
 .event-card[data-span-gt-8] .event-organizer {
     font-size: 0.9rem !important;
     font-weight: 600 !important;
+    color: #ffffff !important; /* White color for better visibility */
 }
 
 .event-card[data-span-gt-8] .event-category-badge .event-category-pill {
@@ -332,7 +340,7 @@
 }
 
 .event-card .event-duration {
-    color: #475569; /* Medium slate color for good contrast */
+    color: #ffffff; /* White color for better visibility */
     font-weight: 500;
     letter-spacing: 0.005em; /* Subtle spacing */
     line-height: 1.3; /* Match time line height */
@@ -345,7 +353,7 @@
     flex-direction: column;
     gap: 2px;
     font-size: 0.7rem;
-    color: #475569; /* Medium slate color for better contrast */
+    color: #ffffff; /* White color for better visibility */
     line-height: 1.4; /* Better line height for metadata */
     margin-top: 0.125rem; /* Consistent spacing from time */
 }
@@ -356,7 +364,7 @@
     align-items: center;
     gap: 4px;
     font-weight: 500;
-    color: #475569; /* Medium slate color for better contrast */
+    color: #ffffff; /* White color for better visibility */
     letter-spacing: 0.005em; /* Subtle spacing */
     line-height: 1.35; /* Optimal line height for metadata */
     margin-bottom: 0.125rem; /* Small spacing between elements */

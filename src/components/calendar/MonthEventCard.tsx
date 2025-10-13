@@ -100,12 +100,6 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
                         <div 
                             key={i} 
                             className={`day-dot ${i + 1 === currentDay ? 'active' : ''}`}
-                            style={{ 
-                                width: '3px',
-                                height: '3px',
-                                borderRadius: '0',
-                                backgroundColor: i + 1 === currentDay ? textColor : `${textColor}80`
-                            }}
                         />
                     ))}
                 </div>
@@ -115,7 +109,6 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     };
 
     const cardStyle: React.CSSProperties = {
-        backgroundColor: categoryColor,
         padding: '12px',
         height: '120px',
         minHeight: '120px',
@@ -124,7 +117,6 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
         boxSizing: 'border-box',
         overflow: 'hidden',
         margin: 0,
-        border: '2px solid white',
         borderRadius: '8px',
         cursor: 'pointer',
         // No transitions on the card itself - hover effects are instant
@@ -142,7 +134,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     return (
         <div
             style={cardStyle}
-            className={`event-card event-card-v8 ${isPast ? 'past completed-event' : ''} ${className}`}
+            className={`event-card event-card-v8 glass-card ${isPast ? 'past completed-event' : ''} ${className}`}
             onClick={handleClick}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {

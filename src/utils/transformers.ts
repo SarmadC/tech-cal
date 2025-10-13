@@ -460,8 +460,23 @@ export const enhancedEventTransformer = {
         // --- THIS IS THE TRANSFORMATION LOGIC ---
         // It safely checks and converts the snake_case JSON from the DB 
         // into a camelCase object for the application.
-        if (supabaseEvent.daily_schedule && typeof supabaseEvent.daily_schedule === 'object' && !Array.isArray(supabaseEvent.daily_schedule)) {
-            const dbSchedule = supabaseEvent.daily_schedule as unknown as DbDailySchedule;
+        if (supabaseEvent.daily_schedule) {
+            let dbSchedule: DbDailySchedule;
+            
+            // Handle both JSON string and parsed object cases
+            if (typeof supabaseEvent.daily_schedule === 'string') {
+                try {
+                    dbSchedule = JSON.parse(supabaseEvent.daily_schedule) as DbDailySchedule;
+                } catch (error) {
+                    console.warn('Failed to parse daily_schedule JSON string:', error);
+                    return { ...enrichedEvent, isMultiDay: false, dailySchedule: undefined, eventPattern: 'single' };
+                }
+            } else if (typeof supabaseEvent.daily_schedule === 'object' && !Array.isArray(supabaseEvent.daily_schedule)) {
+                dbSchedule = supabaseEvent.daily_schedule as unknown as DbDailySchedule;
+            } else {
+                console.warn('Invalid daily_schedule format:', supabaseEvent.daily_schedule);
+                return { ...enrichedEvent, isMultiDay: false, dailySchedule: undefined, eventPattern: 'single' };
+            }
 
             // This explicit mapping creates the camelCase object your app uses.
             parsedSchedule = {

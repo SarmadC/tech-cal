@@ -38,7 +38,7 @@ export const NavigationUtils = {
   /**
    * Navigate to calendar discovery
    */
-  goToDiscovery: () => '/calendar?view=discover',
+  goToDiscovery: () => '/discover',
   
   /**
    * Navigate to growth dashboard

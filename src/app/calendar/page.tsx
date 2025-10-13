@@ -29,6 +29,11 @@ export default async function CalendarPage({
     if (!view) {
         redirect('/calendar?view=month');
     }
+    
+    // Redirect discover view to the dedicated discover page
+    if (view === 'discover') {
+        redirect('/discover');
+    }
 
     try {
         // Load categories for filter options

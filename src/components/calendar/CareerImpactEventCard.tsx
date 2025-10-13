@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Event, AppProfile, AgendaItem } from '@/types';
+import { Event, AppProfile } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { CareerImpactScore } from '@/types';
 import { EventCard } from './shared/EventCard';
@@ -19,7 +19,6 @@ interface CareerImpactEventCardProps {
   viewType?: 'day' | 'week' | 'month';
   visualInfo?: Record<string, unknown>;
   isOverlapping?: boolean;
-  agenda?: AgendaItem[];
   style?: React.CSSProperties;
   className?: string;
   showCareerImpact?: boolean;
@@ -37,7 +36,6 @@ export function CareerImpactEventCard({
   viewType = 'day',
   visualInfo,
   isOverlapping,
-  agenda,
   style,
   className,
   showCareerImpact = true,
@@ -87,7 +85,6 @@ export function CareerImpactEventCard({
         viewType={viewType === 'month' ? 'day' : viewType}
         visualInfo={visualInfo}
         isOverlapping={isOverlapping}
-        agenda={agenda}
         style={style}
         className={className}
         {...props}

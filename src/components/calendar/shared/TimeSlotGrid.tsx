@@ -53,6 +53,18 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
         // Use the event's actual times (which for multi-day instances are already the daily schedule times)
         const eventStart = new Date(event.startTime);
         const eventEnd = event.endTime ? new Date(event.endTime) : new Date(eventStart.getTime() + 60 * 60 * 1000);
+        
+        // Debug logging for grid positioning
+        console.log('Grid positioning for event:', {
+            eventTitle: event.title,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            parsedStart: eventStart,
+            parsedEnd: eventEnd,
+            startHour: eventStart.getHours(),
+            endHour: eventEnd.getHours(),
+            currentDay: currentDay.toDateString()
+        });
 
         // Get day boundaries
         const dayStart = new Date(currentDay);
@@ -231,7 +243,6 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                                 viewType="week"
                                 visualInfo={{ span, ...visualInfo }}
                                 className={spanClasses}
-                                agenda={'agenda' in event ? event.agenda : undefined}
                                 showCareerImpact={true}
                                 style={{
                                     height: '100%'

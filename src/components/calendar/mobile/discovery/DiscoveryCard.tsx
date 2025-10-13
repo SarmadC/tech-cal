@@ -79,7 +79,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
 
 
 
-  // Get category color - matching the pattern from other event cards
+  // Get category color for logo area only
   const getCategoryColor = () => {
     // If we have a category with a color, use it directly
     if (event.category?.color) {
@@ -113,30 +113,13 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     }
   };
 
-  // Create contrasting text colors from pastel backgrounds (matching EventCard)
-  const getPillColor = (color: string, factor: number = 0.5) => {
-    // Convert hex to RGB
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    
-    // Create a darker version for text
-    const newR = Math.max(0, Math.floor(r * factor));
-    const newG = Math.max(0, Math.floor(g * factor));
-    const newB = Math.max(0, Math.floor(b * factor));
-    
-    return `rgb(${newR}, ${newG}, ${newB})`;
-  };
-
   const categoryColor = getCategoryColor();
-  const titleColor = getPillColor(categoryColor, 0.5);
 
 
   return (
     <Card 
       className={cn(
-        "event-card cursor-pointer transition-all duration-300 hover:shadow-lg relative",
+        "discovery-card event-card cursor-pointer transition-all duration-300 hover:shadow-lg relative",
         "border-border/50 bg-card hover:bg-card/80",
         variant === 'featured' && "md:col-span-2",
         variant === 'compact' && "flex-row items-center gap-4",
@@ -152,10 +135,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
           onClick?.();
         }
       }}
-      style={{
-        '--category-bg': categoryColor,
-        '--category-title-color': titleColor,
-      } as React.CSSProperties}
     >
       
       <CardHeader className="pb-0 relative">
@@ -164,8 +143,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
            {/* Event title and arrow button on the same line */}
            <div className="flex items-center justify-between">
              <h3 
-               className="font-semibold text-lg leading-tight tracking-tight flex-1 min-w-0"
-               style={{ color: titleColor }}
+               className="font-semibold text-lg leading-tight tracking-tight flex-1 min-w-0 text-foreground-primary"
              >
                {event.title}
              </h3>

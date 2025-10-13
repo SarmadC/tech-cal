@@ -19,7 +19,7 @@ const quickActions: QuickAction[] = [
     variant: 'default'
   },
   {
-    href: '/calendar?view=discover',
+    href: '/discover',
     icon: StarIcon,
     label: 'Discover New Events',
     variant: 'outline'

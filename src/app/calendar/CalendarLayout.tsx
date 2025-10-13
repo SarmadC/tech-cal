@@ -18,7 +18,7 @@ import { formatDateForURL, parseDateFromURL } from '@/utils/dateUtils';
 import { useCalendar } from '@/contexts';
 import { Event, Json } from '@/types';
 
-type CalendarViewType = 'month' | 'week' | 'day' | 'discover';
+type CalendarViewType = 'month' | 'week' | 'day';
 
 export interface CalendarLayoutContext {
     view: string;
@@ -310,7 +310,7 @@ export function CalendarLayout({
                 {!useNewMobileViews && (
                 <div className="md:hidden">
                     <MobileBottomTabNavigation
-                        currentView={view === 'discover' ? 'month' : view as 'month' | 'week' | 'day'}
+                        currentView={view as 'month' | 'week' | 'day'}
                         onViewChange={handleViewChange}
                         onToggleSidebar={onToggleSidebar || (() => {})}
                         onToggleFilters={handleToggleFilters}

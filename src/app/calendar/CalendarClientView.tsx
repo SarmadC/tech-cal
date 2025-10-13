@@ -149,12 +149,46 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
         const dayEnd = new Date(currentDate);
         dayEnd.setHours(23, 59, 59, 999);
 
-        const filtered = enrichedEvents.filter((event: TrackedEvent) => {
-            const eventStart = new Date(event.startTime);
-            const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
-            const inRange = eventStart <= dayEnd && eventEnd >= dayStart;
-            
-            return inRange;
+        // First, let's see what events we have
+        console.log('All tracked events:', enrichedEvents.map(te => ({
+            title: te.title || 'No title',
+            startTime: te.startTime || 'No start time',
+            endTime: te.endTime || 'No end time',
+            isMultiDay: 'isMultiDay' in te ? te.isMultiDay : false
+        })));
+
+        const filtered = enrichedEvents
+            .filter((trackedEvent: TrackedEvent) => {
+                // TrackedEvent is EventWithTracking, so properties are spread directly
+                const eventStart = new Date(trackedEvent.startTime);
+                const eventEnd = trackedEvent.endTime ? new Date(trackedEvent.endTime) : eventStart;
+                const inRange = eventStart <= dayEnd && eventEnd >= dayStart;
+                
+                // Debug each event's date range - simplified
+                if (trackedEvent.title.includes('Microsoft') || trackedEvent.title.includes('Ignite')) {
+                    console.log('Microsoft Ignite event check:', {
+                        title: trackedEvent.title,
+                        eventStart: trackedEvent.startTime,
+                        eventEnd: trackedEvent.endTime,
+                        parsedStart: eventStart.toISOString(),
+                        parsedEnd: eventEnd.toISOString(),
+                        dayStart: dayStart.toISOString(),
+                        dayEnd: dayEnd.toISOString(),
+                        inRange: inRange,
+                        isMultiDay: 'isMultiDay' in trackedEvent ? trackedEvent.isMultiDay : false
+                    });
+                }
+                
+                return inRange;
+            });
+        
+        console.log('Day events filtered:', {
+            totalTrackedEvents: enrichedEvents.length,
+            filteredCount: filtered.length,
+            viewDate: currentDate.toDateString(),
+            dayStart: dayStart.toISOString(),
+            dayEnd: dayEnd.toISOString(),
+            filteredEvents: filtered.map(e => ({ title: e.title, startTime: e.startTime }))
         });
         
         return filtered;
@@ -184,12 +218,14 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
 
         // Week calculation complete
 
-        const filtered = enrichedEvents.filter((event: TrackedEvent) => {
-            const eventStart = new Date(event.startTime);
-            const eventEnd = event.endTime ? new Date(event.endTime) : eventStart;
-            const inRange = eventStart <= weekEnd && eventEnd >= weekStart;
-            return inRange;
-        });
+        const filtered = enrichedEvents
+            .filter((trackedEvent: TrackedEvent) => {
+                // TrackedEvent is EventWithTracking, so properties are spread directly
+                const eventStart = new Date(trackedEvent.startTime);
+                const eventEnd = trackedEvent.endTime ? new Date(trackedEvent.endTime) : eventStart;
+                const inRange = eventStart <= weekEnd && eventEnd >= weekStart;
+                return inRange;
+            });
 
         // Event filtering complete
 

@@ -60,7 +60,6 @@ export const WeekEventRenderer: React.FC<WeekEventRendererProps> = ({
                             onLeave={onEventLeave}
                             viewType="week"
                             visualInfo={visualInfo}
-                            agenda={'agenda' in event ? event.agenda : undefined}
                             showCareerImpact={true}
                             style={{
                                 height: '100%',

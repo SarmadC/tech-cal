@@ -4,7 +4,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { Event, MultiDayEventInstance, isEventTracked, AgendaItem } from '@/types';
+import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { isEventLive, isEventPast } from '@/utils/dateUtils';
 import { isMultiDayEvent, getMultiDayDuration } from '@/utils/eventUtils';
@@ -27,7 +27,6 @@ export interface EventCardProps {
     className?: string;
     style?: React.CSSProperties;
     isOverlapping?: boolean;
-    agenda?: AgendaItem[];
     showCareerImpact?: boolean;
 }
 
@@ -41,11 +40,17 @@ export const EventCard: React.FC<EventCardProps> = ({
     className = '',
     style = {},
     isOverlapping = false,
-    agenda = [],
     showCareerImpact = true
 }) => {
+
     const live = isEventLive(event.startTime, event.endTime);
     const isPast = isEventPast(event.startTime, event.endTime);
+
+    // Week view specific content display - DYNAMIC based on card size
+    const cardSize = visualInfo?.span || 1;
+    const isWeekView = viewType === 'week';
+    const isDayView = viewType === 'day';
+
 
     // Size bucket helper derived from span
     const getSizeBucket = (span: number) => {
@@ -227,6 +232,8 @@ export const EventCard: React.FC<EventCardProps> = ({
     const cardClasses = [
         'event-card',
         'event-card-v8', // New V8 styling class
+        'glass-card', // Add glass card effect
+        viewType === 'week' ? 'week-view' : '', // Add week-view class for week view
         live ? 'live' : '',
         isPast ? 'past completed-event' : '',
         isEventTracked(event) ? 'tracked' : '',
@@ -237,60 +244,17 @@ export const EventCard: React.FC<EventCardProps> = ({
 
     // Set up CSS variables for the new design
     const cardStyle: React.CSSProperties = {
-        ['--category-bg' as string]: getCategoryColor(),
-        ['--category-title-color' as string]: getPillColor(getCategoryColor(), 0.5),    
-        backgroundColor: getCategoryColor(),
         ...style
     };
 
 
-
-    // Week view specific content display - DYNAMIC based on card size
-    const cardSize = visualInfo?.span || 1;
     const sizeBucket = getSizeBucket(cardSize);
-    const isWeekView = viewType === 'week';
-    const isDayView = viewType === 'day';
     const isCompact = isWeekView && cardSize <= 2;
     const isDense = isWeekView && cardSize <= 4;
     const isExtraLarge = cardSize > 8;
 
-    const showTimelineRail = (isWeekView && cardSize >= 3) || (isDayView && cardSize >= 8);
+    const showTimelineRail = isDayView && cardSize >= 8;
 
-    // Group agenda by day and get today's highlights
-    const agendaByDay = agenda?.reduce((acc, item) => {
-        const dayNum = item.dayNumber || 1; // Default to day 1 if not specified
-        if (!acc[dayNum]) {
-            acc[dayNum] = [];
-        }
-        acc[dayNum].push(item);
-        return acc;
-    }, {} as Record<number, typeof agenda>) || {};
-
-    // Determine which day's agenda to show
-    let currentDayNumber = 1; // Default to day 1
-    
-    // For multi-day event instances, use the actual day number
-    if ('isInstance' in event && event.isInstance && event.dayInfo) {
-        currentDayNumber = event.dayInfo.currentDay;
-    }
-    
-
-    
-    // Get the correct day's agenda items
-    const todayAgenda = agendaByDay[currentDayNumber] || [];
-    const keyAgendaItems = todayAgenda
-        .filter(item => {
-            // Show key agenda items: keynotes, sessions, workshops, panels, and major events
-            const keyTypes = ['keynote', 'session', 'workshop', 'panel', 'entertainment', 'networking'];
-            return item?.type && keyTypes.includes(item.type);
-        })
-        .sort((a, b) => {
-            // Sort by start time
-            const timeA = a.startTime || '00:00';
-            const timeB = b.startTime || '00:00';
-            return timeA.localeCompare(timeB);
-        })
-        .slice(0, 4); // Show top 4 items
 
 
 
@@ -300,8 +264,6 @@ export const EventCard: React.FC<EventCardProps> = ({
     const _showDayDuration = isDayView && !((cardSize >= 5 && cardSize <= 6) || (cardSize > 8));
     const showDayLocation = isDayView && event.location;
     const showDayOrganizer = isDayView && event.organizer;
-    // Align with design: Day description only for large (span >= 7)
-    const showDayDescription = isDayView && cardSize >= 7 && event.description;
     
     // Small cards: Basic info only
     // Show location for medium and larger cards (span > 4)
@@ -311,9 +273,6 @@ export const EventCard: React.FC<EventCardProps> = ({
     // Medium cards: Add progress indicators
     const showWeekProgress = viewType === 'week' && cardSize >= 3;
     
-    // Large cards: Add description and tags (but not for multi-day events in week view)
-    // Align with design: Week description from medium (span >= 5)
-    const showWeekDescription = viewType === 'week' && cardSize >= 5 && !('isMultiDay' in event && event.isMultiDay);
 
     return (
         <div
@@ -454,13 +413,13 @@ export const EventCard: React.FC<EventCardProps> = ({
                                 {showDayLocation && (
                                     <span className="event-location">
                                         {getLocationIcon(event.location)}
-                                        {event.location.toLowerCase()}
+                                        {event.location}
                                     </span>
                                 )}
                                 {showDayOrganizer && (
                                     <span className="event-organizer">
                                         <MaterialIcon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
-                                        {event.organizer.toLowerCase()}
+                                        {event.organizer}
                                     </span>
                                 )}
                             </div>
@@ -475,11 +434,6 @@ export const EventCard: React.FC<EventCardProps> = ({
                             <div 
                                 key={i}
                                 className={`day-dot ${i + 1 === event.dayInfo!.currentDay ? 'active' : ''}`}
-                                style={{ 
-                                    backgroundColor: i + 1 === event.dayInfo!.currentDay 
-                                        ? getPillColor(getCategoryColor(), 0.4)
-                                        : getPillColor(getCategoryColor(), 0.15)
-                                }}
                             />
                         ))}
                     </div>
@@ -553,59 +507,20 @@ export const EventCard: React.FC<EventCardProps> = ({
                     </div>
                 )}
 
-                {/* Event description - show for both week and day views when appropriate */}
-                {(showWeekDescription || showDayDescription) && event.description && (
-                    <div className="event-description">
-                        <span>{event.description.length > 120 ? `${event.description.substring(0, 120)}...` : event.description}</span>
-                    </div>
-                )}
 
-                {/* Rich agenda timeline for extra large cards (both day and week view) */}
-                {isExtraLarge && (
-                    <div className="event-agenda-timeline">
-                        <div className="agenda-timeline-container">
-                            {keyAgendaItems.length > 0 ? (
-                               keyAgendaItems.map((item, index) => (
-                                   <div key={item.id} className="agenda-timeline-item">
-                                       <div className="timeline-time">
-                                            {item.startTime}
-                                       </div>
-                                       <div className="timeline-connector">
-                                           <div className="timeline-dot"></div>
-                                           {index < keyAgendaItems.length - 1 && <div className="timeline-line"></div>}
-                                       </div>
-                                       <div className="timeline-content">
-                                           <div className="timeline-title">{item.description || item.title}</div>
-                                       </div>
-                                   </div>
-                               ))
-                            ) : (
-                                <div className="timeline-no-data">
-                                    <div className="timeline-time">--:--</div>
-                                    <div className="timeline-connector">
-                                        <div className="timeline-dot"></div>
-                                    </div>
-                                    <div className="timeline-content">
-                                        <div className="timeline-title">Agenda Loading...</div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
 
                 {/* Basic location and organizer */}
                 <div className="event-info">
                     {showWeekLocation && event.location && (
                         <span className="event-location-text">
                             {getLocationIcon(event.location)}
-                            {event.location.toLowerCase()}
+                            {event.location}
                         </span>
                     )}
                     {showWeekOrganizer && event.organizer && (
                         <span className="event-organizer-text">
                             <MaterialIcon name="building" size={10} color={getPillColor(getCategoryColor(), 0.5)} />
-                            {event.organizer.toLowerCase()}
+                            {event.organizer}
                         </span>
                     )}
                 </div>
@@ -628,7 +543,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                 {showCareerImpact && isExtraLarge && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
                     <div className="career-impact-explanation">
                         <div className="flex items-center gap-2 mb-2">
-                            <MaterialIcon name="trending-up" size={12} color="var(--category-title-color)" />
+                            <MaterialIcon name="trending-up" size={12} color="var(--foreground-secondary)" />
                             <span className="text-xs font-medium text-gray-600">Career Impact</span>
                         </div>
                         <div className="career-impact-details">

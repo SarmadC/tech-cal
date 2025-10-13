@@ -168,8 +168,8 @@ export async function POST(request: NextRequest) {
     try {
       console.log('[API] Fetching events with EventService.getEvents:', JSON.stringify(eventFilters, null, 2));
       
-      // Use EventService.getEvents which includes event type attachment
-      filteredEvents = await EventService.getEvents(eventFilters, supabase, page, pageSize);
+      // Use EventService.getEventsWithMultiDay to include multi-day event data
+      filteredEvents = await EventService.getEventsWithMultiDay(eventFilters, supabase, page, pageSize);
       console.log('[API] EventService.getEvents successful, count:', filteredEvents.length);
       
       totalEvents = await EventService.getEventCount(eventFilters, supabase);

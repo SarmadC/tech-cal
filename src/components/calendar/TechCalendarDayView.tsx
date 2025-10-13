@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
+import { Event, EventType, AppProfile, MultiDayEvent } from '@/types';
 import EventPreviewCard from './EventPreviewCard';
 import { EventCard } from './shared/EventCard';
 import '@/app/styles/tech-day-view.css';
 import '@/app/styles/event-card.css';
-import { processEventsForWeekView } from '@/utils/multiDayEventUtils';
+import { processEventsForDayView } from '@/utils/multiDayEventUtils';
 import { getIconForCategory, getEventVisualInfo, createCategoryColumnMap, detectOverlappingEvents } from '@/utils/eventViewUtils';
 import { formatTime } from '@/utils/dateUtils';
 
 
 
 export interface TechCalendarDayViewProps {
-    events: (Event | MultiDayEvent)[];
+    events: MultiDayEvent[];
     initialDate: Date;
     categories: EventType[];
     profile: AppProfile | null;
@@ -31,28 +31,43 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
     const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const dayEvents = useMemo(() => {
-        // Use the same processing logic as week view to ensure consistent multi-day event handling
-        const processedEvents = processEventsForWeekView(events);
+        // Use proper day view processing for multi-day events
+        const processedEvents = processEventsForDayView(events, initialDate);
         
-        // Filter events for the specific day
-        const filtered = processedEvents.filter(event => {
-            // For multi-day instances, match by instanceDate
-            if ('isInstance' in event && event.isInstance) {
-                const instance = event as MultiDayEventInstance;
-                // Parse the instanceDate correctly (it's in YYYY-MM-DD format)
-                const [year, month, dayNum] = instance.instanceDate.split('-').map(Number);
-                const instanceDate = new Date(year, month - 1, dayNum);
-                const matches = instanceDate.toDateString() === initialDate.toDateString();
-                
-                return matches;
-            }
-            
-            // For regular events, check if they occur on this day
-            const eventStart = new Date(event.startTime);
-            return eventStart.toDateString() === initialDate.toDateString();
+        console.log('Day view events processed:', {
+            originalEvents: events.length,
+            processedEvents: processedEvents.length,
+            viewDate: initialDate.toDateString()
         });
         
-        return filtered;
+        // Log detailed original events data
+        events.forEach((e, index) => {
+            console.log(`Original event ${index} (${e.title}):`, {
+                title: e.title,
+                startTime: e.startTime,
+                endTime: e.endTime,
+                isMultiDay: 'isMultiDay' in e ? e.isMultiDay : 'NOT FOUND',
+                dailySchedule: 'dailySchedule' in e ? e.dailySchedule : 'NOT FOUND',
+                eventPattern: 'eventPattern' in e ? e.eventPattern : 'NOT FOUND',
+                hasIsMultiDay: 'isMultiDay' in e,
+                hasDailySchedule: 'dailySchedule' in e,
+                hasEventPattern: 'eventPattern' in e,
+                allKeys: Object.keys(e)
+            });
+        });
+        
+        // Log detailed processed events data
+        console.log('Processed events detailed:', processedEvents.map(e => ({
+            title: e.title,
+            startTime: e.startTime,
+            endTime: e.endTime,
+            isInstance: 'isInstance' in e ? e.isInstance : false,
+            originalEventId: 'originalEventId' in e ? e.originalEventId : null,
+            instanceDate: 'instanceDate' in e ? e.instanceDate : null,
+            dayInfo: 'dayInfo' in e ? e.dayInfo : null
+        })));
+        
+        return processedEvents;
     }, [events, initialDate]);
 
     const categoryColumnMap = useMemo(() => {
@@ -160,7 +175,6 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                     viewType="day"
                                     visualInfo={visualInfo}
                                     isOverlapping={overlapMap.get(event.id) || false}
-                                    agenda={'agenda' in event ? event.agenda || [] : []}
                                     showCareerImpact={true}
                                 />
                             </div>

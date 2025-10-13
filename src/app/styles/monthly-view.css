@@ -645,7 +645,17 @@
 .tech-calendar-month-view .day-dot {
   width: 5px;
   height: 5px;
-  border-radius: 0;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.4);
+  opacity: 0.7;
+}
+
+.tech-calendar-month-view .day-dot.active {
+  width: 6px;
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.9);
+  opacity: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* Ensure dots respect the card padding even when custom values are set */
@@ -656,19 +666,21 @@
 }
 
 .tech-calendar-month-view .fc-event .multi-day-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 0;
-  background-color: var(--category-title-color, #1e293b);
-  opacity: 0.5;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.3);
+  opacity: 0.6;
   transition: all 0.2s ease;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 
 .tech-calendar-month-view .fc-event .multi-day-dot.active {
+  width: 6px;
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.8);
   opacity: 1;
-  background-color: var(--category-title-color, #1e293b);
-  transform: scale(1.15);
+  transform: scale(1);
 }
 
 /* Hover effects */

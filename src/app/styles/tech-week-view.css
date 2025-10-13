@@ -265,15 +265,24 @@
 
 /* Week View Event Card Base Styles */
 .tech-calendar-week-view .event-card {
+    height: 100% !important; /* Essential for proper grid positioning */
+    width: 100% !important; /* Ensure full width within grid cell */
     /* Bind to base card padding for consistent x/y anchors */
     --card-pad: var(--space-lg);
     padding: var(--card-pad) !important;
     gap: 0 !important; /* Remove gap to prevent content shifting */
     min-height: 20px !important;
-    margin: 1px 1px !important;
+    margin: 0 !important; /* Remove margins that might affect grid positioning */
     border-radius: var(--v8-radius-lg) !important;
-    background: var(--category-bg, #f1f5f9) !important;
-    color: var(--text-on-pastel, #1f2937) !important;
+    /* Remove borders for cleaner look in week view */
+    border: none !important;
+    box-shadow: none !important;
+    /* Remove glassmorphism effects for cleaner week view */
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    /* Remove background override to allow inline styling to work */
+    color: #1f2937 !important; /* Dark text for light pastel backgrounds */
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     overflow: visible !important;
@@ -282,6 +291,29 @@
     justify-content: flex-start !important; /* Align content to start */
     display: flex !important; /* Ensure flex layout */
     flex-direction: column !important; /* Ensure column layout */
+    /* Ensure grid positioning works correctly */
+    grid-column: auto !important;
+    grid-row: auto !important;
+}
+
+/* Override glass-card effects specifically for week view */
+.tech-calendar-week-view .event-card.glass-card,
+.tech-calendar-week-view .event-card.event-card-v8.glass-card,
+.tech-calendar-week-view .event-card-v8.glass-card,
+.tech-calendar-week-view .glass-card {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Override global glass-card hover effects for week view */
+.tech-calendar-week-view .glass-card:hover {
+    transform: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* Event content container for week view - consolidated rules */
@@ -402,7 +434,7 @@
 .tech-calendar-week-view .event-card .event-title {
     font-size: 0.75rem !important;
     font-weight: 600 !important;
-    color: var(--category-title-color, var(--text-on-pastel)) !important; /* Use dynamic category color */
+    color: var(--text-card-foreground) !important; /* Use theme-aware text color */
     margin: 0 !important;
     padding: 0 !important; /* Remove any padding that might interfere */
     line-height: 1.2 !important;
@@ -479,15 +511,23 @@
 /* Session type display (replaces category badge) */
 .event-session-type {
     display: inline-block;
-    padding: 2px 8px;
+    padding: 1px 6px;
     background: rgba(255, 255, 255, 0.2);
     border: none;
-    border-radius: 12px;
-    font-size: 0.6rem;
+    border-radius: 8px;
+    font-size: 0.5rem;
     font-weight: 600;
     color: var(--text-on-pastel);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
+}
+
+/* Week view specific styling for smaller category pills */
+.tech-calendar-week-view .event-card .event-session-type {
+    font-size: 0.5rem !important;
+    padding: 1px 6px !important;
+    border-radius: 8px !important;
+    letter-spacing: 0.3px !important;
 }
 
 /* New separated category and tag pills */
@@ -567,7 +607,7 @@
     align-items: center;
     gap: 4px;
     font-size: 0.65rem;
-    color: var(--text-secondary-on-pastel);
+    color: #ffffff;
 }
 
 /* Event content container rules are consolidated above */
@@ -607,7 +647,7 @@
 /* Event location styling */
 .tech-calendar-week-view .event-card .event-location {
     font-size: 0.65rem !important;
-    color: var(--text-secondary-on-pastel, #6b7280) !important;
+    color: #ffffff !important;
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
@@ -616,41 +656,12 @@
 /* Event organizer styling */
 .tech-calendar-week-view .event-card .event-organizer {
     font-size: 0.65rem !important;
-    color: var(--text-secondary-on-pastel, #6b7280) !important;
+    color: #ffffff !important;
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
 }
 
-/* Multi-day event progress indicators */
-.multi-day-progress {
-    display: flex;
-    align-items: center;
-    gap: var(--v8-space-xs);
-    margin-top: var(--v8-space-xs);
-}
-
-.multi-day-progress .progress-bar {
-    flex: 1;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.multi-day-progress .progress-fill {
-    height: 100%;
-    background: var(--text-on-pastel);
-    border-radius: 2px;
-    transition: width 0.3s ease;
-}
-
-.multi-day-progress .day-counter {
-    font-size: 0.6rem;
-    font-weight: 600;
-    color: var(--text-secondary-on-pastel);
-    white-space: nowrap;
-}
 
 /* Multi-day event spanning */
 .multi-day-span {
@@ -893,36 +904,6 @@
     flex-shrink: 0;
 }
 
-/* Multi-day Progress Indicators */
-.tech-calendar-week-view .multi-day-progress {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-top: var(--space-xs);
-    margin-bottom: var(--space-xs);
-}
-
-.tech-calendar-week-view .multi-day-progress .progress-bar {
-    flex: 1;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.tech-calendar-week-view .multi-day-progress .progress-fill {
-    height: 100%;
-    background: var(--text-on-pastel);
-    border-radius: 2px;
-    transition: width var(--transition-normal);
-}
-
-.tech-calendar-week-view .multi-day-progress .day-counter {
-    font-size: 0.6rem;
-    font-weight: 600;
-    color: var(--text-secondary-on-pastel);
-    white-space: nowrap;
-}
 
 /* Multi-day Event Spanning */
 .tech-calendar-week-view .multi-day-span {
@@ -944,17 +925,6 @@
     background: linear-gradient(90deg, var(--category-bg), color-mix(in srgb, var(--category-bg) 95%, white)) !important;
 }
 /* Week View Enhanced Content */
-.tech-calendar-week-view .event-description {
-    margin-top: var(--space-sm);
-    font-size: 0.7rem;
-    line-height: 1.3;
-    color: var(--text-secondary-on-pastel);
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
-}
 
 .tech-calendar-week-view .event-tags {
     display: flex;
@@ -990,10 +960,6 @@
 }
 
 /* Progressive Content Display */
-.tech-calendar-week-view .event-card[data-span-gt-8] .event-description {
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-}
 
 .tech-calendar-week-view .event-card[data-span-gt-10] .event-tags {
     margin-top: var(--space-md);

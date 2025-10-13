@@ -71,6 +71,18 @@ export function generateDailyEventInstances(
             // Format times with local timezone
             const instanceStartTimeStr = `${viewDateStr}T${dailyStart}:00`;
             const instanceEndTimeStr = `${viewDateStr}T${dailyEnd}:00`;
+            
+            // Debug logging
+            console.log('Multi-day event processing:', {
+                eventTitle: event.title,
+                viewDateStr,
+                dailyStart,
+                dailyEnd,
+                instanceStartTimeStr,
+                instanceEndTimeStr,
+                parsedStart: new Date(instanceStartTimeStr),
+                parsedEnd: new Date(instanceEndTimeStr)
+            });
 
             // Create instance with day information
             const { startTime: _startTime, endTime: _endTime, id, ...restOfEvent } = event;
