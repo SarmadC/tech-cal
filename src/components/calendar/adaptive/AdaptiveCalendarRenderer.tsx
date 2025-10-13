@@ -22,7 +22,7 @@ export interface AdaptiveCalendarProps {
   view: string;
   events: (Event | MultiDayEvent)[];
   weekEvents?: (Event | MultiDayEvent)[];
-  dayEvents?: (Event | MultiDayEvent)[];
+  dayEvents?: MultiDayEvent[];
   initialDate: Date;
   categories: EventType[];
   profile: AppProfile | null;
@@ -98,7 +98,7 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
       case 'day':
         return (
           <MobileCalendarDayView
-            events={dayEvents || events}
+            events={dayEvents || (events as MultiDayEvent[])}
             initialDate={initialDate}
             categories={categories}
             profile={profile}
@@ -160,7 +160,7 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
     case 'day':
       return (
         <TechCalendarDayView
-          events={dayEvents || events}
+          events={dayEvents || (events as MultiDayEvent[])}
           initialDate={initialDate}
           categories={categories}
           profile={profile}

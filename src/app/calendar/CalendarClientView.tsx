@@ -134,7 +134,7 @@ function useEventData(profile: AppProfile | null) {
 
 // Custom hook for view-specific event filtering
 function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchParams) {
-    const dayEvents = useMemo(() => {
+    const dayEvents = useMemo((): MultiDayEvent[] => {
         const view = searchParams.get('view') || 'month';
         if (view !== 'day') return [];
 
@@ -191,7 +191,7 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
             filteredEvents: filtered.map(e => ({ title: e.title, startTime: e.startTime }))
         });
         
-        return filtered;
+        return filtered as unknown as MultiDayEvent[];
     }, [enrichedEvents, searchParams]);
 
     const weekEvents = useMemo(() => {

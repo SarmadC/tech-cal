@@ -203,14 +203,14 @@ export class EventService {
             if (error) throw error;
 
             // Transform events using enhanced transformer to include multi-day data
-            const transformedEvents = (data || []).map((eventData: any) => {
-                return enhancedEventTransformer.toApp(eventData);
+            const transformedEvents = (data || []).map((eventData: Record<string, unknown>) => {
+                return enhancedEventTransformer.toApp(eventData as never);
             });
 
-            // Attach tags to events
-            const eventsWithTags = await this.attachTagsToEvents(transformedEvents as any[], supabaseClient);
+            // Attach tags to events - cast to unknown first to avoid type conflicts
+            const eventsWithTags = await this.attachTagsToEvents(transformedEvents as unknown as Parameters<typeof this.attachTagsToEvents>[0], supabaseClient);
 
-            return eventsWithTags;
+            return eventsWithTags as unknown as (Event | MultiDayEvent)[];
         } catch (error) {
             console.error('Error fetching events with multi-day support:', error);
             Sentry.captureException(error, {
