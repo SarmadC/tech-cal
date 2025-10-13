@@ -12,9 +12,10 @@ import {
     getWeekDays,
     generateWeekTimeSlots
 } from '@/utils/eventViewUtils';
+import { processEventsForWeekView } from '@/utils/multiDayEventUtils';
 
 export interface TechCalendarWeekViewProps {
-    events: (Event | MultiDayEvent)[];
+    events: MultiDayEvent[];
     initialDate: Date;
     categories: EventType[];
     profile: AppProfile | null;
@@ -47,83 +48,34 @@ export default function TechCalendarWeekView({
         return generateWeekTimeSlots(START_HOUR, END_HOUR);
     }, []);
 
-    // Process events and generate proper instances for multi-day events
+    // Process events using the proper multi-day processing function
     const processedEvents = useMemo(() => {
         if (!events || events.length === 0) return [];
         
-        const processedEvents: (Event | MultiDayEventInstance)[] = [];
-        const weekStart = new Date(weekDays[0]);
-        weekStart.setHours(0, 0, 0, 0);
-        const weekEnd = new Date(weekDays[6]);
-        weekEnd.setHours(23, 59, 59, 999);
+        console.log('Week view processing events:', {
+            originalEvents: events.length,
+            events: events.map(e => ({
+                title: e.title,
+                startTime: e.startTime,
+                endTime: e.endTime,
+                isMultiDay: e.isMultiDay,
+                dailySchedule: e.dailySchedule
+            }))
+        });
         
-        // Process each event in the current week
-        for (const event of events) {
-            const startDate = new Date(event.startTime);
-            const endDate = event.endTime ? new Date(event.endTime) : startDate;
-            
-            // Check if this is a multi-day event (either explicitly marked or spans multiple days)
-            const eventStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-            const eventEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-            const daysDiff = Math.ceil((eventEndDate.getTime() - eventStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-            
-            const isMultiDay = ('isMultiDay' in event && event.isMultiDay) || daysDiff > 1;
-            
-            if (isMultiDay) {
-                // Find the overlap between the event and the current week
-                const overlapStart = new Date(Math.max(eventStartDate.getTime(), weekStart.getTime()));
-                const overlapEnd = new Date(Math.min(eventEndDate.getTime(), weekEnd.getTime()));
-                
-                if (overlapStart <= overlapEnd) {
-                    // Generate instances for each day in the overlap
-                    const currentDay = new Date(overlapStart);
-                    let dayNumber = 1;
-                    
-                    while (currentDay <= overlapEnd) {
-                        const year = currentDay.getFullYear();
-                        const month = String(currentDay.getMonth() + 1).padStart(2, '0');
-                        const day = String(currentDay.getDate()).padStart(2, '0');
-                        const dateStr = `${year}-${month}-${day}`;
-                        
-                        // Create day info
-                        const dayInfo = {
-                            currentDay: dayNumber,
-                            totalDays: daysDiff,
-                            isFirstDay: dayNumber === 1,
-                            isLastDay: dayNumber === daysDiff,
-                            continuationType: (dayNumber === 1 ? 'start' : dayNumber === daysDiff ? 'end' : 'middle') as 'start' | 'middle' | 'end'
-                        };
-                        
-                        // Create the instance
-                        const instance: MultiDayEventInstance = {
-                            ...event,
-                            id: `${event.id}-${dateStr}`,
-                            startTime: `${dateStr}T00:00:00`,
-                            endTime: `${dateStr}T23:59:59`,
-                            isInstance: true,
-                            originalEventId: event.id,
-                            instanceDate: dateStr,
-                            dayInfo,
-                            isMultiDay: true
-                        };
-                        
-                        processedEvents.push(instance);
-                        
-                        // Move to next day
-                        currentDay.setDate(currentDay.getDate() + 1);
-                        dayNumber++;
-                    }
-                }
-            } else {
-                // Single-day event - add as is if it's in the current week
-                const eventDate = new Date(event.startTime);
-                if (eventDate >= weekStart && eventDate <= weekEnd) {
-                    processedEvents.push(event);
-                }
-            }
-        }
+        const processed = processEventsForWeekView(events);
         
-        return processedEvents;
+        console.log('Week view processed events:', {
+            processedCount: processed.length,
+            processedEvents: processed.map(e => ({
+                title: e.title,
+                startTime: e.startTime,
+                endTime: e.endTime,
+                isInstance: 'isInstance' in e ? e.isInstance : false
+            }))
+        });
+        
+        return processed;
     }, [events, weekDays]);
 
     // Group processed events by day for the grid

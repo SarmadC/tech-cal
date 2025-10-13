@@ -194,7 +194,7 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
         return filtered as unknown as MultiDayEvent[];
     }, [enrichedEvents, searchParams]);
 
-    const weekEvents = useMemo(() => {
+    const weekEvents = useMemo((): MultiDayEvent[] => {
         const view = searchParams.get('view') || 'month';
         if (view !== 'week') return [];
 
@@ -229,7 +229,7 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
 
         // Event filtering complete
 
-        return filtered;
+        return filtered as unknown as MultiDayEvent[];
     }, [enrichedEvents, searchParams]);
 
     return { dayEvents, weekEvents };
