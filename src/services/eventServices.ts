@@ -174,7 +174,7 @@ export class EventService {
                         color,
                         description
                     ),
-                    organizers (
+                    organizers!fk_events_organizer (
                         id,
                         name,
                         logo_url,

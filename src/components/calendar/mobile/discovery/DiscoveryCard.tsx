@@ -231,46 +231,51 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       {/* Event Image or Category Color Block - Moved to bottom */}
       <div className="px-6 pb-6">
         <div className="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-start">
-          {event.eventImageUrl ? (
-            <Image
-              src={event.eventImageUrl}
-              alt={`${event.title} event image`}
-              width={56}
-              height={56}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          ) : event.organization?.logo ? (
-            <div className="w-full h-full flex items-center justify-start">
-              <Image
-                src={event.organization.logo}
-                alt={`${event.organization.name} logo`}
-                width={32}
-                height={32}
-                className="object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  // Show fallback color block if logo fails
-                  const parent = e.currentTarget.parentElement;
-                  if (parent) {
-                    parent.style.backgroundColor = categoryColor;
-                  }
-                }}
-                onLoad={(e) => {
-                  e.currentTarget.style.display = 'block';
-                }}
-              />
-            </div>
-          ) : (
-            <div 
-              className="w-full h-full flex items-center justify-start"
-              style={{ backgroundColor: categoryColor }}
-            >
-              {/* Category color block fallback */}
-            </div>
-          )}
+          {(() => {
+            if (event.eventImageUrl) {
+              return (
+                <Image
+                  src={event.eventImageUrl}
+                  alt={`${event.title} event image`}
+                  width={56}
+                  height={56}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              );
+            } else if (event.organization?.logo) {
+              return (
+                <div className="w-full h-full flex items-center justify-start">
+                  <Image
+                    src={event.organization.logo}
+                    alt={`${event.organization.name} logo`}
+                    width={32}
+                    height={32}
+                    className="object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      // Show fallback color block if logo fails
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        parent.style.backgroundColor = categoryColor;
+                      }
+                    }}
+                  />
+                </div>
+              );
+            } else {
+              return (
+                <div 
+                  className="w-full h-full flex items-center justify-start"
+                  style={{ backgroundColor: categoryColor }}
+                >
+                  {/* Category color block fallback */}
+                </div>
+              );
+            }
+          })()}
         </div>
       </div>
 

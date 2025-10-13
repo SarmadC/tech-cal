@@ -92,7 +92,7 @@ export const extractEventTags = (
 // Helper function to convert logo URL to appropriate format
 const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, supabaseUrl?: string): string | undefined => {
     if (!logoUrl) return undefined;
-    
+
     // If it's already a full URL (starts with http), return as-is
     if (logoUrl.startsWith('http')) {
         return logoUrl;
@@ -104,20 +104,36 @@ const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, 
         const specialLogos: Record<string, string> = {
             'meta.com': 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg',
             'facebook.com': 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg',
+            'google.com': 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg',
+            'microsoft.com': 'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg',
+            'amazon.com': 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+            'apple.com': 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
+            'netflix.com': 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
+            'uber.com': 'https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png',
+            'airbnb.com': 'https://upload.wikimedia.org/wikipedia/commons/6/69/Airbnb_Logo_B%C3%A9lo.svg',
+            'twitter.com': 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Logo_of_Twitter.svg',
+            'linkedin.com': 'https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png',
+            'github.com': 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
+            'stackoverflow.com': 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Stack_Overflow_icon.svg',
+            'docker.com': 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Docker_%28container_engine%29_logo.svg',
+            'kubernetes.io': 'https://upload.wikimedia.org/wikipedia/commons/3/39/Kubernetes_logo_without_workmark.svg',
+            'aws.amazon.com': 'https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg',
+            'cloud.google.com': 'https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg',
+            'azure.microsoft.com': 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Microsoft_Azure.svg',
         };
-        
+
         if (specialLogos[logoUrl]) {
             return specialLogos[logoUrl];
         }
-        
-        // No longer using img.logo.dev API - return undefined to skip logo
-        return undefined;
+
+        // For other domains, try to use a logo service as fallback
+        // Using a more reliable logo service
+        return `https://logo.clearbit.com/${logoUrl}`;
     }
     
     // If it's a filename (including SVG), construct Supabase storage URL
     const baseUrl = supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!baseUrl) {
-        // Gracefully degrade: omit logo when storage base URL is unavailable
         return undefined;
     }
     return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
@@ -174,7 +190,9 @@ export const eventDetailedTransformer = {
 
 export const eventTransformer = {
     toApp: (supabaseEvent: SupabaseEvent | SupabaseEventWithDetails): Event => {
-        const organizerData = (supabaseEvent as SupabaseEventWithDetails).organizer;
+        // Check both 'organizer' (singular, from named joins) and 'organizers' (plural, from FK joins)
+        const eventWithDetails = supabaseEvent as SupabaseEventWithDetails;
+        const organizerData = eventWithDetails.organizer || eventWithDetails.organizers;
         const organizerName = organizerData?.name || 'Unknown Organizer';
         const rawLogoUrl = organizerData?.logo_url ?? undefined;
         const organizerLogo = getLogoUrl(rawLogoUrl, organizerName);
@@ -183,7 +201,7 @@ export const eventTransformer = {
         // Tags are now directly attached to the event object
         const eventTags: EventTag[] = (supabaseEvent as SupabaseEventWithDetails).tags || [];
 
-        return {
+        const result = {
             id: supabaseEvent.id,
             createdAt: supabaseEvent.created_at,
             title: supabaseEvent.title || 'Untitled Event',
@@ -204,6 +222,8 @@ export const eventTransformer = {
                 ...(organizerLogo && { logo: organizerLogo })
             }
         };
+
+        return result;
     },
     toSupabase: (appEvent: Partial<Event>): Partial<SupabaseEvent> => ({
         ...(appEvent.id && { id: appEvent.id }),

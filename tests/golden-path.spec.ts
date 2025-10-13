@@ -63,6 +63,6 @@ test.describe('Golden Path: Full User Journey', () => {
         await expect(page.getByRole('heading', { name: 'For You' })).toBeVisible();
         console.log('✅ Discover navigation working!');
 
-        console.log('🎉 All core routing changes verified successfully!');
+        console.log('All core routing changes verified successfully!');
     });
 });

@@ -166,15 +166,9 @@ export async function POST(request: NextRequest) {
     // Get events using EventService.getEvents (includes event type data)
     let filteredEvents, totalEvents, isColdStart;
     try {
-      console.log('[API] Fetching events with EventService.getEvents:', JSON.stringify(eventFilters, null, 2));
-      
       // Use EventService.getEventsWithMultiDay to include multi-day event data
       filteredEvents = await EventService.getEventsWithMultiDay(eventFilters, supabase, page, pageSize);
-      console.log('[API] EventService.getEvents successful, count:', filteredEvents.length);
-      
       totalEvents = await EventService.getEventCount(eventFilters, supabase);
-      console.log('[API] Total events count:', totalEvents);
-      
       isColdStart = false;
       
     } catch (error) {
@@ -189,7 +183,7 @@ export async function POST(request: NextRequest) {
     // Enrich events with career impact scores (skip for cold start users to avoid double processing)
     let enrichedEvents;
     try {
-      enrichedEvents = isColdStart 
+      enrichedEvents = isColdStart
         ? filteredEvents // Cold start events already have metadata
         : await EventService.enrichEventsWithCareerImpact(
             filteredEvents,
@@ -242,8 +236,6 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    console.log('[API] Returning successful response with', enrichedEvents.length, 'events');
-    console.log('[API] Response structure:', JSON.stringify(response, null, 2));
     return NextResponse.json(response);
 
   } catch (error) {

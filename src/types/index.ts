@@ -57,7 +57,9 @@ export type SupabaseTrackedEvent = {
 
 export type SupabaseEventWithDetails = Omit<SupabaseEvent, 'organizer'> & {
     event_type: SupabaseEventType | null;
-    organizer: { id: string, name: string, logo_url?: string | null } | null;
+    // Support both 'organizer' (from named joins) and 'organizers' (from FK joins)
+    organizer?: { id: string, name: string, logo_url?: string | null } | null;
+    organizers?: { id: string, name: string, logo_url?: string | null } | null;
     tags?: Array<{
         id: string;
         name: string;

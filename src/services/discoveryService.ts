@@ -122,7 +122,7 @@ export class DiscoveryService {
     });
 
     return scoredEvents
-      .filter(event => (event.discoveryMetrics?.trendingScore || 0) > 0.4)
+      .filter(event => (event.discoveryMetrics?.trendingScore || 0) > 0.2) // Lower threshold to show more events
       .sort((a, b) => (b.discoveryMetrics?.trendingScore || 0) - (a.discoveryMetrics?.trendingScore || 0))
       .slice(0, limit);
   }
@@ -134,15 +134,17 @@ export class DiscoveryService {
     const now = new Date();
     const _weekAgo = new Date(now.getTime() - TIME_CONSTANTS.WEEK);
     
-    // For now, we'll simulate "created_at" by using events that start within 2 weeks
+    // For now, we'll simulate "created_at" by using events that start within 4 weeks
     // In a real implementation, you'd have a created_at field
-    const twoWeeksFromNow = new Date(now.getTime() + 2 * TIME_CONSTANTS.WEEK);
+    const fourWeeksFromNow = new Date(now.getTime() + 4 * TIME_CONSTANTS.WEEK);
     
     const newEvents = events
       .filter(event => {
         const eventStart = new Date(event.startTime);
         // Simulate "new" events as those starting soon but not immediately
-        return eventStart > now && eventStart <= twoWeeksFromNow;
+        // Also include events that started recently (within the last week)
+        return (eventStart > now && eventStart <= fourWeeksFromNow) || 
+               (eventStart <= now && eventStart >= _weekAgo);
       })
       .map(event => {
         const freshnessScore = this.calculateFreshnessScore(event);
@@ -174,20 +176,33 @@ export class DiscoveryService {
     const quickWinEvents = events
       .filter(event => {
         const duration = this.getEventDuration(event);
-        return duration <= 2; // 2 hours or less
+        // Include events that are 4 hours or less (more inclusive)
+        // Also include events without clear duration if they seem like quick events
+        if (duration > 0) {
+          return duration <= 4;
+        }
+        // Fallback: if duration can't be calculated, use title/description hints
+        const eventText = `${event.title} ${event.description || ''}`.toLowerCase();
+        const quickEventKeywords = ['webinar', 'quick', 'brief', 'intro', 'overview', 'lunch', 'coffee'];
+        return quickEventKeywords.some(keyword => eventText.includes(keyword));
       })
-      .map(event => ({
-        ...event,
-        discoveryMetrics: {
-          trendingScore: 0,
-          freshnessScore: 0,
-          personalizedScore: 0,
-          popularityScore: this.calculatePopularityScore(event),
-          locationRelevanceScore: 1.0, // Quick wins get neutral location score
-          careerRelevanceScore: 0.7, // Quick wins get moderate career relevance
-        },
-        discoveryReason: `Quick ${this.getEventDuration(event)} hour session`,
-      } as DiscoveryEvent));
+      .map(event => {
+        const duration = this.getEventDuration(event);
+        const durationText = duration > 0 ? `${duration} hour` : 'quick';
+        
+        return {
+          ...event,
+          discoveryMetrics: {
+            trendingScore: 0,
+            freshnessScore: 0,
+            personalizedScore: 0,
+            popularityScore: this.calculatePopularityScore(event),
+            locationRelevanceScore: 1.0, // Quick wins get neutral location score
+            careerRelevanceScore: 0.7, // Quick wins get moderate career relevance
+          },
+          discoveryReason: `Quick ${durationText} session`,
+        } as DiscoveryEvent;
+      });
 
     return quickWinEvents
       .sort((a, b) => (b.discoveryMetrics?.popularityScore || 0) - (a.discoveryMetrics?.popularityScore || 0))
@@ -293,13 +308,14 @@ export class DiscoveryService {
   }
 
   private static calculateTrendingScore(event: Event): number {
-    let score = 0;
+    let score = 0.1; // Base score to ensure most events get some trending points
 
     // Attendee count factor
     if (event.attendeeCount) {
       if (event.attendeeCount > 1000) score += 0.3;
       else if (event.attendeeCount > 500) score += 0.2;
       else if (event.attendeeCount > 100) score += 0.1;
+      else if (event.attendeeCount > 50) score += 0.05; // Even small events get some points
     }
 
     // Recent event bonus (events starting within 1 month)
@@ -332,6 +348,11 @@ export class DiscoveryService {
     
     // Events with registration URLs tend to be more popular
     if (event.registrationUrl) score += 0.05;
+
+    // Boost for events with good descriptions (indicates quality)
+    if (event.description && event.description.length > 100) {
+      score += 0.05;
+    }
 
     return Math.min(score, 1);
   }

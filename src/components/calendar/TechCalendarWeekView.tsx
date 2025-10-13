@@ -76,7 +76,7 @@ export default function TechCalendarWeekView({
         });
         
         return processed;
-    }, [events, weekDays]);
+    }, [events]);
 
     // Group processed events by day for the grid
     const eventsByDay = useMemo(() => {
