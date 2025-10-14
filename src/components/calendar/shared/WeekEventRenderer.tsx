@@ -4,6 +4,8 @@ import React from 'react';
 import { Event, AgendaItem } from '@/types';
 import { EventCard } from './EventCard';
 import { getWeekEventVisualInfo } from '@/utils/eventViewUtils';
+import { getPillColor } from '@/utils/pillColorUtils';
+import { getCategoryColor } from '@/utils/eventUtils';
 
 export interface WeekEventRendererProps {
     events: (Event & { agenda?: AgendaItem[] })[];
@@ -38,11 +40,15 @@ export const WeekEventRenderer: React.FC<WeekEventRendererProps> = ({
             {events.map((event, eventIndex) => {
                 const visualInfo = getWeekEventVisualInfo(event, startHour, endHour, currentDay);
                 const { startRow, endRow } = visualInfo;
-                
+
                 // Skip events that don't have a valid position
                 if (startRow >= endRow || startRow < 1) {
                     return null;
                 }
+
+                // Get category color for this event (same logic as month view)
+                const categoryColor = getCategoryColor(event);
+                const titleColor = getPillColor(categoryColor, 0.5);
                 
                 return (
                     <div
@@ -63,8 +69,11 @@ export const WeekEventRenderer: React.FC<WeekEventRendererProps> = ({
                             showCareerImpact={true}
                             style={{
                                 height: '100%',
-                                margin: '1px 2px'
-                            }}
+                                margin: '1px 2px',
+                                '--category-bg': categoryColor,
+                                '--category-title-color': titleColor,
+                                '--text-on-pastel': titleColor
+                            } as React.CSSProperties}
                         />
                     </div>
                 );

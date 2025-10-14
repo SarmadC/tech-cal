@@ -43,6 +43,7 @@
 /* Base Event Card Styles */
 .event-card {
     --card-pad: 4px;
+    /* Default background will be adjusted per theme below */
     background: var(--category-bg, #f1f5f9);
     color: var(--text-on-pastel);
     border-radius: 6px;
@@ -58,6 +59,45 @@
     z-index: 5;
     align-items: flex-start;
     justify-content: flex-start;
+}
+
+/* Light mode glass effect for all event cards */
+.light .event-card {
+    background: rgb(215 215 215 / 15%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.light .event-card:hover {
+    background: rgb(215 215 215 / 25%);
+}
+
+/* Add inner highlights using pseudo elements so specificity matches view rules */
+.light .event-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7),
+                inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+}
+
+.light .event-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+}
+
+/* Dark mode keeps pastel/category backgrounds */
+.dark .event-card {
+    background: var(--category-bg, #1f2937);
 }
 
 /* Discovery Card Override - Use theme-aware backgrounds */
@@ -188,7 +228,7 @@
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-organizer {
     font-size: 0.8rem !important;
     font-weight: 500 !important; /* Reduced from 600 to 500 for better hierarchy */
-    color: #ffffff !important; /* White color for better visibility */
+    color: var(--text-on-pastel) !important; /* Dynamic color based on theme */
     letter-spacing: 0.005em !important; /* Subtle spacing */
     line-height: 1.35 !important; /* Optimal line height for metadata */
     margin-bottom: 0.125rem !important; /* Small spacing between location and organizer */
@@ -235,7 +275,7 @@
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-duration {
     font-size: 0.85rem !important;
     font-weight: 600 !important;
-    color: #ffffff !important; /* White color for better visibility */
+    color: var(--text-secondary-on-pastel) !important; /* Dynamic color based on theme */
     flex-shrink: 0 !important; /* Prevent duration from shrinking */
     white-space: nowrap !important; /* Keep duration on single line */
     transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
@@ -249,7 +289,7 @@
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-organizer {
     font-size: 0.85rem !important;
     font-weight: 600 !important;
-    color: #ffffff !important; /* White color for better visibility */
+    color: var(--text-on-pastel) !important; /* Dynamic color based on theme */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-category-badge .event-category-pill {
@@ -281,7 +321,7 @@
 .event-card[data-span-gt-8] .event-duration {
     font-size: 0.9rem !important;
     font-weight: 600 !important;
-    color: #ffffff !important; /* White color for better visibility */
+    color: var(--text-secondary-on-pastel) !important; /* Dynamic color based on theme */
     transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
 }
 
@@ -293,7 +333,7 @@
 .event-card[data-span-gt-8] .event-organizer {
     font-size: 0.9rem !important;
     font-weight: 600 !important;
-    color: #ffffff !important; /* White color for better visibility */
+    color: var(--text-on-pastel) !important; /* Dynamic color based on theme */
 }
 
 .event-card[data-span-gt-8] .event-category-badge .event-category-pill {
@@ -340,7 +380,7 @@
 }
 
 .event-card .event-duration {
-    color: #ffffff; /* White color for better visibility */
+    color: var(--text-secondary-on-pastel); /* Dynamic color based on theme */
     font-weight: 500;
     letter-spacing: 0.005em; /* Subtle spacing */
     line-height: 1.3; /* Match time line height */
@@ -353,7 +393,7 @@
     flex-direction: column;
     gap: 2px;
     font-size: 0.7rem;
-    color: #ffffff; /* White color for better visibility */
+    color: var(--text-on-pastel); /* Dynamic color based on theme */
     line-height: 1.4; /* Better line height for metadata */
     margin-top: 0.125rem; /* Consistent spacing from time */
 }
@@ -364,7 +404,7 @@
     align-items: center;
     gap: 4px;
     font-weight: 500;
-    color: #ffffff; /* White color for better visibility */
+    color: var(--text-on-pastel); /* Dynamic color based on theme */
     letter-spacing: 0.005em; /* Subtle spacing */
     line-height: 1.35; /* Optimal line height for metadata */
     margin-bottom: 0.125rem; /* Small spacing between elements */
@@ -463,19 +503,37 @@
 }
 
 .event-card .day-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 0;
-    /* Background color is set dynamically via inline style */
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
     transition: all var(--transition-fast);
     opacity: 0.7;
 }
 
 .event-card .day-dot.active {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     opacity: 1;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Light mode dots - grey inactive, black active */
+.light .event-card .day-dot {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.light .event-card .day-dot.active {
+    background-color: rgba(0, 0, 0, 0.9);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode dots - grey inactive, white active */
+.dark .event-card .day-dot {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .event-card .day-dot.active {
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 1px 3px rgba(255, 255, 255, 0.3);
 }
 
 /* Subtle hover effect for dots */
@@ -1005,7 +1063,7 @@
 }
 
 .event-card:hover .event-title {
-    color: var(--text-on-pastel);
+    color: var(--category-title-color, var(--text-on-pastel));
 }
 
 /* Special Event States */

@@ -4,6 +4,7 @@ import { EventContentArg } from '@/types/fullcalendar';
 import { Event, MultiDayEventInstance } from '@/types';
 import { formatTime } from '@/utils/dateUtils';
 import { getCategoryColor, isMultiDayEvent, getMultiDayDuration } from '@/utils/eventUtils';
+import { getPillColor } from '@/utils/pillColorUtils';
 import Image from 'next/image';
 
 interface EventContentProps extends EventContentArg {
@@ -95,8 +96,8 @@ const EventContent: FC<EventContentProps> = ({
             onMouseLeave={handleMouseLeave}
             style={{
                 '--category-bg': categoryColor,
-                '--category-title-color': '#1e293b',
-                '--text-on-pastel': '#1e293b'
+                '--category-title-color': getPillColor(categoryColor, 0.5),
+                '--text-on-pastel': getPillColor(categoryColor, 0.5)
             } as React.CSSProperties}
         >
             {/* Event Logo */}

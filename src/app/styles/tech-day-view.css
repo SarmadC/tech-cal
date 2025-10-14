@@ -381,12 +381,7 @@
     /* Remove borders for cleaner look in day view */
     border: none !important;
     box-shadow: none !important;
-    /* Remove glassmorphism effects for cleaner day view */
-    background: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    /* Remove background override to allow inline styling to work */
-    color: #1f2937 !important; /* Dark text for light pastel backgrounds */
+    /* Allow inline background styling to work for category colors */
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     overflow: visible !important;
@@ -400,24 +395,60 @@
     grid-row: auto !important;
 }
 
-/* Override glass-card effects specifically for day view */
-.tech-day-view .event-card.glass-card,
-.tech-day-view .event-card.event-card-v8.glass-card,
-.tech-day-view .event-card-v8.glass-card,
-.tech-day-view .glass-card {
-    background: transparent !important;
+/* In dark mode, disable glass blur so pastel backgrounds show */
+.dark .tech-day-view .event-card {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    border: none !important;
-    box-shadow: none !important;
 }
 
-/* Override global glass-card hover effects for day view */
-.tech-day-view .glass-card:hover {
-    transform: none !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+/* Override glass-card effects specifically for day view */
+/* Light mode: enable subtle glass effect for day view event cards */
+.light .tech-day-view .event-card,
+.light .tech-day-view .event-card.glass-card,
+.light .tech-day-view .event-card.event-card-v8.glass-card,
+.light .tech-day-view .event-card-v8.glass-card,
+.light .tech-day-view .glass-card {
+    background: rgb(215 215 215 / 15%) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.light .tech-day-view .glass-card:hover,
+.light .tech-day-view .event-card:hover {
+    background: rgb(215 215 215 / 25%) !important;
+}
+
+/* Light-mode glass highlights (independent of container background) */
+.light .tech-day-view .event-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7),
+                inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+}
+
+.light .tech-day-view .event-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.05));
+    mix-blend-mode: overlay;
+}
+
+/* Dark mode: keep neutral (no blur) so pastel category bg shows */
+.dark .tech-day-view .event-card,
+.dark .tech-day-view .event-card.glass-card,
+.dark .tech-day-view .event-card.event-card-v8.glass-card,
+.dark .tech-day-view .event-card-v8.glass-card,
+.dark .tech-day-view .glass-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 /* Event content container for day view - consolidated rules */
@@ -508,7 +539,7 @@
 .tech-day-view .event-card .event-title {
     font-size: 0.75rem !important;
     font-weight: 600 !important;
-    color: var(--text-card-foreground) !important; /* Use theme-aware text color */
+    color: var(--category-title-color, var(--text-on-pastel)); /* Use darker shade for readability on pastel backgrounds */
     margin: 0 !important;
     padding: 0 !important; /* Remove any padding that might interfere */
     line-height: 1.2 !important;
@@ -681,7 +712,7 @@
     align-items: center;
     gap: 4px;
     font-size: 0.65rem;
-    color: #ffffff;
+    color: var(--text-on-pastel);
 }
 
 /* Event time-duration container styling for day view */
@@ -719,7 +750,7 @@
 /* Event location styling */
 .tech-day-view .event-card .event-location {
     font-size: 0.65rem !important;
-    color: #ffffff !important;
+    color: var(--text-on-pastel) !important;
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
@@ -728,7 +759,7 @@
 /* Event organizer styling */
 .tech-day-view .event-card .event-organizer {
     font-size: 0.65rem !important;
-    color: #ffffff !important;
+    color: var(--text-on-pastel) !important;
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
@@ -805,17 +836,17 @@
 .tech-day-view .event-card[data-span-gt-8] .event-location,
 .tech-day-view .event-card[data-span-gt-8] .event-organizer {
     font-weight: 400 !important; /* Remove boldness */
-    color: #ffffff !important; /* White color for better visibility */
+    color: var(--text-on-pastel) !important; /* Dynamic color based on theme */
 }
 
 /* Fix event description color for extra large day view cards */
 .tech-day-view .event-card[data-span-gt-8] .event-description {
-    color: #ffffff !important; /* White color for better visibility */
+    color: var(--text-on-pastel) !important; /* Dynamic color based on theme */
 }
 
 /* Ensure consistent styling for large day view cards (data-span="8") */
 .tech-day-view .event-card[data-span="8"] .event-description {
-    color: #ffffff !important; /* White color for better visibility */
+    color: var(--text-on-pastel) !important; /* Dynamic color based on theme */
     font-weight: 500 !important; /* Consistent font weight */
 }
 

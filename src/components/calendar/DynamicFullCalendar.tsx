@@ -16,6 +16,7 @@ import { EventClickArg, EventContentArg, EventMountArg, EventHoveringArg } from 
 import { Event } from '@/types';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventContent from './EventContent';
+import { getPillColor } from '@/utils/pillColorUtils';
 
 export interface DynamicFullCalendarProps {
     events: Event[];
@@ -80,8 +81,8 @@ const DynamicFullCalendar = forwardRef<any, DynamicFullCalendarProps>(({
             // Add CSS custom properties for styling
             style: {
                 '--category-bg': backgroundColor,
-                '--category-title-color': '#1e293b',
-                '--text-on-pastel': '#1e293b'
+                '--category-title-color': getPillColor(backgroundColor, 0.5),
+                '--text-on-pastel': getPillColor(backgroundColor, 0.5)
             } as React.CSSProperties
         };
     });

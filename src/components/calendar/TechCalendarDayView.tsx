@@ -9,8 +9,8 @@ import '@/app/styles/event-card.css';
 import { processEventsForDayView } from '@/utils/multiDayEventUtils';
 import { getIconForCategory, getEventVisualInfo, createCategoryColumnMap, detectOverlappingEvents } from '@/utils/eventViewUtils';
 import { formatTime } from '@/utils/dateUtils';
-
-
+import { getPillColor } from '@/utils/pillColorUtils';
+import { getCategoryColor } from '@/utils/eventUtils';
 
 export interface TechCalendarDayViewProps {
     events: MultiDayEvent[];
@@ -158,6 +158,10 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                         const visualInfo = getEventVisualInfo(event);
                         const { startRow, endRow } = visualInfo;
 
+                        // Get category color for this event (same logic as month view)
+                        const categoryColor = getCategoryColor(event);
+                        const titleColor = getPillColor(categoryColor, 0.5);
+
                         return (
                             <div
                                 key={event.id}
@@ -176,6 +180,12 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                     visualInfo={visualInfo}
                                     isOverlapping={overlapMap.get(event.id) || false}
                                     showCareerImpact={true}
+                                    style={{
+                                        '--category-bg': categoryColor,
+                                        '--category-title-color': titleColor,
+                                        '--text-on-pastel': titleColor,
+                                        '--text-secondary-on-pastel': titleColor
+                                    } as React.CSSProperties}
                                 />
                             </div>
                         );

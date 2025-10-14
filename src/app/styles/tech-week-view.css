@@ -277,12 +277,7 @@
     /* Remove borders for cleaner look in week view */
     border: none !important;
     box-shadow: none !important;
-    /* Remove glassmorphism effects for cleaner week view */
-    background: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    /* Remove background override to allow inline styling to work */
-    color: #1f2937 !important; /* Dark text for light pastel backgrounds */
+    /* Allow inline background styling to work for category colors */
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     overflow: visible !important;
@@ -297,23 +292,49 @@
 }
 
 /* Override glass-card effects specifically for week view */
-.tech-calendar-week-view .event-card.glass-card,
-.tech-calendar-week-view .event-card.event-card-v8.glass-card,
-.tech-calendar-week-view .event-card-v8.glass-card,
-.tech-calendar-week-view .glass-card {
-    background: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    border: none !important;
-    box-shadow: none !important;
+/* Light mode: enable subtle glass effect for week view event cards */
+.light .tech-calendar-week-view .event-card,
+.light .tech-calendar-week-view .event-card.glass-card,
+.light .tech-calendar-week-view .event-card.event-card-v8.glass-card,
+.light .tech-calendar-week-view .event-card-v8.glass-card,
+.light .tech-calendar-week-view .glass-card {
+    background: rgb(215 215 215 / 15%) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
-/* Override global glass-card hover effects for week view */
-.tech-calendar-week-view .glass-card:hover {
-    transform: none !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+.light .tech-calendar-week-view .glass-card:hover,
+.light .tech-calendar-week-view .event-card:hover {
+    background: rgb(215 215 215 / 25%) !important;
+}
+
+/* Light-mode glass highlights (independent of container background) */
+.light .tech-calendar-week-view .event-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7),
+                inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+}
+
+.light .tech-calendar-week-view .event-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.05));
+    mix-blend-mode: overlay;
+}
+
+/* In dark mode, disable glass blur so pastel backgrounds show */
+.dark .tech-calendar-week-view .event-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 /* Event content container for week view - consolidated rules */
@@ -434,7 +455,7 @@
 .tech-calendar-week-view .event-card .event-title {
     font-size: 0.75rem !important;
     font-weight: 600 !important;
-    color: var(--text-card-foreground) !important; /* Use theme-aware text color */
+    color: var(--category-title-color, var(--text-on-pastel)); /* Use darker shade for readability on pastel backgrounds */
     margin: 0 !important;
     padding: 0 !important; /* Remove any padding that might interfere */
     line-height: 1.2 !important;
