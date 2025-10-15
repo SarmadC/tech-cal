@@ -40,8 +40,20 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
     const getScore = (e: Event): number => (e as MaybeScored).careerImpact?.overall ?? 0;
     const sorted = [...upcomingEvents].sort((a, b) => getScore(b) - getScore(a));
     
-    // Take top 8 for For You section
-    return sorted.slice(0, 8);
+    // Only include events with meaningful scores for For You section
+    // Quality thresholds:
+    // - High quality: 50%+ (strong recommendations)
+    // - Medium quality: 25%+ (decent recommendations) 
+    // - Low quality: <25% (not recommended)
+    // - No score: 0% (not recommended - scoring failed)
+    const qualityEvents = sorted.filter(event => {
+      const score = getScore(event);
+      // Only show events that were successfully scored with at least 25% match
+      return score > 0 && score >= 25;
+    });
+    
+    // Take top 8 high-quality events
+    return qualityEvents.slice(0, 8);
   }, [events]);
   
   // Filter out personalized events from explore more section
@@ -71,7 +83,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
               limit={8}
               renderAsBento={true}
               className="desktop-for-you"
-              skipPersonalization={true}
+              skipPersonalization={false}
             />
           </ErrorBoundary>
         </div>

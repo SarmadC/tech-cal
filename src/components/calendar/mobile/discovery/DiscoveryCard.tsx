@@ -205,41 +205,78 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                              <span>{reason.reason}</span>
                              <span className="text-white/70">+{reason.contribution}%</span>
                            </li>
-                         )) || ((event.careerImpactLite as { explanation?: { reasons?: string[] } })?.explanation?.reasons)?.map((reason: string, idx: number) => (
+                         )) || ((event.careerImpactLite as { explanation?: { alignmentReasons?: Array<{ reason: string; contribution: number }> } })?.explanation?.alignmentReasons)?.map((reason, idx: number) => (
                            <li key={idx} className="flex items-center justify-between">
-                             <span>{reason}</span>
-                             <span className="text-white/70">+5%</span>
+                             <span>{reason.reason}</span>
+                             <span className="text-white/70">+{reason.contribution}%</span>
                            </li>
-                         )) || (event.careerImpact?.explanation as { reasons?: string[] })?.reasons?.map((reason: string, idx: number) => (
-                           <li key={idx} className="flex items-center justify-between">
-                             <span>{reason}</span>
-                             <span className="text-white/70">+5%</span>
-                           </li>
-                         ))}
+                         )) || ((event.careerImpactLite as { explanation?: { reasons?: string[] } })?.explanation?.reasons)?.map((reason: string, idx: number) => {
+                           // Fallback: Calculate approximate contribution based on total score and number of reasons
+                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
+                           const reasonCount = ((event.careerImpactLite as { explanation?: { reasons?: string[] } })?.explanation?.reasons || []).length;
+                           const avgContribution = reasonCount > 0 ? Math.round(totalScore / reasonCount) : 0;
+                           return (
+                             <li key={idx} className="flex items-center justify-between">
+                               <span>{reason}</span>
+                               <span className="text-white/70">+{avgContribution}%</span>
+                             </li>
+                           );
+                         }) || (event.careerImpact?.explanation as { reasons?: string[] })?.reasons?.map((reason: string, idx: number) => {
+                           // Fallback: Calculate approximate contribution based on total score and number of reasons
+                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
+                           const reasonCount = (event.careerImpact?.explanation as { reasons?: string[] })?.reasons?.length || 0;
+                           const avgContribution = reasonCount > 0 ? Math.round(totalScore / reasonCount) : 0;
+                           return (
+                             <li key={idx} className="flex items-center justify-between">
+                               <span>{reason}</span>
+                               <span className="text-white/70">+{avgContribution}%</span>
+                             </li>
+                           );
+                         })}
                          {/* Show matched skills if available */}
-                         {((event.careerImpactLite as { explanation?: { matchedSkills?: string[] } })?.explanation?.matchedSkills)?.map((skill: string, idx: number) => (
-                           <li key={`skill-${idx}`} className="flex items-center justify-between">
-                             <span>Matches skill: {skill}</span>
-                             <span className="text-white/70">+10%</span>
-                           </li>
-                         )) || (event.careerImpact?.explanation as { matchedSkills?: string[] })?.matchedSkills?.map((skill: string, idx: number) => (
-                           <li key={`skill-${idx}`} className="flex items-center justify-between">
-                             <span>Matches skill: {skill}</span>
-                             <span className="text-white/70">+10%</span>
-                           </li>
-                         ))}
+                         {((event.careerImpactLite as { explanation?: { matchedSkills?: string[] } })?.explanation?.matchedSkills)?.map((skill: string, idx: number) => {
+                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
+                           const skillCount = ((event.careerImpactLite as { explanation?: { matchedSkills?: string[] } })?.explanation?.matchedSkills || []).length;
+                           const avgContribution = skillCount > 0 ? Math.round(totalScore / skillCount) : 0;
+                           return (
+                             <li key={`skill-${idx}`} className="flex items-center justify-between">
+                               <span>Matches skill: {skill}</span>
+                               <span className="text-white/70">+{avgContribution}%</span>
+                             </li>
+                           );
+                         }) || (event.careerImpact?.explanation as { matchedSkills?: string[] })?.matchedSkills?.map((skill: string, idx: number) => {
+                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
+                           const skillCount = (event.careerImpact?.explanation as { matchedSkills?: string[] })?.matchedSkills?.length || 0;
+                           const avgContribution = skillCount > 0 ? Math.round(totalScore / skillCount) : 0;
+                           return (
+                             <li key={`skill-${idx}`} className="flex items-center justify-between">
+                               <span>Matches skill: {skill}</span>
+                               <span className="text-white/70">+{avgContribution}%</span>
+                             </li>
+                           );
+                         })}
                          {/* Show speaker highlights if available */}
-                         {((event.careerImpactLite as { explanation?: { speakerHighlights?: string[] } })?.explanation?.speakerHighlights)?.map((highlight: string, idx: number) => (
-                           <li key={`speaker-${idx}`} className="flex items-center justify-between">
-                             <span>Speaker: {highlight}</span>
-                             <span className="text-white/70">+8%</span>
-                           </li>
-                         )) || (event.careerImpact?.explanation as { speakerHighlights?: string[] })?.speakerHighlights?.map((highlight: string, idx: number) => (
-                           <li key={`speaker-${idx}`} className="flex items-center justify-between">
-                             <span>Speaker: {highlight}</span>
-                             <span className="text-white/70">+8%</span>
-                           </li>
-                         ))}
+                         {((event.careerImpactLite as { explanation?: { speakerHighlights?: string[] } })?.explanation?.speakerHighlights)?.map((highlight: string, idx: number) => {
+                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
+                           const highlightCount = ((event.careerImpactLite as { explanation?: { speakerHighlights?: string[] } })?.explanation?.speakerHighlights || []).length;
+                           const avgContribution = highlightCount > 0 ? Math.round(totalScore / highlightCount) : 0;
+                           return (
+                             <li key={`speaker-${idx}`} className="flex items-center justify-between">
+                               <span>Speaker: {highlight}</span>
+                               <span className="text-white/70">+{avgContribution}%</span>
+                             </li>
+                           );
+                         }) || (event.careerImpact?.explanation as { speakerHighlights?: string[] })?.speakerHighlights?.map((highlight: string, idx: number) => {
+                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
+                           const highlightCount = (event.careerImpact?.explanation as { speakerHighlights?: string[] })?.speakerHighlights?.length || 0;
+                           const avgContribution = highlightCount > 0 ? Math.round(totalScore / highlightCount) : 0;
+                           return (
+                             <li key={`speaker-${idx}`} className="flex items-center justify-between">
+                               <span>Speaker: {highlight}</span>
+                               <span className="text-white/70">+{avgContribution}%</span>
+                             </li>
+                           );
+                         })}
                        </ul>
                        <div className="mt-3 pt-2 border-t border-white/20">
                          <div className="flex items-center justify-between">

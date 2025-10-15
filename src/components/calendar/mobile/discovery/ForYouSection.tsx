@@ -53,17 +53,17 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   // Use React Query for caching and performance optimization (disabled in server-scored mode)
   const isLoading = false;
   const error: Error | null = null;
-  const personalizedEvents: Event[] = [];
+  
+  // For now, we're using server-side scoring, so we use the passed events directly
+  // (In the future, this could be replaced with React Query for client-side personalization)
+  const personalizedEvents: Event[] = events;
 
-  // Use passed events directly when skipPersonalization is true
+  // Use passed events directly (they are already scored by the server)
   const finalEvents = React.useMemo(() => {
-    if (skipPersonalization) {
-      // Filter out past events when using passed events directly
-      const now = new Date();
-      return events.filter(event => new Date(event.startTime) > now).slice(0, limit);
-    }
-    return personalizedEvents;
-  }, [skipPersonalization, events, personalizedEvents, limit]);
+    // Filter out past events and limit results
+    const now = new Date();
+    return events.filter(event => new Date(event.startTime) > now).slice(0, limit);
+  }, [events, limit]);
 
   // Debug logging (dev only)
   React.useEffect(() => {

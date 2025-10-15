@@ -173,6 +173,7 @@ export function calculateBaseScore(
       alignmentScore += contribution;
       careerStageMatch += contribution;
       matchedGoals.push(goal);
+      
       alignmentReasons.push({
         type: 'goal',
         reason: `Supports ${goal.replace('-', ' ')}`,
@@ -205,6 +206,7 @@ export function calculateBaseScore(
       alignmentScore += contribution;
       // Learning style contributes to career stage match (finding right format for growth)
       careerStageMatch += contribution;
+      
       alignmentReasons.push({
         type: 'learning-style',
         reason: `Fits ${style.replace('-', ' ')} learning`,

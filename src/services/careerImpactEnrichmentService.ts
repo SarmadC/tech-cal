@@ -98,6 +98,7 @@ export async function enrichEventsWithCareerImpact(
           explanation: {
             // Maintain legacy shape while preserving detailed reasons
             reasons: alignment.alignmentReasons.map(r => r.reason),
+            alignmentReasons: alignment.alignmentReasons, // Preserve detailed reasons with contributions
             matchedSkills: alignment.matchedSkills,
             speakerHighlights: [],
             careerImpactCategory: getAlignmentCategory(alignment.overall),
