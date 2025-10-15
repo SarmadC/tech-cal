@@ -7,10 +7,7 @@ import { Calendar } from '@phosphor-icons/react';
 import TodayTaskCard from './components/TodayTaskCard';
 import MobileEventPreview from './MobileEventPreview';
 import { 
-  ForYouSection, 
-  TrendingSection, 
-  NewThisWeekSection, 
-  QuickWinsSection 
+  ForYouSection
 } from './discovery';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useUserLocation } from '@/hooks/useUserLocation';
@@ -132,37 +129,6 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
               onTrackEvent={handleTrackEvent}
               userLocation={userLocation || undefined}
               limit={5}
-            />
-          </ErrorBoundary>
-
-          {/* Trending Section */}
-          <ErrorBoundary name="Trending">
-            <TrendingSection
-              events={events}
-              onEventSelect={handleEventTap}
-              onTrackEvent={handleTrackEvent}
-              userLocation={userLocation || undefined}
-              limit={5}
-            />
-          </ErrorBoundary>
-
-          {/* New This Week Section */}
-          <ErrorBoundary name="NewThisWeek">
-            <NewThisWeekSection
-              events={events}
-              onEventSelect={handleEventTap}
-              onTrackEvent={handleTrackEvent}
-              limit={4}
-            />
-          </ErrorBoundary>
-
-          {/* Quick Wins Section */}
-          <ErrorBoundary name="QuickWins">
-            <QuickWinsSection
-              events={events}
-              onEventSelect={handleEventTap}
-              onTrackEvent={handleTrackEvent}
-              limit={4}
             />
           </ErrorBoundary>
 
