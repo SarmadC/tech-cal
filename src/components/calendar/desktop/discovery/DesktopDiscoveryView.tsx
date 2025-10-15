@@ -8,12 +8,6 @@ import {
 } from '../../mobile/discovery';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useUserLocation } from '@/hooks/useUserLocation';
-import { useQuery } from '@tanstack/react-query';
-import { PersonalizedDiscoveryService } from '@/services/personalizedDiscoveryService';
-import { createClient } from '@/utils/supabase/client';
-import { hasCompleteCareerProfile } from '@/utils/profileTypeGuards';
-import { CareerProfileService } from '@/services/careerProfileService';
-// calculateEventAlignment no longer needed - PersonalizedDiscoveryService handles scoring
 import './desktop-discovery.css';
 
 export interface DesktopDiscoveryViewProps {
@@ -36,104 +30,28 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
   // Get user location for location-aware recommendations
   const { location: userLocation } = useUserLocation(profile);
   
-  // Get personalized events to exclude from explore more section
-  const supabase = React.useMemo(() => createClient(), []);
+  // Sort events by career impact score (already attached by server)
+  // Take top events for "For You" section
+  const personalizedEvents = React.useMemo(() => {
+    const upcomingEvents = events.filter(event => new Date(event.startTime) > new Date());
+    
+    // Sort by career impact score (server-side scoring)
+    type MaybeScored = { careerImpact?: { overall: number } };
+    const getScore = (e: Event): number => (e as MaybeScored).careerImpact?.overall ?? 0;
+    const sorted = [...upcomingEvents].sort((a, b) => getScore(b) - getScore(a));
+    
+    // Take top 8 for For You section
+    return sorted.slice(0, 8);
+  }, [events]);
   
-  // Use proper CareerProfileService to get career profile
-  const {
-    data: careerProfile = null,
-    isLoading: careerProfileLoading
-  } = useQuery({
-    queryKey: ['careerProfile', profile?.id],
-    queryFn: async () => {
-      if (!profile) return null;
-      try {
-        return await CareerProfileService.getCareerProfile(profile.id, supabase);
-      } catch (error) {
-        console.warn('Failed to load career profile, falling back to preferences:', error);
-        // Fallback to legacy method
-        return CareerProfileService.getCareerProfileFromPreferences(profile);
-      }
-    },
-    enabled: !!profile,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-  });
-  
-  const hasCareerProfile = React.useMemo(() => hasCompleteCareerProfile(careerProfile), [careerProfile]);
-  
-  // Debug logging for career profile
-  React.useEffect(() => {
-    console.log('DesktopDiscoveryView Career Profile Debug:', {
-      hasProfile: !!profile,
-      careerProfile: !!careerProfile,
-      hasCareerProfile,
-      careerProfileLoading,
-      eventsCount: events.length,
-      careerProfileDetails: careerProfile ? {
-        primarySkills: careerProfile.primarySkills?.length,
-        interests: careerProfile.interests?.length,
-        seniority: careerProfile.seniority,
-        careerGoals: careerProfile.careerGoals?.length
-      } : null
-    });
-  }, [profile, careerProfile, hasCareerProfile, careerProfileLoading, events.length]);
-  
-  const {
-    data: personalizedEvents = []
-  } = useQuery({
-    queryKey: ['personalizedEventsForDedup', profile?.id, events.length],
-    queryFn: async () => {
-      if (!hasCareerProfile || !profile || events.length === 0) return [];
-      
-      try {
-        const upcomingEvents = events.filter(event => new Date(event.startTime) > new Date());
-        const personalized = await PersonalizedDiscoveryService.getAdvancedPersonalizedRecommendations(
-          upcomingEvents,
-          profile,
-          trackedEvents,
-          supabase,
-          8, // Same limit as ForYouSection
-          userLocation || undefined
-        );
-        
-        // PersonalizedDiscoveryService now provides consistent client-side career alignment scores
-        // No need to override - just use the scores directly
-        return personalized;
-      } catch (error) {
-        console.warn('Failed to get personalized events for deduplication:', error);
-        return [];
-      }
-    },
-    enabled: !!(hasCareerProfile && profile && events.length > 0 && !careerProfileLoading),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-  });
-  
-  // Filter out personalized events from the explore more section
+  // Filter out personalized events from explore more section
   const exploreMoreEvents = React.useMemo(() => {
     if (personalizedEvents.length === 0) {
-      console.log('No personalized events to filter, using all events');
       return events;
     }
     
     const personalizedEventIds = new Set(personalizedEvents.map(event => event.id));
-    const filtered = events.filter(event => !personalizedEventIds.has(event.id));
-    
-    // Debug logging
-    console.log('Event Deduplication:', {
-      totalEvents: events.length,
-      personalizedEvents: personalizedEvents.length,
-      exploreMoreEvents: filtered.length,
-      personalizedEventIds: Array.from(personalizedEventIds),
-      personalizedEventTitles: personalizedEvents.map(e => e.title),
-        personalizedEventScores: personalizedEvents.map(e => ({
-          title: e.title,
-          careerImpact: (e as Event & { careerImpactLite?: { overall: number } }).careerImpactLite?.overall
-        }))
-    });
-    
-    return filtered;
+    return events.filter(event => !personalizedEventIds.has(event.id));
   }, [events, personalizedEvents]);
 
   return (
@@ -165,7 +83,6 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
               events={exploreMoreEvents}
               onEventSelect={onEventSelect}
               userLocation={userLocation || undefined}
-              userProfile={profile || undefined}
               className="desktop-explore-more"
             />
           </ErrorBoundary>

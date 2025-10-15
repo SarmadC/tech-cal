@@ -23,7 +23,7 @@ import {
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { CareerProfile } from '@/types/career';
-import { EnhancedScoringService } from './enhancedScoringService';
+import { enrichEventsWithCareerImpact as enrichEventsWithNewScoring } from './careerImpactEnrichmentService';
 import { LookalikeUserService } from './lookalikeUserService';
 import { DiversityEnhancementService } from './diversityEnhancementService';
 import { DIVERSITY_CONFIG } from '@/utils/diversityUtils';
@@ -1552,11 +1552,12 @@ export class EventService {
         }
 
         try {
-            // First, enrich with career impact scores
-            const enrichedEvents = await EnhancedScoringService.enrichEventsWithScores(
+            // Use new alignment-core-based enrichment (DRY, consistent scoring)
+            const enrichedEvents = await enrichEventsWithNewScoring(
                 events,
                 careerProfile,
-                { userId, supabaseClient }
+                supabaseClient,
+                userId
             );
 
             // Apply diversity enhancement if requested and we have enough events

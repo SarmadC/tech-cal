@@ -18,6 +18,18 @@ npm run validate:analytics  # Analytics data flow validation
 
 ## Scripts Overview
 
+### 0. `test-alignment-scoring.ts` ⭐ NEW
+**Purpose**: Manual test suite for the consolidated alignment scoring system
+**Checks**:
+- ✅ Core scoring functionality
+- ✅ Score ranges (50-80% for good matches)
+- ✅ Component breakdown accuracy
+- ✅ Edge cases (null/empty data)
+- ✅ Weight configuration
+- ✅ Consistency and determinism
+
+**Usage**: `npx tsx scripts/test-alignment-scoring.ts`
+
 ### 1. `verify-production.ts`
 **Purpose**: Comprehensive production readiness check
 **Checks**:

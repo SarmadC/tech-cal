@@ -9,12 +9,15 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "test": "vitest run",
+    "test:scoring": "vitest run src/lib/__tests__/alignmentCore.parity.test.ts src/app/api/__tests__/filtered.contract.test.ts src/services/recommendations/__tests__/rerankAdvanced.test.ts",
+    "bench:scoring": "tsx scripts/benchmark-scoring.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:staging": "playwright test --config=playwright.staging.config.ts",
     "type-check": "tsc --noEmit",
+    "type-check:src": "tsc --noEmit -p tsconfig.src.json",
     "audit": "npm audit --audit-level=moderate",
     "audit:fix": "npm audit fix",
     "build:analyze": "ANALYZE=true npm run build",
@@ -103,6 +106,7 @@
     "react-router-dom": "^7.7.1",
     "supabase": "^2.34.3",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.20.6",
     "typescript": "^5",
     "vitest": "^3.2.4"
   }

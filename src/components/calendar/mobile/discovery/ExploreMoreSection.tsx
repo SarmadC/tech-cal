@@ -8,39 +8,22 @@ import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 import BentoGrid from '../../desktop/discovery/BentoGrid';
 import { Badge } from '@/components/ui/badge';
-import { useQuery } from '@tanstack/react-query';
-import { calculateEventAlignment } from '@/utils/careerAlignmentCalculator';
-import { CareerProfileService } from '@/services/careerProfileService';
-import { createClient } from '@/utils/supabase/client';
-import { hasCompleteCareerProfile } from '@/utils/profileTypeGuards';
 
 export interface ExploreMoreSectionProps {
   events: Event[];
   onEventSelect?: (event: Event) => void;
   className?: string;
   userLocation?: { city?: string; country?: string; timezone?: string };
-  userProfile?: import('@/types').AppProfile; // Add userProfile prop for career alignment calculation
 }
 
 const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
   events,
   onEventSelect,
   className = '',
-  userLocation,
-  userProfile
+  userLocation
 }) => {
-  // Get career profile for alignment calculation
-  const _supabase = React.useMemo(() => createClient(), []);
-  const careerProfile = React.useMemo(() => {
-    if (!userProfile) return null;
-    try {
-      return CareerProfileService.getCareerProfileFromPreferences(userProfile);
-    } catch {
-      return null;
-    }
-  }, [userProfile]);
-  const hasCareerProfile = React.useMemo(() => hasCompleteCareerProfile(careerProfile), [careerProfile]);
-  // First, organize events by type with deduplication
+  // Organize events by type with deduplication
+  // Events already have career impact scores from server
   const organizedEvents = React.useMemo(() => {
     // Filter out past events first
     const now = new Date();
@@ -120,76 +103,8 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
     return sortedEvents;
   }, [events, userLocation]);
 
-  // Enhance events with career impact scores
-  const { data: exploreEvents = organizedEvents } = useQuery({
-    queryKey: ['exploreMoreCareerImpact', organizedEvents.map(e => e.event.id).join(','), hasCareerProfile],
-    queryFn: async () => {
-      try {
-        if (!hasCareerProfile || !careerProfile) {
-          return organizedEvents;
-        }
-
-        const eventsList = organizedEvents.map(e => e.event);
-        
-        // Enhance with client-side career alignment calculation
-        const enhancedEvents = eventsList.map(event => {
-          const alignment = calculateEventAlignment(event, careerProfile);
-          return {
-            ...event,
-            careerImpact: {
-              overall: alignment.alignmentScore,
-              confidence: 1.0,
-              components: {
-                skillRelevance: alignment.alignmentReasons
-                  .filter(r => r.type === 'skill')
-                  .reduce((sum, r) => sum + r.contribution, 0),
-                careerStageMatch: alignment.alignmentReasons
-                  .filter(r => r.type === 'goal')
-                  .reduce((sum, r) => sum + r.contribution, 0),
-                networkingValue: alignment.alignmentReasons
-                  .filter(r => r.type === 'networking')
-                  .reduce((sum, r) => sum + r.contribution, 0),
-                industryRelevance: alignment.alignmentReasons
-                  .filter(r => r.type === 'interest')
-                  .reduce((sum, r) => sum + r.contribution, 0),
-                timingBonus: alignment.alignmentReasons
-                  .filter(r => r.type === 'learning-style')
-                  .reduce((sum, r) => sum + r.contribution, 0),
-              },
-              explanation: {
-                reasons: alignment.alignmentReasons.map(r => r.reason),
-                matchedSkills: alignment.matchedSkills,
-                speakerHighlights: [],
-                careerImpactCategory: alignment.alignmentScore >= 80 ? 'high' : 
-                                     alignment.alignmentScore >= 50 ? 'moderate' : 'low',
-                confidenceFactors: ['Client-side calculation'],
-                // Add the alignment reasons for the tooltip
-                alignmentReasons: alignment.alignmentReasons
-              },
-              metadata: {
-                algorithmVersion: 'v2.0-client',
-                calculatedAt: new Date().toISOString(),
-                careerProfileHash: '',
-                eventDataHash: ''
-              }
-            }
-          };
-        });
-        
-        // Map enhanced events back to organized structure
-        return organizedEvents.map(item => ({
-          ...item,
-          event: enhancedEvents.find(e => e.id === item.event.id) || item.event
-        }));
-      } catch (error) {
-        console.warn('Failed to enhance explore events with career impact:', error);
-        return organizedEvents;
-      }
-    },
-    enabled: organizedEvents.length > 0 && hasCareerProfile,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-  });
+  // Events already have career impact scores from server - no need to recalculate
+  const exploreEvents = organizedEvents;
 
   const handleEventClick = React.useCallback((event: Event) => {
     onEventSelect?.(event);
