@@ -25,7 +25,7 @@ import { SCORING_CONFIG, TIME_CONSTANTS } from '@/config/analyticsConfig';
 import { DatabaseQueryPatterns } from '@/utils/databaseQueryPatterns';
 import { UnifiedEventUtils } from '@/utils/unifiedEventUtils';
 // Removed unused imports - using SupabaseClientType from types
-// import { CareerImpactUtils } from '@/utils/careerImpactUtils'; // Now using batch service
+// Removed unused career impact utilities
 
 // SupabaseClientType now imported from types
 
@@ -169,15 +169,34 @@ export class PersonalizedDiscoveryService extends DiscoveryService {
         } as Event;
     });
 
-    // Enhance with career impact scores for better ranking
+    // Enhance with client-side career alignment scores for better ranking
     const careerProfile = supabaseClient 
       ? await CareerProfileService.getCareerProfile(userProfile.id, supabaseClient)
       : CareerProfileService.getCareerProfileFromPreferences(userProfile);
     if (careerProfile) {
       try {
-        // Use batch service instead of N+1 pattern
-        const { BatchCareerImpactService } = await import('./batchCareerImpactService');
-        const careerEnhancedEvents = await BatchCareerImpactService.enhanceEventsLite(enhancedRecommendations);
+        // Use client-side alignment calculation for consistency with discovery section
+        const { calculateEventAlignment } = await import('@/utils/careerAlignmentCalculator');
+        const careerEnhancedEvents = enhancedRecommendations.map(event => {
+          const alignment = calculateEventAlignment(event, careerProfile);
+          return {
+            ...event,
+            careerImpactLite: {
+              overall: alignment.alignmentScore,
+              confidence: 1.0,
+              category: alignment.alignmentScore >= 80 ? 'high' : 
+                       alignment.alignmentScore >= 50 ? 'moderate' : 'low',
+              explanation: {
+                reasons: alignment.alignmentReasons.map(r => r.reason),
+                matchedSkills: alignment.matchedSkills,
+                speakerHighlights: [],
+                careerImpactCategory: alignment.alignmentScore >= 80 ? 'high' : 
+                                     alignment.alignmentScore >= 50 ? 'moderate' : 'low',
+                confidenceFactors: ['Client-side calculation']
+              }
+            }
+          };
+        });
         
         // Sort by career impact score (primary) and enhanced score (secondary)
         return careerEnhancedEvents
@@ -195,7 +214,7 @@ export class PersonalizedDiscoveryService extends DiscoveryService {
           })
           .slice(0, limit);
       } catch (careerError) {
-        console.warn('Career impact enhancement failed, using basic ranking:', careerError);
+        console.warn('Career alignment calculation failed, using basic ranking:', careerError);
       }
     }
 

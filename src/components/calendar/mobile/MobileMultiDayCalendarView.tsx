@@ -4,7 +4,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { Event, EventType, AppProfile } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
+// Career impact components removed - using inline implementation
 import MobileEventPreview from './MobileEventPreview';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 
@@ -214,12 +214,14 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
                     <div className="event-title flex-1">{event.title}</div>
                     {/* Career Impact Indicator for mobile */}
                     {(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
-                      <CareerImpactIndicator 
-                        score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall}
-                        size="sm"
-                        showValue={false}
-                        className="flex-shrink-0 ml-2"
-                      />
+                      <div className="flex-shrink-0 ml-2">
+                        <div className={`
+                          w-2 h-2 rounded-full
+                          ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
+                            (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
+                            (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                        `} />
+                      </div>
                     )}
                   </div>
                   {event.location && (

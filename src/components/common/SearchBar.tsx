@@ -1,7 +1,7 @@
 // src/components/SearchBar.tsx
 
 import { MaterialIcon } from '@/components/ui/Icon';
-import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
+// Career impact components removed - using inline implementation
 
 type Suggestion = {
   id: string;
@@ -85,12 +85,14 @@ export default function SearchBar({
                   </div>
                   {/* Career Impact Indicator */}
                   {suggestion.careerScore && suggestion.careerScore > 0 && (
-                    <CareerImpactIndicator 
-                      score={suggestion.careerScore}
-                      size="sm"
-                      showValue={false}
-                      className="flex-shrink-0 ml-2"
-                    />
+                    <div className="flex-shrink-0 ml-2">
+                      <div className={`
+                        w-2 h-2 rounded-full
+                        ${suggestion.careerScore >= 80 ? 'bg-green-400' :
+                          suggestion.careerScore >= 50 ? 'bg-blue-400' :
+                          suggestion.careerScore >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                      `} />
+                    </div>
                   )}
                 </button>
               </li>

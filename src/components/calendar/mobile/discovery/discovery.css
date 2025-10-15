@@ -33,12 +33,12 @@
   --size-trending-indicator: 48px;
 }
 .discovery-section {
-  @apply mb-6;
+  @apply mb-8;
   position: relative;
 }
 
 .discovery-section-header {
-  @apply flex items-center justify-between mb-6;
+  @apply flex items-center justify-between mb-8;
   position: relative;
   z-index: 10;
 }
@@ -47,64 +47,50 @@
   @apply flex items-center gap-4;
 }
 
-/* Simplified Section Icon - Theme Aware */
+/* Simplified Section Icon - Theme Aware & Lightweight */
 .section-icon {
-  @apply flex items-center justify-center w-12 h-12 rounded-lg;
-  background: var(--background-elevated);
+  @apply flex items-center justify-center w-10 h-10 rounded-lg;
+  background: transparent;
   color: var(--foreground-primary);
-  border: 1px solid var(--border-card);
+  border: none;
   transition: var(--transition-standard);
-  box-shadow: var(--shadow-icon);
 }
 
 .discovery-section:hover .section-icon {
   transform: scale(1.05);
-  background: var(--background-card-hover);
-  border-color: var(--border-light);
-  box-shadow: var(--shadow-hover);
-}
-
-/* Theme-aware icon styles */
-.section-icon {
-  background: var(--background-elevated);
-  border-color: var(--border-strong);
-  color: var(--foreground-primary);
-}
-
-.discovery-section:hover .section-icon {
-  background: var(--background-tertiary);
-  border-color: var(--accent-primary);
   color: var(--accent-primary);
 }
 
 .section-title {
   font-family: var(--font-dm-sans);
-  @apply text-xl font-semibold text-foreground-primary;
+  @apply text-xl font-semibold;
+  color: var(--foreground-primary);
   letter-spacing: -0.015em;
   margin-bottom: 0.25rem;
 }
 
 .section-subtitle {
   font-family: var(--font-sans);
-  @apply text-sm text-foreground-secondary;
+  @apply text-sm;
+  color: var(--foreground-secondary);
   line-height: 1.6;
   font-weight: 400;
   letter-spacing: -0.01em;
 }
 
 .view-all-button {
-  @apply flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground-primary hover:opacity-80;
-  background: var(--background-muted);
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
+  @apply flex items-center gap-2 px-3 py-1.5 text-sm font-medium;
+  color: var(--foreground-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
   font-family: var(--font-sans);
   transition: var(--transition-standard);
 }
 
 .view-all-button:hover {
-  background: var(--background-card-hover);
-  border-color: var(--border-card);
-  transform: translateY(-1px);
+  color: var(--foreground-primary);
+  background: var(--background-muted);
 }
 
 .view-all-text {
@@ -121,6 +107,19 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem; /* 24px - equivalent to space-y-6 */
+}
+
+/* Bento Card Specific Styles */
+.bento-card-large {
+  min-height: 280px;
+}
+
+.bento-card-medium {
+  min-height: 220px;
+}
+
+.bento-card-small {
+  min-height: 180px;
 }
 
 /* Mobile-specific spacing adjustments */
@@ -140,7 +139,7 @@
 /* Discovery Icons */
 
 .discovery-icon {
-  @apply text-accent-primary;
+  color: var(--accent-primary);
 }
 
 /* Arrow Styling - Scoped to Discovery View */
@@ -400,19 +399,22 @@
 
 /* Section-Specific Styles */
 .trending-featured-card {
-  @apply bg-background-elevated border-strong;
+  background-color: var(--background-elevated);
+  border-color: var(--border-strong);
 }
 
 /* Consolidated Section Stats */
 .section-stats,
 .trending-stats,
 .new-events-stats {
-  @apply mt-4 pt-3 border-t border-subtle;
+  @apply mt-4 pt-3 border-t;
+  border-color: var(--border-subtle);
 }
 
 .stat-item,
 .quick-wins-info {
-  @apply flex items-center gap-2 text-xs text-foreground-tertiary;
+  @apply flex items-center gap-2 text-xs;
+  color: var(--foreground-tertiary);
 }
 
 .stat-text,
@@ -436,13 +438,60 @@
 
 .empty-icon,
 .discovery-empty-state .empty-icon {
-  @apply text-foreground-muted;
+  color: var(--foreground-muted);
   margin-bottom: 1.5rem;
   opacity: 0.6;
 }
 
 .empty-text {
-  @apply text-sm text-foreground-secondary max-w-xs;
+  @apply text-sm max-w-xs;
+  color: var(--foreground-secondary);
+}
+
+/* Enhanced Empty State for For You Section */
+.discovery-empty-state .empty-icon-container {
+  @apply relative mb-6;
+}
+
+.discovery-empty-state .empty-icon-bg {
+  @apply absolute inset-0 rounded-full;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  opacity: 0.1;
+  transform: scale(1.2);
+}
+
+.discovery-empty-state .empty-actions {
+  @apply flex flex-col sm:flex-row gap-3 items-center mt-6;
+}
+
+.discovery-empty-state .empty-cta-primary {
+  @apply px-6 py-3 text-white rounded-lg font-medium text-sm;
+  background-color: var(--accent-primary);
+  font-family: var(--font-sans);
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.discovery-empty-state .empty-cta-primary:hover {
+  @apply transform -translate-y-0.5;
+  background-color: var(--accent-primary);
+  opacity: 0.9;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.discovery-empty-state .empty-cta-secondary {
+  @apply px-6 py-3 border border-border rounded-lg font-medium text-sm;
+  color: var(--foreground-secondary);
+  font-family: var(--font-sans);
+  transition: all 0.2s ease-in-out;
+  background: var(--background-card);
+}
+
+.discovery-empty-state .empty-cta-secondary:hover {
+  color: var(--foreground-primary);
+  border-color: var(--foreground-primary);
+  opacity: 0.2;
+  background: var(--background-muted);
 }
 
 /* Error Boundary Styles - Consolidated */

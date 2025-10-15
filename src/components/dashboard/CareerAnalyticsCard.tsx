@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-// import { CareerImpactBadge } from '@/components/ui/career-impact-badge'; // Removed unused import
+// Removed unused career impact components
 // import { Event } from '@/types'; // Removed unused import
 // import { CareerImpactScoreLite } from '@/types/careerImpact'; // Removed unused import
 import { 

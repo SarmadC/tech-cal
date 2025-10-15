@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
+// Career impact components removed - using inline implementation
 import { Event, AppProfile } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { 
@@ -149,11 +149,19 @@ export function CareerRecommendationsCard({
                   </div>
                 </div>
               </div>
-              <CareerImpactBadge 
-                score={recommendation.estimatedImpact}
-                variant="compact"
-                className="flex-shrink-0"
-              />
+              <div className="flex-shrink-0">
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md">
+                  <div className={`
+                    w-2 h-2 rounded-full
+                    ${recommendation.estimatedImpact >= 80 ? 'bg-green-400' :
+                      recommendation.estimatedImpact >= 50 ? 'bg-blue-400' :
+                      recommendation.estimatedImpact >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                  `} />
+                  <span className="text-xs font-medium">
+                    {Math.round(recommendation.estimatedImpact)}%
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Reason */}
@@ -200,11 +208,19 @@ export function CareerRecommendationsCard({
                         </div>
                       </div>
                       {event.careerImpactLite && (
-                        <CareerImpactBadge 
-                          score={event.careerImpactLite}
-                          variant="compact"
-                          className="ml-2 flex-shrink-0"
-                        />
+                        <div className="ml-2 flex-shrink-0">
+                          <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md">
+                            <div className={`
+                              w-2 h-2 rounded-full
+                              ${event.careerImpactLite!.overall >= 80 ? 'bg-green-400' :
+                                event.careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
+                                event.careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                            `} />
+                            <span className="text-xs font-medium">
+                              {Math.round(event.careerImpactLite!.overall)}%
+                            </span>
+                          </div>
+                        </div>
                       )}
                     </div>
                   ))}

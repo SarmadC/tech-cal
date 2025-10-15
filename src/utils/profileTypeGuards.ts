@@ -38,20 +38,29 @@ export function extractCareerProfile(userProfile: AppProfile | null): CareerProf
     const career = careerData as Record<string, unknown>;
 
     return {
-      industry: typeof career.industry === 'string' ? career.industry : undefined,
-      interests: Array.isArray(career.interests) ? career.interests.filter(i => typeof i === 'string') : [],
-      seniority: typeof career.seniority === 'string' ? career.seniority : undefined,
-      timeframe: typeof career.timeframe === 'string' ? career.timeframe : undefined,
-      careerGoals: Array.isArray(career.careerGoals) ? career.careerGoals.filter(g => typeof g === 'string') : [],
-      companySize: typeof career.companySize === 'string' ? career.companySize : undefined,
-      currentRole: typeof career.currentRole === 'string' ? career.currentRole : undefined,
-      availableTime: typeof career.availableTime === 'string' ? career.availableTime : undefined,
-      learningStyle: Array.isArray(career.learningStyle) ? career.learningStyle.filter(l => typeof l === 'string') : [],
+      // Current Role Information
+      currentRole: typeof career.currentRole === 'string' ? career.currentRole : '',
+      seniority: (typeof career.seniority === 'string' ? career.seniority : 'entry-level') as 'entry-level' | 'junior' | 'mid-level' | 'senior' | 'lead' | 'principal' | 'executive',
+      industry: typeof career.industry === 'string' ? career.industry : '',
+      companySize: (typeof career.companySize === 'string' ? career.companySize : 'small') as 'startup' | 'small' | 'medium' | 'large' | 'enterprise',
+      
+      // Skills and Interests
       primarySkills: Array.isArray(career.primarySkills) ? career.primarySkills.filter(s => typeof s === 'string') : [],
       skillsToLearn: Array.isArray(career.skillsToLearn) ? career.skillsToLearn.filter(s => typeof s === 'string') : [],
+      interests: Array.isArray(career.interests) ? career.interests.filter(i => typeof i === 'string') : [],
+      
+      // Career Goals
+      careerGoals: Array.isArray(career.careerGoals) ? career.careerGoals.filter(g => typeof g === 'string') : [],
+      timeframe: (typeof career.timeframe === 'string' ? career.timeframe : 'short-term') as 'immediate' | 'short-term' | 'medium-term' | 'long-term',
+      
+      // Learning Preferences
+      learningStyle: Array.isArray(career.learningStyle) ? career.learningStyle.filter(l => typeof l === 'string') : [],
+      availableTime: (typeof career.availableTime === 'string' ? career.availableTime : 'moderate') as 'low' | 'moderate' | 'high',
+      budget: (typeof career.budget === 'string' ? career.budget : 'low') as 'free' | 'low' | 'moderate' | 'high',
+      
+      // Networking Preferences
       networkingGoals: Array.isArray(career.networkingGoals) ? career.networkingGoals.filter(g => typeof g === 'string') : [],
       preferredEventTypes: Array.isArray(career.preferredEventTypes) ? career.preferredEventTypes.filter(t => typeof t === 'string') : [],
-      budget: typeof career.budget === 'string' ? career.budget : undefined,
     };
   } catch (error) {
     console.error('Error extracting career profile:', error);

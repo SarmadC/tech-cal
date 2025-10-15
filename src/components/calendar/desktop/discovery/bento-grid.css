@@ -1,0 +1,209 @@
+/* Bento Grid Layout */
+.bento-grid {
+  display: grid;
+  gap: 1rem;
+  grid-auto-flow: dense;
+  width: 100%;
+}
+
+/* Bento Card Size Variants - Typography and Spacing */
+.bento-card-large {
+  padding: 2rem;
+  background: linear-gradient(135deg, var(--background-elevated) 0%, var(--background-card) 100%);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.bento-card-large .event-title {
+  font-size: 1.5rem; /* text-2xl */
+  line-height: 2rem;
+  font-weight: 700;
+}
+
+.bento-card-medium {
+  padding: 1.5rem;
+  background: var(--background-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.bento-card-medium .event-title {
+  font-size: 1.25rem; /* text-xl */
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+.bento-card-small {
+  padding: 1rem;
+  background: var(--background-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.bento-card-small .event-title {
+  font-size: 1rem; /* text-base */
+  line-height: 1.5rem;
+  font-weight: 500;
+}
+
+/* Mobile: 1 column, all cards similar size */
+@media (max-width: 768px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Large cards get emphasis via padding/font size */
+  .bento-card-large {
+    padding: 1.5rem;
+  }
+  
+  .bento-card-medium {
+    padding: 1.25rem;
+  }
+  
+  .bento-card-small {
+    padding: 1rem;
+  }
+}
+
+/* Tablet: 2 columns */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .bento-card-large {
+    grid-column: span 2;
+    grid-row: span 1;
+  }
+  
+  .bento-card-medium {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+  
+  .bento-card-small {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+}
+
+/* Desktop: 3-4 columns with auto-fit */
+@media (min-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: minmax(200px, auto);
+  }
+  
+  .bento-card-large {
+    grid-column: span 2;
+    grid-row: span 2;
+    min-height: 400px;
+  }
+  
+  .bento-card-medium {
+    grid-column: span 1;
+    grid-row: span 1;
+    min-height: 200px;
+  }
+  
+  .bento-card-small {
+    grid-column: span 1;
+    grid-row: span 1;
+    min-height: 180px;
+  }
+}
+
+/* Wide desktop: 4 columns */
+@media (min-width: 1536px) {
+  .bento-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .bento-card-large {
+    grid-column: span 2;
+    grid-row: span 2;
+    min-height: 450px;
+  }
+}
+
+/* Bento Card Hover Effects - Subtle lift */
+.bento-card-large {
+  transition: all 0.2s ease-in-out;
+}
+
+.bento-card-medium {
+  transition: all 0.2s ease-in-out;
+}
+
+.bento-card-small {
+  transition: all 0.2s ease-in-out;
+}
+
+.bento-card-large:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.bento-card-medium:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.bento-card-small:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* Ensure proper aspect ratio on large cards */
+@media (min-width: 1024px) {
+  .bento-card-large {
+    aspect-ratio: auto;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Career Impact Display */
+.bento-card-large .flex.items-center.gap-3 > div:first-child,
+.bento-card-medium .flex.items-center.gap-3 > div:first-child,
+.bento-card-small .flex.items-center.gap-3 > div:first-child {
+  transition: all 0.2s ease-in-out;
+}
+
+.bento-card-large:hover .flex.items-center.gap-3 > div:first-child,
+.bento-card-medium:hover .flex.items-center.gap-3 > div:first-child {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Career Impact Meter Animation */
+@keyframes fillMeter {
+  from {
+    width: 0%;
+  }
+}
+
+.bento-card-large .h-full.transition-all,
+.bento-card-medium .h-full.transition-all,
+.bento-card-small .h-full.transition-all {
+  animation: fillMeter 0.6s ease-out;
+}
+
+/* Event Badge Styling - Now integrated in content */
+.bento-card-large .flex.flex-wrap.gap-1.mt-2,
+.bento-card-medium .flex.flex-wrap.gap-1.mt-2,
+.bento-card-small .flex.flex-wrap.gap-1.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.bento-card-large .flex.flex-wrap.gap-1.mt-2 .badge,
+.bento-card-medium .flex.flex-wrap.gap-1.mt-2 .badge,
+.bento-card-small .flex.flex-wrap.gap-1.mt-2 .badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+

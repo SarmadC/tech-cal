@@ -8,8 +8,7 @@ import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { isEventLive, isEventPast } from '@/utils/dateUtils';
 import { isMultiDayEvent, getMultiDayDuration, getCategoryColor } from '@/utils/eventUtils';
-import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
-import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
+// Career impact components removed - using inline implementation
 import { getPillColor } from '@/utils/pillColorUtils';
 
 export interface EventCardProps {
@@ -234,20 +233,19 @@ export const EventCard: React.FC<EventCardProps> = ({
                         {/* Career Impact Display */}
                         {showCareerImpact && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
                             <div className="flex-shrink-0 ml-2">
-                                {cardSize >= 6 ? (
-                                    <CareerImpactBadge 
-                                        score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!}
-                                        variant="compact"
-                                        showTooltip={true}
-                                        className="text-xs"
-                                    />
-                                ) : (
-                                    <CareerImpactIndicator 
-                                        score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall}
-                                        size={viewType === 'week' ? 'sm' : 'md'}
-                                        showValue={cardSize >= 4}
-                                    />
-                                )}
+                                <div className="flex items-center gap-1">
+                                    <div className={`
+                                        w-2 h-2 rounded-full
+                                        ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
+                                          (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
+                                          (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                                    `} />
+                                    {cardSize >= 4 && (
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                            {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}%
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -460,11 +458,17 @@ export const EventCard: React.FC<EventCardProps> = ({
                         </div>
                         <div className="career-impact-details">
                             <div className="flex items-center justify-between mb-1">
-                                <CareerImpactBadge 
-                                    score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!}
-                                    variant="detailed"
-                                    className="text-xs"
-                                />
+                                <div className="flex items-center gap-2 px-2 py-1 bg-gray-100 rounded-md">
+                                    <div className={`
+                                        w-2 h-2 rounded-full
+                                        ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
+                                          (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
+                                          (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                                    `} />
+                                    <span className="text-xs font-medium">
+                                        {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}% Match
+                                    </span>
+                                </div>
                             </div>
                             <div className="career-impact-reasons text-xs text-gray-600 mt-1">
                                 <div className="flex items-start gap-1">

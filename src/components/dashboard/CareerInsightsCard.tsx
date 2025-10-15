@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
+// Career impact components removed - using inline implementation
 import { Event } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { TargetIcon, TrendUpIcon, SparkleIcon } from '@phosphor-icons/react';
@@ -64,10 +64,17 @@ export function CareerInsightsCard({ topOpportunities, className }: CareerInsigh
             Career Opportunities
           </CardTitle>
           {insights.averageScore > 0 && (
-            <CareerImpactBadge 
-              score={insights.averageScore}
-              variant="compact"
-            />
+            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md">
+              <div className={`
+                w-2 h-2 rounded-full
+                ${insights.averageScore >= 80 ? 'bg-green-400' :
+                  insights.averageScore >= 50 ? 'bg-blue-400' :
+                  insights.averageScore >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+              `} />
+              <span className="text-xs font-medium">
+                {Math.round(insights.averageScore)}%
+              </span>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -120,11 +127,19 @@ export function CareerInsightsCard({ topOpportunities, className }: CareerInsigh
               </div>
             </div>
             {event.careerImpactLite && (
-              <CareerImpactBadge 
-                score={event.careerImpactLite}
-                variant="compact"
-                className="ml-2"
-              />
+              <div className="ml-2">
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md">
+                  <div className={`
+                    w-2 h-2 rounded-full
+                    ${event.careerImpactLite!.overall >= 80 ? 'bg-green-400' :
+                      event.careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
+                      event.careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                  `} />
+                  <span className="text-xs font-medium">
+                    {Math.round(event.careerImpactLite!.overall)}%
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         ))}

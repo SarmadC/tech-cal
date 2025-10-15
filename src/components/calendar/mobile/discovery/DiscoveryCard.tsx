@@ -9,23 +9,24 @@ import {
   Clock
 } from '@phosphor-icons/react';
 // Use consolidated Event type - recommendation functionality handled through EventWithCareerImpact
-import { Event } from '@/types';
+import { Event, CareerImpactScore } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { Card, CardHeader } from '@/components/ui/card';
-import { CareerImpactIndicator } from '@/components/ui/career-impact-tooltip';
 import { cn } from '@/lib/utils';
 import ShinyText from '../../shared/ShinyText';
 import '../../shared/ShinyText.css';
 
 export interface DiscoveryCardProps {
-  event: Event & { careerImpactLite?: CareerImpactScoreLite };
+  event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore };
   onClick?: () => void;
   onView?: () => void;
   onLearnMore?: () => void;
   className?: string;
   variant?: 'default' | 'featured' | 'compact';
+  size?: 'small' | 'medium' | 'large';
   showCareerImpact?: boolean;
   showLearnMore?: boolean;
+  badges?: React.ReactNode;
 }
 
 const DiscoveryCard = React.memo<DiscoveryCardProps>(({
@@ -35,11 +36,13 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   onLearnMore,
   className = '',
   variant = 'default',
+  size = 'medium',
   showCareerImpact = true,
-  showLearnMore = true
+  showLearnMore = false,
+  badges
 }) => {
-  const hasTrackedView = React.useRef(false);
   const [isHovered, setIsHovered] = useState(false);
+  const hasTrackedView = React.useRef(false);
 
   // Track view only once when component mounts
   React.useEffect(() => {
@@ -116,6 +119,13 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   const categoryColor = getCategoryColor();
 
 
+  // Size-based styling classes
+  const sizeClasses = {
+    small: 'bento-card-small',
+    medium: 'bento-card-medium',
+    large: 'bento-card-large'
+  };
+
   return (
     <Card 
       className={cn(
@@ -123,6 +133,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         "border-border/50 bg-card hover:bg-card/80",
         variant === 'featured' && "md:col-span-2",
         variant === 'compact' && "flex-row items-center gap-4",
+        sizeClasses[size],
         className
       )}
       onClick={onClick}
@@ -140,13 +151,111 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       <CardHeader className="pb-0 relative">
          {/* Event Header Content - Now takes full width */}
          <div className="w-full space-y-4">
-           {/* Event title and arrow button on the same line */}
-           <div className="flex items-center justify-between">
+           {/* Event title, career impact bar, and arrow button on the same line */}
+           <div className="flex items-center justify-between gap-3">
              <h3 
-               className="font-semibold text-lg leading-tight tracking-tight flex-1 min-w-0 text-foreground-primary"
+               className={cn(
+                 "font-semibold leading-tight tracking-tight flex-1 min-w-0 text-foreground-primary",
+                 size === 'large' && "text-xl",
+                 size === 'medium' && "text-lg",
+                 size === 'small' && "text-base"
+               )}
              >
                {event.title}
              </h3>
+             
+             {/* Career Impact - Progress Bar with Percentage and Breakdown Tooltip */}
+              {showCareerImpact && ((event.careerImpactLite?.overall ?? 0) > 0 || (event.careerImpact?.overall ?? 0) > 0) && (
+               <div className="relative flex items-center gap-2 flex-shrink-0">
+                 <div 
+                   className={cn(
+                     "bg-gray-200 rounded-full overflow-hidden cursor-pointer",
+                     size === 'large' ? "h-2 w-16" : "h-1.5 w-12"
+                   )}
+                   onMouseEnter={() => setIsHovered(true)}
+                   onMouseLeave={() => setIsHovered(false)}
+                 >
+                   <div 
+                     className={cn(
+                       "h-full transition-all duration-300 rounded-full",
+                       (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) >= 80 && "bg-gradient-to-r from-emerald-400 to-emerald-600",
+                       (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) >= 60 && (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) < 80 && "bg-gradient-to-r from-blue-400 to-blue-600",
+                       (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) >= 40 && (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) < 60 && "bg-gradient-to-r from-amber-400 to-amber-600",
+                       (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) < 40 && "bg-gray-400"
+                     )}
+                     style={{ width: `${Math.min(event.careerImpactLite?.overall || event.careerImpact?.overall || 0, 100)}%` }}
+                   />
+                 </div>
+                 <span className={cn(
+                   "font-medium text-foreground-secondary",
+                   size === 'large' ? "text-sm" : "text-xs"
+                 )}>
+                   {Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0)}%
+                 </span>
+
+                 {/* Breakdown Tooltip */}
+                  {isHovered && (event.careerImpact?.components || Boolean((event.careerImpactLite as { explanation?: unknown })?.explanation)) && (
+                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-3 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                     <div className="text-xs text-white">
+                       <div className="font-medium mb-2">Why this event matches:</div>
+                       <ul className="space-y-1">
+                         {/* Show alignment reasons with their actual contributions */}
+                         {(event.careerImpact?.explanation as { alignmentReasons?: Array<{ reason: string; contribution: number }> })?.alignmentReasons?.map((reason, idx: number) => (
+                           <li key={idx} className="flex items-center justify-between">
+                             <span>{reason.reason}</span>
+                             <span className="text-white/70">+{reason.contribution}%</span>
+                           </li>
+                         )) || ((event.careerImpactLite as { explanation?: { reasons?: string[] } })?.explanation?.reasons)?.map((reason: string, idx: number) => (
+                           <li key={idx} className="flex items-center justify-between">
+                             <span>{reason}</span>
+                             <span className="text-white/70">+5%</span>
+                           </li>
+                         )) || (event.careerImpact?.explanation as { reasons?: string[] })?.reasons?.map((reason: string, idx: number) => (
+                           <li key={idx} className="flex items-center justify-between">
+                             <span>{reason}</span>
+                             <span className="text-white/70">+5%</span>
+                           </li>
+                         ))}
+                         {/* Show matched skills if available */}
+                         {((event.careerImpactLite as { explanation?: { matchedSkills?: string[] } })?.explanation?.matchedSkills)?.map((skill: string, idx: number) => (
+                           <li key={`skill-${idx}`} className="flex items-center justify-between">
+                             <span>Matches skill: {skill}</span>
+                             <span className="text-white/70">+10%</span>
+                           </li>
+                         )) || (event.careerImpact?.explanation as { matchedSkills?: string[] })?.matchedSkills?.map((skill: string, idx: number) => (
+                           <li key={`skill-${idx}`} className="flex items-center justify-between">
+                             <span>Matches skill: {skill}</span>
+                             <span className="text-white/70">+10%</span>
+                           </li>
+                         ))}
+                         {/* Show speaker highlights if available */}
+                         {((event.careerImpactLite as { explanation?: { speakerHighlights?: string[] } })?.explanation?.speakerHighlights)?.map((highlight: string, idx: number) => (
+                           <li key={`speaker-${idx}`} className="flex items-center justify-between">
+                             <span>Speaker: {highlight}</span>
+                             <span className="text-white/70">+8%</span>
+                           </li>
+                         )) || (event.careerImpact?.explanation as { speakerHighlights?: string[] })?.speakerHighlights?.map((highlight: string, idx: number) => (
+                           <li key={`speaker-${idx}`} className="flex items-center justify-between">
+                             <span>Speaker: {highlight}</span>
+                             <span className="text-white/70">+8%</span>
+                           </li>
+                         ))}
+                       </ul>
+                       <div className="mt-3 pt-2 border-t border-white/20">
+                         <div className="flex items-center justify-between">
+                           <span className="font-medium">Total Match:</span>
+                           <span className="font-medium text-white">
+                             {Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0)}%
+                           </span>
+                         </div>
+                       </div>
+                     </div>
+                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-black/90"></div>
+                   </div>
+                 )}
+               </div>
+             )}
+             
              {showLearnMore && (
                <button
                  onClick={(e) => {
@@ -180,15 +289,11 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                </button>
              )}
            </div>
-          
-          {/* Career Impact Indicator - separate line */}
-          {showCareerImpact && event.careerImpactLite && event.careerImpactLite.overall > 0 && (
-            <div className="flex items-center">
-              <CareerImpactIndicator 
-                score={event.careerImpactLite.overall}
-                size="sm"
-                showValue={true}
-              />
+
+          {/* Event Badges */}
+          {badges && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {badges}
             </div>
           )}
 
@@ -230,15 +335,23 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
 
       {/* Event Image or Category Color Block - Moved to bottom */}
       <div className="px-6 pb-6">
-        <div className="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-start">
+        <div className={cn(
+          "rounded-lg overflow-hidden flex items-center justify-start",
+          size === 'large' && "w-16 h-16",
+          size === 'medium' && "w-14 h-14",
+          size === 'small' && "w-10 h-10"
+        )}>
           {(() => {
+            const imageSizes = size === 'large' ? 64 : size === 'medium' ? 56 : 40;
+            const logoSizes = size === 'large' ? 40 : size === 'medium' ? 32 : 24;
+            
             if (event.eventImageUrl) {
               return (
                 <Image
                   src={event.eventImageUrl}
                   alt={`${event.title} event image`}
-                  width={56}
-                  height={56}
+                  width={imageSizes}
+                  height={imageSizes}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
@@ -251,8 +364,8 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                   <Image
                     src={event.organization.logo}
                     alt={`${event.organization.name} logo`}
-                    width={32}
-                    height={32}
+                    width={logoSizes}
+                    height={logoSizes}
                     className="object-contain"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';

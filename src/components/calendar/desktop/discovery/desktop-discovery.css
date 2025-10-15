@@ -19,7 +19,13 @@
   @apply text-lg text-muted-foreground;
 }
 
-/* Desktop Grid Layout */
+/* Desktop Grid Layout - V2 Bento */
+.discovery-grid-v2 {
+  @apply space-y-12 max-w-7xl mx-auto;
+  /* Increased spacing to compensate for removed container padding */
+}
+
+/* Legacy grid styles - kept for backwards compatibility */
 .discovery-grid {
   @apply grid grid-cols-1 lg:grid-cols-3 gap-8;
 }
@@ -33,10 +39,11 @@
 }
 
 .discovery-section-wrapper {
-  @apply rounded-xl shadow-sm border border-border/50 p-6;
+  @apply p-0;
+  /* Remove borders and background - let cards be the focus */
 }
 
-/* Desktop-specific section styles */
+/* Desktop-specific section styles - Legacy */
 .desktop-for-you .discovery-cards-container {
   @apply grid grid-cols-1 md:grid-cols-2 gap-4;
 }
@@ -59,6 +66,12 @@
 
 .desktop-quick-wins .discovery-cards-container {
   @apply space-y-3;
+}
+
+/* Desktop Bento Grid Sections - V2 */
+.desktop-for-you .bento-grid,
+.desktop-explore-more .bento-grid {
+  @apply w-full;
 }
 
 /* Desktop discovery cards */

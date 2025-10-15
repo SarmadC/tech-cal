@@ -14,7 +14,7 @@ import { useRecommendationTracking } from '@/hooks/useRecommendationTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
-import { CareerImpactBadge } from '@/components/ui/career-impact-badge';
+// Career impact components removed - using inline implementation
 import { createAnalyticsContext } from '@/utils/analyticsUtils';
 
 // 2. UPDATE PROPS: The component can accept either a base Event or an enriched TrackedEvent.
@@ -212,12 +212,17 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     {/* Career Impact Badge in Preview */}
                     {(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
                         <div className="flex-shrink-0">
-                            <CareerImpactBadge 
-                                score={(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!}
-                                variant="compact"
-                                showTooltip={false}
-                                className="text-xs"
-                            />
+                            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md">
+                                <div className={`
+                                    w-2 h-2 rounded-full
+                                    ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
+                                      (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
+                                      (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                                `} />
+                                <span className="text-xs font-medium">
+                                    {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}%
+                                </span>
+                            </div>
                         </div>
                     )}
                 </div>
