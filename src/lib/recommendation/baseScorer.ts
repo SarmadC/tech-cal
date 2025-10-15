@@ -1,13 +1,13 @@
 /**
- * Pure career alignment scoring core
+ * Base Career Scorer
  * 
- * This module contains the core scoring logic for matching events to user career profiles.
+ * This module contains the foundational scoring logic for matching events to user career profiles.
  * It has NO UI dependencies (no React, no icons) and can be used by:
  * - Server-side scoring in API routes
- * - Client-side UI components (via careerAlignmentCalculator.ts wrapper)
+ * - Client-side UI components (via uiScoringAdapter.ts wrapper)
  * - Testing and validation
  * 
- * Follows DRY principle: single source of truth for all scoring logic.
+ * Follows DRY principle: single source of truth for base scoring logic.
  */
 
 import { Event, CareerProfile } from '@/types';
@@ -66,9 +66,9 @@ export interface AlignmentReason {
 }
 
 /**
- * Pure alignment result (no UI dependencies)
+ * Base scorer result (no UI dependencies)
  */
-export interface AlignmentResult {
+export interface BaseScorerResult {
   overall: number;
   components: {
     skillRelevance: number;
@@ -82,20 +82,24 @@ export interface AlignmentResult {
   matchedGoals: string[];
 }
 
+// Backward compatibility aliases
+export type AlignmentResult = BaseScorerResult;
+export type CoreAlignmentResult = BaseScorerResult;
+
 /**
- * Calculate career alignment score for an event
+ * Calculate base career score for an event
  * 
- * This is the core scoring algorithm used throughout the application.
+ * This is the foundational scoring algorithm used throughout the application.
  * It analyzes event content against user career profile and returns a detailed breakdown.
  * 
  * @param event - The event to score
  * @param careerProfile - User's career profile (or null for unauthenticated users)
- * @returns Alignment result with score, breakdown, and reasons
+ * @returns Base scorer result with score, breakdown, and reasons
  */
-export function calculateAlignment(
+export function calculateBaseScore(
   event: Event,
   careerProfile: CareerProfile | null
-): AlignmentResult {
+): BaseScorerResult {
   // Early return for missing profile
   if (!careerProfile) {
     return {
@@ -243,6 +247,9 @@ export function calculateAlignment(
 /**
  * Get alignment category from score
  */
+// Backward compatibility alias
+export const calculateAlignment = calculateBaseScore;
+
 export function getAlignmentCategory(score: number): 'high' | 'moderate' | 'low' {
   if (score >= 80) return 'high';
   if (score >= 50) return 'moderate';

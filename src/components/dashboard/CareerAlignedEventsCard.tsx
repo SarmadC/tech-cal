@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Target, ArrowRight, X, Info } from '@phosphor-icons/react';
 import type { CareerProfile, Event, EventType } from '@/types';
-import { calculateEventAlignment, EventCareerAlignment, getMatchQuality, getMatchColor } from '@/utils/careerAlignmentCalculator';
+import { calculateEventAlignment, EventCareerAlignment, getMatchQuality, getMatchColor } from '@/utils/uiScoringAdapter';
 import dynamic from 'next/dynamic';
 
 // Dynamically import DashboardEventDetailModal to avoid SSR issues

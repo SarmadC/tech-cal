@@ -1,8 +1,8 @@
 /**
- * UI Scoring Adapter
+ * UI wrapper for career alignment calculator
  * 
- * This module adds UI-specific properties (icons, colors) to the pure base scorer.
- * The actual scoring logic lives in src/lib/recommendation/baseScorer.ts
+ * This module adds UI-specific properties (icons, colors) to the pure scoring core.
+ * The actual scoring logic lives in src/lib/recommendation/alignmentCore.ts
  * 
  * Follows DRY principle: UI concerns separated from business logic.
  */
@@ -56,8 +56,8 @@ function getUIPropertiesForReason(reason: AlignmentReason): UIAlignmentReason {
 /**
  * Calculate career alignment for an event with UI properties
  * 
- * This wraps the pure base scorer and adds icons/colors for dashboard display.
- * For server-side scoring or testing, use calculateBaseScore from baseScorer.ts directly.
+ * This wraps the pure core calculator and adds icons/colors for dashboard display.
+ * For server-side scoring or testing, use calculateAlignment from alignmentCore.ts directly.
  */
 export function calculateEventAlignment(event: Event, careerProfile: CareerProfile): EventCareerAlignment {
   // Use pure base scorer

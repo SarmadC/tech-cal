@@ -10,7 +10,7 @@
  * Run with: npx tsx scripts/test-alignment-scoring.ts
  */
 
-import { calculateAlignment, getAlignmentCategory, ALIGNMENT_WEIGHTS } from '../src/lib/recommendation/alignmentCore';
+import { calculateBaseScore, getAlignmentCategory, ALIGNMENT_WEIGHTS } from '../src/lib/recommendation/baseScorer';
 import { Event } from '../src/types';
 import { CareerProfile } from '../src/types/career';
 
@@ -159,7 +159,7 @@ function testAlignmentCore() {
   logSection('Test 1: Alignment Core Functionality');
   
   const event = sampleEvents[0]; // Kubernetes workshop
-  const result = calculateAlignment(event, sampleCareerProfile);
+  const result = calculateBaseScore(event, sampleCareerProfile);
   
   logTest(
     'Core returns valid result structure',
@@ -197,7 +197,7 @@ function testScoreRanges() {
   
   const results = sampleEvents.map(event => ({
     event,
-    result: calculateAlignment(event, sampleCareerProfile)
+    result: calculateBaseScore(event, sampleCareerProfile)
   }));
   
   console.log('\nEvent Scores:');
@@ -252,7 +252,7 @@ function testComponentBreakdown() {
   logSection('Test 3: Component Breakdown Accuracy');
   
   const event = sampleEvents[0]; // K8s workshop
-  const result = calculateAlignment(event, sampleCareerProfile);
+  const result = calculateBaseScore(event, sampleCareerProfile);
   
   const componentSum = 
     result.components.skillRelevance +
@@ -291,7 +291,7 @@ function testEdgeCases() {
   logSection('Test 4: Edge Cases');
   
   // Null profile
-  const result1 = calculateAlignment(sampleEvents[0], null);
+  const result1 = calculateBaseScore(sampleEvents[0], null);
   logTest(
     'Handles null profile gracefully',
     result1.overall === 0 && result1.alignmentReasons.length === 0
@@ -318,7 +318,7 @@ function testEdgeCases() {
     preferredEventTypes: [],
   };
   
-  const result2 = calculateAlignment(sampleEvents[0], emptyProfile);
+  const result2 = calculateBaseScore(sampleEvents[0], emptyProfile);
   logTest(
     'Handles empty profile gracefully',
     result2.overall === 0,
@@ -341,7 +341,7 @@ function testEdgeCases() {
     livestreamUrl: null,
   } as Event;
   
-  const result3 = calculateAlignment(minimalEvent, sampleCareerProfile);
+  const result3 = calculateBaseScore(minimalEvent, sampleCareerProfile);
   logTest(
     'Handles minimal event data',
     result3.overall >= 0 && result3.overall <= 100,
@@ -378,9 +378,9 @@ function testConsistency() {
   logSection('Test 6: Consistency Check');
   
   const event = sampleEvents[0];
-  const result1 = calculateAlignment(event, sampleCareerProfile);
-  const result2 = calculateAlignment(event, sampleCareerProfile);
-  const result3 = calculateAlignment(event, sampleCareerProfile);
+  const result1 = calculateBaseScore(event, sampleCareerProfile);
+  const result2 = calculateBaseScore(event, sampleCareerProfile);
+  const result3 = calculateBaseScore(event, sampleCareerProfile);
   
   logTest(
     'Multiple calls produce identical scores',

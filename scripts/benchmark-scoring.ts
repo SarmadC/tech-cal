@@ -4,8 +4,8 @@
  */
 
 import { enrichEventsWithCareerImpact } from '@/services/careerImpactEnrichmentService';
-import { rerankWithAdvanced } from '@/services/recommendations/rerankAdvanced';
-import { calculateAlignment } from '@/lib/recommendation/alignmentCore';
+import { rerankWithBehavioral } from '@/services/recommendations/behavioralReranker';
+import { calculateBaseScore } from '@/lib/recommendation/baseScorer';
 import type { Event, EventWithCareerImpact } from '@/types';
 import type { CareerProfile } from '@/types/career';
 
@@ -61,7 +61,7 @@ async function run() {
   for (const { n, k } of [{ n: 10, k: 10 }, { n: 25, k: 25 }, { n: 50, k: 50 }]) {
     const events = makeEvents(n);
     const enriched: EventWithCareerImpact[] = events.map(e => {
-      const core = calculateAlignment(e, profile);
+      const core = calculateBaseScore(e, profile);
       return {
         ...e,
         careerImpact: {
@@ -75,7 +75,7 @@ async function run() {
       };
     });
     const t0 = performance.now();
-    await rerankWithAdvanced(enriched, profile, {} as any, { topK: k });
+    await rerankWithBehavioral(enriched, profile, {} as any, { topK: k });
     const t1 = performance.now();
     console.log(`N=${n}, topK=${k} → ${(t1 - t0).toFixed(2)}ms`);
   }

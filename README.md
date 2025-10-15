@@ -31,24 +31,26 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Scoring System (Discovery)
 
-This project uses a unified, server-side career alignment scoring system.
+This project uses a unified, server-side career scoring system with two layers:
 
-- Core logic: `src/lib/recommendation/alignmentCore.ts`
-- Server enrichment: `src/services/careerImpactEnrichmentService.ts`
+- Base scorer: `src/lib/recommendation/baseScorer.ts` (foundational alignment)
+- Advanced scorer: `src/services/scoring/strategies/AdvancedScorer.ts` (behavioral/contextual)
+- Behavioral reranker: `src/services/recommendations/behavioralReranker.ts` (optional)
+- Server enrichment: `src/services/careerImpactEnrichmentService.ts` (orchestration)
 - Discovery API: `src/app/api/events/filtered/route.ts`
 
 Environment flags:
 
 ```bash
 # Primary scoring (default: server)
-DISCOVERY_SCORING=server  # unified alignment core
+DISCOVERY_SCORING=server  # unified base scorer
 DISCOVERY_SCORING=legacy  # old EnhancedScoringService (kill switch)
 DISCOVERY_SCORING=shadow  # compute both, log deltas
 
 # Optional advanced reranking (default: off)
-DISCOVERY_RERANK=off      # core order only
-DISCOVERY_RERANK=advanced # rerank top-K with DeterministicV2Strategy
-DISCOVERY_RERANK=shadow   # compute rerank but keep core order, log deltas
+DISCOVERY_RERANK=off      # base order only
+DISCOVERY_RERANK=advanced # rerank top-K with AdvancedScorer (behavioral)
+DISCOVERY_RERANK=shadow   # compute rerank but keep base order, log deltas
 ```
 
 Environment example:

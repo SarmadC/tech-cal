@@ -13,9 +13,9 @@
 
 import { Event, EventWithCareerImpact, SupabaseClientType } from '@/types';
 import { CareerProfile } from '@/types/career';
-import { calculateAlignment, getAlignmentCategory } from '@/lib/recommendation/alignmentCore';
+import { calculateBaseScore, getAlignmentCategory } from '@/lib/recommendation/baseScorer';
 import { EnhancedScoringService } from './enhancedScoringService';
-import { rerankWithAdvanced } from '@/services/recommendations/rerankAdvanced';
+import { rerankWithBehavioral } from '@/services/recommendations/behavioralReranker';
 import * as Sentry from '@sentry/nextjs';
 
 /**
@@ -85,9 +85,9 @@ export async function enrichEventsWithCareerImpact(
   const rerank = getRerankStrategy();
 
   try {
-    // Server scoring (DRY alignment core)
+    // Server scoring (DRY base scorer)
     const enrichedEvents: EventWithCareerImpact[] = events.map(event => {
-      const alignment = calculateAlignment(event, careerProfile);
+      const alignment = calculateBaseScore(event, careerProfile);
       
       return {
         ...event,
@@ -189,7 +189,7 @@ export async function enrichEventsWithCareerImpact(
     // Optional advanced reranking stage
     try {
       if (rerank === 'advanced') {
-        const reranked = await rerankWithAdvanced(
+        const reranked = await rerankWithBehavioral(
           enrichedEvents,
           careerProfile,
           _supabaseClient,
@@ -201,7 +201,7 @@ export async function enrichEventsWithCareerImpact(
       if (rerank === 'shadow') {
         // Compute advanced order but return original order; log deltas
         const startShadow = Date.now();
-        const reranked = await rerankWithAdvanced(
+        const reranked = await rerankWithBehavioral(
           enrichedEvents,
           careerProfile,
           _supabaseClient,

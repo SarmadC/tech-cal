@@ -37,4 +37,6 @@ export { BaseScoringStrategy } from './ScoringStrategy';
 export { ScoringStrategyFactory } from './ScoringStrategyFactory';
 
 // Available strategies
-export { DeterministicV2Strategy } from './strategies/DeterministicV2Strategy';
+export { AdvancedScorer } from './strategies/AdvancedScorer';
+// Backward compatibility alias
+export { AdvancedScorer as DeterministicV2Strategy } from './strategies/AdvancedScorer';

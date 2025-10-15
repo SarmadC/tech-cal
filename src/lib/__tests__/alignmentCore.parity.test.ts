@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { calculateAlignment } from '@/lib/recommendation/alignmentCore';
+import { calculateBaseScore } from '@/lib/recommendation/baseScorer';
 import { enrichEventsWithCareerImpact } from '@/services/careerImpactEnrichmentService';
 import type { Event } from '@/types';
 import type { CareerProfile } from '@/types/career';
@@ -78,7 +78,7 @@ describe('Alignment Core vs Enrichment parity', () => {
   });
 
   it('enrichment overall scores match core scores for the same inputs', async () => {
-    const coreScores = events.map(e => calculateAlignment(e, sampleCareerProfile).overall);
+    const coreScores = events.map(e => calculateBaseScore(e, sampleCareerProfile).overall);
 
     const enriched = await enrichEventsWithCareerImpact(
       events,

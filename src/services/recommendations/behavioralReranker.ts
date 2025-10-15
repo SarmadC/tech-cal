@@ -12,13 +12,13 @@ interface EventWithIndex extends EventWithCareerImpact {
 }
 
 /**
- * Rerank events using DeterministicV2Strategy over the alignment core results.
- * - Primary sort key: advanced (DeterministicV2) score (desc)
- * - Ties: core careerImpact.overall (desc)
+ * Rerank events using behavioral/contextual signals (AdvancedScorer) over the base scorer results.
+ * - Primary sort key: advanced (behavioral) score (desc)
+ * - Ties: base careerImpact.overall (desc)
  * - Stability: original index (asc)
- * Only topK events (by core score) are scored with the advanced strategy to control latency.
+ * Only topK events (by base score) are scored with the advanced scorer to control latency.
  */
-export async function rerankWithAdvanced(
+export async function rerankWithBehavioral(
   events: EventWithCareerImpact[],
   careerProfile: CareerProfile,
   supabaseClient: SupabaseClientType,
@@ -103,5 +103,8 @@ export async function rerankWithAdvanced(
 
   return sorted;
 }
+
+// Backward compatibility alias
+export const rerankWithAdvanced = rerankWithBehavioral;
 
 

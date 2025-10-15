@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rerankWithAdvanced } from '../rerankAdvanced';
+import { rerankWithBehavioral } from '../behavioralReranker';
 import type { EventWithCareerImpact, SupabaseClientType } from '@/types';
 import type { CareerProfile } from '@/types/career';
 
@@ -51,15 +51,15 @@ function e(id: string, core: number): EventWithCareerImpact {
   } as unknown as EventWithCareerImpact;
 }
 
-describe('rerankWithAdvanced', () => {
+describe('rerankWithBehavioral', () => {
   it('returns original if no events', async () => {
-    const out = await rerankWithAdvanced([], profile, supabaseStub);
+    const out = await rerankWithBehavioral([], profile, supabaseStub);
     expect(out).toEqual([]);
   });
 
   it('prefers advanced score when present, ties by core, then original index', async () => {
     const events: EventWithCareerImpact[] = [e('a', 80), e('b', 70), e('c', 60)];
-    const out = await rerankWithAdvanced(events, profile, supabaseStub, { topK: 2 });
+    const out = await rerankWithBehavioral(events, profile, supabaseStub, { topK: 2 });
     expect(out.length).toBe(3);
     // We cannot assert exact order without a deterministic advanced strategy here,
     // but we can assert stability: all items preserved and first is one of the topK by core.
@@ -69,14 +69,14 @@ describe('rerankWithAdvanced', () => {
 
   it('respects topK limit for advanced scoring', async () => {
     const events: EventWithCareerImpact[] = [e('a', 90), e('b', 80), e('c', 70), e('d', 60), e('e', 50)];
-    const out = await rerankWithAdvanced(events, profile, supabaseStub, { topK: 2 });
+    const out = await rerankWithBehavioral(events, profile, supabaseStub, { topK: 2 });
     expect(out.length).toBe(5);
     // Top 2 by core should be scored; rest keep original order
   });
 
   it('handles events without careerImpact gracefully', async () => {
     const badEvents = [{ id: 'x', title: 'x' }] as EventWithCareerImpact[];
-    const out = await rerankWithAdvanced(badEvents, profile, supabaseStub);
+    const out = await rerankWithBehavioral(badEvents, profile, supabaseStub);
     // Should return array with same length; reranker adds metadata when possible
     expect(out.length).toBe(1);
     expect(out[0].id).toBe('x');
@@ -84,7 +84,7 @@ describe('rerankWithAdvanced', () => {
 
   it('preserves all events after rerank', async () => {
     const events: EventWithCareerImpact[] = [e('a', 80), e('b', 70), e('c', 60)];
-    const out = await rerankWithAdvanced(events, profile, supabaseStub, { topK: 10 });
+    const out = await rerankWithBehavioral(events, profile, supabaseStub, { topK: 10 });
     expect(out.length).toBe(events.length);
     const ids = new Set(out.map(e => e.id));
     expect(ids.size).toBe(events.length);

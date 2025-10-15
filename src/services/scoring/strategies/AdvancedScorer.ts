@@ -1,8 +1,8 @@
 /**
- * Deterministic V2 Scoring Strategy
+ * Advanced Scorer
  *
- * This is the current production scoring algorithm (version 2.0.0).
- * It uses rule-based, deterministic logic with weighted components.
+ * This is the advanced scoring algorithm (version 2.0.0) that incorporates behavioral and contextual signals.
+ * It uses rule-based logic with weighted components, layered on top of the base scorer.
  *
  * Components:
  * - Skill Relevance (30%): Event type, skill matching, content depth, learning format
@@ -11,7 +11,7 @@
  * - Industry Relevance (15%): Industry alignment, sector trends, market relevance
  * - Timing Bonus (10%): Career timing, seasonal timing, schedule alignment
  *
- * This class was extracted from CareerImpactService to support the Strategy pattern.
+ * Used for advanced reranking via behavioralReranker.
  */
 
 import { Event, CareerImpactScore } from '@/types';
@@ -31,9 +31,9 @@ import { hasSeniorSpeaker } from '@/utils/speakerUtils';
 import * as Sentry from '@sentry/nextjs';
 import { AnalyticsService } from '@/services/analyticsService';
 
-export class DeterministicV2Strategy extends BaseScoringStrategy {
+export class AdvancedScorer extends BaseScoringStrategy {
   readonly version = 'v2.0.0';
-  readonly name = 'Deterministic V2';
+  readonly name = 'Advanced Scorer';
 
   private readonly config: ScoringAlgorithmConfig = {
     version: 'v2.0.0',
@@ -486,7 +486,7 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
       // Additional tiny boost for beginner-friendly workshops when user isn't marked beginner
       // to avoid overlap with calculateBeginnerBoost. Conditions: sparse tags, canonical workshop,
       // beginner keywords present, skillsToLearn non-empty.
-      const beginnerFriendly = DeterministicV2Strategy.BEGINNER_KEYWORDS.some(
+      const beginnerFriendly = AdvancedScorer.BEGINNER_KEYWORDS.some(
         kw => ((event.title || '') + ' ' + (event.description || '')).toLowerCase().includes(kw)
       );
       if (!isBeginner && beginnerFriendly && !hasRichTags && canonicalTypeForSkills === 'workshop' && skillsToLearn.length > 0) {
@@ -540,7 +540,7 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
 
     // Bonus for beginners if event explicitly mentions learning/beginner
     if (isBeginner) {
-      const hasBeginnerKeywords = DeterministicV2Strategy.BEGINNER_KEYWORDS.some(kw => searchText.includes(kw));
+      const hasBeginnerKeywords = AdvancedScorer.BEGINNER_KEYWORDS.some(kw => searchText.includes(kw));
       if (hasBeginnerKeywords) {
         score += 10;
       }
@@ -560,7 +560,7 @@ export class DeterministicV2Strategy extends BaseScoringStrategy {
     const searchText = title + ' ' + description;
 
     // 1. Explicit beginner keywords (+8 points)
-    if (DeterministicV2Strategy.BEGINNER_KEYWORDS.some(kw => searchText.includes(kw))) {
+    if (AdvancedScorer.BEGINNER_KEYWORDS.some(kw => searchText.includes(kw))) {
       boost += 8;
     }
 

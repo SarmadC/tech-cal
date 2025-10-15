@@ -22,7 +22,7 @@
  */
 
 import { ScoringStrategy } from './ScoringStrategy';
-import { DeterministicV2Strategy } from './strategies/DeterministicV2Strategy';
+import { AdvancedScorer } from './strategies/AdvancedScorer';
 import { BehavioralScoringEnhancer } from '../behavioralScoringEnhancer';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
@@ -44,24 +44,24 @@ export class ScoringStrategyFactory {
     if (this.initialized) return;
 
     // Register all available strategies
-    this.register(new DeterministicV2Strategy());
+    this.register(new AdvancedScorer());
 
     // Conditionally register upcoming variants behind env flags
     try {
       if (process.env.NEXT_PUBLIC_ENABLE_SCORING_V210 === 'true') {
-        // For now, reuse DeterministicV2Strategy with version label preserved
-        // Future: create a dedicated class e.g., DeterministicV2_1_0
-        const v210 = new DeterministicV2Strategy();
+        // For now, reuse AdvancedScorer with version label preserved
+        // Future: create a dedicated class e.g., AdvancedScorer_v2_1_0
+        const v210 = new AdvancedScorer();
         (v210 as any).version = 'v2.1.0'; // eslint-disable-line @typescript-eslint/no-explicit-any
         this.register(v210);
       }
       if (process.env.NEXT_PUBLIC_ENABLE_SCORING_V220 === 'true') {
-        const v220 = new DeterministicV2Strategy();
+        const v220 = new AdvancedScorer();
         (v220 as any).version = 'v2.2.0'; // eslint-disable-line @typescript-eslint/no-explicit-any
         this.register(v220);
       }
       if (process.env.NEXT_PUBLIC_ENABLE_SCORING_V230 === 'true') {
-        const v230 = new DeterministicV2Strategy();
+        const v230 = new AdvancedScorer();
         (v230 as any).version = 'v2.3.0'; // eslint-disable-line @typescript-eslint/no-explicit-any
         this.register(v230);
       }
