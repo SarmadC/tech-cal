@@ -1159,12 +1159,8 @@ export class EventService {
             );
         }
 
-        // Recommendation filtering (based on common tech terms)
-        if (filters.recommended) {
-            const techTerms = ['react', 'javascript', 'python', 'ai', 'machine learning', 'data', 'typescript', 'node', 'web development'];
-            const orConditions = techTerms.map(term => `title.ilike.%${term}%,description.ilike.%${term}%`).join(',');
-            query = query.or(orConditions);
-        }
+        // Note: Recommended filtering removed - now handled client-side via careerImpact.overall scores
+        // The p_recommended parameter is still passed to RPC for future server-side implementation
 
         return query;
     }

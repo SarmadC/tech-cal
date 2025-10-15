@@ -8,9 +8,25 @@
  * Usage: tsx scripts/validate-analytics.ts
  */
 
-import { createClient } from '@/utils/supabase/server';
+import { config } from 'dotenv';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/types/supabase';
 import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
-import { envConfig } from '@/utils/envConfig';
+
+// Load environment variables from .env.local
+config({ path: '.env.local' });
+
+// Create a standalone Supabase client for scripts (not tied to Next.js cookies)
+function createClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
+  return createSupabaseClient<Database>(supabaseUrl, supabaseKey);
+}
 
 interface AnalyticsValidationResult {
   test: string;
@@ -21,14 +37,15 @@ interface AnalyticsValidationResult {
 
 class AnalyticsValidator {
   private supabase: any;
-  private testUserId = 'analytics-test-user';
+  // Use a valid UUID format for testing (this is a dummy UUID, not a real user)
+  private testUserId = '00000000-0000-0000-0000-000000000001';
   private results: AnalyticsValidationResult[] = [];
 
   async run(): Promise<void> {
     console.log('📊 Validating Analytics Data Flow...\n');
 
     try {
-      this.supabase = await createClient();
+      this.supabase = createClient();
       
       // Run all validation tests
       await this.validateEnvironmentConfig();
@@ -50,20 +67,24 @@ class AnalyticsValidator {
     console.log('🔧 Validating Environment Configuration...');
     
     try {
-      const validation = envConfig.validate();
+      // Check for required Supabase environment variables
+      const requiredVars = [
+        'NEXT_PUBLIC_SUPABASE_URL',
+        'NEXT_PUBLIC_SUPABASE_ANON_KEY'
+      ];
       
-      if (validation.isValid) {
+      const missing = requiredVars.filter(varName => !process.env[varName]);
+      
+      if (missing.length === 0) {
         this.addResult(true, 'Environment configuration valid');
         console.log('   ✅ All required environment variables present');
       } else {
-        this.addResult(false, `Missing environment variables: ${validation.missing.join(', ')}`);
-        console.log(`   ❌ Missing: ${validation.missing.join(', ')}`);
+        this.addResult(false, `Missing environment variables: ${missing.join(', ')}`);
+        console.log(`   ❌ Missing: ${missing.join(', ')}`);
       }
       
-      const summary = envConfig.getSummary();
-      console.log(`   📊 Required: ${summary.required.present}/${summary.required.total}`);
-      console.log(`   📊 Optional: ${summary.optional.present}/${summary.optional.total}`);
-      console.log(`   🎛️  Features: ${Object.entries(summary.features).filter(([_, enabled]) => enabled).length} enabled\n`);
+      console.log(`   📊 Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL ? '✓' : '✗'}`);
+      console.log(`   📊 Supabase Key: ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✓' : '✗'}\n`);
       
     } catch (error) {
       this.addResult(false, `Environment validation failed: ${error}`);
@@ -103,49 +124,63 @@ class AnalyticsValidator {
     
     try {
       // Test basic interaction tracking
-      const testInteraction = {
-        userId: this.testUserId,
-        eventId: 'test-event-123',
-        interactionType: 'click' as const,
-        section: 'for_you' as const,
-        position: 1,
-        algorithmVersion: 'v2.0.0',
-        context: { test: true }
-      };
-      
       await BehavioralAnalyticsService.trackInteraction(
         this.testUserId,
         'bookmark',
-        { section: 'for_you', position: 1, algorithmVersion: 'v2.0.0', context: { test: true } },
+        { eventId: 'test-event-123', section: 'for_you', position: 1, algorithmVersion: 'v2.0.0' },
         this.supabase
       );
-      this.addResult(true, 'Basic interaction tracking working');
-      console.log('   ✅ Basic interaction tracking');
+      
+      // Verify it was persisted
+      const { data: bookmarkData, error: bookmarkError } = await this.supabase
+        .from('user_interactions_simple')
+        .select('*')
+        .eq('user_id', this.testUserId)
+        .eq('interaction_type', 'bookmark')
+        .eq('section', 'for_you')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (bookmarkError || !bookmarkData || bookmarkData.length === 0) {
+        this.addResult(false, 'Bookmark interaction not persisted to database');
+        console.log('   ❌ Bookmark interaction not persisted');
+      } else {
+        this.addResult(true, 'Bookmark interaction persisted correctly');
+        console.log('   ✅ Bookmark interaction persisted');
+      }
       
       // Test view tracking with duration
-      const viewInteraction = {
-        userId: this.testUserId,
-        eventId: 'test-event-456',
-        interactionType: 'view' as const,
-        section: 'trending' as const,
-        position: 2,
-        algorithmVersion: 'v2.0.0',
-        durationMs: 5000
-      };
-      
       await BehavioralAnalyticsService.trackInteraction(
         this.testUserId,
         'view',
         { eventId: 'test-event-456', section: 'trending', position: 2, algorithmVersion: 'v2.0.0', durationMs: 5000 },
         this.supabase
       );
-      this.addResult(true, 'View tracking with duration working');
-      console.log('   ✅ View tracking with duration');
       
-      // Note: Recommendation batch tracking would be implemented here
-      // For now, we'll skip this test since the method doesn't exist yet
-      this.addResult(true, 'Recommendation batch tracking skipped (method not implemented)');
-      console.log('   ⏭️  Recommendation batch tracking skipped');
+      // Verify view interaction with duration was persisted
+      const { data: viewData, error: viewError } = await this.supabase
+        .from('user_interactions_simple')
+        .select('*')
+        .eq('user_id', this.testUserId)
+        .eq('interaction_type', 'view')
+        .eq('section', 'trending')
+        .eq('event_id', 'test-event-456')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (viewError || !viewData || viewData.length === 0) {
+        this.addResult(false, 'View interaction not persisted to database');
+        console.log('   ❌ View interaction not persisted');
+      } else if (viewData[0].duration_ms !== 5000) {
+        this.addResult(false, `View duration mismatch: expected 5000, got ${viewData[0].duration_ms}`);
+        console.log('   ❌ View duration not persisted correctly');
+      } else {
+        this.addResult(true, 'View interaction with duration persisted correctly');
+        console.log('   ✅ View interaction with duration persisted');
+      }
+      
+      // Note: Recommendation batch tracking deferred to Phase 2
+      console.log('   ⏭️  Recommendation batch tracking deferred to Phase 2');
       
       console.log('   📊 Interaction tracking validated\n');
       

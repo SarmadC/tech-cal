@@ -214,24 +214,18 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       score: number;
       position: number;
     }>,
-    algorithmVersion: string = 'v1.0'
+    _algorithmVersion: string = 'v1.0'
   ) => {
     if (!user?.id || !sessionIdRef.current || !options.enableTracking) return;
 
     const hasConsent = await checkConsentCached(user.id);
     if (!hasConsent) return;
 
-    const batch: RecommendationBatch = {
-      userId: user.id,
-      sessionId: sessionIdRef.current,
-      algorithmVersion,
-      section,
-      recommendations
-    };
-
-    // Note: trackRecommendationBatch method not implemented yet
-    // For now, we'll just log the batch for debugging
-    console.log('Recommendation batch would be tracked:', batch);
+    // TODO: Implement recommendation batch tracking in Phase 2
+    // Will require new RPC function or table structure for batch display tracking
+    // For now, individual interactions (view/click) provide sufficient signal
+    // Batch structure for future reference:
+    // { userId, sessionId, algorithmVersion, section, recommendations }
   }, [user?.id, options.enableTracking, checkConsentCached]);
 
   /**

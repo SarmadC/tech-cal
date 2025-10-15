@@ -3,6 +3,22 @@ import { useState, useMemo, useCallback } from 'react';
 import { Event, AppProfile, isTrackedEvent, TrackedEvent, CalendarEventData } from '@/types';
 import { UnifiedEventUtils, DurationCategory } from '@/utils/unifiedEventUtils';
 
+/**
+ * Extract career impact score from event
+ * Checks both careerImpactLite (lightweight) and careerImpact (full)
+ * @param event - Event or TrackedEvent to extract score from
+ * @returns Career impact score (0-100) or 0 if no score available
+ */
+function getCareerImpactScore(event: Event | TrackedEvent): number {
+    const asScored = event as { 
+        careerImpactLite?: { overall: number };
+        careerImpact?: { overall: number };
+    };
+    return asScored.careerImpactLite?.overall 
+           ?? asScored.careerImpact?.overall 
+           ?? 0;
+}
+
 export interface SmartFilterOptions {
     // ... (interface remains the same)
     categories: string[];
@@ -102,7 +118,10 @@ export function useSmartFilters(
                 return false;
             }
             if (filters.myNetwork && !hasNetworkConnections(event)) return false;
-            if (filters.recommended && !isRecommendedForUser(event, userProfile)) return false;
+            
+            // Recommended: Filter by career impact score (50+ threshold)
+            // Events are pre-enriched with careerImpact scores by the server
+            if (filters.recommended && getCareerImpactScore(event) < 50) return false;
 
             return true;
         });
@@ -118,9 +137,9 @@ export function useSmartFilters(
                     const bAttendees = b.attendeeCount || 0;
                     return bAttendees - aAttendees;
                 case 'career-impact':
-                    // Career impact sorting (will be enhanced with actual scores)
-                    const aCareerScore = (a as { careerImpactLite?: { overall: number } }).careerImpactLite?.overall || 0;
-                    const bCareerScore = (b as { careerImpactLite?: { overall: number } }).careerImpactLite?.overall || 0;
+                    // Career impact sorting using pre-computed scores
+                    const aCareerScore = getCareerImpactScore(a);
+                    const bCareerScore = getCareerImpactScore(b);
                     if (aCareerScore !== bCareerScore) {
                         return bCareerScore - aCareerScore; // Higher scores first
                     }
@@ -201,31 +220,6 @@ export function useSmartFilters(
         if (eventType.includes('workshop') && attendeeCount > 50) return true;
         
         return false;
-    };
-
-    const isRecommendedForUser = (event: Event, profile: AppProfile | null): boolean => {
-        if (!profile) return false;
-        
-        // Basic recommendation logic to avoid circular dependency
-        const preferences = profile.preferences as Record<string, unknown>;
-        const careerProfile = preferences?.careerProfile as Record<string, unknown>;
-        
-        if (!careerProfile) {
-          // Fallback: basic category matching
-          const eventText = `${event.title} ${event.description || ''}`.toLowerCase();
-          const commonTechTerms = ['react', 'javascript', 'python', 'ai', 'machine learning', 'data'];
-          return commonTechTerms.some(term => eventText.includes(term));
-        }
-        
-        // Simple skill matching
-        const eventText = `${event.title} ${event.description || ''}`.toLowerCase();
-        const primarySkills = (careerProfile.primarySkills as string[]) || [];
-        const skillsToLearn = (careerProfile.skillsToLearn as string[]) || [];
-        const userSkills = [...primarySkills, ...skillsToLearn];
-        
-        return userSkills.some((skill: string) => 
-          eventText.includes(skill.toLowerCase())
-        );
     };
 
     // Filter actions

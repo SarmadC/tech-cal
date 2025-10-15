@@ -6,6 +6,8 @@
 
 import type { SupabaseClientType } from '@/types';
 import type { UserContext } from './behavioralBoostService';
+import { DatabaseQueryPatterns } from '@/utils/databaseQueryPatterns';
+import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
 
 /**
  * Behavioral Analytics Service
@@ -181,37 +183,59 @@ export class BehavioralAnalyticsService {
 
   /**
    * Get user's analytics consent status
-   * For now, returns true by default (assume consent given)
+   * Returns null if not set (opt-in required), true if consented, false if declined
    */
   static async getAnalyticsConsent(
-    _userId: string,
-    _supabaseClient: SupabaseClientType
+    userId: string,
+    supabaseClient: SupabaseClientType
   ): Promise<boolean | null> {
     try {
-      // For now, assume users have given consent
-      // In the future, this would check a user_preferences table
-      return true;
+      // Read the actual consent from the database
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('analytics_consent')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.warn('Error getting analytics consent:', error);
+        return null; // Return null on error
+      }
+
+      return data?.analytics_consent ?? null; // Return null if not set
     } catch (error) {
-      console.warn('Error getting analytics consent:', error);
+      console.warn('Exception getting analytics consent:', error);
       return null;
     }
   }
 
   /**
    * Set user's analytics consent
-   * For now, just logs the consent
+   * Persists consent choice to profiles table
    */
   static async setAnalyticsConsent(
     userId: string,
     consent: boolean,
-    _supabaseClient: SupabaseClientType
+    supabaseClient: SupabaseClientType
   ): Promise<boolean> {
     try {
-      // For now, just log the consent
+      // Persist the consent to the database
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update({
+          analytics_consent: consent,
+          analytics_consent_date: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error setting analytics consent:', error);
+        return false;
+      }
       console.log(`Analytics consent set for user ${userId}: ${consent}`);
       return true;
     } catch (error) {
-      console.error('Error setting analytics consent:', error);
+      console.error('Exception setting analytics consent:', error);
       return false;
     }
   }
@@ -256,19 +280,38 @@ export class BehavioralAnalyticsService {
 
   /**
    * Track user interaction for analytics
-   * For now, just logs the interaction
+   * Persists interaction to user_interactions_simple table via RPC
    */
   static async trackInteraction(
     userId: string,
     interactionType: string,
     data: Record<string, unknown>,
-    _supabaseClient: SupabaseClientType
+    supabaseClient: SupabaseClientType
   ): Promise<void> {
     try {
-      // For now, just log the interaction
-      console.log(`User interaction tracked: ${userId} - ${interactionType}`, data);
+      // Note: Consent already checked at hook layer (useRecommendationTracking)
+      
+      const interaction = {
+        user_id: userId,
+        event_id: (data.eventId as string) || null,
+        interaction_type: interactionType,
+        section: (data.section as string) || 'unknown',
+        position: (data.position as number) || null,
+        algorithm_version: (data.algorithmVersion as string) || ANALYTICS_CONFIG.CURRENT_ALGORITHM_VERSION,
+        duration_ms: (data.durationMs as number) || null,
+      };
+
+      // Use existing DatabaseQueryPatterns abstraction
+      const { error } = await DatabaseQueryPatterns.batchInsertInteractions(
+        [interaction],
+        supabaseClient
+      );
+
+      if (error) {
+        console.error('Error tracking interaction:', error);
+      }
     } catch (error) {
-      console.warn('Error tracking interaction:', error);
+      console.warn('Exception tracking interaction:', error);
     }
   }
 }

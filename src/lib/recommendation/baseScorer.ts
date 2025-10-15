@@ -13,6 +13,36 @@
 import { Event, CareerProfile } from '@/types';
 
 /**
+ * Test if a keyword matches as a complete word in the text
+ * Uses word boundaries to prevent partial matches (e.g., "Java" won't match "JavaScript")
+ * 
+ * @param text - The text to search in (should be lowercase)
+ * @param keyword - The keyword to search for (should be lowercase)
+ * @returns true if keyword is found as a complete word
+ */
+function matchesWholeWord(text: string, keyword: string): boolean {
+  // Escape special regex characters in the keyword
+  const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  
+  // For keywords with non-word characters (e.g., "C++", "Node.js", "C#"),
+  // use lookahead/lookbehind to ensure word boundaries or string boundaries
+  // This handles cases where \b doesn't work well with non-word chars
+  const hasNonWordChars = /[^a-zA-Z0-9\s]/.test(keyword);
+  
+  if (hasNonWordChars) {
+    // Use lookaround assertions for special characters
+    // (?:^|\\s|\\b) - match start of string, whitespace, or word boundary
+    // (?=\\s|\\b|$) - followed by whitespace, word boundary, or end of string
+    const regex = new RegExp(`(?:^|\\s|\\b)${escapedKeyword}(?=\\s|\\b|$)`, 'i');
+    return regex.test(text);
+  }
+  
+  // Standard word boundary for regular keywords
+  const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
+  return regex.test(text);
+}
+
+/**
  * Scoring weights configuration
  * These control how much each factor contributes to the overall alignment score
  * 
@@ -135,7 +165,7 @@ export function calculateBaseScore(
 
   // 1. Skills to Learn (highest priority)
   careerProfile.skillsToLearn.forEach(skill => {
-    if (eventText.includes(skill.toLowerCase())) {
+    if (matchesWholeWord(eventText, skill.toLowerCase())) {
       const contribution = ALIGNMENT_WEIGHTS.skillsToLearn;
       alignmentScore += contribution;
       skillRelevance += contribution;
@@ -150,7 +180,7 @@ export function calculateBaseScore(
 
   // 2. Primary Skills (maintenance/advancement)
   careerProfile.primarySkills.slice(0, 5).forEach(skill => {
-    if (eventText.includes(skill.toLowerCase())) {
+    if (matchesWholeWord(eventText, skill.toLowerCase())) {
       const contribution = ALIGNMENT_WEIGHTS.primarySkills;
       alignmentScore += contribution;
       skillRelevance += contribution;
@@ -166,7 +196,7 @@ export function calculateBaseScore(
   // 3. Career Goals
   careerProfile.careerGoals.forEach(goal => {
     const keywords = GOAL_KEYWORDS[goal as keyof typeof GOAL_KEYWORDS] || [];
-    const hasMatch = keywords.some(keyword => eventText.includes(keyword));
+    const hasMatch = keywords.some(keyword => matchesWholeWord(eventText, keyword));
 
     if (hasMatch) {
       const contribution = ALIGNMENT_WEIGHTS.careerGoals;
@@ -184,7 +214,7 @@ export function calculateBaseScore(
 
   // 4. Interests
   careerProfile.interests.slice(0, 5).forEach(interest => {
-    if (eventText.includes(interest.toLowerCase())) {
+    if (matchesWholeWord(eventText, interest.toLowerCase())) {
       const contribution = ALIGNMENT_WEIGHTS.interests;
       alignmentScore += contribution;
       industryRelevance += contribution;
@@ -199,7 +229,7 @@ export function calculateBaseScore(
   // 5. Learning Style
   careerProfile.learningStyle.forEach(style => {
     const keywords = LEARNING_STYLE_KEYWORDS[style] || [];
-    const hasMatch = keywords.some(keyword => eventText.includes(keyword));
+    const hasMatch = keywords.some(keyword => matchesWholeWord(eventText, keyword));
 
     if (hasMatch) {
       const contribution = ALIGNMENT_WEIGHTS.learningStyle;
@@ -217,7 +247,9 @@ export function calculateBaseScore(
 
   // 6. Networking
   if (careerProfile.networkingGoals.length > 0 &&
-      (eventText.includes('networking') || eventText.includes('meetup') || eventText.includes('community'))) {
+      (matchesWholeWord(eventText, 'networking') || 
+       matchesWholeWord(eventText, 'meetup') || 
+       matchesWholeWord(eventText, 'community'))) {
     const contribution = ALIGNMENT_WEIGHTS.networking;
     alignmentScore += contribution;
     networkingValue += contribution;
