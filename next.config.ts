@@ -69,8 +69,11 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    // Optimize Phosphor icon imports to avoid compiling all modules in dev
-    optimizePackageImports: ["@phosphor-icons/react"],
+    // Optimize package imports to avoid compiling entire libraries
+    optimizePackageImports: [
+      "@phosphor-icons/react",
+      "@mui/material"
+    ],
   },
   // ... you can add other Next.js config options here if needed in the future
 };

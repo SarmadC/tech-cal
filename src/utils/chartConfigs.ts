@@ -69,10 +69,6 @@ export const CAREER_ANALYTICS_CONFIG = {
     label: "Impact Score",
     color: CHART_COLORS.primary,
   },
-  growth: {
-    label: "Growth Trend",
-    color: CHART_COLORS.secondary,
-  },
   skills: {
     label: "Skills Developed",
     color: CHART_COLORS.tertiary,

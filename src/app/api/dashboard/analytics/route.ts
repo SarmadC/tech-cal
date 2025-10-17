@@ -5,6 +5,7 @@ import { UserEventService } from '@/services/userEventService';
 import { EventService } from '@/services/eventServices';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
+import { requireOnboardedApi } from '@/utils/onboarding';
 
 // Rate limiter for analytics API - Increased for dashboard usage
 const ratelimit = new Ratelimit({
@@ -49,6 +50,10 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Optional onboarding requirement for dashboard analytics
+    const onboardingGuard = await requireOnboardedApi(supabase, user.id);
+    if (onboardingGuard) return onboardingGuard;
 
     // Apply rate limiting
     const { success: rateLimitSuccess } = await ratelimit.limit(user.id);
@@ -171,6 +176,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Optional onboarding requirement for dashboard analytics
+    const onboardingGuard = await requireOnboardedApi(supabase, user.id);
+    if (onboardingGuard) return onboardingGuard;
 
     // Apply rate limiting
     const { success: rateLimitSuccess } = await ratelimit.limit(user.id);

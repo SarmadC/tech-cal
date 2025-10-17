@@ -101,7 +101,6 @@ export const analyticsKeys = {
   all: ['analytics'] as const,
   serverSide: (userId?: string, includeRecs?: boolean, limit?: number) =>
     ['serverSideAnalytics', userId, includeRecs, limit] as const,
-  growth: (userId?: string) => ['growthAnalytics', userId] as const,
 } as const;
 
 /**

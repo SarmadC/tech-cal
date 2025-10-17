@@ -1,4 +1,4 @@
-// src/app/hackathons/layout.tsx
+// src/app/(protected)/hackathons/layout.tsx
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {

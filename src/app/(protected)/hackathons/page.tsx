@@ -2,7 +2,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { HackathonService } from '@/services/hackathonService';
 import { ProfileService } from '@/services/profileService';
-import HackathonClientView from './HackathonClientView';
+import HackathonClientView from '@/app/hackathons/HackathonClientView';
 
 export const metadata = {
   title: 'Hackathons - TechCal',

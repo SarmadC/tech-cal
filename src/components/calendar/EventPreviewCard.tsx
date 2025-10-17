@@ -13,7 +13,7 @@ import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useRecommendationTracking } from '@/hooks/useRecommendationTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import { isEventLive, formatTime, formatDate, getEventDuration } from '@/utils/dateUtils';
+import { formatTime, formatDate, getEventDuration, getTimeUntilEvent } from '@/utils/dateUtils';
 // Career impact components removed - using inline implementation
 import { createAnalyticsContext } from '@/utils/analyticsUtils';
 
@@ -51,15 +51,19 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     
     // Track if this is the first render to enable smooth initial animation
     const [hasAnimated, setHasAnimated] = useState(false);
+    // State for expandable description
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     // Trigger animation on mount and when visibility changes
     useEffect(() => {
         if (isVisible && !hasAnimated) {
-            // Small delay to ensure the initial state is rendered before animating
-            requestAnimationFrame(() => {
+            // Use requestAnimationFrame for smoother animation
+            const timer = requestAnimationFrame(() => {
                 setHasAnimated(true);
             });
+            return () => cancelAnimationFrame(timer);
         } else if (!isVisible) {
+            // Reset animation state when hiding
             setHasAnimated(false);
         }
     }, [isVisible, hasAnimated]);
@@ -72,22 +76,52 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
         const cardWidth = 320;
         const cardHeight = 400;
         const padding = 20;
+        const offset = 10; // Small offset from cursor
 
-        let x = position.x;
-        let y = position.y;
+        let x = position.x + offset;
+        let y = position.y + offset;
 
+        // Prevent going off right edge
         if (x + cardWidth > window.innerWidth - padding) {
-            x = position.x - cardWidth - 20;
+            x = position.x - cardWidth - offset;
         }
 
+        // Prevent going off bottom edge
         if (y + cardHeight > window.innerHeight - padding) {
-            y = window.innerHeight - cardHeight - padding;
+            y = position.y - cardHeight - offset;
         }
 
-        return { x: Math.max(padding, x), y: Math.max(padding, y) };
+        // Ensure minimum padding from edges
+        x = Math.max(padding, Math.min(x, window.innerWidth - cardWidth - padding));
+        y = Math.max(padding, Math.min(y, window.innerHeight - cardHeight - padding));
+
+        return { x, y };
     }, [position.x, position.y]);
 
     const isVirtual = event.livestreamUrl || event.location?.toLowerCase().includes('virtual');
+
+    // Helper functions
+    const getUrgencyText = () => {
+        const timeInfo = getTimeUntilEvent(event.startTime);
+        if (timeInfo.isLive) return 'Live now';
+        if (timeInfo.hasEnded) return 'Event ended';
+        if (timeInfo.days > 0) return `Starts in ${timeInfo.days} day${timeInfo.days > 1 ? 's' : ''}`;
+        if (timeInfo.hours > 0) return `Starts in ${timeInfo.hours} hour${timeInfo.hours > 1 ? 's' : ''}`;
+        if (timeInfo.minutes > 0) return `Starts in ${timeInfo.minutes} minute${timeInfo.minutes > 1 ? 's' : ''}`;
+        return 'Starting soon';
+    };
+
+    const getUrgencyColor = () => {
+        const timeInfo = getTimeUntilEvent(event.startTime);
+        if (timeInfo.isLive) return 'bg-red-500';
+        if (timeInfo.hasEnded) return 'bg-gray-500';
+        if (timeInfo.days === 0 && timeInfo.hours < 2) return 'bg-orange-500';
+        return 'bg-blue-500';
+    };
+
+    const shouldShowReadMore = () => {
+        return event.description && event.description.length > 150;
+    };
 
     // Actions
     const handleTrackEvent = async () => {
@@ -143,131 +177,164 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
     return (
         <div
             ref={cardRef}
-            className={`fixed z-[9999] w-80 bg-white dark:bg-gray-800 border rounded-lg shadow-xl overflow-hidden pointer-events-auto ${
+            className={`event-preview-card event-preview-glass fixed z-[9999] w-80 rounded-lg shadow-xl overflow-hidden pointer-events-auto ${
                 isPinned 
-                    ? 'border-zinc-300 dark:border-zinc-400 shadow-zinc-200 dark:shadow-black/40' 
-                    : 'border-gray-200 dark:border-gray-600'
+                    ? 'border-zinc-300/50 dark:border-zinc-400/30' 
+                    : 'border-white/30 dark:border-white/10'
             } ${isVisible && hasAnimated ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
             style={{
                 left: `${cardPosition.x}px`,
                 top: `${cardPosition.y}px`,
-                transformOrigin: 'top center',
-                // Smooth animation for opacity and scale with ease-out for natural feel
-                transition: 'opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                transformOrigin: 'top left',
+                // Smoother animation with better easing
+                transition: isVisible && hasAnimated 
+                    ? 'opacity 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                    : 'opacity 0.15s cubic-bezier(0.4, 0, 1, 1), transform 0.15s cubic-bezier(0.4, 0, 1, 1)',
                 pointerEvents: isVisible && hasAnimated ? 'auto' : 'none',
+                // Prevent layout shifts
+                willChange: 'opacity, transform',
             }}
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
         >
             {/* Header */}
-            <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 border-b border-gray-200 dark:border-gray-600">
-                <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-2 flex-wrap gap-1">
+            <div className="event-preview-glass-header p-4 border-b border-white/20 dark:border-white/10">
+                {/* Urgency indicator */}
+                <div className="mb-3">
+                    <span className={`event-preview-urgency ${getUrgencyColor().replace('bg-', '').replace('-500', '')}`}>
+                        {getUrgencyText()}
+                    </span>
+                </div>
+
+                <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center flex-wrap gap-1.5 flex-1 mr-3">
+                        {/* Show ALL tags in preview - this is the key difference from card */}
                         {event.tags && event.tags.length > 0 ? (
-                            event.tags.slice(0, 2).map((tag, index) => (
+                            event.tags.map((tag, index) => (
                                 <span
                                     key={index}
-                                    className="px-2 py-1 text-xs font-medium text-gray-900 dark:text-white rounded-md bg-gray-200 dark:bg-gray-600"
+                                    className="px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 rounded-md bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm border border-white/20 dark:border-white/10"
                                 >
                                     {tag.name}
                                 </span>
                             ))
                         ) : (
                             event.eventTypeId && (
-                                <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-900 dark:bg-gray-600 dark:text-white rounded-md">
+                                <span className="px-2.5 py-1 text-xs font-medium bg-white/60 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 rounded-md backdrop-blur-sm border border-white/20 dark:border-white/10">
                                     Event
                                 </span>
                             )
                         )}
-                        {event.tags && event.tags.length > 2 && (
-                            <span className="px-2 py-1 text-xs font-medium bg-gray-500 text-white rounded-md">
-                                +{event.tags.length - 2}
-                            </span>
-                        )}
-                        {isEventLive(event.startTime, event.endTime) && (
-                            <span className="px-2 py-1 text-xs font-medium bg-red-500 text-white rounded-md flex items-center">
-                                <div className="w-2 h-2 bg-white rounded-full animate-pulse mr-1" />
-                                Live
-                            </span>
-                        )}
                         {isPinned && (
-                            <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-900 dark:bg-gray-600 dark:text-white rounded-md flex items-center gap-1">
-                                <BookmarkSimpleIcon className="w-3.5 h-3.5" />
+                            <span className="px-2.5 py-1 text-xs font-medium bg-white/60 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 rounded-md backdrop-blur-sm border border-white/20 dark:border-white/10 flex items-center gap-1.5">
+                                <BookmarkSimpleIcon className="w-3 h-3" />
                                 <span>Pinned</span>
                             </span>
                         )}
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors text-lg leading-none"
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors text-lg leading-none flex-shrink-0 p-1 rounded-md hover:bg-white/20 dark:hover:bg-white/10"
                     >
                         ×
                     </button>
                 </div>
 
-                <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-2 leading-tight flex-1">
-                        {event.title}
-                    </h3>
-                    {/* Career Impact Badge in Preview */}
-                    {(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
-                        <div className="flex-shrink-0">
-                            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md">
-                                <div className={`
-                                    w-2 h-2 rounded-full
-                                    ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
-                                      (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
-                                      (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
-                                `} />
-                                <span className="text-xs font-medium">
-                                    {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}%
-                                </span>
-                            </div>
+                {/* Career Impact Badge in Preview - moved to top right */}
+                {(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
+                    <div className="flex justify-end mb-2">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-white/60 dark:bg-gray-700/60 rounded-md backdrop-blur-sm border border-white/20 dark:border-white/10">
+                            <div className={`
+                                w-2 h-2 rounded-full
+                                ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
+                                  (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
+                                  (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                            `} />
+                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}%
+                            </span>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {/* Content */}
             <div className="p-4 space-y-3">
-                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                    <ClockIcon className="w-4 h-4 text-gray-500" />
-                    <span>{formatDate(event.startTime, event.timezone)} • {formatTime(event.startTime, event.timezone)}</span>
+                {/* Enhanced temporal information */}
+                <div className="event-preview-temporal event-preview-glass-section p-3 rounded-lg">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
+                            <ClockIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                            <span>{formatDate(event.startTime, event.timezone)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 ml-6">
+                            <span>{formatTime(event.startTime, event.timezone)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 ml-6">
+                            <CalendarIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                            <span>{getEventDuration(event.startTime, event.endTime)}</span>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                    {isVirtual ? (
-                        <GlobeIcon className="w-4 h-4 text-gray-500" />
-                    ) : (
-                        <MapPinIcon className="w-4 h-4 text-gray-500" />
+
+                {/* Location with map context */}
+                <div className="flex items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-300">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {isVirtual ? (
+                            <GlobeIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                        ) : (
+                            <MapPinIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                        )}
+                        <span className="line-clamp-1">
+                            {isVirtual ? 'Virtual Event' : (event.location || 'Location TBA')}
+                        </span>
+                    </div>
+                    {!isVirtual && event.location && (
+                        <button
+                            onClick={() => {
+                                const mapsUrl = `https://maps.google.com/maps?q=${encodeURIComponent(event.location!)}`;
+                                window.open(mapsUrl, '_blank');
+                            }}
+                            className="event-preview-map-link flex-shrink-0 px-2 py-1 rounded-md hover:bg-white/20 dark:hover:bg-white/10 transition-colors"
+                        >
+                            View Map
+                        </button>
                     )}
-                    <span className="line-clamp-1">
-                        {isVirtual ? 'Virtual Event' : (event.location || 'Location TBA')}
-                    </span>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                    <UsersIcon className="w-4 h-4 text-gray-500" />
+
+                {/* Organizer */}
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <UsersIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
                     <span className="line-clamp-1">{event.organizer}</span>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                    <CalendarIcon className="w-4 h-4 text-gray-500" />
-                    <span>{getEventDuration(event.startTime, event.endTime)}</span>
-                </div>
+
+                {/* Expandable description */}
                 {event.description && (
                     <div className="pt-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 leading-relaxed">
+                        <p className={`event-preview-description text-sm text-gray-600 dark:text-gray-300 leading-relaxed ${
+                            isDescriptionExpanded ? 'expanded' : 'collapsed'
+                        }`}>
                             {event.description}
                         </p>
+                        {shouldShowReadMore() && (
+                            <button
+                                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                                className="event-preview-read-more"
+                            >
+                                {isDescriptionExpanded ? 'Show less' : 'Read more'}
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
 
             {/* Actions */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50">
-                <div className="flex space-x-2">
+            <div className="p-4 border-t border-white/20 dark:border-white/10 bg-white/10 dark:bg-black/10 backdrop-blur-sm">
+                <div className="flex gap-2">
                     <button
                         onClick={handleTrackEvent}
                         disabled={isLoading}
-                        className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                             isLoading 
                                 ? 'bg-gray-400 text-white cursor-not-allowed'
                                 : isTracked
@@ -289,7 +356,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     </button>
                     <button
                         onClick={handleShare}
-                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        className="px-3 py-2 border border-white/20 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 transition-colors backdrop-blur-sm"
                         title="Share event"
                     >
                         <ShareNetworkIcon className="w-4 h-4" />
@@ -297,7 +364,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     {event.sourceUrl && (
                         <button
                             onClick={() => { handleOutboundClick(); window.open(event.sourceUrl, '_blank'); }}
-                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                            className="px-3 py-2 border border-white/20 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 transition-colors backdrop-blur-sm"
                             title="View event details"
                         >
                             <ArrowSquareOutIcon className="w-4 h-4" />
@@ -306,7 +373,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     {event.livestreamUrl && (
                         <button
                             onClick={() => window.open(event.livestreamUrl!, '_blank')}
-                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                            className="px-3 py-2 border border-white/20 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 transition-colors backdrop-blur-sm"
                             title="Join live stream"
                         >
                             <PlayCircleIcon className="w-4 h-4" />

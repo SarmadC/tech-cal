@@ -168,7 +168,6 @@ export const EventCard: React.FC<EventCardProps> = ({
 
 
     // Day view specific content display
-    const showDayTime = isDayView;
     // Hide duration for medium (5–6) and extra-large (>8) day cards to match CSS
     const _showDayDuration = isDayView && !((cardSize >= 5 && cardSize <= 6) || (cardSize > 8));
     const showDayLocation = isDayView && event.location;
@@ -296,24 +295,6 @@ export const EventCard: React.FC<EventCardProps> = ({
                                 </div>
                             </div>
                         )}
-                        
-                                                 {/* Time and Duration */}
-                         <div className="event-time-duration">
-                             {showDayTime && (
-                                 <span className="event-time">
-                                     {new Date(event.startTime).toLocaleTimeString('en-US', { 
-                                         hour: 'numeric', 
-                                         minute: '2-digit', 
-                                         hour12: true 
-                                     }).toLowerCase()}
-                                     {event.endTime && ` - ${new Date(event.endTime).toLocaleTimeString('en-US', { 
-                                         hour: 'numeric', 
-                                         minute: '2-digit', 
-                                         hour12: true 
-                                     }).toLowerCase()}`}
-                                 </span>
-                             )}
-                        </div>
                         
                         {/* Location and Organizer */}
                         {(showDayLocation || showDayOrganizer) && (

@@ -1,4 +1,4 @@
-// src/app/calendar/layout.tsx
+// src/app/(protected)/calendar/layout.tsx
 export default function CalendarLayoutWrapper({
     children,
 }: {

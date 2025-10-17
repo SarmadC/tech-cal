@@ -33,7 +33,7 @@ const ErrorFallback: React.FC<{
     
     if (level === 'page') {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'hsl(var(--background))' }}>
                 <div className="max-w-md w-full text-center">
                     <div className="bg-card rounded-lg p-6 border shadow-sm">
                         <BugIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />

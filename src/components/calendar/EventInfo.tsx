@@ -1,7 +1,7 @@
 'use client';
 
-import { FC } from 'react';
-import { ClockIcon, MapPinIcon, TagIcon } from '@phosphor-icons/react';
+import { FC, useState } from 'react';
+import { ClockIcon, MapPinIcon, TagIcon, CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
 // 1. UPDATE IMPORTS: Use the new, specific type names.
 import { Event, EventType } from '@/types';
@@ -20,6 +20,17 @@ const EventInfo: FC<EventInfoProps> = ({ event, category }) => {
     const timelineTheme = useTimelineTheme();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const [showAllTags, setShowAllTags] = useState(false);
+    
+    // Combine category and event tags
+    const allTags = [
+        ...(category ? [{ id: 'category', name: category.name, color: category.color }] : []),
+        ...(event.tags || [])
+    ];
+    
+    const maxInitialTags = 5;
+    const shouldShowToggle = allTags.length > maxInitialTags;
+    const displayedTags = showAllTags ? allTags : allTags.slice(0, maxInitialTags);
     
     return (
         <>
@@ -40,36 +51,43 @@ const EventInfo: FC<EventInfoProps> = ({ event, category }) => {
                     <span className={timelineTheme.textSecondary}>{event.organizer}</span>
                 </div>
             </div>
-        {/* Display all tags - category and event tags */}
-        <div className="flex flex-wrap gap-2">
-            {/* Category tag */}
-            {category && (
-                <div 
-                    className="px-3 py-1 text-xs rounded-md flex items-center space-x-2" 
-                    style={{ 
-                        backgroundColor: addColorOpacity(category.color, 0.2, isDark), 
-                        color: getColorWithFullOpacity(category.color, isDark) 
-                    }}
-                >
-                    <TagIcon className="w-3 h-3" />
-                    <span>{category.name}</span>
-                </div>
-            )}
+        {/* Display tags with collapsible functionality */}
+        <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+                {displayedTags.map((tag) => (
+                    <div 
+                        key={tag.id} 
+                        className="px-3 py-1 text-xs rounded-md flex items-center space-x-2" 
+                        style={{ 
+                            backgroundColor: addColorOpacity(tag.color, 0.2, isDark), 
+                            color: getColorWithFullOpacity(tag.color, isDark) 
+                        }}
+                    >
+                        <TagIcon className="w-3 h-3" />
+                        <span>{tag.name}</span>
+                    </div>
+                ))}
+            </div>
             
-            {/* Additional event tags */}
-            {event.tags && event.tags.length > 0 && event.tags.map((tag) => (
-                <div 
-                    key={tag.id} 
-                    className="px-3 py-1 text-xs rounded-md flex items-center space-x-2" 
-                    style={{ 
-                        backgroundColor: addColorOpacity(tag.color, 0.2, isDark), 
-                        color: getColorWithFullOpacity(tag.color, isDark) 
-                    }}
+            {/* Show more/less toggle button */}
+            {shouldShowToggle && (
+                <button
+                    onClick={() => setShowAllTags(!showAllTags)}
+                    className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                 >
-                    <TagIcon className="w-3 h-3" />
-                    <span>{tag.name}</span>
-                </div>
-            ))}
+                    {showAllTags ? (
+                        <>
+                            <CaretUpIcon className="w-3 h-3" />
+                            Show less
+                        </>
+                    ) : (
+                        <>
+                            <CaretDownIcon className="w-3 h-3" />
+                            Show {allTags.length - maxInitialTags} more
+                        </>
+                    )}
+                </button>
+            )}
         </div>
             <p className={`text-sm leading-relaxed ${timelineTheme.textSecondary}`}>
                 {event.description}

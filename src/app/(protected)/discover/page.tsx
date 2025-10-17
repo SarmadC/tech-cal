@@ -1,18 +1,12 @@
 // src/app/discover/page.tsx
 import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
-import DiscoverClientView from './DiscoverClientView';
+import DiscoverClientView from '../../discover/DiscoverClientView';
 
 export default async function DiscoverPage() {
     const supabase = await createClient();
-    const { data: { user }, error: _authError } = await supabase.auth.getUser();
-
-    // Re-enable authentication
-    if (_authError || !user) {
-        redirect('/login?redirect=/discover');
-    }
+    const { data: { user } } = await supabase.auth.getUser();
 
     try {
         // Load categories for filter options

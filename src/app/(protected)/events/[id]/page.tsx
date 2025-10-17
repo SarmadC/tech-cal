@@ -1,4 +1,4 @@
-// src/app/events/[id]/page.tsx
+// src/app/(protected)/events/[id]/page.tsx
 import { createClient } from '@/utils/supabase/server';
 import { EventService } from '@/services/eventServices';
 import { notFound } from 'next/navigation';

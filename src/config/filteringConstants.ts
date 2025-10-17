@@ -12,6 +12,9 @@ export const FILTERING_CONSTANTS = {
   /** Search term debounce delay */
   SEARCH_DEBOUNCE_MS: 1500,
 
+  /** Coalesce non-search filter changes */
+  FILTERS_DEBOUNCE_MS: 300,
+
   /** Default page size for paginated results */
   DEFAULT_PAGE_SIZE: 50,
 

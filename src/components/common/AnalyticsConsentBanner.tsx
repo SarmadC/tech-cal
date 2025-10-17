@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, BarChart3, Shield } from 'lucide-react';
+import { X, ChartBar, Shield } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import { createClient } from '@/utils/supabase/client';
@@ -59,7 +59,7 @@ export default function AnalyticsConsentBanner() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 mt-1">
-            <BarChart3 className="w-5 h-5 text-blue-500" />
+            <ChartBar className="w-5 h-5 text-blue-500" />
           </div>
           
           <div className="flex-1 min-w-0">

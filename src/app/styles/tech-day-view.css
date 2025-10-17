@@ -687,37 +687,9 @@
     color: var(--text-on-pastel);
 }
 
-/* Event time-duration container styling for day view */
-.tech-day-view .event-card .event-time-duration {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: var(--space-xs) !important;
-    margin-bottom: 0.25rem !important;
-    min-height: 1.2em !important; /* Ensure consistent height for day view */
-    line-height: 1.2 !important; /* Consistent line height for alignment */
-}
+/* Event time-duration container styling removed - time no longer shown in cards */
 
-/* Event time styling */
-.tech-day-view .event-card .event-time {
-    font-size: 0.85rem !important; /* Larger than month */
-    font-weight: 500 !important; /* Keep month style weight */
-    color: var(--category-title-color, var(--text-on-pastel)) !important; /* Match month view tone */
-    display: flex !important;
-    align-items: center !important;
-    gap: 4px !important;
-    line-height: 1.2 !important; /* Match container line height */
-}
-
-/* Event duration styling for day view */
-.tech-day-view .event-card .event-duration {
-    font-size: 0.65rem !important;
-    color: var(--text-secondary-on-pastel, #6b7280) !important;
-    display: flex !important;
-    align-items: center !important;
-    line-height: 1.2 !important; /* Match container line height */
-    font-weight: 500 !important; /* Slightly lighter than time for hierarchy */
-}
+/* Event duration styling removed - duration no longer shown in cards */
 
 /* Event location styling */
 .tech-day-view .event-card .event-location {
@@ -751,58 +723,7 @@
     margin-left: 0 !important;
 }
 
-/* Ensure time and duration stay on single line for medium cards in day view */
-.tech-day-view .event-card[data-span="5"] .event-time-duration,
-.tech-day-view .event-card[data-span="6"] .event-time-duration {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: var(--space-xs) !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-}
-
-/* Ensure time and duration stay on single line for large cards in day view */
-.tech-day-view .event-card[data-span="7"] .event-time-duration,
-.tech-day-view .event-card[data-span="8"] .event-time-duration {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 0 !important; /* No gap needed since we're using transform for spacing */
-    flex-wrap: nowrap !important; /* Prevent wrapping but allow proper spacing */
-    min-width: 0 !important; /* Allow flex items to shrink if needed */
-}
-
-/* Hide event-duration for medium day view cards */
-.tech-day-view .event-card[data-span="5"] .event-duration,
-.tech-day-view .event-card[data-span="6"] .event-duration {
-    display: none !important;
-}
-
-/* Adjust event-time styling for medium day view cards */
-.tech-day-view .event-card[data-span="5"] .event-time,
-.tech-day-view .event-card[data-span="6"] .event-time {
-    font-size: 0.75rem !important; /* Reduce font size */
-    font-weight: 400 !important; /* Remove boldness */
-    white-space: nowrap !important; /* Ensure single line */
-    line-height: 1.2 !important; /* Tighter line height */
-}
-
-/* Medium day view cards - no transform needed for proper grid alignment */
-
-/* Hide event-duration for extra large day view cards */
-.tech-day-view .event-card[data-span-gt-8] .event-duration {
-    display: none !important;
-}
-
-/* Adjust event-time styling for extra large day view cards */
-.tech-day-view .event-card[data-span-gt-8] .event-time {
-    font-weight: 400 !important; /* Remove boldness */
-    white-space: nowrap !important; /* Ensure single line */
-    line-height: 1.2 !important; /* Tighter line height */
-}
+/* Time-related styles removed - time no longer shown in cards */
 
 /* Adjust venue location and event-info styling for extra large day view cards */
 .tech-day-view .event-card[data-span-gt-8] .event-location,
@@ -822,19 +743,9 @@
     font-weight: 500 !important; /* Consistent font weight */
 }
 
-/* Ensure proper spacing for time and duration elements in large day view cards */
-.tech-day-view .event-card[data-span="7"] .event-time,
-.tech-day-view .event-card[data-span="8"] .event-time {
-    flex-shrink: 0 !important; /* Prevent time from shrinking */
-    white-space: nowrap !important; /* Keep time on single line */
-}
+/* Time-related styles removed - time no longer shown in cards */
 
-.tech-day-view .event-card[data-span="7"] .event-duration,
-.tech-day-view .event-card[data-span="8"] .event-duration {
-    flex-shrink: 0 !important; /* Prevent duration from shrinking */
-    white-space: nowrap !important; /* Keep duration on single line */
-    transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
-}
+/* Duration-related styles removed - duration no longer shown in cards */
 
 /* Transform styles for extra large day view cards */
 .tech-day-view .event-card[data-span-gt-8] .event-day-dots {
@@ -889,16 +800,7 @@
     overflow-wrap: break-word;
 }
 
-/* Day view event time display */
-.tech-day-view .event-card .event-time {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-bottom: 0.25rem;
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.9);
-    flex-shrink: 0 !important;
-}
+/* Time-related styles removed - time no longer shown in cards */
 
 /* Day view event organizer */
 .tech-day-view .event-card .event-organizer { 

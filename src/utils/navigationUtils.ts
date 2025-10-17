@@ -40,10 +40,6 @@ export const NavigationUtils = {
    */
   goToDiscovery: () => '/discover',
   
-  /**
-   * Navigate to growth dashboard
-   */
-  goToGrowth: () => '/dashboard/growth',
   
   /**
    * Navigate to main dashboard

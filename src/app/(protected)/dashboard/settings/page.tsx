@@ -2,19 +2,19 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { ProfileService } from '@/services/profileService';
-import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import type { AppProfile } from '@/types'; // Import the type for clarity
 
-import SettingsTabs from './SettingTabs';
-import SettingsNavigation from './SettingsNavigation';
+import SettingsTabs from '@/app/dashboard/settings/SettingTabs';
+import SettingsNavigation from '@/app/dashboard/settings/SettingsNavigation';
 
 export default async function SettingsPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-        redirect('/login?redirect=/dashboard/settings');
+        // Protected layout guards auth; this is a safety check only
+        return null;
     }
 
     // --- CHANGED SECTION START ---

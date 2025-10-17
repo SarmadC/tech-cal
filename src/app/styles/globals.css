@@ -633,7 +633,8 @@ input::placeholder, textarea::placeholder {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: hsl(var(--background));
   }
 
   /* Discovery Mode Enhancements */

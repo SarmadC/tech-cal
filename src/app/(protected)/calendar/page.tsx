@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation';
 // EventService no longer needed - using server-side filtering
 import { EventTypeService } from '@/services/eventTypeService';
 import { ProfileService } from '@/services/profileService';
-import CalendarClientView from './CalendarClientView';
+import CalendarClientView from '../../calendar/CalendarClientView';
 
 export default async function CalendarPage({
     searchParams,
@@ -16,12 +16,7 @@ export default async function CalendarPage({
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     const supabase = await createClient();
-    const { data: { user }, error: _authError } = await supabase.auth.getUser();
-
-    // Re-enable authentication
-    if (_authError || !user) {
-        redirect('/login');
-    }
+    const { data: { user } } = await supabase.auth.getUser();
 
     // Enforce view parameter - redirect to month view if missing
     const params = await searchParams;

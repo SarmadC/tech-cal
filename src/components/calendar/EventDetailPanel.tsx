@@ -32,14 +32,22 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const [isLoading, setIsLoading] = useState(true);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
-    const { handleShare, googleCalendarLink, handleIcsDownload } = useEventActions(event);
     
     // Add tracking functionality
     const { user } = useAuth();
     const { trackedEventIds, trackEvent, untrackEvent, isLoading: isTrackingLoading } = useTrackedEventsUnified();
     
+    // Update eventWithAgenda when event prop changes
+    useEffect(() => {
+        setEventWithAgenda(event);
+        setIsLoading(true);
+    }, [event]); // Update when event prop changes
+    
     // Get the display event (with agenda if available)
     const displayEvent = eventWithAgenda;
+    
+    // Event actions hook - use displayEvent to ensure it updates with new events
+    const { handleShare, googleCalendarLink, handleIcsDownload } = useEventActions(displayEvent);
     
     // Debug: Log the agendaUrl to see if it's populated
     console.log('EventDetailPanel - displayEvent.agendaUrl:', displayEvent.agendaUrl);
@@ -146,30 +154,40 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         };
     }, [showMoreMenu]);
 
-    // Conditional styling based on variant
+    // Conditional styling based on variant with glassmorphism
     const containerClasses = variant === 'modal'
-        ? `max-h-[85vh] ${theme.modalBg} rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/10 p-6 flex flex-col relative overflow-hidden`
-        : `h-full ${theme.modalBg} border-l ${theme.borderCard} shadow-2xl p-6 flex flex-col relative`;
+        ? `max-h-[85vh] event-detail-glass-modal rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/10 p-6 flex flex-col relative overflow-hidden`
+        : `h-full event-detail-glass-sidebar border-l border-white/20 dark:border-white/10 shadow-2xl p-6 flex flex-col relative`;
 
     return (
-        <div className={containerClasses}>
-            <div className="flex items-center justify-between mb-6">
-                <h2 className={`text-lg font-semibold ${theme.textPrimary} font-dm-sans`}>Event Details</h2>
-                <button onClick={onClose} className={`p-2 ${theme.hoverCard} rounded-full transition-colors`}>
-                    <XIcon className={`w-5 h-5 ${theme.textMuted}`} />
-                </button>
+        <div 
+            className={containerClasses}
+            style={{
+                background: theme.isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px) saturate(120%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(120%)',
+                border: theme.isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+        >
+            <div className="event-preview-glass-header p-4 rounded-lg mb-6 border border-white/20 dark:border-white/10">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white font-dm-sans">Event Details</h2>
+                    <button onClick={onClose} className="p-2 hover:bg-white/20 dark:hover:bg-white/10 rounded-full transition-colors">
+                        <XIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto pr-2 -mr-2">
                 <div className="flex items-start justify-between">
-                    <h3 className={`text-2xl font-bold ${theme.textPrimary} flex-1`}>{displayEvent.title}</h3>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex-1">{displayEvent.title}</h3>
 
                     {displayEvent.agendaUrl ? (
                         <a
                             href={displayEvent.agendaUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`ml-4 p-2 ${theme.textMuted} ${theme.hoverText} ${theme.hoverCard} rounded-full transition-colors`}
+                            className="ml-4 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/20 dark:hover:bg-white/10 rounded-full transition-colors"
                             title="View full agenda"
                         >
                             <ArrowSquareOutIcon className="w-5 h-5" />
@@ -177,7 +195,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                     ) : (
                         <Link
                             href={`/events/${generateEventSlug(displayEvent.title, displayEvent.id)}`}
-                            className={`ml-4 p-2 ${theme.textMuted} ${theme.hoverText} ${theme.hoverCard} rounded-full transition-colors`}
+                            className="ml-4 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/20 dark:hover:bg-white/10 rounded-full transition-colors"
                             title="View full page"
                         >
                             <ArrowSquareOutIcon className="w-5 h-5" />
@@ -189,17 +207,17 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 
                 {/* Adaptive Timeline Section */}
                 {/* Show loading skeleton while fetching, then timeline if agenda exists */}
-                <div className={`mt-6 pt-6 border-t ${theme.borderCard}`}>
+                <div className="mt-6 pt-6 border-t border-white/20 dark:border-white/10">
                     {isLoading ? (
                         <div className="space-y-4 animate-pulse">
                             <div className="flex items-center gap-2">
-                                <div className={`h-4 w-32 bg-white/10 rounded`}></div>
-                                <div className={`h-3 w-48 bg-white/5 rounded`}></div>
+                                <div className="h-4 w-32 bg-white/10 dark:bg-black/10 rounded backdrop-blur-sm"></div>
+                                <div className="h-3 w-48 bg-white/5 dark:bg-black/5 rounded backdrop-blur-sm"></div>
                             </div>
                             <div className="space-y-3">
-                                <div className={`h-20 bg-white/10 rounded`}></div>
-                                <div className={`h-20 bg-white/8 rounded`}></div>
-                                <div className={`h-20 bg-white/5 rounded`}></div>
+                                <div className="h-20 bg-white/10 dark:bg-black/10 rounded backdrop-blur-sm"></div>
+                                <div className="h-20 bg-white/8 dark:bg-black/8 rounded backdrop-blur-sm"></div>
+                                <div className="h-20 bg-white/5 dark:bg-black/5 rounded backdrop-blur-sm"></div>
                             </div>
                         </div>
                     ) : displayEvent.agenda && displayEvent.agenda.length > 0 ? (
@@ -208,7 +226,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 </div>
             </div>
 
-            <div className={`mt-6 pt-4 border-t ${theme.borderCard}`}>
+            <div className="mt-6 pt-4 border-t border-white/20 dark:border-white/10">
                 {/* All actions in a single container */}
                 <div className="p-4">
                     <div className="flex items-center gap-3">
@@ -216,9 +234,13 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         <button 
                             onClick={handleTrackEvent}
                             disabled={isTrackingLoading || !user}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md ${
-                                isTracked ? theme.btnDanger : theme.btnPrimary
-                            } ${isTrackingLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 
+                                ${isTracked 
+                                    ? 'bg-red-500/90 hover:bg-red-600/90 text-white' 
+                                    : 'bg-gray-900/90 hover:bg-gray-800/90 text-white dark:bg-white/90 dark:hover:bg-white/100 dark:text-gray-900'
+                                } 
+                                backdrop-blur-sm border border-white/20 dark:border-white/10
+                                ${isTrackingLoading ? 'opacity-50 cursor-not-allowed' : 'shadow-sm hover:shadow-md'}`}
                         >
                             <CalendarPlusIcon className="w-4 h-4" />
                             <span>{isTracked ? 'Untrack Event' : 'Track Event'}</span>
@@ -230,30 +252,30 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         </div>
 
                         {/* Share icon-only button */}
-                                <button
-                                    onClick={() => handleShare()}
-                                    className={`flex items-center justify-center px-3 py-3 ${theme.btnSecondary} rounded-lg transition-colors`}
-                                    title="Share event"
-                                >
-                            <ShareNetworkIcon className={`w-3.5 h-3.5 ${theme.textSecondary}`} />
+                        <button
+                            onClick={() => handleShare()}
+                            className="flex items-center justify-center px-3 py-3 bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-colors backdrop-blur-sm border border-white/20 dark:border-white/10"
+                            title="Share event"
+                        >
+                            <ShareNetworkIcon className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
                         </button>
 
                         {/* More menu */}
                         <div className="relative flex-shrink-0" ref={moreMenuRef}>
                                     <button
                                         onClick={() => setShowMoreMenu(!showMoreMenu)}
-                                        className={`flex items-center justify-center px-3 py-3 ${theme.btnSecondary} rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${theme.isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white'}`}
+                                        className="flex items-center justify-center px-3 py-3 bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-colors backdrop-blur-sm border border-white/20 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-offset-white"
                                         title="More actions"
                                         aria-expanded={showMoreMenu}
                                         aria-haspopup="true"
                                     >
-                                <DotsThreeVerticalIcon className={`w-3.5 h-3.5 ${theme.textSecondary}`} />
+                                <DotsThreeVerticalIcon className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
                             </button>
                             
                             {/* More menu dropdown */}
                             {showMoreMenu && (
                                 <div 
-                                    className={`absolute right-0 top-full mt-2 w-48 ${theme.modalBg} ${theme.modalBorder} rounded-lg shadow-lg z-10`}
+                                    className="absolute right-0 top-full mt-2 w-48 event-preview-glass-section rounded-lg shadow-lg z-10 border border-white/20 dark:border-white/10 backdrop-blur-md"
                                     role="menu"
                                     aria-orientation="vertical"
                                 >
@@ -262,7 +284,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 onClick={() => setShowMoreMenu(false)}
-                                                className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm ${theme.modalTextSecondary} ${theme.hoverCard} rounded-t-lg transition-colors focus:outline-none`}
+                                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-t-lg transition-colors focus:outline-none"
                                                 role="menuitem"
                                             >
                                         <CalendarPlusIcon className="w-4 h-4" />
@@ -273,21 +295,21 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                                     handleIcsDownload();
                                                     setShowMoreMenu(false);
                                                 }}
-                                                className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm ${theme.modalTextSecondary} ${theme.hoverCard} transition-colors focus:outline-none`}
+                                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 transition-colors focus:outline-none"
                                                 role="menuitem"
                                             >
                                         <DownloadSimpleIcon className="w-4 h-4" />
                                         <span>Download .ics</span>
                                     </button>
                                     <button 
-                                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm ${theme.modalTextSecondary} ${theme.hoverCard} transition-colors focus:outline-none`}
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 transition-colors focus:outline-none"
                                         role="menuitem"
                                     >
                                         <DownloadSimpleIcon className="w-4 h-4" />
                                         <span>Export to PDF</span>
                                     </button>
                                     <button 
-                                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm ${theme.modalTextSecondary} ${theme.hoverCard} rounded-b-lg transition-colors focus:outline-none`}
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-b-lg transition-colors focus:outline-none"
                                         role="menuitem"
                                     >
                                         <DownloadSimpleIcon className="w-4 h-4" />

@@ -31,68 +31,20 @@ export async function middleware(request: NextRequest) {
 
     const { pathname } = request.nextUrl
 
-    // Protected routes that require authentication
-    const protectedRoutes = ['/discover', '/calendar', '/dashboard', '/hackathons', '/onboarding'];
+    // Define which routes are protected (require authentication)
+    const protectedRoutes = ['/discover', '/calendar', '/dashboard', '/hackathons', '/events'];
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
-    // RULE 1: If user is not logged in, and they are trying to access a protected route, redirect to /login
+    // Minimal auth gating: if no user on a protected route, redirect to login
     if (!user && isProtectedRoute) {
-        // User not found, redirecting to login
-        return NextResponse.redirect(new URL('/login', request.url))
+        const loginUrl = new URL('/login', request.url)
+        loginUrl.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(loginUrl)
     }
 
-    // RULE 2: If user is logged in, and they are trying to access a public-only route, redirect to /discover
+    // Keep convenience redirect: logged-in users visiting auth pages go to /discover
     if (user && (pathname === '/login' || pathname === '/signup')) {
-        // User is logged in, redirecting to discover page
         return NextResponse.redirect(new URL('/discover', request.url))
-    }
-
-    // RULE 3: If user is logged in and accessing app pages, check if they've completed onboarding
-    // This encourages users to complete their career profile for better recommendations
-    // Can be disabled by setting DISABLE_ONBOARDING_REDIRECT=true in environment variables
-    // Skip this check for onboarding pages themselves and settings
-    const appRoutes = ['/discover', '/calendar', '/dashboard', '/hackathons', '/events'];
-    const isAppRoute = appRoutes.some(route => pathname.startsWith(route));
-    const isOnboardingPage = pathname.startsWith('/onboarding');
-    const isSettingsPage = pathname.startsWith('/dashboard/settings');
-    const onboardingRedirectEnabled = process.env.DISABLE_ONBOARDING_REDIRECT !== 'true';
-
-    if (user && isAppRoute && !isOnboardingPage && !isSettingsPage && onboardingRedirectEnabled) {
-        try {
-            // Check if user has completed career onboarding
-            // First check the career_profiles table
-            const { data: careerProfile, error } = await supabase
-                .from('career_profiles')
-                .select('user_id')
-                .eq('user_id', user.id)
-                .single();
-
-            const hasCareerProfile = !error && careerProfile;
-
-            // If no career profile found, check the legacy preferences as fallback
-            if (!hasCareerProfile) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('preferences')
-                    .eq('id', user.id)
-                    .single();
-
-                const preferences = profile?.preferences as Record<string, unknown> | null;
-                const hasLegacyOnboarding = preferences?.careerOnboardingCompleted === true;
-
-                // If neither exists, redirect to onboarding with a helpful message
-                if (!hasLegacyOnboarding) {
-                    const onboardingUrl = new URL('/onboarding/career', request.url);
-                    // Add a query parameter to show a welcome message
-                    onboardingUrl.searchParams.set('from', 'middleware');
-                    return NextResponse.redirect(onboardingUrl);
-                }
-            }
-        } catch (error) {
-            // If there's an error checking onboarding status, log it but don't block access
-            console.warn('Error checking onboarding status in middleware:', error);
-            // Allow the user to proceed - they'll see generic recommendations
-        }
     }
 
     // Middleware processing complete
@@ -100,15 +52,14 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+    // Narrow matcher to only routes that need auth gating or auth-page redirects
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - All image assets
-         */
-        '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/discover/:path*',
+        '/calendar/:path*',
+        '/dashboard/:path*',
+        '/hackathons/:path*',
+        '/events/:path*',
+        '/login',
+        '/signup',
     ],
 }

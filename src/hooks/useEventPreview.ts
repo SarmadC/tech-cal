@@ -16,9 +16,9 @@ interface Position {
     y: number;
 }
 
-const HOVER_DELAY = 200; // Delay before showing preview (ms)
-const HIDE_DELAY = 150; // Delay before hiding preview (ms)
-const ANIMATION_DURATION = 250; // Duration of fade-out animation (ms) - matches CSS transition
+const HOVER_DELAY = 100; // Reduced delay for more responsive feel
+const HIDE_DELAY = 100; // Reduced delay for smoother transitions
+const ANIMATION_DURATION = 200; // Matches CSS transition duration
 
 export function useEventPreview() {
     const [previewState, setPreviewState] = useState<PreviewState>({
@@ -61,7 +61,17 @@ export function useEventPreview() {
             return;
         }
 
-        // Delay showing preview to avoid jank when quickly moving over events
+        // If showing a different event, update immediately for smoother transitions
+        if (previewState.isVisible && previewState.event?.id !== event.id) {
+            setPreviewState({
+                event,
+                isVisible: true,
+                position
+            });
+            return;
+        }
+
+        // Delay showing preview only for new events to avoid jank when quickly moving over events
         showTimerRef.current = setTimeout(() => {
             setPreviewState({
                 event,

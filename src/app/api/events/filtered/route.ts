@@ -5,6 +5,8 @@ import { CareerProfileService } from '@/services/careerProfileService';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
 import { EventFilters } from '@/types';
+import { createHash } from 'crypto';
+import { requireOnboardedApi } from '@/utils/onboarding';
 
 // Rate limiter for filtered events API
 const ratelimit = new Ratelimit({
@@ -86,6 +88,12 @@ export async function POST(request: NextRequest) {
 
     console.log('[API] User authenticated:', user.id);
 
+    // Optional onboarding requirement for filtered events
+    const onboardingGuard = await requireOnboardedApi(supabase, user.id);
+    if (onboardingGuard) {
+      return onboardingGuard;
+    }
+
     // Apply rate limiting (skip in development if KV not configured)
     try {
       const { success: rateLimitSuccess } = await ratelimit.limit(user.id);
@@ -135,6 +143,43 @@ export async function POST(request: NextRequest) {
 
     const startTime = Date.now();
 
+    // Build a stable cache signature (per-user + filters)
+    const normalizedSignature = {
+      userId: user.id,
+      searchTerm: body.searchTerm || '',
+      categories: (body.categories || []).slice().sort(),
+      format,
+      budget,
+      cost,
+      difficulty,
+      dateStart: body.dateRange?.start || null,
+      dateEnd: body.dateRange?.end || null,
+      sortBy,
+      page,
+      pageSize,
+      availability: _availability,
+      popularity,
+      duration,
+      myNetwork,
+      recommended
+    };
+
+    const cacheKey = `fe2:${createHash('sha1').update(JSON.stringify(normalizedSignature)).digest('hex')}`;
+
+    // Attempt to serve from cache for a short TTL window
+    try {
+      const cached = await kv.get<FilteredEventsResponse>(cacheKey);
+      if (cached) {
+        // Attach quick headers and return cached response
+        const res = NextResponse.json(cached);
+        res.headers.set('X-Cache', 'HIT');
+        res.headers.set('X-Cache-Key', cacheKey);
+        return res;
+      }
+    } catch (cacheErr) {
+      console.log('[API] Filtered events cache unavailable/disabled:', cacheErr instanceof Error ? cacheErr.message : 'unknown');
+    }
+
     // Build comprehensive server-side filters
     const eventFilters: EventFilters = {
       categories: categories.length > 0 ? categories : undefined,
@@ -180,17 +225,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Enrich events with career impact scores (skip for cold start users to avoid double processing)
+    // Enrich events with career impact scores
+    // Optimization: limit enrichment to early pages to reduce cost; defer deeper insights to detail view
+    const ENRICH_MAX_PAGE = parseInt(process.env.ENRICH_MAX_PAGE || '1');
     let enrichedEvents;
     try {
-      enrichedEvents = isColdStart
-        ? filteredEvents // Cold start events already have metadata
-        : await EventService.enrichEventsWithCareerImpact(
-            filteredEvents,
-            careerProfile,
-            supabase,
-            user.id
-          );
+      if (page > ENRICH_MAX_PAGE) {
+        enrichedEvents = filteredEvents;
+      } else {
+        enrichedEvents = isColdStart
+          ? filteredEvents // Cold start events already have metadata
+          : await EventService.enrichEventsWithCareerImpact(
+              filteredEvents,
+              careerProfile,
+              supabase,
+              user.id
+            );
+      }
     } catch (error) {
       console.error('Error enriching events with career impact:', error);
       // Fallback to using events without enrichment
@@ -236,7 +287,17 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    return NextResponse.json(response);
+    // Store in cache with short TTL to coalesce rapid toggles
+    try {
+      await kv.set(cacheKey, response, { ex: 60 });
+    } catch (cacheSetErr) {
+      console.log('[API] Failed to set filtered events cache:', cacheSetErr instanceof Error ? cacheSetErr.message : 'unknown');
+    }
+
+    const res = NextResponse.json(response);
+    res.headers.set('X-Cache', 'MISS');
+    res.headers.set('X-Cache-Key', cacheKey);
+    return res;
 
   } catch (error) {
     console.error('[API] Filtered events API error:', error);

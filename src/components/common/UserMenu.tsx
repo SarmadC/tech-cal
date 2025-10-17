@@ -170,14 +170,6 @@ export default function UserMenu() {
                             <span className="text-sm text-foreground-primary">Dashboard</span>
                         </Link>
 
-                        <Link
-                            href="/dashboard/growth"
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center space-x-3 px-4 py-2 hover:bg-background-secondary transition-colors"
-                        >
-                            <MaterialIcon name="trending-up" size={16} className="text-foreground-tertiary" />
-                            <span className="text-sm text-foreground-primary">Growth</span>
-                        </Link>
                     </div>
 
                     {/* Account Section */}

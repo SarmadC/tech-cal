@@ -54,7 +54,7 @@ export default function DashboardClientView({
     if (!isReady || isLoading) {
         return (
             <SidebarProvider>
-                <div className="flex h-screen bg-background">
+                <div className="flex h-screen" style={{ background: 'hsl(var(--background))' }}>
                     <AppSidebar />
                     <main className="flex-1 flex flex-col overflow-hidden">
                         <div className="flex-1 overflow-auto">
@@ -76,7 +76,7 @@ export default function DashboardClientView({
     if (hasCriticalErrors) {
         return (
             <SidebarProvider>
-                <div className="flex h-screen bg-background">
+                <div className="flex h-screen" style={{ background: 'hsl(var(--background))' }}>
                     <AppSidebar />
                     <main className="flex-1 flex flex-col overflow-hidden">
                         <div className="flex-1 overflow-auto">

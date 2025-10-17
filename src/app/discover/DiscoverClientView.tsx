@@ -207,19 +207,13 @@ export default function DiscoverClientView({
                     {/* Event Detail Panel */}
                     {selectedEvent && (
                         <div 
-                            className="fixed inset-0 z-50 bg-black bg-opacity-50"
-                            onClick={handleCloseEventDetail}
+                            className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
                         >
-                            <div 
-                                className="absolute right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform transition-transform duration-300 ease-in-out"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <EventDetailPanelDynamic 
-                                    event={selectedEvent} 
-                                    onClose={handleCloseEventDetail} 
-                                    categories={initialCategories} 
-                                />
-                            </div>
+                            <EventDetailPanelDynamic 
+                                event={selectedEvent} 
+                                onClose={handleCloseEventDetail} 
+                                categories={initialCategories} 
+                            />
                         </div>
                     )}
                 </div>

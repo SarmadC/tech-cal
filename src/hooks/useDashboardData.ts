@@ -34,7 +34,9 @@ export function useDashboardData({
     enabled: !!supabase && isReady,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    // Event types change rarely; keep them fresh for longer to avoid extra requests
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    gcTime: 48 * 60 * 60 * 1000, // 48 hours cache retention
     initialData: initialEventTypes,
   });
 

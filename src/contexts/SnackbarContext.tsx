@@ -1,14 +1,17 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
-import Button from '@mui/material/Button';
+import dynamic from 'next/dynamic';
+import { Button } from '@/components/ui/button';
+
+// Lazy‑load MUI surfaces only when needed to keep them out of the base bundle
+const MuiSnackbar = dynamic(() => import('@mui/material/Snackbar'), { ssr: false });
+const MuiAlert = dynamic(() => import('@mui/material/Alert'), { ssr: false });
+const MuiDialog = dynamic(() => import('@mui/material/Dialog'), { ssr: false });
+const MuiDialogActions = dynamic(() => import('@mui/material/DialogActions'), { ssr: false });
+const MuiDialogContent = dynamic(() => import('@mui/material/DialogContent'), { ssr: false });
+const MuiDialogContentText = dynamic(() => import('@mui/material/DialogContentText'), { ssr: false });
+const MuiDialogTitle = dynamic(() => import('@mui/material/DialogTitle'), { ssr: false });
 
 type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
 
@@ -137,51 +140,51 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     }}>
       {children}
 
-      {/* Snackbar */}
-      <Snackbar
-        open={!!snackbar}
-        autoHideDuration={snackbar?.autoHideDuration || null}
-        onClose={handleSnackbarClose}
-        anchorOrigin={snackbar ? getAnchorOrigin(snackbar.severity) : undefined}
-        key={snackbar?.id}
-      >
-        <Alert
+      {/* Snackbar: mount only when a message exists to defer MUI loading */}
+      {snackbar && (
+        <MuiSnackbar
+          open
+          autoHideDuration={snackbar.autoHideDuration || null}
           onClose={handleSnackbarClose}
-          severity={snackbar?.severity || 'info'}
-          variant="filled"
-          sx={{ width: '100%' }}
+          anchorOrigin={getAnchorOrigin(snackbar.severity)}
+          key={snackbar.id}
         >
-          {snackbar?.message || ''}
-        </Alert>
-      </Snackbar>
-
-      {/* Confirmation Dialog */}
-      <Dialog
-        open={confirmation.open}
-        onClose={confirmation.onCancel}
-        aria-labelledby="confirmation-dialog-title"
-      >
-        <DialogTitle id="confirmation-dialog-title">
-          {confirmation.title}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {confirmation.message}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={confirmation.onCancel}>
-            {confirmation.cancelText}
-          </Button>
-          <Button
-            onClick={confirmation.onConfirm}
-            variant="contained"
-            autoFocus
+          <MuiAlert
+            onClose={handleSnackbarClose}
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ width: '100%' }}
           >
-            {confirmation.confirmText}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            {snackbar.message}
+          </MuiAlert>
+        </MuiSnackbar>
+      )}
+
+      {/* Confirmation Dialog: mount only when open to defer MUI loading */}
+      {confirmation.open && (
+        <MuiDialog
+          open
+          onClose={confirmation.onCancel}
+          aria-labelledby="confirmation-dialog-title"
+        >
+          <MuiDialogTitle id="confirmation-dialog-title">
+            {confirmation.title}
+          </MuiDialogTitle>
+          <MuiDialogContent>
+            <MuiDialogContentText>
+              {confirmation.message}
+            </MuiDialogContentText>
+          </MuiDialogContent>
+          <MuiDialogActions>
+            <Button onClick={confirmation.onCancel} variant="outline">
+              {confirmation.cancelText}
+            </Button>
+            <Button onClick={confirmation.onConfirm} autoFocus>
+              {confirmation.confirmText}
+            </Button>
+          </MuiDialogActions>
+        </MuiDialog>
+      )}
     </SnackbarContext.Provider>
   );
 }
