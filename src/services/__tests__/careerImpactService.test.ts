@@ -20,8 +20,8 @@ describe('CareerImpactService', () => {
   });
 
   describe('calculateCareerImpactScore', () => {
-    it('should calculate a valid career impact score', () => {
-      const result = CareerImpactService.calculateCareerImpactScore(mockInput);
+    it('should calculate a valid career impact score', async () => {
+      const result = await CareerImpactService.calculateCareerImpactScore(mockInput);
 
       // Validate overall score
       CareerImpactTestUtils.assertScoreInRange(result.overall);
@@ -51,28 +51,28 @@ describe('CareerImpactService', () => {
       expect(result.metadata).toHaveProperty('eventDataHash');
     });
 
-    it('should give higher scores to high-impact events', () => {
+    it('should give higher scores to high-impact events', async () => {
       const highImpactEvent = CareerImpactTestUtils.createHighImpactEvent();
       const lowImpactEvent = CareerImpactTestUtils.createLowImpactEvent();
 
       const highImpactInput = { event: highImpactEvent, careerProfile: mockCareerProfile };
       const lowImpactInput = { event: lowImpactEvent, careerProfile: mockCareerProfile };
 
-      const highImpactScore = CareerImpactService.calculateCareerImpactScore(highImpactInput);
-      const lowImpactScore = CareerImpactService.calculateCareerImpactScore(lowImpactInput);
+      const highImpactScore = await CareerImpactService.calculateCareerImpactScore(highImpactInput);
+      const lowImpactScore = await CareerImpactService.calculateCareerImpactScore(lowImpactInput);
 
       expect(highImpactScore.overall).toBeGreaterThan(lowImpactScore.overall);
     });
 
-    it('should handle different career profiles appropriately', () => {
+    it('should handle different career profiles appropriately', async () => {
       const seniorProfile = CareerImpactTestUtils.createSeniorCareerProfile();
       const juniorProfile = CareerImpactTestUtils.createJuniorCareerProfile();
 
       const seniorInput = { event: mockEvent, careerProfile: seniorProfile };
       const juniorInput = { event: mockEvent, careerProfile: juniorProfile };
 
-      const seniorScore = CareerImpactService.calculateCareerImpactScore(seniorInput);
-      const juniorScore = CareerImpactService.calculateCareerImpactScore(juniorInput);
+      const seniorScore = await CareerImpactService.calculateCareerImpactScore(seniorInput);
+      const juniorScore = await CareerImpactService.calculateCareerImpactScore(juniorInput);
 
       // Both should be valid scores
       CareerImpactTestUtils.assertScoreInRange(seniorScore.overall);
@@ -81,20 +81,20 @@ describe('CareerImpactService', () => {
       CareerImpactTestUtils.assertConfidenceInRange(juniorScore.confidence);
     });
 
-    it('should handle custom algorithm options', () => {
+    it('should handle custom algorithm options', async () => {
       const customOptions: CareerImpactCalculationOptions = {
         algorithmVersion: '2.0.0',
         includeExplanations: true,
         debugMode: true
       };
 
-      const result = CareerImpactService.calculateCareerImpactScore(mockInput, customOptions);
+      const result = await CareerImpactService.calculateCareerImpactScore(mockInput, customOptions);
 
       expect(result.metadata.algorithmVersion).toBe('2.0.0');
       expect(result.explanation.reasons.length).toBeGreaterThan(0);
     });
 
-    it('should handle events with minimal data gracefully', () => {
+    it('should handle events with minimal data gracefully', async () => {
       const minimalEvent = CareerImpactTestUtils.createMockEvent({
         description: '',
         speakerLineup: [],
@@ -103,7 +103,7 @@ describe('CareerImpactService', () => {
       });
 
       const minimalInput = { event: minimalEvent, careerProfile: mockCareerProfile };
-      const result = CareerImpactService.calculateCareerImpactScore(minimalInput);
+      const result = await CareerImpactService.calculateCareerImpactScore(minimalInput);
 
       // Should still produce valid scores
       CareerImpactTestUtils.assertScoreInRange(result.overall);
@@ -113,25 +113,25 @@ describe('CareerImpactService', () => {
       expect(result.confidence).toBeLessThanOrEqual(1.0);
     });
 
-    it('should handle different event types correctly', () => {
+    it('should handle different event types correctly', async () => {
       const eventTypes = ['workshop', 'conference', 'meetup', 'webinar', 'training', 'course', 'networking', 'social'];
       
-      eventTypes.forEach(eventType => {
+      for (const eventType of eventTypes) {
         const event = CareerImpactTestUtils.createMockEvent({
           category: { id: eventType, name: eventType, description: `${eventType} event`, color: '#000000' }
         });
         
         const input = { event, careerProfile: mockCareerProfile };
-        const result = CareerImpactService.calculateCareerImpactScore(input);
+        const result = await CareerImpactService.calculateCareerImpactScore(input);
         
         CareerImpactTestUtils.assertScoreInRange(result.overall);
         CareerImpactTestUtils.assertConfidenceInRange(result.confidence);
-      });
+      }
     });
 
-    it('should calculate consistent scores for identical inputs', () => {
-      const result1 = CareerImpactService.calculateCareerImpactScore(mockInput);
-      const result2 = CareerImpactService.calculateCareerImpactScore(mockInput);
+    it('should calculate consistent scores for identical inputs', async () => {
+      const result1 = await CareerImpactService.calculateCareerImpactScore(mockInput);
+      const result2 = await CareerImpactService.calculateCareerImpactScore(mockInput);
 
       expect(result1.overall).toBe(result2.overall);
       expect(result1.confidence).toBe(result2.confidence);
@@ -191,8 +191,8 @@ describe('CareerImpactService', () => {
   });
 
   describe('getCareerImpactScoreLite', () => {
-    it('should return lightweight score with essential data only', () => {
-      const result = CareerImpactService.getCareerImpactScoreLite(mockInput);
+    it('should return lightweight score with essential data only', async () => {
+      const result = await CareerImpactService.getCareerImpactScoreLite(mockInput);
 
       expect(result).toHaveProperty('overall');
       expect(result).toHaveProperty('confidence');
@@ -208,9 +208,9 @@ describe('CareerImpactService', () => {
       CareerImpactTestUtils.assertValidImpactCategory(result.category);
     });
 
-    it('should match overall score with full calculation', () => {
-      const fullResult = CareerImpactService.calculateCareerImpactScore(mockInput);
-      const liteResult = CareerImpactService.getCareerImpactScoreLite(mockInput);
+    it('should match overall score with full calculation', async () => {
+      const fullResult = await CareerImpactService.calculateCareerImpactScore(mockInput);
+      const liteResult = await CareerImpactService.getCareerImpactScoreLite(mockInput);
 
       expect(liteResult.overall).toBe(fullResult.overall);
       expect(liteResult.confidence).toBe(fullResult.confidence);
@@ -219,19 +219,19 @@ describe('CareerImpactService', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle events with very long descriptions', () => {
+    it('should handle events with very long descriptions', async () => {
       const longDescriptionEvent = CareerImpactTestUtils.createMockEvent({
         description: 'A'.repeat(10000) // Very long description
       });
 
       const input = { event: longDescriptionEvent, careerProfile: mockCareerProfile };
-      const result = CareerImpactService.calculateCareerImpactScore(input);
+      const result = await CareerImpactService.calculateCareerImpactScore(input);
 
       CareerImpactTestUtils.assertScoreInRange(result.overall);
       CareerImpactTestUtils.assertConfidenceInRange(result.confidence);
     });
 
-    it('should handle events with many speakers', () => {
+    it('should handle events with many speakers', async () => {
       const manySpeakersEvent = CareerImpactTestUtils.createMockEvent({
         speakerLineup: Array.from({ length: 20 }, (_, i) => ({
           id: `speaker-${i}`,
@@ -244,26 +244,26 @@ describe('CareerImpactService', () => {
       });
 
       const input = { event: manySpeakersEvent, careerProfile: mockCareerProfile };
-      const result = CareerImpactService.calculateCareerImpactScore(input);
+      const result = await CareerImpactService.calculateCareerImpactScore(input);
 
       CareerImpactTestUtils.assertScoreInRange(result.overall);
       CareerImpactTestUtils.assertConfidenceInRange(result.confidence);
     });
 
-    it('should handle events with future dates far in the future', () => {
+    it('should handle events with future dates far in the future', async () => {
       const futureEvent = CareerImpactTestUtils.createMockEvent({
         startTime: '2025-12-31T09:00:00Z',
         endTime: '2025-12-31T17:00:00Z'
       });
 
       const input = { event: futureEvent, careerProfile: mockCareerProfile };
-      const result = CareerImpactService.calculateCareerImpactScore(input);
+      const result = await CareerImpactService.calculateCareerImpactScore(input);
 
       CareerImpactTestUtils.assertScoreInRange(result.overall);
       CareerImpactTestUtils.assertConfidenceInRange(result.confidence);
     });
 
-    it('should handle career profiles with minimal data', () => {
+    it('should handle career profiles with minimal data', async () => {
       const minimalProfile = CareerImpactTestUtils.createMockCareerProfile({
         primarySkills: [],
         careerGoals: [],
@@ -271,7 +271,7 @@ describe('CareerImpactService', () => {
       });
 
       const input = { event: mockEvent, careerProfile: minimalProfile };
-      const result = CareerImpactService.calculateCareerImpactScore(input);
+      const result = await CareerImpactService.calculateCareerImpactScore(input);
 
       CareerImpactTestUtils.assertScoreInRange(result.overall);
       CareerImpactTestUtils.assertConfidenceInRange(result.confidence);

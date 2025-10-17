@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@/utils/test-utils';
 import { useUnifiedServerFiltering } from '../useUnifiedServerFiltering';
 import { FILTERING_CONSTANTS } from '@/config/filteringConstants';
 

@@ -12,8 +12,51 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      accessibility_features: {
+        Row: {
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       agenda_speakers: {
         Row: {
           agenda_id: string
@@ -85,6 +128,386 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      career_impact_analytics: {
+        Row: {
+          algorithm_version: string
+          event_id: string | null
+          experiment_variant: string | null
+          id: string
+          measured_at: string | null
+          metric_type: string
+          metric_value: number
+          user_id: string
+        }
+        Insert: {
+          algorithm_version: string
+          event_id?: string | null
+          experiment_variant?: string | null
+          id?: string
+          measured_at?: string | null
+          metric_type: string
+          metric_value: number
+          user_id: string
+        }
+        Update: {
+          algorithm_version?: string
+          event_id?: string | null
+          experiment_variant?: string | null
+          id?: string
+          measured_at?: string | null
+          metric_type?: string
+          metric_value?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_impact_analytics_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_impact_analytics_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_impact_analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_impact_analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "career_impact_analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      career_impact_cache: {
+        Row: {
+          cache_key: string
+          cache_value: Json
+          created_at: string | null
+          expires_at: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          cache_key: string
+          cache_value: Json
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          cache_key?: string
+          cache_value?: Json
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      career_impact_scores: {
+        Row: {
+          algorithm_version: string
+          calculated_at: string | null
+          career_impact_category: string | null
+          career_profile_hash: string
+          career_stage_score: number | null
+          confidence: number
+          event_data_hash: string
+          event_id: string
+          id: string
+          industry_relevance_score: number | null
+          matched_skills: string[] | null
+          networking_score: number | null
+          overall_score: number
+          reasons: string[]
+          skill_relevance_score: number | null
+          speaker_highlights: string[] | null
+          timing_bonus: number | null
+          user_id: string
+        }
+        Insert: {
+          algorithm_version?: string
+          calculated_at?: string | null
+          career_impact_category?: string | null
+          career_profile_hash: string
+          career_stage_score?: number | null
+          confidence: number
+          event_data_hash: string
+          event_id: string
+          id?: string
+          industry_relevance_score?: number | null
+          matched_skills?: string[] | null
+          networking_score?: number | null
+          overall_score: number
+          reasons?: string[]
+          skill_relevance_score?: number | null
+          speaker_highlights?: string[] | null
+          timing_bonus?: number | null
+          user_id: string
+        }
+        Update: {
+          algorithm_version?: string
+          calculated_at?: string | null
+          career_impact_category?: string | null
+          career_profile_hash?: string
+          career_stage_score?: number | null
+          confidence?: number
+          event_data_hash?: string
+          event_id?: string
+          id?: string
+          industry_relevance_score?: number | null
+          matched_skills?: string[] | null
+          networking_score?: number | null
+          overall_score?: number
+          reasons?: string[]
+          skill_relevance_score?: number | null
+          speaker_highlights?: string[] | null
+          timing_bonus?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_impact_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_impact_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_impact_scores_profile_snapshot_fkey"
+            columns: ["user_id", "career_profile_hash"]
+            isOneToOne: false
+            referencedRelation: "career_profile_snapshots"
+            referencedColumns: ["user_id", "profile_hash"]
+          },
+          {
+            foreignKeyName: "career_impact_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_impact_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "career_impact_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      career_profile_snapshots: {
+        Row: {
+          created_at: string | null
+          id: string
+          profile_data: Json
+          profile_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          profile_data: Json
+          profile_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          profile_data?: Json
+          profile_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_profile_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_profile_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "career_profile_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      career_profiles: {
+        Row: {
+          available_time:
+            | Database["public"]["Enums"]["available_time_enum"]
+            | null
+          budget: Database["public"]["Enums"]["budget_range_enum"] | null
+          career_goals: Database["public"]["Enums"]["career_goal_enum"][]
+          company_size: Database["public"]["Enums"]["company_size_enum"] | null
+          created_at: string
+          current_role: string
+          industry: string
+          interests: string[]
+          learning_style: Database["public"]["Enums"]["learning_style_enum"][]
+          networking_goals: Database["public"]["Enums"]["networking_goal_enum"][]
+          preferred_event_types: Database["public"]["Enums"]["career_event_type_enum"][]
+          primary_skills: string[]
+          seniority: Database["public"]["Enums"]["seniority_level"]
+          skill_tags: Json
+          skills_to_learn: string[]
+          timeframe: Database["public"]["Enums"]["career_timeframe_enum"] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          available_time?:
+            | Database["public"]["Enums"]["available_time_enum"]
+            | null
+          budget?: Database["public"]["Enums"]["budget_range_enum"] | null
+          career_goals?: Database["public"]["Enums"]["career_goal_enum"][]
+          company_size?: Database["public"]["Enums"]["company_size_enum"] | null
+          created_at?: string
+          current_role: string
+          industry: string
+          interests?: string[]
+          learning_style?: Database["public"]["Enums"]["learning_style_enum"][]
+          networking_goals?: Database["public"]["Enums"]["networking_goal_enum"][]
+          preferred_event_types?: Database["public"]["Enums"]["career_event_type_enum"][]
+          primary_skills?: string[]
+          seniority: Database["public"]["Enums"]["seniority_level"]
+          skill_tags?: Json
+          skills_to_learn?: string[]
+          timeframe?:
+            | Database["public"]["Enums"]["career_timeframe_enum"]
+            | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          available_time?:
+            | Database["public"]["Enums"]["available_time_enum"]
+            | null
+          budget?: Database["public"]["Enums"]["budget_range_enum"] | null
+          career_goals?: Database["public"]["Enums"]["career_goal_enum"][]
+          company_size?: Database["public"]["Enums"]["company_size_enum"] | null
+          created_at?: string
+          current_role?: string
+          industry?: string
+          interests?: string[]
+          learning_style?: Database["public"]["Enums"]["learning_style_enum"][]
+          networking_goals?: Database["public"]["Enums"]["networking_goal_enum"][]
+          preferred_event_types?: Database["public"]["Enums"]["career_event_type_enum"][]
+          primary_skills?: string[]
+          seniority?: Database["public"]["Enums"]["seniority_level"]
+          skill_tags?: Json
+          skills_to_learn?: string[]
+          timeframe?:
+            | Database["public"]["Enums"]["career_timeframe_enum"]
+            | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "career_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      event_accessibility_features: {
+        Row: {
+          event_id: string
+          feature_id: string
+        }
+        Insert: {
+          event_id: string
+          feature_id: string
+        }
+        Update: {
+          event_id?: string
+          feature_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_accessibility_features_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_accessibility_features_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_accessibility_features_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "accessibility_features"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_agenda: {
         Row: {
@@ -164,6 +587,124 @@ export type Database = {
           },
         ]
       }
+      event_feedback: {
+        Row: {
+          actual_value_rating: number | null
+          career_benefit: string | null
+          connections_made: number | null
+          event_attended: boolean
+          event_id: string
+          feedback_date: string | null
+          feedback_text: string | null
+          id: string
+          predicted_score: number
+          skills_gained: string[] | null
+          user_id: string
+          would_recommend: boolean | null
+        }
+        Insert: {
+          actual_value_rating?: number | null
+          career_benefit?: string | null
+          connections_made?: number | null
+          event_attended?: boolean
+          event_id: string
+          feedback_date?: string | null
+          feedback_text?: string | null
+          id?: string
+          predicted_score: number
+          skills_gained?: string[] | null
+          user_id: string
+          would_recommend?: boolean | null
+        }
+        Update: {
+          actual_value_rating?: number | null
+          career_benefit?: string | null
+          connections_made?: number | null
+          event_attended?: boolean
+          event_id?: string
+          feedback_date?: string | null
+          feedback_text?: string | null
+          id?: string
+          predicted_score?: number
+          skills_gained?: string[] | null
+          user_id?: string
+          would_recommend?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_feedback_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "event_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      event_prerequisites: {
+        Row: {
+          event_id: string
+          prerequisite_id: string
+        }
+        Insert: {
+          event_id: string
+          prerequisite_id: string
+        }
+        Update: {
+          event_id?: string
+          prerequisite_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_prerequisites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_prerequisites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_prerequisites_prerequisite_id_fkey"
+            columns: ["prerequisite_id"]
+            isOneToOne: false
+            referencedRelation: "prerequisites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_series: {
         Row: {
           created_at: string | null
@@ -198,6 +739,54 @@ export type Database = {
             columns: ["organizer_id"]
             isOneToOne: false
             referencedRelation: "organizers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_sync_log: {
+        Row: {
+          changes_detected: Json | null
+          error_message: string | null
+          event_id: string
+          id: string
+          processing_time_ms: number | null
+          sync_result: string
+          sync_type: string
+          synced_at: string | null
+        }
+        Insert: {
+          changes_detected?: Json | null
+          error_message?: string | null
+          event_id: string
+          id?: string
+          processing_time_ms?: number | null
+          sync_result: string
+          sync_type: string
+          synced_at?: string | null
+        }
+        Update: {
+          changes_detected?: Json | null
+          error_message?: string | null
+          event_id?: string
+          id?: string
+          processing_time_ms?: number | null
+          sync_result?: string
+          sync_type?: string
+          synced_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_sync_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_sync_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
             referencedColumns: ["id"]
           },
         ]
@@ -266,6 +855,43 @@ export type Database = {
         }
         Relationships: []
       }
+      event_target_audiences: {
+        Row: {
+          audience_id: string
+          event_id: string
+        }
+        Insert: {
+          audience_id: string
+          event_id: string
+        }
+        Update: {
+          audience_id?: string
+          event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_target_audiences_audience_id_fkey"
+            columns: ["audience_id"]
+            isOneToOne: false
+            referencedRelation: "target_audiences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_target_audiences_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_target_audiences_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_type: {
         Row: {
           color: string | null
@@ -307,32 +933,40 @@ export type Database = {
           capacity: number | null
           certificate_offered: boolean | null
           created_at: string
+          currency: string | null
           daily_schedule: Json | null
           description: string | null
           difficulty_level: string | null
           end_time: string | null
+          event_format: Database["public"]["Enums"]["event_format_enum"] | null
           event_image_url: string | null
           event_pattern: string | null
           event_type_id: string | null
+          external_id: string | null
+          external_status: string | null
           fts: unknown | null
           id: string
           is_multi_day: boolean | null
           language: string | null
+          last_synced_at: string | null
           livestream_url: string | null
           location: string | null
           organizer_id: string | null
           prerequisites: string | null
-          price_range: string | null
+          price_max: number | null
+          price_min: number | null
+          pricing_type: Database["public"]["Enums"]["pricing_type_enum"] | null
           recording_available: boolean | null
           registration_deadline: string | null
           registration_url: string | null
-          "Remote/In-person": string
           series_id: string | null
           social_media_hashtag: string | null
           source_url: string | null
           speaker_lineup: Json | null
           start_time: string
           status: string | null
+          status_enum: Database["public"]["Enums"]["event_status_enum"] | null
+          sync_error_count: number | null
           target_audience: string | null
           timezone: string | null
           title: string
@@ -347,32 +981,40 @@ export type Database = {
           capacity?: number | null
           certificate_offered?: boolean | null
           created_at?: string
+          currency?: string | null
           daily_schedule?: Json | null
           description?: string | null
           difficulty_level?: string | null
           end_time?: string | null
+          event_format?: Database["public"]["Enums"]["event_format_enum"] | null
           event_image_url?: string | null
           event_pattern?: string | null
           event_type_id?: string | null
+          external_id?: string | null
+          external_status?: string | null
           fts?: unknown | null
           id?: string
           is_multi_day?: boolean | null
           language?: string | null
+          last_synced_at?: string | null
           livestream_url?: string | null
           location?: string | null
           organizer_id?: string | null
           prerequisites?: string | null
-          price_range?: string | null
+          price_max?: number | null
+          price_min?: number | null
+          pricing_type?: Database["public"]["Enums"]["pricing_type_enum"] | null
           recording_available?: boolean | null
           registration_deadline?: string | null
           registration_url?: string | null
-          "Remote/In-person"?: string
           series_id?: string | null
           social_media_hashtag?: string | null
           source_url?: string | null
           speaker_lineup?: Json | null
           start_time: string
           status?: string | null
+          status_enum?: Database["public"]["Enums"]["event_status_enum"] | null
+          sync_error_count?: number | null
           target_audience?: string | null
           timezone?: string | null
           title: string
@@ -387,32 +1029,40 @@ export type Database = {
           capacity?: number | null
           certificate_offered?: boolean | null
           created_at?: string
+          currency?: string | null
           daily_schedule?: Json | null
           description?: string | null
           difficulty_level?: string | null
           end_time?: string | null
+          event_format?: Database["public"]["Enums"]["event_format_enum"] | null
           event_image_url?: string | null
           event_pattern?: string | null
           event_type_id?: string | null
+          external_id?: string | null
+          external_status?: string | null
           fts?: unknown | null
           id?: string
           is_multi_day?: boolean | null
           language?: string | null
+          last_synced_at?: string | null
           livestream_url?: string | null
           location?: string | null
           organizer_id?: string | null
           prerequisites?: string | null
-          price_range?: string | null
+          price_max?: number | null
+          price_min?: number | null
+          pricing_type?: Database["public"]["Enums"]["pricing_type_enum"] | null
           recording_available?: boolean | null
           registration_deadline?: string | null
           registration_url?: string | null
-          "Remote/In-person"?: string
           series_id?: string | null
           social_media_hashtag?: string | null
           source_url?: string | null
           speaker_lineup?: Json | null
           start_time?: string
           status?: string | null
+          status_enum?: Database["public"]["Enums"]["event_status_enum"] | null
+          sync_error_count?: number | null
           target_audience?: string | null
           timezone?: string | null
           title?: string
@@ -427,6 +1077,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "event_type"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_event_type_id_fkey"
+            columns: ["event_type_id"]
+            isOneToOne: false
+            referencedRelation: "event_type_analytics"
+            referencedColumns: ["event_type_id"]
           },
           {
             foreignKeyName: "fk_events_organizer"
@@ -447,6 +1104,187 @@ export type Database = {
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hackathon_participants: {
+        Row: {
+          availability_pattern: Json | null
+          collaboration_style: string[] | null
+          communication_preferences: string[] | null
+          created_at: string | null
+          hackathon_id: string
+          id: string
+          mentorship_preference: string | null
+          preferred_team_role: string | null
+          project_type_preferences: string[] | null
+          skill_proficiencies: Json | null
+          status: string | null
+          team_goals: string[] | null
+          team_id: string | null
+          team_size_preference: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          availability_pattern?: Json | null
+          collaboration_style?: string[] | null
+          communication_preferences?: string[] | null
+          created_at?: string | null
+          hackathon_id: string
+          id?: string
+          mentorship_preference?: string | null
+          preferred_team_role?: string | null
+          project_type_preferences?: string[] | null
+          skill_proficiencies?: Json | null
+          status?: string | null
+          team_goals?: string[] | null
+          team_id?: string | null
+          team_size_preference?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          availability_pattern?: Json | null
+          collaboration_style?: string[] | null
+          communication_preferences?: string[] | null
+          created_at?: string | null
+          hackathon_id?: string
+          id?: string
+          mentorship_preference?: string | null
+          preferred_team_role?: string | null
+          project_type_preferences?: string[] | null
+          skill_proficiencies?: Json | null
+          status?: string | null
+          team_goals?: string[] | null
+          team_id?: string | null
+          team_size_preference?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hackathon_participants_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hackathon_participants_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "hackathon_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hackathon_teams: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          hackathon_id: string
+          id: string
+          looking_for_members: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          hackathon_id: string
+          id?: string
+          looking_for_members?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          hackathon_id?: string
+          id?: string
+          looking_for_members?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hackathon_teams_hackathon_id_fkey"
+            columns: ["hackathon_id"]
+            isOneToOne: false
+            referencedRelation: "hackathons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hackathons: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_date: string
+          id: string
+          is_virtual: boolean | null
+          location: string | null
+          max_team_size: number | null
+          organizer_id: string | null
+          platform_url: string | null
+          registration_deadline: string | null
+          registration_url: string | null
+          start_date: string
+          status: string | null
+          submission_deadline: string | null
+          title: string
+          updated_at: string | null
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          is_virtual?: boolean | null
+          location?: string | null
+          max_team_size?: number | null
+          organizer_id?: string | null
+          platform_url?: string | null
+          registration_deadline?: string | null
+          registration_url?: string | null
+          start_date: string
+          status?: string | null
+          submission_deadline?: string | null
+          title: string
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_virtual?: boolean | null
+          location?: string | null
+          max_team_size?: number | null
+          organizer_id?: string | null
+          platform_url?: string | null
+          registration_deadline?: string | null
+          registration_url?: string | null
+          start_date?: string
+          status?: string | null
+          submission_deadline?: string | null
+          title?: string
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hackathons_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "organizers"
             referencedColumns: ["id"]
           },
         ]
@@ -588,6 +1426,24 @@ export type Database = {
           },
         ]
       }
+      prerequisites: {
+        Row: {
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           analytics_consent: boolean | null
@@ -601,6 +1457,7 @@ export type Database = {
           location: string | null
           preferences: Json | null
           recommendation_preferences: Json | null
+          team_preferences: Json | null
           timezone: string | null
           updated_at: string | null
         }
@@ -616,6 +1473,7 @@ export type Database = {
           location?: string | null
           preferences?: Json | null
           recommendation_preferences?: Json | null
+          team_preferences?: Json | null
           timezone?: string | null
           updated_at?: string | null
         }
@@ -631,6 +1489,7 @@ export type Database = {
           location?: string | null
           preferences?: Json | null
           recommendation_preferences?: Json | null
+          team_preferences?: Json | null
           timezone?: string | null
           updated_at?: string | null
         }
@@ -748,6 +1607,24 @@ export type Database = {
           email?: string
           id?: string
           subscribed_at?: string
+        }
+        Relationships: []
+      }
+      target_audiences: {
+        Row: {
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -1034,8 +1911,79 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_events: {
+        Row: {
+          action: string
+          error_message: string | null
+          event_external_id: string | null
+          event_id: string | null
+          id: string
+          payload: Json | null
+          processed_at: string | null
+          processing_result: string | null
+          signature_verified: boolean | null
+          source: string
+          webhook_id: string | null
+        }
+        Insert: {
+          action: string
+          error_message?: string | null
+          event_external_id?: string | null
+          event_id?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          processing_result?: string | null
+          signature_verified?: boolean | null
+          source: string
+          webhook_id?: string | null
+        }
+        Update: {
+          action?: string
+          error_message?: string | null
+          event_external_id?: string | null
+          event_id?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          processing_result?: string | null
+          signature_verified?: boolean | null
+          source?: string
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
+      event_type_analytics: {
+        Row: {
+          attended: number | null
+          avg_attendees: number | null
+          bookmarked: number | null
+          event_type_color: string | null
+          event_type_id: string | null
+          event_type_name: string | null
+          popularity_score: number | null
+          total_tracked: number | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
       events_detailed: {
         Row: {
           accessibility_features: Json | null
@@ -1056,6 +2004,7 @@ export type Database = {
           livestream_url: string | null
           location: string | null
           organizer_id: string | null
+          organizer_logo_url: string | null
           organizer_name: string | null
           organizer_website: string | null
           prerequisites: string | null
@@ -1091,6 +2040,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "events_event_type_id_fkey"
+            columns: ["event_type_id"]
+            isOneToOne: false
+            referencedRelation: "event_type_analytics"
+            referencedColumns: ["event_type_id"]
+          },
+          {
             foreignKeyName: "fk_events_organizer"
             columns: ["organizer_id"]
             isOneToOne: false
@@ -1112,6 +2068,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_analytics_summary: {
+        Row: {
+          estimated_impact_score: number | null
+          events_attended: number | null
+          events_bookmarked: number | null
+          events_interested: number | null
+          first_activity: string | null
+          high_value_events: number | null
+          last_activity: string | null
+          recent_activity_30d: number | null
+          total_tracked_events: number | null
+          unique_event_types: number | null
+          user_id: string | null
+        }
+        Relationships: []
       }
       user_engagement_summary: {
         Row: {
@@ -1147,6 +2119,102 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      filter_events: {
+        Args:
+          | {
+              categories?: string[]
+              cost_filter?: string
+              difficulty_filter?: string
+              duration_filter?: string
+              end_date?: string
+              event_format?: string
+              my_network?: boolean
+              page_num?: number
+              page_size?: number
+              popularity_filter?: string
+              recommended?: boolean
+              search_term?: string
+              sort_by?: string
+              start_date?: string
+            }
+          | {
+              p_budget?: string
+              p_categories?: string[]
+              p_cost?: string
+              p_currency?: string
+              p_duration?: string
+              p_end_date?: string
+              p_event_format?: string
+              p_my_network?: boolean
+              p_page_num?: number
+              p_page_size?: number
+              p_popularity?: string
+              p_recommended?: boolean
+              p_search_term?: string
+              p_sort_by?: string
+              p_start_date?: string
+            }
+          | {
+              p_budget?: string
+              p_categories?: string[]
+              p_cost?: string
+              p_duration?: string
+              p_end_date?: string
+              p_event_format?: string
+              p_my_network?: boolean
+              p_page_num?: number
+              p_page_size?: number
+              p_popularity?: string
+              p_recommended?: boolean
+              p_search_term?: string
+              p_sort_by?: string
+              p_start_date?: string
+            }
+        Returns: {
+          accessibility_features: Json
+          agenda_url: string
+          attendee_count: number
+          capacity: number
+          certificate_offered: boolean
+          created_at: string
+          currency: string
+          daily_schedule: Json
+          description: string
+          end_time: string
+          event_format: string
+          event_image_url: string
+          event_type_id: string
+          id: string
+          is_multi_day: boolean
+          language: string
+          livestream_url: string
+          location: string
+          organizer_id: string
+          prerequisites: string
+          price_max: number
+          price_min: number
+          pricing_type: string
+          recording_available: boolean
+          registration_deadline: string
+          registration_url: string
+          series_id: string
+          source_url: string
+          speaker_lineup: Json
+          start_time: string
+          status: string
+          status_enum: string
+          target_audience: string
+          timezone: string
+          title: string
+          total_count: number
+          updated_at: string
+          venue_id: string
+        }[]
+      }
+      find_event_by_external_id: {
+        Args: { p_external_id: string; p_source?: string }
+        Returns: string
+      }
       get_analytics_health: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -1160,6 +2228,22 @@ export type Database = {
           id: string
           name: string
         }[]
+      }
+      get_impact_trend: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_monthly_stats: {
+        Args: { p_month_offset?: number; p_user_id: string }
+        Returns: Json
+      }
+      get_skills_growth_analysis: {
+        Args: { p_target_skills: string[]; p_user_id: string }
+        Returns: Json
+      }
+      get_user_analytics_comprehensive: {
+        Args: { p_include_recommendations?: boolean; p_user_id: string }
+        Returns: Json
       }
       get_user_dashboard_data: {
         Args: { user_uuid: string }
@@ -1183,6 +2267,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_service_role: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_valid_email: {
         Args: { email: string }
         Returns: boolean
@@ -1191,39 +2279,104 @@ export type Database = {
         Args: { url: string }
         Returns: boolean
       }
+      log_webhook_event: {
+        Args: {
+          p_action: string
+          p_external_id: string
+          p_payload: Json
+          p_signature_verified?: boolean
+          p_source: string
+        }
+        Returns: string
+      }
       make_user_admin: {
         Args: { user_email: string }
         Returns: undefined
       }
+      refresh_analytics_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       track_event_and_update_profile: {
         Args: {
-          p_user_id: string
           p_event_id: string
+          p_notes?: string
           p_status: string
-          p_notes: string | null
+          p_user_id: string
         }
-        Returns: {
-          success: boolean
-          is_new_tracking?: boolean
-          message: string
-          error?: string
-        }
+        Returns: Json
       }
       untrack_event_and_update_profile: {
-        Args: {
-          p_user_id: string
-          p_event_id: string
-        }
-        Returns: {
-          success: boolean
-          was_tracked?: boolean
-          message: string
-          error?: string
-        }
+        Args: { p_event_id: string; p_user_id: string }
+        Returns: Json
       }
     }
     Enums: {
-      [_ in never]: never
+      available_time_enum:
+        | "very-limited"
+        | "limited"
+        | "moderate"
+        | "flexible"
+        | "dedicated"
+      budget_range_enum: "free-only" | "low" | "moderate" | "high" | "unlimited"
+      career_event_type_enum:
+        | "conference"
+        | "workshop"
+        | "meetup"
+        | "webinar"
+        | "summit"
+        | "networking"
+      career_goal_enum:
+        | "skill-development"
+        | "career-advancement"
+        | "role-transition"
+        | "leadership-growth"
+        | "entrepreneurship"
+        | "networking"
+        | "specialization"
+        | "salary-increase"
+      career_timeframe_enum:
+        | "immediate"
+        | "short-term"
+        | "medium-term"
+        | "long-term"
+      company_size_enum:
+        | "startup"
+        | "small"
+        | "medium"
+        | "large"
+        | "enterprise"
+        | "freelance"
+      event_format_enum: "Online" | "In-person" | "Hybrid"
+      event_status_enum: "Confirmed" | "Tentative" | "Cancelled" | "Postponed"
+      learning_style_enum:
+        | "hands-on"
+        | "theoretical"
+        | "interactive"
+        | "networking"
+        | "case-studies"
+        | "peer-learning"
+      networking_goal_enum:
+        | "find-mentors"
+        | "find-peers"
+        | "find-collaborators"
+        | "find-employers"
+        | "industry-insights"
+        | "thought-leadership"
+      pricing_type_enum: "Free" | "Paid" | "Varies"
+      seniority_level:
+        | "student"
+        | "entry-level"
+        | "junior"
+        | "mid-level"
+        | "senior"
+        | "staff"
+        | "principal"
+        | "lead"
+        | "manager"
+        | "director"
+        | "vp"
+        | "founder"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1349,7 +2502,84 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  public: {
+  graphql_public: {
     Enums: {},
+  },
+  public: {
+    Enums: {
+      available_time_enum: [
+        "very-limited",
+        "limited",
+        "moderate",
+        "flexible",
+        "dedicated",
+      ],
+      budget_range_enum: ["free-only", "low", "moderate", "high", "unlimited"],
+      career_event_type_enum: [
+        "conference",
+        "workshop",
+        "meetup",
+        "webinar",
+        "summit",
+        "networking",
+      ],
+      career_goal_enum: [
+        "skill-development",
+        "career-advancement",
+        "role-transition",
+        "leadership-growth",
+        "entrepreneurship",
+        "networking",
+        "specialization",
+        "salary-increase",
+      ],
+      career_timeframe_enum: [
+        "immediate",
+        "short-term",
+        "medium-term",
+        "long-term",
+      ],
+      company_size_enum: [
+        "startup",
+        "small",
+        "medium",
+        "large",
+        "enterprise",
+        "freelance",
+      ],
+      event_format_enum: ["Online", "In-person", "Hybrid"],
+      event_status_enum: ["Confirmed", "Tentative", "Cancelled", "Postponed"],
+      learning_style_enum: [
+        "hands-on",
+        "theoretical",
+        "interactive",
+        "networking",
+        "case-studies",
+        "peer-learning",
+      ],
+      networking_goal_enum: [
+        "find-mentors",
+        "find-peers",
+        "find-collaborators",
+        "find-employers",
+        "industry-insights",
+        "thought-leadership",
+      ],
+      pricing_type_enum: ["Free", "Paid", "Varies"],
+      seniority_level: [
+        "student",
+        "entry-level",
+        "junior",
+        "mid-level",
+        "senior",
+        "staff",
+        "principal",
+        "lead",
+        "manager",
+        "director",
+        "vp",
+        "founder",
+      ],
+    },
   },
 } as const

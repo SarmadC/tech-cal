@@ -1,8 +1,9 @@
 // src/components/ui/button.test.tsx
 
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { Button } from '@/components/ui/button'; // This path is now correct
+import { screen } from '@/utils/test-utils';
 
 describe('Button Component', () => {
     it('should render the button with its children', () => {

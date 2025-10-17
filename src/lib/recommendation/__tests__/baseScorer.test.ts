@@ -15,6 +15,8 @@ describe('matchesWholeWord (indirect testing via calculateBaseScore)', () => {
     endTime: new Date().toISOString(),
     location: 'Test Location',
     organizer: 'Test Organizer',
+    status: 'confirmed',
+    sourceUrl: 'https://example.com',
     eventTypeId: 'test-type',
     priceRange: 'Free',
     registrationUrl: '',
@@ -25,15 +27,23 @@ describe('matchesWholeWord (indirect testing via calculateBaseScore)', () => {
   });
 
   const createTestProfile = (overrides: Partial<CareerProfile> = {}): CareerProfile => ({
+    userId: 'test-user-id',
+    profileId: 'test-profile-id',
+    lastUpdated: new Date().toISOString(),
     currentRole: 'Developer',
-    careerStage: 'mid-level',
-    yearsOfExperience: 5,
+    seniority: 'mid-level',
+    industry: 'Technology',
+    companySize: 'medium',
     primarySkills: [],
     skillsToLearn: [],
     interests: [],
     careerGoals: [],
+    timeframe: 'medium-term',
     learningStyle: [],
+    availableTime: 'moderate',
+    budget: 'moderate',
     networkingGoals: [],
+    preferredEventTypes: [],
     ...overrides,
   });
 
@@ -235,7 +245,7 @@ describe('matchesWholeWord (indirect testing via calculateBaseScore)', () => {
   describe('Networking keywords', () => {
     it('should match networking keywords with word boundaries', () => {
       const profile = createTestProfile({
-        networkingGoals: ['expand-professional-network'],
+        networkingGoals: ['find-peers'],
       });
       const event = createTestEvent('Networking Event', 'Professional networking mixer');
       
@@ -247,7 +257,7 @@ describe('matchesWholeWord (indirect testing via calculateBaseScore)', () => {
 
     it('should NOT match partial networking keywords', () => {
       const profile = createTestProfile({
-        networkingGoals: ['expand-professional-network'],
+        networkingGoals: ['find-peers'],
       });
       // "networks" should NOT match "networking"
       const event = createTestEvent('Computer Networks', 'Learn about computer networks');

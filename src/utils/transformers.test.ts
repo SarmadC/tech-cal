@@ -19,6 +19,7 @@ const mockDetailedSupabaseEvent: SupabaseEventWithDetails = {
     source_url: 'https://example.com/aiconf',
     livestream_url: 'https://youtube.com/aiconf',
     event_type_id: 'type_conf_123',
+    agenda_url: null,
     // ----- Joined relations -----
     organizer: { id: 'org_abc', name: 'Tech Events Inc.' },
     event_type: {

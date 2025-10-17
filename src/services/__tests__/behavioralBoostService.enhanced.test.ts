@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BehavioralBoostService } from '../behavioralBoostService';
-import type { Event } from '@/types';
+import type { Event, SupabaseClientType } from '@/types';
 
 // Mock data
 const mockEvent: Event = {
@@ -61,7 +61,7 @@ const mockSupabaseClient = {
       }))
     }))
   }))
-} as unknown as Record<string, unknown>;
+} as unknown as SupabaseClientType;
 
 describe('Enhanced Behavioral Boost Service', () => {
   beforeEach(() => {
@@ -101,9 +101,11 @@ describe('Enhanced Behavioral Boost Service', () => {
   describe('Contextual Awareness', () => {
     it('should apply contextual boost for good timing', async () => {
       const context = {
-        timeOfDay: 10, // 10 AM
-        dayOfWeek: 1, // Monday
-        deviceType: 'desktop' as const
+        preferredCategories: ['Workshop'],
+        preferredFormats: ['virtual'],
+        preferredTimes: ['morning'],
+        averageEventDuration: 120,
+        interactionFrequency: 5
       };
 
       const result = await BehavioralBoostService.calculateBehavioralBoost(
@@ -136,9 +138,11 @@ describe('Enhanced Behavioral Boost Service', () => {
   describe('Integration', () => {
     it('should combine all enhancements correctly', async () => {
       const context = {
-        timeOfDay: 10,
-        dayOfWeek: 1,
-        deviceType: 'desktop' as const
+        preferredCategories: ['Workshop'],
+        preferredFormats: ['virtual'],
+        preferredTimes: ['morning'],
+        averageEventDuration: 120,
+        interactionFrequency: 5
       };
 
       const result = await BehavioralBoostService.calculateBehavioralBoost(
@@ -152,7 +156,7 @@ describe('Enhanced Behavioral Boost Service', () => {
       // Should have all components working together
       expect(result.boost).toBeDefined();
       expect(result.similarities).toBeDefined();
-      expect(result.application).toBeDefined();
+      expect(result.confidence).toBeDefined();
       expect(typeof result.boost).toBe('number');
     });
   });

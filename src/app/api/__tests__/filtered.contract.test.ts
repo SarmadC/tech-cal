@@ -37,34 +37,39 @@ describe('/api/events/filtered contract', () => {
     // Minimal valid body
     const req = makeRequest({ page: 1, pageSize: 1 });
     const res = await route.POST(req as unknown as NextRequest);
-    const json = await (res as { json: () => Promise<unknown> }).json();
+    const json = await (res as { json: () => Promise<unknown> }).json() as {
+      success: boolean;
+      data?: { events: unknown[] };
+    };
 
     // success flag
     expect(json).toHaveProperty('success');
 
     // If success, validate shape
-    if (json.success) {
+    if (json.success && json.data) {
       expect(json.data).toHaveProperty('events');
       expect(Array.isArray(json.data.events)).toBe(true);
 
-      const first = json.data.events[0];
+      const first = json.data.events[0] as Record<string, unknown>;
       if (first) {
         expect(first).toHaveProperty('id');
         expect(first).toHaveProperty('title');
         // Career impact contract
         expect(first).toHaveProperty('careerImpact');
-        const ci = first.careerImpact;
+        const ci = first.careerImpact as Record<string, unknown>;
         expect(ci).toHaveProperty('overall');
         expect(ci).toHaveProperty('components');
-        expect(ci.components).toHaveProperty('skillRelevance');
-        expect(ci.components).toHaveProperty('careerStageMatch');
-        expect(ci.components).toHaveProperty('networkingValue');
-        expect(ci.components).toHaveProperty('industryRelevance');
-        expect(ci.components).toHaveProperty('timingBonus');
+        const components = ci.components as Record<string, unknown>;
+        expect(components).toHaveProperty('skillRelevance');
+        expect(components).toHaveProperty('careerStageMatch');
+        expect(components).toHaveProperty('networkingValue');
+        expect(components).toHaveProperty('industryRelevance');
+        expect(components).toHaveProperty('timingBonus');
         expect(ci).toHaveProperty('explanation');
-        expect(ci.explanation).toHaveProperty('alignmentReasons');
-        expect(Array.isArray(ci.explanation.alignmentReasons)).toBe(true);
-        expect(ci.explanation).toHaveProperty('matchedSkills');
+        const explanation = ci.explanation as Record<string, unknown>;
+        expect(explanation).toHaveProperty('alignmentReasons');
+        expect(Array.isArray(explanation.alignmentReasons)).toBe(true);
+        expect(explanation).toHaveProperty('matchedSkills');
       }
     }
   });

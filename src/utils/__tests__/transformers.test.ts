@@ -43,6 +43,7 @@ describe('eventTransformer', () => {
         organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
         updated_at: '2024-01-01T09:00:00Z',
+        agenda_url: null,
         organizer: {
           id: 'org1',
           name: 'Test Organizer',
@@ -94,6 +95,7 @@ describe('eventTransformer', () => {
         organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
         updated_at: '2024-01-01T09:00:00Z',
+        agenda_url: null,
         organizer: {
           id: 'org1',
           name: 'Test Organizer',
@@ -138,6 +140,7 @@ describe('eventTransformer', () => {
         organizer_id: null,
         created_at: '2024-01-01T09:00:00Z',
         updated_at: '2024-01-01T09:00:00Z',
+        agenda_url: null,
         organizer: null,
         tags: [],
       };
@@ -280,6 +283,7 @@ describe('trackedEventTransformer', () => {
           organizer_id: 'org1',
           created_at: '2024-01-01T09:00:00Z',
           updated_at: '2024-01-01T09:00:00Z',
+          agenda_url: null,
           event_type: {
             id: 'type1',
             name: 'Conference',
@@ -430,6 +434,7 @@ describe('array transformers', () => {
         organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
         updated_at: '2024-01-01T09:00:00Z',
+        agenda_url: null,
         organizer: { id: 'org1', name: 'Org 1' },
         tags: [],
       },
@@ -447,6 +452,7 @@ describe('array transformers', () => {
         organizer_id: 'org2',
         created_at: '2024-01-02T09:00:00Z',
         updated_at: '2024-01-02T09:00:00Z',
+        agenda_url: null,
         organizer: { id: 'org2', name: 'Org 2' },
         tags: [],
       },
@@ -725,6 +731,7 @@ describe('enhancedEventTransformer', () => {
         organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
         updated_at: '2024-01-01T09:00:00Z',
+        agenda_url: null,
         organizer: { id: 'org1', name: 'Test Org' },
         tags: [],
         is_multi_day: true,
@@ -794,6 +801,7 @@ describe('enhancedEventTransformer', () => {
         organizer_id: 'org1',
         created_at: '2024-01-01T09:00:00Z',
         updated_at: '2024-01-01T09:00:00Z',
+        agenda_url: null,
         organizer: { id: 'org1', name: 'Test Org' },
         tags: [],
         is_multi_day: false,

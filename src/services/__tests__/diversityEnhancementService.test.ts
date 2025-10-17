@@ -30,7 +30,13 @@ const createMockEvent = (
   careerImpact: {
     overall: careerImpactScore,
     confidence: 0.9,
-    components: {},
+    components: {
+      skillRelevance: 0,
+      careerStageMatch: 0,
+      networkingValue: 0,
+      industryRelevance: 0,
+      timingBonus: 0
+    },
     explanation: {
       reasons: [],
       matchedSkills: [],

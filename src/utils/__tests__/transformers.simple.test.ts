@@ -37,6 +37,7 @@ describe('transformers', () => {
           organizer_id: 'org1',
           created_at: '2024-01-01T09:00:00Z',
           updated_at: '2024-01-01T09:00:00Z',
+          agenda_url: null,
           organizer: {
             id: 'org1',
             name: 'Test Organizer',
@@ -70,6 +71,7 @@ describe('transformers', () => {
           organizer_id: 'org1',
           created_at: '2024-01-01T09:00:00Z',
           updated_at: '2024-01-01T09:00:00Z',
+          agenda_url: null,
           organizer: {
             id: 'org1',
             name: 'Test Organizer',

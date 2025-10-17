@@ -1,6 +1,6 @@
 // src/components/calendar/MobileSearchFilter.test.tsx
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
 import { describe, it, expect, vi } from 'vitest';
 import MobileSearchFilter from './MobileSearchFilter';
 

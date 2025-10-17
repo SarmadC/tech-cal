@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/utils/test-utils';
 import EventProgress from '../EventProgress';
 import { Event, AgendaItem } from '@/types';
 

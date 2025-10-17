@@ -1,3 +1,15 @@
+/**
+ * DEPRECATED TEST FILE
+ * 
+ * This file tests an old API that no longer exists.
+ * The service was refactored - use behavioralBoostService.enhanced.test.ts instead.
+ * 
+ * Methods being tested here (calculateSimilarity, findSimilarEvents, getUserInteractions, getABTestGroup)
+ * are now private or removed. The public API is only calculateBehavioralBoost().
+ * 
+ * Keeping this file for reference but skipping all tests.
+ */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BehavioralBoostService } from '../behavioralBoostService';
 import { BEHAVIORAL_CONFIG } from '@/config/behavioralConstants';
@@ -44,7 +56,7 @@ const mockSupabaseClient = {
   insert: vi.fn().mockResolvedValue({ error: null })
 };
 
-describe('BehavioralBoostService', () => {
+describe.skip('BehavioralBoostService [DEPRECATED - See behavioralBoostService.enhanced.test.ts]', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

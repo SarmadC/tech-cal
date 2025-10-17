@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { calculateBaseScore } from '@/lib/recommendation/baseScorer';
 import { enrichEventsWithCareerImpact } from '@/services/careerImpactEnrichmentService';
-import type { Event } from '@/types';
+import type { Event, SupabaseClientType } from '@/types';
 import type { CareerProfile } from '@/types/career';
 
 // Sample career profile for testing
 const sampleCareerProfile: CareerProfile = {
+  userId: 'test-user-123',
+  profileId: 'test-profile-123',
+  lastUpdated: new Date().toISOString(),
   currentRole: 'Senior Software Engineer',
   seniority: 'senior',
   industry: 'Technology',
@@ -18,7 +21,7 @@ const sampleCareerProfile: CareerProfile = {
   learningStyle: ['hands-on', 'interactive'],
   availableTime: 'moderate',
   budget: 'moderate',
-  networkingGoals: ['technical-community', 'mentorship'],
+  networkingGoals: ['find-peers', 'find-mentors'],
   preferredEventTypes: ['workshop', 'conference', 'meetup']
 };
 
@@ -31,11 +34,10 @@ const events: Event[] = [
     startTime: '2025-11-01T10:00:00Z',
     endTime: '2025-11-01T17:00:00Z',
     location: 'Online',
-    locationType: 'online',
     format: 'virtual',
     cost: 'paid',
     eventTypeId: '1'
-  },
+  } as unknown as Event,
   {
     id: 'e2',
     title: 'React Conference 2025: Advanced Patterns',
@@ -43,11 +45,10 @@ const events: Event[] = [
     startTime: '2025-11-15T09:00:00Z',
     endTime: '2025-11-15T18:00:00Z',
     location: 'San Francisco, CA',
-    locationType: 'in-person',
     format: 'in-person',
     cost: 'paid',
     eventTypeId: '2'
-  },
+  } as unknown as Event,
   {
     id: 'e3',
     title: 'Introduction to Python for Beginners',
@@ -55,15 +56,14 @@ const events: Event[] = [
     startTime: '2025-12-01T10:00:00Z',
     endTime: '2025-12-01T15:00:00Z',
     location: 'Virtual',
-    locationType: 'online',
     format: 'virtual',
     cost: 'free',
     eventTypeId: '3'
-  }
+  } as unknown as Event
 ];
 
 // Stub supabase client (not used by enrichment when strategy=server)
-const supabaseStub = {} as unknown;
+const supabaseStub = {} as unknown as SupabaseClientType;
 
 describe('Alignment Core vs Enrichment parity', () => {
   let originalStrategy: string | undefined;

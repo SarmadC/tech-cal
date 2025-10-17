@@ -8,6 +8,21 @@ import type {
 import { trackedEventTransformer } from '@/utils/transformers';
 import * as Sentry from "@sentry/nextjs";
 
+// RPC return type interfaces
+interface TrackEventRpcResult {
+    success: boolean;
+    message?: string;
+    error?: string;
+    is_new_tracking?: boolean;
+}
+
+interface UntrackEventRpcResult {
+    success: boolean;
+    message?: string;
+    error?: string;
+    was_tracked?: boolean;
+}
+
 export class UserEventService {
     /**
      * Track an event or update its status using atomic RPC function.
@@ -25,7 +40,7 @@ export class UserEventService {
                 p_user_id: userId,
                 p_event_id: eventId,
                 p_status: status,
-                p_notes: notes || null
+                p_notes: notes ?? undefined
             });
 
             if (error) {
@@ -33,10 +48,12 @@ export class UserEventService {
                 throw error;
             }
 
-            if (!data || !data.success) {
-                const errorMessage = data?.message || data?.error || 'Failed to track event';
+            const result = data as TrackEventRpcResult | null;
+            
+            if (!result || !result.success) {
+                const errorMessage = result?.message || result?.error || 'Failed to track event';
                 console.error('❌ Function returned failure:', {
-                    data,
+                    data: result,
                     errorMessage,
                     userId,
                     eventId,
@@ -49,7 +66,7 @@ export class UserEventService {
                 userId,
                 eventId,
                 status,
-                isNewTracking: data.is_new_tracking
+                isNewTracking: result.is_new_tracking
             });
         } catch (error) {
             console.error('Error tracking event:', error);
@@ -166,10 +183,12 @@ export class UserEventService {
                 throw error;
             }
 
-            if (!data || !data.success) {
-                const errorMessage = data?.message || data?.error || 'Failed to untrack event';
+            const result = data as UntrackEventRpcResult | null;
+            
+            if (!result || !result.success) {
+                const errorMessage = result?.message || result?.error || 'Failed to untrack event';
                 console.error('❌ Function returned failure:', {
-                    data,
+                    data: result,
                     errorMessage,
                     userId,
                     eventId
@@ -180,7 +199,7 @@ export class UserEventService {
             console.log('Event untracked successfully:', {
                 userId,
                 eventId,
-                wasTracked: data.was_tracked
+                wasTracked: result.was_tracked
             });
         } catch (error) {
             console.error('Error untracking event:', error);
