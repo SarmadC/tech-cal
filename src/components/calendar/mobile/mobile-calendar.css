@@ -319,6 +319,11 @@
   animation: fadeInUp 0.3s ease-out;
 }
 
+/* Dark mode: use event category pastel background when provided */
+.dark .mobile-event-card {
+  background: var(--category-bg, var(--background-secondary));
+}
+
 .mobile-event-card:hover {
   background: var(--background-elevated);
   border-color: var(--border-strong);

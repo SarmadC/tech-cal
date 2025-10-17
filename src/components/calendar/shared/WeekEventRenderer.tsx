@@ -70,7 +70,6 @@ export const WeekEventRenderer: React.FC<WeekEventRendererProps> = ({
                             style={{
                                 height: '100%',
                                 margin: '1px 2px',
-                                '--category-bg': categoryColor,
                                 '--category-title-color': titleColor,
                                 '--text-on-pastel': titleColor
                             } as React.CSSProperties}

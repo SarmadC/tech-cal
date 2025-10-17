@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { CareerOnboardingData } from '@/types/career';
@@ -11,15 +11,26 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 
 export default function CareerOnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { showSuccess, showError, showInfo } = useSnackbar();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
   
   const {
     hasCompletedOnboarding,
     isLoading,
     completeOnboarding
   } = useCareerProfile();
+
+  // Check if user was redirected from middleware
+  useEffect(() => {
+    const fromMiddleware = searchParams.get('from') === 'middleware';
+    if (fromMiddleware && !hasCompletedOnboarding) {
+      setShowWelcomeMessage(true);
+      showInfo('Complete your profile to get personalized event recommendations!');
+    }
+  }, [searchParams, hasCompletedOnboarding, showInfo]);
 
   // Redirect if user has already completed onboarding
   React.useEffect(() => {
@@ -75,6 +86,28 @@ export default function CareerOnboardingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
+        {/* Welcome Banner (shown when redirected from middleware) */}
+        {showWelcomeMessage && (
+          <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-500 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  One Quick Step to Get Started
+                </h3>
+                <p className="mt-1 text-sm text-blue-700">
+                  Complete your career profile to unlock personalized event recommendations tailored to your goals and interests. 
+                  This only takes 2-3 minutes and will dramatically improve your experience.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

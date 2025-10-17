@@ -138,9 +138,8 @@ export const EventCard: React.FC<EventCardProps> = ({
     // Generate CSS classes for event state
     const cardClasses = [
         'event-card',
-        'event-card-v8', // New V8 styling class
-        'glass-card', // Add glass card effect
-        viewType === 'week' ? 'week-view' : '', // Add week-view class for week view
+        'event-card-v8',
+        viewType === 'week' ? 'week-view' : '',
         live ? 'live' : '',
         isPast ? 'past completed-event' : '',
         isEventTracked(event) ? 'tracked' : '',
@@ -152,7 +151,6 @@ export const EventCard: React.FC<EventCardProps> = ({
     // Set up CSS variables for the new design
     const cardStyle: React.CSSProperties = {
         ...style,
-        '--category-bg': categoryColor,
         '--category-title-color': titleColor,
         '--text-on-pastel': titleColor,
         '--text-secondary-on-pastel': titleColor

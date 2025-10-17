@@ -310,6 +310,7 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
                 onMouseLeave={handleEventLeave}
                 style={{
                   '--event-color': event.color || 'var(--accent-primary)',
+                  '--category-bg': (event as Event | MultiDayEventInstance).color || 'var(--background-secondary)'
                 } as React.CSSProperties}
               >
                 <div className="event-time">

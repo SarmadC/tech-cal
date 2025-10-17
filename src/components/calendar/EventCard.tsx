@@ -3,6 +3,8 @@
 import { FC, memo } from 'react';
 // 1. UPDATE IMPORTS: Use the new, canonical `TrackedEvent` type.
 import { TrackedEvent } from '@/types';
+import { getCategoryColor } from '@/utils/eventUtils';
+import { getPillColor } from '@/utils/pillColorUtils';
 import { ClockIcon, MapPinIcon, UsersIcon, StarIcon } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/utils/dateUtils';
@@ -39,13 +41,16 @@ const EventCard: FC<EventCardProps> = ({
             role="button"
             aria-label={`Event: ${event.title} by ${event.organizer}`}
             className={`
-                premium-card smooth-colors
-                bg-[#1e1e1e] border border-gray-800 rounded-xl p-4
-                transition-all duration-200 cursor-pointer group
-                hover:border-zinc-500/50 hover:bg-[#2a2a2a]
+                event-card premium-card smooth-colors rounded-xl p-4
+                border border-gray-800 transition-all duration-200 cursor-pointer group
+                hover:border-zinc-500/50
                 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-transparent
                 ${isSelected ? 'border-zinc-300 ring-2 ring-white/30' : ''}
             `}
+            style={{
+                ['--category-title-color' as unknown as string]: getPillColor(getCategoryColor(event), 0.5),
+                ['--text-on-pastel' as unknown as string]: getPillColor(getCategoryColor(event), 0.5)
+            }}
         >
             <div className="flex justify-between items-start mb-3">
                 <div className="flex flex-col">

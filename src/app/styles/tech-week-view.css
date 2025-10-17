@@ -292,49 +292,22 @@
 }
 
 /* Override glass-card effects specifically for week view */
-/* Light mode: enable subtle glass effect for week view event cards */
-.light .tech-calendar-week-view .event-card,
-.light .tech-calendar-week-view .event-card.glass-card,
-.light .tech-calendar-week-view .event-card.event-card-v8.glass-card,
-.light .tech-calendar-week-view .event-card-v8.glass-card,
-.light .tech-calendar-week-view .glass-card {
-    background: rgb(215 215 215 / 15%) !important;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-
-.light .tech-calendar-week-view .glass-card:hover,
-.light .tech-calendar-week-view .event-card:hover {
-    background: rgb(215 215 215 / 25%) !important;
-}
-
-/* Light-mode glass highlights (independent of container background) */
-.light .tech-calendar-week-view .event-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7),
-                inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
-}
-
-.light .tech-calendar-week-view .event-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.05));
-    mix-blend-mode: overlay;
-}
+/* Light mode: no additional glass background for week view event cards */
 
 /* In dark mode, disable glass blur so pastel backgrounds show */
 .dark .tech-calendar-week-view .event-card {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+}
+
+/* Dark mode: ensure hover/glass does not tint over category pastel */
+.dark .tech-calendar-week-view .event-card.glass-card,
+.dark .tech-calendar-week-view .glass-card {
+  background: var(--category-bg) !important;
+}
+
+.dark .tech-calendar-week-view .event-card:hover {
+  background: var(--category-bg) !important;
 }
 
 /* Event content container for week view - consolidated rules */
@@ -453,9 +426,9 @@
 
 /* Event title styling - comprehensive override for week view */
 .tech-calendar-week-view .event-card .event-title {
-    font-size: 0.75rem !important;
-    font-weight: 600 !important;
-    color: var(--category-title-color, var(--text-on-pastel)); /* Use darker shade for readability on pastel backgrounds */
+    font-size: 1.05rem !important; /* Larger than month for more room */
+    font-weight: 700 !important; /* Keep month style weight */
+    color: var(--category-title-color, var(--text-on-pastel));
     margin: 0 !important;
     padding: 0 !important; /* Remove any padding that might interfere */
     line-height: 1.2 !important;
@@ -628,7 +601,7 @@
     align-items: center;
     gap: 4px;
     font-size: 0.65rem;
-    color: #ffffff;
+    color: var(--text-on-pastel);
 }
 
 /* Event content container rules are consolidated above */
@@ -646,13 +619,13 @@
 
 /* Event time styling */
 .tech-calendar-week-view .event-card .event-time {
-    font-size: 0.65rem !important;
-    color: var(--text-secondary-on-pastel, #6b7280) !important;
+    font-size: 0.85rem !important; /* Larger than month */
+    font-weight: 500 !important; /* Keep month style weight */
+    color: var(--category-title-color, var(--text-on-pastel)) !important; /* Match month view tone */
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
     line-height: 1.2 !important; /* Match container line height */
-    font-weight: 600 !important; /* Ensure consistent weight */
 }
 
 /* Event duration styling for week view */
@@ -668,7 +641,7 @@
 /* Event location styling */
 .tech-calendar-week-view .event-card .event-location {
     font-size: 0.65rem !important;
-    color: #ffffff !important;
+    color: var(--text-on-pastel) !important;
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;
@@ -677,7 +650,7 @@
 /* Event organizer styling */
 .tech-calendar-week-view .event-card .event-organizer {
     font-size: 0.65rem !important;
-    color: #ffffff !important;
+    color: var(--text-on-pastel) !important;
     display: flex !important;
     align-items: center !important;
     gap: 4px !important;

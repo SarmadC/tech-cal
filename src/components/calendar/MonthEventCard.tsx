@@ -121,6 +121,9 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
         cursor: 'pointer',
         // No transitions on the card itself - hover effects are instant
         // This prevents flickering and provides immediate visual feedback
+        // Month cards in dark mode use neutral dark card; keep text vars for contrast control
+        ['--category-title-color' as unknown as string]: textColor,
+        ['--text-on-pastel' as unknown as string]: textColor,
         ...style
     };
 
@@ -134,7 +137,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     return (
         <div
             style={cardStyle}
-            className={`event-card event-card-v8 glass-card ${isPast ? 'past completed-event' : ''} ${className}`}
+            className={`event-card event-card-v8 ${isPast ? 'past completed-event' : ''} ${className}`}
             onClick={handleClick}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {

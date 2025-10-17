@@ -114,7 +114,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return (
       <DiscoverySection
         title="For You"
-        subtitle="Personalized Recommendations"
         icon={<User size={20} weight="fill" />}
         className={className}
       >
@@ -134,7 +133,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return (
       <DiscoverySection
         title="For You"
-        subtitle="Personalized Recommendations"
         icon={<User size={20} weight="fill" />}
         className={className}
       >
@@ -154,7 +152,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return (
       <DiscoverySection
         title="For You"
-        subtitle="Personalized Recommendations"
         icon={<User size={20} weight="fill" />}
         className={className}
       >
@@ -177,7 +174,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     return (
       <DiscoverySection
         title="For You"
-        subtitle="Personalized Recommendations"
         icon={<User size={20} weight="fill" />}
         className={className}
       >
@@ -216,11 +212,10 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   // Show empty state with helpful message if no events found OR if profile is incomplete
   if (finalEvents.length === 0) {
     console.log('Rendering empty state:', { hasCareerProfile, finalEventsLength: finalEvents.length });
-    
+
     return (
       <DiscoverySection
         title="For You"
-        subtitle="Personalized Recommendations"
         icon={<User size={20} weight="fill" />}
         className={className}
       >
@@ -289,7 +284,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   return (
     <DiscoverySection
       title="For You"
-      subtitle="Personalized Recommendations"
       icon={<User size={20} weight="fill" />}
       className={className}
       showViewAll={personalizedEvents.length >= limit}

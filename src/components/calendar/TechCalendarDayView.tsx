@@ -181,7 +181,6 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                     isOverlapping={overlapMap.get(event.id) || false}
                                     showCareerImpact={true}
                                     style={{
-                                        '--category-bg': categoryColor,
                                         '--category-title-color': titleColor,
                                         '--text-on-pastel': titleColor,
                                         '--text-secondary-on-pastel': titleColor

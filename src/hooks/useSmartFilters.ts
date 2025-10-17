@@ -153,7 +153,7 @@ export function useSmartFilters(
         
         // Smart filters completed
         return sorted;
-    }, [events, filters, userProfile, userCalendar]);
+    }, [events, filters, userCalendar]);
 
     // 4. UPDATE HELPER SIGNATURES: All helpers now accept the base `Event` type.
     const getDifficultyFromEvent = (event: Event): 'beginner' | 'intermediate' | 'advanced' => {

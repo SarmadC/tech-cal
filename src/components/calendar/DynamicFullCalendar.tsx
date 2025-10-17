@@ -80,7 +80,6 @@ const DynamicFullCalendar = forwardRef<any, DynamicFullCalendarProps>(({
             ],
             // Add CSS custom properties for styling
             style: {
-                '--category-bg': backgroundColor,
                 '--category-title-color': getPillColor(backgroundColor, 0.5),
                 '--text-on-pastel': getPillColor(backgroundColor, 0.5)
             } as React.CSSProperties

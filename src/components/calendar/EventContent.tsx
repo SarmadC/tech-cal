@@ -95,7 +95,6 @@ const EventContent: FC<EventContentProps> = ({
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             style={{
-                '--category-bg': categoryColor,
                 '--category-title-color': getPillColor(categoryColor, 0.5),
                 '--text-on-pastel': getPillColor(categoryColor, 0.5)
             } as React.CSSProperties}
