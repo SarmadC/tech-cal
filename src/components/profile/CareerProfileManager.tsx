@@ -1,14 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { CareerProfile, CareerOnboardingData } from '@/types/career';
+import { CareerProfile, CareerOnboardingData, CareerOptionalSectionStatus, CareerOptionalSectionSnoozes } from '@/types/career';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
+import { useAuth } from '@/contexts';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import QuickEditModal from './QuickEditModal';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { User } from '@phosphor-icons/react';
+import { AnalyticsService } from '@/services/analyticsService';
+
+const OPTIONAL_PROMPT_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface CareerProfileManagerProps {
   className?: string;
@@ -19,6 +23,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   className = '',
   onProfileUpdate
 }) => {
+  const { user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showError } = useSnackbar();
@@ -27,6 +32,9 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   const [quickEditSection, setQuickEditSection] = useState<string | null>(null);
   const [showAllCurrentSkills, setShowAllCurrentSkills] = useState(false);
   const [showAllLearningGoals, setShowAllLearningGoals] = useState(false);
+  const [dismissedPromptIds, setDismissedPromptIds] = useState<string[]>([]);
+  const loggedShownPrompts = useRef<Set<string>>(new Set());
+  const completedSectionsRef = useRef<Set<string>>(new Set());
   
   const {
     careerProfile: currentCareerProfile,
@@ -35,8 +43,124 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     error,
     saveCareerProfile: _saveCareerProfile,
     completeOnboarding,
-    refreshProfile
+    refreshProfile,
+    optionalSections,
+    optionalSectionSnoozes,
+    markOptionalSectionComplete,
+    snoozeOptionalSection
   } = useCareerProfile();
+
+  const sectionKeyMap: Record<string, keyof CareerOptionalSectionStatus> = {
+    learning: 'learningPreferences',
+    networking: 'networkingPreferences',
+    team: 'teamPreferences'
+  };
+
+
+  const promptDefinitions = useMemo(() => ([
+    {
+      id: 'learningPreferences',
+      title: 'Add your learning preferences',
+      description: 'Tell us how you prefer to learn and how much time you can dedicate each month to improve recommendation relevance.',
+      cta: 'Set learning preferences',
+      quickEdit: 'learning'
+    },
+    {
+      id: 'networkingPreferences',
+      title: 'Share your networking goals',
+      description: 'Let us know the connections you want to make so we can spotlight the right events.',
+      cta: 'Set networking goals',
+      quickEdit: 'networking'
+    },
+    {
+      id: 'teamPreferences',
+      title: 'Pick preferred event formats',
+      description: 'Choose the event types you enjoy most to diversify recommendations.',
+      cta: 'Choose event formats',
+      quickEdit: 'team'
+    }
+  ]) as Array<{
+    id: keyof CareerOptionalSectionStatus;
+    title: string;
+    description: string;
+    cta: string;
+    quickEdit: string;
+  }>, []);
+
+  const logPromptEvent = useCallback((event: 'prompt_shown' | 'prompt_opened' | 'prompt_snoozed' | 'prompt_completed', sectionId: keyof CareerOptionalSectionStatus, extra: Record<string, unknown> = {}) => {
+    AnalyticsService.logProfilePromptEvent(event, {
+      section: sectionId,
+      userId: user?.id ?? null,
+      ...extra
+    });
+  }, [user?.id]);
+
+  const shouldShowPrompt = React.useCallback((sectionId: string) => {
+    const status: CareerOptionalSectionStatus = optionalSections ?? {
+      learningPreferences: false,
+      networkingPreferences: false,
+      teamPreferences: false
+    };
+    const snoozes: CareerOptionalSectionSnoozes = optionalSectionSnoozes ?? {};
+    const completed = status[sectionId as keyof CareerOptionalSectionStatus];
+    if (completed) return false;
+    if (dismissedPromptIds.includes(sectionId)) return false;
+    const snoozeTimestamp = snoozes[sectionId as keyof CareerOptionalSectionSnoozes];
+    if (!snoozeTimestamp) return true;
+    const snoozeDate = new Date(snoozeTimestamp).getTime();
+    return Date.now() - snoozeDate > OPTIONAL_PROMPT_SNOOZE_MS;
+  }, [optionalSections, optionalSectionSnoozes, dismissedPromptIds]);
+
+  const pendingPrompts = useMemo(
+    () => promptDefinitions.filter(prompt => shouldShowPrompt(prompt.id)),
+    [promptDefinitions, shouldShowPrompt]
+  );
+
+  React.useEffect(() => {
+    pendingPrompts.forEach(prompt => {
+      if (!loggedShownPrompts.current.has(prompt.id)) {
+        loggedShownPrompts.current.add(prompt.id);
+        logPromptEvent('prompt_shown', prompt.id);
+      }
+    });
+  }, [pendingPrompts, logPromptEvent]);
+
+  React.useEffect(() => {
+    if (!optionalSections) return;
+    const nextCompleted = new Set<string>();
+    if (optionalSections.learningPreferences) nextCompleted.add('learningPreferences');
+    if (optionalSections.networkingPreferences) nextCompleted.add('networkingPreferences');
+    if (optionalSections.teamPreferences) nextCompleted.add('teamPreferences');
+    completedSectionsRef.current = nextCompleted;
+  }, [optionalSections]);
+
+  const handlePromptComplete = (quickEditKey: string) => {
+    const prompt = promptDefinitions.find(p => p.quickEdit === quickEditKey);
+    if (prompt) {
+      logPromptEvent('prompt_opened', prompt.id, { trigger: 'banner' });
+    }
+    handleQuickEdit(quickEditKey);
+  };
+
+  const handlePromptSnooze = async (sectionId: string) => {
+    const until = await snoozeOptionalSection(sectionId as keyof CareerOptionalSectionStatus);
+    setDismissedPromptIds(prev => prev.includes(sectionId) ? prev : [...prev, sectionId]);
+    loggedShownPrompts.current.delete(sectionId);
+    logPromptEvent('prompt_snoozed', sectionId as keyof CareerOptionalSectionStatus, {
+      snoozeUntil: until ?? null
+    });
+  };
+
+  const handleOptionalSectionCompleted = (section: string) => {
+    const optionalKey = sectionKeyMap[section];
+    if (optionalKey && !completedSectionsRef.current.has(optionalKey)) {
+      void markOptionalSectionComplete(optionalKey);
+      setDismissedPromptIds(prev => prev.filter(id => id !== optionalKey));
+      loggedShownPrompts.current.delete(optionalKey);
+      logPromptEvent('prompt_completed', optionalKey, { completedAt: new Date().toISOString() });
+      completedSectionsRef.current.add(optionalKey);
+    }
+  };
   
   // Debug: Log when career profile changes
   React.useEffect(() => {
@@ -81,11 +205,14 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     );
   }
 
-  const handleComplete = async (data: CareerOnboardingData) => {
+  const handleComplete = async (
+    data: CareerOnboardingData,
+    options?: { optionalSectionsCompleted: CareerOptionalSectionStatus }
+  ) => {
     setIsSubmitting(true);
     
     try {
-      await completeOnboarding(data);
+      await completeOnboarding(data, options?.optionalSectionsCompleted);
       
       setIsEditing(false);
       if (onProfileUpdate && currentCareerProfile) {
@@ -115,6 +242,11 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   };
 
   const handleQuickEdit = (section: string) => {
+    const optionalKey = sectionKeyMap[section];
+    if (optionalKey) {
+      setDismissedPromptIds(prev => prev.filter(id => id !== optionalKey));
+      loggedShownPrompts.current.delete(optionalKey);
+    }
     setQuickEditSection(section);
   };
 
@@ -188,6 +320,36 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   return (
     <>
       <div key={`profile-${lastUpdate}`} className={`career-profile-manager completed ${className}`}>
+        {pendingPrompts.length > 0 && (
+          <div className="mb-6 space-y-4">
+            {pendingPrompts.map(prompt => (
+              <div
+                key={prompt.id}
+                className="flex flex-col gap-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 md:flex-row md:items-center md:justify-between"
+              >
+                <div className="md:max-w-2xl">
+                  <h4 className="text-base font-semibold text-blue-900">{prompt.title}</h4>
+                  <p className="mt-1 text-blue-800">{prompt.description}</p>
+                </div>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                  <button
+                    onClick={() => handlePromptComplete(prompt.quickEdit)}
+                    className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+                  >
+                    {prompt.cta}
+                  </button>
+                  <button
+                    onClick={() => handlePromptSnooze(prompt.id)}
+                    className="text-blue-700 underline-offset-4 hover:underline"
+                  >
+                    Remind me later
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm transition-all duration-200 hover:shadow-md">
         <div className="flex items-start justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -440,7 +602,8 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
             </div>
           </div>
         </div>
-        </div>      </div>
+      </div>
+    </div>
       
       {/* Quick Edit Modal */}
       {quickEditSection && currentCareerProfile && (
@@ -449,6 +612,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
           onClose={handleQuickEditClose}
           section={quickEditSection}
           currentProfile={currentCareerProfile}
+          onSectionCompleted={handleOptionalSectionCompleted}
         />
       )}
     </>

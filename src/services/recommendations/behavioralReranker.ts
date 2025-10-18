@@ -1,6 +1,7 @@
 import type { Event, EventWithCareerImpact, SupabaseClientType } from '@/types';
 import type { CareerProfile } from '@/types/career';
 import { ScoringStrategyFactory } from '@/services/scoring';
+import { getUserInteractedEvents } from '@/utils/behavioralBoostUtils';
 
 export interface RerankOptions {
   topK?: number;
@@ -43,12 +44,25 @@ export async function rerankWithBehavioral(
   const candidateSlice = withIdx.slice(0, Math.min(topK, withIdx.length));
   const strategy = ScoringStrategyFactory.getDefaultStrategy();
 
+  let interactedEvents: Event[] | undefined;
+  if (userId && typeof supabaseClient?.from === 'function') {
+    try {
+      interactedEvents = await getUserInteractedEvents(userId, supabaseClient, 30);
+    } catch (error) {
+      console.warn('[Rerank] Failed to load user interaction history; proceeding without boost', error);
+    }
+  }
+
   // Compute advanced scores for the candidate slice
   const results = await Promise.all(
     candidateSlice.map(async (e) => {
       const score = await strategy.calculate(
         { event: e as unknown as Event, careerProfile },
-        { userId, supabaseClient }
+        {
+          userId,
+          supabaseClient,
+          interactedEvents: interactedEvents && interactedEvents.length > 0 ? interactedEvents : undefined
+        }
       );
       return { id: e.id, overall: score.overall, metadata: score.metadata } as const;
     })
@@ -106,5 +120,4 @@ export async function rerankWithBehavioral(
 
 // Backward compatibility alias
 export const rerankWithAdvanced = rerankWithBehavioral;
-
 

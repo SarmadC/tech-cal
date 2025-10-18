@@ -44,16 +44,17 @@
 }
 
 .section-title-container {
-  @apply flex items-center gap-4;
+  @apply flex items-center gap-2;
 }
 
 /* Simplified Section Icon - Theme Aware & Lightweight */
 .section-icon {
-  @apply flex items-center justify-center w-10 h-10 rounded-lg;
+  @apply flex items-center justify-center w-6 h-6;
   background: transparent;
   color: var(--foreground-primary);
   border: none;
   transition: var(--transition-standard);
+  flex-shrink: 0;
 }
 
 .discovery-section:hover .section-icon {
@@ -122,19 +123,7 @@
   min-height: 180px;
 }
 
-/* Mobile-specific spacing adjustments */
-@media (max-width: 768px) {
-  .discovery-cards-container {
-    gap: 2rem; /* 32px - equivalent to space-y-8 */
-  }
-  
-  /* Additional spacing for specific section containers */
-  .discovery-cards-container.trending-container,
-  .discovery-cards-container.new-events-container,
-  .discovery-cards-container.quick-wins-container {
-    gap: 2rem; /* 32px */
-  }
-}
+/* Note: Mobile-specific styles moved to mobile-discovery.css */
 
 /* Discovery Icons */
 

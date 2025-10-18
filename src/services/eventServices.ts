@@ -8,6 +8,7 @@ import type {
     MultiDayEvent,
     AgendaItem,
     SupabaseClientType,
+    RecommendationTelemetryContext,
 } from '@/types';
 // Type alias for Supabase query builder - using any for practical reasons
 // Supabase's query builder types are complex and change between versions
@@ -28,6 +29,7 @@ import { LookalikeUserService } from './lookalikeUserService';
 import { DiversityEnhancementService } from './diversityEnhancementService';
 import { DIVERSITY_CONFIG } from '@/utils/diversityUtils';
 import * as Sentry from "@sentry/nextjs";
+import { logTelemetryEvent } from '@/utils/supabase/telemetry';
 
 export class EventService {
     /**
@@ -1262,12 +1264,31 @@ export class EventService {
         limit: number = 10
     ): Promise<Event[]> {
         try {
-            return await TagBasedMatchingService.getRecommendedEventsByTags(
+            const recommendations = await TagBasedMatchingService.getRecommendedEventsByTags(
                 userId,
                 careerProfile,
                 supabaseClient,
                 limit
             );
+
+            return recommendations.map((recommendation, index) => {
+                const appEvent = eventTransformer.toApp(recommendation.event);
+                return {
+                    ...appEvent,
+                    recommendationMetadata: {
+                        matchedTags: recommendation.match.matchedTags,
+                        matchExplanation: recommendation.match.explanation,
+                        matchScore: recommendation.match.score,
+                        impactScore: recommendation.impactScore,
+                        profileBoost: recommendation.profileBoost,
+                        recencyBoost: recommendation.recencyBoost,
+                        popularityBoost: recommendation.popularityBoost,
+                        totalScore: recommendation.totalScore,
+                        reasons: recommendation.reasons,
+                        tagRank: index + 1
+                    }
+                } as Event & { recommendationMetadata: Record<string, unknown> };
+            });
         } catch (error) {
             console.error('Error fetching tag-based recommendations:', error);
             Sentry.captureException(error, {
@@ -1350,7 +1371,8 @@ export class EventService {
         careerProfile: CareerProfile | null,
         userId?: string,
         page: number = 1,
-        pageSize: number = 100
+        pageSize: number = 100,
+        telemetry?: RecommendationTelemetryContext
     ): Promise<{ events: Event[]; totalCount: number; isColdStart: boolean }> {
         try {
             // Validate inputs
@@ -1366,14 +1388,57 @@ export class EventService {
                     careerProfile,
                     supabaseClient,
                     page,
-                    pageSize
+                    pageSize,
+                    telemetry
                 );
             }
 
-            // Use normal filtering for users with interaction history or specific filters
-            const result = await this.getEventsWithRPC(filters, supabaseClient, page, pageSize);
+            // Use multi-day aware filtering for users with interaction history or specific filters
+            const events = await this.getEventsWithMultiDay(filters, supabaseClient, page, pageSize);
+            const totalCount = await this.getEventCount(filters, supabaseClient);
+
+            if (telemetry?.hasConsent && telemetry.userId) {
+                const topEventIds = events.slice(0, 5)
+                    .map((event) => ('id' in event ? event.id : undefined))
+                    .filter((id): id is string => Boolean(id));
+
+                await logTelemetryEvent(supabaseClient, {
+                    eventType: 'standard_filtered_events_generated',
+                    eventVersion: 1,
+                    source: telemetry.source ?? 'backend',
+                    userId: telemetry.userId,
+                    sessionId: telemetry.sessionId ?? null,
+                    requestId: telemetry.requestId ?? null,
+                    occurredAt: new Date(),
+                    context: {
+                        surface: telemetry.surface ?? 'filtered_events',
+                        ...telemetry.additionalContext
+                    },
+                    metadata: {
+                        returnedCount: events.length,
+                        totalCount,
+                        page,
+                        pageSize,
+                        activeFilters: Object.entries(filters).filter(([, value]) => {
+                            if (value === undefined || value === null) return false;
+                            if (Array.isArray(value)) return value.length > 0;
+                            if (value instanceof Date) return true;
+                            if (typeof value === 'object') {
+                                const obj = value as Record<string, unknown>;
+                                return Object.values(obj).some((entry) => entry !== undefined && entry !== null);
+                            }
+                            if (typeof value === 'boolean') return value;
+                            if (typeof value === 'string') return value.length > 0;
+                            return true;
+                        }).length,
+                        topEventIds
+                    }
+                });
+            }
+
             return {
-                ...result,
+                events: events as Event[],
+                totalCount,
                 isColdStart: false
             };
         } catch (error) {
@@ -1384,9 +1449,12 @@ export class EventService {
             
             // Fallback to normal filtering with error recovery
             try {
-                const result = await this.getEventsWithRPC(filters, supabaseClient, page, pageSize);
+                const events = await this.getEventsWithMultiDay(filters, supabaseClient, page, pageSize);
+                const totalCount = await this.getEventCount(filters, supabaseClient);
+
                 return {
-                    ...result,
+                    events: events as Event[],
+                    totalCount,
                     isColdStart: false
                 };
             } catch (fallbackError) {
@@ -1407,18 +1475,30 @@ export class EventService {
         careerProfile: CareerProfile,
         supabaseClient: SupabaseClientType,
         page: number = 1,
-        pageSize: number = 100
+        pageSize: number = 100,
+        telemetry?: RecommendationTelemetryContext
     ): Promise<{ events: Event[]; totalCount: number; isColdStart: boolean }> {
         try {
             // Get lookalike recommendations directly
             const lookalikeRecommendations = await LookalikeUserService.getLookalikeRecommendations(
                 careerProfile.userId,
                 supabaseClient,
-                pageSize * 2 // Get more to account for filtering
+                pageSize * 2, // Get more to account for filtering
+                telemetry
             );
 
             if (lookalikeRecommendations.length === 0) {
-                return await this.getFallbackPopularEvents(supabaseClient, page, pageSize);
+                const fallbackTelemetry = telemetry
+                    ? ({
+                        ...telemetry,
+                        additionalContext: {
+                            ...(telemetry.additionalContext || {}),
+                            reason: 'lookalike_empty'
+                        }
+                    } as RecommendationTelemetryContext)
+                    : undefined;
+
+                return await this.getFallbackPopularEvents(supabaseClient, page, pageSize, fallbackTelemetry);
             }
 
             // Transform events with lookalike metadata
@@ -1428,6 +1508,29 @@ export class EventService {
             const sortedEvents = this.sortEventsByPopularity(appEvents);
             const diverseEvents = this.applyDiversityEnhancement(sortedEvents, pageSize * 2);
             const paginatedEvents = this.paginateEvents(diverseEvents, page, pageSize);
+
+            if (telemetry?.hasConsent && telemetry.userId) {
+                await logTelemetryEvent(supabaseClient, {
+                    eventType: 'cold_start_recommendations_generated',
+                    eventVersion: 1,
+                    source: telemetry.source ?? 'backend',
+                    userId: telemetry.userId,
+                    sessionId: telemetry.sessionId ?? null,
+                    requestId: telemetry.requestId ?? null,
+                    occurredAt: new Date(),
+                    context: {
+                        surface: telemetry.surface ?? 'cold_start',
+                        ...telemetry.additionalContext
+                    },
+                    metadata: {
+                        requestedPageSize: pageSize,
+                        returnedCount: paginatedEvents.length,
+                        totalCandidates: sortedEvents.length,
+                        page,
+                        topEventIds: paginatedEvents.slice(0, 5).map(event => event.id)
+                    }
+                });
+            }
 
             return {
                 events: paginatedEvents,
@@ -1440,7 +1543,17 @@ export class EventService {
                 extra: { function: 'getColdStartRecommendations', userId: careerProfile.userId }
             });
             
-            return await this.getFallbackPopularEvents(supabaseClient, page, pageSize);
+            const fallbackTelemetry = telemetry
+                ? ({
+                    ...telemetry,
+                    additionalContext: {
+                        ...(telemetry.additionalContext || {}),
+                        reason: 'cold_start_exception'
+                    }
+                } as RecommendationTelemetryContext)
+                : undefined;
+
+            return await this.getFallbackPopularEvents(supabaseClient, page, pageSize, fallbackTelemetry);
         }
     }
 
@@ -1450,7 +1563,8 @@ export class EventService {
     private static async getFallbackPopularEvents(
         supabaseClient: SupabaseClientType,
         page: number = 1,
-        pageSize: number = 100
+        pageSize: number = 100,
+        telemetry?: RecommendationTelemetryContext
     ): Promise<{ events: Event[]; totalCount: number; isColdStart: boolean }> {
         try {
             const { data: events, error } = await (supabaseClient as any) // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -1464,6 +1578,30 @@ export class EventService {
 
             const transformedEvents = await this.attachTagsToEvents(events || [], supabaseClient);
             const appEvents = transformedEvents.map(event => eventTransformer.toApp(event as any)); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+            if (telemetry?.hasConsent && telemetry.userId) {
+                const topEventIds = appEvents.slice(0, 5).map(event => event.id);
+
+                await logTelemetryEvent(supabaseClient, {
+                    eventType: 'cold_start_popular_fallback_generated',
+                    eventVersion: 1,
+                    source: telemetry.source ?? 'backend',
+                    userId: telemetry.userId,
+                    sessionId: telemetry.sessionId ?? null,
+                    requestId: telemetry.requestId ?? null,
+                    occurredAt: new Date(),
+                    context: {
+                        surface: telemetry.surface ?? 'cold_start',
+                        ...telemetry.additionalContext
+                    },
+                    metadata: {
+                        returnedCount: appEvents.length,
+                        page,
+                        pageSize,
+                        topEventIds
+                    }
+                });
+            }
 
             return {
                 events: appEvents,

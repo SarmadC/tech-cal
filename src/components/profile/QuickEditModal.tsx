@@ -20,7 +20,7 @@
 
 import React, { useState } from 'react';
 import { X } from '@phosphor-icons/react';
-import { CareerProfile } from '@/types/career';
+import { CareerProfile, LearningStyle, AvailableTime, BudgetRange, NetworkingGoal, CareerEventType } from '@/types/career';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import SkillsDropdown from '@/components/ui/SkillsDropdown';
@@ -30,6 +30,7 @@ interface QuickEditModalProps {
   onClose: () => void;
   section: string;
   currentProfile: CareerProfile;
+  onSectionCompleted?: (section: string) => void;
 }
 
 interface SectionEditorProps {
@@ -356,7 +357,265 @@ const GoalsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel
   );
 };
 
-const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, section, currentProfile: _currentProfile }) => {
+// Learning Preferences Editor
+const learningStyleOptions: Array<{ value: LearningStyle; label: string }> = [
+  { value: 'hands-on', label: 'Hands-on Workshops' },
+  { value: 'theoretical', label: 'Lectures & Presentations' },
+  { value: 'interactive', label: 'Discussions & Q&A' },
+  { value: 'networking', label: 'Networking & Meeting People' },
+  { value: 'case-studies', label: 'Real-world Examples' },
+  { value: 'peer-learning', label: 'Learning from Peers' }
+];
+
+const availableTimeOptions: Array<{ value: AvailableTime; label: string }> = [
+  { value: 'very-limited', label: 'Very Limited (< 2 hrs/month)' },
+  { value: 'limited', label: 'Limited (2-8 hrs/month)' },
+  { value: 'moderate', label: 'Moderate (8-20 hrs/month)' },
+  { value: 'flexible', label: 'Flexible (20+ hrs/month)' },
+  { value: 'dedicated', label: 'Dedicated (can take time off)' }
+];
+
+const budgetOptions: Array<{ value: BudgetRange; label: string }> = [
+  { value: 'free-only', label: 'Free events only' },
+  { value: 'low', label: 'Low ($1-100/month)' },
+  { value: 'moderate', label: 'Moderate ($100-500/month)' },
+  { value: 'high', label: 'High ($500-2000/month)' },
+  { value: 'unlimited', label: 'No budget constraints' }
+];
+
+const LearningPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
+  const [formData, setFormData] = useState({
+    learningStyle: profile.learningStyle || [],
+    availableTime: profile.availableTime || 'moderate',
+    budget: profile.budget || 'moderate'
+  });
+
+  const toggleLearningStyle = (style: LearningStyle) => {
+    setFormData(prev => {
+      const exists = prev.learningStyle.includes(style);
+      const learningStyle = exists
+        ? prev.learningStyle.filter(s => s !== style)
+        : [...prev.learningStyle, style];
+      onUpdate({ learningStyle });
+      return { ...prev, learningStyle };
+    });
+  };
+
+  const handleSelectChange = (field: 'availableTime' | 'budget', value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    onUpdate({ [field]: value } as Partial<CareerProfile>);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-semibold text-gray-900 mb-3">Learning Styles</label>
+        <div className="grid grid-cols-2 gap-3">
+          {learningStyleOptions.map(option => (
+            <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.learningStyle.includes(option.value)}
+                onChange={() => toggleLearningStyle(option.value)}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-900 mb-2">Available Time</label>
+        <select
+          value={formData.availableTime}
+          onChange={(e) => handleSelectChange('availableTime', e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base bg-white"
+        >
+          {availableTimeOptions.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-900 mb-2">Budget Range</label>
+        <select
+          value={formData.budget}
+          onChange={(e) => handleSelectChange('budget', e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base bg-white"
+        >
+          {budgetOptions.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex justify-end space-x-4 pt-8 border-t border-gray-100 mt-6">
+        <button
+          onClick={onCancel}
+          className="px-6 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
+        >
+          Cancel
+        </button>
+        {isSaving && (
+          <div className="flex items-center px-6 py-2.5 text-blue-600 text-sm font-medium">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            Saving changes...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Networking Preferences Editor
+const networkingGoalOptions: Array<{ value: NetworkingGoal; label: string }> = [
+  { value: 'find-mentors', label: 'Connect with mentors' },
+  { value: 'find-mentees', label: 'Support mentees' },
+  { value: 'find-peers', label: 'Meet peers at my level' },
+  { value: 'find-collaborators', label: 'Find collaborators' },
+  { value: 'find-employers', label: 'Explore job opportunities' },
+  { value: 'industry-insights', label: 'Learn industry trends' },
+  { value: 'thought-leadership', label: 'Establish expertise' }
+];
+
+const eventTypeOptions: Array<{ value: CareerEventType; label: string }> = [
+  { value: 'conference', label: 'Conferences' },
+  { value: 'workshop', label: 'Workshops' },
+  { value: 'meetup', label: 'Meetups' },
+  { value: 'webinar', label: 'Webinars' },
+  { value: 'summit', label: 'Summits' },
+  { value: 'networking', label: 'Networking Events' },
+  { value: 'bootcamp', label: 'Bootcamps' },
+  { value: 'hackathon', label: 'Hackathons' },
+  { value: 'panel', label: 'Panels' },
+  { value: 'keynote', label: 'Keynotes' },
+  { value: 'trade-show', label: 'Trade Shows' }
+];
+
+const NetworkingPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
+  const [formData, setFormData] = useState({
+    networkingGoals: profile.networkingGoals || [],
+    preferredEventTypes: profile.preferredEventTypes || []
+  });
+
+  const toggleCheckbox = <T extends string>(field: 'networkingGoals' | 'preferredEventTypes', value: T) => {
+    setFormData(prev => {
+      const existing = (prev[field] as string[]).includes(value);
+      const nextValues = existing
+        ? (prev[field] as string[]).filter(item => item !== value)
+        : [...(prev[field] as string[]), value];
+      onUpdate({ [field]: nextValues } as Partial<CareerProfile>);
+      return { ...prev, [field]: nextValues };
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-semibold text-gray-900 mb-3">Networking Goals</label>
+        <div className="grid grid-cols-2 gap-3">
+          {networkingGoalOptions.map(option => (
+            <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.networkingGoals.includes(option.value)}
+                onChange={() => toggleCheckbox('networkingGoals', option.value)}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-900 mb-3">Preferred Event Types</label>
+        <div className="grid grid-cols-2 gap-3">
+          {eventTypeOptions.map(option => (
+            <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.preferredEventTypes.includes(option.value)}
+                onChange={() => toggleCheckbox('preferredEventTypes', option.value)}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-4 pt-8 border-t border-gray-100 mt-6">
+        <button
+          onClick={onCancel}
+          className="px-6 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
+        >
+          Cancel
+        </button>
+        {isSaving && (
+          <div className="flex items-center px-6 py-2.5 text-blue-600 text-sm font-medium">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            Saving changes...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Team Preferences Editor (basic)
+const TeamPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
+  const [preferredEventTypes, setPreferredEventTypes] = useState(profile.preferredEventTypes || []);
+
+  const handleToggle = (value: CareerEventType) => {
+    setPreferredEventTypes(prev => {
+      const exists = prev.includes(value);
+      const updated = exists ? prev.filter(type => type !== value) : [...prev, value];
+      onUpdate({ preferredEventTypes: updated });
+      return updated;
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-semibold text-gray-900 mb-3">Preferred Event Types</label>
+        <div className="grid grid-cols-2 gap-3">
+          {eventTypeOptions.map(option => (
+            <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={preferredEventTypes.includes(option.value)}
+                onChange={() => handleToggle(option.value)}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-4 pt-8 border-t border-gray-100 mt-6">
+        <button
+          onClick={onCancel}
+          className="px-6 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
+        >
+          Cancel
+        </button>
+        {isSaving && (
+          <div className="flex items-center px-6 py-2.5 text-blue-600 text-sm font-medium">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            Saving changes...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, section, currentProfile: _currentProfile, onSectionCompleted }) => {
   const { careerProfile, saveCareerProfile, refreshProfile } = useCareerProfile();
   const { showSuccess, showError } = useSnackbar();
   const [isSaving, setIsSaving] = useState(false);
@@ -368,7 +627,10 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
   const sectionTitles = {
     role: 'Role Information',
     skills: 'Skills & Interests',
-    goals: 'Career Goals'
+    goals: 'Career Goals',
+    learning: 'Learning Preferences',
+    networking: 'Networking Goals',
+    team: 'Team Preferences'
   };
 
   const handleUpdate = async (updates: Partial<CareerProfile>) => {
@@ -383,6 +645,10 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
         console.log('QuickEditModal - saving updatedProfile:', updatedProfile);
         await saveCareerProfile(updatedProfile);
         console.log('QuickEditModal - save completed successfully');
+
+        if (onSectionCompleted) {
+          onSectionCompleted(section);
+        }
 
         // Force refresh the profile data to ensure UI updates
         await refreshProfile();
@@ -427,6 +693,12 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
         return <SkillsEditor {...editorProps} />;
       case 'goals':
         return <GoalsEditor {...editorProps} />;
+      case 'learning':
+        return <LearningPreferencesEditor {...editorProps} />;
+      case 'networking':
+        return <NetworkingPreferencesEditor {...editorProps} />;
+      case 'team':
+        return <TeamPreferencesEditor {...editorProps} />;
       default:
         return null;
     }

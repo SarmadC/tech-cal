@@ -11,7 +11,10 @@ import {
   AvailableTime,
   BudgetRange,
   NetworkingGoal,
-  CareerEventType
+  CareerEventType,
+  CareerOptionalSectionStatus,
+  CareerOptionalSectionSnoozes,
+  CareerOptionalSectionTimestamps
 } from '@/types/career';
 import { AppProfile, Json, SupabaseClientType } from '@/types';
 import * as Sentry from '@sentry/nextjs';
@@ -310,7 +313,13 @@ export class CareerProfileService {
       }
       
       // Mark onboarding as completed
-      await this.markOnboardingCompleted(userId, supabaseClient);
+      const optionalStatus: CareerOptionalSectionStatus = {
+        learningPreferences: Boolean(onboardingData.step4_preferences?.learningStyle?.length),
+        networkingPreferences: Boolean(onboardingData.step5_networking?.networkingGoals?.length),
+        teamPreferences: Boolean(onboardingData.step6_teamBuilding?.teamGoals?.length)
+      };
+
+      await this.markOnboardingCompleted(userId, supabaseClient, optionalStatus);
       
       return careerProfile;
     } catch (error) {
@@ -452,6 +461,9 @@ export class CareerProfileService {
     
     // Count proficiency levels
     const proficiencyDistribution = skillTags.reduce((acc, tag) => {
+      if (!tag.proficiency) {
+        return acc;
+      }
       acc[tag.proficiency] = (acc[tag.proficiency] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -473,7 +485,8 @@ export class CareerProfileService {
    */
   static async markOnboardingCompleted(
     userId: string,
-    supabaseClient: SupabaseClientType
+    supabaseClient: SupabaseClientType,
+    optionalStatus?: CareerOptionalSectionStatus
   ): Promise<void> {
     try {
       // Get current preferences
@@ -486,10 +499,34 @@ export class CareerProfileService {
       if (fetchError) throw fetchError;
 
       const currentPreferences = (currentProfile?.preferences as Record<string, unknown>) || {};
+      const existingOptionalStatus = currentPreferences?.careerOptionalSections as CareerOptionalSectionStatus | undefined;
+      const existingOptionalSnoozes = currentPreferences?.careerOptionalSnoozes as CareerOptionalSectionSnoozes | undefined;
+      const existingOptionalTimestamps = currentPreferences?.careerOptionalSectionTimestamps as CareerOptionalSectionTimestamps | undefined;
+      const optionalSectionStatus = {
+        learningPreferences: optionalStatus?.learningPreferences ?? existingOptionalStatus?.learningPreferences ?? false,
+        networkingPreferences: optionalStatus?.networkingPreferences ?? existingOptionalStatus?.networkingPreferences ?? false,
+        teamPreferences: optionalStatus?.teamPreferences ?? existingOptionalStatus?.teamPreferences ?? false
+      };
+      const timestampNow = new Date().toISOString();
+      const optionalSectionTimestamps: CareerOptionalSectionTimestamps = {
+        learningPreferencesCompletedAt: optionalSectionStatus.learningPreferences
+          ? (existingOptionalTimestamps?.learningPreferencesCompletedAt ?? timestampNow)
+          : existingOptionalTimestamps?.learningPreferencesCompletedAt,
+        networkingPreferencesCompletedAt: optionalSectionStatus.networkingPreferences
+          ? (existingOptionalTimestamps?.networkingPreferencesCompletedAt ?? timestampNow)
+          : existingOptionalTimestamps?.networkingPreferencesCompletedAt,
+        teamPreferencesCompletedAt: optionalSectionStatus.teamPreferences
+          ? (existingOptionalTimestamps?.teamPreferencesCompletedAt ?? timestampNow)
+          : existingOptionalTimestamps?.teamPreferencesCompletedAt
+      };
+
       const updatedPreferences = {
         ...currentPreferences,
         careerOnboardingCompleted: true,
-        careerOnboardingCompletedAt: new Date().toISOString()
+        careerOnboardingCompletedAt: new Date().toISOString(),
+        careerOptionalSections: optionalSectionStatus,
+        careerOptionalSnoozes: existingOptionalSnoozes ?? {},
+        careerOptionalSectionTimestamps: optionalSectionTimestamps
       };
 
       const { error: updateError } = await supabaseClient
@@ -507,6 +544,83 @@ export class CareerProfileService {
         extra: { function: 'markOnboardingCompleted', userId } 
       });
       throw new Error('Failed to mark onboarding as completed.');
+    }
+  }
+
+  static async updateOptionalSections(
+    userId: string,
+    supabaseClient: SupabaseClientType,
+    statusUpdates: Partial<CareerOptionalSectionStatus> = {},
+    snoozeUpdates: Partial<CareerOptionalSectionSnoozes> = {},
+    timestampUpdates: Partial<CareerOptionalSectionTimestamps> = {}
+  ): Promise<void> {
+    try {
+      const { data: currentProfile, error: fetchError } = await supabaseClient
+        .from('profiles')
+        .select('preferences')
+        .eq('id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentPreferences = (currentProfile?.preferences as Record<string, unknown>) || {};
+      const existingStatus = (currentPreferences?.careerOptionalSections as CareerOptionalSectionStatus | undefined) ?? {
+        learningPreferences: false,
+        networkingPreferences: false,
+        teamPreferences: false
+      };
+      const existingSnoozes = (currentPreferences?.careerOptionalSnoozes as CareerOptionalSectionSnoozes | undefined) ?? {};
+      const existingTimestamps = (currentPreferences?.careerOptionalSectionTimestamps as CareerOptionalSectionTimestamps | undefined) ?? {};
+
+      const timestampNow = new Date().toISOString();
+      const mergedStatus: CareerOptionalSectionStatus = {
+        ...existingStatus,
+        ...statusUpdates
+      };
+
+      const timestampPayload: CareerOptionalSectionTimestamps = { ...existingTimestamps };
+      (Object.keys(statusUpdates) as Array<keyof CareerOptionalSectionStatus>).forEach(section => {
+        if (statusUpdates[section] === true) {
+          const keyMap: Record<keyof CareerOptionalSectionStatus, keyof CareerOptionalSectionTimestamps> = {
+            learningPreferences: 'learningPreferencesCompletedAt',
+            networkingPreferences: 'networkingPreferencesCompletedAt',
+            teamPreferences: 'teamPreferencesCompletedAt'
+          };
+          const timestampKey = keyMap[section];
+          timestampPayload[timestampKey] = timestampUpdates[timestampKey] ?? timestampNow;
+        }
+      });
+
+      const mergedTimestamps: CareerOptionalSectionTimestamps = {
+        ...timestampPayload,
+        ...timestampUpdates
+      };
+
+      const updatedPreferences = {
+        ...currentPreferences,
+        careerOptionalSections: mergedStatus,
+        careerOptionalSnoozes: {
+          ...existingSnoozes,
+          ...snoozeUpdates
+        },
+        careerOptionalSectionTimestamps: mergedTimestamps
+      };
+
+      const { error: updateError } = await supabaseClient
+        .from('profiles')
+        .update({
+          preferences: updatedPreferences as unknown as Json,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (updateError) throw updateError;
+    } catch (error) {
+      console.error('Error updating optional sections:', error);
+      Sentry.captureException(error, {
+        extra: { function: 'updateOptionalSections', userId, statusUpdates, snoozeUpdates }
+      });
+      throw new Error('Failed to update optional section status.');
     }
   }
 

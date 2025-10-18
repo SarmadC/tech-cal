@@ -229,11 +229,12 @@ export const PROFICIENCY_LEVELS = {
 
 export interface SkillTag {
   skill: string;
-  proficiency: SkillProficiency;
+  proficiency?: SkillProficiency;
   yearsOfExperience: number;
   lastUsed: string; // ISO date
   category?: string; // Skill category for organization
   order?: number; // For drag-and-drop ordering
+  pendingProficiency?: boolean; // Flag to highlight missing inputs in the UI
 }
 
 export interface TeamSkillRequirement {
@@ -427,6 +428,24 @@ export interface CareerProfile {
   // Networking Preferences
   networkingGoals: NetworkingGoal[];
   preferredEventTypes: CareerEventType[];
+}
+
+export interface CareerOptionalSectionStatus {
+  learningPreferences: boolean;
+  networkingPreferences: boolean;
+  teamPreferences: boolean;
+}
+
+export interface CareerOptionalSectionSnoozes {
+  learningPreferences?: string; // ISO timestamp of last snooze
+  networkingPreferences?: string;
+  teamPreferences?: string;
+}
+
+export interface CareerOptionalSectionTimestamps {
+  learningPreferencesCompletedAt?: string;
+  networkingPreferencesCompletedAt?: string;
+  teamPreferencesCompletedAt?: string;
 }
 
 // Team Building Preferences (stored separately in preferences JSON)

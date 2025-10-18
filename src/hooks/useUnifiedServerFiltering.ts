@@ -1,7 +1,7 @@
 // src/hooks/useUnifiedServerFiltering.ts
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useDebounce } from './useDebounce';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Event, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
@@ -111,6 +111,14 @@ export function useUnifiedServerFiltering(
 
   const { trackedEventIds } = useTrackedEventIds();
 
+  const sessionIdRef = useRef<string | null>(null);
+  if (!sessionIdRef.current) {
+    const randomId = typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `filters_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    sessionIdRef.current = randomId;
+  }
+
   // Debounce search term to avoid excessive API calls
   const debouncedSearchTerm = useDebounce(filters.searchTerm, FILTERING_CONSTANTS.SEARCH_DEBOUNCE_MS);
 
@@ -142,10 +150,15 @@ export function useUnifiedServerFiltering(
     queryKey: ['filtered-events', stableFilters],
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
+      const sessionId = sessionIdRef.current ?? 'filters_fallback';
+      const requestId = typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID()
+        : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
       const response = await fetch('/api/events/filtered', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...stableFilters, page: pageParam }),
+        headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId },
+        body: JSON.stringify({ ...stableFilters, page: pageParam, sessionId })
       });
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);

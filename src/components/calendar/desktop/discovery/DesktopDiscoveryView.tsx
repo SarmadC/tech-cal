@@ -2,10 +2,8 @@
 
 import React from 'react';
 import { Event, EventType, AppProfile, TrackedEvent } from '@/types';
-import { 
-  ForYouSection,
-  ExploreMoreSection
-} from '../../mobile/discovery';
+import ForYouSection from '../../mobile/discovery/ForYouSection';
+import ExploreMoreSection from '../../mobile/discovery/ExploreMoreSection';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import './desktop-discovery.css';

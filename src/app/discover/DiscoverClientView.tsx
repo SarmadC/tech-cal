@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { Event, EventType, AppProfile } from '@/types';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
+import MobileDiscoveryView from '@/components/calendar/mobile/discovery/MobileDiscoveryView';
 import DiscoveryHeader from '@/components/calendar/DiscoveryHeader';
 import { CalendarProvider } from '@/contexts/CalendarContext';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
@@ -15,9 +16,15 @@ import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import Loading from '@/components/Loading';
+import { useIsMobile } from '@/hooks/useDeviceDetection';
 
 const EventDetailPanelDynamic = dynamic(
     () => import('@/components/calendar/EventDetailPanel'),
+    { loading: () => <Loading /> }
+);
+
+const MobileEventDetailPanelDynamic = dynamic(
+    () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
     { loading: () => <Loading /> }
 );
 
@@ -32,6 +39,8 @@ export default function DiscoverClientView({
 }: DiscoverClientViewProps) {
     const router = useRouter();
     const nav = useNavigation(router);
+    const isMobile = useIsMobile();
+    
     const initialFilters = useMemo(() => {
         try {
             const budget = (profile as unknown as { careerProfile?: { budget?: string } } | null)?.careerProfile?.budget;
@@ -90,8 +99,16 @@ export default function DiscoverClientView({
     // Loading skeleton
     const loadingSkeleton = <EventsLoadingSkeleton />;
 
-    // Main content
-    const mainContent = (
+    // Main content - Adaptive rendering based on viewport
+    const mainContent = isMobile ? (
+        <MobileDiscoveryView
+            events={eventData.filteredEvents}
+            categories={initialCategories}
+            profile={profile}
+            trackedEvents={eventData.filteredEvents.filter(e => e.isTracked)}
+            onEventSelect={handleEventSelect}
+        />
+    ) : (
         <DesktopDiscoveryView
             events={eventData.filteredEvents}
             categories={initialCategories}
@@ -112,8 +129,8 @@ export default function DiscoverClientView({
         return (
             <div 
                 className={`flex-1 flex flex-col transition-[margin] duration-200 ease-in-out ${
-                    open ? 'md:ml-64' : 'md:ml-16'
-                } ml-0`}
+                    !isMobile ? (open ? 'md:ml-64' : 'md:ml-16') : 'ml-0'
+                }`}
             >
                 {children}
             </div>
@@ -133,8 +150,8 @@ export default function DiscoverClientView({
         >
             <SidebarProvider>
                 <div className="flex min-h-screen calendar-page">
-                    {/* App Sidebar */}
-                    <AppSidebar />
+                    {/* App Sidebar - Hidden on mobile */}
+                    {!isMobile && <AppSidebar />}
                     
                     <MainContentWithSidebarOffset>
                         {/* Discovery Header */}
@@ -144,7 +161,7 @@ export default function DiscoverClientView({
                         
                         {/* Main Content */}
                         <div className="flex-1 flex flex-col" data-view="discovery">
-                            <div className="flex-1 relative p-4 md:p-6">
+                            <div className={`flex-1 relative ${isMobile ? 'p-0' : 'p-4 md:p-6'}`}>
                                 <SmartLoader
                                     loading={eventData.isLoading}
                                     error={eventData.error}
@@ -206,15 +223,25 @@ export default function DiscoverClientView({
 
                     {/* Event Detail Panel */}
                     {selectedEvent && (
-                        <div 
-                            className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
-                        >
-                            <EventDetailPanelDynamic 
-                                event={selectedEvent} 
-                                onClose={handleCloseEventDetail} 
-                                categories={initialCategories} 
-                            />
-                        </div>
+                        <>
+                            {isMobile ? (
+                                <MobileEventDetailPanelDynamic 
+                                    event={selectedEvent} 
+                                    onClose={handleCloseEventDetail} 
+                                    categories={initialCategories} 
+                                />
+                            ) : (
+                                <div 
+                                    className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
+                                >
+                                    <EventDetailPanelDynamic 
+                                        event={selectedEvent} 
+                                        onClose={handleCloseEventDetail} 
+                                        categories={initialCategories} 
+                                    />
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </SidebarProvider>

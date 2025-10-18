@@ -366,12 +366,71 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
               <span>{event.attendeeCount} attending</span>
             </div>
           )}
+
+          {/* Logo positioned in bottom-right corner within content area */}
+          <div className="flex justify-end mt-2">
+            <div className={cn(
+              "rounded-lg overflow-hidden flex items-center justify-center",
+              size === 'large' && "w-8 h-8",
+              size === 'medium' && "w-6 h-6",
+              size === 'small' && "w-5 h-5"
+            )}>
+              {(() => {
+                const imageSizes = size === 'large' ? 32 : size === 'medium' ? 24 : 20;
+                const logoSizes = size === 'large' ? 20 : size === 'medium' ? 16 : 12;
+                
+                if (event.eventImageUrl) {
+                  return (
+                    <Image
+                      src={event.eventImageUrl}
+                      alt={`${event.title} event image`}
+                      width={imageSizes}
+                      height={imageSizes}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  );
+                } else if (event.organization?.logo) {
+                  return (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Image
+                        src={event.organization.logo}
+                        alt={`${event.organization.name} logo`}
+                        width={logoSizes}
+                        height={logoSizes}
+                        className="object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          // Show fallback color block if logo fails
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            parent.style.backgroundColor = categoryColor;
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div 
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ backgroundColor: categoryColor }}
+                    >
+                      {/* Category color block fallback */}
+                    </div>
+                  );
+                }
+              })()}
+            </div>
+          </div>
         </div>
       </CardHeader>
 
 
-      {/* Event Image or Category Color Block - Moved to bottom */}
-      <div className="px-6 pb-6">
+      {/* Event Image or Category Color Block - Moved to bottom - Hidden on mobile */}
+      <div className="px-6 pb-6 hidden md:block">
         <div className={cn(
           "rounded-lg overflow-hidden flex items-center justify-start",
           size === 'large' && "w-16 h-16",

@@ -7,6 +7,7 @@ export interface MultiSelectOption {
   value: string;
   label: string;
   category?: string;
+  keywords?: string[];
 }
 
 export interface MultiSelectDropdownProps {
@@ -50,11 +51,20 @@ export default function MultiSelectDropdown({
   }, {} as Record<string, MultiSelectOption[]>);
 
   // Filter options based on search term
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const matchesSearch = (option: MultiSelectOption) => {
+    if (!normalizedSearch) return true;
+    const haystack = [
+      option.label.toLowerCase(),
+      option.value.toLowerCase(),
+      ...(option.keywords?.map(keyword => keyword.toLowerCase()) ?? [])
+    ];
+    return haystack.some(entry => entry.includes(normalizedSearch));
+  };
+
   const filteredOptions = Object.entries(groupedOptions).map(([category, categoryOptions]) => [
     category,
-    categoryOptions.filter(option =>
-      option.label.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    categoryOptions.filter(matchesSearch)
   ]).filter(([, categoryOptions]) => categoryOptions.length > 0);
 
   const handleToggle = () => {

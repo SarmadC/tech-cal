@@ -1,0 +1,316 @@
+/* Mobile Discovery View Specific Styles
+ * Optimized for compact, thinner cards on mobile devices
+ */
+
+/* Mobile Discovery View Layout */
+.mobile-discovery-view {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  padding: 0;
+}
+
+.mobile-discovery-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  padding: 1rem;
+  padding-top: 5rem; /* Add space for fixed navbar */
+}
+
+.mobile-discovery-section-wrapper {
+  width: 100%;
+}
+
+/* Mobile-specific section styles */
+.mobile-for-you .discovery-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.mobile-explore-more .discovery-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Ensure proper spacing between all discovery cards in mobile view */
+.mobile-discovery-view .discovery-card {
+  margin-bottom: 1.5rem !important;
+}
+
+.mobile-discovery-view .discovery-card:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* BentoGrid card spacing for mobile */
+.mobile-discovery-view .bento-card-large,
+.mobile-discovery-view .bento-card-medium,
+.mobile-discovery-view .bento-card-small {
+  margin-bottom: 1.5rem !important;
+}
+
+.mobile-discovery-view .bento-card-large:last-child,
+.mobile-discovery-view .bento-card-medium:last-child,
+.mobile-discovery-view .bento-card-small:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Mobile empty state adjustments */
+.mobile-empty-state {
+  padding: 3rem 1rem;
+}
+
+/* Mobile Card Overrides - Thinner, Compact Cards with Frosted Glass */
+.mobile-discovery-view .bento-card-large,
+.mobile-discovery-view .bento-card-medium,
+.mobile-discovery-view .discovery-card {
+  min-height: 135px !important;
+  max-height: 155px;
+  overflow: hidden !important; /* Keep content within card boundaries */
+  position: relative !important; /* Ensure proper positioning context */
+}
+
+/* Force glass-card effect on mobile discovery cards - override conflicting styles */
+.mobile-discovery-view .discovery-card.glass-card {
+  background: rgba(255, 255, 255, 0.7) !important; /* Light mode glass effect */
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.15),
+              0 0 0 1px rgba(255, 255, 255, 0.5) inset !important;
+}
+
+/* Dark mode glass effect */
+.dark .mobile-discovery-view .discovery-card.glass-card {
+  background: rgba(255, 255, 255, 0.05) !important; /* Dark mode glass effect */
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.8), 
+              0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+}
+
+.mobile-discovery-view .bento-card-small {
+  min-height: 120px !important;
+  max-height: 140px;
+  /* Preserve frosted glass effect - don't override glass-card styles */
+}
+
+/* Remove all padding from CardHeader on mobile - target the exact class combination */
+.mobile-discovery-view .discovery-card .flex.flex-col.space-y-1\.5.p-6.pb-0.relative {
+  padding: 0 !important; /* Remove all padding */
+}
+
+/* Alternative selectors for CardHeader */
+.mobile-discovery-view .discovery-card [class*="CardHeader"],
+.mobile-discovery-view .discovery-card .flex.flex-col.space-y-1\.5,
+.mobile-discovery-view .discovery-card .p-6 {
+  padding: 0 !important; /* Remove all padding */
+}
+
+/* Add minimal padding to the content wrapper inside CardHeader */
+.mobile-discovery-view .discovery-card [class*="CardHeader"] .w-full {
+  padding: 0.5rem !important; /* Minimal padding for content */
+}
+
+/* Logo is now inside content area - no special positioning needed */
+
+/* Compact title and content spacing */
+.mobile-discovery-view .discovery-card h3 {
+  font-size: 0.8125rem !important; /* 13px - smaller than desktop */
+  line-height: 1.2 !important;
+  margin-bottom: 0.125rem !important;
+  font-weight: 600;
+}
+
+/* Reduce spacing between metadata elements - target the space-y-4 div */
+.mobile-discovery-view .discovery-card [class*="CardHeader"] .space-y-4 {
+  gap: 0.25rem !important; /* Much tighter spacing */
+}
+
+.mobile-discovery-view .discovery-card [class*="CardHeader"] .space-y-4 > div:not(:first-child) {
+  margin-top: 0.125rem !important; /* Minimal spacing between elements */
+}
+
+/* Smaller icons on mobile */
+.mobile-discovery-view .discovery-card svg {
+  width: 10px !important;
+  height: 10px !important;
+  flex-shrink: 0;
+}
+
+/* Compact text sizing on mobile - using more specific selectors */
+.mobile-discovery-view .discovery-card span,
+.mobile-discovery-view .discovery-card p {
+  font-size: 0.6875rem !important; /* 11px - smaller for mobile */
+  line-height: 1.3;
+}
+
+/* Dark mode text color fixes for mobile */
+.dark .mobile-discovery-view .discovery-card span,
+.dark .mobile-discovery-view .discovery-card p,
+.dark .mobile-discovery-view .discovery-card .text-gray-600,
+.dark .mobile-discovery-view .discovery-card .text-gray-500 {
+  color: rgba(255, 255, 255, 0.8) !important; /* White text for dark mode */
+}
+
+/* Specific targeting for metadata elements in dark mode */
+.dark .mobile-discovery-view .discovery-card .flex.items-center.gap-4 span,
+.dark .mobile-discovery-view .discovery-card .flex.items-center.gap-1 span,
+.dark .mobile-discovery-view .discovery-card .max-w-64 {
+  color: rgba(255, 255, 255, 0.8) !important; /* White text for location, date, time */
+}
+
+/* Light mode text colors */
+.light .mobile-discovery-view .discovery-card .text-gray-600 {
+  color: #4b5563 !important; /* Gray-600 for light mode */
+}
+
+.light .mobile-discovery-view .discovery-card .text-gray-500 {
+  color: #6b7280 !important; /* Gray-500 for light mode */
+}
+
+/* Compact career impact bar - target the actual structure */
+.mobile-discovery-view .discovery-card [class*="CardHeader"] .flex.items-center.justify-between.gap-3 > div:last-child {
+  gap: 0.25rem !important;
+}
+
+/* Smaller career impact progress bar */
+.mobile-discovery-view .discovery-card [class*="CardHeader"] .flex.items-center.justify-between.gap-3 > div:last-child > div:first-child {
+  height: 1px !important;
+  width: 2rem !important; /* Even smaller width for mobile */
+}
+
+/* Smaller career impact percentage text */
+.mobile-discovery-view .discovery-card [class*="CardHeader"] .flex.items-center.justify-between.gap-3 > div:last-child > span {
+  font-size: 0.5625rem !important; /* 9px - very small for mobile */
+}
+
+/* Logo sizing for mobile - now inside content area */
+.mobile-discovery-view .discovery-card .flex.justify-end.mt-2 > div {
+  width: 1.5rem !important; /* Slightly bigger logo for mobile */
+  height: 1.5rem !important;
+  min-width: 1.5rem !important;
+  max-width: 1.5rem !important;
+  overflow: hidden !important;
+  border-radius: 0.25rem !important;
+}
+
+.mobile-discovery-view .discovery-card .flex.justify-end.mt-2 > div img {
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  max-width: 1.5rem !important;
+  max-height: 1.5rem !important;
+  object-fit: contain !important;
+}
+
+/* Hide badges/tags in mobile view */
+.mobile-discovery-view .discovery-card .flex.flex-wrap.gap-1.mt-2 {
+  display: none !important; /* Hide badge container */
+}
+
+/* Alternative selector for badges */
+.mobile-discovery-view .discovery-card [class*="badge"],
+.mobile-discovery-view .discovery-card .rounded-md.border {
+  display: none !important; /* Hide individual badges */
+}
+
+/* Compact section headers on mobile */
+.mobile-discovery-view .discovery-section-header {
+  margin-bottom: 0.75rem;
+}
+
+.mobile-discovery-view .section-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.mobile-discovery-view .section-title {
+  font-size: 1rem; /* Smaller section title */
+  font-weight: 600;
+}
+
+.mobile-discovery-view .section-subtitle {
+  font-size: 0.6875rem; /* Smaller subtitle */
+  margin-top: 0.0625rem;
+}
+
+/* Optimize attendee count display */
+.mobile-discovery-view .discovery-card span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Location text truncation on mobile - target metadata spans */
+.mobile-discovery-view .discovery-card [class*="CardHeader"] .flex.items-center.gap-4 span,
+.mobile-discovery-view .discovery-card [class*="CardHeader"] .flex.items-center.gap-1 span {
+  max-width: 8rem !important; /* Even shorter on mobile */
+}
+
+/* Responsive adjustments for very small screens */
+@media (max-width: 390px) {
+  .mobile-discovery-stack {
+    padding: 0.5rem;
+  }
+
+  .mobile-discovery-view .discovery-card h3 {
+    font-size: 0.75rem !important; /* 12px - even smaller on tiny screens */
+  }
+
+  .mobile-discovery-view .discovery-card span,
+  .mobile-discovery-view .discovery-card p {
+    font-size: 0.625rem !important; /* 10px - very small on tiny screens */
+  }
+
+  .mobile-discovery-view .discovery-card > div:last-child {
+    padding: 0.375rem 0.5rem !important;
+    overflow: visible !important; /* Ensure logos are visible on small screens */
+  }
+
+  .mobile-discovery-view .discovery-card [class*="CardHeader"] {
+    padding: 0.5rem !important;
+    padding-bottom: 0.375rem !important;
+  }
+
+  /* Adjust logo size for very small screens */
+  .mobile-discovery-view .discovery-card > div:last-child > div {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    min-width: 1.25rem !important;
+    max-width: 1.25rem !important;
+  }
+
+  .mobile-discovery-view .discovery-card > div:last-child > div img {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    max-width: 1.25rem !important;
+    max-height: 1.25rem !important;
+  }
+}
+
+/* Optimize touch targets on mobile */
+.mobile-discovery-view .discovery-card {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-discovery-view .discovery-card:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease-in-out;
+}
+
+/* Better spacing between sections on mobile */
+.mobile-discovery-view .discovery-section + .discovery-section {
+  margin-top: 2rem;
+}
+
+/* Ensure proper scrolling on mobile */
+.mobile-discovery-view {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/utils/supabase/client';
 import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
+import { sendTelemetryEvent } from '@/utils/telemetryClient';
 
 // =============================================
 // RECOMMENDATION TRACKING HOOK
@@ -132,6 +133,23 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
       },
       supabase
     );
+
+    void sendTelemetryEvent({
+      eventType: 'recommendation_interaction',
+      sessionId: sessionIdRef.current,
+      context: {
+        surface: 'recommendations',
+        section
+      },
+      metadata: {
+        eventId,
+        interactionType,
+        position,
+        algorithmVersion: interaction.algorithmVersion,
+        durationMs: interaction.durationMs,
+        interactionContext: context ?? null
+      }
+    });
   }, [user?.id, supabase, options.enableTracking, checkConsentCached]);
 
   /**
@@ -226,6 +244,19 @@ export function useRecommendationTracking(options: TrackingOptions = {}) {
     // For now, individual interactions (view/click) provide sufficient signal
     // Batch structure for future reference:
     // { userId, sessionId, algorithmVersion, section, recommendations }
+
+    void sendTelemetryEvent({
+      eventType: 'recommendation_batch_displayed',
+      sessionId: sessionIdRef.current,
+      context: {
+        surface: 'recommendations',
+        section
+      },
+      metadata: {
+        recommendations,
+        algorithmVersion: _algorithmVersion
+      }
+    });
   }, [user?.id, options.enableTracking, checkConsentCached]);
 
   /**

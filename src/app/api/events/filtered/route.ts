@@ -4,8 +4,8 @@ import { EventService } from '@/services/eventServices';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
-import { EventFilters } from '@/types';
-import { createHash } from 'crypto';
+import { EventFilters, RecommendationTelemetryContext } from '@/types';
+import { createHash, randomUUID } from 'crypto';
 import { requireOnboardedApi } from '@/utils/onboarding';
 
 // Rate limiter for filtered events API
@@ -37,6 +37,7 @@ interface FilteredEventsRequest {
   myTracked?: boolean;
   myNetwork?: boolean;
   recommended?: boolean;
+  sessionId?: string;
 }
 
 interface FilteredEventsResponse {
@@ -62,6 +63,7 @@ interface FilteredEventsResponse {
       filteredCount: number;
       totalCount: number;
     };
+    isColdStart?: boolean;
   };
   error?: string;
 }
@@ -111,7 +113,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse and validate request
-    const body: FilteredEventsRequest = await request.json();
+    const rawBody: FilteredEventsRequest = await request.json();
+    const { sessionId: telemetrySessionId, ...body } = rawBody;
     console.log('[API] Request body:', JSON.stringify(body, null, 2));
     
     const {
@@ -142,6 +145,15 @@ export async function POST(request: NextRequest) {
     }
 
     const startTime = Date.now();
+    const requestId = request.headers.get('x-request-id') ?? randomUUID();
+
+    const { data: consentRow } = await supabase
+      .from('profiles')
+      .select('analytics_consent')
+      .eq('id', user.id)
+      .single();
+
+    const hasTelemetryConsent = Boolean(consentRow?.analytics_consent);
 
     // Build a stable cache signature (per-user + filters)
     const normalizedSignature = {
@@ -199,6 +211,22 @@ export async function POST(request: NextRequest) {
       sortBy: sortBy !== 'date' ? sortBy : undefined
     };
 
+    const telemetryContext: RecommendationTelemetryContext | undefined = hasTelemetryConsent ? {
+      userId: user.id,
+      hasConsent: true,
+      sessionId: telemetrySessionId ?? null,
+      requestId,
+      source: 'backend',
+      surface: 'filtered_events',
+      additionalContext: {
+        recommended,
+        hasSearchTerm: Boolean(searchTerm),
+        categoryCount: categories.length,
+        ...(format !== 'all' ? { format } : {}),
+        page
+      }
+    } : undefined;
+
     // Get user's career profile for scoring and cold start detection
     let careerProfile = null;
     try {
@@ -208,13 +236,22 @@ export async function POST(request: NextRequest) {
       console.log('No career profile found for user, skipping career impact scoring:', error);
     }
 
-    // Get events using EventService.getEvents (includes event type data)
+    // Get events using EventService (includes cold start & telemetry)
     let filteredEvents, totalEvents, isColdStart;
     try {
-      // Use EventService.getEventsWithMultiDay to include multi-day event data
-      filteredEvents = await EventService.getEventsWithMultiDay(eventFilters, supabase, page, pageSize);
-      totalEvents = await EventService.getEventCount(eventFilters, supabase);
-      isColdStart = false;
+      const result = await EventService.getEventsWithColdStartHandling(
+        eventFilters,
+        supabase,
+        careerProfile,
+        user.id,
+        page,
+        pageSize,
+        telemetryContext
+      );
+
+      filteredEvents = result.events;
+      totalEvents = result.totalCount;
+      isColdStart = result.isColdStart;
       
     } catch (error) {
       console.error('[API] All event fetching methods failed:', error);
@@ -283,7 +320,8 @@ export async function POST(request: NextRequest) {
           processingTimeMs: processingTime,
           filteredCount: enrichedEvents.length,
           totalCount: totalEvents
-        }
+        },
+        isColdStart
       }
     };
 

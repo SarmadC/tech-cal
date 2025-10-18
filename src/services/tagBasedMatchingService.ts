@@ -1,5 +1,6 @@
-import { Event, EventTag } from '@/types';
+import { Event, EventTag, SupabaseEventWithDetails, CareerGoal, LearningStyle, NetworkingGoal, SupabaseClientType } from '@/types';
 import { CareerProfile } from '@/types/career';
+import { eventTransformer } from '@/utils/transformers';
 
 export interface TagMatchResult {
   score: number;
@@ -10,6 +11,17 @@ export interface TagMatchResult {
 
 export interface TagSimilarityMap {
   [key: string]: string[];
+}
+
+export interface TagRecommendationResult {
+  event: SupabaseEventWithDetails;
+  match: TagMatchResult;
+  impactScore: number;
+  profileBoost: number;
+  recencyBoost: number;
+  popularityBoost: number;
+  totalScore: number;
+  reasons: string[];
 }
 
 /**
@@ -258,23 +270,21 @@ export class TagBasedMatchingService {
    * Get recommended events based on tag matching
    */
   static async getRecommendedEventsByTags(
-    userId: string,
+    _userId: string,
     careerProfile: CareerProfile,
-    supabaseClient: unknown,
+    supabaseClient: SupabaseClientType,
     limit: number = 10
-  ): Promise<Event[]> {
-    const userSkills = careerProfile.primarySkills || [];
-    const userInterests = careerProfile.interests || [];
-    const skillsToLearn = careerProfile.skillsToLearn || [];
-    const allUserTerms = [...userSkills, ...userInterests, ...skillsToLearn];
-
-    if (allUserTerms.length === 0) {
+  ): Promise<TagRecommendationResult[]> {
+    const candidateTerms = this.buildCandidateTerms(careerProfile);
+    if (candidateTerms.length === 0) {
       return [];
     }
 
+    const fetchLimit = Math.min(limit * 5, 100);
+    const queryTerms = candidateTerms.slice(0, 100);
+
     // Get events with matching tags
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: events, error } = await (supabaseClient as any)
+    let query = supabaseClient
       .from('events')
       .select(`
         *,
@@ -284,18 +294,144 @@ export class TagBasedMatchingService {
           event_tags (event_tag, category, color)
         )
       `)
-      .in('tags.event_tags.event_tag', allUserTerms)
       .eq('status', 'confirmed')
       .gte('start_time', new Date().toISOString())
       .order('start_time', { ascending: true })
-      .limit(limit);
+      .limit(fetchLimit);
+
+    // Apply flexible tag filtering (case-insensitive approximations)
+    if (queryTerms.length > 0) {
+      query = query.in('tags.event_tags.event_tag', queryTerms);
+    }
+
+    const { data: events, error } = await query;
 
     if (error) {
       console.error('Error fetching recommended events:', error);
       return [];
     }
 
-    return events || [];
+    const normalizedEvents = (events || []).map((event: Record<string, unknown>) => {
+      const relations = Array.isArray(event.tags)
+        ? (event.tags as Array<{ event_tags?: { id: string; event_tag: string; color?: string | null; category?: string | null } | null }>)
+        : [];
+
+      const normalizedTags: EventTag[] = relations.flatMap((relation) => {
+        if (!relation?.event_tags) return [];
+        const tag = relation.event_tags;
+        return [{
+          id: tag.id,
+          name: tag.event_tag,
+          color: tag.color || '#6b7280',
+          category: tag.category || 'General'
+        }];
+      });
+
+      return {
+        ...event,
+        tags: normalizedTags
+      };
+    }) as unknown as SupabaseEventWithDetails[];
+
+    let candidateEvents: SupabaseEventWithDetails[] = normalizedEvents;
+
+    if (candidateEvents.length === 0 && (careerProfile.preferredEventTypes?.length ?? 0) > 0) {
+      const { data: fallbackEvents, error: fallbackError } = await supabaseClient
+        .from('events')
+        .select(`
+          *,
+          event_type:event_type_id (*),
+          organizer:organizers (*),
+          tags:event_tag_relations (
+            event_tags (event_tag, category, color)
+          )
+        `)
+        .in('event_type_id', careerProfile.preferredEventTypes)
+        .eq('status', 'confirmed')
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(fetchLimit);
+
+      if (!fallbackError && Array.isArray(fallbackEvents)) {
+        candidateEvents = fallbackEvents.map((event: Record<string, unknown>) => {
+          const relations = Array.isArray(event.tags)
+            ? (event.tags as Array<{ event_tags?: { id: string; event_tag: string; color?: string | null; category?: string | null } | null }>)
+            : [];
+
+          const normalizedTags: EventTag[] = relations.flatMap((relation) => {
+            if (!relation?.event_tags) return [];
+            const tag = relation.event_tags;
+            return [{
+              id: tag.id,
+              name: tag.event_tag,
+              color: tag.color || '#6b7280',
+              category: tag.category || 'General'
+            }];
+          });
+
+          return {
+            ...event,
+            tags: normalizedTags
+          };
+        }) as unknown as SupabaseEventWithDetails[];
+      }
+    }
+
+    if (candidateEvents.length === 0) {
+      return [];
+    }
+
+    const scored = candidateEvents.map((eventRecord) => {
+      const appEvent = eventTransformer.toApp(eventRecord);
+      const match = this.calculateTagSimilarity(appEvent, careerProfile);
+      const impactScore = this.calculateTagBasedCareerImpact(appEvent, careerProfile);
+      const { boost: profileBoost, reasons: profileReasons } = this.calculateProfileBoost(appEvent, careerProfile, match);
+      const recencyBoost = this.calculateRecencyBoost(appEvent);
+      const popularityBoost = this.calculatePopularityBoost(appEvent);
+
+      const totalScore =
+        match.score * 0.6 +
+        impactScore * 0.25 +
+        profileBoost +
+        recencyBoost +
+        popularityBoost;
+
+      const reasons = [
+        match.explanation,
+        ...profileReasons.filter(Boolean)
+      ].filter(Boolean);
+
+      return {
+        event: eventRecord,
+        match,
+        impactScore,
+        profileBoost,
+        recencyBoost,
+        popularityBoost,
+        totalScore,
+        reasons
+      } as TagRecommendationResult;
+    });
+
+    const sorted = scored
+      .sort((a, b) => {
+        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+        const matchDelta = b.match.matchedTags.length - a.match.matchedTags.length;
+        if (matchDelta !== 0) return matchDelta;
+        const getAttendeeCount = (eventRecord: SupabaseEventWithDetails): number => {
+          const recordWithAttendees = eventRecord as SupabaseEventWithDetails & { attendee_count?: number | null; attendeeCount?: number | null };
+          return recordWithAttendees.attendee_count ?? recordWithAttendees.attendeeCount ?? 0;
+        };
+
+        const popDelta = getAttendeeCount(b.event) - getAttendeeCount(a.event);
+        if (popDelta !== 0) return popDelta;
+        const aStart = new Date(a.event.start_time as string).getTime();
+        const bStart = new Date(b.event.start_time as string).getTime();
+        return aStart - bStart;
+      })
+      .slice(0, limit);
+
+    return sorted;
   }
 
   /**
@@ -323,5 +459,196 @@ export class TagBasedMatchingService {
     const finalScore = Math.min(baseScore + categoryBoost + matchCountBoost, 100);
     
     return Math.round(finalScore);
+  }
+
+  private static buildCandidateTerms(careerProfile: CareerProfile): string[] {
+    const terms = new Set<string>();
+
+    const addTerm = (term: string) => {
+      const trimmed = term.trim();
+      if (!trimmed) return;
+      const lower = trimmed.toLowerCase();
+      terms.add(trimmed);
+      terms.add(lower);
+      terms.add(this.toTitleCase(lower));
+
+      const similar = this.TAG_SIMILARITIES[lower];
+      if (similar) {
+        similar.forEach(addTerm);
+      }
+    };
+
+    const seedTerms = [
+      ...(careerProfile.primarySkills || []),
+      ...(careerProfile.skillsToLearn || []),
+      ...(careerProfile.interests || [])
+    ];
+
+    seedTerms.forEach(addTerm);
+
+    (careerProfile.preferredEventTypes || []).forEach(addTerm);
+    (careerProfile.careerGoals || []).forEach(goal => addTerm(goal.replace(/_/g, ' ')));
+    (careerProfile.learningStyle || []).forEach(style => addTerm(style.replace(/_/g, ' ')));
+    (careerProfile.networkingGoals || []).forEach(goal => addTerm(goal.replace(/_/g, ' ')));
+
+    return Array.from(terms);
+  }
+
+  private static calculateProfileBoost(
+    event: Event,
+    careerProfile: CareerProfile,
+    match: TagMatchResult
+  ): { boost: number; reasons: string[] } {
+    let boost = 0;
+    const reasons: string[] = [];
+    const tagNames = new Set((event.tags || []).map(tag => tag.name.toLowerCase()));
+    const text = `${event.title} ${event.description || ''}`.toLowerCase();
+
+    const preferredTypes = new Set(careerProfile.preferredEventTypes ?? []);
+    if (event.eventTypeId && preferredTypes.has(event.eventTypeId as CareerProfile['preferredEventTypes'][number])) {
+      boost += 8;
+      reasons.push('Matches your preferred event type');
+    }
+
+    const goalBoost = this.calculateGoalBoost(careerProfile.careerGoals || [], tagNames, text);
+    boost += goalBoost.amount;
+    reasons.push(...goalBoost.reasons);
+
+    const learningBoost = this.calculateLearningStyleBoost(careerProfile.learningStyle || [], tagNames, text);
+    boost += learningBoost.amount;
+    reasons.push(...learningBoost.reasons);
+
+    const networkingBoost = this.calculateNetworkingBoost(careerProfile.networkingGoals || [], tagNames, text);
+    boost += networkingBoost.amount;
+    reasons.push(...networkingBoost.reasons);
+
+    if (careerProfile.seniority && match.matchedCategories.includes('Career-Stage')) {
+      boost += 4;
+      reasons.push('Aligned with your seniority level');
+    }
+
+    return { boost, reasons };
+  }
+
+  private static calculateGoalBoost(
+    goals: CareerGoal[],
+    tagNames: Set<string>,
+    text: string
+  ): { amount: number; reasons: string[] } {
+    let amount = 0;
+    const reasons: string[] = [];
+
+    goals.forEach(goal => {
+      switch (goal) {
+        case 'networking':
+          if (tagNames.has('networking') || text.includes('networking')) {
+            amount += 6;
+            reasons.push('Supports your networking goal');
+          }
+          break;
+        case 'skill-development':
+          if (tagNames.has('workshop') || text.includes('workshop')) {
+            amount += 5;
+            reasons.push('Hands-on skill development opportunity');
+          }
+          break;
+        case 'leadership-growth':
+        case 'career-advancement':
+          if (text.includes('leadership') || tagNames.has('leadership')) {
+            amount += 5;
+            reasons.push('Targets your leadership growth goal');
+          }
+          break;
+        case 'entrepreneurship':
+          if (text.includes('startup') || tagNames.has('startup')) {
+            amount += 4;
+            reasons.push('Relevant to your entrepreneurship interests');
+          }
+          break;
+      }
+    });
+
+    return { amount, reasons };
+  }
+
+  private static calculateLearningStyleBoost(
+    learningStyles: LearningStyle[],
+    tagNames: Set<string>,
+    text: string
+  ): { amount: number; reasons: string[] } {
+    let amount = 0;
+    const reasons: string[] = [];
+
+    learningStyles.forEach(style => {
+      switch (style) {
+        case 'hands-on':
+          if (tagNames.has('workshop') || text.includes('workshop')) {
+            amount += 5;
+            reasons.push('Hands-on workshop matches your learning style');
+          }
+          break;
+        case 'interactive':
+          if (text.includes('panel') || text.includes('discussion')) {
+            amount += 3;
+            reasons.push('Interactive format aligns with your preference');
+          }
+          break;
+        case 'theoretical':
+          if (text.includes('lecture') || text.includes('talk')) {
+            amount += 2;
+            reasons.push('Deep-dive session suits your learning style');
+          }
+          break;
+      }
+    });
+
+    return { amount, reasons };
+  }
+
+  private static calculateNetworkingBoost(
+    networkingGoals: NetworkingGoal[],
+    tagNames: Set<string>,
+    text: string
+  ): { amount: number; reasons: string[] } {
+    let amount = 0;
+    const reasons: string[] = [];
+
+    networkingGoals.forEach(goal => {
+      const normalized = String(goal).replace(/_/g, '-');
+      if (normalized.includes('leadership') && text.includes('executive')) {
+        amount += 4;
+        reasons.push('High-level networking opportunity');
+      } else if ((normalized.includes('peer') || normalized.includes('network')) &&
+        (tagNames.has('networking') || text.includes('network'))) {
+        amount += 3;
+        reasons.push('Great fit for expanding your peer network');
+      }
+    });
+
+    return { amount, reasons };
+  }
+
+  private static calculateRecencyBoost(event: Event): number {
+    const start = new Date(event.startTime);
+    const now = new Date();
+    const diffDays = (start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (Number.isNaN(diffDays)) return 0;
+    if (diffDays <= 7 && diffDays >= 0) return 6;
+    if (diffDays <= 14 && diffDays >= 0) return 4;
+    if (diffDays <= 30 && diffDays >= 0) return 2;
+    return 0;
+  }
+
+  private static calculatePopularityBoost(event: Event): number {
+    const attendees = event.attendeeCount ?? 0;
+    if (attendees > 1000) return 6;
+    if (attendees > 500) return 4;
+    if (attendees > 100) return 2;
+    return attendees > 0 ? 1 : 0;
+  }
+
+  private static toTitleCase(value: string): string {
+    return value.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1));
   }
 }

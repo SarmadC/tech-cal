@@ -17,20 +17,21 @@ import {
   TeamSizePreference,
   CommunicationPreference,
   MentorshipPreference,
+  CareerOptionalSectionStatus,
   ROLE_TAXONOMY,
   COMPANY_SIZE_OPTIONS,
   SENIORITY_LEVELS,
   INDUSTRY_FOCUS,
-  TECHNICAL_SKILLS,
   INTEREST_AREAS
 } from '@/types/career';
 import MultiSelectDropdown, { MultiSelectOption } from '@/components/ui/MultiSelectDropdown';
 import { SkillProficiencySelector } from './SkillProficiencySelector';
 import { TeamRoleSelector } from './TeamRoleSelector';
 import { validateOnboardingData, sanitizeOnboardingData, synchronizeSkillTags } from '@/utils/onboardingUtils';
+import { buildSkillOptionList, mapSkillsToCanonical, normalizeSkillName } from '@/utils/skillTaxonomy';
 
 interface CareerOnboardingProps {
-  onComplete: (data: CareerOnboardingData) => void;
+  onComplete: (data: CareerOnboardingData, options?: { optionalSectionsCompleted: CareerOptionalSectionStatus }) => void;
   onSkip?: () => void;
   className?: string;
 }
@@ -43,15 +44,12 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<Partial<CareerOnboardingData>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [includeOptionalSteps, setIncludeOptionalSteps] = useState(false);
 
-  const totalSteps = 6;
+  const totalSteps = includeOptionalSteps ? 6 : 3;
 
   // Memoize dropdown options to prevent recreation on every render
-  const technicalSkillOptions: MultiSelectOption[] = useMemo(() => 
-    Object.entries(TECHNICAL_SKILLS).map(([category, skills]) => 
-      skills.map(skill => ({ value: skill, label: skill, category }))
-    ).flat(), []
-  );
+  const technicalSkillOptions: MultiSelectOption[] = useMemo(() => buildSkillOptionList(), []);
 
   const interestOptions: MultiSelectOption[] = useMemo(() => 
     INTEREST_AREAS.map(interest => ({
@@ -69,7 +67,13 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       const validation = validateOnboardingData(data);
       if (validation.isValid) {
         const sanitizedData = sanitizeOnboardingData(data);
-        onComplete(sanitizedData);
+        const optionalSectionsCompleted: CareerOptionalSectionStatus = {
+          learningPreferences: includeOptionalSteps && Boolean(data.step4_preferences?.learningStyle?.length),
+          networkingPreferences: includeOptionalSteps && Boolean(data.step5_networking?.networkingGoals?.length),
+          teamPreferences: includeOptionalSteps && Boolean(data.step6_teamBuilding?.teamGoals?.length)
+        };
+
+        onComplete(sanitizedData, { optionalSectionsCompleted });
       } else {
         // Show validation errors to user
         setValidationErrors(validation.errors);
@@ -87,20 +91,34 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
   const updateData = (step: keyof CareerOnboardingData, stepData: unknown) => {
     setData(prev => {
-      const newData = { ...prev, [step]: stepData };
-      
-      // Handle skill tags synchronization for step2_skills
       if (step === 'step2_skills' && stepData && typeof stepData === 'object') {
-        const skillsData = stepData as Partial<CareerOnboardingData['step2_skills']>;
-        if (skillsData.primarySkills) {
-          const existingSkillTags = skillsData.skillTags || prev.step2_skills?.skillTags || [];
-          const synchronizedTags = synchronizeSkillTags(skillsData.primarySkills, existingSkillTags);
-          
-          (newData.step2_skills as CareerOnboardingData['step2_skills']).skillTags = synchronizedTags;
-        }
+        const incoming = stepData as Partial<CareerOnboardingData['step2_skills']>;
+        const primarySkillsRaw = incoming.primarySkills ?? prev.step2_skills?.primarySkills ?? [];
+        const skillsToLearnRaw = incoming.skillsToLearn ?? prev.step2_skills?.skillsToLearn ?? [];
+        const interests = incoming.interests ?? prev.step2_skills?.interests ?? [];
+
+        const canonicalPrimary = mapSkillsToCanonical(primarySkillsRaw);
+        const canonicalSkillsToLearn = mapSkillsToCanonical(skillsToLearnRaw);
+        const existingSkillTags = incoming.skillTags ?? prev.step2_skills?.skillTags ?? [];
+        const synchronizedTags = synchronizeSkillTags(canonicalPrimary, existingSkillTags);
+
+        return {
+          ...prev,
+          step2_skills: {
+            ...prev.step2_skills,
+            ...incoming,
+            primarySkills: canonicalPrimary,
+            skillsToLearn: canonicalSkillsToLearn,
+            interests,
+            skillTags: synchronizedTags
+          }
+        };
       }
-      
-      return newData;
+
+      return {
+        ...prev,
+        [step]: stepData
+      };
     });
   };
 
@@ -112,9 +130,13 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         const hasSkills = !!(data.step2_skills?.primarySkills?.length || data.step2_skills?.skillsToLearn?.length || data.step2_skills?.interests?.length);
         const primarySkills = data.step2_skills?.primarySkills || [];
         const skillTags = data.step2_skills?.skillTags || [];
-        const allSkillsHaveTags = primarySkills.length === 0 || 
-          primarySkills.every(skill => skillTags.some(tag => tag.skill === skill));
-        return hasSkills && allSkillsHaveTags;
+        const allSkillsHaveRatings = primarySkills.length === 0 ||
+          primarySkills.every(skill => {
+            const normalizedSkill = normalizeSkillName(skill);
+            const matchingTag = skillTags.find(tag => normalizeSkillName(tag.skill) === normalizedSkill);
+            return Boolean(matchingTag?.proficiency);
+          });
+        return hasSkills && allSkillsHaveRatings;
       case 3:
         return !!(data.step3_goals?.careerGoals?.length);
       case 4:
@@ -137,30 +159,37 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     </div>
   );
 
-  const renderStepIndicator = () => (
-    <div className="flex justify-center mb-8">
-      {[1, 2, 3, 4, 5, 6].map((step) => (
-        <div key={step} className="flex items-center">
-          <div className={`
-            w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-            ${step === currentStep 
-              ? 'bg-blue-600 text-white' 
-              : step < currentStep 
-                ? 'bg-green-500 text-white' 
-                : 'bg-gray-200 text-gray-600'
-            }
-          `}>
-            {step < currentStep ? <CheckCircle size={16} /> : step}
+  const renderStepIndicator = () => {
+    const steps = includeOptionalSteps ? [1, 2, 3, 4, 5, 6] : [1, 2, 3];
+    return (
+      <div className="flex justify-center mb-8">
+        {steps.map((step, index) => (
+          <div key={step} className="flex items-center">
+            <div
+              className={`
+              w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+              ${step === currentStep
+                ? 'bg-blue-600 text-white'
+                : step < currentStep
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-200 text-gray-600'
+              }
+            `}
+            >
+              {step < currentStep ? <CheckCircle size={16} /> : step}
+            </div>
+            {index < steps.length - 1 && (
+              <div
+                className={`w-12 h-0.5 mx-2 ${
+                  step < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                }`}
+              />
+            )}
           </div>
-          {step < 6 && (
-            <div className={`w-12 h-0.5 mx-2 ${
-              step < currentStep ? 'bg-green-500' : 'bg-gray-200'
-            }`} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
+        ))}
+      </div>
+    );
+  };
 
   const renderStep1 = () => (
     <div className="space-y-6">
@@ -257,11 +286,10 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         options={technicalSkillOptions}
         selectedValues={data.step2_skills?.primarySkills || []}
         onChange={(values) => updateData('step2_skills', { 
-          ...data.step2_skills, 
           primarySkills: values 
         })}
         label="Current Skills"
-        description="Select your strongest technical skills"
+        description='Select your strongest technical skills. You can search by acronyms like "JS" or "Next.js" and we’ll map them to our canonical list.'
         placeholder="Choose your current skills..."
         maxSelections={10}
         searchable={true}
@@ -276,10 +304,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
             skillTags={data.step2_skills.skillTags || []}
             onSkillsChange={(skillTags) => {
               try {
-                updateData('step2_skills', {
-                  ...data.step2_skills,
-                  skillTags
-                });
+                updateData('step2_skills', { skillTags });
               } catch (error) {
                 console.error('Error updating skill tags:', error);
               }
@@ -292,11 +317,10 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         options={technicalSkillOptions}
         selectedValues={data.step2_skills?.skillsToLearn || []}
         onChange={(values) => updateData('step2_skills', { 
-          ...data.step2_skills, 
           skillsToLearn: values 
         })}
         label="Skills You Want to Learn"
-        description="What would you like to learn next?"
+        description='What would you like to learn next? Feel free to search with shorthand terms like "GCP" or "K8s".'
         placeholder="Choose skills to learn..."
         maxSelections={10}
         searchable={true}
@@ -318,68 +342,103 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     </div>
   );
 
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <Target size={48} className="mx-auto mb-4 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">What are your goals?</h2>
-        <p className="text-gray-600">Tell us about your career aspirations so we can recommend relevant events.</p>
-      </div>
+  const renderStep3 = () => {
+    const canContinueToOptional = isStepComplete(3);
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Career Goals (select all that apply)</label>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { value: 'skill-development', label: 'Learn New Skills' },
-            { value: 'career-advancement', label: 'Get Promoted' },
-            { value: 'role-transition', label: 'Change Roles' },
-            { value: 'leadership-growth', label: 'Develop Leadership' },
-            { value: 'entrepreneurship', label: 'Start a Company' },
-            { value: 'networking', label: 'Build Network' },
-            { value: 'specialization', label: 'Become Expert' },
-            { value: 'salary-increase', label: 'Increase Salary' }
-          ].map((goal) => (
-            <label key={goal.value} className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={data.step3_goals?.careerGoals?.includes(goal.value as CareerGoal) || false}
-                onChange={(e) => {
-                  const currentGoals = data.step3_goals?.careerGoals || [];
-                  const newGoals = e.target.checked
-                    ? [...currentGoals, goal.value as CareerGoal]
-                    : currentGoals.filter(g => g !== goal.value);
-                  updateData('step3_goals', { 
-                    ...data.step3_goals, 
-                    careerGoals: newGoals 
-                  });
-                }}
-                className="text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">{goal.label}</span>
-            </label>
-          ))}
+    return (
+      <div className="space-y-6">
+        <div className="text-center mb-8">
+          <Target size={48} className="mx-auto mb-4 text-blue-600" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">What are your goals?</h2>
+          <p className="text-gray-600">Tell us about your career aspirations so we can recommend relevant events.</p>
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Timeline</label>
-        <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          value={data.step3_goals?.timeframe || ''}
-          onChange={(e) => updateData('step3_goals', { 
-            ...data.step3_goals, 
-            timeframe: e.target.value as CareerTimeframe 
-          })}
-        >
-          <option value="">When do you want to achieve these goals?</option>
-          <option value="immediate">Immediately (0-6 months)</option>
-          <option value="short-term">Short-term (6-18 months)</option>
-          <option value="medium-term">Medium-term (1-3 years)</option>
-          <option value="long-term">Long-term (3+ years)</option>
-        </select>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">Career Goals (select all that apply)</label>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: 'skill-development', label: 'Learn New Skills' },
+              { value: 'career-advancement', label: 'Get Promoted' },
+              { value: 'role-transition', label: 'Change Roles' },
+              { value: 'leadership-growth', label: 'Develop Leadership' },
+              { value: 'entrepreneurship', label: 'Start a Company' },
+              { value: 'networking', label: 'Build Network' },
+              { value: 'specialization', label: 'Become Expert' },
+              { value: 'salary-increase', label: 'Increase Salary' }
+            ].map((goal) => (
+              <label key={goal.value} className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={data.step3_goals?.careerGoals?.includes(goal.value as CareerGoal) || false}
+                  onChange={(e) => {
+                    const currentGoals = data.step3_goals?.careerGoals || [];
+                    const newGoals = e.target.checked
+                      ? [...currentGoals, goal.value as CareerGoal]
+                      : currentGoals.filter(g => g !== goal.value);
+                    updateData('step3_goals', {
+                      ...data.step3_goals,
+                      careerGoals: newGoals
+                    });
+                  }}
+                  className="text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{goal.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Timeline</label>
+          <select
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={data.step3_goals?.timeframe || ''}
+            onChange={(e) => updateData('step3_goals', {
+              ...data.step3_goals,
+              timeframe: e.target.value as CareerTimeframe
+            })}
+          >
+            <option value="">When do you want to achieve these goals?</option>
+            <option value="immediate">Immediately (0-6 months)</option>
+            <option value="short-term">Short-term (6-18 months)</option>
+            <option value="medium-term">Medium-term (1-3 years)</option>
+            <option value="long-term">Long-term (3+ years)</option>
+          </select>
+        </div>
+
+        {!includeOptionalSteps && (
+          <div className="mt-10 rounded-xl border border-blue-100 bg-blue-50 p-6">
+            <h3 className="text-lg font-semibold text-blue-900 mb-2">Make recommendations even smarter</h3>
+            <p className="text-sm text-blue-800">
+              Share your learning preferences, availability, and networking goals when you&apos;re ready. These details are optional and can be added later.
+            </p>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                disabled={!canContinueToOptional}
+                onClick={() => {
+                  if (!canContinueToOptional) return;
+                  setIncludeOptionalSteps(true);
+                  setCurrentStep(4);
+                  setValidationErrors([]);
+                }}
+                className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  canContinueToOptional
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-blue-200 text-blue-100 cursor-not-allowed'
+                }`}
+              >
+                Continue to preferences
+              </button>
+              <p className="text-xs text-blue-700 sm:ml-4">
+                Prefer to do this later? You can update these details anytime from your profile.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderStep4 = () => (
     <div className="space-y-6">
@@ -794,9 +853,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
         {currentStep === 3 && renderStep3()}
-        {currentStep === 4 && renderStep4()}
-        {currentStep === 5 && renderStep5()}
-        {currentStep === 6 && renderStep6()}
+        {includeOptionalSteps && currentStep === 4 && renderStep4()}
+        {includeOptionalSteps && currentStep === 5 && renderStep5()}
+        {includeOptionalSteps && currentStep === 6 && renderStep6()}
       </div>
 
       {/* Validation Errors */}
@@ -821,7 +880,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
               onClick={onSkip}
               className="text-gray-500 hover:text-gray-700 text-sm font-medium"
             >
-              Skip for now
+              Improve recommendations later
             </button>
           )}
         </div>

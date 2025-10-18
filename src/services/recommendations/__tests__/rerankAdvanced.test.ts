@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { rerankWithBehavioral } from '../behavioralReranker';
 import type { EventWithCareerImpact, SupabaseClientType } from '@/types';
 import type { CareerProfile } from '@/types/career';
+
+vi.mock('@/utils/behavioralBoostUtils', () => ({
+  getUserInteractedEvents: vi.fn().mockResolvedValue([])
+}));
 
 const supabaseStub = {} as SupabaseClientType;
 
@@ -90,5 +94,4 @@ describe('rerankWithBehavioral', () => {
     expect(ids.size).toBe(events.length);
   });
 });
-
 

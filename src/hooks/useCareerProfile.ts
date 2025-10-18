@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { MemoizedProfileService } from '@/services/memoizedProfileService';
-import { CareerProfile, CareerOnboardingData } from '@/types/career';
+import { CareerProfile, CareerOnboardingData, CareerOptionalSectionStatus, CareerOptionalSectionSnoozes, CareerOptionalSectionTimestamps } from '@/types/career';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 
 interface UseCareerProfileReturn {
@@ -12,8 +12,13 @@ interface UseCareerProfileReturn {
   isLoading: boolean;
   error: string | null;
   saveCareerProfile: (profile: CareerProfile) => Promise<void>;
-  completeOnboarding: (data: CareerOnboardingData) => Promise<void>;
+  completeOnboarding: (data: CareerOnboardingData, optionalStatus?: CareerOptionalSectionStatus) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  optionalSections: CareerOptionalSectionStatus | null;
+  optionalSectionSnoozes: CareerOptionalSectionSnoozes | null;
+  optionalSectionTimestamps: CareerOptionalSectionTimestamps | null;
+  markOptionalSectionComplete: (section: keyof CareerOptionalSectionStatus) => Promise<void>;
+  snoozeOptionalSection: (section: keyof CareerOptionalSectionStatus, days?: number) => Promise<string | void>;
 }
 
 /**
@@ -22,6 +27,10 @@ interface UseCareerProfileReturn {
  */
 export function useCareerProfile(): UseCareerProfileReturn {
   const { user, profile } = useAuth();
+  const preferencesRecord = profile?.preferences as Record<string, unknown> | undefined;
+  const optionalSections = preferencesRecord?.careerOptionalSections as CareerOptionalSectionStatus | undefined;
+  const optionalSectionSnoozes = preferencesRecord?.careerOptionalSnoozes as CareerOptionalSectionSnoozes | undefined;
+  const optionalSectionTimestamps = preferencesRecord?.careerOptionalSectionTimestamps as CareerOptionalSectionTimestamps | undefined;
   const { supabase, isReady } = useSupabaseSafe();
   const { showSuccess } = useSnackbar();
   const [careerProfile, setCareerProfile] = useState<CareerProfile | null>(null);
@@ -91,7 +100,7 @@ export function useCareerProfile(): UseCareerProfileReturn {
   }, [user?.id, supabase]);
 
   // Complete onboarding
-  const completeOnboarding = useCallback(async (data: CareerOnboardingData) => {
+  const completeOnboarding = useCallback(async (data: CareerOnboardingData, optionalStatus?: CareerOptionalSectionStatus) => {
     if (!user?.id || !supabase) {
       throw new Error('User not authenticated or Supabase not available');
     }
@@ -99,7 +108,7 @@ export function useCareerProfile(): UseCareerProfileReturn {
     try {
       const careerProfile = CareerProfileService.onboardingDataToCareerProfile(data, user.id);
       await CareerProfileService.saveCareerProfile(user.id, careerProfile, supabase);
-      await CareerProfileService.markOnboardingCompleted(user.id, supabase);
+      await CareerProfileService.markOnboardingCompleted(user.id, supabase, optionalStatus);
       
       setCareerProfile(careerProfile);
       setHasCompletedOnboarding(true);
@@ -119,6 +128,45 @@ export function useCareerProfile(): UseCareerProfileReturn {
     await loadCareerProfile();
   }, [loadCareerProfile]);
 
+  const markOptionalSectionComplete = useCallback(async (section: keyof CareerOptionalSectionStatus) => {
+    if (!user?.id || !supabase) return;
+    try {
+      const timestampKeyMap: Record<keyof CareerOptionalSectionStatus, keyof CareerOptionalSectionTimestamps> = {
+        learningPreferences: 'learningPreferencesCompletedAt',
+        networkingPreferences: 'networkingPreferencesCompletedAt',
+        teamPreferences: 'teamPreferencesCompletedAt'
+      };
+      await CareerProfileService.updateOptionalSections(
+        user.id,
+        supabase,
+        { [section]: true },
+        {},
+        { [timestampKeyMap[section]]: new Date().toISOString() }
+      );
+      await refreshProfile();
+    } catch (error) {
+      console.error('Failed to mark optional section complete:', error);
+    }
+  }, [user?.id, supabase, refreshProfile]);
+
+  const snoozeOptionalSection = useCallback(async (section: keyof CareerOptionalSectionStatus, days: number = 7) => {
+    if (!user?.id || !supabase) return;
+    try {
+      const snoozeUntil = new Date();
+      snoozeUntil.setDate(snoozeUntil.getDate() + days);
+      await CareerProfileService.updateOptionalSections(
+        user.id,
+        supabase,
+        {},
+        { [section]: snoozeUntil.toISOString() }
+      );
+      await refreshProfile();
+      return snoozeUntil.toISOString();
+    } catch (error) {
+      console.error('Failed to snooze optional section prompt:', error);
+    }
+  }, [user?.id, supabase, refreshProfile]);
+
   // Load profile on mount and when dependencies change
   useEffect(() => {
     loadCareerProfile();
@@ -132,5 +180,10 @@ export function useCareerProfile(): UseCareerProfileReturn {
     saveCareerProfile,
     completeOnboarding,
     refreshProfile,
+    optionalSections: optionalSections ?? null,
+    optionalSectionSnoozes: optionalSectionSnoozes ?? null,
+    markOptionalSectionComplete,
+    snoozeOptionalSection,
+    optionalSectionTimestamps: optionalSectionTimestamps ?? null,
   };
 }

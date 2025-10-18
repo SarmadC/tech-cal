@@ -169,14 +169,14 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 border: theme.isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(255, 255, 255, 0.2)'
             }}
         >
-            <div className="event-preview-glass-header p-4 rounded-lg mb-6 border border-white/20 dark:border-white/10">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white font-dm-sans">Event Details</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-white/20 dark:hover:bg-white/10 rounded-full transition-colors">
-                        <XIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                    </button>
-                </div>
-            </div>
+            <button
+                type="button"
+                onClick={onClose}
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/10 dark:bg-black/20 hover:bg-white/20 dark:hover:bg-white/10 border border-white/20 dark:border-white/10 text-gray-600 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                aria-label="Close event details"
+            >
+                <XIcon className="w-4 h-4" />
+            </button>
 
             <div className="flex-1 space-y-6 overflow-y-auto pr-2 -mr-2">
                 <div className="flex items-start justify-between">

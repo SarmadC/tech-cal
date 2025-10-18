@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
-import { CareerOnboardingData } from '@/types/career';
+import { CareerOnboardingData, CareerOptionalSectionStatus } from '@/types/career';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import OnboardingErrorBoundary from '@/components/onboarding/OnboardingErrorBoundary';
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -51,11 +51,14 @@ export default function CareerOnboardingPage() {
     return () => window.removeEventListener('profile-updated', handleProfileUpdate);
   }, [queryClient]);
 
-  const handleComplete = async (data: CareerOnboardingData) => {
+  const handleComplete = async (
+    data: CareerOnboardingData,
+    options?: { optionalSectionsCompleted: CareerOptionalSectionStatus }
+  ) => {
     setIsSubmitting(true);
     
     try {
-      await completeOnboarding(data);
+      await completeOnboarding(data, options?.optionalSectionsCompleted);
       
       // Invalidate profile queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ['profile'] });

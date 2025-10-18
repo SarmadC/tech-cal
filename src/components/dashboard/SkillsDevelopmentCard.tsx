@@ -33,7 +33,9 @@ export function SkillsDevelopmentCard({
     };
 
     skillTags.forEach(tag => {
-      proficiencyCounts[tag.proficiency]++;
+      if (tag.proficiency) {
+        proficiencyCounts[tag.proficiency]++;
+      }
     });
 
     // Calculate average experience

@@ -1553,6 +1553,70 @@ export type Database = {
           },
         ]
       }
+      telemetry_events: {
+        Row: {
+          context: Json
+          event_type: string
+          event_version: number
+          id: string
+          metadata: Json
+          occurred_at: string
+          received_at: string
+          request_id: string | null
+          session_id: string | null
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          context?: Json
+          event_type: string
+          event_version?: number
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          received_at?: string
+          request_id?: string | null
+          session_id?: string | null
+          source?: string
+          user_id?: string | null
+        }
+        Update: {
+          context?: Json
+          event_type?: string
+          event_version?: number
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          received_at?: string
+          request_id?: string | null
+          session_id?: string | null
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telemetry_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telemetry_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "telemetry_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       speakers: {
         Row: {
           bio: string | null

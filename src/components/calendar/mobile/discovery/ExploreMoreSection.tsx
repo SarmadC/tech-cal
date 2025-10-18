@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Compass, Fire, Sparkle, Lightning } from '@phosphor-icons/react';
-import { Event } from '@/types';
+import type { Event } from '@/types';
 import { DiscoveryService } from '@/services/discoveryService';
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
@@ -39,7 +39,14 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
     const quickWins = DiscoveryService.getQuickWinEvents(upcomingEvents, 4);
     
     // Create a map to track events and their types
-    const eventMap = new Map();
+    const eventMap = new Map<
+      string,
+      {
+        event: Event;
+        types: string[];
+        size: 'large' | 'medium' | 'small';
+      }
+    >();
     
     // Add trending events
     trending.forEach(e => {
@@ -48,8 +55,9 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
     
     // Add new events (avoid duplicates)
     newEvents.slice(0, 2).forEach(e => {
-      if (eventMap.has(e.id)) {
-        eventMap.get(e.id).types.push('new');
+      const existing = eventMap.get(e.id);
+      if (existing) {
+        existing.types.push('new');
       } else {
         eventMap.set(e.id, { event: e, types: ['new'], size: 'medium' });
       }
@@ -57,11 +65,11 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
     
     // Add quick wins (avoid duplicates)
     quickWins.slice(0, 4).forEach(e => {
-      if (eventMap.has(e.id)) {
-        eventMap.get(e.id).types.push('quick');
-        // If it's already trending, keep it large, otherwise make it medium
-        if (!eventMap.get(e.id).types.includes('trending')) {
-          eventMap.get(e.id).size = 'medium';
+      const existing = eventMap.get(e.id);
+      if (existing) {
+        existing.types.push('quick');
+        if (!existing.types.includes('trending')) {
+          existing.size = 'medium';
         }
       } else {
         eventMap.set(e.id, { event: e, types: ['quick'], size: 'small' });
@@ -157,8 +165,10 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
         className={className}
       >
         <div className="discovery-empty-state">
-          <Compass size={48} className="empty-icon" />
-          <div className="empty-title">No events to explore right now</div>
+          <div className="flex items-center gap-3 mb-4">
+            <Compass size={24} className="text-gray-400" />
+            <div className="empty-title">Nothing here yet</div>
+          </div>
           <div className="empty-subtitle">
             Check back soon for trending events, new additions, and quick wins!
           </div>
@@ -196,4 +206,3 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
 ExploreMoreSection.displayName = 'ExploreMoreSection';
 
 export default ExploreMoreSection;
-

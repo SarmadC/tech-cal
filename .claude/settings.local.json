@@ -48,7 +48,8 @@
       "Bash(find:*)",
       "Bash(git checkout:*)",
       "Bash(cat:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(npx playwright test:*)"
     ],
     "deny": [],
     "ask": []
