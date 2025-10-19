@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect } from 'react';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import MobileHeroSection from './MobileHeroSection';
 import MobileChaosToOrderSection from './MobileChaosToOrderSection';
 import MobileFeaturesGrid from './MobileFeaturesGrid';
 import MobileFooter from './MobileFooter';
-import MobileNavigation from './MobileNavigation';
+import MobileNavbar from '@/components/layout/MobileNavbar';
 import '@/app/styles/mobile-landing.css';
 import '@/app/styles/mobile-design-system.css';
 
@@ -16,8 +15,6 @@ export interface MobileLandingPageProps {
 }
 
 const MobileLandingPage: React.FC<MobileLandingPageProps> = ({ className = '' }) => {
-  const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isMobile, userAgent } = useDeviceDetection();
 
   // Enhanced mobile detection for specific devices
@@ -27,15 +24,15 @@ const MobileLandingPage: React.FC<MobileLandingPageProps> = ({ className = '' })
   const navItems = [
     {
       name: "Features",
-      link: "#features",
+      href: "#features",
     },
     {
       name: "Pricing", 
-      link: "#pricing",
+      href: "#pricing",
     },
     {
-      name: "Contact",
-      link: "#contact",
+      name: "Blog",
+      href: "/blog",
     },
   ];
 
@@ -61,16 +58,10 @@ const MobileLandingPage: React.FC<MobileLandingPageProps> = ({ className = '' })
   return (
     <div className={`mobile-landing-container ${className}`}>
       {/* Mobile Navigation */}
-      <MobileNavigation
+      <MobileNavbar
         navItems={navItems}
-        isOpen={isMobileMenuOpen}
-        onToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        onNavigate={(path) => {
-          setIsMobileMenuOpen(false);
-          router.push(path);
-        }}
-        isIOS={isIOSMobile}
-        isAndroid={isAndroidMobile}
+        showThemeToggle={true}
+        showLogo={true}
       />
 
       <main className="mobile-landing-main">

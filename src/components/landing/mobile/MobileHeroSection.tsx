@@ -1,10 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+import React from 'react';
 import Link from 'next/link';
-import { useTheme } from 'next-themes';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import GlassSurface from '@/components/GlassSurface';
 
 export interface MobileHeroSectionProps {
   isIOS?: boolean;
@@ -17,81 +15,74 @@ const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({
   isAndroid: _isAndroid = false,
   className = ''
 }) => {
-  const [_prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const { resolvedTheme } = useTheme();
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('matchMedia' in window)) return;
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => setPrefersReducedMotion(!!mq.matches);
-    update();
-    mq.addEventListener?.('change', update);
-    return () => mq.removeEventListener?.('change', update);
-  }, []);
-
-  // Determine background image based on theme
-  const backgroundImage = resolvedTheme === 'dark' 
-    ? '/mobile-ui-dark.jpg' 
-    : '/mobile-ui-light-ultra-hq.jpg';
-
   return (
     <section className={`mobile-hero ${className}`}>
-      {/* Mobile Theme Toggle */}
-      <div className="mobile-theme-toggle">
-        <ThemeToggle />
-      </div>
-
-      {/* Mobile Hero Background Image */}
-      <div className="mobile-hero-background">
-        <Image 
-          src={backgroundImage} 
-          alt="Tech events calendar background" 
-          className="mobile-hero-bg-image"
-          fill
-          priority
-        />
+      {/* Programmatic gradient background */}
+      <div className="mobile-hero-background" aria-hidden="true">
+        <div className="mobile-hero-surface" />
         <div className="mobile-hero-overlay" />
       </div>
 
-      {/* Mobile Hero Content - Centered Text */}
-      <div className="mobile-hero-text-content">
-        {/* Hero Title */}
-        <h1 className="mobile-hero-title">
-          All-in-One<br />
-          <span className="highlight-text">Tech Events Calendar</span>
-        </h1>
+      {/* Mobile Hero Content - New Layout */}
+      <div className="mobile-hero-content">
+        {/* Hero Image Container */}
+        <div className="mobile-hero-image-container">
+          <img 
+            src="/kanhaiya-sharma-EiAqej-cGks-unsplash(1).jpg" 
+            alt="Abstract geometric filter symbol"
+            className="hero-image"
+          />
+          <div className="hero-image-overlay" />
+          
+          {/* Hero Text Overlay */}
+          <div className="hero-text-overlay">
+            {/* Hero Title */}
+            <h1 className="mobile-hero-title">
+              All-in-One<br />
+              <span className="highlight-text">Tech Events Calendar</span>
+            </h1>
 
-                {/* Hero Subtitle */}
-                <div className="mobile-hero-subtitle">
-                  <div className="subtitle-content">
-                    <p className="subtitle-main">
-                      Effortless Event Discovery for Everyone:
-                    </p>
-                    <p className="subtitle-secondary">
-                      Discover How Simple Steps<br />
-                      Can Make Career Growth Easy
-                    </p>
-                  </div>
-                </div>
-      </div>
+            {/* Hero Subtitle */}
+            <div className="mobile-hero-subtitle">
+              <div className="subtitle-content">
+                <p className="subtitle-main">
+                  Effortless Event Discovery for Everyone
+                </p>
+                <p className="subtitle-secondary">
+                  Never miss important tech events again.<br />
+                  Find, track, and attend events that matter to your career.
+                </p>
+              </div>
+            </div>
 
-      {/* Mobile CTA Buttons - Bottom Positioned */}
-      <div className="mobile-hero-cta enhanced">
-        <div className="mobile-liquid-glass-cta">
-          <Link 
-            href="/discover" 
-            className="mobile-primary-cta-liquid"
-          >
-            <span>DISCOVER EVENTS</span>
-          </Link>
+            {/* CTA Button */}
+            <div className="mobile-hero-cta-container">
+              <GlassSurface
+                width="100%"
+                height="auto"
+                borderRadius={12}
+                brightness={60}
+                opacity={0.9}
+                blur={10}
+                displace={8}
+                backgroundOpacity={0.12}
+                saturation={1.15}
+                distortionScale={-160}
+                redOffset={4}
+                greenOffset={12}
+                blueOffset={20}
+                mixBlendMode="screen"
+                className="mobile-liquid-glass-cta"
+                contentStyle={{ padding: 0 }}
+              >
+                <Link href="/discover" className="mobile-primary-cta-liquid">
+                  <span>DISCOVER EVENTS</span>
+                </Link>
+              </GlassSurface>
+            </div>
+          </div>
         </div>
-        
-        <Link 
-          href="/login" 
-          className="mobile-secondary-cta enhanced-secondary"
-        >
-          LOG IN
-        </Link>
+      
       </div>
     </section>
   );

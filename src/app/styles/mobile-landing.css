@@ -1,5 +1,4 @@
 /* Mobile Landing Page Styles - Consistent with Design System */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
 /* ============================================== */
 /* 1. MOBILE LANDING CONTAINER                   */
@@ -14,9 +13,7 @@
   font-family: var(--font-sans);
 }
 
-.mobile-landing-container.blur-background {
-  /* Blur effect removed to ensure menu visibility */
-}
+/* Blur effect removed to ensure menu visibility */
 
 .mobile-landing-main {
   position: relative;
@@ -34,7 +31,9 @@
   right: 0;
   z-index: 10000;
   background: var(--background-main);
-  backdrop-filter: blur(20px);
+  background: color-mix(in srgb, var(--background-main) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-subtle);
   display: block;
 }
@@ -208,7 +207,9 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: var(--space-6);
+  padding: var(--space-4);
+  padding-top: var(--space-2);
+  padding-bottom: 0;
   background: var(--background-main);
   color: var(--foreground-primary);
   overflow: hidden;
@@ -219,26 +220,9 @@
   color: white;
 }
 
-/* Mobile Theme Toggle */
-.mobile-theme-toggle {
-  position: fixed;
-  top: calc(60px + var(--space-4));
-  right: var(--space-4);
-  z-index: 10001;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: var(--radius);
-  padding: var(--space-2);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  pointer-events: auto;
-}
-
-/* Dark mode theme toggle */
-.dark .mobile-theme-toggle {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+/* Mobile navbar spacing - add top padding to account for fixed navbar */
+.mobile-landing-main {
+  padding-top: 80px; /* Space for fixed navbar */
 }
 
 .mobile-hero-background {
@@ -253,42 +237,43 @@
   overflow: hidden;
 }
 
-.mobile-hero-bg-image {
+.mobile-hero-surface {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
+  inset: -20% -10%;
+  background:
+    radial-gradient(ellipse at top left, rgba(99, 102, 241, 0.25) 0%, transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(16, 185, 129, 0.22) 0%, transparent 60%),
+    radial-gradient(circle at 40% 30%, rgba(59, 130, 246, 0.18) 0%, transparent 55%),
+    var(--background-main);
   z-index: 1;
-  filter: blur(15px);
-  transform: scale(1.1);
+  transform: translateZ(0);
+}
+
+.dark .mobile-hero-surface {
+  /* Force solid black background in dark mode to remove blue tint */
+  background: #000;
 }
 
 .mobile-hero-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: linear-gradient(
-    135deg,
-    rgba(0, 0, 0, 0.1) 0%,
-    rgba(0, 0, 0, 0.05) 50%,
-    rgba(0, 0, 0, 0.15) 100%
+    180deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.35) 55%,
+    rgba(255, 255, 255, 0.85) 100%
   );
   z-index: 2;
-  backdrop-filter: blur(1px);
 }
 
 /* Dark mode overlay */
 .dark .mobile-hero-overlay {
+  /* Match the rest of the dark landing page with a neutral black gradient */
   background: linear-gradient(
-    135deg,
-    rgba(0, 0, 0, 0.3) 0%,
-    rgba(0, 0, 0, 0.1) 50%,
-    rgba(0, 0, 0, 0.4) 100%
+    180deg,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.55) 55%,
+    rgba(0, 0, 0, 0.88) 100%
   );
 }
 
@@ -302,97 +287,129 @@
   border-radius: 0 0 0 20px;
 }
 
-.mobile-hero-text-content {
+.mobile-hero-content {
   position: relative;
   z-index: 3;
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  text-align: left;
-  padding: 0;
-  height: calc(100vh - 180px);
+  align-items: center;
+  padding: var(--space-2);
+  height: calc(100vh - 220px);
+  gap: var(--space-4);
 }
+
+.mobile-hero-image-container {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: calc(100vh - 180px);
+  border-radius: 32px;
+  overflow: hidden;
+  background: var(--background-secondary);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-hero-image-container .hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.5) 70%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  z-index: 2;
+}
+
+.hero-text-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-6);
+  color: white;
+}
+
+.mobile-hero-cta-container {
+  margin-top: auto;
+}
+
+.mobile-hero-secondary-cta {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Old hero stack styles removed - using new illustration-based layout */
 
 .mobile-hero-title {
-  font-size: 3.75rem;
-  font-weight: 300;
-  line-height: 1.15;
-  margin-bottom: var(--space-12);
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: var(--space-4);
   letter-spacing: -0.025em;
   font-family: var(--font-sans);
-  color: var(--foreground-primary);
-}
-
-/* Dark mode title */
-.dark .mobile-hero-title {
   color: white;
+  text-align: left;
 }
 
 .mobile-hero-title .highlight-text {
   font-weight: 700;
-  color: var(--foreground-primary);
+  color: white;
   display: inline-block;
 }
 
-/* Dark mode highlight text */
-.dark .mobile-hero-title .highlight-text {
-  color: white;
-}
-
 .mobile-hero-subtitle {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: 3.5rem;
-  justify-content: flex-start;
+  margin-bottom: var(--space-6);
 }
-
-
 
 .subtitle-content {
-  flex: 1;
+  text-align: left;
 }
 
 .subtitle-main {
   font-size: 1.125rem;
-  line-height: 1.6;
-  color: var(--foreground-primary);
-  margin: 0 0 var(--space-3) 0;
+  line-height: 1.5;
+  color: white;
+  margin: 0 0 var(--space-2) 0;
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 
-/* Dark mode subtitle main */
-.dark .subtitle-main {
-  color: white;
-}
-
 .subtitle-secondary {
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--foreground-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
   margin: 0;
   font-weight: 400;
 }
-/* Dark mode subtitle secondary */
-.dark .subtitle-secondary {
-  color: rgba(255, 255, 255, 0.8);
-}
 
-.mobile-hero-cta {
-  position: relative;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+.mobile-hero-cta-container {
   margin-top: auto;
-  margin-bottom: 1rem;
-  padding: 0 var(--space-6);
 }
 
-.mobile-hero-cta.enhanced {
-  gap: 1rem;
+.mobile-hero-secondary-cta {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
 }
 
 .mobile-primary-cta.enhanced-primary {
@@ -479,52 +496,11 @@
 }
 
 /* Glass Effect CTA Button Styles */
-.mobile-liquid-glass-cta {
-  width: 100%;
-  max-width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
-}
-
-.mobile-liquid-glass-cta:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-/* Light mode glass effect */
-:root:not(.dark) .mobile-liquid-glass-cta {
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-:root:not(.dark) .mobile-liquid-glass-cta:hover {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.15);
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-}
+.mobile-liquid-glass-cta { width: 100%; max-width: 100%; display: flex; align-items: center; justify-content: center; position: relative; border-radius: var(--radius); }
 
 .mobile-primary-cta-liquid {
   background: transparent;
-  color: white;
+  color: rgba(0, 0, 0, 0.9);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.875rem;
@@ -542,19 +518,14 @@
   outline: none;
 }
 
-.mobile-primary-cta-liquid:hover {
-  color: white;
-  text-decoration: none;
-}
+.mobile-primary-cta-liquid:hover { color: inherit; text-decoration: none; }
+
+/* Dark mode primary CTA liquid */
+.dark .mobile-primary-cta-liquid { color: white; }
 
 /* Light mode primary CTA liquid */
-:root:not(.dark) .mobile-primary-cta-liquid {
-  color: rgba(0, 0, 0, 0.9);
-}
-
-:root:not(.dark) .mobile-primary-cta-liquid:hover {
-  color: rgba(0, 0, 0, 1);
-}
+:root:not(.dark) .mobile-primary-cta-liquid { color: rgba(0, 0, 0, 0.9); }
+:root:not(.dark) .mobile-primary-cta-liquid:hover { color: rgba(0, 0, 0, 1); }
 
 .mobile-primary-cta-liquid:focus {
   outline: none;
@@ -565,20 +536,28 @@
 /* ============================================== */
 
 .mobile-features {
-  padding: var(--space-16) var(--space-6);
+  padding: var(--space-8) var(--space-6) var(--space-4) var(--space-6);
   background: var(--background-main);
+  overflow: visible;
+  min-height: auto;
+  position: relative;
 }
 
 .mobile-features-header {
   text-align: left;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 
 .mobile-features-title {
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: var(--space-4);
+  margin-left: var(--space-4);
+  margin-right: var(--space-4);
   color: var(--foreground-primary);
+  font-family: var(--font-sans);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
 }
 
 .mobile-features-subtitle {
@@ -592,10 +571,15 @@
 .mobile-features-list {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
   list-style: none;
   padding: 0;
   margin: 0;
+  position: relative;
+  gap: 0;
+  min-height: 150vh;
+  overflow: visible;
+  justify-content: center;
+  align-items: center;
 }
 
 .mobile-feature-card {
@@ -603,19 +587,68 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius);
   padding: var(--space-6);
-  transition: background-color 0.15s ease, transform 0.12s ease, border-color 0.15s ease, opacity 0.25s ease;
+  position: relative;
+  margin-top: calc(var(--space-6) * -1);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  contain: layout style paint;
+  transform-origin: center center;
   -webkit-tap-highlight-color: transparent;
-  opacity: 0;
-  transform: translateY(12px);
 }
 
-.mobile-feature-card.visible {
+.mobile-feature-card:first-child {
+  margin-top: 0;
+}
+
+/* Static rendering for reduced motion */
+.mobile-features--static {
+  min-height: auto;
+}
+
+.mobile-features-list--static {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.mobile-feature-card--static {
+  position: static;
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
+  will-change: auto;
 }
 
-.mobile-feature-card:active {
-  transform: scale(0.98);
+/* Framer Motion handles all animation transforms */
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-feature-card {
+    transition: none;
+  }
+}
+
+/* Hover effects for stacked cards */
+/* Disable hover lift during stacking to avoid transform conflicts */
+.mobile-feature-card:hover {
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.12),
+    0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-feature-card:active:hover {
+  transform: translateY(-1px) scale(0.99);
+}
+
+/* Ensure proper card styling and spacing */
+.mobile-feature-card {
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .mobile-feature-content {
@@ -659,13 +692,14 @@
 /* ============================================== */
 
 .mobile-chaos-to-order {
-  padding: var(--space-16) var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  margin-top: -24px;
   background: var(--background-main);
   position: relative;
   overflow: hidden;
   /* Dynamic square sizing based on viewport and calendar cells */
   --tile-size: 34px; /* locked default for 341–420px devices */
-  --logo-scale: 0.68; /* 68% of tile for clean spacing */
+  --logo-scale: 0.78; /* slightly larger logos for readability */
 }
 
 .mobile-chaos-container {
@@ -698,12 +732,26 @@
 .mobile-animation-container {
   position: relative;
   /* Viewport-scaled height ensuring square cells */
-  height: min(68vh, 540px);
+  height: min(46vh, 360px);
   margin: 2rem 0;
-  background: var(--background-secondary); /* subtle contrast over page */
-  border: 1px solid var(--border-default); /* blend border with page background */
+  background: transparent; /* background handled by GlassSurface */
+  border: none;
   border-radius: 16px;
   overflow: hidden;
+}
+
+/* Light mode: add subtle backdrop under GlassSurface so the frost is visible */
+:root:not(.dark) .mobile-animation-container::before {
+  content: '';
+  position: absolute;
+  inset: -6%;
+  background:
+    radial-gradient(ellipse at 15% 8%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 85% 90%, rgba(16, 185, 129, 0.06) 0%, transparent 65%),
+    linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+  filter: none;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .mobile-animation-container.finalized .mobile-event-card,
@@ -716,19 +764,34 @@
 /* Calendar Grid */
 .mobile-calendar-grid {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
-  right: 1rem;
-  bottom: 1rem;
-  background: var(--background-main); /* calendar background */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent; /* use GlassSurface for background */
   border-radius: 16px;
-  padding: 1rem;
+  padding: 0.375rem; /* small inner gutter to avoid corner clipping */
+  border: none; /* GlassSurface handles visual border/edge */
   opacity: 0.8;
   transition: opacity 0.5s ease;
+  /* full-width inside container; sizing managed by container */
+  z-index: 1; /* above the underlay */
 }
 
+/* Ensure GlassSurface content spans fully and uses our inner padding */
+.calendar-surface-content {
+  width: 100%;
+  height: 100%;
+  padding: 0; /* children control their own spacing */
+  display: block;
+}
+
+/* Background handled by GlassSurface; no theme-specific backgrounds here */
+
 .calendar-header {
-  margin-bottom: 0.75rem;
+  /* Align with calendar-dates which sits inside the grid padding */
+  margin: 0 0 0.5rem;
+  padding: 0;
 }
 
 .calendar-days {
@@ -737,20 +800,34 @@
   align-items: center;
   margin-bottom: 0.5rem;
   height: 42px; /* 40–44px target */
-  padding: 0; /* full-width inside the card so columns align with dates */
+  padding: 0; /* let content edge-align inside GlassSurface content padding */
   width: 100%;
-  background: rgba(0, 0, 0, 0.72); /* reduced contrast so it doesn't dominate */
-  color: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
+  background: transparent !important; /* remove header background */
+  background-image: none !important;
+  color: var(--foreground-primary);
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
   column-gap: 12px; /* match dates grid gap exactly */
 }
+
+/* Dark theme: no background, keep high-contrast text */
+.dark .calendar-days { background: transparent !important; background-image: none !important; color: rgba(255, 255, 255, 0.95); border: 0; box-shadow: none; border-radius: 0; }
+
+/* Explicit light theme text color to avoid white-on-white */
+:root:not(.dark) .calendar-days { color: rgba(24, 24, 27, 0.9); }
 
 .calendar-days span {
   text-align: center;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.02em; /* tighter letterspacing */
+  color: inherit;
 }
+
+/* Ensure weekday letters are theme-adaptive */
+:root:not(.dark) .calendar-days span { color: rgba(24, 24, 27, 0.9); }
+.dark .calendar-days span { color: rgba(255, 255, 255, 0.95); }
 
 .calendar-dates {
   display: grid;
@@ -814,8 +891,13 @@
 
 .date-number {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(24, 24, 27, 0.85); /* light mode default (near-black) */
   font-weight: 500;
+}
+
+/* Dark theme: keep strong white for contrast */
+.dark .date-number {
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .event-dot {
@@ -864,7 +946,7 @@
   color: var(--foreground-primary);
   font-size: 0.75rem;
   /* Subtle shadow 12–16px blur */
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.12);
   transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0;
   transform: scale(0.85) translateZ(0);
@@ -877,6 +959,20 @@
   max-width: var(--tile-size);
   min-height: var(--tile-size);
   max-height: var(--tile-size);
+}
+
+/* Dark theme: slightly stronger depth */
+.dark .mobile-chaos-to-order .mobile-event-card {
+  background: rgba(0, 0, 0, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Light theme: white tile cards for logos */
+:root:not(.dark) .mobile-chaos-to-order .mobile-event-card {
+  background: #f5f5f4; /* warmer subtle grey tile in light mode */
+  border-color: rgba(0, 0, 0, 0.10);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .mobile-chaos-to-order .mobile-event-card.chaos {
@@ -1368,9 +1464,9 @@
 @media (max-width: 340px) {
   .mobile-chaos-to-order {
     --tile-size: 30px; /* locked for ultra-compact */
-    --logo-scale: 0.64;
+    --logo-scale: 0.74;
   }
-  .mobile-animation-container { height: min(66vh, 520px); }
+  .mobile-animation-container { height: min(44vh, 340px); }
   
   .mobile-nav-logo .logo-image {
     width: 20px !important;
@@ -1386,9 +1482,9 @@
 @media (min-width: 341px) and (max-width: 420px) {
   .mobile-chaos-to-order {
     --tile-size: 34px; /* locked default */
-    --logo-scale: 0.70;
+    --logo-scale: 0.80;
   }
-  .mobile-animation-container { height: min(68vh, 540px); }
+  .mobile-animation-container { height: min(46vh, 360px); }
   
   .mobile-nav-logo .logo-image {
     width: 24px !important;
@@ -1406,9 +1502,9 @@
 @media (min-width: 421px) {
   .mobile-chaos-to-order {
     --tile-size: 38px; /* locked for larger phones */
-    --logo-scale: 0.74;
+    --logo-scale: 0.84;
   }
-  .mobile-animation-container { height: min(70vh, 560px); }
+  .mobile-animation-container { height: min(48vh, 380px); }
   
   .mobile-nav-logo .logo-image {
     width: 28px !important;
