@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthNotifications } from '@/hooks/useAuthNotifications';
 import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import Navbar from "@/components/common/Navbar";
+import MobileNavbar from "@/components/layout/MobileNavbar";
 import AnalyticsConsentBanner from '@/components/common/AnalyticsConsentBanner';
 
 export default function ClientLayout({
@@ -17,7 +18,7 @@ export default function ClientLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
-    const { isMobile: _isMobile } = useDeviceDetection();
+    const { isMobile } = useDeviceDetection();
     const { user, loading } = useAuth();
     
     // Handle auth notifications using snackbar
@@ -58,9 +59,40 @@ export default function ClientLayout({
         );
     }
 
+    // Navigation items for MobileNavbar
+    const mobileNavItems = [
+        { name: 'Features', href: '/#features' },
+        { name: 'Pricing', href: '/pricing' },
+        { name: 'Blog', href: '/blog' },
+        { name: 'Contact', href: '/contact' },
+    ];
+
+    // Add authenticated links for mobile
+    if (user) {
+        mobileNavItems.push(
+            { name: 'Discover', href: '/discover' },
+            { name: 'Calendar', href: '/calendar?view=month' },
+            { name: 'Dashboard', href: '/dashboard' }
+        );
+    } else {
+        mobileNavItems.push(
+            { name: 'Sign In', href: '/login' },
+            { name: 'Sign Up', href: '/signup' }
+        );
+    }
+
     return (
         <>
-            <Navbar />
+            {/* Use MobileNavbar on mobile, desktop Navbar otherwise */}
+            {isMobile ? (
+                <MobileNavbar 
+                    navItems={mobileNavItems}
+                    showThemeToggle={true}
+                    showLogo={true}
+                />
+            ) : (
+                <Navbar />
+            )}
             {/* ✅ Wrap children in a main tag with top padding to offset the navbar */}
             <main className="pt-16">
                 {children}

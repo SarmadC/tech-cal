@@ -14,7 +14,7 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ className = '' }) => {
       <div className="mobile-footer-main">
         {/* Slim CTA strip */}
         <div className="mobile-footer-cta-strip">
-          <p className="cta-strip-text">Get event picks tailored to you.</p>
+          <p className="cta-strip-text">Events tailored to you</p>
           <Link
             href="/signup"
             className="cta-strip-action"
@@ -24,15 +24,11 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ className = '' }) => {
           </Link>
         </div>
 
-        {/* Essential links (2x3) */}
+        {/* Essential links */}
         <nav className="mobile-footer-compact" aria-label="Footer">
           <ul className="mobile-footer-links-grid" role="list">
-            <li><Link href="/discover" className="grid-link">Discover</Link></li>
-            <li><Link href="/calendar?view=month" className="grid-link">Calendar</Link></li>
-            <li><Link href="/dashboard" className="grid-link">Dashboard</Link></li>
             <li><Link href="/pricing" className="grid-link">Pricing</Link></li>
             <li><Link href="/blog" className="grid-link">Blog</Link></li>
-            <li><Link href="/contact" className="grid-link">Contact</Link></li>
           </ul>
         </nav>
 
