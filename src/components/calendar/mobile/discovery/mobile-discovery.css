@@ -64,38 +64,25 @@
   padding: 3rem 1rem;
 }
 
-/* Mobile Card Overrides - Thinner, Compact Cards with Frosted Glass */
+/* Mobile Card Overrides - 3x3 Grid Layout with Frosted Glass */
 .mobile-discovery-view .bento-card-large,
 .mobile-discovery-view .bento-card-medium,
+.mobile-discovery-view .bento-card-small,
 .mobile-discovery-view .discovery-card {
-  min-height: 135px !important;
-  max-height: 155px;
-  overflow: hidden !important; /* Keep content within card boundaries */
+  min-height: 180px !important;
+  max-height: 200px;
+  overflow: visible !important; /* Allow tooltips to show */
   position: relative !important; /* Ensure proper positioning context */
 }
 
-/* Force glass-card effect on mobile discovery cards - override conflicting styles */
-.mobile-discovery-view .discovery-card.glass-card {
-  background: rgba(255, 255, 255, 0.7) !important; /* Light mode glass effect */
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.8) !important;
-  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.15),
-              0 0 0 1px rgba(255, 255, 255, 0.5) inset !important;
-}
+/* Glass Surface effect is now handled by the GlassSurface component */
 
-/* Dark mode glass effect */
-.dark .mobile-discovery-view .discovery-card.glass-card {
-  background: rgba(255, 255, 255, 0.05) !important; /* Dark mode glass effect */
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.8), 
-              0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
-}
-
-.mobile-discovery-view .bento-card-small {
-  min-height: 120px !important;
-  max-height: 140px;
-  /* Preserve frosted glass effect - don't override glass-card styles */
+/* Ensure GlassSurface effect is visible on mobile discovery cards */
+.mobile-discovery-view .glass-surface {
+  /* Remove any conflicting background overrides */
+  background: unset !important;
+  border: unset !important;
+  box-shadow: unset !important;
 }
 
 /* Remove all padding from CardHeader on mobile - target the exact class combination */

@@ -264,7 +264,10 @@ export async function POST(request: NextRequest) {
 
     // Enrich events with career impact scores
     // Optimization: limit enrichment to early pages to reduce cost; defer deeper insights to detail view
-    const ENRICH_MAX_PAGE = parseInt(process.env.ENRICH_MAX_PAGE || '1');
+    const enrichMaxPageEnv = process.env.ENRICH_MAX_PAGE ? parseInt(process.env.ENRICH_MAX_PAGE, 10) : Number.NaN;
+    const ENRICH_MAX_PAGE = Number.isFinite(enrichMaxPageEnv) && enrichMaxPageEnv > 0
+      ? enrichMaxPageEnv
+      : Number.MAX_SAFE_INTEGER;
     let enrichedEvents;
     try {
       if (page > ENRICH_MAX_PAGE) {

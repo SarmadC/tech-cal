@@ -11,6 +11,7 @@
  */
 
 import { Event, CareerProfile } from '@/types';
+import { resolveSkillIds, matchSkillIdsInText } from '@/lib/skills/skillRegistry';
 
 /**
  * Test if a keyword matches as a complete word in the text
@@ -69,7 +70,7 @@ export const GOAL_KEYWORDS: Record<string, string[]> = {
   'role-transition': ['career', 'transition', 'new role', 'switch'],
   'leadership-growth': ['leadership', 'management', 'team', 'executive'],
   'entrepreneurship': ['startup', 'founder', 'business', 'entrepreneurship'],
-  'networking': ['networking', 'meetup', 'connections', 'community'],
+  'networking': ['networking', 'meetup', 'connections', 'community', 'github'],
   'specialization': ['expert', 'advanced', 'deep dive', 'mastery'],
   'generalization': ['full-stack', 'broad', 'overview', 'introduction']
 } as const;
@@ -81,10 +82,38 @@ export const LEARNING_STYLE_KEYWORDS: Record<string, string[]> = {
   'hands-on': ['workshop', 'lab', 'hands-on', 'practical', 'coding'],
   'theoretical': ['lecture', 'presentation', 'keynote', 'talk'],
   'interactive': ['panel', 'discussion', 'q&a', 'interactive'],
-  'networking': ['networking', 'meetup', 'mixer', 'social'],
+  'networking': ['networking', 'meetup', 'mixer', 'social', 'github'],
   'case-studies': ['case study', 'real-world', 'example', 'demo'],
   'peer': ['community', 'peer', 'group', 'collaborative']
 } as const;
+
+function getGoalReason(goal: string): string {
+  const goalMap: Record<string, string> = {
+    'skill-development': 'Build in-demand skills',
+    'career-advancement': 'Move toward your next role',
+    'role-transition': 'Support your role transition',
+    'leadership-growth': 'Grow leadership capabilities',
+    'entrepreneurship': 'Fuel your entrepreneurial plans',
+    'networking': 'Build industry relationships',
+    'specialization': 'Deepen your specialization',
+    'generalization': 'Broaden your expertise'
+  };
+
+  return goalMap[goal] ?? `Supports ${goal.replace('-', ' ')}`;
+}
+
+function getLearningStyleReason(style: string): string {
+  const styleMap: Record<string, string> = {
+    'hands-on': 'Hands-on workshop format',
+    'theoretical': 'Expert-led session style',
+    'interactive': 'Interactive discussion format',
+    'networking': 'Collaborative peer exchange format',
+    'case-studies': 'Case-study driven format',
+    'peer': 'Collaborative peer-learning format'
+  };
+
+  return styleMap[style] ?? `Fits ${style.replace('-', ' ')} learning`;
+}
 
 /**
  * Alignment reason (without UI-specific properties)
@@ -152,10 +181,93 @@ export function calculateBaseScore(
   const matchedSkills: string[] = [];
   const matchedGoals: string[] = [];
 
-  // Prepare event text for matching
-  const eventTitle = event.title.toLowerCase();
-  const eventDesc = event.description?.toLowerCase() || '';
-  const eventText = `${eventTitle} ${eventDesc}`;
+  // Build structured attribute index for matching
+  const structuredTokens = new Set<string>();
+  const eventSkillIds = new Set<string>();
+  const collectSkillIds = (value?: string | null) => {
+    if (!value) return;
+    matchSkillIdsInText(value).forEach(id => eventSkillIds.add(id));
+  };
+  const addStructuredValue = (value?: string | null, options: { splitTokens?: boolean } = {}) => {
+    if (!value) return;
+    const { splitTokens = true } = options;
+    const lower = value.toLowerCase();
+    structuredTokens.add(lower);
+    if (splitTokens) {
+      lower.split(/[^a-z0-9#+]+/g).forEach(token => {
+        if (token) {
+          structuredTokens.add(token);
+        }
+      });
+    }
+  };
+
+  addStructuredValue(event.title);
+  collectSkillIds(event.title);
+  addStructuredValue(event.description, { splitTokens: false });
+  collectSkillIds(event.description ?? undefined);
+  addStructuredValue(event.category?.name);
+  collectSkillIds(event.category?.name);
+  addStructuredValue(event.category?.description);
+  collectSkillIds(event.category?.description ?? undefined);
+  addStructuredValue(event.organization?.name);
+  collectSkillIds(event.organization?.name);
+  addStructuredValue(event.targetAudience);
+  collectSkillIds(event.targetAudience);
+  addStructuredValue(event.prerequisites);
+  collectSkillIds(event.prerequisites);
+  addStructuredValue(event.location);
+  collectSkillIds(event.location);
+  addStructuredValue(event.eventTypeId, { splitTokens: false });
+  collectSkillIds(event.eventTypeId);
+
+  (event.tags ?? []).forEach(tag => {
+    addStructuredValue(tag.name);
+    addStructuredValue(tag.category);
+    collectSkillIds(tag.name);
+    collectSkillIds(tag.category);
+  });
+
+  (event.speakerLineup ?? []).forEach(speaker => {
+    addStructuredValue(speaker.name);
+    if (speaker.title) addStructuredValue(speaker.title);
+    if (speaker.company) addStructuredValue(speaker.company);
+    collectSkillIds(speaker.name);
+    if (speaker.title) collectSkillIds(speaker.title);
+    if (speaker.company) collectSkillIds(speaker.company);
+  });
+
+  const eventText = [
+    event.title,
+    event.description,
+    event.category?.name,
+    ...(event.tags ?? []).map(tag => tag.name),
+    event.organization?.name,
+    event.targetAudience,
+    event.prerequisites,
+    event.location,
+    ...(event.speakerLineup ?? []).map(s => `${s.name ?? ''} ${s.title ?? ''}`)
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  matchSkillIdsInText(eventText).forEach(id => eventSkillIds.add(id));
+
+  const matchesKeyword = (keyword: string): boolean => {
+    const normalized = keyword.toLowerCase();
+    if (structuredTokens.has(normalized)) {
+      return true;
+    }
+    return matchesWholeWord(eventText, keyword);
+  };
+
+  const skillMatches = (skill: string): boolean => {
+    const resolvedIds = resolveSkillIds([skill]);
+    if (resolvedIds.some(id => eventSkillIds.has(id))) {
+      return true;
+    }
+    return matchesKeyword(skill);
+  };
 
   // Component tracking for breakdown
   let skillRelevance = 0;
@@ -165,7 +277,7 @@ export function calculateBaseScore(
 
   // 1. Skills to Learn (highest priority)
   careerProfile.skillsToLearn.forEach(skill => {
-    if (matchesWholeWord(eventText, skill.toLowerCase())) {
+    if (skillMatches(skill)) {
       const contribution = ALIGNMENT_WEIGHTS.skillsToLearn;
       alignmentScore += contribution;
       skillRelevance += contribution;
@@ -180,7 +292,7 @@ export function calculateBaseScore(
 
   // 2. Primary Skills (maintenance/advancement)
   careerProfile.primarySkills.slice(0, 5).forEach(skill => {
-    if (matchesWholeWord(eventText, skill.toLowerCase())) {
+    if (skillMatches(skill)) {
       const contribution = ALIGNMENT_WEIGHTS.primarySkills;
       alignmentScore += contribution;
       skillRelevance += contribution;
@@ -196,7 +308,7 @@ export function calculateBaseScore(
   // 3. Career Goals
   careerProfile.careerGoals.forEach(goal => {
     const keywords = GOAL_KEYWORDS[goal as keyof typeof GOAL_KEYWORDS] || [];
-    const hasMatch = keywords.some(keyword => matchesWholeWord(eventText, keyword));
+    const hasMatch = keywords.some(matchesKeyword);
 
     if (hasMatch) {
       const contribution = ALIGNMENT_WEIGHTS.careerGoals;
@@ -206,7 +318,7 @@ export function calculateBaseScore(
       
       alignmentReasons.push({
         type: 'goal',
-        reason: `Supports ${goal.replace('-', ' ')}`,
+        reason: getGoalReason(goal),
         contribution
       });
     }
@@ -214,7 +326,7 @@ export function calculateBaseScore(
 
   // 4. Interests
   careerProfile.interests.slice(0, 5).forEach(interest => {
-    if (matchesWholeWord(eventText, interest.toLowerCase())) {
+    if (matchesKeyword(interest)) {
       const contribution = ALIGNMENT_WEIGHTS.interests;
       alignmentScore += contribution;
       industryRelevance += contribution;
@@ -229,7 +341,7 @@ export function calculateBaseScore(
   // 5. Learning Style
   careerProfile.learningStyle.forEach(style => {
     const keywords = LEARNING_STYLE_KEYWORDS[style] || [];
-    const hasMatch = keywords.some(keyword => matchesWholeWord(eventText, keyword));
+    const hasMatch = keywords.some(matchesKeyword);
 
     if (hasMatch) {
       const contribution = ALIGNMENT_WEIGHTS.learningStyle;
@@ -239,7 +351,7 @@ export function calculateBaseScore(
       
       alignmentReasons.push({
         type: 'learning-style',
-        reason: `Fits ${style.replace('-', ' ')} learning`,
+        reason: getLearningStyleReason(style),
         contribution
       });
     }
@@ -247,15 +359,13 @@ export function calculateBaseScore(
 
   // 6. Networking
   if (careerProfile.networkingGoals.length > 0 &&
-      (matchesWholeWord(eventText, 'networking') || 
-       matchesWholeWord(eventText, 'meetup') || 
-       matchesWholeWord(eventText, 'community'))) {
+      GOAL_KEYWORDS.networking.some(matchesKeyword)) {
     const contribution = ALIGNMENT_WEIGHTS.networking;
     alignmentScore += contribution;
     networkingValue += contribution;
     alignmentReasons.push({
       type: 'networking',
-      reason: 'Networking opportunity',
+      reason: 'High-value community access',
       contribution
     });
   }
@@ -299,4 +409,3 @@ export function getMatchQuality(score: number): string {
   if (score >= 20) return 'Good';
   return 'Fair';
 }
-

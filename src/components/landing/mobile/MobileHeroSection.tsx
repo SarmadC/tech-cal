@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import GlassSurface from '@/components/GlassSurface';
 
 export interface MobileHeroSectionProps {
@@ -27,10 +28,13 @@ const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({
       <div className="mobile-hero-content">
         {/* Hero Image Container */}
         <div className="mobile-hero-image-container">
-          <img 
+          <Image 
             src="/kanhaiya-sharma-EiAqej-cGks-unsplash(1).jpg" 
             alt="Abstract geometric filter symbol"
             className="hero-image"
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            priority
           />
           <div className="hero-image-overlay" />
           

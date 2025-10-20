@@ -19,6 +19,18 @@ type Measurement = {
   spawn: Vec2[];
 };
 
+const COMPANY_SLUG: Record<string, string> = {
+  meta: 'meta',
+  google: 'google',
+  apple: 'apple',
+  microsoft: 'microsoft',
+  github: 'github',
+  openai: 'openai',
+  vercel: 'vercel',
+  amazon: 'amazon',
+  docker: 'docker'
+};
+
 const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ className = '' }) => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -57,28 +69,17 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
   const daysInMonth = new Date(YEAR, MONTH_INDEX + 1, 0).getDate();
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const companySlug: Record<string, string> = {
-    meta: 'meta',
-    google: 'google',
-    apple: 'apple',
-    microsoft: 'microsoft',
-    github: 'github',
-    openai: 'openai',
-    vercel: 'vercel',
-    amazon: 'amazon',
-    docker: 'docker',
-  };
-  const logoUrl = (name: string) => {
+  const logoUrl = useCallback((name: string) => {
     const key = name.toLowerCase();
-    const slug = Object.keys(companySlug).find((k) => key.includes(k));
-    if (SUPABASE_URL && slug) return `${SUPABASE_URL}/storage/v1/object/public/logos/${companySlug[slug]}.svg`;
-    const domain = slug ? `${companySlug[slug]}.com` : 'example.com';
+    const slug = Object.keys(COMPANY_SLUG).find((k) => key.includes(k));
+    if (SUPABASE_URL && slug) return `${SUPABASE_URL}/storage/v1/object/public/logos/${COMPANY_SLUG[slug]}.svg`;
+    const domain = slug ? `${COMPANY_SLUG[slug]}.com` : 'example.com';
     return `https://logo.clearbit.com/${domain}`;
-  };
+  }, [SUPABASE_URL]);
 
   const logoSources = useMemo(
     () => eventData.map((e) => logoUrl(e.company)),
-    [eventData, SUPABASE_URL]
+    [eventData, logoUrl]
   );
 
   const getTileSize = () => {
@@ -290,11 +291,12 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
   }, [eventDays, measure]);
 
   useEffect(() => {
+    const cardsSnapshot = [...cardRefs.current];
     return () => {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
       }
-      cardRefs.current.forEach((card) => {
+      cardsSnapshot.forEach((card) => {
         card?.getAnimations().forEach((animation) => animation.cancel());
       });
     };

@@ -253,19 +253,7 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     );
   }
 
-  // Determine card size based on index and career impact
-  const getCardSize = (index: number, event: Event): 'small' | 'medium' | 'large' => {
-    if (renderAsBento) {
-      // First event or high career impact = large
-      const careerImpact = (event as Event & { careerImpactLite?: { overall: number } }).careerImpactLite?.overall || 0;
-      if (index === 0 || careerImpact > 0.7) return 'large';
-      // Next 2-3 events or medium career impact = medium
-      if (index < 3 || careerImpact > 0.4) return 'medium';
-      // Rest = small
-      return 'small';
-    }
-    return 'medium';
-  };
+  // Use consistent card size for all cards
 
   const cardsContent = finalEvents.map((event, index) => (
     <DiscoveryCard
@@ -275,7 +263,6 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
       onView={() => handleEventView(event, index)}
       onLearnMore={() => handleLearnMore(event, index)}
       variant={index === 0 ? 'featured' : 'default'}
-      size={getCardSize(index, event)}
       showLearnMore={false}
       className=""
     />

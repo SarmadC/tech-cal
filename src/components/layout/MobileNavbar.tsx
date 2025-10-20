@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { List, X } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { ThemeLogo } from '@/components/ui/ThemeLogo';
@@ -43,20 +43,20 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const toggleMenu = () => {
-    if (isMenuOpen) {
-      // Start closing animation
-      setIsClosing(true);
-    } else {
-      setIsMenuOpen(true);
-    }
-  };
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen((open) => {
+      if (open) {
+        setIsClosing(true);
+        return open;
+      }
+      setIsClosing(false);
+      return true;
+    });
+  }, []);
 
-  const closeMenu = () => {
-    if (isMenuOpen) {
-      setIsClosing(true);
-    }
-  };
+  const closeMenu = useCallback(() => {
+    setIsClosing(true);
+  }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -65,7 +65,7 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
     };
     if (isMenuOpen) document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [isMenuOpen]);
+  }, [closeMenu, isMenuOpen]);
 
   // Scroll lock and focus management
   useEffect(() => {

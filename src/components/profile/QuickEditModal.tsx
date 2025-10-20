@@ -63,23 +63,23 @@ const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel,
 
   return (
     <div className="space-y-6">
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-3">Current Role</label>
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-foreground-secondary">Current Role</label>
         <input
           type="text"
           value={formData.currentRole}
           onChange={(e) => handleFieldChange('currentRole', e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base"
+          className="w-full rounded-2xl border border-border-color bg-background-tertiary px-4 py-3 text-base text-foreground-primary shadow-sm transition-all duration-200 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30"
           placeholder="e.g., Frontend Engineer"
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-3">Experience Level</label>
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-foreground-secondary">Experience Level</label>
         <select
           value={formData.seniority}
           onChange={(e) => handleFieldChange('seniority', e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base bg-white"
+          className="w-full rounded-2xl border border-border-color bg-background-tertiary px-4 py-3 text-base text-foreground-primary shadow-sm transition-all duration-200 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30"
         >
           <option value="student">Student</option>
           <option value="entry-level">Entry Level (0-2 years)</option>
@@ -96,12 +96,12 @@ const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel,
         </select>
       </div>
 
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-3">Industry</label>
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-foreground-secondary">Industry</label>
         <select
           value={formData.industry}
           onChange={(e) => handleFieldChange('industry', e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base bg-white"
+          className="w-full rounded-2xl border border-border-color bg-background-tertiary px-4 py-3 text-base text-foreground-primary shadow-sm transition-all duration-200 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30"
         >
           <option value="Technology/Software">Technology/Software</option>
           <option value="Healthcare/Biotech">Healthcare/Biotech</option>
@@ -118,12 +118,12 @@ const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel,
         </select>
       </div>
 
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-3">Company Size</label>
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-foreground-secondary">Company Size</label>
         <select
           value={formData.companySize}
           onChange={(e) => handleFieldChange('companySize', e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base bg-white"
+          className="w-full rounded-2xl border border-border-color bg-background-tertiary px-4 py-3 text-base text-foreground-primary shadow-sm transition-all duration-200 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30"
         >
           <option value="startup">Startup (&lt; 50 employees)</option>
           <option value="small">Small (50-200 employees)</option>
@@ -134,19 +134,19 @@ const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel,
         </select>
       </div>
 
-      <div className="flex justify-end space-x-4 pt-8 border-t border-gray-100 mt-6">
-        <button
-          onClick={onCancel}
-          className="px-6 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
-        >
-          Cancel
-        </button>
+      <div className="mt-8 flex items-center justify-end gap-4 border-t border-border-subtle pt-6">
         {isSaving && (
-          <div className="flex items-center px-6 py-2.5 text-blue-600 text-sm font-medium">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-            Saving changes...
+          <div className="flex items-center gap-2 text-sm font-medium text-blue-500">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500/40 border-t-blue-500"></div>
+            Saving changes…
           </div>
         )}
+        <button
+          onClick={onCancel}
+          className="inline-flex items-center rounded-xl border border-border-color bg-background-tertiary px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-all duration-200 hover:bg-background-tertiary/80 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
@@ -160,13 +160,11 @@ const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCance
     interests: profile.interests
   });
 
-
   const handlePrimarySkillsChange = (skills: string[]) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       primarySkills: skills
     }));
-    // Save immediately
     onUpdate({
       primarySkills: skills,
       skillsToLearn: formData.skillsToLearn,
@@ -175,11 +173,10 @@ const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCance
   };
 
   const handleSkillsToLearnChange = (skills: string[]) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       skillsToLearn: skills
     }));
-    // Save immediately
     onUpdate({
       primarySkills: formData.primarySkills,
       skillsToLearn: skills,
@@ -188,79 +185,88 @@ const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCance
   };
 
   const handleInterestsChange = (interests: string[]) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      interests: interests
+      interests
     }));
-    // Save immediately
     onUpdate({
       primarySkills: formData.primarySkills,
       skillsToLearn: formData.skillsToLearn,
-      interests: interests
+      interests
     });
   };
 
+  const SectionCard = ({
+    title,
+    description,
+    children
+  }: {
+    title: string;
+    description: string;
+    children: React.ReactNode;
+  }) => (
+    <div className="rounded-3xl border border-border-color bg-background-secondary/70 p-6 shadow-sm">
+      <div className="mb-4 space-y-1.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">{title}</h3>
+        <p className="text-sm text-foreground-muted">{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+
   return (
-    <div className="space-y-8">
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-3">Current Skills</label>
+    <div className="flex flex-col gap-6">
+      <SectionCard
+        title="Current Skills"
+        description="Select the skills you actively use and feel confident about."
+      >
         <SkillsDropdown
           selectedSkills={formData.primarySkills}
           onSkillsChange={handlePrimarySkillsChange}
-          placeholder="Search and select your current skills..."
-          maxSkills={20}
-          className="w-full"
+          placeholder="Search skills you actively use..."
         />
-        <p className="text-xs text-gray-500 mt-1">
-          Select the skills you currently have and use regularly
-        </p>
-      </div>
+      </SectionCard>
 
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-3">Skills to Learn</label>
+      <SectionCard
+        title="Skills to Learn"
+        description="Choose skills you want to improve or explore next."
+      >
         <SkillsDropdown
           selectedSkills={formData.skillsToLearn}
           onSkillsChange={handleSkillsToLearnChange}
-          placeholder="Search and select skills you want to learn..."
-          maxSkills={15}
-          className="w-full"
+          placeholder="Search skills you want to learn..."
         />
-        <p className="text-xs text-gray-500 mt-1">
-          Select skills you want to develop or improve
-        </p>
-      </div>
+      </SectionCard>
 
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-3">Areas of Interest</label>
+      <SectionCard
+        title="Areas of Interest"
+        description="Highlight topics and technologies that inspire you."
+      >
         <SkillsDropdown
           selectedSkills={formData.interests}
           onSkillsChange={handleInterestsChange}
-          placeholder="Search and select your areas of interest..."
-          maxSkills={10}
-          className="w-full"
+          placeholder="Search interests and technologies..."
         />
-        <p className="text-xs text-gray-500 mt-1">
-          Select topics and technologies that interest you
-        </p>
-      </div>
+      </SectionCard>
 
-      <div className="flex justify-end space-x-4 pt-8 border-t border-gray-100 mt-6">
-        <button
-          onClick={onCancel}
-          className="px-6 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
-        >
-          Cancel
-        </button>
+      <div className="mt-4 flex items-center justify-end gap-4 border-t border-border-subtle pt-6">
         {isSaving && (
-          <div className="flex items-center px-6 py-2.5 text-blue-600 text-sm font-medium">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-            Saving changes...
+          <div className="flex items-center gap-2 text-sm font-medium text-blue-500">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500/40 border-t-blue-500"></div>
+            Saving changes…
           </div>
         )}
+        <button
+          onClick={onCancel}
+          className="inline-flex items-center rounded-xl border border-border-color bg-background-tertiary px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-all duration-200 hover:bg-background-tertiary/80 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
 };
+
 
 // Career Goals Editor
 const GoalsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
@@ -570,12 +576,13 @@ const TeamPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate
   const [preferredEventTypes, setPreferredEventTypes] = useState(profile.preferredEventTypes || []);
 
   const handleToggle = (value: CareerEventType) => {
-    setPreferredEventTypes(prev => {
-      const exists = prev.includes(value);
-      const updated = exists ? prev.filter(type => type !== value) : [...prev, value];
-      onUpdate({ preferredEventTypes: updated });
-      return updated;
-    });
+    const exists = preferredEventTypes.includes(value);
+    const updated = exists
+      ? preferredEventTypes.filter(type => type !== value)
+      : [...preferredEventTypes, value];
+
+    setPreferredEventTypes(updated);
+    void onUpdate({ preferredEventTypes: updated });
   };
 
   return (
@@ -634,17 +641,12 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
   };
 
   const handleUpdate = async (updates: Partial<CareerProfile>) => {
-    console.log('QuickEditModal - handleUpdate called with updates:', updates);
-    console.log('QuickEditModal - currentProfile before update:', currentProfile);
-
     // Save immediately instead of using pendingUpdates
     if (Object.keys(updates).length > 0) {
       setIsSaving(true);
       try {
         const updatedProfile = { ...currentProfile, ...updates };
-        console.log('QuickEditModal - saving updatedProfile:', updatedProfile);
         await saveCareerProfile(updatedProfile);
-        console.log('QuickEditModal - save completed successfully');
 
         if (onSectionCompleted) {
           onSectionCompleted(section);
@@ -652,7 +654,6 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
 
         // Force refresh the profile data to ensure UI updates
         await refreshProfile();
-        console.log('QuickEditModal - profile refreshed');
 
         showSuccess('Career profile updated successfully!');
 
@@ -705,24 +706,27 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100">
-        <div className="flex items-center justify-between p-8 border-b border-gray-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-black/60 backdrop-blur-sm transition-opacity duration-300 dark:bg-black/70">
+      <div className="w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-3xl border border-border-color bg-background-secondary shadow-2xl transition-transform duration-300">
+        <div className="flex items-center justify-between border-b border-border-subtle bg-background-secondary/80 px-8 py-6">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-1">
+            <h2 className="text-2xl font-semibold text-foreground-primary mb-1">
               Edit {sectionTitles[section as keyof typeof sectionTitles]}
             </h2>
-            <p className="text-sm text-gray-600">Update your profile information</p>
+            <p className="text-sm text-foreground-secondary">
+              Update your profile information
+            </p>
           </div>
           <button
             onClick={handleCancel}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-foreground-muted transition-all duration-200 hover:border-border-color hover:bg-background-tertiary focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:ring-offset-2"
+            aria-label="Close"
           >
-            <X size={24} />
+            <X size={22} />
           </button>
         </div>
 
-        <div className="p-8">
+        <div className="max-h-[calc(90vh-6rem)] overflow-y-auto px-8 py-6">
           {renderSectionEditor()}
         </div>
       </div>

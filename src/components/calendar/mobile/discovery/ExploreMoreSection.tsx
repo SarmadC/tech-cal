@@ -22,35 +22,35 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
   className = '',
   userLocation
 }) => {
-  // Organize events by type with deduplication
+  // Organize events by type with consistent sizing
   // Events already have career impact scores from server
   const organizedEvents = React.useMemo(() => {
     // Filter out past events first
     const now = new Date();
     const upcomingEvents = events.filter(event => new Date(event.startTime) > now);
     
-    // Get top trending event (size: large)
+    // Get top trending event
     const trending = DiscoveryService.getTrendingEvents(upcomingEvents, 1, userLocation);
     
-    // Get 2-3 new events (size: medium)
+    // Get 2-3 new events
     const newEvents = DiscoveryService.getNewEvents(upcomingEvents, 3);
     
-    // Get 3-4 quick wins (size: small)
+    // Get 3-4 quick wins
     const quickWins = DiscoveryService.getQuickWinEvents(upcomingEvents, 4);
     
-    // Create a map to track events and their types
+    // Create a map to track events and their types (all same size now)
     const eventMap = new Map<
       string,
       {
         event: Event;
         types: string[];
-        size: 'large' | 'medium' | 'small';
+        size: 'medium'; // Consistent size for all cards
       }
     >();
     
     // Add trending events
     trending.forEach(e => {
-      eventMap.set(e.id, { event: e, types: ['trending'], size: 'large' });
+      eventMap.set(e.id, { event: e, types: ['trending'], size: 'medium' });
     });
     
     // Add new events (avoid duplicates)
@@ -68,45 +68,17 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
       const existing = eventMap.get(e.id);
       if (existing) {
         existing.types.push('quick');
-        if (!existing.types.includes('trending')) {
-          existing.size = 'medium';
-        }
       } else {
-        eventMap.set(e.id, { event: e, types: ['quick'], size: 'small' });
+        eventMap.set(e.id, { event: e, types: ['quick'], size: 'medium' });
       }
     });
     
-    // Convert to array and sort by priority (trending first, then by size)
+    // Convert to array and sort by priority (trending first)
     const sortedEvents = Array.from(eventMap.values()).sort((a, b) => {
       if (a.types.includes('trending') && !b.types.includes('trending')) return -1;
       if (!a.types.includes('trending') && b.types.includes('trending')) return 1;
-      if (a.size === 'large' && b.size !== 'large') return -1;
-      if (a.size !== 'large' && b.size === 'large') return 1;
       return 0;
     });
-    
-    // Ensure we have a good mix of sizes for Bento grid
-    // First event should be large if it's trending, otherwise make it large
-    if (sortedEvents.length > 0 && !sortedEvents[0].types.includes('trending')) {
-      sortedEvents[0].size = 'large';
-    }
-    
-    // Make the second card large for better visual balance
-    if (sortedEvents.length > 1) {
-      sortedEvents[1].size = 'large';
-    }
-    
-    // Ensure we have at least one medium and one small (starting from third event)
-    const hasLarge = sortedEvents.some(e => e.size === 'large');
-    const hasMedium = sortedEvents.some(e => e.size === 'medium');
-    const hasSmall = sortedEvents.some(e => e.size === 'small');
-    
-    if (hasLarge && !hasMedium && sortedEvents.length > 2) {
-      sortedEvents[2].size = 'medium';
-    }
-    if (hasLarge && hasMedium && !hasSmall && sortedEvents.length > 3) {
-      sortedEvents[3].size = 'small';
-    }
     
     return sortedEvents;
   }, [events, userLocation]);
@@ -185,13 +157,12 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
       className={className}
     >
       <BentoGrid>
-        {exploreEvents.map(({ event, types, size }, index) => (
+        {exploreEvents.map(({ event, types }, index) => (
           <DiscoveryCard
             key={`${event.id}-${index}`}
             event={event}
             onClick={() => handleEventClick(event)}
             onLearnMore={() => handleLearnMore(event)}
-            size={size}
             variant="default"
             showLearnMore={false}
             badges={getEventBadges(types)}

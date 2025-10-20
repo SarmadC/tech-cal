@@ -11,7 +11,7 @@ import {
 // Use consolidated Event type - recommendation functionality handled through EventWithCareerImpact
 import { Event, CareerImpactScore } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
-import { Card, CardHeader } from '@/components/ui/card';
+import GlassSurface from '@/components/GlassSurface';
 import { cn } from '@/lib/utils';
 import ShinyText from '../../shared/ShinyText';
 import '../../shared/ShinyText.css';
@@ -23,7 +23,6 @@ export interface DiscoveryCardProps {
   onLearnMore?: () => void;
   className?: string;
   variant?: 'default' | 'featured' | 'compact';
-  size?: 'small' | 'medium' | 'large';
   showCareerImpact?: boolean;
   showLearnMore?: boolean;
   badges?: React.ReactNode;
@@ -36,13 +35,93 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   onLearnMore,
   className = '',
   variant = 'default',
-  size = 'medium',
   showCareerImpact = true,
   showLearnMore = false,
   badges
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const hasTrackedView = React.useRef(false);
+  const displayScore = React.useMemo(() => {
+    const fullScore = event.careerImpact?.overall;
+    if (typeof fullScore === 'number' && Number.isFinite(fullScore)) {
+      return Math.max(0, Math.min(fullScore, 100));
+    }
+
+    const liteScore = event.careerImpactLite?.overall;
+    if (typeof liteScore === 'number' && Number.isFinite(liteScore)) {
+      const normalized = liteScore <= 1 ? liteScore * 100 : liteScore;
+      return Math.max(0, Math.min(normalized, 100));
+    }
+
+    return 0;
+  }, [event]);
+
+  type AlignmentReasonEntry = { label: string; contribution: number };
+
+  const explanationReasons = React.useMemo(() => {
+    const entries: AlignmentReasonEntry[] = [];
+
+    const explanation = (event.careerImpact?.explanation as
+      | {
+          alignmentReasons?: Array<{ reason: string; contribution: number }>;
+          reasons?: string[];
+          matchedSkills?: string[];
+        }
+      | undefined) ??
+      ((event.careerImpactLite as {
+        explanation?: {
+          alignmentReasons?: Array<{ reason: string; contribution: number }>;
+          reasons?: string[];
+          matchedSkills?: string[];
+        };
+      })?.explanation);
+
+    const pushEntry = (label: string, contribution: number) => {
+      if (!label) return;
+      entries.push({ label, contribution: Math.round(contribution) });
+    };
+
+    if (explanation?.alignmentReasons?.length) {
+      explanation.alignmentReasons.forEach(({ reason, contribution }) => {
+        pushEntry(reason, contribution);
+      });
+    }
+
+    if (!explanation?.alignmentReasons?.length && explanation?.reasons?.length) {
+      const avgContribution = explanation.reasons.length > 0
+        ? Math.max(1, Math.round(displayScore / explanation.reasons.length))
+        : 0;
+      explanation.reasons.forEach((reason) => pushEntry(reason, avgContribution));
+    }
+
+    if (explanation?.matchedSkills?.length) {
+      const avgContribution = explanation.matchedSkills.length > 0
+        ? Math.max(1, Math.round(displayScore / explanation.matchedSkills.length))
+        : 0;
+      explanation.matchedSkills.forEach((skill) =>
+        pushEntry(`Matches skill: ${skill}`, avgContribution)
+      );
+    }
+
+    return entries.sort((a, b) => b.contribution - a.contribution);
+  }, [event, displayScore]);
+
+  const condensedReasons = React.useMemo(() => {
+    const MAX_ITEMS = 3;
+    if (explanationReasons.length <= MAX_ITEMS) {
+      return { list: explanationReasons, remainder: null as AlignmentReasonEntry | null };
+    }
+
+    const list = explanationReasons.slice(0, MAX_ITEMS);
+    const remainderItems = explanationReasons.slice(MAX_ITEMS);
+    const remainderContribution = remainderItems.reduce((sum, item) => sum + item.contribution, 0);
+    const remainder: AlignmentReasonEntry = {
+      label: `${remainderItems.length} more factor${remainderItems.length === 1 ? '' : 's'}`,
+      contribution: Math.max(1, Math.round(remainderContribution))
+    };
+
+    return { list, remainder };
+  }, [explanationReasons]);
 
   // Track view only once when component mounts
   React.useEffect(() => {
@@ -119,172 +198,114 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
   const categoryColor = getCategoryColor();
 
 
-  // Size-based styling classes
-  const sizeClasses = {
-    small: 'bento-card-small',
-    medium: 'bento-card-medium',
-    large: 'bento-card-large'
-  };
-
   return (
-    <Card 
-      className={cn(
-        "discovery-card event-card cursor-pointer transition-all duration-300 hover:shadow-lg relative",
-        "border-border/50 bg-card hover:bg-card/80",
-        variant === 'featured' && "md:col-span-2",
-        variant === 'compact' && "flex-row items-center gap-4",
-        sizeClasses[size],
-        className
-      )}
+    <div
       onClick={onClick}
       role="listitem"
       tabIndex={0}
       aria-label={`${event.title} - ${formatEventDate(event.startTime)} at ${formatTime(event.startTime)}`}
-      onKeyDown={(e) => {
+      onKeyDown={(e: React.KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onClick?.();
         }
       }}
+      className="w-full h-full"
     >
+      <GlassSurface
+        width="100%"
+        height="auto"
+        borderRadius={16}
+        backgroundOpacity={0.1}
+        opacity={0.8}
+        blur={12}
+        brightness={50}
+        saturation={1.2}
+        borderWidth={0.07}
+        displace={0.5}
+        distortionScale={-180}
+        redOffset={0}
+        greenOffset={10}
+        blueOffset={20}
+        className={cn(
+          "discovery-card cursor-pointer transition-all duration-300 hover:shadow-lg relative bento-card-medium",
+          variant === 'featured' && "md:col-span-2",
+          variant === 'compact' && "flex-row items-center gap-4",
+          className
+        )}
+        contentClassName="flex flex-col w-full h-full p-0"
+        style={{
+          minHeight: 'fit-content'
+        }}
+      >
       
-      <CardHeader className="pb-0 relative">
-         {/* Event Header Content - Now takes full width */}
+      <div className="pb-0 relative flex flex-col space-y-1.5 p-6">
+         {/* Event Header Content - Redesigned for better layout */}
          <div className="w-full space-y-4">
-           {/* Event title, career impact bar, and arrow button on the same line */}
-           <div className="flex items-center justify-between gap-3">
+           {/* Event title on its own line */}
+           <div className="w-full">
              <h3 
-               className={cn(
-                 "font-semibold leading-tight tracking-tight flex-1 min-w-0 text-foreground-primary",
-                 size === 'large' && "text-xl",
-                 size === 'medium' && "text-lg",
-                 size === 'small' && "text-base"
-               )}
+               className="font-semibold leading-tight tracking-tight text-foreground-primary text-xl truncate"
+               title={event.title}
              >
                {event.title}
              </h3>
-             
+           </div>
+           
+           {/* Career Impact and Learn More button on second line */}
+           <div className="flex items-center justify-between gap-3">
              {/* Career Impact - Progress Bar with Percentage and Breakdown Tooltip */}
-              {showCareerImpact && ((event.careerImpactLite?.overall ?? 0) > 0 || (event.careerImpact?.overall ?? 0) > 0) && (
+             {showCareerImpact && displayScore > 0 && (
                <div className="relative flex items-center gap-2 flex-shrink-0">
                  <div 
-                   className={cn(
-                     "bg-gray-200 rounded-full overflow-hidden cursor-pointer",
-                     size === 'large' ? "h-2 w-16" : "h-1.5 w-12"
-                   )}
+                   className="bg-gray-200 rounded-full overflow-hidden cursor-pointer h-2 w-16"
                    onMouseEnter={() => setIsHovered(true)}
                    onMouseLeave={() => setIsHovered(false)}
                  >
                    <div 
                      className={cn(
                        "h-full transition-all duration-300 rounded-full",
-                       (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) >= 80 && "bg-gradient-to-r from-emerald-400 to-emerald-600",
-                       (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) >= 60 && (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) < 80 && "bg-gradient-to-r from-blue-400 to-blue-600",
-                       (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) >= 40 && (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) < 60 && "bg-gradient-to-r from-amber-400 to-amber-600",
-                       (event.careerImpactLite?.overall || event.careerImpact?.overall || 0) < 40 && "bg-gray-400"
+                       displayScore >= 80 && "bg-gradient-to-r from-emerald-400 to-emerald-600",
+                       displayScore >= 60 && displayScore < 80 && "bg-gradient-to-r from-blue-400 to-blue-600",
+                       displayScore >= 40 && displayScore < 60 && "bg-gradient-to-r from-amber-400 to-amber-600",
+                       displayScore < 40 && "bg-gray-400"
                      )}
-                     style={{ width: `${Math.min(event.careerImpactLite?.overall || event.careerImpact?.overall || 0, 100)}%` }}
+                     style={{ width: `${displayScore}%` }}
                    />
                  </div>
-                 <span className={cn(
-                   "font-medium text-foreground-secondary",
-                   size === 'large' ? "text-sm" : "text-xs"
-                 )}>
-                   {Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0)}%
+                 <span className="font-medium text-foreground-secondary text-sm">
+                   {Math.round(displayScore)}%
                  </span>
 
                  {/* Breakdown Tooltip */}
-                  {isHovered && (event.careerImpact?.components || Boolean((event.careerImpactLite as { explanation?: unknown })?.explanation)) && (
-                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-3 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                 {isHovered && (event.careerImpact?.components || Boolean((event.careerImpactLite as { explanation?: unknown })?.explanation)) && (
+                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-3 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg z-[9999] max-h-72 overflow-y-auto">
                      <div className="text-xs text-white">
                        <div className="font-medium mb-2">Why this event matches:</div>
                        <ul className="space-y-1">
-                         {/* Show alignment reasons with their actual contributions */}
-                         {(event.careerImpact?.explanation as { alignmentReasons?: Array<{ reason: string; contribution: number }> })?.alignmentReasons?.map((reason, idx: number) => (
-                           <li key={idx} className="flex items-center justify-between">
-                             <span>{reason.reason}</span>
+                         {condensedReasons.list.map((reason, idx) => (
+                           <li key={`reason-${idx}`} className="flex items-center justify-between">
+                             <span>{reason.label}</span>
                              <span className="text-white/70">+{reason.contribution}%</span>
                            </li>
-                         )) || ((event.careerImpactLite as { explanation?: { alignmentReasons?: Array<{ reason: string; contribution: number }> } })?.explanation?.alignmentReasons)?.map((reason, idx: number) => (
-                           <li key={idx} className="flex items-center justify-between">
-                             <span>{reason.reason}</span>
-                             <span className="text-white/70">+{reason.contribution}%</span>
+                         ))}
+                         {condensedReasons.remainder && condensedReasons.remainder.contribution > 0 && (
+                           <li className="flex items-center justify-between text-white/80">
+                             <span>{condensedReasons.remainder.label}</span>
+                             <span className="text-white/60">+{condensedReasons.remainder.contribution}%</span>
                            </li>
-                         )) || ((event.careerImpactLite as { explanation?: { reasons?: string[] } })?.explanation?.reasons)?.map((reason: string, idx: number) => {
-                           // Fallback: Calculate approximate contribution based on total score and number of reasons
-                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
-                           const reasonCount = ((event.careerImpactLite as { explanation?: { reasons?: string[] } })?.explanation?.reasons || []).length;
-                           const avgContribution = reasonCount > 0 ? Math.round(totalScore / reasonCount) : 0;
-                           return (
-                             <li key={idx} className="flex items-center justify-between">
-                               <span>{reason}</span>
-                               <span className="text-white/70">+{avgContribution}%</span>
-                             </li>
-                           );
-                         }) || (event.careerImpact?.explanation as { reasons?: string[] })?.reasons?.map((reason: string, idx: number) => {
-                           // Fallback: Calculate approximate contribution based on total score and number of reasons
-                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
-                           const reasonCount = (event.careerImpact?.explanation as { reasons?: string[] })?.reasons?.length || 0;
-                           const avgContribution = reasonCount > 0 ? Math.round(totalScore / reasonCount) : 0;
-                           return (
-                             <li key={idx} className="flex items-center justify-between">
-                               <span>{reason}</span>
-                               <span className="text-white/70">+{avgContribution}%</span>
-                             </li>
-                           );
-                         })}
-                         {/* Show matched skills if available */}
-                         {((event.careerImpactLite as { explanation?: { matchedSkills?: string[] } })?.explanation?.matchedSkills)?.map((skill: string, idx: number) => {
-                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
-                           const skillCount = ((event.careerImpactLite as { explanation?: { matchedSkills?: string[] } })?.explanation?.matchedSkills || []).length;
-                           const avgContribution = skillCount > 0 ? Math.round(totalScore / skillCount) : 0;
-                           return (
-                             <li key={`skill-${idx}`} className="flex items-center justify-between">
-                               <span>Matches skill: {skill}</span>
-                               <span className="text-white/70">+{avgContribution}%</span>
-                             </li>
-                           );
-                         }) || (event.careerImpact?.explanation as { matchedSkills?: string[] })?.matchedSkills?.map((skill: string, idx: number) => {
-                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
-                           const skillCount = (event.careerImpact?.explanation as { matchedSkills?: string[] })?.matchedSkills?.length || 0;
-                           const avgContribution = skillCount > 0 ? Math.round(totalScore / skillCount) : 0;
-                           return (
-                             <li key={`skill-${idx}`} className="flex items-center justify-between">
-                               <span>Matches skill: {skill}</span>
-                               <span className="text-white/70">+{avgContribution}%</span>
-                             </li>
-                           );
-                         })}
-                         {/* Show speaker highlights if available */}
-                         {((event.careerImpactLite as { explanation?: { speakerHighlights?: string[] } })?.explanation?.speakerHighlights)?.map((highlight: string, idx: number) => {
-                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
-                           const highlightCount = ((event.careerImpactLite as { explanation?: { speakerHighlights?: string[] } })?.explanation?.speakerHighlights || []).length;
-                           const avgContribution = highlightCount > 0 ? Math.round(totalScore / highlightCount) : 0;
-                           return (
-                             <li key={`speaker-${idx}`} className="flex items-center justify-between">
-                               <span>Speaker: {highlight}</span>
-                               <span className="text-white/70">+{avgContribution}%</span>
-                             </li>
-                           );
-                         }) || (event.careerImpact?.explanation as { speakerHighlights?: string[] })?.speakerHighlights?.map((highlight: string, idx: number) => {
-                           const totalScore = Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0);
-                           const highlightCount = (event.careerImpact?.explanation as { speakerHighlights?: string[] })?.speakerHighlights?.length || 0;
-                           const avgContribution = highlightCount > 0 ? Math.round(totalScore / highlightCount) : 0;
-                           return (
-                             <li key={`speaker-${idx}`} className="flex items-center justify-between">
-                               <span>Speaker: {highlight}</span>
-                               <span className="text-white/70">+{avgContribution}%</span>
-                             </li>
-                           );
-                         })}
+                         )}
+                         {condensedReasons.list.length === 0 && (
+                           <li>No detailed breakdown available</li>
+                         )}
                        </ul>
-                       <div className="mt-3 pt-2 border-t border-white/20">
-                         <div className="flex items-center justify-between">
-                           <span className="font-medium">Total Match:</span>
-                           <span className="font-medium text-white">
-                             {Math.round(event.careerImpactLite?.overall || event.careerImpact?.overall || 0)}%
-                           </span>
-                         </div>
+                     </div>
+                     <div className="mt-3 pt-2 border-t border-white/20">
+                       <div className="flex items-center justify-between">
+                         <span className="font-medium">Total Match:</span>
+                         <span className="font-medium text-white">
+                           {Math.round(displayScore)}%
+                         </span>
                        </div>
                      </div>
                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-black/90"></div>
@@ -367,17 +388,12 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
             </div>
           )}
 
-          {/* Logo positioned in bottom-right corner within content area */}
-          <div className="flex justify-end mt-2">
-            <div className={cn(
-              "rounded-lg overflow-hidden flex items-center justify-center",
-              size === 'large' && "w-8 h-8",
-              size === 'medium' && "w-6 h-6",
-              size === 'small' && "w-5 h-5"
-            )}>
+          {/* Logo positioned in bottom-right corner within content area - Mobile only */}
+          <div className="flex justify-end mt-2 md:hidden">
+            <div className="rounded-lg overflow-hidden flex items-center justify-center w-8 h-8">
               {(() => {
-                const imageSizes = size === 'large' ? 32 : size === 'medium' ? 24 : 20;
-                const logoSizes = size === 'large' ? 20 : size === 'medium' ? 16 : 12;
+                const imageSizes = 32;
+                const logoSizes = 20;
                 
                 if (event.eventImageUrl) {
                   return (
@@ -426,20 +442,15 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
             </div>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
 
       {/* Event Image or Category Color Block - Moved to bottom - Hidden on mobile */}
       <div className="px-6 pb-6 hidden md:block">
-        <div className={cn(
-          "rounded-lg overflow-hidden flex items-center justify-start",
-          size === 'large' && "w-16 h-16",
-          size === 'medium' && "w-14 h-14",
-          size === 'small' && "w-10 h-10"
-        )}>
+        <div className="rounded-lg overflow-hidden flex items-center justify-start w-16 h-16">
           {(() => {
-            const imageSizes = size === 'large' ? 64 : size === 'medium' ? 56 : 40;
-            const logoSizes = size === 'large' ? 40 : size === 'medium' ? 32 : 24;
+            const imageSizes = 64;
+            const logoSizes = 40;
             
             if (event.eventImageUrl) {
               return (
@@ -488,7 +499,8 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         </div>
       </div>
 
-    </Card>
+    </GlassSurface>
+    </div>
   );
 });
 

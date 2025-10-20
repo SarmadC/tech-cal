@@ -110,17 +110,12 @@
   gap: 1.5rem; /* 24px - equivalent to space-y-6 */
 }
 
-/* Bento Card Specific Styles */
-.bento-card-large {
-  min-height: 280px;
-}
-
-.bento-card-medium {
-  min-height: 220px;
-}
-
+/* Consistent Card Heights - 3x3 Grid Layout */
+.bento-card-large,
+.bento-card-medium,
 .bento-card-small {
-  min-height: 180px;
+  min-height: 280px;
+  overflow: visible; /* Allow tooltips to show */
 }
 
 /* Note: Mobile-specific styles moved to mobile-discovery.css */

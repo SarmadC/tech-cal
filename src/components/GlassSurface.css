@@ -1,7 +1,7 @@
 .glass-surface {
   position: relative;
   display: flex;
-  overflow: hidden;
+  overflow: visible;
   transition: opacity 0.26s ease-out;
 }
 

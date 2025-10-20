@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useId } from 'react';
+import React, { useCallback, useEffect, useRef, useId } from 'react';
 import './GlassSurface.css';
 
 export interface GlassSurfaceProps {
@@ -80,7 +80,7 @@ const GlassSurface: React.FC<GlassSurfaceProps> = ({
   const blueChannelRef = useRef<SVGFEDisplacementMapElement>(null);
   const gaussianBlurRef = useRef<SVGFEGaussianBlurElement>(null);
 
-  const generateDisplacementMap = () => {
+  const generateDisplacementMap = useCallback(() => {
     const rect = containerRef.current?.getBoundingClientRect();
     const actualWidth = rect?.width || 400;
     const actualHeight = rect?.height || 200;
@@ -106,11 +106,20 @@ const GlassSurface: React.FC<GlassSurfaceProps> = ({
     `;
 
     return `data:image/svg+xml,${encodeURIComponent(svgContent)}`;
-  };
+  }, [
+    borderWidth,
+    borderRadius,
+    brightness,
+    opacity,
+    blur,
+    mixBlendMode,
+    redGradId,
+    blueGradId
+  ]);
 
-  const updateDisplacementMap = () => {
+  const updateDisplacementMap = useCallback(() => {
     feImageRef.current?.setAttribute('href', generateDisplacementMap());
-  };
+  }, [generateDisplacementMap]);
 
   useEffect(() => {
     updateDisplacementMap();
@@ -128,6 +137,7 @@ const GlassSurface: React.FC<GlassSurfaceProps> = ({
 
     gaussianBlurRef.current?.setAttribute('stdDeviation', displace.toString());
   }, [
+    updateDisplacementMap,
     width,
     height,
     borderRadius,
@@ -157,25 +167,11 @@ const GlassSurface: React.FC<GlassSurfaceProps> = ({
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      setTimeout(updateDisplacementMap, 0);
-    });
-
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
+  }, [updateDisplacementMap]);
 
   useEffect(() => {
     setTimeout(updateDisplacementMap, 0);
-  }, [width, height]);
+  }, [updateDisplacementMap, width, height]);
 
   const supportsSVGFilters = () => {
     const isWebkit = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
