@@ -44,7 +44,6 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
   const finalizedRef = useRef(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
 
   const eventData = useMemo(
     () => [
@@ -262,17 +261,6 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     update();
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
-  }, []);
-
-  // Track theme toggles (listen to class changes on <html>)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const root = document.documentElement;
-    const update = () => setIsDarkTheme(root.classList.contains('dark'));
-    update();
-    const observer = new MutationObserver(update);
-    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
   }, []);
 
   // Optimized resize handler with debouncing
