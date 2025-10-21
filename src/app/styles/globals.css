@@ -798,3 +798,61 @@ input::placeholder, textarea::placeholder {
   filter: blur(4px);
   transition: filter 0.3s ease-in-out;
 }
+
+/* ============================================== */
+/* OPTIMIZED FROSTED GLASS COMPONENTS            */
+/* ============================================== */
+
+/* Mobile Navigation Glass Panel */
+.mobile-nav-glass-panel {
+  /* Light theme - subtle frosted white */
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(248, 250, 252, 0.80) 100%
+  );
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    -4px 0 24px rgba(0, 0, 0, 0.1),
+    inset 1px 0 0 rgba(255, 255, 255, 0.6);
+  /* Minimal blur for performance */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  /* GPU acceleration */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Dark theme mobile nav */
+.dark .mobile-nav-glass-panel {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 30, 35, 0.90) 0%,
+    rgba(20, 20, 25, 0.85) 100%
+  );
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    -4px 0 24px rgba(0, 0, 0, 0.5),
+    inset 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Mobile performance optimization */
+@media (max-width: 768px) {
+  .mobile-nav-glass-panel {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}
+
+/* Reduced motion fallback */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav-glass-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  .dark .mobile-nav-glass-panel {
+    background: rgba(25, 25, 30, 0.95);
+  }
+}

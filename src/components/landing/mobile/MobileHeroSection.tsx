@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import GlassSurface from '@/components/GlassSurface';
 
 export interface MobileHeroSectionProps {
   isIOS?: boolean;
@@ -61,28 +60,11 @@ const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({
 
             {/* CTA Button */}
             <div className="mobile-hero-cta-container">
-              <GlassSurface
-                width="100%"
-                height="auto"
-                borderRadius={12}
-                brightness={60}
-                opacity={0.9}
-                blur={10}
-                displace={8}
-                backgroundOpacity={0.12}
-                saturation={1.15}
-                distortionScale={-160}
-                redOffset={4}
-                greenOffset={12}
-                blueOffset={20}
-                mixBlendMode="screen"
-                className="mobile-liquid-glass-cta"
-                contentStyle={{ padding: 0 }}
-              >
+              <div className="mobile-liquid-glass-cta">
                 <Link href="/discover" className="mobile-primary-cta-liquid">
                   <span>DISCOVER EVENTS</span>
                 </Link>
-              </GlassSurface>
+              </div>
             </div>
           </div>
         </div>

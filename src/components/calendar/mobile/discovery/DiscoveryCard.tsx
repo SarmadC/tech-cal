@@ -11,7 +11,6 @@ import {
 // Use consolidated Event type - recommendation functionality handled through EventWithCareerImpact
 import { Event, CareerImpactScore } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
-import GlassSurface from '@/components/GlassSurface';
 import { cn } from '@/lib/utils';
 import ShinyText from '../../shared/ShinyText';
 import '../../shared/ShinyText.css';
@@ -212,32 +211,13 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       }}
       className="w-full h-full"
     >
-      <GlassSurface
-        width="100%"
-        height="auto"
-        borderRadius={16}
-        backgroundOpacity={0.1}
-        opacity={0.8}
-        blur={12}
-        brightness={50}
-        saturation={1.2}
-        borderWidth={0.07}
-        displace={0.5}
-        distortionScale={-180}
-        redOffset={0}
-        greenOffset={10}
-        blueOffset={20}
-        className={cn(
-          "discovery-card cursor-pointer transition-all duration-300 hover:shadow-lg relative bento-card-medium",
-          variant === 'featured' && "md:col-span-2",
-          variant === 'compact' && "flex-row items-center gap-4",
-          className
-        )}
-        contentClassName="flex flex-col w-full h-full p-0"
-        style={{
-          minHeight: 'fit-content'
-        }}
-      >
+      <div className={cn(
+        "discovery-card-glass cursor-pointer transition-all duration-300 hover:shadow-lg relative bento-card-medium",
+        variant === 'featured' && "md:col-span-2",
+        variant === 'compact' && "flex-row items-center gap-4",
+        className
+      )} style={{ minHeight: 'fit-content' }}>
+        <div className="flex flex-col w-full h-full p-0">
       
       <div className="pb-0 relative flex flex-col space-y-1.5 p-6">
          {/* Event Header Content - Redesigned for better layout */}
@@ -499,7 +479,8 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         </div>
       </div>
 
-    </GlassSurface>
+        </div>
+      </div>
     </div>
   );
 });
