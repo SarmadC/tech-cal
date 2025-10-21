@@ -5,7 +5,8 @@ import React, { useMemo } from 'react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 import { GraduationCap, ArrowRight, Sparkle, Target } from '@phosphor-icons/react';
-import type { CareerProfile, TrackedEventRecord, Event } from '@/types';
+import type { CareerProfile, TrackedEventRecord, Event, CareerGoal } from '@/types';
+import { getMatchingGoals, getGoalTarget } from '@/utils/eventGoalAlignment';
 
 interface GoalAlignmentProps {
   careerProfile: CareerProfile | null;
@@ -14,12 +15,11 @@ interface GoalAlignmentProps {
   className?: string;
 }
 
-const GOAL_KEYWORDS: Record<string, string[]> = {
-  'skill-development': ['workshop', 'training', 'course', 'tutorial', 'learning', 'hands-on'],
-  'role-transition': ['career', 'transition', 'interview', 'job', 'hiring'],
-  'career-advancement': ['leadership', 'management', 'senior', 'principal', 'strategy'],
-  'networking': ['networking', 'meetup', 'community', 'social', 'mixer'],
-  'salary-increase': ['compensation', 'negotiation', 'salary', 'promotion']
+const GOAL_LABELS: Partial<Record<CareerGoal, string>> = {
+  'skill-development': 'Skill Development',
+  'role-transition': 'Role Transition',
+  'leadership-growth': 'Leadership Growth',
+  'networking': 'Networking'
 };
 
 export function GoalAlignment({ careerProfile, trackedEvents, upcomingEvents, className = '' }: GoalAlignmentProps) {
@@ -28,33 +28,37 @@ export function GoalAlignment({ careerProfile, trackedEvents, upcomingEvents, cl
       return { chartData: [], nudges: [] };
     }
 
-    const chartData = careerProfile.careerGoals.map(goal => {
-      const keywords = GOAL_KEYWORDS[goal] || [];
-      
-      // Count time spent (attended events)
+    const chartData = careerProfile.careerGoals.reduce<Array<{
+      goal: string;
+      timeSpent: number;
+      available: number;
+      coverage: number;
+      isPriority: boolean;
+    }>>((acc, goal) => {
+      const label = GOAL_LABELS[goal] || goal.replace('-', ' ');
+
       const timeSpent = trackedEvents.filter(record => {
         if (record.status !== 'attended' || !record.event) return false;
-        const text = `${record.event.title || ''} ${record.event.description || ''}`.toLowerCase();
-        return keywords.some(kw => text.includes(kw));
+        return getMatchingGoals(record.event, [goal]).includes(goal);
       }).length;
 
-      // Count available opportunities
       const available = upcomingEvents.filter(event => {
-        const text = `${event.title || ''} ${event.description || ''}`.toLowerCase();
-        return keywords.some(kw => text.includes(kw));
+        return getMatchingGoals(event, [goal]).includes(goal);
       }).length;
 
-      const goalName = goal.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      const coverage = timeSpent > 0 ? Math.min((timeSpent / 5) * 100, 100) : 0;
+      const target = getGoalTarget(goal);
+      const coverage = target > 0 ? Math.min((timeSpent / target) * 100, 100) : 0;
 
-      return {
-        goal: goalName,
+      acc.push({
+        goal: label,
         timeSpent,
         available,
         coverage,
-        isPriority: coverage < 30 // Low coverage = priority
-      };
-    });
+        isPriority: coverage < 30
+      });
+
+      return acc;
+    }, []);
 
     // Generate nudges
     const uncoveredGoal = chartData.find(g => g.coverage < 30 && g.available > 0);
@@ -223,4 +227,3 @@ export function GoalAlignment({ careerProfile, trackedEvents, upcomingEvents, cl
     </div>
   );
 }
-

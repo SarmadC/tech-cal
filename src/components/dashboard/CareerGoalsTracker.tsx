@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import { Target, CheckCircle, Clock, TrendUp } from '@phosphor-icons/react';
 import type { CareerProfile, TrackedEventRecord, Event, CareerGoal } from '@/types';
+import { doesEventMatchGoal, getGoalTarget } from '@/utils/eventGoalAlignment';
 
 interface CareerGoalsTrackerProps {
   careerProfile: CareerProfile;
@@ -14,85 +15,39 @@ interface CareerGoalsTrackerProps {
   upcomingEvents: Event[];
 }
 
-const GOAL_CONFIGS: Record<CareerGoal, {
+const GOAL_CONFIGS: Partial<Record<CareerGoal, {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   description: string;
   targetEvents: number;
-}> = {
+}>> = {
   'skill-development': {
     icon: TrendUp,
     color: 'text-blue-600 dark:text-blue-400',
     description: 'Attend workshops and training sessions',
-    targetEvents: 12
-  },
-  'career-advancement': {
-    icon: Target,
-    color: 'text-purple-600 dark:text-purple-400',
-    description: 'Build leadership and management skills',
-    targetEvents: 8
+    targetEvents: getGoalTarget('skill-development')
   },
   'role-transition': {
     icon: CheckCircle,
     color: 'text-green-600 dark:text-green-400',
     description: 'Learn new role-specific skills',
-    targetEvents: 10
+    targetEvents: getGoalTarget('role-transition')
   },
   'leadership-growth': {
     icon: Target,
     color: 'text-orange-600 dark:text-orange-400',
     description: 'Develop leadership capabilities',
-    targetEvents: 6
-  },
-  'entrepreneurship': {
-    icon: TrendUp,
-    color: 'text-red-600 dark:text-red-400',
-    description: 'Build business and startup skills',
-    targetEvents: 8
-  },
-  'consulting': {
-    icon: CheckCircle,
-    color: 'text-indigo-600 dark:text-indigo-400',
-    description: 'Develop consulting expertise',
-    targetEvents: 6
-  },
-  'specialization': {
-    icon: Target,
-    color: 'text-teal-600 dark:text-teal-400',
-    description: 'Become a domain expert',
-    targetEvents: 15
-  },
-  'generalization': {
-    icon: TrendUp,
-    color: 'text-pink-600 dark:text-pink-400',
-    description: 'Broaden your skill set',
-    targetEvents: 12
+    targetEvents: getGoalTarget('leadership-growth')
   },
   'networking': {
     icon: CheckCircle,
     color: 'text-yellow-600 dark:text-yellow-400',
     description: 'Build professional connections',
-    targetEvents: 10
-  },
-  'industry-change': {
-    icon: Target,
-    color: 'text-cyan-600 dark:text-cyan-400',
-    description: 'Learn new industry specifics',
-    targetEvents: 8
-  },
-  'work-life-balance': {
-    icon: CheckCircle,
-    color: 'text-emerald-600 dark:text-emerald-400',
-    description: 'Find sustainable work practices',
-    targetEvents: 4
-  },
-  'salary-increase': {
-    icon: TrendUp,
-    color: 'text-amber-600 dark:text-amber-400',
-    description: 'Build valuable skills',
-    targetEvents: 6
+    targetEvents: getGoalTarget('networking')
   }
 };
+
+type GoalConfig = NonNullable<(typeof GOAL_CONFIGS)[CareerGoal]>;
 
 export function CareerGoalsTracker({
   careerProfile,
@@ -106,23 +61,36 @@ export function CareerGoalsTracker({
     // Only count ATTENDED events
     const attendedEvents = trackedEvents.filter(e => e.status === 'attended');
 
-    return careerProfile.careerGoals.map(goal => {
+    return careerProfile.careerGoals.reduce<Array<{
+      goal: CareerGoal;
+      config: GoalConfig;
+      eventsAttended: number;
+      progress: number;
+      relevantUpcoming: number;
+      targetEvents: number;
+    }>>((acc, goal) => {
       const config = GOAL_CONFIGS[goal];
-      const eventsAttended = attendedEvents.length; // Count attended events only
+      if (!config) return acc;
+
+      const eventsAttended = attendedEvents.filter(eventRecord => {
+        if (!eventRecord.event) return false;
+        return doesEventMatchGoal(eventRecord.event, goal);
+      }).length;
+
+      const relevantUpcoming = upcomingEvents.filter(event => doesEventMatchGoal(event, goal)).slice(0, 5).length;
       const progress = Math.min(Math.round((eventsAttended / config.targetEvents) * 100), 100);
 
-      // Count relevant upcoming events
-      const relevantUpcoming = upcomingEvents.slice(0, 5).length;
-
-      return {
+      acc.push({
         goal,
         config,
         eventsAttended,
         progress,
         relevantUpcoming,
         targetEvents: config.targetEvents
-      };
-    });
+      });
+
+      return acc;
+    }, []);
   }, [careerProfile.careerGoals, trackedEvents, upcomingEvents]);
 
   // Calculate timeframe progress

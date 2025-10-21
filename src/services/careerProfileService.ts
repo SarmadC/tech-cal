@@ -47,25 +47,34 @@ export class CareerProfileService {
    * Transform database row to CareerProfile
    */
   private static transformRowToCareerProfile(row: CareerProfileRow): CareerProfile {
+    const availableTime = (row.available_time as AvailableTime | null) ?? 'moderate';
+    const budget = (row.budget as BudgetRange | null) ?? 'moderate';
+    const companySize = (row.company_size as CompanySize | null) ?? 'small';
+    const seniority = (row.seniority as SeniorityLevel | null) ?? 'entry-level';
+    const timeframe = (row.timeframe as CareerTimeframe | null) ?? 'short-term';
+
+    const rawSkillTags = row.skill_tags as unknown;
+    const skillTags = Array.isArray(rawSkillTags) ? (rawSkillTags as SkillTag[]) : [];
+
     return {
       userId: row.user_id,
       profileId: `profile_${row.user_id}_${Date.now()}`,
       lastUpdated: row.updated_at,
       currentRole: row["current_role"],
-      seniority: row.seniority as SeniorityLevel,
+      seniority,
       industry: row.industry,
-      companySize: row.company_size as CompanySize,
-      primarySkills: row.primary_skills,
-      skillsToLearn: row.skills_to_learn,
-      interests: row.interests,
-      skillTags: (row.skill_tags as unknown as SkillTag[]) || [],
-      careerGoals: row.career_goals as CareerGoal[],
-      timeframe: row.timeframe as CareerTimeframe,
-      learningStyle: row.learning_style as LearningStyle[],
-      availableTime: row.available_time as AvailableTime,
-      budget: row.budget as BudgetRange,
-      networkingGoals: row.networking_goals as NetworkingGoal[],
-      preferredEventTypes: row.preferred_event_types as CareerEventType[]
+      companySize,
+      primarySkills: Array.isArray(row.primary_skills) ? row.primary_skills : [],
+      skillsToLearn: Array.isArray(row.skills_to_learn) ? row.skills_to_learn : [],
+      interests: Array.isArray(row.interests) ? row.interests : [],
+      skillTags,
+      careerGoals: Array.isArray(row.career_goals) ? (row.career_goals as CareerGoal[]) : [],
+      timeframe,
+      learningStyle: Array.isArray(row.learning_style) ? (row.learning_style as LearningStyle[]) : [],
+      availableTime,
+      budget,
+      networkingGoals: Array.isArray(row.networking_goals) ? (row.networking_goals as NetworkingGoal[]) : [],
+      preferredEventTypes: Array.isArray(row.preferred_event_types) ? (row.preferred_event_types as CareerEventType[]) : []
     };
   }
 
@@ -77,18 +86,18 @@ export class CareerProfileService {
       "current_role": careerProfile.currentRole,
       seniority: careerProfile.seniority,
       industry: careerProfile.industry,
-      company_size: careerProfile.companySize,
-      primary_skills: careerProfile.primarySkills,
-      skills_to_learn: careerProfile.skillsToLearn,
-      interests: careerProfile.interests,
-      skill_tags: careerProfile.skillTags as unknown as Json,
-      career_goals: careerProfile.careerGoals,
-      timeframe: careerProfile.timeframe,
-      learning_style: careerProfile.learningStyle,
-      available_time: careerProfile.availableTime,
-      budget: careerProfile.budget,
-      networking_goals: careerProfile.networkingGoals,
-      preferred_event_types: careerProfile.preferredEventTypes
+      company_size: careerProfile.companySize ?? 'small',
+      primary_skills: careerProfile.primarySkills ?? [],
+      skills_to_learn: careerProfile.skillsToLearn ?? [],
+      interests: careerProfile.interests ?? [],
+      skill_tags: (careerProfile.skillTags ?? []) as unknown as Json,
+      career_goals: careerProfile.careerGoals ?? [],
+      timeframe: careerProfile.timeframe ?? 'short-term',
+      learning_style: careerProfile.learningStyle ?? [],
+      available_time: careerProfile.availableTime ?? 'moderate',
+      budget: careerProfile.budget ?? 'moderate',
+      networking_goals: careerProfile.networkingGoals ?? [],
+      preferred_event_types: careerProfile.preferredEventTypes ?? []
     };
   }
 
@@ -193,7 +202,23 @@ export class CareerProfileService {
         console.warn('Failed to invalidate career impact cache after profile update:', error);
       });
     } catch (error) {
-      console.error('Error saving career profile:', error);
+      const formattedError = (() => {
+        if (error && typeof error === 'object' && 'message' in error) {
+          const err = error as { message: string; details?: string; hint?: string; code?: string };
+          return {
+            message: err.message,
+            details: err.details,
+            hint: err.hint,
+            code: err.code
+          };
+        }
+        if (error instanceof Error) {
+          return { message: error.message, stack: error.stack };
+        }
+        return error;
+      })();
+
+      console.error('Error saving career profile:', formattedError);
       Sentry.captureException(error, { 
         extra: { function: 'saveCareerProfile', userId } 
       });

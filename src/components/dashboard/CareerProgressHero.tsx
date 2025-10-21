@@ -6,8 +6,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import { Target, TrendUp, Clock, Calendar } from '@phosphor-icons/react';
-import type { CareerProfile, TrackedEventRecord, Event } from '@/types';
+import type { CareerProfile, TrackedEventRecord, Event, CareerGoal } from '@/types';
 import { SENIORITY_LEVELS, COMPANY_SIZE_OPTIONS } from '@/types/career';
+import { getMatchingGoals, getGoalTarget } from '@/utils/eventGoalAlignment';
 
 interface CareerProgressHeroProps {
   careerProfile: CareerProfile;
@@ -25,8 +26,30 @@ export function CareerProgressHero({
   // Calculate career progress metrics
   const metrics = useMemo(() => {
     // Only count ATTENDED events, not just tracked/bookmarked
-    const attendedEvents = trackedEvents.filter(e => e.status === 'attended');
+    const attendedEvents = trackedEvents.filter(e => e.status === 'attended' && e.event);
     const totalAttended = attendedEvents.length;
+
+    const goalCounts = new Map<CareerGoal, number>();
+    attendedEvents.forEach(eventRecord => {
+      if (!eventRecord.event) return;
+      const matchedGoals = getMatchingGoals(eventRecord.event, careerProfile.careerGoals);
+      matchedGoals.forEach(goal => {
+        goalCounts.set(goal, (goalCounts.get(goal) || 0) + 1);
+      });
+    });
+
+    const goalProgressValues = careerProfile.careerGoals
+      .map(goal => {
+        const count = goalCounts.get(goal) || 0;
+        const target = getGoalTarget(goal);
+        if (target === 0) return 0;
+        return Math.min(Math.round((count / target) * 100), 100);
+      })
+      .filter(value => value >= 0);
+
+    const goalProgress = goalProgressValues.length
+      ? Math.round(goalProgressValues.reduce((sum, value) => sum + value, 0) / goalProgressValues.length)
+      : 0;
 
     const skillsLearned = careerProfile.primarySkills.length;
     const skillsToLearn = careerProfile.skillsToLearn.length;
@@ -43,9 +66,7 @@ export function CareerProgressHero({
     };
     const monthsToGoal = timeframeMap[careerProfile.timeframe];
 
-    // Simple progress calculation: events ATTENDED / (estimated events needed)
-    const estimatedEventsNeeded = monthsToGoal * 2; // Assume 2 events per month
-    const goalProgress = Math.min(Math.round((totalAttended / estimatedEventsNeeded) * 100), 100);
+    const upcomingAligned = upcomingEvents.filter(event => getMatchingGoals(event, careerProfile.careerGoals).length > 0);
 
     return {
       totalAttended,
@@ -54,7 +75,7 @@ export function CareerProgressHero({
       skillProgress,
       goalProgress,
       monthsToGoal,
-      upcomingCount: upcomingEvents.length
+      upcomingCount: upcomingAligned.length
     };
   }, [careerProfile, trackedEvents, upcomingEvents]);
 

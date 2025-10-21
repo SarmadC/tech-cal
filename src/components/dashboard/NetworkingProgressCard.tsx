@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import { Users, UserPlus, Handshake, TrendUp } from '@phosphor-icons/react';
 import type { CareerProfile, TrackedEventRecord, Event, NetworkingGoal } from '@/types';
+import { doesEventMatchGoal } from '@/utils/eventGoalAlignment';
 
 interface NetworkingProgressCardProps {
   careerProfile: CareerProfile;
@@ -86,10 +87,10 @@ export function NetworkingProgressCard({
   // Calculate networking metrics
   const networkingMetrics = useMemo(() => {
     // Only count ATTENDED networking-related events
-    const attendedEvents = trackedEvents.filter(e => e.status === 'attended');
-    const networkingEvents = attendedEvents.filter(_event => {
-      // In a real app, we'd check event type or tags
-      return true; // Simplified
+    const attendedEvents = trackedEvents.filter(e => e.status === 'attended' && e.event);
+    const networkingEvents = attendedEvents.filter(eventRecord => {
+      if (!eventRecord.event) return false;
+      return doesEventMatchGoal(eventRecord.event, 'networking');
     });
 
     const networkingProgress = careerProfile.networkingGoals.length > 0
@@ -97,14 +98,9 @@ export function NetworkingProgressCard({
       : 0;
 
     // Find upcoming networking events
-    const upcomingNetworking = upcomingEvents.filter(event => {
-      const title = event.title.toLowerCase();
-      const desc = event.description.toLowerCase();
-      return title.includes('networking') ||
-             title.includes('meetup') ||
-             title.includes('mixer') ||
-             desc.includes('networking');
-    }).slice(0, 3);
+    const upcomingNetworking = upcomingEvents
+      .filter(event => doesEventMatchGoal(event, 'networking'))
+      .slice(0, 3);
 
     return {
       totalEvents: networkingEvents.length,

@@ -4,15 +4,16 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { CareerProfile, CareerOnboardingData, CareerOptionalSectionStatus, CareerOptionalSectionSnoozes } from '@/types/career';
+import { QuickEditSection } from './quick-edit/sections';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { useAuth } from '@/contexts';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
-import QuickEditModal from './QuickEditModal';
+import QuickEditModal from './quick-edit';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { CheckCircle, Clock, User } from '@phosphor-icons/react';
+import { CheckCircle, Timer, User } from '@phosphor-icons/react';
 import { AnalyticsService } from '@/services/analyticsService';
 
 const TIMEFRAME_COPY: Record<string, { label: string; window: string }> = {
@@ -45,7 +46,7 @@ const DEFAULT_OPTIONAL_STATUS: CareerOptionalSectionStatus = {
   teamPreferences: false
 };
 
-const OPTIONAL_QUICK_EDIT_MAP: Record<keyof CareerOptionalSectionStatus, string> = {
+const OPTIONAL_QUICK_EDIT_MAP: Record<keyof CareerOptionalSectionStatus, QuickEditSection> = {
   learningPreferences: 'learning',
   networkingPreferences: 'networking',
   teamPreferences: 'team'
@@ -71,12 +72,24 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   const { showError } = useSnackbar();
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [quickEditSection, setQuickEditSection] = useState<string | null>(null);
+  const [quickEditSection, setQuickEditSection] = useState<QuickEditSection | null>(null);
+  const [quickEditModalState, setQuickEditModalState] = useState<{
+    isDirty: boolean;
+    isSaving: boolean;
+    saveError?: string | null;
+  }>({
+    isDirty: false,
+    isSaving: false,
+    saveError: null
+  });
   const [showAllCurrentSkills, setShowAllCurrentSkills] = useState(false);
   const [showAllLearningGoals, setShowAllLearningGoals] = useState(false);
   const [dismissedPromptIds, setDismissedPromptIds] = useState<string[]>([]);
   const loggedShownPrompts = useRef<Set<string>>(new Set());
   const completedSectionsRef = useRef<Set<string>>(new Set());
+  
+  // Derive disabled state from modal state
+  const isQuickEditDisabled = quickEditModalState.isSaving || quickEditSection !== null;
   
   const {
     careerProfile: currentCareerProfile,
@@ -92,10 +105,13 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     snoozeOptionalSection
   } = useCareerProfile();
 
-  const sectionKeyMap: Record<string, keyof CareerOptionalSectionStatus> = {
+  const sectionKeyMap: Record<QuickEditSection, keyof CareerOptionalSectionStatus> = {
     learning: 'learningPreferences',
     networking: 'networkingPreferences',
-    team: 'teamPreferences'
+    team: 'teamPreferences',
+    role: null as never,
+    skills: null as never,
+    goals: null as never
   };
 
   const promptDefinitions = useMemo(() => ([
@@ -104,28 +120,28 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
       title: 'Add your learning preferences',
       description: 'Tell us how you prefer to learn and how much time you can dedicate each month to improve recommendation relevance.',
       cta: 'Set learning preferences',
-      quickEdit: 'learning'
+      quickEdit: 'learning' as QuickEditSection
     },
     {
       id: 'networkingPreferences',
       title: 'Share your networking goals',
       description: 'Let us know the connections you want to make so we can spotlight the right events.',
       cta: 'Set networking goals',
-      quickEdit: 'networking'
+      quickEdit: 'networking' as QuickEditSection
     },
     {
       id: 'teamPreferences',
       title: 'Pick preferred event formats',
       description: 'Choose the event types you enjoy most to diversify recommendations.',
       cta: 'Choose event formats',
-      quickEdit: 'team'
+      quickEdit: 'team' as QuickEditSection
     }
   ]) as Array<{
     id: keyof CareerOptionalSectionStatus;
     title: string;
     description: string;
     cta: string;
-    quickEdit: string;
+    quickEdit: QuickEditSection;
   }>, []);
 
   const logPromptEvent = useCallback((event: 'prompt_shown' | 'prompt_opened' | 'prompt_snoozed' | 'prompt_completed', sectionId: keyof CareerOptionalSectionStatus, extra: Record<string, unknown> = {}) => {
@@ -178,7 +194,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     ? Math.round((completedOptionalSections / optionalSectionEntries.length) * 100)
     : 0;
 
-  const handlePromptComplete = (quickEditKey: string) => {
+  const handlePromptComplete = (quickEditKey: QuickEditSection) => {
     const prompt = promptDefinitions.find(p => p.quickEdit === quickEditKey);
     if (prompt) {
       logPromptEvent('prompt_opened', prompt.id, { trigger: 'banner' });
@@ -195,7 +211,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     });
   };
 
-  const handleOptionalSectionCompleted = (section: string) => {
+  const handleOptionalSectionCompleted = (section: QuickEditSection) => {
     const optionalKey = sectionKeyMap[section];
     if (optionalKey && !completedSectionsRef.current.has(optionalKey)) {
       void markOptionalSectionComplete(optionalKey);
@@ -292,7 +308,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     setIsEditing(false);
   };
 
-  const handleQuickEdit = (section: string) => {
+  const handleQuickEdit = (section: QuickEditSection) => {
     const optionalKey = sectionKeyMap[section];
     if (optionalKey) {
       setDismissedPromptIds(prev => prev.filter(id => id !== optionalKey));
@@ -593,7 +609,8 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                 </div>
                 <button
                   onClick={() => handleQuickEdit('role')}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  disabled={isQuickEditDisabled}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: 'var(--accent-primary-light)',
                     border: '1px solid var(--accent-border)',
@@ -711,7 +728,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
 
                 <div className="space-y-3">
                   {optionalSectionEntries.map(([sectionId, isComplete]) => {
-                    const SectionIcon = isComplete ? CheckCircle : Clock;
+                    const SectionIcon = isComplete ? CheckCircle : Timer;
                     const copy = OPTIONAL_SECTION_COPY[sectionId];
                     const quickEditKey = OPTIONAL_QUICK_EDIT_MAP[sectionId];
                     return (
@@ -787,7 +804,8 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                 </div>
                 <button
                   onClick={() => handleQuickEdit('skills')}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  disabled={isQuickEditDisabled}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: 'var(--accent-primary-light)',
                     border: '1px solid var(--accent-border)',
@@ -884,7 +902,8 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                 </div>
                 <button
                   onClick={() => handleQuickEdit('goals')}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  disabled={isQuickEditDisabled}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: 'var(--accent-primary-light)',
                     border: '1px solid var(--accent-border)',
@@ -964,6 +983,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
           section={quickEditSection}
           currentProfile={currentCareerProfile}
           onSectionCompleted={handleOptionalSectionCompleted}
+          onStateChange={setQuickEditModalState}
         />
       )}
     </>

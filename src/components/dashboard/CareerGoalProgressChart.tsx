@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { Target, TrendUp } from '@phosphor-icons/react';
-import type { CareerProfile, TrackedEventRecord, Event } from '@/types';
+import type { CareerProfile, TrackedEventRecord, Event, CareerGoal } from '@/types';
 import { cn } from '@/lib/utils';
+import { getMatchingGoals, getGoalTarget } from '@/utils/eventGoalAlignment';
 
 interface CareerGoalProgressChartProps {
   careerProfile: CareerProfile;
@@ -15,29 +16,11 @@ interface CareerGoalProgressChartProps {
   className?: string;
 }
 
-// Map career goals to relevant event keywords
-const GOAL_EVENT_KEYWORDS: Record<string, string[]> = {
-  'skill-development': ['workshop', 'training', 'course', 'bootcamp', 'tutorial', 'learning'],
-  'role-transition': ['career', 'transition', 'interview', 'job', 'hiring', 'recruitment'],
-  'career-advancement': ['leadership', 'management', 'senior', 'principal', 'architect', 'strategy'],
-  'networking': ['networking', 'meetup', 'community', 'social', 'connect', 'mixer'],
-  'salary-increase': ['compensation', 'negotiation', 'salary', 'promotion', 'advancement']
-};
-
-const GOAL_LABELS: Record<string, string> = {
+const GOAL_LABELS: Partial<Record<CareerGoal, string>> = {
   'skill-development': 'Skill Development',
   'role-transition': 'Role Transition',
-  'career-advancement': 'Career Advancement',
-  'networking': 'Networking',
-  'salary-increase': 'Salary Growth'
-};
-
-const GOAL_TARGETS: Record<string, number> = {
-  'skill-development': 8, // 8 events per timeframe
-  'role-transition': 6,
-  'career-advancement': 5,
-  'networking': 10,
-  'salary-increase': 4
+  'leadership-growth': 'Leadership Growth',
+  'networking': 'Networking'
 };
 
 export function CareerGoalProgressChart({
@@ -54,39 +37,38 @@ export function CareerGoalProgressChart({
       return [];
     }
 
-    return activeGoals.map(goal => {
-      const keywords = GOAL_EVENT_KEYWORDS[goal] || [];
-      
-      // Count attended events matching this goal
+    return activeGoals.reduce<Array<{
+      goal: string;
+      attended: number;
+      available: number;
+      target: number;
+      progress: number;
+      shortGoal: string;
+    }>>((acc, goal) => {
       const attendedCount = trackedEvents.filter(record => {
         if (record.status !== 'attended' || !record.event) return false;
-        
-        // Check if event title/description matches goal keywords
-        const eventText = `${record.event.title || ''} ${record.event.description || ''}`.toLowerCase();
-        return keywords.some(keyword => eventText.includes(keyword));
+        return getMatchingGoals(record.event, [goal]).includes(goal);
       }).length;
 
-      // Count available upcoming events matching this goal
       const availableCount = upcomingEvents.filter(event => {
-        const eventText = `${event.title || ''} ${event.description || ''}`.toLowerCase();
-        return keywords.some(keyword => eventText.includes(keyword));
+        return getMatchingGoals(event, [goal]).includes(goal);
       }).length;
 
-      // Get target for this goal type
-      const target = GOAL_TARGETS[goal] || 5;
-      
-      // Calculate progress percentage
-      const progress = Math.min(Math.round((attendedCount / target) * 100), 100);
+      const target = getGoalTarget(goal);
+      const progress = target > 0 ? Math.min(Math.round((attendedCount / target) * 100), 100) : 0;
+      const label = GOAL_LABELS[goal] || goal.replace('-', ' ');
 
-      return {
-        goal: GOAL_LABELS[goal] || goal,
+      acc.push({
+        goal: label,
         attended: attendedCount,
         available: availableCount,
         target,
         progress,
-        shortGoal: GOAL_LABELS[goal]?.split(' ')[0] || goal // For mobile
-      };
-    });
+        shortGoal: label.split(' ')[0] || label
+      });
+
+      return acc;
+    }, []);
   }, [careerProfile, trackedEvents, upcomingEvents]);
 
   const totalAttended = chartData.reduce((sum, item) => sum + item.attended, 0);
@@ -285,4 +267,3 @@ export function CareerGoalProgressChart({
     </Card>
   );
 }
-

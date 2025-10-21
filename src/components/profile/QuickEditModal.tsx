@@ -18,7 +18,7 @@
  * />
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 import { CareerProfile, LearningStyle, AvailableTime, BudgetRange, NetworkingGoal, CareerEventType } from '@/types/career';
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -36,12 +36,10 @@ interface QuickEditModalProps {
 interface SectionEditorProps {
   profile: CareerProfile;
   onUpdate: (updates: Partial<CareerProfile>) => void;
-  onCancel: () => void;
-  isSaving: boolean;
 }
 
 // Role Information Editor
-const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
+const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
   const [formData, setFormData] = useState({
     currentRole: profile.currentRole,
     seniority: profile.seniority,
@@ -49,15 +47,25 @@ const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel,
     companySize: profile.companySize
   });
 
+  useEffect(() => {
+    setFormData({
+      currentRole: profile.currentRole,
+      seniority: profile.seniority,
+      industry: profile.industry,
+      companySize: profile.companySize
+    });
+  }, [profile]);
+
   const handleFieldChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Save immediately
-    onUpdate({
-      currentRole: formData.currentRole,
-      seniority: formData.seniority,
-      industry: formData.industry,
-      companySize: formData.companySize,
-      [field]: value
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      onUpdate({
+        currentRole: updated.currentRole,
+        seniority: updated.seniority,
+        industry: updated.industry,
+        companySize: updated.companySize
+      });
+      return updated;
     });
   };
 
@@ -134,65 +142,55 @@ const RoleEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel,
         </select>
       </div>
 
-      <div className="mt-8 flex items-center justify-end gap-4 border-t border-border-subtle pt-6">
-        {isSaving && (
-          <div className="flex items-center gap-2 text-sm font-medium text-blue-500">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500/40 border-t-blue-500"></div>
-            Saving changes…
-          </div>
-        )}
-        <button
-          onClick={onCancel}
-          className="inline-flex items-center rounded-xl border border-border-color bg-background-tertiary px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-all duration-200 hover:bg-background-tertiary/80 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2"
-        >
-          Close
-        </button>
-      </div>
     </div>
   );
 };
 
 // Skills Editor
-const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
+const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
   const [formData, setFormData] = useState({
     primarySkills: profile.primarySkills,
     skillsToLearn: profile.skillsToLearn,
     interests: profile.interests
   });
 
-  const handlePrimarySkillsChange = (skills: string[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      primarySkills: skills
-    }));
+  useEffect(() => {
+    setFormData({
+      primarySkills: profile.primarySkills,
+      skillsToLearn: profile.skillsToLearn,
+      interests: profile.interests
+    });
+  }, [profile]);
+
+  const syncUpdates = (next: typeof formData) => {
     onUpdate({
-      primarySkills: skills,
-      skillsToLearn: formData.skillsToLearn,
-      interests: formData.interests
+      primarySkills: next.primarySkills,
+      skillsToLearn: next.skillsToLearn,
+      interests: next.interests
+    });
+  };
+
+  const handlePrimarySkillsChange = (skills: string[]) => {
+    setFormData(prev => {
+      const next = { ...prev, primarySkills: skills };
+      syncUpdates(next);
+      return next;
     });
   };
 
   const handleSkillsToLearnChange = (skills: string[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      skillsToLearn: skills
-    }));
-    onUpdate({
-      primarySkills: formData.primarySkills,
-      skillsToLearn: skills,
-      interests: formData.interests
+    setFormData(prev => {
+      const next = { ...prev, skillsToLearn: skills };
+      syncUpdates(next);
+      return next;
     });
   };
 
   const handleInterestsChange = (interests: string[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      interests
-    }));
-    onUpdate({
-      primarySkills: formData.primarySkills,
-      skillsToLearn: formData.skillsToLearn,
-      interests
+    setFormData(prev => {
+      const next = { ...prev, interests };
+      syncUpdates(next);
+      return next;
     });
   };
 
@@ -248,42 +246,30 @@ const SkillsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCance
           placeholder="Search interests and technologies..."
         />
       </SectionCard>
-
-      <div className="mt-4 flex items-center justify-end gap-4 border-t border-border-subtle pt-6">
-        {isSaving && (
-          <div className="flex items-center gap-2 text-sm font-medium text-blue-500">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500/40 border-t-blue-500"></div>
-            Saving changes…
-          </div>
-        )}
-        <button
-          onClick={onCancel}
-          className="inline-flex items-center rounded-xl border border-border-color bg-background-tertiary px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-all duration-200 hover:bg-background-tertiary/80 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2"
-        >
-          Close
-        </button>
-      </div>
     </div>
   );
 };
 
 
 // Career Goals Editor
-const GoalsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
+const GoalsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
   const [formData, setFormData] = useState({
     careerGoals: profile.careerGoals,
     timeframe: profile.timeframe
   });
 
+  useEffect(() => {
+    setFormData({
+      careerGoals: profile.careerGoals,
+      timeframe: profile.timeframe
+    });
+  }, [profile]);
+
   const goalOptions = [
     { value: 'skill-development', label: 'Learn New Skills' },
-    { value: 'career-advancement', label: 'Get Promoted' },
     { value: 'role-transition', label: 'Change Roles' },
     { value: 'leadership-growth', label: 'Develop Leadership' },
-    { value: 'entrepreneurship', label: 'Start a Company' },
-    { value: 'networking', label: 'Build Network' },
-    { value: 'specialization', label: 'Become Expert' },
-    { value: 'salary-increase', label: 'Increase Salary' }
+    { value: 'networking', label: 'Build Network' }
   ];
 
   const handleGoalToggle = (goal: string) => {
@@ -291,12 +277,7 @@ const GoalsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel
       ? formData.careerGoals.filter(g => g !== goal)
       : [...formData.careerGoals, goal as CareerProfile['careerGoals'][0]];
 
-    setFormData(prev => ({
-      ...prev,
-      careerGoals: updatedGoals
-    }));
-
-    // Save immediately
+    setFormData(prev => ({ ...prev, careerGoals: updatedGoals }));
     onUpdate({
       careerGoals: updatedGoals,
       timeframe: formData.timeframe
@@ -305,10 +286,9 @@ const GoalsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel
 
   const handleTimeframeChange = (timeframe: CareerProfile['timeframe']) => {
     setFormData(prev => ({ ...prev, timeframe }));
-    // Save immediately
     onUpdate({
       careerGoals: formData.careerGoals,
-      timeframe: timeframe
+      timeframe
     });
   };
 
@@ -345,20 +325,6 @@ const GoalsEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel
         </select>
       </div>
 
-      <div className="flex justify-end space-x-4 pt-8 border-t border-gray-100 mt-6">
-        <button
-          onClick={onCancel}
-          className="px-6 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
-        >
-          Cancel
-        </button>
-        {isSaving && (
-          <div className="flex items-center px-6 py-2.5 text-blue-600 text-sm font-medium">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-            Saving changes...
-          </div>
-        )}
-      </div>
     </div>
   );
 };
@@ -389,27 +355,41 @@ const budgetOptions: Array<{ value: BudgetRange; label: string }> = [
   { value: 'unlimited', label: 'No budget constraints' }
 ];
 
-const LearningPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
+const LearningPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
   const [formData, setFormData] = useState({
     learningStyle: profile.learningStyle || [],
     availableTime: profile.availableTime || 'moderate',
     budget: profile.budget || 'moderate'
   });
 
-  const toggleLearningStyle = (style: LearningStyle) => {
-    setFormData(prev => {
-      const exists = prev.learningStyle.includes(style);
-      const learningStyle = exists
-        ? prev.learningStyle.filter(s => s !== style)
-        : [...prev.learningStyle, style];
-      onUpdate({ learningStyle });
-      return { ...prev, learningStyle };
+  useEffect(() => {
+    setFormData({
+      learningStyle: profile.learningStyle || [],
+      availableTime: profile.availableTime || 'moderate',
+      budget: profile.budget || 'moderate'
     });
+  }, [profile]);
+
+  const toggleLearningStyle = (style: LearningStyle) => {
+    const exists = formData.learningStyle.includes(style);
+    const learningStyle = exists
+      ? formData.learningStyle.filter(s => s !== style)
+      : [...formData.learningStyle, style];
+
+    setFormData(prev => ({ ...prev, learningStyle }));
+    onUpdate({ learningStyle });
   };
 
   const handleSelectChange = (field: 'availableTime' | 'budget', value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    onUpdate({ [field]: value } as Partial<CareerProfile>);
+    if (field === 'availableTime') {
+      const typedValue = value as AvailableTime;
+      setFormData(prev => ({ ...prev, availableTime: typedValue }));
+      onUpdate({ availableTime: typedValue });
+    } else {
+      const typedValue = value as BudgetRange;
+      setFormData(prev => ({ ...prev, budget: typedValue }));
+      onUpdate({ budget: typedValue });
+    }
   };
 
   return (
@@ -457,20 +437,6 @@ const LearningPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUp
         </select>
       </div>
 
-      <div className="flex justify-end space-x-4 pt-8 border-t border-gray-100 mt-6">
-        <button
-          onClick={onCancel}
-          className="px-6 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
-        >
-          Cancel
-        </button>
-        {isSaving && (
-          <div className="flex items-center px-6 py-2.5 text-blue-600 text-sm font-medium">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-            Saving changes...
-          </div>
-        )}
-      </div>
     </div>
   );
 };
@@ -500,21 +466,28 @@ const eventTypeOptions: Array<{ value: CareerEventType; label: string }> = [
   { value: 'trade-show', label: 'Trade Shows' }
 ];
 
-const NetworkingPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
+const NetworkingPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
   const [formData, setFormData] = useState({
     networkingGoals: profile.networkingGoals || [],
     preferredEventTypes: profile.preferredEventTypes || []
   });
 
-  const toggleCheckbox = <T extends string>(field: 'networkingGoals' | 'preferredEventTypes', value: T) => {
-    setFormData(prev => {
-      const existing = (prev[field] as string[]).includes(value);
-      const nextValues = existing
-        ? (prev[field] as string[]).filter(item => item !== value)
-        : [...(prev[field] as string[]), value];
-      onUpdate({ [field]: nextValues } as Partial<CareerProfile>);
-      return { ...prev, [field]: nextValues };
+  useEffect(() => {
+    setFormData({
+      networkingGoals: profile.networkingGoals || [],
+      preferredEventTypes: profile.preferredEventTypes || []
     });
+  }, [profile]);
+
+  const toggleCheckbox = <T extends string>(field: 'networkingGoals' | 'preferredEventTypes', value: T) => {
+    const currentValues = formData[field] as string[];
+    const existing = currentValues.includes(value);
+    const nextValues = existing
+      ? currentValues.filter(item => item !== value)
+      : [...currentValues, value];
+
+    setFormData(prev => ({ ...prev, [field]: nextValues }));
+    onUpdate({ [field]: nextValues } as Partial<CareerProfile>);
   };
 
   return (
@@ -553,27 +526,17 @@ const NetworkingPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, on
         </div>
       </div>
 
-      <div className="flex justify-end space-x-4 pt-8 border-t border-gray-100 mt-6">
-        <button
-          onClick={onCancel}
-          className="px-6 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
-        >
-          Cancel
-        </button>
-        {isSaving && (
-          <div className="flex items-center px-6 py-2.5 text-blue-600 text-sm font-medium">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-            Saving changes...
-          </div>
-        )}
-      </div>
     </div>
   );
 };
 
 // Team Preferences Editor (basic)
-const TeamPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate, onCancel, isSaving }) => {
+const TeamPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate }) => {
   const [preferredEventTypes, setPreferredEventTypes] = useState(profile.preferredEventTypes || []);
+
+  useEffect(() => {
+    setPreferredEventTypes(profile.preferredEventTypes || []);
+  }, [profile]);
 
   const handleToggle = (value: CareerEventType) => {
     const exists = preferredEventTypes.includes(value);
@@ -604,20 +567,6 @@ const TeamPreferencesEditor: React.FC<SectionEditorProps> = ({ profile, onUpdate
         </div>
       </div>
 
-      <div className="flex justify-end space-x-4 pt-8 border-t border-gray-100 mt-6">
-        <button
-          onClick={onCancel}
-          className="px-6 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 font-medium"
-        >
-          Cancel
-        </button>
-        {isSaving && (
-          <div className="flex items-center px-6 py-2.5 text-blue-600 text-sm font-medium">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-            Saving changes...
-          </div>
-        )}
-      </div>
     </div>
   );
 };
@@ -626,10 +575,21 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
   const { careerProfile, saveCareerProfile, refreshProfile } = useCareerProfile();
   const { showSuccess, showError } = useSnackbar();
   const [isSaving, setIsSaving] = useState(false);
-  const [_pendingUpdates, _setPendingUpdates] = useState<Partial<CareerProfile>>({});
+  const [pendingUpdates, setPendingUpdates] = useState<Partial<CareerProfile>>({});
   
   // Use the profile from the hook instead of the prop
   const currentProfile = careerProfile || _currentProfile;
+
+  useEffect(() => {
+    if (isOpen) {
+      setPendingUpdates({});
+    }
+  }, [isOpen, section, currentProfile]);
+
+  const draftProfile = useMemo(() => {
+    if (!currentProfile) return currentProfile;
+    return { ...currentProfile, ...pendingUpdates } as CareerProfile;
+  }, [currentProfile, pendingUpdates]);
 
   const sectionTitles = {
     role: 'Role Information',
@@ -640,51 +600,56 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
     team: 'Team Preferences'
   };
 
-  const handleUpdate = async (updates: Partial<CareerProfile>) => {
-    // Save immediately instead of using pendingUpdates
-    if (Object.keys(updates).length > 0) {
-      setIsSaving(true);
-      try {
-        const updatedProfile = { ...currentProfile, ...updates };
-        await saveCareerProfile(updatedProfile);
+  const handleUpdate = (updates: Partial<CareerProfile>) => {
+    if (updates && Object.keys(updates).length > 0) {
+      setPendingUpdates(prev => ({ ...prev, ...updates }));
+    }
+  };
 
-        if (onSectionCompleted) {
-          onSectionCompleted(section);
-        }
+  const handleSave = async () => {
+    if (!currentProfile || Object.keys(pendingUpdates).length === 0) {
+      onClose();
+      return;
+    }
 
-        // Force refresh the profile data to ensure UI updates
-        await refreshProfile();
+    setIsSaving(true);
+    try {
+      const updatedProfile = { ...currentProfile, ...pendingUpdates } as CareerProfile;
+      await saveCareerProfile(updatedProfile);
 
-        showSuccess('Career profile updated successfully!');
-
-        // Auto-close modal after successful save (with small delay to show success message)
-        setTimeout(() => {
-          onClose();
-        }, 800);
-      } catch (error) {
-        console.error('Error updating career profile:', error);
-        showError('Failed to update career profile. Please try again.');
-      } finally {
-        setIsSaving(false);
+      if (onSectionCompleted) {
+        onSectionCompleted(section);
       }
+
+      await refreshProfile();
+      showSuccess('Career profile updated successfully!');
+      setPendingUpdates({});
+      onClose();
+    } catch (error) {
+      console.error('Error updating career profile:', error);
+      showError('Failed to update career profile. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
 
   const handleCancel = () => {
-    _setPendingUpdates({});
+    setPendingUpdates({});
     onClose();
   };
 
 
   if (!isOpen || !currentProfile) return null;
 
+  const effectiveProfile = (draftProfile ?? currentProfile) as CareerProfile;
+
+  const hasPendingChanges = Object.keys(pendingUpdates).length > 0;
+
   const renderSectionEditor = () => {
     const editorProps = {
-      profile: currentProfile,
-      onUpdate: handleUpdate,
-      onCancel: handleCancel,
-      isSaving
+      profile: effectiveProfile,
+      onUpdate: handleUpdate
     };
 
     switch (section) {
@@ -728,6 +693,28 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({ isOpen, onClose, sectio
 
         <div className="max-h-[calc(90vh-6rem)] overflow-y-auto px-8 py-6">
           {renderSectionEditor()}
+        </div>
+        <div className="flex items-center justify-end gap-3 border-t border-border-subtle bg-background-secondary/80 px-8 py-5">
+          <button
+            onClick={handleCancel}
+            className="inline-flex items-center rounded-xl border border-border-color bg-background-tertiary px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-all duration-200 hover:bg-background-tertiary/80 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!hasPendingChanges || isSaving}
+            className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving ? (
+              <>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                Saving…
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </button>
         </div>
       </div>
     </div>

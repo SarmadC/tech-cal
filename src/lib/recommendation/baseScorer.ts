@@ -65,14 +65,41 @@ export const ALIGNMENT_WEIGHTS = {
  * Keywords for matching career goals to event content
  */
 export const GOAL_KEYWORDS: Record<string, string[]> = {
-  'skill-development': ['workshop', 'training', 'bootcamp', 'course', 'learn'],
-  'career-advancement': ['leadership', 'management', 'promotion', 'senior'],
-  'role-transition': ['career', 'transition', 'new role', 'switch'],
-  'leadership-growth': ['leadership', 'management', 'team', 'executive'],
-  'entrepreneurship': ['startup', 'founder', 'business', 'entrepreneurship'],
-  'networking': ['networking', 'meetup', 'connections', 'community', 'github'],
-  'specialization': ['expert', 'advanced', 'deep dive', 'mastery'],
-  'generalization': ['full-stack', 'broad', 'overview', 'introduction']
+  'skill-development': ['workshop', 'training', 'bootcamp', 'course', 'tutorial', 'hands-on', 'upskill', 'skill'],
+  'role-transition': [
+    'career transition',
+    'career change',
+    'career pivot',
+    'new role',
+    'role change',
+    'switch careers',
+    'job search',
+    'interview',
+    'resume',
+    'cv'
+  ],
+  'leadership-growth': [
+    'leadership',
+    'manager',
+    'management',
+    'people leader',
+    'executive',
+    'influence',
+    'stakeholder',
+    'coaching',
+    'mentoring'
+  ],
+  'networking': [
+    'networking',
+    'meetup',
+    'mixer',
+    'community',
+    'connect',
+    'connections',
+    'roundtable',
+    'happy hour',
+    'social'
+  ]
 } as const;
 
 /**
@@ -84,19 +111,15 @@ export const LEARNING_STYLE_KEYWORDS: Record<string, string[]> = {
   'interactive': ['panel', 'discussion', 'q&a', 'interactive'],
   'networking': ['networking', 'meetup', 'mixer', 'social', 'github'],
   'case-studies': ['case study', 'real-world', 'example', 'demo'],
-  'peer': ['community', 'peer', 'group', 'collaborative']
+  'peer-learning': ['community', 'peer', 'group', 'collaborative']
 } as const;
 
 function getGoalReason(goal: string): string {
   const goalMap: Record<string, string> = {
     'skill-development': 'Build in-demand skills',
-    'career-advancement': 'Move toward your next role',
     'role-transition': 'Support your role transition',
     'leadership-growth': 'Grow leadership capabilities',
-    'entrepreneurship': 'Fuel your entrepreneurial plans',
-    'networking': 'Build industry relationships',
-    'specialization': 'Deepen your specialization',
-    'generalization': 'Broaden your expertise'
+    'networking': 'Build industry relationships'
   };
 
   return goalMap[goal] ?? `Supports ${goal.replace('-', ' ')}`;
@@ -109,7 +132,7 @@ function getLearningStyleReason(style: string): string {
     'interactive': 'Interactive discussion format',
     'networking': 'Collaborative peer exchange format',
     'case-studies': 'Case-study driven format',
-    'peer': 'Collaborative peer-learning format'
+    'peer-learning': 'Collaborative peer-learning format'
   };
 
   return styleMap[style] ?? `Fits ${style.replace('-', ' ')} learning`;

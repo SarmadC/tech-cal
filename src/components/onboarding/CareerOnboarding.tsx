@@ -358,13 +358,10 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
           <div className="grid grid-cols-2 gap-3">
             {[
               { value: 'skill-development', label: 'Learn New Skills' },
-              { value: 'career-advancement', label: 'Get Promoted' },
               { value: 'role-transition', label: 'Change Roles' },
               { value: 'leadership-growth', label: 'Develop Leadership' },
-              { value: 'entrepreneurship', label: 'Start a Company' },
               { value: 'networking', label: 'Build Network' },
-              { value: 'specialization', label: 'Become Expert' },
-              { value: 'salary-increase', label: 'Increase Salary' }
+              // Aspirational options like promotion or salary increase are paused until we can track them reliably
             ].map((goal) => (
               <label key={goal.value} className="flex items-center space-x-2 cursor-pointer">
                 <input
