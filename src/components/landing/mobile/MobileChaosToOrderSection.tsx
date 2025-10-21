@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import GlassSurface from '@/components/GlassSurface';
 import Image from 'next/image';
 
 export interface MobileChaosToOrderSectionProps {
@@ -90,30 +89,37 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     return Number.isFinite(n) ? Math.round(n) : 32;
   };
 
-  // Measure important layout points
+  // Optimized measurement with reduced DOM queries
   const computeMeasurement = useCallback((): Measurement | null => {
     const container = containerRef.current;
     const bar = daysBarRef.current;
     const grid = gridRef.current;
     if (!container || !bar || !grid) return null;
 
+    // Batch all reads together to avoid layout thrashing
     const containerRect = container.getBoundingClientRect();
     const barRect = bar.getBoundingClientRect();
-    const railY = Math.max(0, barRect.bottom - containerRect.top + 10); // pixels from container top
+    const railY = Math.max(0, barRect.bottom - containerRect.top + 10);
 
     const centers: Record<number, Vec2> = {};
     const cells = Array.from(grid.querySelectorAll<HTMLElement>('.calendar-date'));
-    cells.forEach((cell) => {
-      const day = Number(cell.dataset.day);
+
+    // Batch all getBoundingClientRect calls
+    const cellData = cells.map((cell) => ({
+      day: Number(cell.dataset.day),
+      rect: cell.getBoundingClientRect()
+    }));
+
+    // Calculate centers from batched data
+    cellData.forEach(({ day, rect }) => {
       if (!day) return;
-      const r = cell.getBoundingClientRect();
       centers[day] = {
-        x: r.left - containerRect.left + r.width / 2,
-        y: r.top - containerRect.top + r.height / 2,
+        x: rect.left - containerRect.left + rect.width / 2,
+        y: rect.top - containerRect.top + rect.height / 2,
       };
     });
 
-    // Spawn points below the container, X distributed across width
+    // Spawn points below the container
     const tile = getTileSize();
     const pad = 24;
     const width = containerRect.width - pad * 2 - tile;
@@ -139,31 +145,34 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
 
   const placeCardsInstantly = useCallback(
     (measurement: Measurement) => {
-      cardRefs.current.forEach((card, i) => {
-        if (!card) return;
-        const day = eventDays[i];
-        const center = measurement.centers[day];
-        if (!center) return;
-        card.style.opacity = '1';
-        card.style.transform = `translate3d(${center.x - measurement.tile / 2}px, ${
-          center.y - measurement.tile / 2
-        }px, 0)`;
-        card.style.willChange = 'auto';
+      // Batch all DOM writes together
+      requestAnimationFrame(() => {
+        cardRefs.current.forEach((card, i) => {
+          if (!card) return;
+          const day = eventDays[i];
+          const center = measurement.centers[day];
+          if (!center) return;
+          card.style.opacity = '1';
+          card.style.transform = `translate3d(${center.x - measurement.tile / 2}px, ${
+            center.y - measurement.tile / 2
+          }px, 0)`;
+          card.style.willChange = 'auto';
+        });
+        finalizedRef.current = true;
+        containerRef.current?.classList.add('finalized');
       });
-      finalizedRef.current = true;
-      containerRef.current?.classList.add('finalized');
     },
     [eventDays]
   );
 
-  // FLIP/WAAPI animation
+  // Optimized WAAPI animation with GPU acceleration
   const animateOnce = useCallback(() => {
     if (finalizedRef.current || startedRef.current) return;
     const measurement = measure();
     if (!measurement) return;
     startedRef.current = true;
 
-    const { railY, centers, tile, spawn } = measurement;
+    const { centers, tile, spawn } = measurement;
 
     if (prefersReducedMotionRef.current) {
       placeCardsInstantly(measurement);
@@ -171,28 +180,30 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     }
 
     const animations: Animation[] = [];
-    const totalDelay = 50; // snappier stagger
+    const totalDelay = 40; // Faster stagger for mobile
 
     cardRefs.current.forEach((card, i) => {
       if (!card) return;
       const day = eventDays[i];
       const center = centers[day];
       if (!center) return;
+
       const spawnT = `translate3d(${spawn[i].x - tile / 2}px, ${spawn[i].y - tile / 2}px, 0)`;
-      const railT = `translate3d(${spawn[i].x - tile / 2}px, ${railY - tile / 2}px, 0)`;
       const finalT = `translate3d(${center.x - tile / 2}px, ${center.y - tile / 2}px, 0)`;
 
+      // Force GPU layer creation
       card.style.opacity = '1';
-      card.style.willChange = 'transform, opacity';
+      card.style.willChange = 'transform';
+      card.style.transform = 'translateZ(0)';
 
+      // Simplified 2-keyframe animation for better performance
       const a = card.animate(
         [
           { transform: spawnT, opacity: 0.9 },
-          { transform: railT, opacity: 1, offset: 0.5 },
           { transform: finalT, opacity: 1 },
         ],
         {
-          duration: 1200,
+          duration: 700, // Reduced from 1200ms for snappier mobile performance
           easing: EASE,
           delay: i * totalDelay,
           fill: 'forwards',
@@ -203,11 +214,13 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
 
     // Finalize after animations settle
     Promise.all(animations.map((a) => a.finished.catch(() => undefined))).then(() => {
-      const latestMeasurement = measure(true) ?? measurement;
-      cardRefs.current.forEach((card) => card?.getAnimations().forEach((an) => an.cancel()));
-      if (latestMeasurement) {
-        placeCardsInstantly(latestMeasurement);
-      }
+      requestAnimationFrame(() => {
+        const latestMeasurement = measure(true) ?? measurement;
+        cardRefs.current.forEach((card) => card?.getAnimations().forEach((an) => an.cancel()));
+        if (latestMeasurement) {
+          placeCardsInstantly(latestMeasurement);
+        }
+      });
     });
   }, [eventDays, measure, placeCardsInstantly]);
 
@@ -262,29 +275,41 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     return () => observer.disconnect();
   }, []);
 
-  // After finalized, keep placement correct on resize/orientation
+  // Optimized resize handler with debouncing
   useEffect(() => {
+    let resizeTimeout: NodeJS.Timeout;
+
     const onResize = () => {
       if (!finalizedRef.current) return;
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
-      rafRef.current = window.requestAnimationFrame(() => {
-        const m = measure(true);
-        if (!m) return;
-        const { centers, tile } = m;
-        cardRefs.current.forEach((card, i) => {
-          if (!card) return;
-          const day = eventDays[i];
-          const c = centers[day];
-          if (!c) return;
-          card.style.transform = `translate3d(${c.x - tile / 2}px, ${c.y - tile / 2}px, 0)`;
+
+      // Debounce resize events
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current);
+        }
+        rafRef.current = window.requestAnimationFrame(() => {
+          const m = measure(true);
+          if (!m) return;
+          const { centers, tile } = m;
+
+          // Batch all transform updates
+          cardRefs.current.forEach((card, i) => {
+            if (!card) return;
+            const day = eventDays[i];
+            const c = centers[day];
+            if (!c) return;
+            card.style.transform = `translate3d(${c.x - tile / 2}px, ${c.y - tile / 2}px, 0)`;
+          });
         });
-      });
+      }, 150); // Debounce 150ms
     };
-    window.addEventListener('resize', onResize);
-    window.addEventListener('orientationchange', onResize);
+
+    window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener('orientationchange', onResize, { passive: true });
+
     return () => {
+      clearTimeout(resizeTimeout);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
     };
@@ -311,26 +336,8 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
         </div>
 
         <div ref={containerRef} className="mobile-animation-container">
-          <GlassSurface
-            className="mobile-calendar-grid"
-            width="100%"
-            height="100%"
-            borderRadius={14}
-            brightness={isDarkTheme ? 64 : 58}
-            opacity={0.95}
-            blur={isDarkTheme ? 14 : 18}
-            displace={10}
-            backgroundOpacity={isDarkTheme ? 0.16 : 0.42}
-            saturation={1.2}
-            distortionScale={-220}
-            borderWidth={0.08}
-            redOffset={4}
-            greenOffset={12}
-            blueOffset={20}
-            mixBlendMode={isDarkTheme ? 'screen' : 'overlay'}
-            contentClassName="calendar-surface-content"
-            contentStyle={{ padding: 0, display: 'block' }}
-          >
+          {/* Lightweight frosted glass replacement - theme adaptive */}
+          <div className="mobile-calendar-grid frosted-calendar">
             <div className="calendar-header">
               <div ref={daysBarRef} className="calendar-days">
                 <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
@@ -354,7 +361,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
                 );
               })}
             </div>
-          </GlassSurface>
+          </div>
 
           <div className="mobile-event-cards">
             {eventData.map((e, i) => (
