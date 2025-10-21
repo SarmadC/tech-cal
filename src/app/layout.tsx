@@ -4,7 +4,8 @@
 // Static routes (landing, pricing, legal, blog) will be statically generated
 
 import type { Metadata } from "next";
-import { Inter, DM_Sans } from "next/font/google";
+// Temporarily use system fonts for build - Google Fonts unavailable in this environment
+// import { Inter, DM_Sans } from "next/font/google";
 
 import "./styles/globals.css";
 import './styles/premium-animation.css';
@@ -29,8 +30,12 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { SnackbarProvider } from '@/contexts/SnackbarContext';
 
 
-const inter = Inter({ subsets: ["latin"] });
-const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
+// const inter = Inter({ subsets: ["latin"] });
+// const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
+
+// Use system fonts as fallback
+const inter = { className: "" };
+const dmSans = { variable: "" };
 
 // Refined Metadata for a more professional look
 export const metadata: Metadata = {
