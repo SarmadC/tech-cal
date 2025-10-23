@@ -605,6 +605,84 @@
     }
 }
 
+/* Short height screens at desktop widths (e.g., 1272x564) */
+@media (max-height: 650px) and (min-width: 1025px) {
+    .footer-container {
+        margin-top: var(--space-16);
+    }
+
+    .footer-main {
+        padding: 60px 32px;
+    }
+
+    .footer-content {
+        gap: 40px;
+    }
+
+    .footer-intro-title {
+        font-size: clamp(1.75rem, 4vw, 2.5rem);
+        margin-bottom: 28px;
+    }
+
+    .footer-cta-section {
+        padding: 24px 28px;
+        margin-bottom: 28px;
+    }
+
+    .cta-title {
+        font-size: 1.25rem;
+        margin-bottom: 10px;
+    }
+
+    .cta-subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 24px;
+    }
+
+    .cta-button {
+        padding: 14px 28px;
+        font-size: 0.95rem;
+    }
+
+    .footer-bottom {
+        padding: 24px 32px;
+    }
+
+    .footer-logo-bg {
+        font-size: clamp(10rem, 12vw, 12rem);
+    }
+}
+
+/* Very short height screens at desktop widths */
+@media (max-height: 580px) and (min-width: 1025px) {
+    .footer-main {
+        padding: 48px 28px;
+    }
+
+    .footer-intro-title {
+        font-size: clamp(1.5rem, 3.5vw, 2rem);
+        margin-bottom: 20px;
+    }
+
+    .footer-cta-section {
+        padding: 20px 24px;
+        margin-bottom: 20px;
+    }
+
+    .cta-title {
+        font-size: 1.1rem;
+    }
+
+    .cta-button {
+        padding: 12px 24px;
+        font-size: 0.9rem;
+    }
+
+    .footer-bottom {
+        padding: 20px 28px;
+    }
+}
+
 /* Accessibility improvements */
 @media (prefers-reduced-motion: reduce) {
     .footer-container *,

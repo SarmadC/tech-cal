@@ -545,31 +545,98 @@
         min-height: 100vh;
         padding: var(--space-4) 0;
     }
-    
+
     .landing-container .hero-content {
         padding: 0 var(--space-4);
     }
-    
+
     .landing-container .hero .hero-title {
         font-size: clamp(1.5rem, 4vw, 2.5rem) !important;
         margin-bottom: var(--space-3) !important;
     }
-    
+
     .landing-container .hero-subtitle {
         font-size: clamp(0.9rem, 2vw, 1.1rem);
         margin-bottom: var(--space-6);
     }
-    
+
     .landing-container .hero-cta {
         flex-direction: row;
         max-width: 100%;
         gap: var(--space-3);
     }
-    
+
     .landing-container .hero-cta button,
     .landing-container .hero-cta a {
         min-width: auto;
         flex: 1;
+    }
+}
+
+/* Short height screens (like small laptops: 1272x564, etc.) */
+@media (max-height: 650px) and (min-width: 1025px) {
+    .landing-container .hero {
+        min-height: 100vh;
+        padding: var(--space-6) 0;
+    }
+
+    .landing-container .hero-content {
+        padding: 0 var(--space-6);
+        max-width: 700px;
+    }
+
+    .landing-container .hero .hero-title {
+        font-size: clamp(2rem, 5vw, 3rem) !important;
+        margin-bottom: var(--space-4) !important;
+        line-height: 1.15 !important;
+    }
+
+    .landing-container .hero-subtitle {
+        font-size: clamp(0.95rem, 2vw, 1.1rem);
+        margin-bottom: var(--space-8);
+        line-height: 1.5;
+    }
+
+    .landing-container .hero-cta {
+        flex-direction: row;
+        max-width: 100%;
+        gap: var(--space-3);
+    }
+
+    .landing-container .hero-cta button,
+    .landing-container .hero-cta a {
+        min-width: 160px;
+        max-width: 240px;
+        height: 44px;
+        font-size: 0.95rem;
+    }
+
+    /* Reduce orbit hole radius for better fit */
+    .landing-container .hero .hero-orbit-layer {
+        --orbit-hole-radius: clamp(12rem, 22vh, 18rem);
+    }
+}
+
+/* Very short height screens (< 580px) at desktop widths */
+@media (max-height: 580px) and (min-width: 1025px) {
+    .landing-container .hero-content {
+        max-width: 650px;
+    }
+
+    .landing-container .hero .hero-title {
+        font-size: clamp(1.75rem, 4.5vw, 2.5rem) !important;
+        margin-bottom: var(--space-3) !important;
+    }
+
+    .landing-container .hero-subtitle {
+        font-size: clamp(0.9rem, 1.8vw, 1rem);
+        margin-bottom: var(--space-6);
+    }
+
+    .landing-container .hero-cta button,
+    .landing-container .hero-cta a {
+        height: 40px;
+        font-size: 0.9rem;
     }
 }
 
