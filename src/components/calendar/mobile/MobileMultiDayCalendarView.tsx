@@ -5,7 +5,7 @@ import { Event, EventType, AppProfile } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
 // Career impact components removed - using inline implementation
-import MobileEventPreview from './MobileEventPreview';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 
 export interface MobileMultiDayCalendarViewProps {
@@ -28,7 +28,7 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
   className = ''
 }) => {
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
 
   // Generate array of days to display (current week)
   const displayDays = useMemo(() => {
@@ -81,16 +81,16 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
   // Event preview handlers
   const handleEventTap = (event: Event) => {
     setPreviewEvent(event);
-    setIsPreviewVisible(true);
+    _setIsPreviewVisible(true);
   };
 
   const handleClosePreview = () => {
-    setIsPreviewVisible(false);
+    _setIsPreviewVisible(false);
     setPreviewEvent(null);
   };
 
-  const handleTrackEvent = (_event: Event) => {
-    // Event tracking is handled by the MobileEventPreview component
+  const _handleTrackEvent = (_event: Event) => {
+    // Event tracking is handled by the MobileEventDetailPanel component
     // Event tracked successfully
   };
 
@@ -243,13 +243,11 @@ const MobileMultiDayCalendarView: React.FC<MobileMultiDayCalendarViewProps> = ({
         </div>
       </div>
 
-      {/* Mobile Event Preview */}
+      {/* Mobile Event Detail Panel */}
       {previewEvent && (
-        <MobileEventPreview
+        <MobileEventDetailPanel
           event={previewEvent}
-          isVisible={isPreviewVisible}
           onClose={handleClosePreview}
-          onTrackEvent={handleTrackEvent}
           categories={_categories}
         />
       )}

@@ -4,7 +4,7 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import './mobile-calendar.css';
 import { MaterialIcon } from '@/components/ui/Icon';
-import EventPreviewCard from '../EventPreviewCard';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 import { getWeekDays } from '@/utils/eventViewUtils';
 import { processEventsForWeekView } from '@/utils/multiDayEventUtils';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
@@ -38,9 +38,7 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
 }) => {
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-  const [hideTimer, setHideTimer] = useState<NodeJS.Timeout | null>(null);
+  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -165,29 +163,10 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
 
   // Event handlers
   const handleEventClick = useCallback((event: Event | MultiDayEventInstance) => {
-    setIsPreviewVisible(false);
+    setPreviewEvent(event);
+        _setIsPreviewVisible(true);
     onEventSelect?.(event);
   }, [onEventSelect]);
-
-  const handleEventHover = useCallback((event: Event | MultiDayEventInstance, mouseEvent: React.MouseEvent) => {
-    if (hideTimer) {
-      clearTimeout(hideTimer);
-      setHideTimer(null);
-    }
-
-    const rect = mouseEvent.currentTarget.getBoundingClientRect();
-    setPreviewEvent(event);
-    setPreviewPosition({ x: rect.right + 10, y: rect.top });
-    setIsPreviewVisible(true);
-  }, [hideTimer]);
-
-  const handleEventLeave = useCallback(() => {
-    const timer = setTimeout(() => {
-      setIsPreviewVisible(false);
-      setPreviewEvent(null);
-    }, 300);
-    setHideTimer(timer);
-  }, []);
 
   // Format event time for mobile display
   const formatEventTime = useCallback((event: Event | MultiDayEventInstance) => {
@@ -304,10 +283,8 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
             {currentDayEvents.map((event, index) => (
               <div 
                 key={`${event.id}-${index}`}
-                className="mobile-event-card mobile-event-border"
+                className="mobile-event-card mobile-event-border event-card-enhanced-depth"
                 onClick={() => handleEventClick(event)}
-                onMouseEnter={(e) => handleEventHover(event, e)}
-                onMouseLeave={handleEventLeave}
                 style={{
                   '--event-color': event.color || 'var(--accent-primary)',
                   '--category-bg': (event as Event | MultiDayEventInstance).color || 'var(--background-secondary)'
@@ -347,13 +324,15 @@ const MobileCalendarWeekView: React.FC<MobileCalendarWeekViewProps> = ({
         )}
       </div>
 
-      {/* Event Preview */}
+      {/* Event Detail Panel */}
       {previewEvent && (
-        <EventPreviewCard
+        <MobileEventDetailPanel
           event={previewEvent}
-          isVisible={isPreviewVisible}
-          position={previewPosition}
-          onClose={() => setIsPreviewVisible(false)}
+          onClose={() => {
+            _setIsPreviewVisible(false);
+            setPreviewEvent(null);
+          }}
+          categories={_categories}
         />
       )}
     </div>

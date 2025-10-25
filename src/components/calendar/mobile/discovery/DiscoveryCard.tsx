@@ -212,7 +212,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       className="w-full"
     >
       <div className={cn(
-        "discovery-card-glass cursor-pointer transition-all duration-300 hover:shadow-lg relative bento-card-medium",
+        "discovery-card-glass event-card-enhanced-depth cursor-pointer transition-all duration-300 hover:shadow-lg relative bento-card-medium",
         variant === 'featured' && "md:col-span-2",
         variant === 'compact' && "flex-row items-center gap-4",
         className
@@ -222,14 +222,68 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       <div className="pb-0 relative flex flex-col space-y-1.5 p-6">
          {/* Event Header Content - Redesigned for better layout */}
          <div className="w-full space-y-4">
-           {/* Event title on its own line */}
-           <div className="w-full">
+           {/* Event title and logo on same line */}
+           <div className="w-full flex items-start justify-between gap-3">
              <h3
-               className="font-semibold leading-tight tracking-tight text-foreground-primary text-xl"
+               className="font-semibold leading-tight tracking-tight text-foreground-primary text-xl flex-1"
                title={event.title}
              >
                {event.title}
              </h3>
+             
+             {/* Logo positioned in top-right corner - Mobile only */}
+             <div className="flex-shrink-0 md:hidden">
+               <div className="rounded-lg overflow-visible flex items-center justify-center w-8 h-8">
+                 {(() => {
+                   const imageSizes = 32;
+                   const logoSizes = 20;
+                   
+                   if (event.eventImageUrl) {
+                     return (
+                       <Image
+                         src={event.eventImageUrl}
+                         alt={`${event.title} event image`}
+                         width={imageSizes}
+                         height={imageSizes}
+                         className="w-full h-full object-cover"
+                         onError={(e) => {
+                           e.currentTarget.style.display = 'none';
+                         }}
+                       />
+                     );
+                   } else if (event.organization?.logo) {
+                     return (
+                       <div className="w-full h-full flex items-center justify-center">
+                         <Image
+                           src={event.organization.logo}
+                           alt={`${event.organization.name} logo`}
+                           width={logoSizes}
+                           height={logoSizes}
+                           className="object-contain"
+                           onError={(e) => {
+                             e.currentTarget.style.display = 'none';
+                             // Show fallback color block if logo fails
+                             const parent = e.currentTarget.parentElement;
+                             if (parent) {
+                               parent.style.backgroundColor = categoryColor;
+                             }
+                           }}
+                         />
+                       </div>
+                     );
+                   } else {
+                     return (
+                       <div 
+                         className="w-full h-full flex items-center justify-center"
+                         style={{ backgroundColor: categoryColor }}
+                       >
+                         {/* Category color block fallback */}
+                       </div>
+                     );
+                   }
+                 })()}
+               </div>
+             </div>
            </div>
            
            {/* Career Impact and Learn More button on second line */}
@@ -368,59 +422,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
             </div>
           )}
 
-          {/* Logo positioned in bottom-right corner within content area - Mobile only */}
-          <div className="flex justify-end mt-2 md:hidden">
-            <div className="rounded-lg overflow-visible flex items-center justify-center w-8 h-8">
-              {(() => {
-                const imageSizes = 32;
-                const logoSizes = 20;
-                
-                if (event.eventImageUrl) {
-                  return (
-                    <Image
-                      src={event.eventImageUrl}
-                      alt={`${event.title} event image`}
-                      width={imageSizes}
-                      height={imageSizes}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  );
-                } else if (event.organization?.logo) {
-                  return (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Image
-                        src={event.organization.logo}
-                        alt={`${event.organization.name} logo`}
-                        width={logoSizes}
-                        height={logoSizes}
-                        className="object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          // Show fallback color block if logo fails
-                          const parent = e.currentTarget.parentElement;
-                          if (parent) {
-                            parent.style.backgroundColor = categoryColor;
-                          }
-                        }}
-                      />
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div 
-                      className="w-full h-full flex items-center justify-center"
-                      style={{ backgroundColor: categoryColor }}
-                    >
-                      {/* Category color block fallback */}
-                    </div>
-                  );
-                }
-              })()}
-            </div>
-          </div>
         </div>
       </div>
 

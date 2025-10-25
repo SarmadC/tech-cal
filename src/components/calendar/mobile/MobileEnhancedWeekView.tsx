@@ -4,7 +4,7 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { Event, EventType, AppProfile } from '@/types';
 import { MaterialIcon } from '@/components/ui/Icon';
-import MobileEventPreview from './MobileEventPreview';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { getSpeakerAvatarUrl } from '@/services/avatarService';
 import { AvatarCircles } from '@/components/ui/avatar-circles';
@@ -32,7 +32,7 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
   const [speakerCounts, setSpeakerCounts] = useState<Record<string, number>>({});
   const [fullSpeakerData, setFullSpeakerData] = useState<Record<string, Array<{ id: string; name: string; photoUrl?: string }>>>({});
 
@@ -122,12 +122,12 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
   // Event preview handlers
   const handleEventTap = useCallback((event: Event) => {
     setPreviewEvent(event);
-    setIsPreviewVisible(true);
+    _setIsPreviewVisible(true);
     onEventSelect?.(event);
   }, [onEventSelect]);
 
   const handleClosePreview = useCallback(() => {
-    setIsPreviewVisible(false);
+    _setIsPreviewVisible(false);
     setPreviewEvent(null);
   }, []);
 
@@ -458,13 +458,11 @@ const MobileEnhancedWeekView: React.FC<MobileEnhancedWeekViewProps> = ({
         )}
       </div>
 
-      {/* Mobile Event Preview */}
+      {/* Mobile Event Detail Panel */}
       {previewEvent && (
-        <MobileEventPreview
+        <MobileEventDetailPanel
           event={previewEvent}
-          isVisible={isPreviewVisible}
           onClose={handleClosePreview}
-          onTrackEvent={() => {}}
           categories={categories}
         />
       )}

@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import './mobile-calendar.css';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
 // Career impact components removed - using inline implementation
-import EventPreviewCard from '../EventPreviewCard';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, DayViewSkeleton } from '@/components/ui/SkeletonLoader';
@@ -38,9 +38,7 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
   isLoading = false,
 }) => {
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-  const [hideTimer, setHideTimer] = useState<NodeJS.Timeout | null>(null);
+  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
   const [_isTransitioning, _setIsTransitioning] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -136,38 +134,20 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
 
   // Event handlers
   const handleEventClick = useCallback((event: Event) => {
-    setIsPreviewVisible(false);
+    setPreviewEvent(event);
+    _setIsPreviewVisible(true);
     onEventSelect?.(event);
   }, [onEventSelect]);
 
-  const handleEventHover = useCallback((event: Event, mouseEvent: React.MouseEvent) => {
-    if (hideTimer) {
-      clearTimeout(hideTimer);
-      setHideTimer(null);
-    }
-
-    const rect = mouseEvent.currentTarget.getBoundingClientRect();
-    setPreviewEvent(event);
-    setPreviewPosition({ x: rect.right + 10, y: rect.top });
-    setIsPreviewVisible(true);
-  }, [hideTimer]);
-
-  const handleEventLeave = useCallback(() => {
-    const timer = setTimeout(() => {
-      setIsPreviewVisible(false);
-      setPreviewEvent(null);
-    }, 300);
-    setHideTimer(timer);
+  const _handleEventHover = useCallback((_event: Event, _mouseEvent: React.MouseEvent) => {
+    // Event hover handling removed - using click-only interaction
   }, []);
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-      }
-    };
-  }, [hideTimer]);
+  const _handleEventLeave = useCallback(() => {
+    // Event leave handling removed - using click-only interaction
+  }, []);
+
+  // Cleanup timer on unmount - removed since we no longer use timers
 
   // Format event duration
   const getEventDuration = useCallback((event: Event) => {
@@ -296,8 +276,8 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
                         key={`${event.id}-${index}`}
                         className="mobile-timeline-event mobile-event-border"
                         onClick={() => handleEventClick(event)}
-                        onMouseEnter={(e) => handleEventHover(event, e)}
-                        onMouseLeave={handleEventLeave}
+                        onMouseEnter={(e) => _handleEventHover(event, e)}
+                        onMouseLeave={_handleEventLeave}
                         style={{
                           '--event-color': event.color || 'var(--accent-primary)',
                         } as React.CSSProperties}
@@ -366,13 +346,15 @@ const MobileCalendarDayView: React.FC<MobileCalendarDayViewProps> = ({
         )}
       </div>
 
-      {/* Event Preview */}
+      {/* Event Detail Panel */}
       {previewEvent && (
-        <EventPreviewCard
+        <MobileEventDetailPanel
           event={previewEvent}
-          isVisible={isPreviewVisible}
-          position={previewPosition}
-          onClose={() => setIsPreviewVisible(false)}
+          onClose={() => {
+            _setIsPreviewVisible(false);
+            setPreviewEvent(null);
+          }}
+          categories={_categories}
         />
       )}
     </div>

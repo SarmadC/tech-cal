@@ -183,21 +183,30 @@
   font-size: 0.5625rem !important; /* 9px - very small for mobile */
 }
 
-/* Logo sizing for mobile - now inside content area */
-.mobile-discovery-view .discovery-card .flex.justify-end.mt-2 > div {
-  width: 2rem !important; /* Bigger logo for mobile */
+/* Logo sizing for mobile - now in title row */
+.mobile-discovery-view .discovery-card .flex.items-start.justify-between.gap-3 > div:last-child {
+  width: 2rem !important; /* 32px logo for mobile */
   height: 2rem !important;
   min-width: 2rem !important;
   max-width: 2rem !important;
   overflow: hidden !important;
   border-radius: 0.25rem !important;
+  flex-shrink: 0 !important; /* Prevent logo from shrinking */
 }
 
-.mobile-discovery-view .discovery-card .flex.justify-end.mt-2 > div img {
-  width: 2rem !important;
-  height: 2rem !important;
-  max-width: 2rem !important;
-  max-height: 2rem !important;
+.mobile-discovery-view .discovery-card .flex.items-start.justify-between.gap-3 > div:last-child > div {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.mobile-discovery-view .discovery-card .flex.items-start.justify-between.gap-3 > div:last-child img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
   object-fit: contain !important;
 }
 
@@ -273,19 +282,12 @@
     padding-bottom: 0.5rem !important;
   }
 
-  /* Adjust logo size for very small screens */
-  .mobile-discovery-view .discovery-card > div:last-child > div {
-    width: 1.25rem !important;
-    height: 1.25rem !important;
-    min-width: 1.25rem !important;
-    max-width: 1.25rem !important;
-  }
-
-  .mobile-discovery-view .discovery-card > div:last-child > div img {
-    width: 1.25rem !important;
-    height: 1.25rem !important;
-    max-width: 1.25rem !important;
-    max-height: 1.25rem !important;
+  /* Adjust logo size for very small screens - now in title row */
+  .mobile-discovery-view .discovery-card .flex.items-start.justify-between.gap-3 > div:last-child {
+    width: 1.5rem !important; /* 24px for very small screens */
+    height: 1.5rem !important;
+    min-width: 1.5rem !important;
+    max-width: 1.5rem !important;
   }
 }
 
@@ -317,30 +319,12 @@
 /* OPTIMIZED FROSTED GLASS DISCOVERY CARDS       */
 /* ============================================== */
 
-/* Discovery Card Frosted Glass Effect */
+/* Import shared event card depth styles */
+@import '../shared-event-card-styles.css';
+
+/* Discovery Card with Enhanced Depth - now uses shared styles */
 .discovery-card-glass {
-  /* Light theme - subtle frosted white */
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.70) 0%,
-    rgba(248, 250, 252, 0.65) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 16px;
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  /* Minimal blur for performance */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  /* GPU acceleration */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  will-change: auto;
-  transition: all 0.3s ease;
-  /* Add vertical margin for spacing between cards */
-  margin-bottom: 1rem !important;
+  /* Inherits all depth styles from .event-card-enhanced-depth */
 }
 
 .discovery-card-glass:last-child {
@@ -361,45 +345,19 @@
   margin-bottom: 1rem !important;
 }
 
-.discovery-card-glass:hover {
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  transform: translateY(-2px) translateZ(0);
-}
-
-/* Dark theme discovery cards */
-.dark .discovery-card-glass {
-  background: linear-gradient(
-    135deg,
-    rgba(30, 30, 35, 0.75) 0%,
-    rgba(20, 20, 25, 0.70) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.dark .discovery-card-glass:hover {
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-/* Mobile performance optimization */
+/* Mobile performance optimization - removed backdrop-filter for solid depth effect */
 @media (max-width: 768px) {
   .discovery-card-glass {
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 
-/* Small mobile devices */
+/* Small mobile devices - removed backdrop-filter for solid depth effect */
 @media (max-width: 480px) {
   .discovery-card-glass {
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 

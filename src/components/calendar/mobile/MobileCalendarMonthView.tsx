@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { EventClickArg } from '@/types/fullcalendar';
 import './mobile-calendar.css';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
 // Career impact components removed - using inline implementation
-import EventPreviewCard from '../EventPreviewCard';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useScrollCollapse } from '@/hooks/useScrollCollapse';
@@ -49,10 +49,8 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
   isLoading = false,
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
-  const [previewEvent, _setPreviewEvent] = useState<Event | null>(null);
-  const [previewPosition, _setPreviewPosition] = useState({ x: 0, y: 0 });
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-  const [hideTimer, _setHideTimer] = useState<NodeJS.Timeout | null>(null);
+  const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
+  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
   const isCalendarCollapsed = propIsCalendarCollapsed;
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -162,7 +160,8 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
 
   const handleEventClick = useCallback((event: Event, e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsPreviewVisible(false);
+    setPreviewEvent(event);
+        _setIsPreviewVisible(true);
     onEventSelect?.(event);
   }, [onEventSelect]);
 
@@ -187,14 +186,6 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
   }, []);
 
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-      }
-    };
-  }, [hideTimer]);
 
   // Format time for mobile display
 
@@ -324,13 +315,15 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
         </div>
       </div>
 
-      {/* Event Preview */}
+      {/* Event Detail Panel */}
       {previewEvent && (
-        <EventPreviewCard
+        <MobileEventDetailPanel
           event={previewEvent}
-          isVisible={isPreviewVisible}
-          position={previewPosition}
-          onClose={() => setIsPreviewVisible(false)}
+          onClose={() => {
+            _setIsPreviewVisible(false);
+            setPreviewEvent(null);
+          }}
+          categories={_categories}
         />
       )}
     </div>

@@ -5,7 +5,7 @@ import { Event, EventType, AppProfile, TrackedEvent } from '@/types';
 import './mobile-calendar.css';
 import { Calendar } from '@phosphor-icons/react';
 import TodayTaskCard from './components/TodayTaskCard';
-import MobileEventPreview from './MobileEventPreview';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 import { 
   ForYouSection
 } from './discovery';
@@ -46,7 +46,7 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
   const _upcomingEvents = events.filter(event => new Date(event.startTime) > now);
   // Mobile today view time and events processed
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
   // Filter events for today - not used in current implementation
   const _todayEvents = useMemo(() => {
     const today = new Date(currentDate);
@@ -96,13 +96,13 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
   // Event preview handlers
   const handleEventTap = (event: Event) => {
     setPreviewEvent(event);
-    setIsPreviewVisible(true);
+    _setIsPreviewVisible(true);
     // Also call the parent's onEventSelect if provided
     onEventSelect?.(event);
   };
 
   const handleClosePreview = () => {
-    setIsPreviewVisible(false);
+    _setIsPreviewVisible(false);
     setPreviewEvent(null);
   };
 
@@ -165,13 +165,11 @@ const MobileTodayView: React.FC<MobileTodayViewProps> = ({
         </div>
       )}
 
-      {/* Mobile Event Preview */}
+      {/* Mobile Event Detail Panel */}
       {previewEvent && (
-        <MobileEventPreview
+        <MobileEventDetailPanel
           event={previewEvent}
-          isVisible={isPreviewVisible}
           onClose={handleClosePreview}
-          onTrackEvent={handleTrackEvent}
           categories={_categories}
         />
       )}
