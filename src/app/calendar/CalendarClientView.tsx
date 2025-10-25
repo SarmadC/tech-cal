@@ -427,14 +427,20 @@ export default function CalendarClientView({
                                         categories={initialCategories}
                                     />
                                 ) : (
-                                    <div
-                                        className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
+                                    <div 
+                                        className="fixed inset-0 z-40"
+                                        onClick={actions.closeEventDetail}
                                     >
-                                        <EventDetailPanelDynamic
-                                            event={state.selectedEvent}
-                                            onClose={actions.closeEventDetail}
-                                            categories={initialCategories}
-                                        />
+                                        <div 
+                                            className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <EventDetailPanelDynamic
+                                                event={state.selectedEvent}
+                                                onClose={actions.closeEventDetail}
+                                                categories={initialCategories}
+                                            />
+                                        </div>
                                     </div>
                                 )}
                             </>
