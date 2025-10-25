@@ -6,14 +6,12 @@ import './mobile-calendar.css';
 import { Event, EventType, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { useSmartFilters } from '@/hooks/useSmartFilters';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
-import MobileTopNavigation, { MobileViewType } from './MobileTopNavigation';
-import MobileTodayView from './MobileTodayView';
-import MobileEnhancedWeekView from './MobileEnhancedWeekView';
-import MobileMonthView from './MobileMonthView';
+import MobileTopNavigation from './MobileTopNavigation';
+import MobileCalendarMonthView from './MobileCalendarMonthView';
 import MobileSearchFilter from '../MobileSearchFilter';
 import MobileViewEnhancements from './MobileViewEnhancements';
 import MobileAdvancedGestures from './MobileAdvancedGestures';
-import './mobile-enhanced-week.css';
+import MobileNavbar from '@/components/common/MobileNavbar';
 
 export interface MobileCalendarAppProps {
   events: Event[];
@@ -34,7 +32,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
   profile,
   trackedEvents = [],
   onEventSelect,
-  onEventTrack,
+  onEventTrack: _onEventTrack,
   onDateChange,
   className = ''
 }) => {
@@ -62,55 +60,37 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
     activeFilterCount
   } = useSmartFilters(enrichedEvents, profile);
 
-  // Get mobile view from URL, default to 'today'
-  const getMobileViewFromURL = useCallback((): MobileViewType => {
-    const mobileView = searchParams.get('mobileView');
-    return (mobileView === 'calendar' || mobileView === 'month' || mobileView === 'today') ? mobileView : 'today';
-  }, [searchParams]);
-
-  const [currentView, setCurrentView] = useState<MobileViewType>(getMobileViewFromURL());
+  // Default to month view only
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [isCalendarCollapsed, setIsCalendarCollapsed] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Debug logging
   // Mobile calendar app state logged
   const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
   const [localCurrentDate, setLocalCurrentDate] = useState(currentDate);
 
-  // Sync with URL changes
-  useEffect(() => {
-    setCurrentView(getMobileViewFromURL());
-  }, [searchParams, getMobileViewFromURL]);
+  // No view switching needed - always month view
 
   // Sync local date with prop changes
   useEffect(() => {
     setLocalCurrentDate(currentDate);
   }, [currentDate]);
 
-  const handleViewChange = (view: MobileViewType) => {
-    setCurrentView(view);
+  const handleToggleMonthPicker = () => {
+    setIsMonthPickerOpen(!isMonthPickerOpen);
+  };
 
-    // Update URL with mobile view parameter
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('mobileView', view);
-
-    // When switching to week view ('calendar'), reset to today's date
-    if (view === 'calendar') {
-      const today = new Date();
-      setLocalCurrentDate(today);
-      onDateChange?.(today);
-      params.set('date', today.toISOString().split('T')[0]);
-    } else {
-      // Preserve existing date parameter for other views
-      const dateParam = searchParams.get('date');
-      if (dateParam) {
-        params.set('date', dateParam);
-      }
-    }
-
-    router.push(`/calendar?${params.toString()}`, { scroll: false });
+  const handleToggleCalendarCollapse = () => {
+    setIsCalendarCollapsed(!isCalendarCollapsed);
   };
 
   const handleToggleSearchFilter = () => {
     setIsSearchFilterOpen(!isSearchFilterOpen);
+  };
+
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
   };
 
   // Navigation handlers
@@ -119,36 +99,21 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
     setLocalCurrentDate(date);
     onDateChange?.(date);
 
-    // Auto-switch to month view only when date is selected via search, not from within week view
-    if (fromSearch && currentView !== 'month') {
-      console.log('MobileCalendarApp: Switching to month view (from search)');
-      setCurrentView('month');
-
-      // Update URL to reflect the view change
+    // Update URL with selected date
+    if (fromSearch) {
       const params = new URLSearchParams(searchParams.toString());
-      params.set('mobileView', 'month');
-
-      // Add the selected date to URL
       const dateParam = date.toISOString().split('T')[0];
       params.set('date', dateParam);
-
       router.push(`/calendar?${params.toString()}`, { scroll: false });
     }
-  }, [onDateChange, currentView, searchParams, router]);
+  }, [onDateChange, searchParams, router]);
 
   const handleNavigate = useCallback((direction: 'prev' | 'next') => {
     const newDate = new Date(localCurrentDate);
-    
-    if (currentView === 'today') {
-      // For today view, navigate by days
-      newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
-    } else {
-      // For calendar view, navigate by weeks
-      newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
-    }
-    
+    // Always navigate by months in month view
+    newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
     handleDateChange(newDate);
-  }, [localCurrentDate, currentView, handleDateChange]);
+  }, [localCurrentDate, handleDateChange]);
 
   const handleGoToToday = useCallback(() => {
     const today = new Date();
@@ -170,9 +135,12 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
   return (
     <div className={`mobile-calendar-app ${className}`}>
       <MobileTopNavigation
-        currentView={currentView}
-        onViewChange={handleViewChange}
+        currentDate={localCurrentDate}
+        onToggleMonthPicker={handleToggleMonthPicker}
         onToggleSearchFilter={handleToggleSearchFilter}
+        onToggleCalendarCollapse={handleToggleCalendarCollapse}
+        onToggleSidebar={handleToggleSidebar}
+        isCalendarCollapsed={isCalendarCollapsed}
         activeFilterCount={activeFilterCount}
       />
       
@@ -200,12 +168,12 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
       >
         <div 
           id="mobile-calendar-content"
-          role="tabpanel"
-          aria-labelledby={currentView === 'today' ? 'today-tab' : 'calendar-tab'}
+          role="main"
+          aria-label="Mobile calendar month view"
         >
           {/* View Enhancements */}
           <MobileViewEnhancements
-            currentView={currentView === 'month' ? 'calendar' : currentView}
+            currentView="month"
             currentDate={localCurrentDate}
             events={filteredEvents}
             categories={categories}
@@ -214,39 +182,17 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
             onEventSelect={onEventSelect}
           />
 
-          {/* Main Content */}
-          {currentView === 'today' ? (
-            <MobileTodayView
-              events={filteredEvents}
-              currentDate={localCurrentDate}
-              categories={categories}
-              profile={profile}
-              trackedEvents={enrichedEvents.filter(e => e.isTracked)}
-              onEventSelect={onEventSelect}
-              onTrackEvent={onEventTrack || (async () => {
-                console.warn('Event tracking not implemented in parent component');
-              })}
-              showDiscoveryMode={true}
-            />
-          ) : currentView === 'month' ? (
-            <MobileMonthView
-              events={filteredEvents}
-              initialDate={localCurrentDate}
-              categories={categories}
-              profile={profile}
-              onEventSelect={onEventSelect}
-              onDateChange={(date) => handleDateChange(date, false)}
-            />
-          ) : (
-            <MobileEnhancedWeekView
-              events={filteredEvents}
-              currentDate={localCurrentDate}
-              categories={categories}
-              profile={profile}
-              onEventSelect={onEventSelect}
-              onDateChange={(date) => handleDateChange(date, false)}
-            />
-          )}
+          {/* Main Content - Month View Only */}
+          <MobileCalendarMonthView
+            events={filteredEvents}
+            initialDate={localCurrentDate}
+            categories={categories}
+            profile={profile}
+            onEventSelect={onEventSelect}
+            onDateChange={(date) => handleDateChange(date, false)}
+            onToggleCalendarCollapse={handleToggleCalendarCollapse}
+            isCalendarCollapsed={isCalendarCollapsed}
+          />
         </div>
       </MobileAdvancedGestures>
 
@@ -277,6 +223,13 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
           // Selected suggestion handled
         }}
         onDateChange={(date) => handleDateChange(date, true)}
+      />
+
+      {/* Mobile Sidebar */}
+      <MobileNavbar 
+        showHamburgerButton={false} 
+        isOpen={isSidebarOpen}
+        onToggle={handleToggleSidebar}
       />
 
     </div>

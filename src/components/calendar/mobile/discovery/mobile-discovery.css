@@ -20,26 +20,31 @@
   padding-top: 5rem; /* Add space for fixed navbar */
 }
 
+/* Add extra margin to first section to create gap below navbar */
+.mobile-discovery-stack > .mobile-discovery-section-wrapper:first-child {
+  margin-top: 2rem;
+}
+
 .mobile-discovery-section-wrapper {
   width: 100%;
 }
 
 /* Mobile-specific section styles */
 .mobile-for-you .discovery-cards-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1rem !important;
 }
 
 .mobile-explore-more .discovery-cards-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1rem !important;
 }
 
 /* Ensure proper spacing between all discovery cards in mobile view */
 .mobile-discovery-view .discovery-card {
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 1rem !important;
 }
 
 .mobile-discovery-view .discovery-card:last-child {
@@ -50,7 +55,7 @@
 .mobile-discovery-view .bento-card-large,
 .mobile-discovery-view .bento-card-medium,
 .mobile-discovery-view .bento-card-small {
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 1rem !important;
 }
 
 .mobile-discovery-view .bento-card-large:last-child,
@@ -69,8 +74,8 @@
 .mobile-discovery-view .bento-card-medium,
 .mobile-discovery-view .bento-card-small,
 .mobile-discovery-view .discovery-card {
-  min-height: 180px !important;
-  max-height: 200px;
+  min-height: auto !important;
+  max-height: none;
   overflow: visible !important; /* Allow tooltips to show */
   position: relative !important; /* Ensure proper positioning context */
 }
@@ -87,19 +92,19 @@
 
 /* Remove all padding from CardHeader on mobile - target the exact class combination */
 .mobile-discovery-view .discovery-card .flex.flex-col.space-y-1\.5.p-6.pb-0.relative {
-  padding: 0 !important; /* Remove all padding */
+  padding: 1rem !important; /* Reasonable padding on mobile */
 }
 
 /* Alternative selectors for CardHeader */
 .mobile-discovery-view .discovery-card [class*="CardHeader"],
 .mobile-discovery-view .discovery-card .flex.flex-col.space-y-1\.5,
 .mobile-discovery-view .discovery-card .p-6 {
-  padding: 0 !important; /* Remove all padding */
+  padding: 1rem !important; /* Reasonable padding on mobile */
 }
 
-/* Add minimal padding to the content wrapper inside CardHeader */
+/* Add padding to the content wrapper inside CardHeader */
 .mobile-discovery-view .discovery-card [class*="CardHeader"] .w-full {
-  padding: 0.5rem !important; /* Minimal padding for content */
+  padding: 0 !important; /* No extra padding inside content */
 }
 
 /* Logo is now inside content area - no special positioning needed */
@@ -110,15 +115,18 @@
   line-height: 1.2 !important;
   margin-bottom: 0.125rem !important;
   font-weight: 600;
+  white-space: normal !important; /* Allow wrapping */
+  word-break: break-word !important;
+  overflow: visible !important; /* Allow text to show */
 }
 
 /* Reduce spacing between metadata elements - target the space-y-4 div */
 .mobile-discovery-view .discovery-card [class*="CardHeader"] .space-y-4 {
-  gap: 0.25rem !important; /* Much tighter spacing */
+  gap: 0.5rem !important; /* Reasonable spacing for readability */
 }
 
 .mobile-discovery-view .discovery-card [class*="CardHeader"] .space-y-4 > div:not(:first-child) {
-  margin-top: 0.125rem !important; /* Minimal spacing between elements */
+  margin-top: 0.25rem !important; /* Minimal spacing between elements */
 }
 
 /* Smaller icons on mobile */
@@ -177,19 +185,19 @@
 
 /* Logo sizing for mobile - now inside content area */
 .mobile-discovery-view .discovery-card .flex.justify-end.mt-2 > div {
-  width: 1.5rem !important; /* Slightly bigger logo for mobile */
-  height: 1.5rem !important;
-  min-width: 1.5rem !important;
-  max-width: 1.5rem !important;
+  width: 2rem !important; /* Bigger logo for mobile */
+  height: 2rem !important;
+  min-width: 2rem !important;
+  max-width: 2rem !important;
   overflow: hidden !important;
   border-radius: 0.25rem !important;
 }
 
 .mobile-discovery-view .discovery-card .flex.justify-end.mt-2 > div img {
-  width: 1.5rem !important;
-  height: 1.5rem !important;
-  max-width: 1.5rem !important;
-  max-height: 1.5rem !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  max-width: 2rem !important;
+  max-height: 2rem !important;
   object-fit: contain !important;
 }
 
@@ -210,8 +218,11 @@
 }
 
 .mobile-discovery-view .section-icon {
-  width: 1.5rem;
-  height: 1.5rem;
+  display: none; /* Hide section icons on mobile */
+}
+
+.mobile-discovery-view .view-all-button {
+  display: none; /* Hide view all button on mobile */
 }
 
 .mobile-discovery-view .section-title {
@@ -226,40 +237,40 @@
 
 /* Optimize attendee count display */
 .mobile-discovery-view .discovery-card span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
 }
 
 /* Location text truncation on mobile - target metadata spans */
 .mobile-discovery-view .discovery-card [class*="CardHeader"] .flex.items-center.gap-4 span,
 .mobile-discovery-view .discovery-card [class*="CardHeader"] .flex.items-center.gap-1 span {
-  max-width: 8rem !important; /* Even shorter on mobile */
+  max-width: none !important; /* Allow full width on mobile */
 }
 
 /* Responsive adjustments for very small screens */
 @media (max-width: 390px) {
   .mobile-discovery-stack {
-    padding: 0.5rem;
+    padding: 0.75rem;
   }
 
   .mobile-discovery-view .discovery-card h3 {
-    font-size: 0.75rem !important; /* 12px - even smaller on tiny screens */
+    font-size: 0.8125rem !important; /* 13px - slightly smaller on tiny screens */
   }
 
   .mobile-discovery-view .discovery-card span,
   .mobile-discovery-view .discovery-card p {
-    font-size: 0.625rem !important; /* 10px - very small on tiny screens */
+    font-size: 0.6875rem !important; /* 11px - slightly smaller on tiny screens */
   }
 
   .mobile-discovery-view .discovery-card > div:last-child {
-    padding: 0.375rem 0.5rem !important;
+    padding: 0.5rem !important;
     overflow: visible !important; /* Ensure logos are visible on small screens */
   }
 
   .mobile-discovery-view .discovery-card [class*="CardHeader"] {
-    padding: 0.5rem !important;
-    padding-bottom: 0.375rem !important;
+    padding: 0.75rem !important;
+    padding-bottom: 0.5rem !important;
   }
 
   /* Adjust logo size for very small screens */
@@ -328,6 +339,26 @@
   -webkit-backface-visibility: hidden;
   will-change: auto;
   transition: all 0.3s ease;
+  /* Add vertical margin for spacing between cards */
+  margin-bottom: 1rem !important;
+}
+
+.discovery-card-glass:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Mobile-specific spacing - force with higher specificity */
+.mobile-discovery-view .discovery-card-glass {
+  margin-bottom: 1rem !important;
+}
+
+.mobile-discovery-view .discovery-card-glass:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Force spacing on card wrapper divs */
+.discovery-cards-container > div:not(:last-child) {
+  margin-bottom: 1rem !important;
 }
 
 .discovery-card-glass:hover {

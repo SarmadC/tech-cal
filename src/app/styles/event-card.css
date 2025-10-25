@@ -51,55 +51,66 @@
     border-radius: 6px;
     transition: all var(--transition-normal);
     padding: var(--card-pad);
-    margin: 1px;
+    margin: 12px;
     display: flex;
     flex-direction: column;
     gap: 2px;
     position: relative;
     cursor: pointer;
-    overflow: hidden;
+    overflow: visible;
     z-index: 5;
     align-items: flex-start;
     justify-content: flex-start;
 }
 
-/* Light mode glass effect for all event cards */
+/* Light mode - clean, simple background cards */
 .light .event-card {
-    background: rgb(215 215 215 / 15%);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .light .event-card:hover {
-    background: rgb(215 215 215 / 25%);
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Add inner highlights using pseudo elements so specificity matches view rules */
+/* Remove pseudo-element effects for light mode */
 .light .event-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7),
-                inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+    display: none;
 }
 
 .light .event-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.15),
-                0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+    display: none;
 }
 
-/* Dark mode uses neutral dark cards (no category background) */
+/* Dark mode - clean, simple dark cards with subtle border */
 .dark .event-card {
-    background: var(--card-dark-bg);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark .event-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Dark mode text color adjustments for subtle dark background */
+.dark .event-card .event-title {
+    color: #ffffff;
+}
+
+.dark .event-card .event-time,
+.dark .event-card .event-duration {
+    color: #e0e0e0;
+}
+
+.dark .event-card .event-location,
+.dark .event-card .event-organizer {
+    color: #ffffff;
 }
 
 /* Discovery Card Override - Now handled by GlassSurface component */
@@ -786,21 +797,19 @@ div.event-detail-glass-sidebar {
     transform: translateY(-1px) !important;
 }
 
-/* Add subtle gradient overlay for depth (light mode only) */
-.light .event-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-    pointer-events: none;
-    z-index: 1;
+/* Light mode text color adjustments for white background */
+.light .event-card .event-title {
+    color: var(--category-title-color, #1e293b);
 }
 
-.light .event-card:hover::before {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+.light .event-card .event-time,
+.light .event-card .event-duration {
+    color: var(--text-secondary-on-pastel, #475569);
+}
+
+.light .event-card .event-location,
+.light .event-card .event-organizer {
+    color: var(--text-on-pastel, #1e293b);
 }
 
 /* Event Card Header */
@@ -838,7 +847,7 @@ div.event-detail-glass-sidebar {
     right: var(--card-pad);
     display: flex;
     gap: 3px;
-    z-index: 10;
+    z-index: 20;
 }
 
 .event-card .day-dot {
@@ -1079,7 +1088,7 @@ div.event-detail-glass-sidebar {
     position: absolute;
     top: var(--card-pad);
     right: var(--card-pad);
-    z-index: 10;
+    z-index: 20;
     /* Center the arrow icon within its container */
     display: flex;
     align-items: center;
@@ -1096,11 +1105,11 @@ div.event-detail-glass-sidebar {
     position: absolute;
     bottom: var(--card-pad);
     left: var(--card-pad);
-    z-index: 10;
+    z-index: 20;
     width: 18px;
     height: 18px;
     border-radius: var(--radius-sm);
-    overflow: hidden;
+    overflow: visible;
     background: transparent;
     display: flex;
     align-items: center;

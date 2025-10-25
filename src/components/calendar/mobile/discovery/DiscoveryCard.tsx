@@ -209,7 +209,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
           onClick?.();
         }
       }}
-      className="w-full h-full"
+      className="w-full"
     >
       <div className={cn(
         "discovery-card-glass cursor-pointer transition-all duration-300 hover:shadow-lg relative bento-card-medium",
@@ -224,8 +224,8 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
          <div className="w-full space-y-4">
            {/* Event title on its own line */}
            <div className="w-full">
-             <h3 
-               className="font-semibold leading-tight tracking-tight text-foreground-primary text-xl truncate"
+             <h3
+               className="font-semibold leading-tight tracking-tight text-foreground-primary text-xl"
                title={event.title}
              >
                {event.title}
@@ -370,7 +370,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
 
           {/* Logo positioned in bottom-right corner within content area - Mobile only */}
           <div className="flex justify-end mt-2 md:hidden">
-            <div className="rounded-lg overflow-hidden flex items-center justify-center w-8 h-8">
+            <div className="rounded-lg overflow-visible flex items-center justify-center w-8 h-8">
               {(() => {
                 const imageSizes = 32;
                 const logoSizes = 20;
@@ -427,7 +427,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
 
       {/* Event Image or Category Color Block - Moved to bottom - Hidden on mobile */}
       <div className="px-6 pb-6 hidden md:block">
-        <div className="rounded-lg overflow-hidden flex items-center justify-start w-16 h-16">
+        <div className="rounded-lg overflow-visible flex items-center justify-start w-16 h-16">
           {(() => {
             const imageSizes = 64;
             const logoSizes = 40;

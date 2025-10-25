@@ -457,7 +457,7 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
             disabled={isTransitioning}
             aria-label="Previous month"
           >
-            <CaretLeft size={20} />
+            <CaretLeft size={16} />
           </button>
           
           <div className="month-title-modern">
@@ -470,7 +470,7 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
             disabled={isTransitioning}
             aria-label="Next month"
           >
-            <CaretRight size={20} />
+            <CaretRight size={16} />
           </button>
         </div>
       </div>

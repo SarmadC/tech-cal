@@ -4,62 +4,53 @@ import React from 'react';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Badge } from '@/components/ui/badge';
 
-export type MobileViewType = 'today' | 'calendar' | 'month';
-
 export interface MobileTopNavigationProps {
-  currentView: MobileViewType;
-  onViewChange: (view: MobileViewType) => void;
+  currentDate: Date;
+  onToggleMonthPicker?: () => void;
   onToggleSearchFilter?: () => void;
+  onToggleCalendarCollapse?: () => void;
+  onToggleSidebar?: () => void;
+  isCalendarCollapsed?: boolean;
   activeFilterCount?: number;
   className?: string;
 }
 
 const MobileTopNavigation: React.FC<MobileTopNavigationProps> = ({
-  currentView,
-  onViewChange,
+  currentDate,
+  onToggleMonthPicker: _onToggleMonthPicker,
   onToggleSearchFilter,
+  onToggleCalendarCollapse,
+  onToggleSidebar,
+  isCalendarCollapsed = false,
   activeFilterCount = 0,
   className = ''
 }) => {
+  const monthName = currentDate.toLocaleDateString('en-US', { month: 'long' });
+
   return (
-    <div className={`mobile-top-navigation ${className}`} role="navigation" aria-label="Mobile calendar navigation">
-      <div className="mobile-nav-content">
-        <div className="nav-tabs" role="tablist" aria-label="Calendar view selector">
-          <button 
-            className={`nav-tab ${currentView === 'today' ? 'active' : ''}`}
-            onClick={() => onViewChange('today')}
-            role="tab"
-            aria-selected={currentView === 'today'}
-            aria-controls="mobile-calendar-content"
-            id="today-tab"
-          >
-            Discover
-          </button>
-          <button 
-            className={`nav-tab ${currentView === 'calendar' ? 'active' : ''}`}
-            onClick={() => onViewChange('calendar')}
-            role="tab"
-            aria-selected={currentView === 'calendar'}
-            aria-controls="mobile-calendar-content"
-            id="calendar-tab"
-          >
-            Week
-          </button>
-          <button 
-            className={`nav-tab ${currentView === 'month' ? 'active' : ''}`}
-            onClick={() => onViewChange('month')}
-            role="tab"
-            aria-selected={currentView === 'month'}
-            aria-controls="mobile-calendar-content"
-            id="month-tab"
-          >
-            Month
-          </button>
-        </div>
-        
-        {/* Search Filter Button */}
-        {onToggleSearchFilter && (
-          <div className="nav-actions">
+    <div className={`mobile-top-navigation-new ${className}`} role="navigation" aria-label="Mobile calendar navigation">
+      <div className="mobile-nav-content-new">
+        {/* Month Dropdown - Far Left */}
+        <button
+          onClick={onToggleCalendarCollapse}
+          className={`mobile-month-dropdown ${isCalendarCollapsed ? 'collapsed' : ''}`}
+          aria-label={isCalendarCollapsed ? "Expand calendar" : "Collapse calendar"}
+        >
+          <span className="month-text">{monthName}</span>
+          <MaterialIcon 
+            name="expand-more" 
+            size={20} 
+            className="month-chevron"
+          />
+        </button>
+
+        {/* Spacer to push right elements to the right */}
+        <div className="mobile-nav-spacer"></div>
+
+        {/* Right side buttons */}
+        <div className="mobile-nav-right-buttons">
+          {/* Search Filter Button */}
+          {onToggleSearchFilter && (
             <button
               onClick={onToggleSearchFilter}
               className="mobile-search-filter-button"
@@ -72,8 +63,19 @@ const MobileTopNavigation: React.FC<MobileTopNavigationProps> = ({
                 </Badge>
               )}
             </button>
-          </div>
-        )}
+          )}
+
+          {/* Hamburger Menu Button */}
+          {onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className="mobile-hamburger-button"
+              aria-label="Open sidebar menu"
+            >
+              <MaterialIcon name="menu" size={24} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

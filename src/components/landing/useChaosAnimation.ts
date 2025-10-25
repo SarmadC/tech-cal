@@ -254,6 +254,8 @@ export function useScrollAnimation(
     positions: AllCardPositions,
     scrollProgressRef: MutableRefObject<number>
 ) {
+    const hasAnimatedRef = useRef(false);
+
     useEffect(() => {
         if (!sectionRef.current || !containerRef.current || !domCacheRef.current.cards || positions.order.length === 0) return;
 
@@ -318,32 +320,82 @@ export function useScrollAnimation(
             });
         };
 
-        const textTl = gsap.timeline({ paused: true })
-            .to([chaosTitle, chaosSubtitle], { opacity: 0, duration: 0.3 }, 0)
-            .set([orderTitle, orderSubtitle], { display: 'block' }, 0.5)
-            .to([orderTitle, orderSubtitle], { opacity: 1, duration: 0.3 }, 0.5);
-
-        const calendarFrame = container?.querySelector('.calendar-frame');
-        const frameTl = gsap.timeline({ paused: true })
-            .to(calendarFrame, { opacity: 1, duration: 0.5 }, 0.5);
-
-        const scrollTrigger = ScrollTrigger.create({
-            trigger: sectionRef.current,
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: 0.1,
-            onUpdate: (self) => {
-                scrollProgressRef.current = self.progress;
-                updateCards(self.progress);
-                textTl.progress(self.progress);
-                frameTl.progress(self.progress);
+        // Create master timeline for smooth 2-second animation
+        const masterTimeline = gsap.timeline({
+            duration: 2,
+            ease: "power2.inOut",
+            paused: true,
+            onUpdate: () => {
+                const progress = masterTimeline.progress();
+                scrollProgressRef.current = progress;
+                updateCards(progress);
             },
+            onComplete: () => {
+                // Re-enable scrolling after animation completes
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
+            }
         });
 
+        // Set up text animations
+        masterTimeline
+            .to([chaosTitle, chaosSubtitle], { opacity: 0, duration: 0.3 }, 0)
+            .set([orderTitle, orderSubtitle], { display: 'block' }, 1)
+            .to([orderTitle, orderSubtitle], { opacity: 1, duration: 0.3 }, 1);
+
+        // Set up calendar frame animation
+        const calendarFrame = container?.querySelector('.calendar-frame');
+        if (calendarFrame) {
+            masterTimeline.to(calendarFrame, { opacity: 1, duration: 0.5 }, 1);
+        }
+
+        // IntersectionObserver to trigger animation when section is mostly in view
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && !hasAnimatedRef.current) {
+                        hasAnimatedRef.current = true;
+                        // Disable scrolling during animation
+                        document.body.style.overflow = 'hidden';
+                        document.documentElement.style.overflow = 'hidden';
+                        masterTimeline.play();
+                    }
+                });
+            },
+            {
+                threshold: 0.8, // Trigger when 80% of section is visible
+                rootMargin: '0px'
+            }
+        );
+
+        observer.observe(sectionRef.current);
+
+        // Check if section is already mostly visible and trigger animation immediately
+        const checkInitialVisibility = () => {
+            if (sectionRef.current) {
+                const rect = sectionRef.current.getBoundingClientRect();
+                const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+                const visibilityRatio = visibleHeight / rect.height;
+                const isMostlyVisible = visibilityRatio >= 0.8;
+                
+                if (isMostlyVisible && !hasAnimatedRef.current) {
+                    hasAnimatedRef.current = true;
+                    document.body.style.overflow = 'hidden';
+                    document.documentElement.style.overflow = 'hidden';
+                    masterTimeline.play();
+                }
+            }
+        };
+
+        // Check after a short delay to ensure DOM is ready
+        setTimeout(checkInitialVisibility, 100);
+
         return () => {
-            scrollTrigger.kill();
-            textTl.kill();
-            frameTl.kill();
+            observer.disconnect();
+            masterTimeline.kill();
+            // Ensure scrolling is re-enabled on cleanup
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
         };
     }, [sectionRef, containerRef, domCacheRef, positions, scrollProgressRef]);
 }

@@ -26,7 +26,7 @@ export function Footer() {
                             <h3 className="cta-title">Get personalized event recommendations</h3>
                             <Link 
                                 href="/signup" 
-                                className={`cta-button ${isMobile ? 'mobile-optimized' : ''}`}
+                                className={`cta-button animate-shimmer motion-reduce:animate-none ${isMobile ? 'mobile-optimized' : ''}`}
                                 aria-label="Start your free account to access tech events calendar"
                             >
                                 <span>Start Free Account</span>
