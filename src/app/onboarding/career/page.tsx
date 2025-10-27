@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
+import { useAuth } from '@/contexts';
+import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
+import { ProfileService } from '@/services/profileService';
 import { CareerOnboardingData, CareerOptionalSectionStatus } from '@/types/career';
 import CareerOnboarding from '@/components/onboarding/CareerOnboarding';
 import OnboardingErrorBoundary from '@/components/onboarding/OnboardingErrorBoundary';
@@ -14,8 +17,11 @@ export default function CareerOnboardingPage() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { showSuccess, showError, showInfo } = useSnackbar();
+  const { user, profile } = useAuth();
+  const { supabase, isReady } = useSupabaseSafe();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   
   const {
     hasCompletedOnboarding,
@@ -31,6 +37,54 @@ export default function CareerOnboardingPage() {
       showInfo('Complete your profile to get personalized event recommendations!');
     }
   }, [searchParams, hasCompletedOnboarding, showInfo]);
+
+  // Create profile if missing
+  useEffect(() => {
+    const createProfileIfMissing = async () => {
+      if (!user?.id || !supabase || !isReady || profile || isCreatingProfile) {
+        return;
+      }
+
+      // Check if profile exists
+      try {
+        await ProfileService.getProfile(user.id, supabase);
+        // Profile exists, no need to create
+        return;
+      } catch (error) {
+        // Profile doesn't exist, create it
+        if (error instanceof Error && error.name === 'ProfileNotFoundError') {
+          console.log('[CareerOnboarding] Profile not found, creating new profile for user:', user.id);
+          setIsCreatingProfile(true);
+          try {
+            const newProfile = await ProfileService.createProfile({
+              id: user.id,
+              fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+              avatarUrl: user.user_metadata?.avatar_url || null,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              preferences: {}
+            }, supabase);
+            
+            console.log('[CareerOnboarding] Profile created successfully:', newProfile);
+            
+            // Refresh auth context to get the new profile
+            window.dispatchEvent(new CustomEvent('profile-updated'));
+            showSuccess('Profile created successfully!');
+          } catch (createError) {
+            console.error('[CareerOnboarding] Error creating profile:', createError);
+            showError('Failed to create profile. Please refresh the page.');
+          } finally {
+            setIsCreatingProfile(false);
+          }
+        } else {
+          // Some other error occurred
+          console.error('[CareerOnboarding] Unexpected error checking profile:', error);
+          showError('An error occurred while loading your profile. Please refresh the page.');
+        }
+      }
+    };
+
+    createProfileIfMissing();
+  }, [user?.id, user?.email, user?.user_metadata?.full_name, user?.user_metadata?.avatar_url, supabase, isReady, profile, isCreatingProfile, showSuccess, showError]);
 
   // Redirect if user has already completed onboarding
   React.useEffect(() => {
@@ -79,12 +133,71 @@ export default function CareerOnboardingPage() {
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
+    // Ensure profile exists before skipping
+    if (user?.id && supabase && !profile) {
+      try {
+        await ProfileService.createProfile({
+          id: user.id,
+          fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          avatarUrl: user.user_metadata?.avatar_url || null,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          preferences: {
+            careerOnboardingCompleted: true,
+            careerOnboardingCompletedAt: new Date().toISOString(),
+            careerOnboardingSkipped: true
+          }
+        }, supabase);
+        
+        // Refresh auth context to get the new profile
+        window.dispatchEvent(new CustomEvent('profile-updated'));
+      } catch (error) {
+        console.error('[CareerOnboarding] Error creating profile on skip:', error);
+        showError('Failed to set up your profile. Please try again.');
+        return;
+      }
+    } else if (user?.id && supabase && profile) {
+      // If profile exists but user is skipping, mark onboarding as completed
+      try {
+        await ProfileService.updateProfile(user.id, {
+          preferences: {
+            ...(profile.preferences as Record<string, unknown> || {}),
+            careerOnboardingCompleted: true,
+            careerOnboardingCompletedAt: new Date().toISOString(),
+            careerOnboardingSkipped: true
+          }
+        }, supabase);
+        
+        // Refresh auth context to get the updated profile
+        window.dispatchEvent(new CustomEvent('profile-updated'));
+      } catch (error) {
+        console.error('[CareerOnboarding] Error updating profile on skip:', error);
+        showError('Failed to update your profile. Please try again.');
+        return;
+      }
+    }
+    
     showInfo('You can complete your career profile later in settings');
     router.push('/discover');
   };
 
-  // User authentication is now handled by the useCareerProfile hook
+  // Show loading state while creating profile or loading career profile
+  if (isCreatingProfile || (isLoading && !profile)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">
+                {isCreatingProfile ? 'Setting up your profile...' : 'Loading...'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4">

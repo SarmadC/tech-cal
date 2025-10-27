@@ -6,7 +6,7 @@ import { EventClickArg } from '@/types/fullcalendar';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import { CaretLeft, CaretRight, ArrowClockwise } from '@phosphor-icons/react';
 import { MaterialIcon } from '@/components/ui/Icon';
-import EventPreviewCard from '../EventPreviewCard';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { SkeletonLoader, MonthViewSkeleton } from '@/components/ui/SkeletonLoader';
@@ -58,9 +58,7 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-  const [hideTimer, setHideTimer] = useState<NodeJS.Timeout | null>(null);
+  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(initialDate);
   const [speakerCounts, setSpeakerCounts] = useState<Record<string, number>>({});
@@ -334,29 +332,10 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
 
   const handleEventClick = useCallback((event: Event, e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsPreviewVisible(false);
+    _setIsPreviewVisible(false);
     onEventSelect?.(event);
   }, [onEventSelect]);
 
-  const _handleEventHover = useCallback((event: Event, mouseEvent: React.MouseEvent) => {
-    if (hideTimer) {
-      clearTimeout(hideTimer);
-      setHideTimer(null);
-    }
-
-    const rect = mouseEvent.currentTarget.getBoundingClientRect();
-    setPreviewEvent(event);
-    setPreviewPosition({ x: rect.right + 10, y: rect.top });
-    setIsPreviewVisible(true);
-  }, [hideTimer]);
-
-  const _handleEventLeave = useCallback(() => {
-    const timer = setTimeout(() => {
-      setIsPreviewVisible(false);
-      setPreviewEvent(null);
-    }, 300);
-    setHideTimer(timer);
-  }, []);
 
   // Format time for mobile display
   const formatEventTime = useCallback((event: Event) => {
@@ -457,7 +436,7 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
             disabled={isTransitioning}
             aria-label="Previous month"
           >
-            <CaretLeft size={20} />
+            <CaretLeft size={16} />
           </button>
           
           <div className="month-title-modern">
@@ -470,7 +449,7 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
             disabled={isTransitioning}
             aria-label="Next month"
           >
-            <CaretRight size={20} />
+            <CaretRight size={16} />
           </button>
         </div>
       </div>
@@ -693,13 +672,15 @@ const MobileMonthView: React.FC<MobileMonthViewProps> = ({
         )}
       </div>
 
-      {/* Event Preview */}
+      {/* Event Detail Panel */}
       {previewEvent && (
-        <EventPreviewCard
+        <MobileEventDetailPanel
           event={previewEvent}
-          isVisible={isPreviewVisible}
-          position={previewPosition}
-          onClose={() => setIsPreviewVisible(false)}
+          onClose={() => {
+            _setIsPreviewVisible(false);
+            setPreviewEvent(null);
+          }}
+          categories={categories}
         />
       )}
     </div>

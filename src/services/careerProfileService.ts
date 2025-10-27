@@ -676,7 +676,17 @@ export class CareerProfileService {
         .eq('id', userId)
         .single();
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        if (fetchError.code === 'PGRST116') {
+          // No profile found - user is new, nothing to migrate
+          return false;
+        }
+        throw fetchError;
+      }
+
+      if (!profile) {
+        return false; // No profile found
+      }
 
       const preferences = profile?.preferences as Record<string, unknown>;
       const careerProfile = preferences?.careerProfile as CareerProfile;

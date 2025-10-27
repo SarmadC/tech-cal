@@ -25,6 +25,7 @@ import {
   SignOutIcon,
   ChartBarIcon,
   CaretDownIcon,
+  CaretUpIcon,
   CreditCardIcon,
   TrendUpIcon,
   GaugeIcon,
@@ -73,6 +74,7 @@ export type IconName =
   | 'logout'
   | 'bar-chart'
   | 'expand-more'
+  | 'expand-less'
   | 'credit-card'
   | 'trending-up'
   | 'dashboard'
@@ -127,6 +129,7 @@ const iconMap = {
   'logout': SignOutIcon,
   'bar-chart': ChartBarIcon,
   'expand-more': CaretDownIcon,
+  'expand-less': CaretUpIcon,
   'credit-card': CreditCardIcon,
   'trending-up': TrendUpIcon,
   'dashboard': GaugeIcon,

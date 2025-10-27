@@ -21,6 +21,8 @@ interface UntrackEventRpcResult {
     message?: string;
     error?: string;
     was_tracked?: boolean;
+    external_calendar_event_id?: string;
+    external_provider?: string;
 }
 
 export class UserEventService {
@@ -171,7 +173,7 @@ export class UserEventService {
         userId: string,
         eventId: string,
         supabaseClient: SupabaseClientType
-    ): Promise<void> {
+    ): Promise<{ external_calendar_event_id?: string; external_provider?: string }> {
         try {
             const { data, error } = await supabaseClient.rpc('untrack_event_and_update_profile', {
                 p_user_id: userId,
@@ -199,8 +201,15 @@ export class UserEventService {
             console.log('Event untracked successfully:', {
                 userId,
                 eventId,
-                wasTracked: result.was_tracked
+                wasTracked: result.was_tracked,
+                externalCalendarEventId: result.external_calendar_event_id,
+                externalProvider: result.external_provider
             });
+
+            return {
+                external_calendar_event_id: result.external_calendar_event_id,
+                external_provider: result.external_provider
+            };
         } catch (error) {
             console.error('Error untracking event:', error);
             Sentry.captureException(error, { extra: { function: 'untrackEvent', userId, eventId } });

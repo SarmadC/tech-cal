@@ -37,7 +37,7 @@ const securityHeaders = [
         script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.sentry-cdn.com;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
         style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
-        img-src 'self' data: blob: https: https://cdn.jsdelivr.net https://mddgtexrnnlctttbcpsy.supabase.co https://upload.wikimedia.org https://logo.clearbit.com;
+        img-src 'self' data: blob: https: https://cdn.jsdelivr.net https://mddgtexrnnlctttbcpsy.supabase.co https://upload.wikimedia.org https://logo.clearbit.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com;
         font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
         connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co;
         frame-ancestors 'none';
@@ -66,6 +66,8 @@ const nextConfig: NextConfig = {
       'upload.wikimedia.org', // Wikipedia SVG logos (transparent)
       'cdn.freebiesupply.com', // High-quality transparent logos
       'logo.clearbit.com', // Clearbit logo API (fallback)
+      'lh3.googleusercontent.com', // Google profile images
+      'avatars.githubusercontent.com', // GitHub profile images
     ],
   },
   experimental: {

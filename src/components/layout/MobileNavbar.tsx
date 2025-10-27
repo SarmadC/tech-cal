@@ -5,7 +5,6 @@ import { List, X } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { ThemeLogo } from '@/components/ui/ThemeLogo';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import GlassSurface from '@/components/GlassSurface';
 
 type NavItem = {
   name: string;
@@ -153,24 +152,8 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
               }
             }}
           >
-            <GlassSurface
-              width="100%"
-              height="100%"
-              borderRadius={0}
-              brightness={60}
-              opacity={0.9}
-              blur={15}
-              displace={10}
-              backgroundOpacity={0.1}
-              saturation={1.2}
-              distortionScale={-200}
-              redOffset={5}
-              greenOffset={15}
-              blueOffset={25}
-              mixBlendMode="screen"
-              className="h-full"
-              contentStyle={{ padding: 0 }}
-            >
+            {/* Lightweight frosted glass menu panel */}
+            <div className="mobile-nav-glass-panel h-full">
               <div className="flex flex-col h-full w-full">
               {/* Menu Header */}
               <div className="flex items-center justify-between w-full pl-4 border-b border-gray-200/50 dark:border-gray-700/40">
@@ -216,7 +199,7 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
                 </button>
               </div>
               </div>
-            </GlassSurface>
+            </div>
           </div>
         </div>
       )}

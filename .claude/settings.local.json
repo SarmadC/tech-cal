@@ -51,7 +51,9 @@
       "Bash(npm test:*)",
       "Bash(npx playwright test:*)",
       "Bash(npm cache clean:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(echo:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []

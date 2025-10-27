@@ -82,7 +82,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         try {
             return await ProfileService.getProfile(userId, supabase);
         } catch (error) {
-            console.warn('[AuthContext] Profile not found, user might be new:', error);
+            if (error instanceof Error && error.name === 'ProfileNotFoundError') {
+                console.warn('[AuthContext] Profile not found, user might be new:', error);
+            } else {
+                console.error('[AuthContext] Error loading profile:', error);
+            }
             return null;
         }
     }, [supabase]);

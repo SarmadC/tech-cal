@@ -6,7 +6,7 @@ import { Event, EventType, AppProfile } from '@/types';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 
 export interface MobileViewEnhancementsProps {
-    currentView: 'today' | 'calendar';
+    currentView: 'today' | 'calendar' | 'month';
     currentDate: Date;
     events: Event[];
     categories: EventType[];

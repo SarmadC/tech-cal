@@ -14,14 +14,28 @@ export class ProfileService {
             const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', userId).single();
 
             // Handle "not found" as a specific thrown error
-            if (error && error.code === 'PGRST116') throw new Error('Profile not found');
+            if (error && error.code === 'PGRST116') {
+                const notFoundError = new Error('Profile not found');
+                notFoundError.name = 'ProfileNotFoundError';
+                throw notFoundError;
+            }
             if (error) throw error; // Throw other Supabase errors
-            if (!data) throw new Error('Profile not found');
+            if (!data) {
+                const notFoundError = new Error('Profile not found');
+                notFoundError.name = 'ProfileNotFoundError';
+                throw notFoundError;
+            }
 
             return profileTransformer.toApp(data);
         } catch (error) {
             console.error('Error fetching profile:', error);
             Sentry.captureException(error, { extra: { function: 'getProfile', userId } });
+            
+            // Re-throw ProfileNotFoundError as-is for specific handling
+            if (error instanceof Error && error.name === 'ProfileNotFoundError') {
+                throw error;
+            }
+            
             throw new Error('Failed to fetch profile.');
         }
     }

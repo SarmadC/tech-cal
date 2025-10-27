@@ -7,6 +7,7 @@ import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
 import { TrackedEventRecord, EVENT_STATUS } from '@/types';
 import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
 import { extractAlgorithmContext } from '@/utils/analyticsUtils';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 /**
  * UNIFIED tracked events management hook
@@ -25,6 +26,7 @@ export function useTrackedEventsUnified() {
   const { supabase, isReady } = useSupabaseSafe();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useSnackbar();
 
   // Single source of truth for tracked events
   const {
@@ -69,7 +71,11 @@ export function useTrackedEventsUnified() {
   ) => {
     if (!user?.id) throw new Error('User not authenticated');
     
+    // Track in database first
     await UserEventService.trackEvent(user.id, eventId, status, undefined, supabase);
+    
+    // Show immediate success feedback
+    showSuccess('Event tracked');
     
     // Log save metric to career_impact_analytics with context
     try {
@@ -90,16 +96,73 @@ export function useTrackedEventsUnified() {
     
     // Invalidate and refetch tracked events
     await queryClient.invalidateQueries({ queryKey: ['trackedEvents', user.id] });
+    
+    // Fire-and-forget calendar sync (202 Accepted pattern)
+    // Don't block UI waiting for sync to complete
+    fetch('/api/calendar/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // Include cookies for authentication
+      body: JSON.stringify({ eventId, action: 'sync' })
+    })
+      .then(async (res) => {
+        if (res.status === 202) {
+          // Accepted - syncing in background
+          console.log('Calendar sync queued');
+        } else if (!res.ok) {
+          const data = await res.json();
+          if (data.requiresReauth) {
+            showError('Please reconnect your calendar in settings');
+          } else if (res.status !== 404) {
+            // 404 means no calendar connection, which is fine - don't show error
+            console.warn('Calendar sync failed:', data.error);
+          }
+        }
+      })
+      .catch((err) => {
+        // Silent failure - already tracked successfully
+        console.error('Calendar sync request failed:', err);
+      });
   };
 
   // Untrack an event
   const untrackEvent = async (eventId: string) => {
     if (!user?.id) throw new Error('User not authenticated');
     
-    await UserEventService.untrackEvent(user.id, eventId, supabase);
+    // Untrack in database first and capture external calendar event ID
+    const { external_calendar_event_id, external_provider } = await UserEventService.untrackEvent(user.id, eventId, supabase);
     
     // Invalidate and refetch tracked events
     await queryClient.invalidateQueries({ queryKey: ['trackedEvents', user.id] });
+    
+    // Fire-and-forget calendar unsync (202 Accepted pattern)
+    // Only attempt to unsync if there was an external calendar event
+    if (external_calendar_event_id && external_provider) {
+      fetch('/api/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Include cookies for authentication
+        body: JSON.stringify({ 
+          eventId, 
+          action: 'delete',
+          external_calendar_event_id,
+          external_provider
+        })
+      })
+        .then(async (res) => {
+          if (res.status === 202) {
+            // Accepted - unsyncing in background
+            console.log('Calendar unsync queued');
+          } else if (!res.ok && res.status !== 404) {
+            // Log error but don't show to user - event already untracked
+            console.warn('Calendar unsync failed');
+          }
+        })
+        .catch((err) => {
+          // Silent failure - event already untracked
+          console.error('Calendar unsync request failed:', err);
+        });
+    }
   };
 
   return {

@@ -21,6 +21,7 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
+import MobileNavbar from '@/components/common/MobileNavbar';
 import type { EventType, Event, TrackedEventRecord } from '@/types';
 
 interface DashboardClientViewProps {
@@ -95,10 +96,12 @@ export default function DashboardClientView({
 
     return (
         <SidebarProvider>
+            {/* Mobile Navigation - Only visible on mobile */}
+            <MobileNavbar />
             <div className="flex h-screen bg-background">
                 <AppSidebar />
                 <main className="flex-1 flex flex-col overflow-hidden">
-                    {/* Main Navbar */}
+                    {/* Main Navbar - Hidden on mobile */}
                     <Navbar />
                     <div className="flex-1 overflow-auto">
                         <PageErrorBoundary name="Dashboard">

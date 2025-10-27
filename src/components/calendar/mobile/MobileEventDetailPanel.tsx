@@ -143,37 +143,11 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
             {/* Mobile Header - Fixed */}
             <div className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between px-4 py-3">
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        {/* Small logo in header */}
-                        <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
-                            {displayEvent.eventImageUrl ? (
-                                <Image
-                                    src={displayEvent.eventImageUrl}
-                                    alt={`${displayEvent.title} event image`}
-                                    width={32}
-                                    height={32}
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : displayEvent.organization?.logo ? (
-                                <Image
-                                    src={displayEvent.organization.logo}
-                                    alt={`${displayEvent.organization.name} logo`}
-                                    width={24}
-                                    height={24}
-                                    className="w-6 h-6 object-contain"
-                                />
-                            ) : (
-                                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                    <span className="text-xs font-bold text-white">
-                                        {displayEvent.title.charAt(0).toUpperCase()}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
+                    <div className="flex-1 min-w-0">
                         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
                             {displayEvent.title}
                         </h1>
-                </div>
+                    </div>
                     <button
                         onClick={onClose}
                         className="flex-shrink-0 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ml-2"

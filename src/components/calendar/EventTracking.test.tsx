@@ -125,7 +125,7 @@ describe('EventTracking Component', () => {
         vi.spyOn(UserEventService.UserEventService, 'isEventTracked')
             .mockResolvedValue({ isTracked: true, status: 'attending' });
         const untrackEventSpy = vi.spyOn(UserEventService.UserEventService, 'untrackEvent')
-            .mockResolvedValue(undefined);
+            .mockResolvedValue({ external_calendar_event_id: 'test-id', external_provider: 'google' });
 
         render(<EventTracking event={mockEvent} />, { mockUser });
 

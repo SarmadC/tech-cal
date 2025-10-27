@@ -495,8 +495,84 @@
   color: rgba(0, 0, 0, 0.9);
 }
 
-/* Glass Effect CTA Button Styles */
-.mobile-liquid-glass-cta { width: 100%; max-width: 100%; display: flex; align-items: center; justify-content: center; position: relative; border-radius: var(--radius); }
+/* Optimized Frosted Glass CTA Button */
+.mobile-liquid-glass-cta {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-radius: 12px;
+  /* Light theme - frosted glass effect */
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(248, 250, 252, 0.70) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  /* Minimal blur for performance */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  /* GPU acceleration */
+  transform: translateZ(0);
+  will-change: auto;
+  transition: all 0.3s ease;
+}
+
+.mobile-liquid-glass-cta:hover {
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px) translateZ(0);
+}
+
+/* Dark theme CTA */
+.dark .mobile-liquid-glass-cta {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 30, 35, 0.80) 0%,
+    rgba(20, 20, 25, 0.75) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.dark .mobile-liquid-glass-cta:hover {
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Mobile performance optimization */
+@media (max-width: 768px) {
+  .mobile-liquid-glass-cta {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
+
+/* Reduced motion fallback */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-liquid-glass-cta {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.90);
+  }
+
+  .dark .mobile-liquid-glass-cta {
+    background: rgba(25, 25, 30, 0.90);
+  }
+
+  .mobile-liquid-glass-cta:hover {
+    transform: none;
+  }
+}
 
 .mobile-primary-cta-liquid {
   background: transparent;

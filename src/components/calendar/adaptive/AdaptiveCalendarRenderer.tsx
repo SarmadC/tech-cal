@@ -16,7 +16,6 @@ import DesktopDiscoveryView from '../desktop/discovery/DesktopDiscoveryView';
 import MobileCalendarWeekView from '../mobile/MobileCalendarWeekView';
 import MobileCalendarDayView from '../mobile/MobileCalendarDayView';
 import MobileCalendarMonthView from '../mobile/MobileCalendarMonthView';
-import MobileTodayView from '../mobile/MobileTodayView';
 
 export interface AdaptiveCalendarProps {
   view: string;
@@ -65,17 +64,20 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
     // Mobile-optimized components
     switch (view) {
       case 'discover':
-      case 'today':
+        // Redirect discover to month view on mobile
         return (
-          <MobileTodayView
-            events={events as Event[]}
-            currentDate={initialDate}
+          <MobileCalendarMonthView
+            events={events}
+            initialDate={initialDate}
             categories={categories}
             profile={profile}
-            trackedEvents={trackedEvents}
-            onEventSelect={onEventSelect as (event: Event) => void}
-            showDiscoveryMode={true}
+            onEventSelect={onEventSelect}
+            onEventClick={onEventClick}
+            onRefresh={onRefresh}
             className={className}
+            isIOS={isIOSMobile}
+            isAndroid={isAndroidMobile}
+            isLoading={isLoading}
           />
         );
 
@@ -134,7 +136,6 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
   // Desktop/Web-optimized components (existing)
   switch (view) {
     case 'discover':
-    case 'today':
       return (
         <DesktopDiscoveryView
           events={events as Event[]}

@@ -99,15 +99,15 @@
 }
 
 .discovery-section-content {
-  @apply space-y-4;
+  @apply space-y-8;
   overflow: visible;
 }
 
-/* Mobile Discovery Cards Container - Increased spacing for better readability */
+/* Mobile Discovery Cards Container - Reduced spacing for more compact layout */
 .discovery-cards-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem; /* 24px - equivalent to space-y-6 */
+  gap: 1rem; /* 16px - reduced spacing for more compact mobile layout */
 }
 
 /* Consistent Card Heights - 3x3 Grid Layout */

@@ -17,9 +17,15 @@ import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 
 import { Event, EventType, AppProfile, TrackedEvent, MultiDayEvent } from '@/types';
 import { CalendarProvider } from '@/contexts';
+import { useIsMobile } from '@/hooks/useDeviceDetection';
 
 const EventDetailPanelDynamic = dynamic(
     () => import('@/components/calendar/EventDetailPanel'),
+    { loading: () => <Loading /> }
+);
+
+const MobileEventDetailPanelDynamic = dynamic(
+    () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
     { loading: () => <Loading /> }
 );
 
@@ -249,6 +255,7 @@ export default function CalendarClientView({
     const calendarRef = useRef<FullCalendar | null>(null);
     const searchParams = useSearchParams();
     const router = useRouter();
+    const isMobile = useIsMobile();
 
     // Use custom hooks for simplified state management
     const { state, actions } = useCalendarUIState();
@@ -412,15 +419,31 @@ export default function CalendarClientView({
                             </div>
                         )}
                         {state.selectedEvent && (
-                            <div 
-                                className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
-                            >
-                                <EventDetailPanelDynamic 
-                                    event={state.selectedEvent} 
-                                    onClose={actions.closeEventDetail} 
-                                    categories={initialCategories} 
-                                />
-                            </div>
+                            <>
+                                {isMobile ? (
+                                    <MobileEventDetailPanelDynamic
+                                        event={state.selectedEvent}
+                                        onClose={actions.closeEventDetail}
+                                        categories={initialCategories}
+                                    />
+                                ) : (
+                                    <div 
+                                        className="fixed inset-0 z-40"
+                                        onClick={actions.closeEventDetail}
+                                    >
+                                        <div 
+                                            className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <EventDetailPanelDynamic
+                                                event={state.selectedEvent}
+                                                onClose={actions.closeEventDetail}
+                                                categories={initialCategories}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 )}

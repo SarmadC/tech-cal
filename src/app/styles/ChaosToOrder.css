@@ -16,7 +16,7 @@
 
 .chaos-section {
   position: relative;
-  height: 250vh;
+  height: 100vh;
   background: transparent;
   font-family: var(--font-sans);
   margin-bottom: 0;
@@ -24,11 +24,11 @@
 
 /* Mobile-optimized chaos section */
 .chaos-section.mobile-optimized {
-  height: 200vh; /* Reduced height for mobile */
+  height: 100vh; /* Same height for mobile since no scroll needed */
 }
 
 .sticky-container {
-  position: sticky;
+  position: relative;
   top: 0;
   height: 100vh;
   overflow: hidden;

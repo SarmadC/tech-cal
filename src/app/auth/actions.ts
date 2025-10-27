@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 
 import { createClient } from '@/utils/supabase/server'
 import { AuthService } from '@/services/authService'
+import { ProfileService } from '@/services/profileService'
 import { OAuthProvider } from '@/types'
 
 
@@ -86,7 +87,37 @@ export async function signupAction(
 
     const supabase = await createClient();
     try {
-        await AuthService.signUp(serviceData, supabase);
+        const result = await AuthService.signUp(serviceData, supabase);
+        
+        // If signup was successful and user was created, create a profile
+        if (result.success) {
+            try {
+                // Get the current user to create profile
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    // Check if profile already exists
+                    try {
+                        await ProfileService.getProfile(user.id, supabase);
+                        // Profile exists, no need to create
+                    } catch (profileError) {
+                        if (profileError instanceof Error && profileError.name === 'ProfileNotFoundError') {
+                            // Create profile
+                            await ProfileService.createProfile({
+                                id: user.id,
+                                fullName: user.user_metadata?.full_name || serviceData.name,
+                                avatarUrl: user.user_metadata?.avatar_url || null,
+                                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                                preferences: {}
+                            }, supabase);
+                            console.log('[SignupAction] Profile created for new user:', user.id);
+                        }
+                    }
+                }
+            } catch (profileError) {
+                console.error('[SignupAction] Error creating profile:', profileError);
+                // Don't fail signup if profile creation fails - it will be handled by onboarding page
+            }
+        }
     } catch (error) {
         console.error("Signup Action Error:", error);
         return {
@@ -174,7 +205,6 @@ export async function oauthSignInAction(provider: OAuthProvider, nextPath: strin
     const { getOAuthRedirectUrl } = await import('@/utils/authUtils');
 
     const redirectTo = getOAuthRedirectUrl(nextPath);
-    // --- FIX 3: USE STRUCTURED LOGGING ---
 
     if (!redirectTo || (redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production')) {
         const errorMessage = `Server configuration error: Unable to determine OAuth redirect URL. Got: ${redirectTo}`;
@@ -196,15 +226,13 @@ export async function oauthSignInAction(provider: OAuthProvider, nextPath: strin
                 }
             },
         });
-
+        
         if (error) {
-            // --- FIX 2: USE STRUCTURED LOGGING ---
             console.error("[OAuth Action] Supabase OAuth Error", { provider, error });
             return redirect(`/login?error=oauth-failed&message=${encodeURIComponent(`Failed to authenticate with ${provider}: ${error.message}`)}`);
         }
 
         if (data?.url) {
-            // --- FIX 1: USE STRUCTURED LOGGING ---
             return redirect(data.url);
         }
 

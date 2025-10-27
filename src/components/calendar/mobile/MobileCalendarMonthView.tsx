@@ -1,17 +1,19 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { EventClickArg } from '@/types/fullcalendar';
 import './mobile-calendar.css';
 import { Event, EventType, AppProfile, MultiDayEventInstance } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
 // Career impact components removed - using inline implementation
-import EventPreviewCard from '../EventPreviewCard';
+import MobileEventDetailPanel from './MobileEventDetailPanel';
 import { useSwipeGestures } from '@/hooks/useSwipeGestures';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useScrollCollapse } from '@/hooks/useScrollCollapse';
 import { SkeletonLoader, MonthViewSkeleton } from '@/components/ui/SkeletonLoader';
 import { isSameDay, getTodayDate } from '@/utils/dateUtils';
+import DiscoveryCard from './discovery/DiscoveryCard';
 
 export interface MobileCalendarMonthViewProps {
   events: Event[];
@@ -20,7 +22,10 @@ export interface MobileCalendarMonthViewProps {
   profile: AppProfile | null;
   onEventSelect?: (event: Event | MultiDayEventInstance) => void;
   onEventClick?: (clickInfo: EventClickArg) => void;
+  onDateChange?: (date: Date) => void;
+  onToggleCalendarCollapse?: () => void;
   onRefresh?: () => Promise<void>;
+  isCalendarCollapsed?: boolean;
   className?: string;
   isIOS?: boolean;
   isAndroid?: boolean;
@@ -34,20 +39,23 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
   profile: _profile,
   onEventSelect,
   onEventClick: _onEventClick,
+  onDateChange,
+  onToggleCalendarCollapse: _onToggleCalendarCollapse,
   onRefresh,
+  isCalendarCollapsed: propIsCalendarCollapsed = false,
   className = '',
   isIOS: _isIOS = false,
   isAndroid: _isAndroid = false,
   isLoading = false,
 }) => {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-  const [hideTimer, setHideTimer] = useState<NodeJS.Timeout | null>(null);
-  const [_isTransitioning, _setIsTransitioning] = useState(false);
+  const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
+  const isCalendarCollapsed = propIsCalendarCollapsed;
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const calendarGridRef = useRef<HTMLDivElement>(null);
+  const { isCollapsed: _isCollapsed, toggleCollapse: _toggleCollapse } = useScrollCollapse(scrollContainerRef, calendarGridRef);
 
   // Generate calendar grid for the month
   const calendarGrid = useMemo(() => {
@@ -94,17 +102,18 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
     return days;
   }, [initialDate, events, selectedDate]);
 
-  // Get events for selected date
-  const selectedDateEvents = useMemo(() => {
-    if (!selectedDate) return [];
+  // Get all events for the current month
+  const monthEvents = useMemo(() => {
+    const year = initialDate.getFullYear();
+    const month = initialDate.getMonth();
     
     return events
       .filter(event => {
         const eventStart = new Date(event.startTime);
-        return eventStart.toDateString() === selectedDate.toDateString();
+        return eventStart.getFullYear() === year && eventStart.getMonth() === month;
       })
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-  }, [events, selectedDate]);
+  }, [events, initialDate]);
 
   // Enhanced gesture handlers
   const { swipeHandlers } = useSwipeGestures({
@@ -129,7 +138,7 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
   }, [onRefresh]);
 
   const {
-    pullToRefreshHandlers,
+    pullToRefreshHandlers: _pullToRefreshHandlers,
     pullState,
     pullProgress: _pullProgress,
     indicatorOpacity,
@@ -146,55 +155,44 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
   // Event handlers
   const handleDateClick = useCallback((date: Date) => {
     setSelectedDate(date);
-  }, []);
+    onDateChange?.(date);
+  }, [onDateChange]);
 
   const handleEventClick = useCallback((event: Event, e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsPreviewVisible(false);
+    setPreviewEvent(event);
+        _setIsPreviewVisible(true);
     onEventSelect?.(event);
   }, [onEventSelect]);
 
-  const handleEventHover = useCallback((event: Event, mouseEvent: React.MouseEvent) => {
-    if (hideTimer) {
-      clearTimeout(hideTimer);
-      setHideTimer(null);
-    }
+  const _handleEventHover = useCallback((_event: Event, _mouseEvent: React.MouseEvent) => {
+    // if (hideTimer) {
+    //   clearTimeout(hideTimer);
+    //   setHideTimer(null);
+    // }
 
-    const rect = mouseEvent.currentTarget.getBoundingClientRect();
-    setPreviewEvent(event);
-    setPreviewPosition({ x: rect.right + 10, y: rect.top });
-    setIsPreviewVisible(true);
-  }, [hideTimer]);
-
-  const handleEventLeave = useCallback(() => {
-    const timer = setTimeout(() => {
-      setIsPreviewVisible(false);
-      setPreviewEvent(null);
-    }, 300);
-    setHideTimer(timer);
+    // const rect = mouseEvent.currentTarget.getBoundingClientRect();
+    // setPreviewEvent(event);
+    // setPreviewPosition({ x: rect.right + 10, y: rect.top });
+    // setIsPreviewVisible(true);
   }, []);
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-      }
-    };
-  }, [hideTimer]);
+  const _handleEventLeave = useCallback(() => {
+    // const timer = setTimeout(() => {
+    //   setIsPreviewVisible(false);
+    //   setPreviewEvent(null);
+    // }, 300);
+    // setHideTimer(timer);
+  }, []);
+
+
 
   // Format time for mobile display
-  const formatEventTime = useCallback((event: Event) => {
-    const start = new Date(event.startTime);
-    const hours = start.getHours();
-    const minutes = start.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}${minutes > 0 ? ':' + minutes.toString().padStart(2, '0') : ''}${ampm}`;
-  }, []);
 
-  const monthName = initialDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const _monthName = initialDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+
 
   // Show loading state
   if (isLoading) {
@@ -230,153 +228,102 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
           <span>Refreshing...</span>
         </div>
       )}
-      {/* Month Header */}
-      <div className="mobile-month-header mobile-pull-transform"
-        {...pullToRefreshHandlers}
-        style={{ '--pull-transform': pullTransform } as React.CSSProperties}
-      >
-        <div className="month-title">{monthName}</div>
-        {selectedDate && (
-          <button
-            className="clear-selection"
-            onClick={() => setSelectedDate(null)}
-          >
-            <MaterialIcon name="clear" size={20} />
-          </button>
-        )}
-      </div>
 
-      {/* Calendar Grid */}
-      <div 
-        className="mobile-calendar-grid mobile-pull-transform"
-        ref={scrollContainerRef}
-        onTouchStart={swipeHandlers.onTouchStart}
-        onTouchMove={swipeHandlers.onTouchMove}
-        onTouchEnd={swipeHandlers.onTouchEnd}
-        style={{ '--pull-transform': pullTransform } as React.CSSProperties}
-      >
-        {/* Week day headers */}
-        <div className="weekday-headers">
-          {weekDays.map(day => (
-            <div key={day} className="weekday-header">
-              {day}
-            </div>
-          ))}
-        </div>
+      {/* Main Content Container */}
+      <div className="mobile-calendar-content-container">
+        {/* Calendar Grid - Collapsible */}
+        <div 
+          className={`mobile-calendar-grid-collapsible ${isCalendarCollapsed ? 'collapsed' : ''}`}
+          ref={scrollContainerRef}
+          onTouchStart={swipeHandlers.onTouchStart}
+          onTouchMove={swipeHandlers.onTouchMove}
+          onTouchEnd={swipeHandlers.onTouchEnd}
+          style={{ '--pull-transform': pullTransform } as React.CSSProperties}
+        >
+          {/* Week day headers */}
+          <div className="weekday-headers-modern">
+            {weekDays.map(day => (
+              <div key={day} className="weekday-header-modern">
+                {day}
+              </div>
+            ))}
+          </div>
 
-        {/* Calendar days */}
-        <div className="calendar-days">
-          {calendarGrid.map((day, index) => (
-            <div
-              key={index}
-              className={`calendar-day ${
-                !day.isCurrentMonth ? 'other-month' : ''
-              } ${day.isToday ? 'today' : ''} ${
-                day.isSelected ? 'selected' : ''
-              } ${day.hasEvents ? 'has-events' : ''}`}
-              onClick={() => handleDateClick(day.date)}
-            >
-              <div className="day-number">{day.dayNumber}</div>
-              
-              {/* Event indicators */}
-              {day.hasEvents && (
-                <div className="event-indicators">
-                  {day.events.slice(0, 3).map((event, eventIndex) => (
-                    <div
-                      key={`${event.id}-${eventIndex}`}
-                      className="event-dot mobile-event-dot"
-                      style={{
-                        '--event-color': event.color || 'var(--accent-primary)',
-                      } as React.CSSProperties}
-                      title={event.title}
-                    />
-                  ))}
-                  {day.events.length > 3 && (
-                    <div className="more-events">+{day.events.length - 3}</div>
+          {/* Calendar days */}
+          <div className="calendar-days-modern" ref={calendarGridRef}>
+            {calendarGrid.map((day, index) => (
+              <div
+                key={index}
+                className={`calendar-day-modern ${
+                  !day.isCurrentMonth ? 'other-month' : ''
+                } ${day.isToday ? 'today' : ''} ${
+                  day.isSelected ? 'selected' : ''
+                } ${day.hasEvents ? 'has-events' : ''}`}
+                onClick={() => handleDateClick(day.date)}
+              >
+                <div className="day-number-modern">{day.dayNumber}</div>
+                
+                  {/* Event indicator */}
+                  {day.hasEvents && (
+                    <div className="event-indicator-single">
+                      <div 
+                        className="event-dot-single"
+                        title={`${day.events.length} event${day.events.length > 1 ? 's' : ''}`}
+                      />
+                    </div>
                   )}
-                </div>
-              )}
-            </div>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Selected Date Events */}
-      {selectedDate && (
-        <div className="selected-date-events">
+        {/* Month Events Discovery - Always visible with different heights */}
+        <div className={`month-events-discovery ${isCalendarCollapsed ? 'collapsed' : ''}`}>
           <div className="events-header">
-            <div className="selected-date">
-              {selectedDate.toLocaleDateString('en-US', { 
-                weekday: 'long',
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </div>
             <div className="events-count">
-              {selectedDateEvents.length} {selectedDateEvents.length === 1 ? 'event' : 'events'}
+              {monthEvents.length} {monthEvents.length === 1 ? 'event' : 'events'}
             </div>
           </div>
 
           <div className="events-list">
-            {selectedDateEvents.length > 0 ? (
-              selectedDateEvents.map((event, index) => (
-                <div
+            {monthEvents.length > 0 ? (
+              monthEvents.map((event, index) => (
+                <DiscoveryCard
                   key={`${event.id}-${index}`}
-                  className="mobile-month-event mobile-event-border"
-                  onClick={(e) => handleEventClick(event, e)}
-                  onMouseEnter={(e) => handleEventHover(event, e)}
-                  onMouseLeave={handleEventLeave}
-                  style={{
-                    '--event-color': event.color || 'var(--accent-primary)',
-                  } as React.CSSProperties}
-                >
-                  <div className="event-time">
-                    {formatEventTime(event)}
-                  </div>
-                  <div className="event-content">
-                    <div className="flex items-center justify-between">
-                      <div className="event-title flex-1">{event.title}</div>
-                      {/* Career Impact Indicator for mobile month view */}
-                      {(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
-                        <div className="flex-shrink-0 ml-2">
-                          <div className={`
-                            w-2 h-2 rounded-full
-                            ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
-                              (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
-                              (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
-                          `} />
-                        </div>
-                      )}
-                    </div>
-                    {event.location && (
-                      <div className="event-location">
-                        <MaterialIcon name="location" size={12} />
-                        <span>{event.location}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="event-chevron">
-                    <MaterialIcon name="chevron_right" size={16} />
-                  </div>
-                </div>
+                  event={event as Event & { careerImpactLite?: CareerImpactScoreLite }}
+                  onClick={() => {
+                    const syntheticEvent = {
+                      preventDefault: () => {},
+                      stopPropagation: () => {},
+                      currentTarget: null,
+                      target: null
+                    } as unknown as React.MouseEvent<HTMLDivElement>;
+                    handleEventClick(event, syntheticEvent);
+                  }}
+                  showCareerImpact={true}
+                  variant="compact"
+                  className="mb-3"
+                />
               ))
             ) : (
               <div className="no-events-selected">
                 <MaterialIcon name="event_available" size={24} />
-                <span>No events on this day</span>
+                <span>No events this month</span>
               </div>
             )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Event Preview */}
+      {/* Event Detail Panel */}
       {previewEvent && (
-        <EventPreviewCard
+        <MobileEventDetailPanel
           event={previewEvent}
-          isVisible={isPreviewVisible}
-          position={previewPosition}
-          onClose={() => setIsPreviewVisible(false)}
+          onClose={() => {
+            _setIsPreviewVisible(false);
+            setPreviewEvent(null);
+          }}
+          categories={_categories}
         />
       )}
     </div>
