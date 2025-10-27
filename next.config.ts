@@ -68,7 +68,7 @@ const nextConfig: NextConfig = {
       'logo.clearbit.com', // Clearbit logo API (fallback)
       'lh3.googleusercontent.com', // Google profile images
       'avatars.githubusercontent.com', // GitHub profile images
-    ],
+        ],
   },
   experimental: {
     // Optimize package imports to avoid compiling entire libraries

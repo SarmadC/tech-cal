@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { GoogleCalendarService } from '@/services/googleCalendarService';
 
-export async function GET(request: NextRequest) {
+async function handleCallback(request: NextRequest) {
     try {
         console.log('[CALENDAR CALLBACK] Request received:', request.url);
         const { searchParams, origin } = new URL(request.url);
@@ -135,4 +135,13 @@ export async function GET(request: NextRequest) {
         const requestOrigin = new URL(request.url).origin;
         return NextResponse.redirect(`${requestOrigin}/dashboard/settings?tab=integrations&error=callback_error`);
     }
+}
+
+// Export both GET and POST handlers
+export async function GET(request: NextRequest) {
+    return handleCallback(request);
+}
+
+export async function POST(request: NextRequest) {
+    return handleCallback(request);
 }
