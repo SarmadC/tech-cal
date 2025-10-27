@@ -101,11 +101,15 @@ describe('Atomic Event Tracking', () => {
 
       mockSupabase.rpc = vi.fn().mockResolvedValue(mockRpcResponse);
 
-      await UserEventService.untrackEvent('user1', 'event1', mockSupabase);
+      const result = await UserEventService.untrackEvent('user1', 'event1', mockSupabase);
 
       expect(mockSupabase.rpc).toHaveBeenCalledWith('untrack_event_and_update_profile', {
         p_user_id: 'user1',
         p_event_id: 'event1'
+      });
+      expect(result).toEqual({
+        external_calendar_event_id: undefined,
+        external_provider: undefined
       });
     });
 

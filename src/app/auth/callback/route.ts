@@ -54,7 +54,6 @@ export async function GET(request: Request) {
             return NextResponse.redirect(`${origin}/login?error=no-session&message=${errorMessage}`);
         }
 
-
         // Successful authentication - redirect to intended destination
         return NextResponse.redirect(`${origin}${next}`)
 

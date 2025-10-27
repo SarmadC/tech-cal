@@ -40,7 +40,7 @@ export function usePullToRefresh({
       scrollElement.current = element;
       
       // Only allow pull-to-refresh when scrolled to top
-      if (element.scrollTop === 0) {
+      if (element && element.scrollTop === 0) {
         startY.current = e.touches[0].clientY;
         setPullState(prev => ({ ...prev, isPulling: false }));
       }
@@ -56,7 +56,7 @@ export function usePullToRefresh({
       const deltaY = currentY - startY.current;
 
       // Only process downward pulls when at the top
-      if (deltaY > 0 && scrollElement.current.scrollTop === 0) {
+      if (deltaY > 0 && scrollElement.current && scrollElement.current.scrollTop === 0) {
         e.preventDefault(); // Prevent native scroll
 
         // Apply resistance to create smooth pull effect

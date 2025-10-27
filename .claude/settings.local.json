@@ -50,7 +50,9 @@
       "Bash(cat:*)",
       "Bash(npm test:*)",
       "Bash(npx playwright test:*)",
-      "Bash(npm cache clean:*)"
+      "Bash(npm cache clean:*)",
+      "Bash(echo:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []

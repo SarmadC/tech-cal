@@ -192,7 +192,7 @@ Key themes: accessibility, animation quality, design system consistency, purpose
 - **State/Data:** TanStack Query, React Context, Supabase (Postgres, Auth, Storage)
 - **Scoring:** Custom alignment core, advanced strategy pattern, behavioral reranking, diversity enhancement
 - **Tooling:** TypeScript, ESLint 9, Vitest, Playwright, Sentry, Upstash Rate Limits, Vercel KV
-
+    
 
 
 ---

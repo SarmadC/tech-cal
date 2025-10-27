@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation'; // Standard, top-level import
 import ProfileSettingsForm from './ProfileSettingsForm';
 import CareerProfileManager from '@/components/profile/CareerProfileManager';
+import CalendarIntegrationSettings from '@/components/dashboard/CalendarIntegrationSettings';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { AppProfile } from '@/types';
@@ -17,6 +18,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
     const tabs = [
         { id: 'profile', label: 'Profile' },
         { id: 'career', label: 'Career Profile' },
+        { id: 'integrations', label: 'Integrations' },
         { id: 'appearance', label: 'Appearance' },
         { id: 'billing', label: 'Billing' },
     ];
@@ -25,6 +27,8 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
         switch (activeTab) {
             case 'career':
                 return <CareerProfileManager />;
+            case 'integrations':
+                return <CalendarIntegrationSettings />;
             case 'appearance':
                 return (
                     <div className="space-y-6">

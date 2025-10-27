@@ -10,53 +10,10 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
-      accessibility_features: {
-        Row: {
-          description: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          description?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          description?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
       agenda_speakers: {
         Row: {
           agenda_id: string
@@ -94,7 +51,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_values: Json | null
           old_values: Json | null
           operation: string
@@ -106,7 +63,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           operation: string
@@ -118,7 +75,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           operation?: string
@@ -128,6 +85,85 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      calendar_connections: {
+        Row: {
+          access_token: string | null
+          access_token_secret_id: string | null
+          calendar_id: string
+          created_at: string
+          has_refresh_token: boolean
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          provider: string
+          refresh_token: string | null
+          refresh_token_secret_id: string | null
+          token_expiry: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_secret_id?: string | null
+          calendar_id: string
+          created_at?: string
+          has_refresh_token?: boolean
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          provider?: string
+          refresh_token?: string | null
+          refresh_token_secret_id?: string | null
+          token_expiry?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_secret_id?: string | null
+          calendar_id?: string
+          created_at?: string
+          has_refresh_token?: boolean
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          provider?: string
+          refresh_token?: string | null
+          refresh_token_secret_id?: string | null
+          token_expiry?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "calendar_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       career_impact_analytics: {
         Row: {
@@ -469,43 +505,6 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "user_event_stats"
             referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      event_accessibility_features: {
-        Row: {
-          event_id: string
-          feature_id: string
-        }
-        Insert: {
-          event_id: string
-          feature_id: string
-        }
-        Update: {
-          event_id?: string
-          feature_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_accessibility_features_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_accessibility_features_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events_detailed"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_accessibility_features_feature_id_fkey"
-            columns: ["feature_id"]
-            isOneToOne: false
-            referencedRelation: "accessibility_features"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -944,7 +943,7 @@ export type Database = {
           event_type_id: string | null
           external_id: string | null
           external_status: string | null
-          fts: unknown | null
+          fts: unknown
           id: string
           is_multi_day: boolean | null
           language: string | null
@@ -992,7 +991,7 @@ export type Database = {
           event_type_id?: string | null
           external_id?: string | null
           external_status?: string | null
-          fts?: unknown | null
+          fts?: unknown
           id?: string
           is_multi_day?: boolean | null
           language?: string | null
@@ -1040,7 +1039,7 @@ export type Database = {
           event_type_id?: string | null
           external_id?: string | null
           external_status?: string | null
-          fts?: unknown | null
+          fts?: unknown
           id?: string
           is_multi_day?: boolean | null
           language?: string | null
@@ -1352,7 +1351,7 @@ export type Database = {
           excerpt: string | null
           featured: boolean
           featured_image_url: string | null
-          fts: unknown | null
+          fts: unknown
           id: string
           published_at: string | null
           read_time_minutes: number | null
@@ -1369,7 +1368,7 @@ export type Database = {
           excerpt?: string | null
           featured?: boolean
           featured_image_url?: string | null
-          fts?: unknown | null
+          fts?: unknown
           id?: string
           published_at?: string | null
           read_time_minutes?: number | null
@@ -1386,7 +1385,7 @@ export type Database = {
           excerpt?: string | null
           featured?: boolean
           featured_image_url?: string | null
-          fts?: unknown | null
+          fts?: unknown
           id?: string
           published_at?: string | null
           read_time_minutes?: number | null
@@ -1459,6 +1458,7 @@ export type Database = {
           recommendation_preferences: Json | null
           team_preferences: Json | null
           timezone: string | null
+          tracked_events_count: number | null
           updated_at: string | null
         }
         Insert: {
@@ -1475,6 +1475,7 @@ export type Database = {
           recommendation_preferences?: Json | null
           team_preferences?: Json | null
           timezone?: string | null
+          tracked_events_count?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -1491,6 +1492,7 @@ export type Database = {
           recommendation_preferences?: Json | null
           team_preferences?: Json | null
           timezone?: string | null
+          tracked_events_count?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1546,70 +1548,6 @@ export type Database = {
           },
           {
             foreignKeyName: "recommendation_batches_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_event_stats"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      telemetry_events: {
-        Row: {
-          context: Json
-          event_type: string
-          event_version: number
-          id: string
-          metadata: Json
-          occurred_at: string
-          received_at: string
-          request_id: string | null
-          session_id: string | null
-          source: string
-          user_id: string | null
-        }
-        Insert: {
-          context?: Json
-          event_type: string
-          event_version?: number
-          id?: string
-          metadata?: Json
-          occurred_at?: string
-          received_at?: string
-          request_id?: string | null
-          session_id?: string | null
-          source?: string
-          user_id?: string | null
-        }
-        Update: {
-          context?: Json
-          event_type?: string
-          event_version?: number
-          id?: string
-          metadata?: Json
-          occurred_at?: string
-          received_at?: string
-          request_id?: string | null
-          session_id?: string | null
-          source?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "telemetry_events_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "telemetry_events_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_engagement_summary"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "telemetry_events_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "user_event_stats"
@@ -1692,12 +1630,58 @@ export type Database = {
         }
         Relationships: []
       }
+      telemetry_events: {
+        Row: {
+          context: Json
+          event_type: string
+          event_version: number
+          id: string
+          metadata: Json
+          occurred_at: string
+          received_at: string
+          request_id: string | null
+          session_id: string | null
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          context?: Json
+          event_type: string
+          event_version?: number
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          received_at?: string
+          request_id?: string | null
+          session_id?: string | null
+          source?: string
+          user_id?: string | null
+        }
+        Update: {
+          context?: Json
+          event_type?: string
+          event_version?: number
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          received_at?: string
+          request_id?: string | null
+          session_id?: string | null
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_events: {
         Row: {
           algorithm_version: string | null
+          calendar_sync_status: string | null
+          calendar_synced_at: string | null
           created_at: string | null
           discovery_source: string | null
           event_id: string
+          external_calendar_event_id: string | null
+          external_provider: string | null
           id: string
           notes: string | null
           recommendation_context: Json | null
@@ -1707,9 +1691,13 @@ export type Database = {
         }
         Insert: {
           algorithm_version?: string | null
+          calendar_sync_status?: string | null
+          calendar_synced_at?: string | null
           created_at?: string | null
           discovery_source?: string | null
           event_id: string
+          external_calendar_event_id?: string | null
+          external_provider?: string | null
           id?: string
           notes?: string | null
           recommendation_context?: Json | null
@@ -1719,9 +1707,13 @@ export type Database = {
         }
         Update: {
           algorithm_version?: string | null
+          calendar_sync_status?: string | null
+          calendar_synced_at?: string | null
           created_at?: string | null
           discovery_source?: string | null
           event_id?: string
+          external_calendar_event_id?: string | null
+          external_provider?: string | null
           id?: string
           notes?: string | null
           recommendation_context?: Json | null
@@ -2039,6 +2031,8 @@ export type Database = {
           attended: number | null
           avg_attendees: number | null
           bookmarked: number | null
+          description: string | null
+          event_count: number | null
           event_type_color: string | null
           event_type_id: string | null
           event_type_name: string | null
@@ -2133,6 +2127,30 @@ export type Database = {
           },
         ]
       }
+      telemetry_recommendation_batches_last7d: {
+        Row: {
+          avg_returned_count: number | null
+          total_batches: number | null
+        }
+        Relationships: []
+      }
+      telemetry_recommendation_interactions_last7d: {
+        Row: {
+          avg_position: number | null
+          interaction_type: string | null
+          total_events: number | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
+      telemetry_skill_ratings_last7d: {
+        Row: {
+          proficiency: string | null
+          rating_count: number | null
+          skill: string | null
+        }
+        Relationships: []
+      }
       user_analytics_summary: {
         Row: {
           estimated_impact_score: number | null
@@ -2175,17 +2193,69 @@ export type Database = {
         Args: { interactions: Json[] }
         Returns: undefined
       }
-      cleanup_old_data: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_interactions: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      filter_events: {
-        Args:
-          | {
+      cleanup_old_data: { Args: never; Returns: undefined }
+      cleanup_old_interactions: { Args: never; Returns: number }
+      filter_events:
+        | {
+            Args: {
+              p_budget?: string
+              p_categories?: string[]
+              p_cost?: string
+              p_duration?: string
+              p_end_date?: string
+              p_event_format?: string
+              p_my_network?: boolean
+              p_page_num?: number
+              p_page_size?: number
+              p_popularity?: string
+              p_recommended?: boolean
+              p_search_term?: string
+              p_sort_by?: string
+              p_start_date?: string
+            }
+            Returns: {
+              accessibility_features: Json
+              agenda_url: string
+              attendee_count: number
+              capacity: number
+              certificate_offered: boolean
+              created_at: string
+              currency: string
+              daily_schedule: Json
+              description: string
+              end_time: string
+              event_format: string
+              event_image_url: string
+              event_type_id: string
+              id: string
+              is_multi_day: boolean
+              language: string
+              livestream_url: string
+              location: string
+              organizer_id: string
+              prerequisites: string
+              price_max: number
+              price_min: number
+              pricing_type: string
+              recording_available: boolean
+              registration_deadline: string
+              registration_url: string
+              series_id: string
+              source_url: string
+              speaker_lineup: Json
+              start_time: string
+              status: string
+              status_enum: string
+              target_audience: string
+              timezone: string
+              title: string
+              total_count: number
+              updated_at: string
+              venue_id: string
+            }[]
+          }
+        | {
+            Args: {
               categories?: string[]
               cost_filter?: string
               difficulty_filter?: string
@@ -2201,7 +2271,32 @@ export type Database = {
               sort_by?: string
               start_date?: string
             }
-          | {
+            Returns: {
+              attendee_count: number
+              created_at: string
+              description: string
+              end_time: string
+              event_type_id: string
+              event_type_name: string
+              id: string
+              is_multi_day: boolean
+              livestream_url: string
+              location: string
+              organizer_id: string
+              organizer_name: string
+              price_range: string
+              registration_url: string
+              start_time: string
+              tags: string[]
+              title: string
+              total_count: number
+              venue_city: string
+              venue_country: string
+              venue_name: string
+            }[]
+          }
+        | {
+            Args: {
               p_budget?: string
               p_categories?: string[]
               p_cost?: string
@@ -2218,73 +2313,54 @@ export type Database = {
               p_sort_by?: string
               p_start_date?: string
             }
-          | {
-              p_budget?: string
-              p_categories?: string[]
-              p_cost?: string
-              p_duration?: string
-              p_end_date?: string
-              p_event_format?: string
-              p_my_network?: boolean
-              p_page_num?: number
-              p_page_size?: number
-              p_popularity?: string
-              p_recommended?: boolean
-              p_search_term?: string
-              p_sort_by?: string
-              p_start_date?: string
-            }
-        Returns: {
-          accessibility_features: Json
-          agenda_url: string
-          attendee_count: number
-          capacity: number
-          certificate_offered: boolean
-          created_at: string
-          currency: string
-          daily_schedule: Json
-          description: string
-          end_time: string
-          event_format: string
-          event_image_url: string
-          event_type_id: string
-          id: string
-          is_multi_day: boolean
-          language: string
-          livestream_url: string
-          location: string
-          organizer_id: string
-          prerequisites: string
-          price_max: number
-          price_min: number
-          pricing_type: string
-          recording_available: boolean
-          registration_deadline: string
-          registration_url: string
-          series_id: string
-          source_url: string
-          speaker_lineup: Json
-          start_time: string
-          status: string
-          status_enum: string
-          target_audience: string
-          timezone: string
-          title: string
-          total_count: number
-          updated_at: string
-          venue_id: string
-        }[]
-      }
+            Returns: {
+              accessibility_features: Json
+              agenda_url: string
+              attendee_count: number
+              capacity: number
+              certificate_offered: boolean
+              created_at: string
+              currency: string
+              daily_schedule: Json
+              description: string
+              end_time: string
+              event_format: string
+              event_image_url: string
+              event_type_id: string
+              id: string
+              is_multi_day: boolean
+              language: string
+              livestream_url: string
+              location: string
+              organizer_id: string
+              prerequisites: string
+              price_max: number
+              price_min: number
+              pricing_type: string
+              recording_available: boolean
+              registration_deadline: string
+              registration_url: string
+              series_id: string
+              source_url: string
+              speaker_lineup: Json
+              start_time: string
+              status: string
+              status_enum: string
+              target_audience: string
+              timezone: string
+              title: string
+              total_count: number
+              updated_at: string
+              venue_id: string
+            }[]
+          }
       find_event_by_external_id: {
         Args: { p_external_id: string; p_source?: string }
         Returns: string
       }
-      get_analytics_health: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      get_analytics_health: { Args: never; Returns: Json }
       get_event_types_with_counts: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           color: string
           description: string
@@ -2293,10 +2369,7 @@ export type Database = {
           name: string
         }[]
       }
-      get_impact_trend: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
+      get_impact_trend: { Args: { p_user_id: string }; Returns: Json }
       get_monthly_stats: {
         Args: { p_month_offset?: number; p_user_id: string }
         Returns: Json
@@ -2309,16 +2382,10 @@ export type Database = {
         Args: { p_include_recommendations?: boolean; p_user_id: string }
         Returns: Json
       }
-      get_user_dashboard_data: {
-        Args: { user_uuid: string }
-        Returns: Json
-      }
-      get_user_growth_analytics: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
+      get_user_dashboard_data: { Args: { user_uuid: string }; Returns: Json }
+      get_user_growth_analytics: { Args: { p_user_id: string }; Returns: Json }
       identify_multi_day_events: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           days_span: number
           end_time: string
@@ -2327,22 +2394,10 @@ export type Database = {
           title: string
         }[]
       }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_service_role: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_valid_email: {
-        Args: { email: string }
-        Returns: boolean
-      }
-      is_valid_url: {
-        Args: { url: string }
-        Returns: boolean
-      }
+      is_admin: { Args: never; Returns: boolean }
+      is_service_role: { Args: never; Returns: boolean }
+      is_valid_email: { Args: { email: string }; Returns: boolean }
+      is_valid_url: { Args: { url: string }; Returns: boolean }
       log_webhook_event: {
         Args: {
           p_action: string
@@ -2353,14 +2408,8 @@ export type Database = {
         }
         Returns: string
       }
-      make_user_admin: {
-        Args: { user_email: string }
-        Returns: undefined
-      }
-      refresh_analytics_data: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      make_user_admin: { Args: { user_email: string }; Returns: undefined }
+      refresh_analytics_data: { Args: never; Returns: undefined }
       track_event_and_update_profile: {
         Args: {
           p_event_id: string
@@ -2566,9 +2615,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       available_time_enum: [

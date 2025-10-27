@@ -183,11 +183,14 @@ describe('UserEventService', () => {
 
       const result = await UserEventService.untrackEvent('user1', 'event1', mockSupabase as unknown as SupabaseClient);
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('user_events');
-      expect(mockSupabase.delete).toHaveBeenCalled();
-      expect(mockSupabase.eq).toHaveBeenCalledWith('user_id', 'user1');
-      expect(mockSupabase.eq).toHaveBeenCalledWith('event_id', 'event1');
-      expect(result).toBeDefined();
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('untrack_event_and_update_profile', {
+        p_user_id: 'user1',
+        p_event_id: 'event1'
+      });
+      expect(result).toEqual({
+        external_calendar_event_id: undefined,
+        external_provider: undefined
+      });
     });
 
     it('should handle event not found', async () => {
@@ -196,9 +199,8 @@ describe('UserEventService', () => {
         error: { code: 'PGRST116', message: 'No rows found' },
       });
 
-      const result = await UserEventService.untrackEvent('user1', 'nonexistent', mockSupabase as unknown as SupabaseClient);
-
-      expect(result).toBeNull();
+      await expect(UserEventService.untrackEvent('user1', 'nonexistent', mockSupabase as unknown as SupabaseClient))
+        .rejects.toThrow();
     });
 
     it('should handle database errors', async () => {

@@ -49,22 +49,34 @@ export function useCareerProfile(): UseCareerProfileReturn {
 
     try {
       // First try to get from new structured table
-      let profile = await CareerProfileService.getCareerProfile(user.id, supabase);
+      let careerProfile = await CareerProfileService.getCareerProfile(user.id, supabase);
       
-      if (!profile) {
-        // If not found in new table, try to migrate from JSONB
-        const migrated = await CareerProfileService.migrateCareerProfileData(user.id, supabase);
-        if (migrated) {
-          // Retry getting from new table after migration
-          profile = await CareerProfileService.getCareerProfile(user.id, supabase);
-        } else {
-          // Fallback to legacy method if no data to migrate
-          profile = CareerProfileService.getCareerProfileFromPreferences(profile);
+      if (!careerProfile) {
+        // Only attempt migration if user has an existing profile with preferences
+        if (profile?.preferences) {
+          const migrated = await CareerProfileService.migrateCareerProfileData(user.id, supabase);
+          if (migrated) {
+            // Retry getting from new table after migration
+            careerProfile = await CareerProfileService.getCareerProfile(user.id, supabase);
+          }
+        }
+        
+        // If still no career profile, try legacy method as fallback
+        if (!careerProfile) {
+          careerProfile = CareerProfileService.getCareerProfileFromPreferences(profile);
         }
       }
 
-      setCareerProfile(profile);
-      setHasCompletedOnboarding(!!profile);
+      setCareerProfile(careerProfile);
+      
+      // Check if onboarding is completed - either has career profile OR marked as completed in preferences
+      const hasCareerProfile = !!careerProfile;
+      const hasCompletedInPreferences = profile?.preferences && 
+        typeof profile.preferences === 'object' && 
+        'careerOnboardingCompleted' in profile.preferences && 
+        profile.preferences.careerOnboardingCompleted === true;
+      
+      setHasCompletedOnboarding(Boolean(hasCareerProfile || hasCompletedInPreferences));
     } catch (err) {
       console.error('Error loading career profile:', err);
       setError('Failed to load career profile');
@@ -73,7 +85,14 @@ export function useCareerProfile(): UseCareerProfileReturn {
       if (profile) {
         const legacyProfile = CareerProfileService.getCareerProfileFromPreferences(profile);
         setCareerProfile(legacyProfile);
-        setHasCompletedOnboarding(!!legacyProfile);
+        
+        // Check preferences for completion status
+        const hasCompletedInPreferences = profile.preferences && 
+          typeof profile.preferences === 'object' && 
+          'careerOnboardingCompleted' in profile.preferences && 
+          profile.preferences.careerOnboardingCompleted === true;
+        
+        setHasCompletedOnboarding(Boolean(legacyProfile || hasCompletedInPreferences));
       }
     } finally {
       setIsLoading(false);
