@@ -540,7 +540,7 @@ export class TagBasedMatchingService {
     return Array.from(terms);
   }
 
-  private static calculateProfileBoost(
+  public static calculateProfileBoost(
     event: Event,
     careerProfile: CareerProfile,
     match: TagMatchResult

@@ -9,7 +9,7 @@ import type { Database } from '@/types/supabase';
 import type { CareerProfile } from '@/types/career';
 import { isColdStartUser } from '@/utils/behavioralBoostUtils';
 import { eventDetailedTransformer } from '@/utils/transformers';
-import { TagBasedMatchingService } from '@/services/TagBasedMatchingService';
+import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { DiversityEnhancementService } from '@/services/diversityEnhancementService';
 import { CareerProfileService } from '@/services/careerProfileService';
 import { CareerImpactService } from '@/services/careerImpactService';

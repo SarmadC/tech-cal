@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TagBasedMatchingService } from '../TagBasedMatchingService';
+import { TagBasedMatchingService } from '../tagBasedMatchingService';
 import type { Event, EventTag } from '@/types';
 import type { CareerProfile } from '@/types/career';
 
