@@ -24,7 +24,7 @@ import {
 } from '@/types/careerImpact';
 import { BaseScoringStrategy } from '../ScoringStrategy';
 import { CareerImpactCache } from '@/services/cache/careerImpactCache';
-import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
+import { TagBasedMatchingService } from '@/services/TagBasedMatchingService';
 import { BehavioralBoostService } from '@/services/behavioralBoostService';
 import { calculateTypePreferenceScore, normalizeEventType } from '@/utils/eventTypeUtils';
 import { hasSeniorSpeaker } from '@/utils/speakerUtils';

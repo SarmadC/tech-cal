@@ -22,7 +22,7 @@ import {
     enhancedEventTransformer
 } from '@/utils/transformers';
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
-import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
+import { TagBasedMatchingService } from '@/services/TagBasedMatchingService';
 import { CareerProfile } from '@/types/career';
 import { enrichEventsWithCareerImpact as enrichEventsWithNewScoring } from './careerImpactEnrichmentService';
 import { LookalikeUserService } from './lookalikeUserService';
