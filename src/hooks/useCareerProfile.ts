@@ -26,7 +26,7 @@ interface UseCareerProfileReturn {
  * Handles both new structured table and legacy JSONB data
  */
 export function useCareerProfile(): UseCareerProfileReturn {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile: refreshAuthProfile } = useAuth();
   const preferencesRecord = profile?.preferences as Record<string, unknown> | undefined;
   const optionalSections = preferencesRecord?.careerOptionalSections as CareerOptionalSectionStatus | undefined;
   const optionalSectionSnoozes = preferencesRecord?.careerOptionalSnoozes as CareerOptionalSectionSnoozes | undefined;
@@ -163,10 +163,11 @@ export function useCareerProfile(): UseCareerProfileReturn {
         { [timestampKeyMap[section]]: new Date().toISOString() }
       );
       await refreshProfile();
+      await refreshAuthProfile();
     } catch (error) {
       console.error('Failed to mark optional section complete:', error);
     }
-  }, [user?.id, supabase, refreshProfile]);
+  }, [user?.id, supabase, refreshProfile, refreshAuthProfile]);
 
   const snoozeOptionalSection = useCallback(async (section: keyof CareerOptionalSectionStatus, days: number = 7) => {
     if (!user?.id || !supabase) return;
@@ -180,11 +181,12 @@ export function useCareerProfile(): UseCareerProfileReturn {
         { [section]: snoozeUntil.toISOString() }
       );
       await refreshProfile();
+      await refreshAuthProfile();
       return snoozeUntil.toISOString();
     } catch (error) {
       console.error('Failed to snooze optional section prompt:', error);
     }
-  }, [user?.id, supabase, refreshProfile]);
+  }, [user?.id, supabase, refreshProfile, refreshAuthProfile]);
 
   // Load profile on mount and when dependencies change
   useEffect(() => {

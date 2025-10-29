@@ -4,6 +4,7 @@ import React from 'react';
 import { X } from '@phosphor-icons/react';
 import { CareerProfile } from '@/types/career';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
+import { useAuth } from '@/contexts';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useQuickEditForm } from './hooks/useQuickEditForm';
 
@@ -86,6 +87,9 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
   const Editor = SECTION_EDITORS[section];
   const validateSection = SECTION_VALIDATORS[section];
 
+  // Get auth context refresh function
+  const { refreshProfile: refreshAuthProfile } = useAuth();
+
   // Use the quick edit form hook - MUST be called before any early returns
   const { 
     draft, 
@@ -113,8 +117,9 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
         onSectionCompleted(section);
       }
 
-      // Refresh profile to get latest data
+      // Refresh both career profile and auth context profile to get latest data
       await refreshProfile();
+      await refreshAuthProfile();
     }
   });
 
@@ -144,8 +149,8 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
           role="document"
         >
           <div className="animate-pulse">
-            <div className="h-6 bg-gray-300 rounded mb-4 w-3/4 mx-auto"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+            <div className="h-6 opacity-10 rounded mb-4 w-3/4 mx-auto"></div>
+            <div className="h-4 opacity-5 rounded w-1/2 mx-auto"></div>
           </div>
           <p 
             id="quick-edit-modal-loading" 
@@ -169,7 +174,10 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
       const saveResult = await saveDraft();
       if (saveResult) {
         showSuccess('Profile section updated successfully!');
-        onClose();
+        // Show inline feedback before closing
+        setTimeout(() => {
+          onClose();
+        }, 1000);
       }
     } catch (error) {
       console.error('Error saving profile section:', error);
@@ -179,31 +187,41 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-black/60 backdrop-blur-sm transition-opacity duration-300 dark:bg-black/70"
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
       role="dialog"
       aria-modal="true"
       aria-labelledby="quick-edit-modal-title"
     >
       <div 
-        className="w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-3xl border border-border-color bg-background-secondary shadow-2xl transition-transform duration-300"
+        className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl transition-transform duration-300"
+        style={{ backgroundColor: 'var(--background-elevated)' }}
         role="document"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-border-subtle bg-background-secondary/80 px-8 py-6">
+        <div className="flex items-center justify-between border-b px-6 py-6">
           <div>
             <h2 
               id="quick-edit-modal-title" 
-              className="text-2xl font-semibold text-foreground-primary mb-1"
+              className="text-2xl font-bold mb-1"
             >
               Edit {SECTION_TITLES[section]}
             </h2>
-            <p className="text-sm text-foreground-secondary">
+            <p className="text-sm opacity-80">
               Update your profile information
             </p>
           </div>
           <button
             onClick={handleCancel}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-foreground-muted transition-all duration-200 hover:border-border-color hover:bg-background-tertiary focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:ring-offset-2"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-transparent opacity-60 transition-all duration-200 hover:opacity-100 hover:border-opacity-30 focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{
+              backgroundColor: 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--accent-primary-light)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
             aria-label="Close"
           >
             <X size={22} />
@@ -211,7 +229,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
         </div>
 
         {/* Modal Content */}
-        <div className="max-h-[calc(90vh-6rem)] overflow-y-auto px-8 py-6">
+        <div className="max-h-[calc(90vh-6rem)] overflow-y-auto px-6 py-6">
           <Editor 
             profile={draft} 
             onUpdate={updateDraft} 
@@ -219,11 +237,11 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-border-subtle bg-background-secondary/80 px-8 py-5">
+        <div className="flex items-center justify-end gap-3 border-t px-6 py-4">
           {/* Error Message */}
           {saveError && (
             <div 
-              className="mr-auto text-sm text-error flex items-center gap-2" 
+              className="mr-auto text-sm text-red-600 flex items-center gap-2" 
               role="alert"
             >
               <span>{saveError}</span>
@@ -233,7 +251,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
           {/* Cancel Button */}
           <button
             onClick={handleCancel}
-            className="inline-flex items-center rounded-xl border border-border-color bg-background-tertiary px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-all duration-200 hover:bg-background-tertiary/80 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2"
+            className="px-4 py-2 rounded-lg font-medium transition-colors hover:bg-white/10 border"
           >
             Cancel
           </button>
@@ -242,11 +260,17 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
           <button
             onClick={handleSave}
             disabled={!isDirty || isSaving}
-            className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`
+              flex items-center px-6 py-2 rounded-lg font-medium transition-all
+              ${isDirty && !isSaving
+                ? 'shadow-sm'
+                : 'opacity-50 cursor-not-allowed'
+              }
+            `}
           >
             {isSaving ? (
               <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current opacity-30 border-t-current"></div>
                 Saving…
               </>
             ) : (

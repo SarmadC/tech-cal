@@ -13,7 +13,8 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { CheckCircle, Timer, User } from '@phosphor-icons/react';
+import { CheckCircle, Timer, User, X } from '@phosphor-icons/react';
+import { GreenBadge } from '@/components/onboarding/shared/FormField';
 import { AnalyticsService } from '@/services/analyticsService';
 
 const TIMEFRAME_COPY: Record<string, { label: string; window: string }> = {
@@ -87,6 +88,8 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   const [dismissedPromptIds, setDismissedPromptIds] = useState<string[]>([]);
   const loggedShownPrompts = useRef<Set<string>>(new Set());
   const completedSectionsRef = useRef<Set<string>>(new Set());
+  const [saveFeedback, setSaveFeedback] = useState<{ section: string; timestamp: Date } | null>(null);
+  const [inlineEditing, setInlineEditing] = useState<{ field: string; value: string; element?: HTMLElement } | null>(null);
   
   // Derive disabled state from modal state
   const isQuickEditDisabled = quickEditModalState.isSaving || quickEditSection !== null;
@@ -189,10 +192,48 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
 
   const optionalStatus: CareerOptionalSectionStatus = optionalSections ?? DEFAULT_OPTIONAL_STATUS;
   const optionalSectionEntries = Object.entries(optionalStatus) as Array<[keyof CareerOptionalSectionStatus, boolean]>;
-  const completedOptionalSections = optionalSectionEntries.filter(([, isComplete]) => isComplete).length;
-  const optionalCompletionPercent = optionalSectionEntries.length > 0
-    ? Math.round((completedOptionalSections / optionalSectionEntries.length) * 100)
-    : 0;
+  
+  // Calculate comprehensive profile completion including core sections
+  const optionalCompletionPercent = React.useMemo(() => {
+    if (!currentCareerProfile) return 0;
+    
+    // Core sections
+    const coreSections = [
+      { name: 'role', completed: !!(currentCareerProfile?.currentRole && currentCareerProfile?.seniority && currentCareerProfile?.industry && currentCareerProfile?.companySize) },
+      { name: 'skills', completed: !!(currentCareerProfile?.primarySkills && currentCareerProfile.primarySkills.length > 0) },
+      { name: 'goals', completed: !!(currentCareerProfile?.careerGoals && currentCareerProfile.careerGoals.length > 0 && currentCareerProfile?.timeframe) }
+    ];
+    
+    // Optional sections
+    const optionalSectionsData = optionalSectionEntries.map(([key, completed]) => ({ name: key, completed }));
+    const allSections = [...coreSections, ...optionalSectionsData];
+    const completedSections = allSections.filter(section => section.completed).length;
+    const totalSections = allSections.length;
+    
+    const percentage = totalSections > 0
+      ? Math.round((completedSections / totalSections) * 100)
+      : 0;
+
+    console.log('Profile completion calculation:', {
+      coreSections,
+      optionalSectionsData,
+      allSections,
+      completedSections,
+      totalSections,
+      percentage,
+      currentCareerProfile: {
+        currentRole: currentCareerProfile?.currentRole,
+        seniority: currentCareerProfile?.seniority,
+        industry: currentCareerProfile?.industry,
+        companySize: currentCareerProfile?.companySize,
+        primarySkills: currentCareerProfile?.primarySkills?.length,
+        careerGoals: currentCareerProfile?.careerGoals?.length,
+        timeframe: currentCareerProfile?.timeframe
+      }
+    });
+    
+    return percentage;
+  }, [currentCareerProfile, optionalSectionEntries]);
 
   const handlePromptComplete = (quickEditKey: QuickEditSection) => {
     const prompt = promptDefinitions.find(p => p.quickEdit === quickEditKey);
@@ -220,6 +261,64 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
       logPromptEvent('prompt_completed', optionalKey, { completedAt: new Date().toISOString() });
       completedSectionsRef.current.add(optionalKey);
     }
+  };
+
+  // Update saveFeedback when quick edit closes after saving
+  const handleQuickEditClose = () => {
+    if (quickEditModalState.isDirty) {
+      const sectionTitle = quickEditSection ? 
+        (quickEditSection === 'role' ? 'Role' :
+         quickEditSection === 'skills' ? 'Skills' :
+         quickEditSection === 'goals' ? 'Goals' : 'Profile') : 'Profile';
+      setSaveFeedback({ section: sectionTitle, timestamp: new Date() });
+      setTimeout(() => setSaveFeedback(null), 3000);
+    }
+    setQuickEditSection(null);
+  };
+
+  // Inline editing handlers
+  const handleInlineEdit = (field: string, currentValue: string, element?: HTMLElement) => {
+    setInlineEditing({ field, value: currentValue, element });
+  };
+
+  const handleInlineSave = async (field: string, newValue: string) => {
+    try {
+      if (!currentCareerProfile) return;
+      
+      // Create updated profile with the new field value
+      const updatedProfile = {
+        ...currentCareerProfile,
+        [field]: newValue
+      };
+      
+      // Save the updated profile
+      await _saveCareerProfile(updatedProfile);
+      
+      // Refresh profile to ensure UI updates with latest data
+      await refreshProfile();
+      
+      // Show feedback
+      setSaveFeedback({ section: field, timestamp: new Date() });
+      setTimeout(() => setSaveFeedback(null), 3000);
+      
+      // Return focus to the original element
+      if (inlineEditing?.element) {
+        inlineEditing.element.focus();
+      }
+      
+      setInlineEditing(null);
+    } catch (error) {
+      console.error('Error saving inline edit:', error);
+      showError('Failed to update field. Please try again.');
+    }
+  };
+
+  const handleInlineCancel = () => {
+    // Return focus to the original element
+    if (inlineEditing?.element) {
+      inlineEditing.element.focus();
+    }
+    setInlineEditing(null);
   };
   
   // Debug: Log when career profile changes
@@ -317,10 +416,6 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     setQuickEditSection(section);
   };
 
-  const handleQuickEditClose = () => {
-    setQuickEditSection(null);
-    // Note: Modal already refreshes data before closing, no need to refresh again
-  };
 
   // This check is now handled by the useCareerProfile hook
 
@@ -413,79 +508,110 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
 
   const timeframeKey = currentCareerProfile.timeframe ?? 'medium-term';
   const timeframeDetails = TIMEFRAME_COPY[timeframeKey] ?? TIMEFRAME_COPY['medium-term'];
-  const heroStats: Array<{ label: string; value: number; caption: string }> = [
-    {
-      label: 'Core skills',
-      value: currentCareerProfile.primarySkills.length,
-      caption: currentCareerProfile.primarySkills.length
-        ? currentCareerProfile.primarySkills.slice(0, 2).join(', ')
-        : 'Add skills you use every day'
-    },
-    {
-      label: 'Learning goals',
-      value: currentCareerProfile.skillsToLearn.length,
-      caption: currentCareerProfile.skillsToLearn.length
-        ? currentCareerProfile.skillsToLearn.slice(0, 2).join(', ')
-        : 'Identify the next skills to target'
-    },
-    {
-      label: 'Focus areas',
-      value: currentCareerProfile.careerGoals.length,
-      caption: currentCareerProfile.careerGoals.length
-        ? formatGoalLabel(currentCareerProfile.careerGoals[0])
-        : 'Define where you want to grow'
-    }
-  ];
-  const remainingOptionalSections = Math.max(optionalSectionEntries.length - completedOptionalSections, 0);
 
   // Show completed career profile with edit option
   return (
     <>
       <div key={`profile-${lastUpdate}`} className={`career-profile-manager completed ${className}`}>
-        <div className="space-y-8">
+        <div className="space-y-6">
+          {/* Primary Focus: Career Snapshot with Enhanced Typography */}
           <section
-            className="rounded-2xl border shadow-sm transition-shadow hover:shadow-md"
+            className="rounded-xl transition-shadow"
             style={{
-              backgroundColor: 'var(--background-main)',
-              borderColor: 'var(--border-default)',
+              backgroundColor: 'var(--background-elevated)',
               color: 'var(--foreground-primary)'
             }}
           >
-            <div className="p-6 sm:p-8 space-y-8">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="p-6 space-y-6">
+              {/* Header with Large Typography */}
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p
-                    className="text-xs font-semibold uppercase tracking-[0.35em]"
-                    style={{ color: 'var(--foreground-tertiary)' }}
-                  >
-                    Career snapshot
-                  </p>
-                  <h3
-                    className="mt-2 text-2xl font-semibold leading-tight sm:text-3xl"
+                  <h1
+                    className="text-3xl font-bold leading-tight sm:text-4xl"
                     style={{ color: 'var(--foreground-primary)' }}
                   >
                     {currentCareerProfile.currentRole}
-                  </h3>
-                  <p
-                    className="mt-2 text-sm"
-                    style={{ color: 'var(--foreground-secondary)' }}
-                  >
-                    {currentCareerProfile.industry}
-                    {currentCareerProfile.companySize ? ` • ${String(currentCareerProfile.companySize).replace('-', ' ')} company` : ''}
-                  </p>
+                  </h1>
                 </div>
                 <button
                   onClick={handleEdit}
-                  className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="px-6 py-3 rounded-xl font-semibold text-base transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-opacity-30 shadow-md border-2"
                   style={{
-                    backgroundColor: 'var(--background-elevated)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--foreground-primary)'
+                    backgroundColor: 'var(--accent-primary)',
+                    color: 'var(--background-main)',
+                    borderColor: 'var(--accent-primary)',
+                    boxShadow: '0 4px 14px 0 rgba(0, 0, 0, 0.15)'
+                  }}
+                  aria-label="Edit profile - open full profile editing wizard"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--accent-primary-dark)';
+                    e.currentTarget.style.borderColor = 'var(--accent-primary-dark)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 0 4px var(--accent-primary-light)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 14px 0 rgba(0, 0, 0, 0.15)';
                   }}
                 >
                   Edit profile
                 </button>
               </div>
+
+              {/* Inline Save Feedback */}
+              {saveFeedback && (
+                <div className="animate-in fade-in slide-in-from-top-2">
+                  <div 
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg"
+                    style={{
+                      backgroundColor: 'var(--success-light)',
+                      color: 'var(--success)',
+                      border: '1px solid var(--success)'
+                    }}
+                  >
+                    <CheckCircle size={18} weight="fill" />
+                    <span className="text-sm font-medium">
+                      {saveFeedback.section} saved • {saveFeedback.timestamp.toLocaleTimeString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Progress Bar Section - Promoted as Primary KPI */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-sm font-bold uppercase tracking-wide"
+                    style={{ color: 'var(--foreground-primary)' }}
+                  >
+                    Profile completion
+                  </span>
+                  <span
+                    className="text-2xl font-bold"
+                    style={{ color: 'var(--foreground-primary)' }}
+                  >
+                    {optionalCompletionPercent}%
+                  </span>
+                </div>
+                <div
+                  className="h-3 w-full overflow-hidden rounded-full"
+                  style={{ backgroundColor: 'var(--background-tertiary)' }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${optionalCompletionPercent}%`,
+                      backgroundColor: 'var(--success)'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Contextual Badges */}
               <div className="flex flex-wrap gap-2">
                 {currentCareerProfile.seniority && (
                   <Badge
@@ -523,79 +649,14 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                   {timeframeDetails.window}
                 </Badge>
               </div>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {heroStats.map(({ label, value, caption }) => (
-                  <div
-                    key={label}
-                    className="flex flex-col gap-1 rounded-xl border px-4 py-3"
-                    style={{
-                      backgroundColor: 'var(--background-secondary)',
-                      borderColor: 'var(--border-default)'
-                    }}
-                  >
-                    <span
-                      className="text-2xl font-semibold"
-                      style={{ color: 'var(--foreground-primary)' }}
-                    >
-                      {value}
-                    </span>
-                    <p
-                      className="text-xs font-semibold uppercase tracking-wide"
-                      style={{ color: 'var(--foreground-secondary)' }}
-                    >
-                      {label}
-                    </p>
-                    <p className="text-sm" style={{ color: 'var(--foreground-tertiary)' }}>
-                      {caption}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: 'var(--foreground-secondary)' }}
-                  >
-                    Profile depth
-                  </span>
-                  <span
-                    className="text-sm font-semibold"
-                    style={{ color: 'var(--foreground-primary)' }}
-                  >
-                    {optionalCompletionPercent}%
-                  </span>
-                </div>
-                <div
-                  className="h-2 w-full overflow-hidden rounded-full"
-                  style={{ backgroundColor: 'var(--background-tertiary)' }}
-                >
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${optionalCompletionPercent}%`,
-                      backgroundColor: 'var(--accent-primary)'
-                    }}
-                  />
-                </div>
-                <p
-                  className="text-xs"
-                  style={{ color: 'var(--foreground-tertiary)' }}
-                >
-                  {remainingOptionalSections > 0
-                    ? `${remainingOptionalSections} optional preference${remainingOptionalSections > 1 ? 's' : ''} left for richer recommendations.`
-                    : 'Optional preferences complete – great job!'}
-                </p>
-              </div>
             </div>
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             <Card
-              className="border shadow-sm"
+              className="rounded-xl"
               style={{
-                borderColor: 'var(--border-default)',
-                backgroundColor: 'var(--background-main)'
+                backgroundColor: 'var(--background-elevated)'
               }}
             >
               <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -604,58 +665,195 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                     Role overview
                   </CardTitle>
                   <CardDescription style={{ color: 'var(--foreground-secondary)' }}>
-                    Keep this information current so we can surface the most relevant opportunities.
+                    Your current position, industry, and workplace details.
                   </CardDescription>
                 </div>
                 <button
                   onClick={() => handleQuickEdit('role')}
                   disabled={isQuickEditDisabled}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:opacity-80 active:opacity-60 focus:outline-none focus:ring-2 focus:ring-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap rounded-lg border"
                   style={{
-                    backgroundColor: 'var(--accent-primary-light)',
-                    border: '1px solid var(--accent-border)',
-                    color: 'var(--accent-primary)'
+                    color: 'var(--accent-primary)',
+                    borderColor: 'var(--border-default)',
+                    backgroundColor: 'var(--background-secondary)'
                   }}
-                >
-                  Quick edit
-                </button>
+                  aria-label="Quick edit - open quick edit modal for this section"
+                  >
+                    Quick edit
+                  </button>
               </CardHeader>
-              <CardContent>
-                <dl className="grid gap-6 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Current role</dt>
-                    <dd className="text-base font-medium text-foreground">{currentCareerProfile.currentRole}</dd>
-                  </div>
-                  <div className="space-y-1">
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Experience level</dt>
-                    <dd className="text-base font-medium text-foreground capitalize">{currentCareerProfile.seniority.replace('-', ' ')}</dd>
-                  </div>
-                  <div className="space-y-1">
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Industry</dt>
-                    <dd className="text-base font-medium text-foreground">{currentCareerProfile.industry}</dd>
-                  </div>
-                  <div className="space-y-1">
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Company size</dt>
-                    <dd className="text-base font-medium text-foreground capitalize">{currentCareerProfile.companySize}</dd>
-                  </div>
-                </dl>
+              <CardContent className="space-y-6">
+                <section>
+                  <dl className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wide opacity-70">Current role</dt>
+                      <dd className="text-base font-semibold">
+                      {inlineEditing?.field === 'currentRole' ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={inlineEditing.value}
+                            onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
+                            className="px-2 py-1 text-base font-semibold border rounded focus:outline-none focus:ring-2 focus:ring-opacity-30"
+                            style={{
+                              backgroundColor: 'var(--background-elevated)',
+                              borderColor: 'var(--border-default)',
+                              color: 'var(--foreground-primary)'
+                            }}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleInlineSave('currentRole', inlineEditing.value);
+                              } else if (e.key === 'Escape') {
+                                handleInlineCancel();
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => handleInlineSave('currentRole', inlineEditing.value)}
+                            className="p-1 text-green-600 hover:text-green-700 transition-colors"
+                            aria-label="Save"
+                          >
+                            <CheckCircle size={16} weight="fill" />
+                          </button>
+                          <button
+                            onClick={handleInlineCancel}
+                            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                            aria-label="Cancel"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => handleInlineEdit('currentRole', currentCareerProfile.currentRole, e.currentTarget)}
+                          className="group flex items-center hover:opacity-80 transition-opacity text-left"
+                          aria-label="Edit current role"
+                        >
+                          {currentCareerProfile.currentRole}
+                        </button>
+                      )}
+                      </dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wide opacity-70">Experience level</dt>
+                      <dd className="text-base font-semibold capitalize">{currentCareerProfile.seniority.replace('-', ' ')}</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wide opacity-70">Industry</dt>
+                      <dd className="text-base font-semibold">
+                      {inlineEditing?.field === 'industry' ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={inlineEditing.value}
+                            onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
+                            className="px-2 py-1 text-base font-semibold border rounded focus:outline-none focus:ring-2 focus:ring-opacity-30"
+                            style={{
+                              backgroundColor: 'var(--background-elevated)',
+                              borderColor: 'var(--border-default)',
+                              color: 'var(--foreground-primary)'
+                            }}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleInlineSave('industry', inlineEditing.value);
+                              } else if (e.key === 'Escape') {
+                                handleInlineCancel();
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => handleInlineSave('industry', inlineEditing.value)}
+                            className="p-1 text-green-600 hover:text-green-700 transition-colors"
+                            aria-label="Save"
+                          >
+                            <CheckCircle size={16} weight="fill" />
+                          </button>
+                          <button
+                            onClick={handleInlineCancel}
+                            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                            aria-label="Cancel"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => handleInlineEdit('industry', currentCareerProfile.industry, e.currentTarget)}
+                          className="group flex items-center hover:opacity-80 transition-opacity text-left"
+                          aria-label="Edit industry"
+                        >
+                          {currentCareerProfile.industry}
+                        </button>
+                      )}
+                      </dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wide opacity-70">Company size</dt>
+                      <dd className="text-base font-semibold capitalize">
+                      {inlineEditing?.field === 'companySize' ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={inlineEditing.value}
+                            onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
+                            className="px-2 py-1 text-base font-semibold border rounded focus:outline-none focus:ring-2 focus:ring-opacity-30"
+                            style={{
+                              backgroundColor: 'var(--background-elevated)',
+                              borderColor: 'var(--border-default)',
+                              color: 'var(--foreground-primary)'
+                            }}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleInlineSave('companySize', inlineEditing.value);
+                              } else if (e.key === 'Escape') {
+                                handleInlineCancel();
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => handleInlineSave('companySize', inlineEditing.value)}
+                            className="p-1 text-green-600 hover:text-green-700 transition-colors"
+                            aria-label="Save"
+                          >
+                            <CheckCircle size={16} weight="fill" />
+                          </button>
+                          <button
+                            onClick={handleInlineCancel}
+                            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                            aria-label="Cancel"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => handleInlineEdit('companySize', currentCareerProfile.companySize, e.currentTarget)}
+                          className="group flex items-center hover:opacity-80 transition-opacity text-left"
+                          aria-label="Edit company size"
+                        >
+                          {currentCareerProfile.companySize}
+                        </button>
+                      )}
+                      </dd>
+                    </div>
+                    </dl>
+                  </section>
               </CardContent>
             </Card>
 
             <Card
-              className="border shadow-sm"
+              className="rounded-xl"
               style={{
-                borderColor: 'var(--border-default)',
-                backgroundColor: 'var(--background-main)'
+                backgroundColor: 'var(--background-elevated)'
               }}
             >
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold" style={{ color: 'var(--foreground-primary)' }}>
+              <CardHeader className="pb-4 pt-6">
+                <CardTitle className="text-base font-semibold" style={{ color: 'var(--foreground-primary)' }}>
                   Optional preferences
                 </CardTitle>
-                <CardDescription style={{ color: 'var(--foreground-secondary)' }}>
-                  Complete these sections to unlock richer recommendations.
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {pendingPrompts.length > 0 && (
@@ -706,26 +904,6 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                   </div>
                 )}
 
-                <div
-                  className="rounded-xl border p-4 shadow-inner"
-                  style={{
-                    backgroundColor: 'var(--background-secondary)',
-                    borderColor: 'var(--border-default)'
-                  }}
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground-secondary)' }}>
-                    Progress
-                  </p>
-                  <p className="mt-2 text-lg font-semibold" style={{ color: 'var(--foreground-primary)' }}>
-                    {optionalCompletionPercent}% complete
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--foreground-tertiary)' }}>
-                    {remainingOptionalSections > 0
-                      ? `Complete ${remainingOptionalSections} more preference${remainingOptionalSections > 1 ? 's' : ''} to reach 100%.`
-                      : 'All optional preferences are complete.'}
-                  </p>
-                </div>
-
                 <div className="space-y-3">
                   {optionalSectionEntries.map(([sectionId, isComplete]) => {
                     const SectionIcon = isComplete ? CheckCircle : Timer;
@@ -755,27 +933,19 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                             </p>
                           </div>
                         </div>
-                        {isComplete ? (
-                          <span
-                            className="text-xs font-semibold"
-                            style={{ color: 'var(--success)' }}
+                        {quickEditKey && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuickEdit(quickEditKey)}
+                            disabled={isQuickEditDisabled}
+                            className="px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:opacity-80 active:opacity-60 focus:outline-none focus:ring-2 focus:ring-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            style={{
+                              color: 'var(--accent-primary)'
+                            }}
+                            aria-label={`${isComplete ? 'Edit' : 'Update'} ${copy.label}`}
                           >
-                            Complete
-                          </span>
-                        ) : (
-                          quickEditKey && (
-                            <button
-                              type="button"
-                              onClick={() => handleQuickEdit(quickEditKey)}
-                              className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                              style={{
-                                backgroundColor: 'var(--accent-primary-light)',
-                                color: 'var(--accent-primary)'
-                              }}
-                            >
-                              Update
-                            </button>
-                          )
+                            {isComplete ? 'Edit' : 'Update'}
+                          </button>
                         )}
                       </div>
                     );
@@ -785,12 +955,11 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
             </Card>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             <Card
-              className="border shadow-sm"
+              className="rounded-xl"
               style={{
-                borderColor: 'var(--border-default)',
-                backgroundColor: 'var(--background-main)'
+                backgroundColor: 'var(--background-elevated)'
               }}
             >
               <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -805,15 +974,16 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                 <button
                   onClick={() => handleQuickEdit('skills')}
                   disabled={isQuickEditDisabled}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:opacity-80 active:opacity-60 focus:outline-none focus:ring-2 focus:ring-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap rounded-lg border"
                   style={{
-                    backgroundColor: 'var(--accent-primary-light)',
-                    border: '1px solid var(--accent-border)',
-                    color: 'var(--accent-primary)'
+                    color: 'var(--accent-primary)',
+                    borderColor: 'var(--border-default)',
+                    backgroundColor: 'var(--background-secondary)'
                   }}
-                >
-                  Quick edit
-                </button>
+                  aria-label="Quick edit - open quick edit modal for this section"
+                  >
+                    Quick edit
+                  </button>
               </CardHeader>
               <CardContent className="space-y-6">
                 {currentCareerProfile.primarySkills.length > 0 && (
@@ -865,18 +1035,9 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {(showAllLearningGoals ? currentCareerProfile.skillsToLearn : currentCareerProfile.skillsToLearn.slice(0, 6)).map((skill, index) => (
-                        <span
-                          key={`${skill}-${index}`}
-                          className="rounded-full border px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-md"
-                          style={{
-                            backgroundColor: 'var(--success-light)',
-                            borderColor: 'var(--success)',
-                            color: 'var(--success)',
-                            boxShadow: 'var(--shadow-xs)'
-                          }}
-                        >
+                        <GreenBadge key={`${skill}-${index}`}>
                           {skill}
-                        </span>
+                        </GreenBadge>
                       ))}
                     </div>
                   </section>
@@ -885,10 +1046,9 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
             </Card>
 
             <Card
-              className="border shadow-sm"
+              className="rounded-xl"
               style={{
-                borderColor: 'var(--border-default)',
-                backgroundColor: 'var(--background-main)'
+                backgroundColor: 'var(--background-elevated)'
               }}
             >
               <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -903,15 +1063,16 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                 <button
                   onClick={() => handleQuickEdit('goals')}
                   disabled={isQuickEditDisabled}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:opacity-80 active:opacity-60 focus:outline-none focus:ring-2 focus:ring-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap rounded-lg border"
                   style={{
-                    backgroundColor: 'var(--accent-primary-light)',
-                    border: '1px solid var(--accent-border)',
-                    color: 'var(--accent-primary)'
+                    color: 'var(--accent-primary)',
+                    borderColor: 'var(--border-default)',
+                    backgroundColor: 'var(--background-secondary)'
                   }}
-                >
-                  Quick edit
-                </button>
+                  aria-label="Quick edit - open quick edit modal for this section"
+                  >
+                    Quick edit
+                  </button>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>

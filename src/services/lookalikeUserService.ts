@@ -120,7 +120,8 @@ export class LookalikeUserService {
           recommendationMetadata: {
             source: 'lookalike',
             lookalikeTagScore: item.tagScore,
-            lookalikeCareerImpactScore: item.careerImpactScore
+            lookalikeCareerImpactScore: item.careerImpactScore,
+            lookalikeCohortSize: similarProfiles.length // Actual number of similar users
           }
         }) as Event);
 

@@ -75,6 +75,34 @@ export const SENIORITY_LEVELS = [
   { value: 'founder', label: 'Founder/Entrepreneur' }
 ] as const;
 
+// Two-track experience level groupings
+export interface ExperienceLevel {
+  value: string;
+  label: string;
+  years: string;
+  lessCommon: boolean;
+}
+
+export const LEVELS_BY_TRACK: Record<'ic' | 'management', ExperienceLevel[]> = {
+  ic: [
+    { value: 'entry-level', label: 'Entry-level', years: '0-2 years', lessCommon: false },
+    { value: 'junior', label: 'Junior', years: '2-4 years', lessCommon: false },
+    { value: 'mid-level', label: 'Mid-level', years: '4-7 years', lessCommon: false },
+    { value: 'senior', label: 'Senior', years: '7-12 years', lessCommon: false },
+    { value: 'staff', label: 'Staff', years: '12+ years', lessCommon: false },
+    { value: 'principal', label: 'Principal', years: '15+ years', lessCommon: false },
+    { value: 'student', label: 'Student', years: '', lessCommon: true },
+    { value: 'founder', label: 'Founder/Entrepreneur', years: '', lessCommon: true }
+  ],
+  management: [
+    { value: 'lead', label: 'Team Lead', years: '', lessCommon: false },
+    { value: 'manager', label: 'Manager', years: '', lessCommon: false },
+    { value: 'director', label: 'Director', years: '', lessCommon: false },
+    { value: 'vp', label: 'VP/Executive', years: '', lessCommon: false },
+    { value: 'founder', label: 'Founder/Entrepreneur', years: '', lessCommon: true }
+  ]
+};
+
 // Industry focus options
 export const INDUSTRY_FOCUS = [
   'Technology/Software',

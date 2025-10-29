@@ -30,6 +30,7 @@ import { calculateTypePreferenceScore, normalizeEventType } from '@/utils/eventT
 import { hasSeniorSpeaker } from '@/utils/speakerUtils';
 import * as Sentry from '@sentry/nextjs';
 import { AnalyticsService } from '@/services/analyticsService';
+import { toBase64 } from '@/utils/base64';
 
 export class AdvancedScorer extends BaseScoringStrategy {
   readonly version = 'v2.0.0';
@@ -1605,6 +1606,6 @@ export class AdvancedScorer extends BaseScoringStrategy {
       speakers: event.speakerLineup?.length || 0,
       attendees: event.attendeeCount || 0
     };
-    return btoa(JSON.stringify(eventData)).substring(0, 16);
+    return toBase64(JSON.stringify(eventData)).substring(0, 16);
   }
 }

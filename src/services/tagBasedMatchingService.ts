@@ -336,24 +336,52 @@ export class TagBasedMatchingService {
     let candidateEvents: SupabaseEventWithDetails[] = normalizedEvents;
 
     if (candidateEvents.length === 0 && (careerProfile.preferredEventTypes?.length ?? 0) > 0) {
-      const { data: fallbackEvents, error: fallbackError } = await supabaseClient
-        .from('events')
-        .select(`
-          *,
-          event_type:event_type_id (*),
-          organizer:organizers (*),
-          tags:event_tag_relations (
-            event_tags (event_tag, category, color)
-          )
-        `)
-        .in('event_type_id', careerProfile.preferredEventTypes)
-        .eq('status', 'confirmed')
-        .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true })
-        .limit(fetchLimit);
+      // Use case-insensitive SQL filtering to avoid loading thousands of events into memory
+      // Build multiple queries for each preferred type, then combine and deduplicate results
+      const fallbackPromises = careerProfile.preferredEventTypes.map(type => 
+        supabaseClient
+          .from('events')
+          .select(`
+            *,
+            event_type:event_type_id (*),
+            organizer:organizers (*),
+            tags:event_tag_relations (
+              event_tags (event_tag, category, color)
+            )
+          `)
+          .eq('status', 'confirmed')
+          .gte('start_time', new Date().toISOString())
+          .ilike('event_type.name', type) // Exact match (case-insensitive)
+          .order('start_time', { ascending: true })
+          .limit(fetchLimit)
+      );
+      
+      const fallbackResults = await Promise.all(fallbackPromises);
+      
+      // Check for errors in any query result
+      const hasErrors = fallbackResults.some(result => result.error);
+      if (hasErrors) {
+        console.warn('[TagBasedMatching] Some fallback queries failed:', 
+          fallbackResults.filter(r => r.error).map(r => r.error));
+      }
+      
+      // Collect unique events by ID to avoid duplicates
+      const eventMap = new Map<string, Record<string, unknown>>();
+      fallbackResults.forEach(result => {
+        if (result.data) {
+          result.data.forEach((event: Record<string, unknown>) => {
+            const eventId = String(event.id);
+            if (!eventMap.has(eventId)) {
+              eventMap.set(eventId, event);
+            }
+          });
+        }
+      });
+      
+      const allFallbackEvents = Array.from(eventMap.values());
 
-      if (!fallbackError && Array.isArray(fallbackEvents)) {
-        candidateEvents = fallbackEvents.map((event: Record<string, unknown>) => {
+      if (allFallbackEvents.length > 0) {
+        candidateEvents = allFallbackEvents.map((event: Record<string, unknown>) => {
           const relations = Array.isArray(event.tags)
             ? (event.tags as Array<{ event_tags?: { id: string; event_tag: string; color?: string | null; category?: string | null } | null }>)
             : [];
@@ -487,9 +515,9 @@ export class TagBasedMatchingService {
     seedTerms.forEach(addTerm);
 
     (careerProfile.preferredEventTypes || []).forEach(addTerm);
-    (careerProfile.careerGoals || []).forEach(goal => addTerm(goal.replace(/_/g, ' ')));
-    (careerProfile.learningStyle || []).forEach(style => addTerm(style.replace(/_/g, ' ')));
-    (careerProfile.networkingGoals || []).forEach(goal => addTerm(goal.replace(/_/g, ' ')));
+    (careerProfile.careerGoals || []).forEach(goal => addTerm(goal.replace(/[-_]/g, ' ')));
+    (careerProfile.learningStyle || []).forEach(style => addTerm(style.replace(/[-_]/g, ' ')));
+    (careerProfile.networkingGoals || []).forEach(goal => addTerm(goal.replace(/[-_]/g, ' ')));
 
     return Array.from(terms);
   }
@@ -504,8 +532,15 @@ export class TagBasedMatchingService {
     const tagNames = new Set((event.tags || []).map(tag => tag.name.toLowerCase()));
     const text = `${event.title} ${event.description || ''}`.toLowerCase();
 
-    const preferredTypes = new Set(careerProfile.preferredEventTypes ?? []);
-    if (event.eventTypeId && preferredTypes.has(event.eventTypeId as CareerProfile['preferredEventTypes'][number])) {
+    // Check preferred event types using category name (case-insensitive)
+    // Normalize both the preference list and event name for reliable comparison
+    const preferredTypes = new Set(
+      (careerProfile.preferredEventTypes ?? []).map(t => t.toLowerCase())
+    );
+    const eventTypeName = event.category?.name?.toLowerCase();
+    
+    // Match by normalized name (handles any casing in stored preferences or event names)
+    if (eventTypeName && preferredTypes.has(eventTypeName)) {
       boost += 8;
       reasons.push('Matches your preferred event type');
     }

@@ -80,27 +80,15 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       entries.push({ label, contribution: Math.round(contribution) });
     };
 
+    // Only show breakdown if alignmentReasons are present with individual contributions
+    // This ensures accurate percentages (no guessing/faking)
     if (explanation?.alignmentReasons?.length) {
       explanation.alignmentReasons.forEach(({ reason, contribution }) => {
         pushEntry(reason, contribution);
       });
     }
 
-    if (!explanation?.alignmentReasons?.length && explanation?.reasons?.length) {
-      const avgContribution = explanation.reasons.length > 0
-        ? Math.max(1, Math.round(displayScore / explanation.reasons.length))
-        : 0;
-      explanation.reasons.forEach((reason) => pushEntry(reason, avgContribution));
-    }
-
-    if (explanation?.matchedSkills?.length) {
-      const avgContribution = explanation.matchedSkills.length > 0
-        ? Math.max(1, Math.round(displayScore / explanation.matchedSkills.length))
-        : 0;
-      explanation.matchedSkills.forEach((skill) =>
-        pushEntry(`Matches skill: ${skill}`, avgContribution)
-      );
-    }
+    // Don't show breakdown if alignmentReasons missing (fallback would show incorrect percentages)
 
     return entries.sort((a, b) => b.contribution - a.contribution);
   }, [event, displayScore]);

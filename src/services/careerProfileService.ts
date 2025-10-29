@@ -86,16 +86,16 @@ export class CareerProfileService {
       "current_role": careerProfile.currentRole,
       seniority: careerProfile.seniority,
       industry: careerProfile.industry,
-      company_size: careerProfile.companySize ?? 'small',
+      company_size: (careerProfile.companySize ?? 'small') as 'startup' | 'small' | 'medium' | 'large' | 'enterprise' | 'freelance',
       primary_skills: careerProfile.primarySkills ?? [],
       skills_to_learn: careerProfile.skillsToLearn ?? [],
       interests: careerProfile.interests ?? [],
       skill_tags: (careerProfile.skillTags ?? []) as unknown as Json,
       career_goals: careerProfile.careerGoals ?? [],
-      timeframe: careerProfile.timeframe ?? 'short-term',
+      timeframe: (careerProfile.timeframe ?? 'short-term') as 'immediate' | 'short-term' | 'medium-term' | 'long-term',
       learning_style: careerProfile.learningStyle ?? [],
-      available_time: careerProfile.availableTime ?? 'moderate',
-      budget: careerProfile.budget ?? 'moderate',
+      available_time: (careerProfile.availableTime ?? 'moderate') as 'very-limited' | 'limited' | 'moderate' | 'flexible' | 'dedicated',
+      budget: (careerProfile.budget ?? 'moderate') as 'free-only' | 'low' | 'moderate' | 'high' | 'unlimited',
       networking_goals: careerProfile.networkingGoals ?? [],
       preferred_event_types: careerProfile.preferredEventTypes ?? []
     };
@@ -183,17 +183,22 @@ export class CareerProfileService {
     supabaseClient: SupabaseClientType
   ): Promise<void> {
     try {
+      console.log('[CareerProfileService] Saving career profile for userId:', userId);
+      console.log('[CareerProfileService] Supabase client available:', !!supabaseClient);
+      
       const rowData = this.transformCareerProfileToRow(careerProfile);
+      console.log('[CareerProfileService] Transformed row data:', rowData);
       
       // Upsert career profile
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabaseClient as any)
+      const { data, error } = await supabaseClient
         .from('career_profiles')
         .upsert({
           user_id: userId,
-          ...rowData,
-          updated_at: new Date().toISOString()
-        });
+          ...rowData
+        } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .select();
+
+      console.log('[CareerProfileService] Upsert result:', { data, error });
 
       if (error) throw error;
 
@@ -202,27 +207,62 @@ export class CareerProfileService {
         console.warn('Failed to invalidate career impact cache after profile update:', error);
       });
     } catch (error) {
-      const formattedError = (() => {
-        if (error && typeof error === 'object' && 'message' in error) {
-          const err = error as { message: string; details?: string; hint?: string; code?: string };
-          return {
-            message: err.message,
-            details: err.details,
-            hint: err.hint,
-            code: err.code
-          };
-        }
-        if (error instanceof Error) {
-          return { message: error.message, stack: error.stack };
-        }
-        return error;
-      })();
-
-      console.error('Error saving career profile:', formattedError);
-      Sentry.captureException(error, { 
-        extra: { function: 'saveCareerProfile', userId } 
+      // Enhanced error logging to capture Supabase error details
+      console.error('Error saving career profile to new table:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+        errorType: error?.constructor?.name || typeof error
       });
-      throw new Error('Failed to save career profile.');
+      
+      // Fallback to legacy method if new table fails
+      try {
+        console.log('[CareerProfileService] Falling back to legacy preferences method');
+        await this.saveCareerProfileToPreferences(userId, careerProfile, supabaseClient);
+        console.log('[CareerProfileService] Successfully saved to preferences');
+        return;
+      } catch (fallbackError) {
+        // Enhanced fallback error logging
+        console.error('Error saving career profile to preferences (fallback):', {
+          fallbackError,
+          fallbackErrorMessage: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          fallbackErrorDetails: JSON.stringify(fallbackError, Object.getOwnPropertyNames(fallbackError))
+        });
+        
+        // Log detailed error information for both errors
+        console.error('Complete error details:', {
+          originalError: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            name: error instanceof Error ? error.name : 'Unknown',
+            stack: error instanceof Error ? error.stack : undefined,
+            errorType: typeof error,
+            errorString: String(error),
+            errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error))
+          },
+          fallbackError: {
+            message: fallbackError instanceof Error ? fallbackError.message : 'Unknown error',
+            name: fallbackError instanceof Error ? fallbackError.name : 'Unknown',
+            stack: fallbackError instanceof Error ? fallbackError.stack : undefined,
+            errorType: typeof fallbackError,
+            errorString: String(fallbackError)
+          },
+          userId,
+          careerProfile: {
+            currentRole: careerProfile?.currentRole,
+            seniority: careerProfile?.seniority,
+            industry: careerProfile?.industry,
+            companySize: careerProfile?.companySize,
+            primarySkills: careerProfile?.primarySkills?.length,
+            careerGoals: careerProfile?.careerGoals?.length,
+            timeframe: careerProfile?.timeframe
+          }
+        });
+        
+        Sentry.captureException(error, { 
+          extra: { function: 'saveCareerProfile', userId, careerProfile, fallbackError } 
+        });
+        throw new Error('Failed to save career profile.');
+      }
     }
   }
 

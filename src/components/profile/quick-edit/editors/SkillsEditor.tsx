@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { CareerProfile } from '@/types/career';
 import SkillsDropdown from '@/components/ui/SkillsDropdown';
+import { FormField } from '@/components/onboarding/shared/FormField';
 
 // Editor prop interface
 export interface SkillsEditorProps {
@@ -32,62 +33,43 @@ const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdat
     onUpdate({ interests });
   };
 
-  // Reusable section card component
-  const SectionCard = ({
-    title,
-    description,
-    children
-  }: {
-    title: string;
-    description: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="rounded-3xl border border-border-color bg-background-secondary/70 p-6 shadow-sm">
-      <div className="mb-4 space-y-1.5">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">{title}</h3>
-        <p className="text-sm text-foreground-muted">{description}</p>
-      </div>
-      {children}
-    </div>
-  );
-
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       {/* Current Skills */}
-      <SectionCard
-        title="Current Skills"
-        description="Select the skills you actively use and feel confident about."
+      <FormField 
+        label="Current Skills" 
+        description="Add 3–5 of your strongest skills"
       >
         <SkillsDropdown
           selectedSkills={formData.primarySkills}
           onSkillsChange={handlePrimarySkillsChange}
-          placeholder="Search skills you actively use..."
+          placeholder="Type to search or select from suggestions..."
         />
-      </SectionCard>
+      </FormField>
 
       {/* Skills to Learn */}
-      <SectionCard
-        title="Skills to Learn"
-        description="Choose skills you want to improve or explore next."
+      <FormField 
+        label="Skills You Want to Learn" 
+        description="What's next on your roadmap? Add 2–3 skills"
       >
         <SkillsDropdown
           selectedSkills={formData.skillsToLearn}
           onSkillsChange={handleSkillsToLearnChange}
-          placeholder="Search skills you want to learn..."
+          placeholder="Type to search or select..."
         />
-      </SectionCard>
+      </FormField>
 
       {/* Areas of Interest */}
-      <SectionCard
-        title="Areas of Interest"
-        description="Highlight topics and technologies that inspire you."
+      <FormField 
+        label="Areas of Interest" 
+        description="Broader topics you're curious about"
       >
         <SkillsDropdown
           selectedSkills={formData.interests}
           onSkillsChange={handleInterestsChange}
-          placeholder="Search interests and technologies..."
+          placeholder="Type to search or add custom topics..."
         />
-      </SectionCard>
+      </FormField>
     </div>
   );
 });

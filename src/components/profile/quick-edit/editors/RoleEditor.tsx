@@ -7,6 +7,8 @@ import {
   INDUSTRY_OPTIONS, 
   COMPANY_SIZE_OPTIONS 
 } from '../config';
+import { FormField, Select } from '@/components/onboarding/shared/FormField';
+import { RoleAutocomplete } from '@/components/onboarding/RoleAutocomplete';
 
 // Editor prop interface
 export interface RoleEditorProps {
@@ -31,73 +33,59 @@ const RoleEditor: React.FC<RoleEditorProps> = React.memo(({ profile, onUpdate })
 
   return (
     <div className="space-y-6">
-      {/* Current Role Input */}
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-foreground-secondary">
-          Current Role
-        </label>
-        <input
-          type="text"
+      {/* Current Role - Autocomplete Dropdown */}
+      <div className="space-y-1">
+        <RoleAutocomplete
+          id="current-role"
+          label="Current Role"
+          hint="Search for your role or browse by category"
           value={formData.currentRole}
-          onChange={(e) => handleFieldChange('currentRole', e.target.value)}
-          className="w-full rounded-2xl border border-border-color bg-background-tertiary px-4 py-3 text-base text-foreground-primary shadow-sm transition-all duration-200 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30"
-          placeholder="e.g., Frontend Engineer"
+          onChange={(value) => handleFieldChange('currentRole', value)}
+          required
         />
       </div>
 
       {/* Seniority Dropdown */}
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-foreground-secondary">
-          Experience Level
-        </label>
-        <select
+      <FormField label="Experience Level" required>
+        <Select
           value={formData.seniority}
           onChange={(e) => handleFieldChange('seniority', e.target.value)}
-          className="w-full rounded-2xl border border-border-color bg-background-tertiary px-4 py-3 text-base text-foreground-primary shadow-sm transition-all duration-200 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30"
         >
           {SENIORITY_OPTIONS.map(option => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </FormField>
 
       {/* Industry Dropdown */}
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-foreground-secondary">
-          Industry
-        </label>
-        <select
+      <FormField label="Industry">
+        <Select
           value={formData.industry}
           onChange={(e) => handleFieldChange('industry', e.target.value)}
-          className="w-full rounded-2xl border border-border-color bg-background-tertiary px-4 py-3 text-base text-foreground-primary shadow-sm transition-all duration-200 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30"
         >
           {INDUSTRY_OPTIONS.map(option => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </FormField>
 
       {/* Company Size Dropdown */}
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-foreground-secondary">
-          Company Size
-        </label>
-        <select
+      <FormField label="Company Size">
+        <Select
           value={formData.companySize}
           onChange={(e) => handleFieldChange('companySize', e.target.value)}
-          className="w-full rounded-2xl border border-border-color bg-background-tertiary px-4 py-3 text-base text-foreground-primary shadow-sm transition-all duration-200 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/30"
         >
           {COMPANY_SIZE_OPTIONS.map(option => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </FormField>
     </div>
   );
 });

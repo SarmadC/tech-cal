@@ -199,7 +199,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
             </div>
 
             {/* Desktop Sidebar */}
-            <aside className="hidden lg:block lg:w-1/4">
+            <aside className="hidden lg:block lg:w-56">
                 <nav className="sticky top-8 space-y-1">
                     {tabs.map(tab => (
                         <Link

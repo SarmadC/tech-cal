@@ -403,7 +403,8 @@ export class DiversityEnhancementService {
       // Apply adjustment to career impact score if it exists
       if ((event as EventWithCareerImpact).careerImpact?.overall) {
         const careerImpact = (event as EventWithCareerImpact).careerImpact!;
-        const adjustedScore = Math.max(0, careerImpact.overall + diversityAdjustment);
+        // Apply percentage-based adjustment (e.g., 0.1 = 10% bonus)
+        const adjustedScore = Math.max(0, Math.min(100, careerImpact.overall * (1 + diversityAdjustment)));
         return {
           ...event,
           careerImpact: {

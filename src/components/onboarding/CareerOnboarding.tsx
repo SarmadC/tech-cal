@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { CaretLeft, CaretRight, User, Target, BookOpen, Network, Users, CheckCircle } from '@phosphor-icons/react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import {
   CareerOnboardingData,
   SeniorityLevel,
-  CompanySize,
   CareerGoal,
   CareerTimeframe,
   LearningStyle,
@@ -18,17 +17,20 @@ import {
   CommunicationPreference,
   MentorshipPreference,
   CareerOptionalSectionStatus,
-  ROLE_TAXONOMY,
-  COMPANY_SIZE_OPTIONS,
-  SENIORITY_LEVELS,
-  INDUSTRY_FOCUS,
   INTEREST_AREAS
 } from '@/types/career';
 import MultiSelectDropdown, { MultiSelectOption } from '@/components/ui/MultiSelectDropdown';
-import { SkillProficiencySelector } from './SkillProficiencySelector';
 import { TeamRoleSelector } from './TeamRoleSelector';
-import { validateOnboardingData, sanitizeOnboardingData, synchronizeSkillTags } from '@/utils/onboardingUtils';
-import { buildSkillOptionList, mapSkillsToCanonical, normalizeSkillName } from '@/utils/skillTaxonomy';
+import { RoleAutocomplete } from './RoleAutocomplete';
+import { ProgressStepper } from './ProgressStepper';
+import { ExperienceLevelSelector } from './ExperienceLevelSelector';
+import { validateOnboardingData, sanitizeOnboardingData } from '@/utils/onboardingUtils';
+import { buildSkillOptionList, mapSkillsToCanonical } from '@/utils/skillTaxonomy';
+import { 
+  getSkillsForRole, 
+  getSuggestedSkillsToLearn,
+  deduplicateSkills
+} from '@/utils/skillSuggestions';
 
 interface CareerOnboardingProps {
   onComplete: (data: CareerOnboardingData, options?: { optionalSectionsCompleted: CareerOptionalSectionStatus }) => void;
@@ -41,12 +43,50 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   onSkip,
   className = ''
 }) => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [data, setData] = useState<Partial<CareerOnboardingData>>({});
+  // Load persisted state from localStorage on mount
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('career-onboarding-step');
+      return saved ? parseInt(saved, 10) : 1;
+    }
+    return 1;
+  });
+
+  const [data, setData] = useState<Partial<CareerOnboardingData>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('career-onboarding-data');
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
+
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [includeOptionalSteps, setIncludeOptionalSteps] = useState(false);
+  const [step1Errors, setStep1Errors] = useState<Record<string, string>>({});
+  const [step2Duplicates, setStep2Duplicates] = useState<string[]>([]);
 
   const totalSteps = includeOptionalSteps ? 6 : 3;
+
+  // Persist state to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('career-onboarding-step', currentStep.toString());
+    }
+  }, [currentStep]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('career-onboarding-data', JSON.stringify(data));
+    }
+  }, [data]);
+
+  // Clear localStorage on completion or skip
+  const clearPersistedState = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('career-onboarding-step');
+      localStorage.removeItem('career-onboarding-data');
+    }
+  };
 
   // Memoize dropdown options to prevent recreation on every render
   const technicalSkillOptions: MultiSelectOption[] = useMemo(() => buildSkillOptionList(), []);
@@ -59,9 +99,36 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   );
 
   const handleNext = () => {
+    // Validate current step
+    if (currentStep === 1) {
+      const errors: Record<string, string> = {};
+      
+      if (!data.step1_role?.currentRole) {
+        errors.currentRole = 'Please select your current role';
+      }
+      
+      if (!data.step1_role?.seniority) {
+        errors.seniority = 'Please select your experience level';
+      }
+      
+      if (Object.keys(errors).length > 0) {
+        setStep1Errors(errors);
+        
+        // Scroll to first error
+        setTimeout(() => {
+          const firstError = document.querySelector('[aria-invalid="true"]') as HTMLElement;
+          firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstError?.focus();
+        }, 100);
+        
+        return;
+      }
+    }
+    
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
       setValidationErrors([]); // Clear errors when moving to next step
+      setStep1Errors({}); // Clear Step 1 errors
     } else {
       // Validate and sanitize data before completing
       const validation = validateOnboardingData(data);
@@ -73,6 +140,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
           teamPreferences: includeOptionalSteps && Boolean(data.step6_teamBuilding?.teamGoals?.length)
         };
 
+        clearPersistedState();
         onComplete(sanitizedData, { optionalSectionsCompleted });
       } else {
         // Show validation errors to user
@@ -93,24 +161,25 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     setData(prev => {
       if (step === 'step2_skills' && stepData && typeof stepData === 'object') {
         const incoming = stepData as Partial<CareerOnboardingData['step2_skills']>;
-        const primarySkillsRaw = incoming.primarySkills ?? prev.step2_skills?.primarySkills ?? [];
-        const skillsToLearnRaw = incoming.skillsToLearn ?? prev.step2_skills?.skillsToLearn ?? [];
-        const interests = incoming.interests ?? prev.step2_skills?.interests ?? [];
-
-        const canonicalPrimary = mapSkillsToCanonical(primarySkillsRaw);
-        const canonicalSkillsToLearn = mapSkillsToCanonical(skillsToLearnRaw);
-        const existingSkillTags = incoming.skillTags ?? prev.step2_skills?.skillTags ?? [];
-        const synchronizedTags = synchronizeSkillTags(canonicalPrimary, existingSkillTags);
+        
+        // Map to canonical for primary skills and skills to learn
+        const canonicalPrimary = incoming.primarySkills 
+          ? mapSkillsToCanonical(incoming.primarySkills)
+          : prev.step2_skills?.primarySkills ?? [];
+        
+        const canonicalSkillsToLearn = incoming.skillsToLearn
+          ? mapSkillsToCanonical(incoming.skillsToLearn)
+          : prev.step2_skills?.skillsToLearn ?? [];
 
         return {
           ...prev,
           step2_skills: {
             ...prev.step2_skills,
-            ...incoming,
             primarySkills: canonicalPrimary,
             skillsToLearn: canonicalSkillsToLearn,
-            interests,
-            skillTags: synchronizedTags
+            interests: incoming.interests ?? prev.step2_skills?.interests ?? [],
+            // Keep existing skillTags if not explicitly updated (backward compatibility)
+            skillTags: incoming.skillTags ?? prev.step2_skills?.skillTags ?? []
           }
         };
       }
@@ -125,18 +194,11 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   const isStepComplete = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!(data.step1_role?.currentRole && data.step1_role?.seniority && data.step1_role?.industry);
+        // Only Current Role and Experience Level required
+        return !!(data.step1_role?.currentRole && data.step1_role?.seniority);
       case 2:
-        const hasSkills = !!(data.step2_skills?.primarySkills?.length || data.step2_skills?.skillsToLearn?.length || data.step2_skills?.interests?.length);
-        const primarySkills = data.step2_skills?.primarySkills || [];
-        const skillTags = data.step2_skills?.skillTags || [];
-        const allSkillsHaveRatings = primarySkills.length === 0 ||
-          primarySkills.every(skill => {
-            const normalizedSkill = normalizeSkillName(skill);
-            const matchingTag = skillTags.find(tag => normalizeSkillName(tag.skill) === normalizedSkill);
-            return Boolean(matchingTag?.proficiency);
-          });
-        return hasSkills && allSkillsHaveRatings;
+        // Require at least 2 current skills (proficiency rating removed)
+        return (data.step2_skills?.primarySkills?.length || 0) >= 2;
       case 3:
         return !!(data.step3_goals?.careerGoals?.length);
       case 4:
@@ -150,194 +212,182 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     }
   };
 
-  const renderProgressBar = () => (
-    <div className="w-full bg-gray-200 rounded h-2 mb-8">
-      <div 
-        className="bg-blue-600 h-2 rounded transition-all duration-300"
-        style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-      />
-    </div>
-  );
-
   const renderStepIndicator = () => {
-    const steps = includeOptionalSteps ? [1, 2, 3, 4, 5, 6] : [1, 2, 3];
+    const steps = [
+      { number: 1, name: 'Your Role' },
+      { number: 2, name: 'Skills' },
+      { number: 3, name: 'Goals' }
+    ];
+    
+    return <ProgressStepper currentStep={currentStep} totalSteps={totalSteps} steps={steps} />;
+  };
+
+  const renderStep1 = () => {
+    const handleRoleChange = (value: string) => {
+      updateData('step1_role', {
+        ...data.step1_role,
+        currentRole: value
+      });
+      if (value) {
+        setStep1Errors(prev => {
+          const { currentRole: _, ...rest } = prev;
+          return rest;
+        });
+      }
+      
+      // Note: Smart track pre-selection would be handled by ExperienceLevelSelector
+      // when it receives the role value, but for now we'll keep it simple
+    };
+
     return (
-      <div className="flex justify-center mb-8">
-        {steps.map((step, index) => (
-          <div key={step} className="flex items-center">
-            <div
-              className={`
-              w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-              ${step === currentStep
-                ? 'bg-blue-600 text-white'
-                : step < currentStep
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-200 text-gray-600'
-              }
-            `}
-            >
-              {step < currentStep ? <CheckCircle size={16} /> : step}
-            </div>
-            {index < steps.length - 1 && (
-              <div
-                className={`w-12 h-0.5 mx-2 ${
-                  step < currentStep ? 'bg-green-500' : 'bg-gray-200'
-                }`}
-              />
-            )}
-          </div>
-        ))}
+      <div className="space-y-6">
+        {/* Header with tighter spacing and time estimate */}
+        <div className="text-center mb-3">
+          <h2 className="text-2xl font-bold mb-1">Tell us about your role</h2>
+          <p className="text-sm opacity-70 mb-0">Takes under 1 minute</p>
+          <p className="text-sm opacity-80 mt-2">This helps us find your peer group and recommend relevant events</p>
+        </div>
+
+        {/* Current Role - Searchable Autocomplete */}
+        <RoleAutocomplete
+          id="current-role"
+          label="Current Role"
+          hint="Search for your role or browse by category"
+          value={data.step1_role?.currentRole || ''}
+          onChange={handleRoleChange}
+          error={step1Errors.currentRole}
+          required
+        />
+
+        {/* Experience Level - Two-track selector */}
+        <ExperienceLevelSelector
+          value={data.step1_role?.seniority || ''}
+          onChange={(value) => {
+            updateData('step1_role', {
+              ...data.step1_role,
+              seniority: value as SeniorityLevel
+            });
+            if (value) {
+              setStep1Errors(prev => {
+                const { seniority: _, ...rest } = prev;
+                return rest;
+              });
+            }
+          }}
+          error={step1Errors.seniority}
+        />
       </div>
     );
   };
 
-  const renderStep1 = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <User size={48} className="mx-auto mb-4 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Tell us about your role</h2>
-        <p className="text-gray-600">This helps us find your peer group and recommend relevant events.</p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Current Role</label>
-        <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          value={data.step1_role?.currentRole || ''}
-          onChange={(e) => updateData('step1_role', {
-            ...data.step1_role,
-            currentRole: e.target.value
-          })}
-        >
-          <option value="">Select your role</option>
-          {Object.entries(ROLE_TAXONOMY).map(([category, roles]) => (
-            <optgroup key={category} label={category}>
-              {roles.map(role => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">Choose the role that best matches your current position</p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Experience Level</label>
-        <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          value={data.step1_role?.seniority || ''}
-          onChange={(e) => updateData('step1_role', {
-            ...data.step1_role,
-            seniority: e.target.value as SeniorityLevel
-          })}
-        >
-          <option value="">Select your level</option>
-          {SENIORITY_LEVELS.map(level => (
-            <option key={level.value} value={level.value}>{level.label}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Industry Focus</label>
-        <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          value={data.step1_role?.industry || ''}
-          onChange={(e) => updateData('step1_role', {
-            ...data.step1_role,
-            industry: e.target.value
-          })}
-        >
-          <option value="">Select your industry</option>
-          {INDUSTRY_FOCUS.map(industry => (
-            <option key={industry} value={industry}>{industry}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Company Size</label>
-        <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          value={data.step1_role?.companySize || ''}
-          onChange={(e) => updateData('step1_role', {
-            ...data.step1_role,
-            companySize: e.target.value as CompanySize
-          })}
-        >
-          <option value="">Select company size</option>
-          {COMPANY_SIZE_OPTIONS.map(size => (
-            <option key={size.value} value={size.value}>{size.label}</option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
+  // Consolidated duplicate checker - reusable for all three fields
+  const checkDuplicatesForAllFields = () => {
+    const current = data.step2_skills?.primarySkills || [];
+    const toLearn = data.step2_skills?.skillsToLearn || [];
+    const interests = data.step2_skills?.interests || [];
+    
+    const dedupe = deduplicateSkills(current, toLearn, interests);
+    if (!dedupe.isValid) {
+      setStep2Duplicates(dedupe.crossFieldDuplicates.map(d => d.skill));
+    } else {
+      setStep2Duplicates([]);
+    }
+  };
 
   const renderStep2 = () => (
     <div className="space-y-6">
-      <div className="text-center mb-8">
-        <BookOpen size={48} className="mx-auto mb-4 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">What are your skills?</h2>
-        <p className="text-gray-600">Help us understand your technical background and learning interests.</p>
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold mb-1">What are your skills?</h2>
+        <p className="text-sm opacity-70 mb-0">~45 seconds</p>
+        <p className="opacity-80 mt-2">Help us understand your technical background and learning interests.</p>
       </div>
 
       <MultiSelectDropdown
         options={technicalSkillOptions}
         selectedValues={data.step2_skills?.primarySkills || []}
-        onChange={(values) => updateData('step2_skills', { 
-          primarySkills: values 
-        })}
+        onChange={(values) => {
+          updateData('step2_skills', { primarySkills: values });
+          checkDuplicatesForAllFields();
+        }}
+        onDuplicateAttempt={(value) => {
+          console.warn(`Duplicate attempt: ${value}`);
+        }}
         label="Current Skills"
-        description='Select your strongest technical skills. You can search by acronyms like "JS" or "Next.js" and we’ll map them to our canonical list.'
-        placeholder="Choose your current skills..."
+        description="Add 3–5 of your strongest skills"
+        placeholder="Type to search or select from suggestions..."
+        suggestions={getSkillsForRole(data.step1_role?.currentRole)}
+        suggestionLabel="Popular for your role"
         maxSelections={10}
         searchable={true}
       />
-
-      {/* Skill Proficiency Selector - Only show if skills are selected */}
-      {data.step2_skills?.primarySkills && data.step2_skills.primarySkills.length > 0 && (
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Rate Your Proficiency</h3>
-          <SkillProficiencySelector
-            skills={data.step2_skills.primarySkills}
-            skillTags={data.step2_skills.skillTags || []}
-            onSkillsChange={(skillTags) => {
-              try {
-                updateData('step2_skills', { skillTags });
-              } catch (error) {
-                console.error('Error updating skill tags:', error);
-              }
-            }}
-          />
-        </div>
-      )}
 
       <MultiSelectDropdown
         options={technicalSkillOptions}
         selectedValues={data.step2_skills?.skillsToLearn || []}
-        onChange={(values) => updateData('step2_skills', { 
-          skillsToLearn: values 
-        })}
+        onChange={(values) => {
+          updateData('step2_skills', { skillsToLearn: values });
+          checkDuplicatesForAllFields();
+        }}
+        onDuplicateAttempt={(value) => {
+          console.warn(`Duplicate attempt: ${value}`);
+        }}
         label="Skills You Want to Learn"
-        description='What would you like to learn next? Feel free to search with shorthand terms like "GCP" or "K8s".'
-        placeholder="Choose skills to learn..."
+        description="What's next on your roadmap? Add 2–3 skills"
+        placeholder="Type to search or select..."
+        suggestions={getSuggestedSkillsToLearn(
+          data.step2_skills?.primarySkills || [],
+          data.step1_role?.currentRole
+        )}
+        suggestionLabel="Suggested based on your skills"
         maxSelections={10}
         searchable={true}
       />
 
+      {step2Duplicates.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm" role="alert">
+          <p className="font-medium text-yellow-900 mb-1">Note:</p>
+          <p className="text-yellow-800 mb-2">
+            {step2Duplicates[0]} appears in multiple fields. Consider keeping skills in only one category.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              const skillToMove = step2Duplicates[0];
+              const currentSkills = data.step2_skills?.primarySkills || [];
+              if (currentSkills.includes(skillToMove)) {
+                // Remove from current skills and add to skills to learn
+                const updatedCurrent = currentSkills.filter(s => s !== skillToMove);
+                const updatedToLearn = [...(data.step2_skills?.skillsToLearn || []), skillToMove];
+                updateData('step2_skills', { 
+                  primarySkills: updatedCurrent,
+                  skillsToLearn: updatedToLearn
+                });
+              }
+              setStep2Duplicates([]);
+            }}
+            className="text-xs text-blue-600 hover:text-blue-700 font-medium underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+          >
+            Move {step2Duplicates[0]} to Skills to Learn
+          </button>
+        </div>
+      )}
+
       <MultiSelectDropdown
         options={interestOptions}
         selectedValues={data.step2_skills?.interests || []}
-        onChange={(values) => updateData('step2_skills', { 
-          ...data.step2_skills, 
-          interests: values 
-        })}
+        onChange={(values) => {
+          updateData('step2_skills', { interests: values });
+          checkDuplicatesForAllFields();
+        }}
+        onDuplicateAttempt={(value) => {
+          console.warn(`Duplicate attempt: ${value}`);
+        }}
         label="Areas of Interest"
         description="Broader topics you're curious about"
-        placeholder="Choose your interests..."
-        maxSelections={8}
+        placeholder="Type to search or add custom topics..."
+        maxSelections={5}
         searchable={true}
+        allowCustom={true}
       />
     </div>
   );
@@ -348,13 +398,12 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     return (
       <div className="space-y-6">
         <div className="text-center mb-8">
-          <Target size={48} className="mx-auto mb-4 text-blue-600" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">What are your goals?</h2>
-          <p className="text-gray-600">Tell us about your career aspirations so we can recommend relevant events.</p>
+          <h2 className="text-2xl font-bold mb-2">What are your goals?</h2>
+          <p className="opacity-80">Tell us about your career aspirations so we can recommend relevant events.</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Career Goals (select all that apply)</label>
+          <label className="block text-sm font-medium mb-3">Career Goals (select all that apply)</label>
           <div className="grid grid-cols-2 gap-3">
             {[
               { value: 'skill-development', label: 'Learn New Skills' },
@@ -377,16 +426,16 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                       careerGoals: newGoals
                     });
                   }}
-                  className="text-blue-600 focus:ring-blue-500"
+                  className="accent-primary"
                 />
-                <span className="text-sm text-gray-700">{goal.label}</span>
+                <span className="text-sm">{goal.label}</span>
               </label>
             ))}
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Timeline</label>
+          <label className="block text-sm font-medium mb-2">Timeline</label>
           <select
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={data.step3_goals?.timeframe || ''}
@@ -440,13 +489,12 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   const renderStep4 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <BookOpen size={48} className="mx-auto mb-4 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Learning preferences</h2>
-        <p className="text-gray-600">How do you prefer to learn and what&apos;s your availability?</p>
+        <h2 className="text-2xl font-bold mb-2">Learning preferences</h2>
+        <p className="opacity-80">How do you prefer to learn and what&apos;s your availability?</p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Learning Styles (select all that apply)</label>
+        <label className="block text-sm font-medium  mb-3">Learning Styles (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'hands-on', label: 'Hands-on Workshops' },
@@ -470,16 +518,16 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                     learningStyle: newStyles 
                   });
                 }}
-                className="text-blue-600 focus:ring-blue-500"
+                className="accent-primary"
               />
-              <span className="text-sm text-gray-700">{style.label}</span>
+              <span className="text-sm">{style.label}</span>
             </label>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Available Time</label>
+        <label className="block text-sm font-medium  mb-2">Available Time</label>
         <select
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           value={data.step4_preferences?.availableTime || ''}
@@ -498,7 +546,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Budget Range</label>
+        <label className="block text-sm font-medium  mb-2">Budget Range</label>
         <select
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           value={data.step4_preferences?.budget || ''}
@@ -521,13 +569,12 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   const renderStep5 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <Network size={48} className="mx-auto mb-4 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Networking goals</h2>
-        <p className="text-gray-600">What kind of professional connections are you looking to make?</p>
+        <h2 className="text-2xl font-bold mb-2">Networking goals</h2>
+        <p className="opacity-80">What kind of professional connections are you looking to make?</p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Networking Goals (select all that apply)</label>
+        <label className="block text-sm font-medium  mb-3">Networking Goals (select all that apply)</label>
         <div className="grid grid-cols-1 gap-3">
           {[
             { value: 'find-mentors', label: 'Connect with Senior Professionals & Mentors' },
@@ -551,16 +598,16 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                     networkingGoals: newGoals 
                   });
                 }}
-                className="text-blue-600 focus:ring-blue-500"
+                className="accent-primary"
               />
-              <span className="text-sm text-gray-700">{goal.label}</span>
+              <span className="text-sm">{goal.label}</span>
             </label>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Preferred Event Types</label>
+        <label className="block text-sm font-medium  mb-3">Preferred Event Types</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'conference', label: 'Conferences' },
@@ -584,9 +631,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                     preferredEventTypes: newTypes 
                   });
                 }}
-                className="text-blue-600 focus:ring-blue-500"
+                className="accent-primary"
               />
-              <span className="text-sm text-gray-700">{type.label}</span>
+              <span className="text-sm">{type.label}</span>
             </label>
           ))}
         </div>
@@ -597,25 +644,10 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   const renderStep6 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <Users size={48} className="mx-auto mb-4 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Team Building Preferences</h2>
-        <p className="text-gray-600">Help us match you with the perfect hackathon team.</p>
+        <h2 className="text-2xl font-bold mb-2">Team Building Preferences</h2>
+        <p className="opacity-80">Help us match you with the perfect hackathon team.</p>
       </div>
 
-      {/* Skill Proficiency (if skills are selected) */}
-      {data.step2_skills?.primarySkills && data.step2_skills.primarySkills.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Rate Your Skills</h3>
-          <SkillProficiencySelector
-            skills={data.step2_skills.primarySkills}
-            skillTags={data.step2_skills.skillTags || []}
-            onSkillsChange={(skillTags) => updateData('step2_skills', {
-              ...(data.step2_skills || {}),
-              skillTags
-            })}
-          />
-        </div>
-      )}
 
       {/* Team Role Selector */}
       <div>
@@ -631,7 +663,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Collaboration Style */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Collaboration Style (select all that apply)</label>
+        <label className="block text-sm font-medium  mb-3">Collaboration Style (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'hands-on', label: 'Hands-on Coding' },
@@ -657,9 +689,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                     collaborationStyle: newStyles 
                   });
                 }}
-                className="text-blue-600 focus:ring-blue-500"
+                className="accent-primary"
               />
-              <span className="text-sm text-gray-700">{style.label}</span>
+              <span className="text-sm">{style.label}</span>
             </label>
           ))}
         </div>
@@ -667,7 +699,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Team Size Preference */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Team Size</label>
+        <label className="block text-sm font-medium  mb-2">Preferred Team Size</label>
         <select
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           value={data.step6_teamBuilding?.teamSizePreference || ''}
@@ -686,7 +718,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Communication Preferences */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Communication Preferences (select all that apply)</label>
+        <label className="block text-sm font-medium  mb-3">Communication Preferences (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'slack', label: 'Slack' },
@@ -712,9 +744,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                     communicationPreferences: newPrefs 
                   });
                 }}
-                className="text-blue-600 focus:ring-blue-500"
+                className="accent-primary"
               />
-              <span className="text-sm text-gray-700">{pref.label}</span>
+              <span className="text-sm">{pref.label}</span>
             </label>
           ))}
         </div>
@@ -722,7 +754,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Team Availability */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Availability for Team Work</label>
+        <label className="block text-sm font-medium  mb-2">Availability for Team Work</label>
         <select
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           value={data.step6_teamBuilding?.availabilityPattern?.timezone || ''}
@@ -746,7 +778,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Project Types */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Project Types You&apos;re Interested In (select all that apply)</label>
+        <label className="block text-sm font-medium  mb-3">Project Types You&apos;re Interested In (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'web-application', label: 'Web Applications' },
@@ -776,9 +808,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                     projectTypePreferences: newTypes 
                   });
                 }}
-                className="text-blue-600 focus:ring-blue-500"
+                className="accent-primary"
               />
-              <span className="text-sm text-gray-700">{type.label}</span>
+              <span className="text-sm">{type.label}</span>
             </label>
           ))}
         </div>
@@ -786,7 +818,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Mentorship Preference */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Mentorship Preference</label>
+        <label className="block text-sm font-medium  mb-2">Mentorship Preference</label>
         <select
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           value={data.step6_teamBuilding?.mentorshipPreference || ''}
@@ -805,7 +837,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Team Building Goals */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Team Building Goals (select all that apply)</label>
+        <label className="block text-sm font-medium  mb-3">Team Building Goals (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'learn-new-skills', label: 'Learn New Skills' },
@@ -831,9 +863,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                     teamGoals: newGoals 
                   });
                 }}
-                className="text-blue-600 focus:ring-blue-500"
+                className="accent-primary"
               />
-              <span className="text-sm text-gray-700">{goal.label}</span>
+              <span className="text-sm">{goal.label}</span>
             </label>
           ))}
         </div>
@@ -842,8 +874,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   );
 
   return (
-    <div className={`max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-lg ${className}`}>
-      {renderProgressBar()}
+    <div className={`max-w-2xl mx-auto p-6 glass-card ${className}`}>
       {renderStepIndicator()}
 
       <div className="min-h-96">
@@ -857,9 +888,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h4 className="text-sm font-medium text-red-800 mb-2">Please fix the following issues:</h4>
-          <ul className="text-sm text-red-700 space-y-1">
+        <div className="mb-4 p-4 rounded-lg" style={{ background: 'var(--error-light)', border: '1px solid var(--error)' }}>
+          <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--error)' }}>Please fix the following issues:</h4>
+          <ul className="text-sm space-y-1" style={{ color: 'var(--error)' }}>
             {validationErrors.map((error, index) => (
               <li key={index} className="flex items-start">
                 <span className="mr-2">•</span>
@@ -870,42 +901,53 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         </div>
       )}
 
-      <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-        <div>
+      <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200 gap-3">
+        <div className="flex items-center gap-3">
+          {/* Persistent Back button */}
+          <button
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+            className={`
+              flex items-center px-4 py-2 rounded-lg font-medium transition-colors
+              ${currentStep === 1
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-white/10 border'
+              }
+            `}
+          >
+            <CaretLeft size={16} className="mr-1" />
+            Back
+          </button>
+
+          {/* Skip for now button */}
           {onSkip && (
             <button
-              onClick={onSkip}
-              className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+              onClick={() => {
+                clearPersistedState();
+                onSkip();
+              }}
+              className="opacity-80 hover:opacity-100 text-sm font-medium transition-colors"
             >
-              Improve recommendations later
+              Skip for now
             </button>
           )}
         </div>
 
-        <div className="flex space-x-3">
-          {currentStep > 1 && (
-            <button
-              onClick={handlePrevious}
-              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
-            >
-              <CaretLeft size={16} className="mr-1" />
-              Previous
-            </button>
-          )}
-          
-          <button
-            onClick={handleNext}
-            disabled={!isStepComplete(currentStep)}
-            className={`flex items-center px-6 py-2 rounded-lg font-medium ${
-              isStepComplete(currentStep)
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {currentStep === totalSteps ? 'Complete Setup' : 'Next'}
-            {currentStep < totalSteps && <CaretRight size={16} className="ml-1" />}
-          </button>
-        </div>
+        {/* Next/Complete button */}
+        <button
+          onClick={handleNext}
+          disabled={!isStepComplete(currentStep)}
+          className={`
+            flex items-center px-6 py-2 rounded-lg font-medium transition-all
+            ${isStepComplete(currentStep)
+              ? 'bg-white text-black hover:bg-gray-100 shadow-sm'
+              : 'opacity-50 cursor-not-allowed'
+            }
+          `}
+        >
+          {currentStep === totalSteps ? 'Complete Setup' : 'Next'}
+          {currentStep < totalSteps && <CaretRight size={16} className="ml-1" />}
+        </button>
       </div>
     </div>
   );

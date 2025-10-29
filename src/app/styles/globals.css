@@ -856,3 +856,8 @@ input::placeholder, textarea::placeholder {
     background: rgba(25, 25, 30, 0.95);
   }
 }
+
+/* Theme-adaptive checkbox accent color */
+input.accent-primary[type="checkbox"] {
+  accent-color: var(--accent-primary);
+}

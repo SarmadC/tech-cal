@@ -201,6 +201,9 @@ export const eventTransformer = {
         // Tags are now directly attached to the event object
         const eventTags: EventTag[] = (supabaseEvent as SupabaseEventWithDetails).tags || [];
 
+        // Extract event_type data if present (from joins)
+        const eventType = (supabaseEvent as SupabaseEventWithDetails).event_type;
+
         const result = {
             id: supabaseEvent.id,
             createdAt: supabaseEvent.created_at,
@@ -216,6 +219,14 @@ export const eventTransformer = {
             eventTypeId: supabaseEvent.event_type_id || '',
             agendaUrl: (supabaseEvent as Record<string, unknown>).agenda_url as string | null,
             ...(eventTags.length > 0 && { tags: eventTags }),
+            ...(eventType && eventType.name && {
+                category: {
+                    id: eventType.id,
+                    name: eventType.name,
+                    color: eventType.color || '#808080',
+                    description: eventType.description || null
+                }
+            }),
             organization: {
                 id: (supabaseEvent as SupabaseEventWithDetails).organizer?.id || '',
                 name: organizerName,

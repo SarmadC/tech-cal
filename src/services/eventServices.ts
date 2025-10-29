@@ -1501,8 +1501,8 @@ export class EventService {
                 return await this.getFallbackPopularEvents(supabaseClient, page, pageSize, fallbackTelemetry);
             }
 
-            // Transform events with lookalike metadata
-            const appEvents = await this.transformEventsWithLookalikeMetadata(lookalikeRecommendations as any[], [], supabaseClient); // eslint-disable-line @typescript-eslint/no-explicit-any
+            // LookalikeRecommendations already have metadata attached, just need to attach tags
+            const appEvents = await this.transformEventsWithLookalikeMetadata(lookalikeRecommendations as any[], lookalikeRecommendations as any[], supabaseClient); // eslint-disable-line @typescript-eslint/no-explicit-any
 
             // Sort by popularity score and apply diversity enhancement
             const sortedEvents = this.sortEventsByPopularity(appEvents);
@@ -1627,17 +1627,31 @@ export class EventService {
         lookalikeRecommendations: any[], // eslint-disable-line @typescript-eslint/no-explicit-any
         supabaseClient: SupabaseClientType
     ): Promise<Event[]> {
+        // Attach tags to events
         const transformedEvents = await this.attachTagsToEvents(events, supabaseClient);
         
         return transformedEvents.map(event => {
             const appEvent = eventTransformer.toApp(event as any); // eslint-disable-line @typescript-eslint/no-explicit-any
-            const recommendation = lookalikeRecommendations.find(rec => rec.eventId === event.id);
             
-            if (recommendation) {
+            // Find matching recommendation - LookalikeUserService already adds recommendationMetadata
+            const recommendation = lookalikeRecommendations.find(rec => rec.id === event.id);
+            
+            if (recommendation && 'recommendationMetadata' in recommendation) {
+                // Preserve the original recommendationMetadata (includes tagScore, careerImpactScore, etc.)
+                const metadata = recommendation.recommendationMetadata;
+                
+                // Copy all original metadata
+                if (metadata) {
+                    (appEvent as any).recommendationMetadata = metadata; // eslint-disable-line @typescript-eslint/no-explicit-any
+                }
+                
+                // Add coldStartMetadata for backward compatibility with sorting logic
+                // Use the actual cohort size from metadata if available
+                const cohortSize = metadata.lookalikeCohortSize || 0;
                 (appEvent as any).coldStartMetadata = { // eslint-disable-line @typescript-eslint/no-explicit-any
-                    reason: recommendation.reason,
-                    popularityScore: recommendation.popularityScore,
-                    lookalikeUsers: recommendation.lookalikeUsers.length
+                    reason: cohortSize > 0 ? `Recommended by ${cohortSize} similar professionals` : 'Matched via lookalike recommendations',
+                    popularityScore: metadata.lookalikeTagScore || 0,
+                    lookalikeUsers: cohortSize
                 };
             }
             

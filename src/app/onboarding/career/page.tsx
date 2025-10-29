@@ -184,12 +184,12 @@ export default function CareerOnboardingPage() {
   // Show loading state while creating profile or loading career profile
   if (isCreatingProfile || (isLoading && !profile)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4">
+      <div className="min-h-screen glass-bg-gradient py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">
+              <p className="opacity-80">
                 {isCreatingProfile ? 'Setting up your profile...' : 'Loading...'}
               </p>
             </div>
@@ -200,22 +200,22 @@ export default function CareerOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4">
+    <div className="min-h-screen glass-bg-gradient py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Welcome Banner (shown when redirected from middleware) */}
         {showWelcomeMessage && (
-          <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+          <div className="mb-6 glass-card p-4">
             <div className="flex items-start">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-blue-500 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 opacity-80 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
+                <h3 className="text-sm font-medium">
                   One Quick Step to Get Started
                 </h3>
-                <p className="mt-1 text-sm text-blue-700">
+                <p className="mt-1 text-sm opacity-80">
                   Complete your career profile to unlock personalized event recommendations tailored to your goals and interests. 
                   This only takes 2-3 minutes and will dramatically improve your experience.
                 </p>
@@ -226,10 +226,10 @@ export default function CareerOnboardingPage() {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold mb-2">
             Welcome to KureCal! 🎉
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg opacity-80 max-w-2xl mx-auto">
             Let&apos;s personalize your experience by learning about your career goals and interests. 
             This helps us recommend the most relevant events for your professional development.
           </p>
@@ -239,10 +239,10 @@ export default function CareerOnboardingPage() {
         <OnboardingErrorBoundary>
           <div className="relative">
             {isSubmitting && (
-              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
+              <div className="absolute inset-0 backdrop-blur-sm bg-black/20 dark:bg-black/40 flex items-center justify-center z-10 rounded-xl">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-600">Saving your career profile...</p>
+                  <p className="text-sm opacity-80">Saving your career profile...</p>
                 </div>
               </div>
             )}
@@ -250,35 +250,35 @@ export default function CareerOnboardingPage() {
             <CareerOnboarding
               onComplete={handleComplete}
               onSkip={handleSkip}
-              className="bg-white/80 backdrop-blur-sm"
+              className=""
             />
           </div>
         </OnboardingErrorBoundary>
 
         {/* Benefits Section */}
         <div className="mt-12 text-center">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
+          <h3 className="text-xl font-semibold mb-4">
             Why complete your career profile?
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="bg-white/60 backdrop-blur-sm rounded-lg p-6 border border-gray-200">
+            <div className="glass-card p-6">
               <div className="text-3xl mb-3">🎯</div>
-              <h4 className="font-semibold text-gray-900 mb-2">Personalized Recommendations</h4>
-              <p className="text-sm text-gray-600">
+              <h4 className="font-semibold mb-2">Personalized Recommendations</h4>
+              <p className="text-sm opacity-80">
                 Get event suggestions tailored to your experience level and career goals
               </p>
             </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-lg p-6 border border-gray-200">
+            <div className="glass-card p-6">
               <div className="text-3xl mb-3">📍</div>
-              <h4 className="font-semibold text-gray-900 mb-2">Location-Aware</h4>
-              <p className="text-sm text-gray-600">
+              <h4 className="font-semibold mb-2">Location-Aware</h4>
+              <p className="text-sm opacity-80">
                 See events near you and virtual options that fit your schedule
               </p>
             </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-lg p-6 border border-gray-200">
+            <div className="glass-card p-6">
               <div className="text-3xl mb-3">⚡</div>
-              <h4 className="font-semibold text-gray-900 mb-2">Smart Discovery</h4>
-              <p className="text-sm text-gray-600">
+              <h4 className="font-semibold mb-2">Smart Discovery</h4>
+              <p className="text-sm opacity-80">
                 Discover trending events and opportunities you might have missed
               </p>
             </div>

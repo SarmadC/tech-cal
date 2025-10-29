@@ -159,13 +159,31 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
           {selectedSkills.map((skill) => (
             <span
               key={skill}
-              className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-sm font-medium text-blue-600 dark:bg-blue-500/25 dark:text-blue-100"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium border transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--success-light)',
+                borderColor: 'var(--success)',
+                color: 'var(--success)',
+                boxShadow: 'var(--shadow-xs)'
+              }}
             >
               {skill}
               <button
                 type="button"
                 onClick={() => handleSkillRemove(skill)}
-                className="ml-1 text-blue-500/80 transition hover:text-blue-600 dark:text-blue-200 dark:hover:text-blue-50"
+                className="ml-1 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                style={{ 
+                  backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                  color: 'var(--success)',
+                  borderRadius: '50%',
+                  width: '16px',
+                  height: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.3)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.2)'}
                 disabled={disabled}
               >
                 <X size={12} />
@@ -184,7 +202,7 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={selectedSkills.length === 0 ? placeholder : 'Add more skills...'}
           disabled={disabled}
-          className="w-full border-none bg-transparent text-sm text-foreground-primary placeholder:text-foreground-muted focus:outline-none focus:ring-0"
+          className="w-full border-none bg-transparent text-sm placeholder:opacity-50 focus:outline-none focus:ring-0"
         />
       </div>
 
@@ -197,12 +215,12 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveCategory('all')}
-                className={cn(
-                  'px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition-colors',
-                  activeCategory === 'all'
-                    ? 'border-b-2 border-blue-500 text-blue-500'
-                    : 'border-b-2 border-transparent text-foreground-muted hover:text-foreground-secondary'
-                )}
+                  className={cn(
+                    'px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition-colors',
+                    activeCategory === 'all'
+                      ? 'border-b-2 border-opacity-100'
+                      : 'border-b-2 border-transparent opacity-70 hover:opacity-100'
+                  )}
               >
                 Popular
               </button>
@@ -227,7 +245,7 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
           {/* Skills List */}
           <div ref={listRef} className="max-h-60 overflow-y-auto bg-background-secondary/90">
             {filteredSkills.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-foreground-muted text-center">
+              <div className="px-4 py-3 text-sm opacity-70 text-center">
                 {searchQuery ? 'No skills found' : 'No skills available'}
               </div>
             ) : (
@@ -237,14 +255,14 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
                   type="button"
                   onClick={() => handleSkillSelect(skill)}
                   className={cn(
-                    'flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-foreground-primary transition-colors',
-                    'hover:bg-background-tertiary focus:bg-background-tertiary focus:outline-none',
-                    index === highlightedIndex && 'bg-background-tertiary'
+                    'flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors',
+                    'hover:bg-opacity-10 hover:bg-current focus:bg-opacity-10 focus:bg-current focus:outline-none',
+                    index === highlightedIndex && 'bg-opacity-10 bg-current'
                   )}
                 >
                   <span>{skill}</span>
                   {selectedSkills.includes(skill) && (
-                    <Check size={16} className="text-blue-500" />
+                    <Check size={16} style={{ color: 'var(--success)' }} />
                   )}
                 </button>
               ))
@@ -252,7 +270,7 @@ export const SkillsDropdown: React.FC<SkillsDropdownProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="border-t border-border-subtle bg-background-secondary/80 px-4 py-2 text-xs text-foreground-muted">
+          <div className="border-t border-border-subtle bg-background-secondary/80 px-4 py-2 text-xs opacity-70">
             {selectedSkills.length}/{maxSkills} skills selected
           </div>
         </div>

@@ -3,6 +3,7 @@ import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { CareerProfile } from '@/types/career';
 import { Event } from '@/types';
 import { kv } from '@vercel/kv';
+import { toBase64 } from '@/utils/base64';
 
 interface CacheStats {
   hits: number;
@@ -54,7 +55,7 @@ export class CareerImpactCache {
       industry: careerProfile.industry
     };
     
-    return btoa(JSON.stringify(hashData)).slice(0, 16);
+    return toBase64(JSON.stringify(hashData)).slice(0, 16);
   }
 
   /**
@@ -68,7 +69,7 @@ export class CareerImpactCache {
       organizer: event.organizer
     };
     
-    return btoa(JSON.stringify(hashData)).slice(0, 12);
+    return toBase64(JSON.stringify(hashData)).slice(0, 12);
   }
 
   /**

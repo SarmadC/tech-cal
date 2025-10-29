@@ -5,6 +5,7 @@ import {
   normalizeSkillName,
   resolveCanonicalSkillName
 } from '@/utils/skillTaxonomy';
+import { deduplicateSkills, normalizeForComparison } from '@/utils/skillSuggestions';
 
 /**
  * Validates that onboarding data is complete and properly formatted
@@ -15,40 +16,50 @@ export function validateOnboardingData(data: Partial<CareerOnboardingData>): {
 } {
   const errors: string[] = [];
 
-  // Step 1: Role information
+  // Step 1: Role information (only Current Role and Experience Level required)
   if (!data.step1_role?.currentRole) {
     errors.push('Current role is required');
   }
   if (!data.step1_role?.seniority) {
     errors.push('Seniority level is required');
   }
-  if (!data.step1_role?.industry) {
-    errors.push('Industry is required');
-  }
+  // Industry and Company Size are now optional (progressive profiling)
 
-  // Step 2: Skills (at least one field should have selections)
-  const hasSkills = 
-    (data.step2_skills?.primarySkills?.length || 0) > 0 ||
-    (data.step2_skills?.skillsToLearn?.length || 0) > 0 ||
-    (data.step2_skills?.interests?.length || 0) > 0;
-  
-  if (!hasSkills) {
-    errors.push('At least one skill, learning goal, or interest is required');
+  // Step 2: Skills - require at least 2 current skills
+  const primarySkills = data.step2_skills?.primarySkills || [];
+  if (primarySkills.length < 2) {
+    errors.push('Please add at least 2 current skills');
   }
   
-  // Validate skill tags if primary skills are selected
-  if (data.step2_skills?.primarySkills?.length) {
-    const skillTags = data.step2_skills.skillTags || [];
-    const unresolvedSkills = data.step2_skills.primarySkills.filter(skill => {
-      const normalizedSkill = normalizeSkillName(skill);
-      const matchingTag = skillTags.find(tag => normalizeSkillName(tag.skill) === normalizedSkill);
-      return !matchingTag?.proficiency;
-    });
-    if (unresolvedSkills.length > 0) {
-      const canonicalNames = mapSkillsToCanonical(unresolvedSkills);
-      errors.push(`Proficiency rating required for: ${canonicalNames.join(', ')}`);
-    }
+  // Check for within-field duplicates in current skills
+  const normPrimary = primarySkills.map(normalizeForComparison);
+  if (new Set(normPrimary).size !== normPrimary.length) {
+    errors.push('Duplicate skills detected in Current Skills');
   }
+  
+  // Check for within-field duplicates in skills to learn
+  const skillsToLearn = data.step2_skills?.skillsToLearn || [];
+  const normToLearn = skillsToLearn.map(normalizeForComparison);
+  if (new Set(normToLearn).size !== normToLearn.length) {
+    errors.push('Duplicate skills detected in Skills to Learn');
+  }
+  
+  // Check for within-field duplicates in interests
+  const interests = data.step2_skills?.interests || [];
+  const normInterests = interests.map(normalizeForComparison);
+  if (new Set(normInterests).size !== normInterests.length) {
+    errors.push('Duplicate entries detected in Areas of Interest');
+  }
+  
+  // Cross-field duplicate warning (non-blocking, just informational)
+  const dedupe = deduplicateSkills(primarySkills, skillsToLearn, interests);
+  if (!dedupe.isValid) {
+    const dupeList = dedupe.crossFieldDuplicates.map(d => d.skill).join(', ');
+    errors.push(`Note: ${dupeList} appear${dedupe.crossFieldDuplicates.length === 1 ? 's' : ''} in multiple fields`);
+  }
+  
+  // Skills to learn and interests are optional (progressive profiling)
+  // No proficiency validation (removed)
 
   // Step 3: Goals
   if (!data.step3_goals?.careerGoals?.length) {
@@ -86,8 +97,9 @@ export function sanitizeOnboardingData(data: Partial<CareerOnboardingData>): Car
       primarySkills: mapSkillsToCanonical(data.step2_skills?.primarySkills || []),
       skillsToLearn: mapSkillsToCanonical(data.step2_skills?.skillsToLearn || []),
       interests: data.step2_skills?.interests || [],
+      // Keep skillTags for backward compatibility, but don't require proficiency
       skillTags: (data.step2_skills?.skillTags || [])
-        .filter(tag => Boolean(tag?.skill && tag?.proficiency))
+        .filter(tag => Boolean(tag?.skill))
         .map((tag, index) => {
           const canonicalSkill = resolveCanonicalSkillName(tag.skill);
           const { pendingProficiency: _pending, ...rest } = tag;
