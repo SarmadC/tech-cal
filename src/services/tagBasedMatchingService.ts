@@ -1,6 +1,7 @@
 import { Event, EventTag, SupabaseEventWithDetails, CareerGoal, LearningStyle, NetworkingGoal, SupabaseClientType } from '@/types';
 import { CareerProfile } from '@/types/career';
 import { eventTransformer } from '@/utils/transformers';
+import { getRoleKeywords } from '@/utils/roleTaxonomy';
 
 export interface TagMatchResult {
   score: number;
@@ -143,6 +144,18 @@ export class TagBasedMatchingService {
       matchedCategories.push(...learnSimilarityMatches.categories);
       if (learnSimilarityMatches.explanations.length > 0) {
         explanations.push(`Learning: ${learnSimilarityMatches.explanations[0]}`);
+      }
+    }
+
+    // Role alignment check
+    if (careerProfile.currentRole) {
+      const roleKeywords = getRoleKeywords(careerProfile.currentRole);
+      const roleMatches = this.findDirectMatches(eventTags, roleKeywords);
+      if (roleMatches.score > 0) {
+        totalScore += roleMatches.score * 0.5; // Modest boost
+        matchedTags.push(...roleMatches.tags);
+        matchedCategories.push(...roleMatches.categories);
+        explanations.push(`Aligns with your ${careerProfile.currentRole} role`);
       }
     }
 
@@ -519,6 +532,11 @@ export class TagBasedMatchingService {
     (careerProfile.learningStyle || []).forEach(style => addTerm(style.replace(/[-_]/g, ' ')));
     (careerProfile.networkingGoals || []).forEach(goal => addTerm(goal.replace(/[-_]/g, ' ')));
 
+    // Add role keywords for matching
+    if (careerProfile.currentRole) {
+      getRoleKeywords(careerProfile.currentRole).forEach(addTerm);
+    }
+
     return Array.from(terms);
   }
 
@@ -556,6 +574,18 @@ export class TagBasedMatchingService {
     const networkingBoost = this.calculateNetworkingBoost(careerProfile.networkingGoals || [], tagNames, text);
     boost += networkingBoost.amount;
     reasons.push(...networkingBoost.reasons);
+
+    // Role boost
+    if (careerProfile.currentRole) {
+      const roleKeywords = getRoleKeywords(careerProfile.currentRole);
+      const hasRoleMatch = roleKeywords.some(keyword => 
+        tagNames.has(keyword.toLowerCase()) || text.includes(keyword.toLowerCase())
+      );
+      if (hasRoleMatch) {
+        boost += 5;
+        reasons.push(`Matches your ${careerProfile.currentRole} role`);
+      }
+    }
 
     if (careerProfile.seniority && match.matchedCategories.includes('Career-Stage')) {
       boost += 4;

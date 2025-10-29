@@ -219,6 +219,26 @@ export class LookalikeUserService {
     supabaseClient: SupabaseClientType,
     limit: number
   ): Promise<CareerProfile[]> {
+    // Attempt role-based cohort first
+    if (careerProfile.currentRole) {
+      const roleQuery = supabaseClient
+        .from('career_profiles')
+        .select('*')
+        .neq('user_id', userId)
+        .eq('industry', careerProfile.industry)
+        .eq('current_role', careerProfile.currentRole)
+        .limit(limit);
+      
+      const { data: roleData, error: roleError } = await roleQuery;
+      
+      if (!roleError && roleData && roleData.length >= 5) {
+        // Sufficient role cohort found
+        return roleData.map(row => CareerProfileService['transformRowToCareerProfile'](row as never));
+      }
+      // Otherwise, fall back to industry + seniority filtering
+    }
+
+    // Fallback: Create fresh query for industry + seniority filtering
     let query = supabaseClient
       .from('career_profiles')
       .select('*')

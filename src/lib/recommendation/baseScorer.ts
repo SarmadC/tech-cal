@@ -12,6 +12,7 @@
 
 import { Event, CareerProfile } from '@/types';
 import { resolveSkillIds, matchSkillIdsInText } from '@/lib/skills/skillRegistry';
+import { getRoleKeywords } from '@/utils/roleTaxonomy';
 
 /**
  * Test if a keyword matches as a complete word in the text
@@ -59,6 +60,7 @@ export const ALIGNMENT_WEIGHTS = {
   interests: 12,          // Personal interests alignment (was 8)
   learningStyle: 8,       // Preferred learning format (was 5)
   networking: 15,         // Networking opportunities (was 10)
+  role: 10,               // Role alignment weight
 } as const;
 
 /**
@@ -142,7 +144,7 @@ function getLearningStyleReason(style: string): string {
  * Alignment reason (without UI-specific properties)
  */
 export interface AlignmentReason {
-  type: 'skill' | 'goal' | 'interest' | 'learning-style' | 'networking';
+  type: 'skill' | 'goal' | 'interest' | 'learning-style' | 'networking' | 'role';
   reason: string;
   contribution: number;
 }
@@ -347,7 +349,23 @@ export function calculateBaseScore(
     }
   });
 
-  // 4. Interests
+  // 4. Current Role Alignment
+  if (careerProfile.currentRole) {
+    const roleKeywords = getRoleKeywords(careerProfile.currentRole);
+    const hasMatch = roleKeywords.some(matchesKeyword);
+    if (hasMatch) {
+      const contribution = ALIGNMENT_WEIGHTS.role;
+      alignmentScore += contribution;
+      careerStageMatch += contribution;
+      alignmentReasons.push({
+        type: 'role',
+        reason: `Aligns with your ${careerProfile.currentRole} role`,
+        contribution
+      });
+    }
+  }
+
+  // 5. Interests
   careerProfile.interests.slice(0, 5).forEach(interest => {
     if (matchesKeyword(interest)) {
       const contribution = ALIGNMENT_WEIGHTS.interests;
@@ -361,7 +379,7 @@ export function calculateBaseScore(
     }
   });
 
-  // 5. Learning Style
+  // 6. Learning Style
   careerProfile.learningStyle.forEach(style => {
     const keywords = LEARNING_STYLE_KEYWORDS[style] || [];
     const hasMatch = keywords.some(matchesKeyword);
@@ -380,7 +398,7 @@ export function calculateBaseScore(
     }
   });
 
-  // 6. Networking
+  // 7. Networking
   if (careerProfile.networkingGoals.length > 0 &&
       GOAL_KEYWORDS.networking.some(matchesKeyword)) {
     const contribution = ALIGNMENT_WEIGHTS.networking;

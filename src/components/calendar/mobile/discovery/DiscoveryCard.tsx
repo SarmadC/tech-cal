@@ -91,7 +91,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     // Don't show breakdown if alignmentReasons missing (fallback would show incorrect percentages)
 
     return entries.sort((a, b) => b.contribution - a.contribution);
-  }, [event, displayScore]);
+  }, [event]);
 
   const condensedReasons = React.useMemo(() => {
     const MAX_ITEMS = 3;

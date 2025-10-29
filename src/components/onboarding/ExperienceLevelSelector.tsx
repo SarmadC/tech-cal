@@ -203,7 +203,6 @@ function TrackOption({ value, label, checked, onChange }: TrackOptionProps) {
         value={value}
         checked={checked}
         onChange={onChange}
-        aria-required="true"
         className="sr-only"
       />
       
@@ -273,7 +272,6 @@ function LevelOption({ level, checked, onChange }: LevelOptionProps) {
         value={level.value}
         checked={checked}
         onChange={onChange}
-        aria-required="true"
         className="sr-only"
       />
       
