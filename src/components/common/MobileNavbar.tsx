@@ -72,6 +72,14 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
     { href: '/dashboard/settings', label: 'Settings' }
   ];
 
+  // Always show background on protected pages
+  const isProtectedPage = pathname?.startsWith('/dashboard') || 
+                         pathname?.startsWith('/calendar') || 
+                         pathname?.startsWith('/discover') ||
+                         pathname?.startsWith('/hackathons');
+  
+  const shouldShowBackground = isScrolled || isProtectedPage;
+
   return (
     <>
       {/* Navbar */}
@@ -79,7 +87,7 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300 md:hidden",
           "transition-colors duration-500 ease-in-out",
-          isScrolled
+          shouldShowBackground
             ? "bg-white/70 dark:bg-gray-900/20 backdrop-blur-md border-b border-white/20 dark:border-gray-700/30 shadow-lg dark:shadow-gray-900/20"
             : "bg-transparent",
           className

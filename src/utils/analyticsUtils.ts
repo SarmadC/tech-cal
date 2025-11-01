@@ -54,7 +54,7 @@ export function createAnalyticsContext(event: Record<string, unknown>): Record<s
  * Calculate basic analytics from tracked events and upcoming events
  */
 export function calculateBasicAnalytics(
-  trackedEvents: Array<{ trackingId: string; status: string; trackedAt: string }>,
+  trackedEvents: Array<{ trackingId: string; status: string | null; trackedAt: string }>,
   upcomingEvents: Array<{ id: string; startTime: string; attendeeCount?: number | null }>
 ): {
   totalTracked: number;

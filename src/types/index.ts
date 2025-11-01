@@ -50,9 +50,11 @@ export type SupabaseTrackedEvent = {
     id: string;
     user_id: string;
     event_id: string;
-    status: 'bookmarked' | 'attending' | 'attended' | 'cancelled';
+    status: 'attending' | 'attended' | 'cancelled' | null;  // bookmarked removed - use is_bookmarked instead
     notes: string | null;
     created_at: string;
+    is_bookmarked: boolean;
+    bookmarked_at: string | null;
     events: SupabaseEvent[] | null;
 };
 

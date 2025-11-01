@@ -157,7 +157,7 @@ const detectAnomaly = (
 const calculateDropOffRisk = (
   trackedEvents: TrackedEventRecord[]
 ): { stage: string; severity: 'high' | 'medium' | 'low' } | null => {
-  const bookmarked = trackedEvents.filter(e => e.status === 'bookmarked').length;
+  const bookmarked = trackedEvents.filter(e => e.isBookmarked).length;
   const registered = trackedEvents.filter(e => e.status === 'attending').length;
   const attended = trackedEvents.filter(e => e.status === 'attended').length;
   

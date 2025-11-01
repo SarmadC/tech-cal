@@ -52,9 +52,15 @@ export function generateStatusDistribution(trackedEvents: TrackedEventRecord[]):
   const statusCount: { [key: string]: number } = {};
 
   trackedEvents.forEach(te => {
-    const status = te.status || 'bookmarked';
-    const displayName = status.charAt(0).toUpperCase() + status.slice(1);
-    statusCount[displayName] = (statusCount[displayName] || 0) + 1;
+    // Count by attendance status (bookmarking is separate)
+    if (te.status) {
+      const displayName = te.status.charAt(0).toUpperCase() + te.status.slice(1);
+      statusCount[displayName] = (statusCount[displayName] || 0) + 1;
+    }
+    // Also count bookmarks separately if no status
+    if (te.isBookmarked && !te.status) {
+      statusCount['Bookmarked'] = (statusCount['Bookmarked'] || 0) + 1;
+    }
   });
 
   return Object.entries(statusCount)

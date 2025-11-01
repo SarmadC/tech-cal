@@ -116,7 +116,7 @@ export class OptimizedAnalyticsService {
     upcomingEvents: Event[]
   ): Promise<OptimizedAnalyticsData> {
     const eventsAttended = trackedEvents.filter(te => te.status === 'attended').length;
-    const eventsBookmarked = trackedEvents.filter(te => te.status === 'bookmarked').length;
+    const eventsBookmarked = trackedEvents.filter(te => te.isBookmarked).length;
     
     // Simple impact score based on event types and attendance
     const averageImpactScore = this.calculateSimpleImpactScore(trackedEvents);

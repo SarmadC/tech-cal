@@ -63,7 +63,7 @@ export function QuickKPIsStrip({ trackedEvents, careerProfile, className = '' }:
       statuses: string[] = ['attended']
     ) => 
       trackedEvents.filter(event => {
-        if (!statuses.includes(event.status)) return false;
+        if (!event.status || !statuses.includes(event.status)) return false;
         const eventDate = new Date(event.trackedAt);
         return endDate 
           ? eventDate >= startDate && eventDate < endDate

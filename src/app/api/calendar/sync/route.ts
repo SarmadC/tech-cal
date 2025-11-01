@@ -55,11 +55,29 @@ export async function POST(request: NextRequest) {
 
         } else if (action === 'delete') {
             // Remove event from calendar
-            if (external_calendar_event_id && external_provider === 'google') {
+            // Look up external calendar IDs if not provided (for bookmark unbookmark case)
+            let calendarEventId = external_calendar_event_id;
+            let provider = external_provider;
+            
+            if (!calendarEventId || !provider) {
+                const { data: userEvent, error: lookupError } = await supabase
+                    .from('user_events')
+                    .select('external_calendar_event_id, external_provider')
+                    .eq('user_id', user.id)
+                    .eq('event_id', eventId)
+                    .single();
+                
+                if (!lookupError && userEvent) {
+                    calendarEventId = userEvent.external_calendar_event_id;
+                    provider = userEvent.external_provider;
+                }
+            }
+            
+            if (calendarEventId && provider === 'google') {
                 const result = await CalendarSyncService.unsyncTrackedEvent(
                     user.id,
                     eventId,
-                    external_calendar_event_id,
+                    calendarEventId,
                     supabase
                 );
 
@@ -74,9 +92,11 @@ export async function POST(request: NextRequest) {
                     }, { status: 500 });
                 }
             } else {
+                // If no calendar event found, that's okay - might not have been synced
                 return NextResponse.json({
-                    error: 'Missing external calendar event ID'
-                }, { status: 400 });
+                    success: true,
+                    message: 'No calendar event to remove (may not have been synced)'
+                }, { status: 200 });
             }
 
         } else {

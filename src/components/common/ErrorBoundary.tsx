@@ -126,6 +126,14 @@ export class ErrorBoundary extends Component<Props, State> {
     public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
         const { name, onError } = this.props;
         
+        // Ignore scrollTop errors - these are often harmless and related to DOM timing
+        if (error.message?.includes('scrollTop') || error.message?.includes('scroll')) {
+            console.warn(`[ErrorBoundary${name ? `:${name}` : ''}] Ignoring scroll-related error:`, error.message);
+            // Reset error state silently for scroll errors
+            this.setState({ hasError: false, error: null, retryCount: 0 });
+            return;
+        }
+        
         // Log error
         console.error(`[ErrorBoundary${name ? `:${name}` : ''}]`, error, errorInfo);
         

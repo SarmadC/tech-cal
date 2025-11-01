@@ -41,15 +41,24 @@ export const EventTrackingSchema = z.object({
     eventId: z.string().min(1, "Event ID cannot be empty."), // Changed for flexibility
 });
 
+// Deprecated: Use BookmarkToggleSchema and AttendanceStatusSchema instead
 export const EventStatusUpdateSchema = z.object({
-    // --- FIX IS HERE ---
-    // We now validate that it's a non-empty string, not strictly a UUID.
-    // This makes the backend more robust against different ID formats in your database.
     eventId: z.string().min(1, "Invalid event ID provided."),
-    status: z.enum(['bookmarked', 'attending', 'attended', 'cancelled'], {
+    status: z.enum(['attending', 'attended', 'cancelled'], {  // 'bookmarked' removed
         errorMap: () => ({ message: "Invalid status provided." })
     }),
-    // Fix: Allow null, undefined, or string for notes - convert null to undefined
+    notes: z.union([z.string(), z.null()]).optional().transform(val => val === null ? undefined : val),
+});
+
+// New schema for bookmark toggle
+export const BookmarkToggleSchema = z.object({
+    eventId: z.string().min(1, "Invalid event ID provided."),
+});
+
+// New schema for attendance status (independent of bookmarking)
+export const AttendanceStatusSchema = z.object({
+    eventId: z.string().min(1, "Invalid event ID provided."),
+    status: z.enum(['attending', 'attended', 'cancelled']).nullable().optional(),  // Can be null to clear status
     notes: z.union([z.string(), z.null()]).optional().transform(val => val === null ? undefined : val),
 });
 

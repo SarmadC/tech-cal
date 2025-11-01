@@ -137,10 +137,35 @@ src/
 
 ## Getting Started
 
+### Prerequisites
+
+- Node.js 20+ and npm
+- Supabase account and project
+- Environment variables configured (see [Environment Variables](#environment-variables))
 
 ### Local Development
 
-Protected routes require Supabase auth. Seed environment variables (`.env.local`) before running `npm run dev`.
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Configure environment variables in `.env.local`:
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# ... other variables as needed
+```
+
+3. Run the development server:
+```bash
+npm run dev
+```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+Protected routes require Supabase auth and completion of the onboarding flow.
 
 ---
 
@@ -167,14 +192,62 @@ NEXT_PUBLIC_SHOW_BUDGET_HINT=false   # Optional UI hint toggle
 
 ## Testing Strategy
 
-- **Unit & Integration:** Vitest (`npm run test`) covers hooks, services, and algorithms.  
-  Configuration lives in `vitest.config.mts`, with setup in `vitest.setup.ts`.
+### How to Test
 
-- **End-to-End:** Playwright scripts (`npm run test:e2e`) exercise auth, discovery, and dashboard flows; see `tests/` and `playwright.config.ts`.
+#### Unit & Integration Tests
+Run all unit and integration tests:
+```bash
+npm run test
+```
 
-- **Benchmarking & Parity:** Scoring-specific commands (`npm run test:scoring`, `npm run bench:scoring`) validate core algorithms and performance budgets.
+Run tests in watch mode:
+```bash
+npm run test:watch
+```
 
-- **Manual QA:** `npm run verify:all` bundles critical parity checks before release.
+Generate coverage report:
+```bash
+npm run test:coverage
+```
+
+#### Scoring & Algorithm Tests
+Validate core scoring algorithms:
+```bash
+npm run test:scoring
+```
+
+Benchmark scoring performance:
+```bash
+npm run bench:scoring
+```
+
+#### End-to-End Tests
+Run E2E tests with Playwright:
+```bash
+npm run test:e2e
+```
+
+Run E2E tests with UI mode:
+```bash
+npm run test:e2e:ui
+```
+
+Run E2E tests against staging:
+```bash
+npm run test:e2e:staging
+```
+
+#### Pre-Release Verification
+Run all critical parity checks before deployment:
+```bash
+npm run verify:all
+```
+
+### Test Infrastructure
+
+- **Vitest**: Unit & integration tests covering hooks, services, and algorithms (`vitest.config.mts`, `vitest.setup.ts`)
+- **Playwright**: E2E tests exercising auth, discovery, and dashboard flows (`tests/`, `playwright.config.ts`)
+- **Benchmarking**: Performance validation for scoring algorithms and performance budgets
 
 ---
 

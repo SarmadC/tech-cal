@@ -136,7 +136,7 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                 await untrackEvent(trackingEventId);
                 showSuccess('Event removed from your calendar');
             } else {
-                await trackEvent(trackingEventId);
+                await trackEvent(trackingEventId, 'bookmarked');
                 showSuccess('Event added to your calendar');
             }
         } catch (error) {

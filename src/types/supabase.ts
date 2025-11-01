@@ -1675,6 +1675,7 @@ export type Database = {
       user_events: {
         Row: {
           algorithm_version: string | null
+          bookmarked_at: string | null
           calendar_sync_status: string | null
           calendar_synced_at: string | null
           created_at: string | null
@@ -1683,14 +1684,16 @@ export type Database = {
           external_calendar_event_id: string | null
           external_provider: string | null
           id: string
+          is_bookmarked: boolean
           notes: string | null
           recommendation_context: Json | null
-          status: string
+          status: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           algorithm_version?: string | null
+          bookmarked_at?: string | null
           calendar_sync_status?: string | null
           calendar_synced_at?: string | null
           created_at?: string | null
@@ -1699,14 +1702,16 @@ export type Database = {
           external_calendar_event_id?: string | null
           external_provider?: string | null
           id?: string
+          is_bookmarked?: boolean
           notes?: string | null
           recommendation_context?: Json | null
-          status?: string
+          status?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           algorithm_version?: string | null
+          bookmarked_at?: string | null
           calendar_sync_status?: string | null
           calendar_synced_at?: string | null
           created_at?: string | null
@@ -1715,9 +1720,10 @@ export type Database = {
           external_calendar_event_id?: string | null
           external_provider?: string | null
           id?: string
+          is_bookmarked?: boolean
           notes?: string | null
           recommendation_context?: Json | null
-          status?: string
+          status?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -2421,6 +2427,23 @@ export type Database = {
       }
       untrack_event_and_update_profile: {
         Args: { p_event_id: string; p_user_id: string }
+        Returns: Json
+      }
+      toggle_bookmark: {
+        Args: {
+          p_user_id: string
+          p_event_id: string
+          p_is_bookmarked: boolean
+        }
+        Returns: Json
+      }
+      set_attendance_status: {
+        Args: {
+          p_user_id: string
+          p_event_id: string
+          p_status: string | null
+          p_notes?: string | null
+        }
         Returns: Json
       }
     }

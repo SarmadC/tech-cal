@@ -58,6 +58,21 @@ export class CalendarSyncService {
                 return { success: false, error: 'Event not found' };
             }
 
+            // Check if event is bookmarked (required for calendar sync)
+            // Events should be synced when bookmarked OR when attendance is set to attending/attended
+            const isBookmarked = userEvent.is_bookmarked ?? false;
+            const attendanceStatus = userEvent.status;
+            const shouldSync = isBookmarked || attendanceStatus === 'attending' || attendanceStatus === 'attended';
+            
+            if (!shouldSync) {
+                console.log('Event not bookmarked or attending, skipping calendar sync:', {
+                    eventId,
+                    isBookmarked,
+                    status: attendanceStatus
+                });
+                return { success: false, error: 'Event is not bookmarked or attending' };
+            }
+
             // Get calendar connection with tokens
             const connection = await CalendarConnectionService.getConnectionWithTokens(
                 userId,

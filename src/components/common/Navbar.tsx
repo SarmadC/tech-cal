@@ -38,8 +38,16 @@ export default function Navbar() {
 
     const allNavLinks = [...navLinks, ...authenticatedLinks];
 
+    // Always show background on dashboard and other protected pages
+    const isProtectedPage = pathname?.startsWith('/dashboard') || 
+                           pathname?.startsWith('/calendar') || 
+                           pathname?.startsWith('/discover') ||
+                           pathname?.startsWith('/hackathons');
+    
+    const shouldShowBackground = isScrolled || isProtectedPage;
+
     return (
-        <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md shadow-sm' : 'bg-transparent'
+        <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${shouldShowBackground ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md shadow-sm' : 'bg-transparent'
             }`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">

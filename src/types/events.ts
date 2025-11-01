@@ -278,13 +278,17 @@ export interface DailySchedule {
 }
 
 export const EVENT_STATUS = {
-    BOOKMARKED: 'bookmarked',
+    // BOOKMARKED removed - use isBookmarked boolean instead
     ATTENDING: 'attending',
     ATTENDED: 'attended',
     CANCELLED: 'cancelled',
 } as const;
 
+// EventStatus is now strictly for attendance
 export type EventStatus = typeof EVENT_STATUS[keyof typeof EVENT_STATUS];
+
+// New type for attendance-only status (bookmarking is separate)
+export type AttendanceStatus = 'attending' | 'attended' | 'cancelled' | null;
 
 // ============================================
 // USER EVENT TRACKING
@@ -294,9 +298,11 @@ export interface TrackedEventRecord {
     trackingId: string;
     userId: string;
     eventId: string;
-    status: EventStatus;
+    status: EventStatus | null;  // Now strictly for attendance, can be null
     notes: string | null;
     trackedAt: string;
+    isBookmarked: boolean;  // Separate from attendance status
+    bookmarkedAt: string | null;  // Timestamp of first bookmark
     event: Event | null;
 }
 

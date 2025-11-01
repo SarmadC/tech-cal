@@ -33,7 +33,7 @@ export function PersonalFunnel({ trackedEvents, upcomingEvents, className = '' }
 
     // Step 2: Tracked (bookmarked events)
     const tracked = relevantTracked.filter(e => 
-      e.status === 'bookmarked' || e.status === 'attending' || e.status === 'attended'
+      e.isBookmarked || e.status === 'attending' || e.status === 'attended'
     ).length;
 
     // Step 3: RSVP (attending)

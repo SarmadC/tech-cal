@@ -174,7 +174,7 @@ export default function DashboardClientView({
                                         </div>
 
                                         {/* Right Column (40%) - Actions & Recommendations */}
-                                        <div className="space-y-6 xl:col-span-5 xl:sticky xl:top-6 self-start">
+                                        <div className="space-y-6 xl:col-span-5">
                                             {/* Pipeline Column */}
                                             {careerProfile && hasCompletedOnboarding && (
                                                 <SectionErrorBoundary name="PipelineColumn">

@@ -25,10 +25,27 @@ interface UntrackEventRpcResult {
     external_provider?: string;
 }
 
+interface ToggleBookmarkRpcResult {
+    success: boolean;
+    error?: string;
+    was_bookmarked: boolean;
+    is_bookmarked: boolean;
+    is_new_row: boolean;
+}
+
+interface SetAttendanceStatusRpcResult {
+    success: boolean;
+    error?: string;
+    previous_status: string | null;
+    new_status: string | null;
+    auto_bookmarked: boolean;
+}
+
 export class UserEventService {
     /**
      * Track an event or update its status using atomic RPC function.
      * This ensures both user_events and profiles tables are updated atomically.
+     * @deprecated Use toggleBookmark and setAttendanceStatus instead for decoupled bookmark/attendance.
      */
     static async trackEvent(
         userId: string,
@@ -77,6 +94,137 @@ export class UserEventService {
         }
     }
 
+    /**
+     * Toggle bookmark status for an event (independent of attendance).
+     * Creates row if it doesn't exist (first-time bookmark).
+     * Returns result with bookmark state info.
+     */
+    static async toggleBookmark(
+        userId: string,
+        eventId: string,
+        isBookmarked: boolean,
+        supabaseClient: SupabaseClientType
+    ): Promise<{ wasBookmarked: boolean; isBookmarked: boolean; isNewRow: boolean }> {
+        try {
+            const { data, error } = await supabaseClient.rpc('toggle_bookmark', {
+                p_user_id: userId,
+                p_event_id: eventId,
+                p_is_bookmarked: isBookmarked
+            });
+
+            if (error) {
+                console.error('RPC error toggling bookmark:', error);
+                throw error;
+            }
+
+            const result = data as ToggleBookmarkRpcResult | null;
+            
+            if (!result || !result.success) {
+                const errorMessage = result?.error || 'Failed to toggle bookmark';
+                console.error('❌ Function returned failure:', {
+                    data: result,
+                    errorMessage,
+                    userId,
+                    eventId,
+                    isBookmarked
+                });
+                throw new Error(errorMessage);
+            }
+
+            console.log('Bookmark toggled successfully:', {
+                userId,
+                eventId,
+                wasBookmarked: result.was_bookmarked,
+                isBookmarked: result.is_bookmarked,
+                isNewRow: result.is_new_row
+            });
+
+            return {
+                wasBookmarked: result.was_bookmarked,
+                isBookmarked: result.is_bookmarked,
+                isNewRow: result.is_new_row
+            };
+        } catch (error) {
+            console.error('Error toggling bookmark:', error);
+            Sentry.captureException(error, { extra: { function: 'toggleBookmark', userId, eventId, isBookmarked } });
+            throw new Error('Failed to toggle bookmark.');
+        }
+    }
+
+    /**
+     * Set attendance status for an event (independent of bookmarking).
+     * Auto-bookmarks if status is 'attending' or 'attended' (for calendar sync consistency).
+     * Returns result with status change info and auto-bookmark flag.
+     */
+    static async setAttendanceStatus(
+        userId: string,
+        eventId: string,
+        status: EventStatus | null,
+        notes: string | undefined,
+        supabaseClient: SupabaseClientType
+    ): Promise<{ previousStatus: string | null; newStatus: string | null; autoBookmarked: boolean }> {
+        try {
+            const { data, error } = await supabaseClient.rpc('set_attendance_status', {
+                p_user_id: userId,
+                p_event_id: eventId,
+                p_status: status ?? null,
+                p_notes: notes ?? null
+            });
+
+            if (error) {
+                console.error('RPC error setting attendance status:', {
+                    error,
+                    errorCode: error.code,
+                    errorMessage: error.message,
+                    errorDetails: error.details,
+                    errorHint: error.hint,
+                    userId,
+                    eventId,
+                    status,
+                    params: {
+                        p_user_id: userId,
+                        p_event_id: eventId,
+                        p_status: status ?? null,
+                        p_notes: notes ?? null
+                    }
+                });
+                throw error;
+            }
+
+            const result = data as SetAttendanceStatusRpcResult | null;
+            
+            if (!result || !result.success) {
+                const errorMessage = result?.error || 'Failed to set attendance status';
+                console.error('❌ Function returned failure:', {
+                    data: result,
+                    errorMessage,
+                    userId,
+                    eventId,
+                    status
+                });
+                throw new Error(errorMessage);
+            }
+
+            console.log('Attendance status updated successfully:', {
+                userId,
+                eventId,
+                previousStatus: result.previous_status,
+                newStatus: result.new_status,
+                autoBookmarked: result.auto_bookmarked
+            });
+
+            return {
+                previousStatus: result.previous_status,
+                newStatus: result.new_status,
+                autoBookmarked: result.auto_bookmarked
+            };
+        } catch (error) {
+            console.error('Error setting attendance status:', error);
+            Sentry.captureException(error, { extra: { function: 'setAttendanceStatus', userId, eventId, status } });
+            throw new Error('Failed to set attendance status.');
+        }
+    }
+
     static async getAllTrackedEventIds(
         userId: string,
         supabaseClient: SupabaseClientType
@@ -110,7 +258,7 @@ export class UserEventService {
             const { data, error } = await supabaseClient
                 .from('user_events')
                 .select(`
-                    id, user_id, event_id, status, notes, created_at,
+                    id, user_id, event_id, status, notes, created_at, is_bookmarked, bookmarked_at,
                     events (
                         id,
                         title,
@@ -139,9 +287,11 @@ export class UserEventService {
                     trackingId: item.id,
                     userId: item.user_id,
                     eventId: item.event_id,
-                    status: item.status as EventStatus,
+                    status: item.status as EventStatus | null,
                     notes: item.notes,
                     trackedAt: item.created_at || new Date().toISOString(),
+                    isBookmarked: item.is_bookmarked ?? false,
+                    bookmarkedAt: item.bookmarked_at || null,
                     event: partialEvent ? {
                         id: partialEvent.id,
                         title: partialEvent.title,
@@ -248,6 +398,8 @@ export class UserEventService {
                 `)
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
+            
+            // Note: The * selector will include is_bookmarked and bookmarked_at automatically
 
             if (page && pageSize) {
                 const from = (page - 1) * pageSize;
@@ -269,23 +421,28 @@ export class UserEventService {
 
     /**
      * Check if an event is tracked by a user. Throws on failure.
+     * Returns both bookmark and attendance status.
      */
     static async isEventTracked(
         userId: string,
         eventId: string,
         supabaseClient: SupabaseClientType
-    ): Promise<{ isTracked: boolean; status?: EventStatus }> {
+    ): Promise<{ isBookmarked: boolean; isTracked: boolean; status?: EventStatus | null }> {
         try {
             const { data, error } = await supabaseClient
                 .from('user_events')
-                .select('status')
+                .select('status, is_bookmarked')
                 .eq('user_id', userId)
                 .eq('event_id', eventId)
                 .single();
 
             if (error && error.code !== 'PGRST116') throw error;
 
-            return { isTracked: !!data, status: data?.status as EventStatus | undefined };
+            return { 
+                isTracked: !!data, 
+                isBookmarked: data?.is_bookmarked ?? false,
+                status: data?.status as EventStatus | null | undefined 
+            };
         } catch (error) {
             console.error('Error checking event tracking status:', error);
             Sentry.captureException(error, { extra: { function: 'isEventTracked', userId, eventId } });

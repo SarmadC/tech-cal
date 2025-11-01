@@ -17,7 +17,8 @@ import type {
     SupabaseTrackedEventWithDetails,
     ProfileTransformer,
     DailySchedule,
-    Json
+    Json,
+    EventStatus
 } from '@/types';
 import { transparentize } from 'color2k';
 import {
@@ -313,9 +314,11 @@ export const trackedEventTransformer = {
             trackingId: supabaseTrackedEvent.id,
             userId: supabaseTrackedEvent.user_id,
             eventId: supabaseTrackedEvent.event_id,
-            status: supabaseTrackedEvent.status,
+            status: supabaseTrackedEvent.status as EventStatus | null,
             notes: supabaseTrackedEvent.notes,
-            trackedAt: supabaseTrackedEvent.created_at,
+            trackedAt: supabaseTrackedEvent.created_at || new Date().toISOString(),
+            isBookmarked: supabaseTrackedEvent.is_bookmarked ?? false,
+            bookmarkedAt: supabaseTrackedEvent.bookmarked_at || null,
             event: appEvent,
         };
     },
@@ -374,6 +377,8 @@ export const transformSimpleTrackedEventsToApp = (
         status: trackedEvent.status,
         notes: trackedEvent.notes,
         trackedAt: trackedEvent.created_at,
+        isBookmarked: trackedEvent.is_bookmarked ?? false,
+        bookmarkedAt: trackedEvent.bookmarked_at || null,
         event: null,
     }));
 };

@@ -375,7 +375,7 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, eventTy
     // Bookmarks convertible to RSVP
     const upcomingIds = new Set(upcomingEvents.map(e => e.id));
     const convertibleBookmarks = trackedEvents.filter(
-      e => e.status === 'bookmarked' && upcomingIds.has(e.eventId)
+      e => e.isBookmarked && upcomingIds.has(e.eventId)
     );
 
     // Determine next best action

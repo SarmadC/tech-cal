@@ -45,7 +45,7 @@ export default function BulkActions({
         setLocalLoading('tracking');
         try {
             for (const eventId of selectedEventArray) {
-                await trackEvent(eventId);
+                await trackEvent(eventId, 'bookmarked');
             }
             showSuccess(`Successfully tracked ${selectedCount} events`);
             onClearSelection();

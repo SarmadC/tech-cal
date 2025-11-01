@@ -22,7 +22,7 @@ export function EventTrackingStatusCard({
   const statusBreakdown = useMemo(() => {
     const attended = trackedEvents.filter(e => e.status === EVENT_STATUS.ATTENDED).length;
     const attending = trackedEvents.filter(e => e.status === EVENT_STATUS.ATTENDING).length;
-    const bookmarked = trackedEvents.filter(e => e.status === EVENT_STATUS.BOOKMARKED).length;
+    const bookmarked = trackedEvents.filter(e => e.isBookmarked).length;  // Use isBookmarked instead of status
     const cancelled = trackedEvents.filter(e => e.status === EVENT_STATUS.CANCELLED).length;
     const total = trackedEvents.length;
 
