@@ -54,7 +54,7 @@ export function PipelineColumn({
             <Clock className="w-5 h-5 text-glass-secondary" weight="regular" />
             <div className="flex-1">
               <h3 className="text-base font-medium text-glass-primary">Follow-up Reminders</h3>
-              <p className="text-sm text-glass-tertiary">RSVP&apos;d events coming up</p>
+              <p className="text-sm text-glass-tertiary">Bookmarked events coming up</p>
             </div>
           </div>
 

@@ -6,6 +6,7 @@ import { ChartTooltip } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, Legend, ResponsiveContainer } from 'recharts';
 import { ChartPie } from '@phosphor-icons/react';
 import type { TrackedEventRecord, Event } from '@/types';
+import { DISTRIBUTION_CHART_CONFIG } from '@/utils/chartConfigs';
 
 interface EventTypeDistributionProps {
   trackedEvents: TrackedEventRecord[];
@@ -13,76 +14,126 @@ interface EventTypeDistributionProps {
   className?: string;
 }
 
-// Monochrome gray scale colors for glassmorphic design
-const EVENT_TYPE_COLORS = [
-  'rgba(140, 140, 140, 0.8)',
-  'rgba(120, 120, 120, 0.7)',
-  'rgba(100, 100, 100, 0.6)',
-  'rgba(160, 160, 160, 0.8)',
-  'rgba(130, 130, 130, 0.7)',
-  'rgba(150, 150, 150, 0.6)',
-  'rgba(110, 110, 110, 0.7)',
-];
+// Normalize database category names to chart category names
+const normalizeCategoryName = (categoryName: string | null | undefined): string => {
+  if (!categoryName) return 'Other';
+  
+  const normalized = categoryName.toLowerCase().trim();
+  
+  // Handle plural/singular variations and map to chart categories
+  if (normalized === 'conference' || normalized === 'conferences') return 'Conferences';
+  if (normalized === 'workshop' || normalized === 'workshops') return 'Workshops';
+  if (normalized === 'meetup' || normalized === 'meetups') return 'Meetups';
+  if (normalized === 'webinar' || normalized === 'webinars') return 'Webinars';
+  if (normalized === 'hackathon' || normalized === 'hackathons') return 'Hackathons';
+  if (normalized === 'training' || normalized === 'course' || normalized === 'courses') return 'Training';
+  // Trade shows, expos, and similar events map to "Other" (no dedicated category in chart config)
+  if (normalized === 'trade show' || normalized === 'tradeshow' || normalized === 'trade shows' || 
+      normalized === 'expo' || normalized === 'exposition' || normalized === 'expositions') return 'Other';
+  
+  return 'Other';
+};
+
+// Map category names to chart config colors
+const getCategoryColor = (categoryName: string): string => {
+  const normalized = categoryName.toLowerCase();
+  if (normalized === 'conferences') return DISTRIBUTION_CHART_CONFIG.conference.color;
+  if (normalized === 'workshops') return DISTRIBUTION_CHART_CONFIG.workshop.color;
+  if (normalized === 'meetups') return DISTRIBUTION_CHART_CONFIG.meetup.color;
+  if (normalized === 'webinars') return DISTRIBUTION_CHART_CONFIG.webinar.color;
+  if (normalized === 'hackathons') return DISTRIBUTION_CHART_CONFIG.hackathon.color;
+  if (normalized === 'training') return DISTRIBUTION_CHART_CONFIG.workshop.color; // Use workshop color for training
+  return DISTRIBUTION_CHART_CONFIG.other.color;
+};
+
+// Get event category - prioritizes database category, falls back to text matching
+const getEventCategory = (event: Event | null | undefined): string => {
+  if (!event) return 'Other';
+  
+  // First, check if event has a category from the database
+  if (event.category?.name) {
+    const normalized = normalizeCategoryName(event.category.name);
+    if (normalized !== 'Other') {
+      return normalized;
+    }
+  }
+  
+  // Fall back to text matching on title/description
+  const text = `${event.title || ''} ${event.description || ''}`.toLowerCase();
+  
+  // Text matching for categorization (when database category is missing)
+  // Note: Trade shows/expos are not included here - they should come from database category
+  if (text.includes('workshop') || text.includes('hands-on')) return 'Workshops';
+  if (text.includes('conference') || text.includes('summit')) return 'Conferences';
+  if (text.includes('meetup') || text.includes('networking')) return 'Meetups';
+  if (text.includes('webinar') || text.includes('online')) return 'Webinars';
+  if (text.includes('hackathon') || text.includes('hack')) return 'Hackathons';
+  if (text.includes('course') || text.includes('training')) return 'Training';
+  
+  return 'Other';
+};
 
 export function EventTypeDistribution({ trackedEvents, upcomingEvents, className = '' }: EventTypeDistributionProps) {
   const chartData = useMemo(() => {
-    // Categorize events by type/format
-    const eventCategories: Record<string, { attended: number; upcoming: number }> = {};
+    // Categorize events by type/format, tracking event names
+    const eventCategories: Record<string, { 
+      attended: number; 
+      upcoming: number;
+      attendedEventNames: string[];
+      upcomingEventNames: string[];
+    }> = {};
 
     // Process attended events
     trackedEvents
       .filter(e => e.status === 'attended' && e.event)
       .forEach(record => {
-        // Infer type from title/description (simplified categorization)
-        const text = `${record.event!.title || ''} ${record.event!.description || ''}`.toLowerCase();
-        
-        let category = 'Other';
-        if (text.includes('workshop') || text.includes('hands-on')) category = 'Workshops';
-        else if (text.includes('conference') || text.includes('summit')) category = 'Conferences';
-        else if (text.includes('meetup') || text.includes('networking')) category = 'Meetups';
-        else if (text.includes('webinar') || text.includes('online')) category = 'Webinars';
-        else if (text.includes('hackathon') || text.includes('hack')) category = 'Hackathons';
-        else if (text.includes('course') || text.includes('training')) category = 'Training';
+        const category = getEventCategory(record.event);
+        const eventTitle = record.event!.title || 'Untitled Event';
 
         if (!eventCategories[category]) {
-          eventCategories[category] = { attended: 0, upcoming: 0 };
+          eventCategories[category] = { 
+            attended: 0, 
+            upcoming: 0,
+            attendedEventNames: [],
+            upcomingEventNames: []
+          };
         }
         eventCategories[category].attended++;
+        eventCategories[category].attendedEventNames.push(eventTitle);
       });
 
     // Process upcoming events
     upcomingEvents.forEach(event => {
-      const text = `${event.title || ''} ${event.description || ''}`.toLowerCase();
-      
-      let category = 'Other';
-      if (text.includes('workshop') || text.includes('hands-on')) category = 'Workshops';
-      else if (text.includes('conference') || text.includes('summit')) category = 'Conferences';
-      else if (text.includes('meetup') || text.includes('networking')) category = 'Meetups';
-      else if (text.includes('webinar') || text.includes('online')) category = 'Webinars';
-      else if (text.includes('hackathon') || text.includes('hack')) category = 'Hackathons';
-      else if (text.includes('course') || text.includes('training')) category = 'Training';
+      const category = getEventCategory(event);
+      const eventTitle = event.title || 'Untitled Event';
 
       if (!eventCategories[category]) {
-        eventCategories[category] = { attended: 0, upcoming: 0 };
+        eventCategories[category] = { 
+          attended: 0, 
+          upcoming: 0,
+          attendedEventNames: [],
+          upcomingEventNames: []
+        };
       }
       eventCategories[category].upcoming++;
+      eventCategories[category].upcomingEventNames.push(eventTitle);
     });
 
     // Convert to array and calculate totals
     return Object.entries(eventCategories)
-      .map(([name, counts]) => ({
+      .map(([name, data]) => ({
         name,
-        attended: counts.attended,
-        upcoming: counts.upcoming,
-        total: counts.attended + counts.upcoming,
-        percentage: 0 // Will calculate after
+        attended: data.attended,
+        upcoming: data.upcoming,
+        total: data.attended + data.upcoming,
+        percentage: 0, // Will calculate after
+        color: getCategoryColor(name),
+        attendedEventNames: data.attendedEventNames,
+        upcomingEventNames: data.upcomingEventNames,
+        allEventNames: [...data.attendedEventNames, ...data.upcomingEventNames]
       }))
       .filter(item => item.total > 0)
-      .sort((a, b) => b.total - a.total)
-      .map((item, index) => ({
-        ...item,
-        color: EVENT_TYPE_COLORS[index % EVENT_TYPE_COLORS.length]
-      }));
+      .sort((a, b) => b.total - a.total);
   }, [trackedEvents, upcomingEvents]);
 
   // Calculate percentages
@@ -130,25 +181,28 @@ export function EventTypeDistribution({ trackedEvents, upcomingEvents, className
               <ChartTooltip
                 content={({ active, payload }) => {
                   if (!active || !payload || !payload[0]) return null;
-                  const data = payload[0].payload;
+                  const data = payload[0].payload as {
+                    allEventNames?: string[];
+                    [key: string]: unknown;
+                  };
+                  
+                  // Combine all event names, removing duplicates
+                  const allEventNames: string[] = [...new Set((data.allEventNames || []) as string[])];
+                  
+                  if (allEventNames.length === 0) return null;
+                  
                   return (
-                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg">
-                      <p className="font-semibold text-gray-900 dark:text-white mb-2">
-                        {data.name}
-                      </p>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="text-gray-600 dark:text-gray-400">Total:</span>
-                          <span className="font-semibold">{data.total} ({data.percentage.toFixed(1)}%)</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="text-gray-600 dark:text-gray-400">Attended:</span>
-                          <span className="font-semibold text-green-600 dark:text-green-400">{data.attended}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="text-gray-600 dark:text-gray-400">Upcoming:</span>
-                          <span className="font-semibold text-blue-600 dark:text-blue-400">{data.upcoming}</span>
-                        </div>
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg max-w-[300px]">
+                      <div className="max-h-[200px] overflow-y-auto space-y-1">
+                        {allEventNames.map((eventName: string, index: number) => (
+                          <div 
+                            key={index}
+                            className="text-sm text-gray-900 dark:text-white py-1 px-2 rounded bg-gray-50 dark:bg-gray-700/50 truncate"
+                            title={eventName}
+                          >
+                            {eventName}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );

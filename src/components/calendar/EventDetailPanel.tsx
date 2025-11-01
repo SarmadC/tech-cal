@@ -1,8 +1,9 @@
 'use client';
 
 import { FC, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { XIcon, ArrowSquareOutIcon, CalendarPlusIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
+import { XIcon, ArrowSquareOutIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon, Star } from '@phosphor-icons/react';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
@@ -13,7 +14,7 @@ import EventInfo from './EventInfo';
 import EventTracking from './EventTracking';
 import AdaptiveTimeline from './AdaptiveTimeline';
 import { useEventActions } from '@/hooks/useEventActions';
-import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
+import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useAuth } from '@/contexts';
 import { generateEventSlug } from '@/utils/slugUtils';
 
@@ -31,11 +32,14 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] }>(event);
     const [isLoading, setIsLoading] = useState(true);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
     const moreMenuRef = useRef<HTMLDivElement>(null);
+    const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     
-    // Add tracking functionality
+    // Add bookmark functionality
     const { user } = useAuth();
-    const { trackedEventIds, trackEvent, untrackEvent, isLoading: isTrackingLoading } = useTrackedEventsUnified();
+    const { isBookmarked, toggleBookmark, isLoading: isBookmarkLoading } = useEventEngagement();
     
     // Update eventWithAgenda when event prop changes
     useEffect(() => {
@@ -47,25 +51,21 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const displayEvent = eventWithAgenda;
     
     // Event actions hook - use displayEvent to ensure it updates with new events
-    const { handleShare, googleCalendarLink, handleIcsDownload } = useEventActions(displayEvent);
+    const { handleShare, handleIcsDownload } = useEventActions(displayEvent);
     
     // Debug: Log the agendaUrl to see if it's populated
     console.log('EventDetailPanel - displayEvent.agendaUrl:', displayEvent.agendaUrl);
     
-    // Check if event is tracked
-    const isTracked = trackedEventIds?.has(displayEvent.id) ?? false;
+    // Check if event is bookmarked
+    const eventIsBookmarked = isBookmarked(displayEvent.id);
     
-    // Handle track/untrack event
-    const handleTrackEvent = async () => {
+    // Handle bookmark/unbookmark event
+    const handleBookmarkEvent = async () => {
         if (!user) {
             return;
         }
         
-        if (isTracked) {
-            await untrackEvent(displayEvent.id);
-        } else {
-            await trackEvent(displayEvent.id, 'bookmarked');
-        }
+        await toggleBookmark(displayEvent.id, displayEvent as unknown as Record<string, unknown>);
     };
 
     // Fetch complete event details with agenda
@@ -137,16 +137,55 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         };
     }, [event.id, event]);
 
+    // Calculate dropdown position when menu opens
+    useEffect(() => {
+        if (showMoreMenu && moreMenuButtonRef.current) {
+            const buttonRect = moreMenuButtonRef.current.getBoundingClientRect();
+            // Approximate dropdown height: 2 items * ~46px each = ~92px
+            const dropdownHeight = 92;
+            const spacing = 8; // mb-2 spacing
+            // Position dropdown above the button, aligned to left
+            setDropdownPosition({
+                top: buttonRect.top - dropdownHeight - spacing,
+                left: buttonRect.left,
+            });
+        } else {
+            setDropdownPosition(null);
+        }
+    }, [showMoreMenu]);
+
     // Close more menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            const clickedInsideMenu = moreMenuRef.current?.contains(target);
+            const clickedInsideDropdown = dropdownRef.current?.contains(target);
+            if (!clickedInsideMenu && !clickedInsideDropdown) {
                 setShowMoreMenu(false);
             }
         };
 
         if (showMoreMenu) {
             document.addEventListener('mousedown', handleClickOutside);
+            // Also recalculate position on scroll/resize
+            const handleReposition = () => {
+                if (moreMenuButtonRef.current) {
+                    const buttonRect = moreMenuButtonRef.current.getBoundingClientRect();
+                    const dropdownHeight = 92;
+                    const spacing = 8;
+                    setDropdownPosition({
+                        top: buttonRect.top - dropdownHeight - spacing,
+                        left: buttonRect.left,
+                    });
+                }
+            };
+            window.addEventListener('scroll', handleReposition, true);
+            window.addEventListener('resize', handleReposition);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+                window.removeEventListener('scroll', handleReposition, true);
+                window.removeEventListener('resize', handleReposition);
+            };
         }
 
         return () => {
@@ -172,7 +211,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
             <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 rounded-full bg-white/10 dark:bg-black/20 hover:bg-white/20 dark:hover:bg-white/10 border border-white/20 dark:border-white/10 text-gray-600 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                className="absolute top-4 right-6 p-2 rounded-full bg-white/10 dark:bg-black/20 hover:bg-white/20 dark:hover:bg-white/10 border border-white/20 dark:border-white/10 text-gray-600 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 z-10"
                 aria-label="Close event details"
             >
                 <XIcon className="w-4 h-4" />
@@ -181,26 +220,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
             <div className="flex-1 space-y-6 overflow-y-auto pr-2 -mr-2">
                 <div className="flex items-start justify-between">
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex-1">{displayEvent.title}</h3>
-
-                    {displayEvent.agendaUrl ? (
-                        <a
-                            href={displayEvent.agendaUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-4 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/20 dark:hover:bg-white/10 rounded-full transition-colors"
-                            title="View full agenda"
-                        >
-                            <ArrowSquareOutIcon className="w-5 h-5" />
-                        </a>
-                    ) : (
-                        <Link
-                            href={`/events/${generateEventSlug(displayEvent.title, displayEvent.id)}`}
-                            className="ml-4 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/20 dark:hover:bg-white/10 rounded-full transition-colors"
-                            title="View full page"
-                        >
-                            <ArrowSquareOutIcon className="w-5 h-5" />
-                        </Link>
-                    )}
                 </div>
 
                 <EventInfo event={displayEvent} category={category} />
@@ -230,20 +249,19 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 {/* All actions in a single container */}
                 <div className="p-4">
                     <div className="flex items-center gap-3">
-                        {/* Primary CTA - Track Event */}
+                        {/* Primary CTA - Bookmark Event */}
                         <button 
-                            onClick={handleTrackEvent}
-                            disabled={isTrackingLoading || !user}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 
-                                ${isTracked 
-                                    ? 'bg-red-500/90 hover:bg-red-600/90 text-white' 
-                                    : 'bg-gray-900/90 hover:bg-gray-800/90 text-white dark:bg-white/90 dark:hover:bg-white/100 dark:text-gray-900'
+                            onClick={handleBookmarkEvent}
+                            disabled={isBookmarkLoading || !user}
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 backdrop-blur-sm
+                                ${eventIsBookmarked 
+                                    ? 'bg-yellow-500/20 dark:bg-yellow-500/20 light:bg-yellow-500/15 hover:bg-yellow-500/30 dark:hover:bg-yellow-500/30 light:hover:bg-yellow-500/20 border border-yellow-500/40 dark:border-yellow-500/40 light:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 light:text-yellow-700'
+                                    : 'bg-gray-900/90 hover:bg-gray-800/90 text-white dark:bg-white/90 dark:hover:bg-white/100 dark:text-gray-900 border border-white/20 dark:border-white/10'
                                 } 
-                                backdrop-blur-sm border border-white/20 dark:border-white/10
-                                ${isTrackingLoading ? 'opacity-50 cursor-not-allowed' : 'shadow-sm hover:shadow-md'}`}
+                                ${isBookmarkLoading ? 'opacity-50 cursor-not-allowed' : 'shadow-sm hover:shadow-md'}`}
                         >
-                            <CalendarPlusIcon className="w-4 h-4" />
-                            <span>{isTracked ? 'Untrack Event' : 'Track Event'}</span>
+                            <Star className="w-4 h-4" weight={eventIsBookmarked ? "fill" : "regular"} />
+                            <span>{eventIsBookmarked ? 'Unbookmark Event' : 'Bookmark Event'}</span>
                         </button>
 
                         {/* Attendance toggle */}
@@ -262,60 +280,65 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
                         {/* More menu */}
                         <div className="relative flex-shrink-0" ref={moreMenuRef}>
-                                    <button
-                                        onClick={() => setShowMoreMenu(!showMoreMenu)}
-                                        className="flex items-center justify-center px-3 py-3 bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-colors backdrop-blur-sm border border-white/20 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-offset-white"
-                                        title="More actions"
-                                        aria-expanded={showMoreMenu}
-                                        aria-haspopup="true"
-                                    >
+                            <button
+                                ref={moreMenuButtonRef}
+                                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                                className="flex items-center justify-center px-3 py-3 bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-colors backdrop-blur-sm border border-white/20 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-offset-white"
+                                title="More actions"
+                                aria-expanded={showMoreMenu}
+                                aria-haspopup="true"
+                            >
                                 <DotsThreeVerticalIcon className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
                             </button>
                             
-                            {/* More menu dropdown */}
-                            {showMoreMenu && (
+                            {/* More menu dropdown - rendered via portal to avoid overflow clipping */}
+                            {showMoreMenu && dropdownPosition && typeof document !== 'undefined' && createPortal(
                                 <div 
-                                    className="absolute right-0 top-full mt-2 w-48 event-preview-glass-section rounded-lg shadow-lg z-10 border border-white/20 dark:border-white/10 backdrop-blur-md"
+                                    ref={dropdownRef}
+                                    className="fixed w-48 event-preview-glass-section rounded-lg shadow-lg z-[9999] border border-white/20 dark:border-white/10 backdrop-blur-md"
+                                    style={{
+                                        top: `${dropdownPosition.top}px`,
+                                        left: `${dropdownPosition.left}px`,
+                                    }}
                                     role="menu"
                                     aria-orientation="vertical"
                                 >
-                                            <a
-                                                href={googleCalendarLink}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                onClick={() => setShowMoreMenu(false)}
-                                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-t-lg transition-colors focus:outline-none"
-                                                role="menuitem"
-                                            >
-                                        <CalendarPlusIcon className="w-4 h-4" />
-                                        <span>Add to Calendar</span>
-                                    </a>
-                                            <button
-                                                onClick={() => {
-                                                    handleIcsDownload();
-                                                    setShowMoreMenu(false);
-                                                }}
-                                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 transition-colors focus:outline-none"
-                                                role="menuitem"
-                                            >
-                                        <DownloadSimpleIcon className="w-4 h-4" />
-                                        <span>Download .ics</span>
-                                    </button>
-                                    <button 
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 transition-colors focus:outline-none"
-                                        role="menuitem"
-                                    >
-                                        <DownloadSimpleIcon className="w-4 h-4" />
-                                        <span>Export to PDF</span>
-                                    </button>
-                                    <button 
+                                    {displayEvent.agendaUrl ? (
+                                        <a
+                                            href={displayEvent.agendaUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={() => setShowMoreMenu(false)}
+                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-t-lg transition-colors focus:outline-none"
+                                            role="menuitem"
+                                        >
+                                            <ArrowSquareOutIcon className="w-4 h-4" />
+                                            <span>View full agenda</span>
+                                        </a>
+                                    ) : (
+                                        <Link
+                                            href={`/events/${generateEventSlug(displayEvent.title, displayEvent.id)}`}
+                                            onClick={() => setShowMoreMenu(false)}
+                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-t-lg transition-colors focus:outline-none"
+                                            role="menuitem"
+                                        >
+                                            <ArrowSquareOutIcon className="w-4 h-4" />
+                                            <span>View full page</span>
+                                        </Link>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            handleIcsDownload();
+                                            setShowMoreMenu(false);
+                                        }}
                                         className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-b-lg transition-colors focus:outline-none"
                                         role="menuitem"
                                     >
                                         <DownloadSimpleIcon className="w-4 h-4" />
-                                        <span>Print</span>
+                                        <span>Download .ics</span>
                                     </button>
-                                </div>
+                                </div>,
+                                document.body
                             )}
                         </div>
                     </div>

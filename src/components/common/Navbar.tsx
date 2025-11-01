@@ -49,16 +49,18 @@ export default function Navbar() {
     return (
         <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${shouldShowBackground ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md shadow-sm' : 'bg-transparent'
             }`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
-                    {/* Logo */}
-                    <Link href="/" className="flex items-center space-x-2">
-                        <Image src="/logo.svg" alt="KureCal" width={32} height={32} />
-                        <span className="text-xl font-semibold text-foreground-primary">KureCal</span>
-                    </Link>
+            <div className="max-w-[1600px] mx-auto px-6">
+                <div className="relative flex items-center h-16">
+                    {/* Logo - Left */}
+                    <div className="flex-shrink-0">
+                        <Link href="/" className="flex items-center space-x-2">
+                            <Image src="/logo.svg" alt="KureCal" width={32} height={32} />
+                            <span className="text-xl font-semibold text-foreground-primary">KureCal</span>
+                        </Link>
+                    </div>
 
-                    {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center space-x-8">
+                    {/* Desktop Navigation - Center */}
+                    <div className="hidden md:flex items-center space-x-8 absolute left-1/2 -translate-x-1/2">
                         {allNavLinks.map((link) => (
                             <Link
                                 key={link.href}
@@ -71,8 +73,8 @@ export default function Navbar() {
                         ))}
                     </div>
 
-                    {/* Desktop User Menu / Auth Buttons */}
-                    <div className="hidden md:flex items-center space-x-4">
+                    {/* Desktop User Menu / Auth Buttons - Right */}
+                    <div className="hidden md:flex items-center space-x-4 ml-auto">
                         <ThemeToggle />
                         <UserMenu />
                     </div>
@@ -80,7 +82,7 @@ export default function Navbar() {
                     {/* Mobile Menu Button */}
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        className="md:hidden ml-auto p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             {isMobileMenuOpen ? (

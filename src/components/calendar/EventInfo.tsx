@@ -16,17 +16,14 @@ interface EventInfoProps {
     category?: EventType;
 }
 
-const EventInfo: FC<EventInfoProps> = ({ event, category }) => {
+const EventInfo: FC<EventInfoProps> = ({ event, category: _category }) => {
     const timelineTheme = useTimelineTheme();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const [showAllTags, setShowAllTags] = useState(false);
     
-    // Combine category and event tags
-    const allTags = [
-        ...(category ? [{ id: 'category', name: category.name, color: category.color }] : []),
-        ...(event.tags || [])
-    ];
+    // Only show event-specific tags, exclude category name tag
+    const allTags = event.tags || [];
     
     const maxInitialTags = 5;
     const shouldShowToggle = allTags.length > maxInitialTags;

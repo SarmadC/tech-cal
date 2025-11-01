@@ -1,13 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Clock, Target, Sparkle, CaretRight, Info } from '@phosphor-icons/react';
+import { Calendar, Clock, Target, Sparkle, Info, Star } from '@phosphor-icons/react';
 import { format, differenceInDays } from 'date-fns';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { getImpactBucketLabel } from '@/config/recommendationThresholds';
 import type { TrackedEventRecord, Event, CareerProfile, EventType } from '@/types';
-import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
-import { EVENT_STATUS } from '@/types/events';
+import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import dynamic from 'next/dynamic';
 
@@ -30,10 +29,11 @@ export function FocusHeroCard({
   careerProfile,
   eventTypes = [],
 }: FocusHeroCardProps) {
-  const { trackEvent } = useTrackedEventsUnified();
-  const { showSuccess, showError } = useSnackbar();
+  const { toggleBookmark, isBookmarked } = useEventEngagement();
+  const { showError } = useSnackbar();
   const [selectedEvent, setSelectedEvent] = React.useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isUpcomingEventsModalOpen, setIsUpcomingEventsModalOpen] = React.useState(false);
 
   const metrics = useDashboardMetrics({
     trackedEvents,
@@ -41,12 +41,11 @@ export function FocusHeroCard({
     careerProfile,
   });
 
-  const handleRSVP = async (event: Event) => {
+  const handleBookmark = async (event: Event) => {
     try {
-      await trackEvent(event.id, EVENT_STATUS.ATTENDING);
-      showSuccess(`RSVP'd to ${event.title}`);
+      await toggleBookmark(event.id, event as unknown as Record<string, unknown>);
     } catch (error) {
-      showError('Failed to RSVP to event');
+      showError('Failed to bookmark event');
       console.error(error);
     }
   };
@@ -71,9 +70,9 @@ export function FocusHeroCard({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top Recommended Event - Main Card */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 flex">
           {metrics.topRecommendedEvent ? (
-            <div className="glass-card p-6 border border-white/10 dark:border-white/10 light:border-black/10 hover:border-white/20 dark:hover:border-white/20 light:hover:border-black/15 transition-colors">
+            <div className="glass-card p-6 border border-white/10 dark:border-white/10 light:border-black/10 hover:border-white/20 dark:hover:border-white/20 light:hover:border-black/15 transition-colors flex flex-col w-full h-full">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
@@ -89,8 +88,13 @@ export function FocusHeroCard({
                     {metrics.topRecommendedEvent.event.title}
                   </h3>
                   {metrics.topRecommendedEvent.reason && (
-                    <p className="text-sm text-glass-secondary mb-4 line-clamp-2">
+                    <p className="text-sm text-glass-secondary mb-3 line-clamp-4">
                       {metrics.topRecommendedEvent.reason}
+                    </p>
+                  )}
+                  {metrics.topRecommendedEvent.event.description && (
+                    <p className="text-sm text-glass-tertiary mb-4 line-clamp-3">
+                      {metrics.topRecommendedEvent.event.description}
                     </p>
                   )}
                 </div>
@@ -137,14 +141,112 @@ export function FocusHeroCard({
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => handleRSVP(metrics.topRecommendedEvent!.event)}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-white/10 dark:bg-white/10 light:bg-black/5 hover:bg-white/20 dark:hover:bg-white/20 light:hover:bg-black/8 text-sm font-medium text-glass-primary transition-all focus:outline-none focus:ring-2 focus:ring-white/30 dark:focus:ring-white/30 light:focus:ring-black/20"
-                >
-                  RSVP Now
-                  <CaretRight className="w-4 h-4 inline ml-2" weight="bold" />
-                </button>
+              {/* Enhanced Content Section */}
+              <div className="space-y-4 mb-6">
+                {/* Event Tags */}
+                {metrics.topRecommendedEvent.event.tags && metrics.topRecommendedEvent.event.tags.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {metrics.topRecommendedEvent.event.tags.slice(0, 4).map((tag, index) => (
+                      <span
+                        key={tag.id || index}
+                        className="px-2.5 py-1 text-xs font-medium rounded-full bg-white/10 dark:bg-white/10 light:bg-black/5 border border-white/20 dark:border-white/20 light:border-black/10 text-glass-secondary"
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Organizer Info */}
+                {metrics.topRecommendedEvent.event.organizer && (
+                  <div className="flex items-center gap-2 text-sm text-glass-tertiary">
+                    <span className="text-xs font-medium text-glass-secondary">Organized by:</span>
+                    <span>{metrics.topRecommendedEvent.event.organizer}</span>
+                    {metrics.topRecommendedEvent.event.organization?.logo && (
+                      <img
+                        src={metrics.topRecommendedEvent.event.organization.logo}
+                        alt={metrics.topRecommendedEvent.event.organizer}
+                        className="w-4 h-4 rounded"
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Career Impact Highlights - Matched Skills */}
+                {(() => {
+                  const matchedSkills = metrics.getEventMatchedSkills(metrics.topRecommendedEvent.event);
+                  if (matchedSkills.length > 0) {
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-medium text-glass-secondary">
+                          <Target className="w-3.5 h-3.5 text-yellow-400" weight="fill" />
+                          <span>{matchedSkills.length} {matchedSkills.length === 1 ? 'skill' : 'skills'} match your profile</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {matchedSkills.slice(0, 4).map((skill, index) => (
+                            <span
+                              key={index}
+                              className="px-2.5 py-1 text-xs font-medium rounded-full bg-yellow-500/20 dark:bg-yellow-500/20 light:bg-yellow-500/15 border border-yellow-500/40 dark:border-yellow-500/40 light:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 light:text-yellow-700"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                          {matchedSkills.length > 4 && (
+                            <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-white/10 dark:bg-white/10 light:bg-black/5 border border-white/20 dark:border-white/20 light:border-black/10 text-glass-tertiary">
+                              +{matchedSkills.length - 4} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Optional Metadata */}
+                {(metrics.topRecommendedEvent.event.difficulty || metrics.topRecommendedEvent.event.targetAudience) && (
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-glass-tertiary">
+                    {metrics.topRecommendedEvent.event.difficulty && (
+                      <span className="px-2.5 py-1 rounded-full bg-white/10 dark:bg-white/10 light:bg-black/5 border border-white/20 dark:border-white/20 light:border-black/10 capitalize">
+                        {metrics.topRecommendedEvent.event.difficulty}
+                      </span>
+                    )}
+                    {metrics.topRecommendedEvent.event.targetAudience && (
+                      <span className="px-2.5 py-1 rounded-full bg-white/10 dark:bg-white/10 light:bg-black/5 border border-white/20 dark:border-white/20 light:border-black/10">
+                        {metrics.topRecommendedEvent.event.targetAudience}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 mt-auto">
+                {(() => {
+                  const event = metrics.topRecommendedEvent!.event;
+                  const bookmarked = isBookmarked(event.id);
+                  return (
+                    <button
+                      onClick={() => handleBookmark(event)}
+                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-white/30 dark:focus:ring-white/30 light:focus:ring-black/20 ${
+                        bookmarked
+                          ? 'bg-yellow-500/20 dark:bg-yellow-500/20 light:bg-yellow-500/15 hover:bg-yellow-500/30 dark:hover:bg-yellow-500/30 light:hover:bg-yellow-500/20 border border-yellow-500/40 dark:border-yellow-500/40 light:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 light:text-yellow-700'
+                          : 'bg-white/10 dark:bg-white/10 light:bg-black/5 hover:bg-white/20 dark:hover:bg-white/20 light:hover:bg-black/8 text-glass-primary'
+                      }`}
+                    >
+                      {bookmarked ? (
+                        <>
+                          <Star className="w-4 h-4 inline mr-2" weight="fill" />
+                          Bookmarked
+                        </>
+                      ) : (
+                        <>
+                          <Star className="w-4 h-4 inline mr-2" weight="regular" />
+                          Bookmark Event
+                        </>
+                      )}
+                    </button>
+                  );
+                })()}
                 <button
                   onClick={() => handleEventClick(metrics.topRecommendedEvent!.event)}
                   className="px-4 py-2.5 rounded-lg border border-white/20 dark:border-white/20 light:border-black/15 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/20 text-sm font-medium text-glass-secondary transition-all focus:outline-none focus:ring-2 focus:ring-white/30 dark:focus:ring-white/30 light:focus:ring-black/20"
@@ -176,7 +278,15 @@ export function FocusHeroCard({
         {/* Quick Glance Metrics */}
         <div className="space-y-4">
           {/* Upcoming Commitments */}
-          <div className="glass-card p-4 border border-white/10 dark:border-white/10 light:border-black/10">
+          <button
+            onClick={() => metrics.upcomingCommitments > 0 && setIsUpcomingEventsModalOpen(true)}
+            disabled={metrics.upcomingCommitments === 0}
+            className={`glass-card p-4 border border-white/10 dark:border-white/10 light:border-black/10 w-full text-left transition-all ${
+              metrics.upcomingCommitments > 0
+                ? 'hover:border-white/20 dark:hover:border-white/20 light:hover:border-black/15 hover:bg-white/5 dark:hover:bg-white/5 light:hover:bg-black/5 cursor-pointer'
+                : 'opacity-60 cursor-default'
+            }`}
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-glass-tertiary uppercase tracking-wider">
                 Upcoming
@@ -192,7 +302,7 @@ export function FocusHeroCard({
               </span>
             </div>
             <p className="text-xs text-glass-tertiary mt-1">You&apos;re attending</p>
-          </div>
+          </button>
 
           {/* Last Impact Score */}
           <div className="glass-card p-4 border border-white/10 dark:border-white/10 light:border-black/10">
@@ -271,6 +381,84 @@ export function FocusHeroCard({
         onClose={handleModalClose}
         categories={eventTypes}
       />
+
+      {/* Upcoming Events Modal */}
+      {isUpcomingEventsModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setIsUpcomingEventsModalOpen(false)}
+        >
+          <div 
+            className="glass-card p-6 border border-white/10 dark:border-white/10 light:border-black/10 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-glass-primary">Upcoming Events</h3>
+                <p className="text-sm text-glass-tertiary mt-1">
+                  {metrics.followUpReminders.length} {metrics.followUpReminders.length === 1 ? 'event' : 'events'} you&apos;re attending
+                </p>
+              </div>
+              <button
+                onClick={() => setIsUpcomingEventsModalOpen(false)}
+                className="p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/5 transition-colors text-glass-tertiary"
+              >
+                <span className="text-2xl leading-none">×</span>
+              </button>
+            </div>
+
+            {/* Events List */}
+            <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-3">
+              {metrics.followUpReminders.length > 0 ? (
+                metrics.followUpReminders.map(({ event, daysUntil }) => (
+                  <div
+                    key={event.id}
+                    onClick={() => {
+                      setSelectedEvent(event);
+                      setIsUpcomingEventsModalOpen(false);
+                      setIsModalOpen(true);
+                    }}
+                    className="p-4 rounded-lg border border-white/10 dark:border-white/10 light:border-black/10 hover:border-white/20 dark:hover:border-white/20 light:hover:border-black/15 hover:bg-white/5 dark:hover:bg-white/5 light:hover:bg-black/5 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <h4 className="text-base font-medium text-glass-primary line-clamp-2 flex-1">
+                        {event.title}
+                      </h4>
+                      <div className="flex-shrink-0 text-xs font-medium text-glass-tertiary">
+                        {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil}d`}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-glass-tertiary">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" weight="regular" />
+                        <span>{format(new Date(event.startTime), 'MMM d, yyyy')}</span>
+                        <span className="opacity-60">•</span>
+                        <span>{format(new Date(event.startTime), 'h:mm a')}</span>
+                      </div>
+                      {event.location && (
+                        <>
+                          <span className="opacity-60">•</span>
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5" weight="regular" />
+                            <span className="line-clamp-1">{event.location}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <Calendar className="w-12 h-12 text-glass-tertiary opacity-60 mx-auto mb-3" weight="regular" />
+                  <p className="text-sm font-medium text-glass-secondary mb-1">No upcoming events</p>
+                  <p className="text-xs text-glass-tertiary">Events you&apos;re attending will appear here</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
