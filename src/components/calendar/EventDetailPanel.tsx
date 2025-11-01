@@ -156,17 +156,17 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
     // Conditional styling based on variant with glassmorphism
     const containerClasses = variant === 'modal'
-        ? `max-h-[85vh] event-detail-glass-modal rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/10 p-6 flex flex-col relative overflow-hidden`
+        ? `max-h-[85vh] event-detail-glass-modal rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/10 dark:ring-white/20 light:ring-black/10 p-6 flex flex-col relative overflow-hidden`
         : `h-full event-detail-glass-sidebar border-l border-white/20 dark:border-white/10 shadow-2xl p-6 flex flex-col relative`;
 
     return (
         <div 
             className={containerClasses}
             style={{
-                background: theme.isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                background: theme.isDark ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(20px) saturate(120%)',
                 WebkitBackdropFilter: 'blur(20px) saturate(120%)',
-                border: theme.isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(255, 255, 255, 0.2)'
+                border: theme.isDark ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.1)'
             }}
         >
             <button

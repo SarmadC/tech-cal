@@ -54,7 +54,7 @@ const DashboardEventDetailModal: FC<DashboardEventDetailModalProps> = ({
     >
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-lg transition-opacity duration-300"
+        className="absolute inset-0 bg-black/70 dark:bg-black/70 light:bg-black/50 backdrop-blur-lg transition-opacity duration-300"
         onClick={onClose}
         aria-hidden="true"
       />

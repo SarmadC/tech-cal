@@ -28,6 +28,36 @@ export type AuthFormState = {
         _form?: string[];
     };
     success: boolean;
+    // Optional hint to client for immediate navigation after success
+    shouldRedirect?: boolean;
+}
+
+/**
+ * Maps AuthService error messages to field-specific errors in AuthFormState
+ */
+function mapAuthErrorToFormState(error: string): Partial<AuthFormState['errors']> {
+    const errorLower = error.toLowerCase();
+    
+    // Map recognizable errors to specific fields
+    if (errorLower.includes('you must accept the terms') || errorLower.includes('accept the terms')) {
+        return { acceptTerms: [error] };
+    }
+    
+    if (errorLower.includes('passwords do not match') || 
+        (errorLower.includes('password') && errorLower.includes('match') && !errorLower.includes('at least'))) {
+        return { confirmPassword: [error] };
+    }
+    
+    if (errorLower.includes('password must be at least') || errorLower.includes('password should be at least')) {
+        return { password: [error] };
+    }
+    
+    if (errorLower.includes('invalid email') || errorLower.includes('please enter a valid email')) {
+        return { email: [error] };
+    }
+    
+    // For all other errors, use _form
+    return { _form: [error] };
 }
 
 
@@ -50,7 +80,24 @@ export async function loginAction(
 
     const supabase = await createClient();
     try {
-        await AuthService.signIn(validatedFields.data, supabase);
+        const result = await AuthService.signIn(validatedFields.data, supabase);
+        
+        if (!result.success) {
+            // Map error to appropriate form state
+            const errorMapping = mapAuthErrorToFormState(result.error || 'Authentication failed.');
+            return {
+                success: false,
+                message: result.error || 'Authentication failed.',
+                errors: errorMapping,
+            };
+        }
+        
+        // Successful login - return success state so AuthForm onSuccess callback can handle redirect
+        return {
+            success: true,
+            message: result.message || 'Successfully signed in!',
+            shouldRedirect: true,
+        };
     } catch (error) {
         console.error("Login Action Error:", error);
         return {
@@ -59,8 +106,6 @@ export async function loginAction(
             errors: { _form: [(error as Error).message] },
         };
     }
-
-    return redirect('/discover');
 }
 
 export async function signupAction(
@@ -89,35 +134,71 @@ export async function signupAction(
     try {
         const result = await AuthService.signUp(serviceData, supabase);
         
-        // If signup was successful and user was created, create a profile
-        if (result.success) {
-            try {
-                // Get the current user to create profile
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    // Check if profile already exists
-                    try {
-                        await ProfileService.getProfile(user.id, supabase);
-                        // Profile exists, no need to create
-                    } catch (profileError) {
-                        if (profileError instanceof Error && profileError.name === 'ProfileNotFoundError') {
-                            // Create profile
-                            await ProfileService.createProfile({
-                                id: user.id,
-                                fullName: user.user_metadata?.full_name || serviceData.name,
-                                avatarUrl: user.user_metadata?.avatar_url || null,
-                                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                                preferences: {}
-                            }, supabase);
-                            console.log('[SignupAction] Profile created for new user:', user.id);
-                        }
+        // If signup failed, return error state with mapped errors
+        if (!result.success) {
+            const errorMapping = mapAuthErrorToFormState(result.error || 'Signup failed.');
+            return {
+                success: false,
+                message: result.error || 'Signup failed.',
+                errors: errorMapping,
+            };
+        }
+        
+        // Signup succeeded - check if user has a session (email confirmed)
+        // If no session, email confirmation is required
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+            // Do not silently treat as confirmation pending; surface the error
+            return {
+                success: false,
+                message: 'Failed to verify session after signup. Please try again.',
+                errors: { _form: [sessionError.message] },
+            };
+        }
+        
+        if (!session) {
+            // Email confirmation required - return success state with message, stay on page
+            return {
+                success: true,
+                message: result.message || 'Please check your email to confirm your account.',
+                shouldRedirect: false,
+            };
+        }
+        
+        // User has session - email is confirmed, create profile
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // Check if profile already exists
+                try {
+                    await ProfileService.getProfile(user.id, supabase);
+                    // Profile exists, no need to create
+                } catch (profileError) {
+                    if (profileError instanceof Error && profileError.name === 'ProfileNotFoundError') {
+                        // Create profile
+                        await ProfileService.createProfile({
+                            id: user.id,
+                            fullName: user.user_metadata?.full_name || serviceData.name,
+                            avatarUrl: user.user_metadata?.avatar_url || null,
+                            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                            preferences: {}
+                        }, supabase);
+                        console.log('[SignupAction] Profile created for new user:', user.id);
                     }
                 }
-            } catch (profileError) {
-                console.error('[SignupAction] Error creating profile:', profileError);
-                // Don't fail signup if profile creation fails - it will be handled by onboarding page
             }
+        } catch (profileError) {
+            console.error('[SignupAction] Error creating profile:', profileError);
+            // Don't fail signup if profile creation fails - it will be handled by onboarding page
         }
+        
+        // Fully signed up and confirmed - return success state so AuthForm onSuccess callback can handle redirect
+        return {
+            success: true,
+            message: result.message || 'Account created successfully!',
+            shouldRedirect: true,
+        };
     } catch (error) {
         console.error("Signup Action Error:", error);
         return {
@@ -126,8 +207,6 @@ export async function signupAction(
             errors: { _form: [(error as Error).message] },
         };
     }
-
-    return redirect('/discover');
 }
 
 export async function forgotPasswordAction(

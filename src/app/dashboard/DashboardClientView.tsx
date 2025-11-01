@@ -7,16 +7,12 @@ import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardErrorState } from '@/components/dashboard/DashboardErrorState';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
-import { QuickKPIsStrip } from '@/components/dashboard/QuickKPIsStrip';
-import { ImpactTimeline } from '@/components/dashboard/ImpactTimeline';
 import { EventTypeDistribution } from '@/components/dashboard/EventTypeDistribution';
-import { CareerProgressHero } from '@/components/dashboard/CareerProgressHero';
-import { CareerGoalsTracker } from '@/components/dashboard/CareerGoalsTracker';
-import { CareerGoalProgressChart } from '@/components/dashboard/CareerGoalProgressChart';
-import { SkillsDevelopmentCard } from '@/components/dashboard/SkillsDevelopmentCard';
-import { CareerAlignedEventsCard } from '@/components/dashboard/CareerAlignedEventsCard';
-import { UpcomingEventsNextSteps } from '@/components/dashboard/UpcomingEventsNextSteps';
-import { NetworkingProgressCard } from '@/components/dashboard/NetworkingProgressCard';
+import { FocusHeroCard } from '@/components/dashboard/FocusHeroCard';
+import { CareerProgressCard } from '@/components/dashboard/CareerProgressCard';
+import { LearningProgressCard } from '@/components/dashboard/LearningProgressCard';
+import { PipelineColumn } from '@/components/dashboard/PipelineColumn';
+import { RecentWinsCard } from '@/components/dashboard/RecentWinsCard';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
@@ -128,95 +124,65 @@ export default function DashboardClientView({
                                         </SectionErrorBoundary>
                                     )}
 
-                                    {/* Hero Section - Career Progress Overview */}
+                                    {/* Focus Zone - Hero Card */}
                                     {careerProfile && hasCompletedOnboarding && (
-                                        <SectionErrorBoundary name="CareerProgressHero">
-                                            <CareerProgressHero
-                                                careerProfile={careerProfile}
+                                        <SectionErrorBoundary name="FocusHeroCard">
+                                            <FocusHeroCard
                                                 trackedEvents={trackedEvents}
                                                 upcomingEvents={allUpcomingEvents}
+                                                careerProfile={careerProfile}
+                                                eventTypes={initialEventTypes}
                                             />
                                         </SectionErrorBoundary>
                                     )}
-
-                                    {/* Quick KPIs Strip - Full Width */}
-                                    <SectionErrorBoundary name="QuickKPIs">
-                                        <QuickKPIsStrip 
-                                            trackedEvents={trackedEvents} 
-                                            careerProfile={careerProfile ?? undefined}
-                                        />
-                                    </SectionErrorBoundary>
 
                                     {/* Main Content Grid - 60/40 Split */}
                                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                                         {/* Left Column (60%) - Progress & Analytics */}
                                         <div className="space-y-6 xl:col-span-7">
-                                            {/* Career Goal Progress Chart */}
+                                            {/* Career Progress Card */}
                                             {careerProfile && hasCompletedOnboarding && (
-                                                <SectionErrorBoundary name="CareerGoalProgressChart">
-                                                    <CareerGoalProgressChart
-                                                        careerProfile={careerProfile}
+                                                <SectionErrorBoundary name="CareerProgressCard">
+                                                    <CareerProgressCard
                                                         trackedEvents={trackedEvents}
                                                         upcomingEvents={allUpcomingEvents}
+                                                        careerProfile={careerProfile}
                                                     />
                                                 </SectionErrorBoundary>
                                             )}
 
-                                            {/* Career Goals Tracker */}
+                                            {/* Learning Progress Card */}
                                             {careerProfile && hasCompletedOnboarding && (
-                                                <SectionErrorBoundary name="CareerGoalsTracker">
-                                                    <CareerGoalsTracker
-                                                        careerProfile={careerProfile}
+                                                <SectionErrorBoundary name="LearningProgressCard">
+                                                    <LearningProgressCard
                                                         trackedEvents={trackedEvents}
                                                         upcomingEvents={allUpcomingEvents}
-                                                    />
-                                                </SectionErrorBoundary>
-                                            )}
-
-                                            {/* Skills Development */}
-                                            {careerProfile && hasCompletedOnboarding && (
-                                                <SectionErrorBoundary name="SkillsDevelopmentCard">
-                                                    <SkillsDevelopmentCard
                                                         careerProfile={careerProfile}
-                                                        upcomingEvents={allUpcomingEvents}
                                                     />
                                                 </SectionErrorBoundary>
                                             )}
 
-                                            {/* Impact Timeline */}
-                                            <SectionErrorBoundary name="ImpactTimeline">
-                                                <ImpactTimeline trackedEvents={trackedEvents} />
+                                            {/* Recent Wins Card */}
+                                            <SectionErrorBoundary name="RecentWinsCard">
+                                                <RecentWinsCard
+                                                    trackedEvents={trackedEvents}
+                                                    upcomingEvents={allUpcomingEvents}
+                                                    careerProfile={careerProfile}
+                                                    eventTypes={initialEventTypes}
+                                                />
                                             </SectionErrorBoundary>
                                         </div>
 
                                         {/* Right Column (40%) - Actions & Recommendations */}
                                         <div className="space-y-6 xl:col-span-5 xl:sticky xl:top-6 self-start">
-                                            {/* Career-Aligned Events */}
+                                            {/* Pipeline Column */}
                                             {careerProfile && hasCompletedOnboarding && (
-                                                <SectionErrorBoundary name="CareerAlignedEventsCard">
-                                                    <CareerAlignedEventsCard
-                                                        careerProfile={careerProfile}
-                                                        upcomingEvents={allUpcomingEvents}
-                                                        eventTypes={initialEventTypes}
-                                                    />
-                                                </SectionErrorBoundary>
-                                            )}
-
-                                            {/* Upcoming Events & Next Steps */}
-                                            <SectionErrorBoundary name="UpcomingEventsNextSteps">
-                                                <UpcomingEventsNextSteps
-                                                    trackedEvents={trackedEvents}
-                                                    upcomingEvents={allUpcomingEvents}
-                                                />
-                                            </SectionErrorBoundary>
-
-                                            {/* Networking Progress */}
-                                            {careerProfile && hasCompletedOnboarding && careerProfile.networkingGoals.length > 0 && (
-                                                <SectionErrorBoundary name="NetworkingProgressCard">
-                                                    <NetworkingProgressCard
-                                                        careerProfile={careerProfile}
+                                                <SectionErrorBoundary name="PipelineColumn">
+                                                    <PipelineColumn
                                                         trackedEvents={trackedEvents}
                                                         upcomingEvents={allUpcomingEvents}
+                                                        careerProfile={careerProfile}
+                                                        eventTypes={initialEventTypes}
                                                     />
                                                 </SectionErrorBoundary>
                                             )}

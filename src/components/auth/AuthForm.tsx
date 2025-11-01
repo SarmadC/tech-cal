@@ -12,7 +12,7 @@ interface AuthFormProps {
     initialState: AuthFormState;
     submitButtonText: string;
     children: (state: AuthFormState) => React.ReactNode;
-    onSuccess?: () => void;
+    onSuccess?: (state: AuthFormState) => void;
 }
 
 export function AuthForm({
@@ -36,7 +36,7 @@ export function AuthForm({
             // Reduced delay to improve perceived performance
             setTimeout(() => {
                 if (onSuccess) {
-                    onSuccess();
+                    onSuccess(state);
                 }
             }, 100);
         } else if (state.message && !state.success && (state.errors?._form || Object.keys(state.errors ?? {}).length === 0)) {

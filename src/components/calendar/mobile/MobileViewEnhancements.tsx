@@ -64,23 +64,31 @@ const MobileViewEnhancements: FC<MobileViewEnhancementsProps> = ({
 
     // Scroll detection for auto-hiding elements
     const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        const currentScrollY = e.currentTarget.scrollTop;
-        const direction = currentScrollY > lastScrollY ? 'down' : 'up';
+        const target = e.currentTarget;
+        if (!target) return;
         
-        setScrollDirection(direction);
-        setIsScrolling(true);
-        setLastScrollY(currentScrollY);
+        try {
+            const currentScrollY = target.scrollTop ?? 0;
+            const direction = currentScrollY > lastScrollY ? 'down' : 'up';
+            
+            setScrollDirection(direction);
+            setIsScrolling(true);
+            setLastScrollY(currentScrollY);
 
-        // Clear existing timeout
-        if (scrollTimeoutRef.current) {
-            clearTimeout(scrollTimeoutRef.current);
+            // Clear existing timeout
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+
+            // Set timeout to stop scrolling state
+            scrollTimeoutRef.current = setTimeout(() => {
+                setIsScrolling(false);
+                setScrollDirection(null);
+            }, 150);
+        } catch (error) {
+            // Element doesn't support scrollTop or was unmounted
+            console.warn('[MobileViewEnhancements] Error accessing scrollTop:', error);
         }
-
-        // Set timeout to stop scrolling state
-        scrollTimeoutRef.current = setTimeout(() => {
-            setIsScrolling(false);
-            setScrollDirection(null);
-        }, 150);
     }, [lastScrollY]);
 
     // Quick actions for today view - simplified for discovery

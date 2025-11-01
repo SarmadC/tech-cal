@@ -37,12 +37,22 @@ export function usePullToRefresh({
       if (!enabled || pullState.isRefreshing) return;
 
       const element = e.currentTarget as HTMLElement;
+      if (!element) return;
+      
       scrollElement.current = element;
       
       // Only allow pull-to-refresh when scrolled to top
-      if (element && element.scrollTop === 0) {
-        startY.current = e.touches[0].clientY;
-        setPullState(prev => ({ ...prev, isPulling: false }));
+      // Check if element has scrollTop property and is at top
+      try {
+        const scrollTop = element.scrollTop ?? 0;
+        if (scrollTop === 0) {
+          startY.current = e.touches[0].clientY;
+          setPullState(prev => ({ ...prev, isPulling: false }));
+        }
+      } catch (error) {
+        // Element doesn't support scrollTop, skip pull-to-refresh
+        console.warn('[usePullToRefresh] Element does not support scrollTop:', error);
+        return;
       }
     },
     [enabled, pullState.isRefreshing]
@@ -56,19 +66,26 @@ export function usePullToRefresh({
       const deltaY = currentY - startY.current;
 
       // Only process downward pulls when at the top
-      if (deltaY > 0 && scrollElement.current && scrollElement.current.scrollTop === 0) {
-        e.preventDefault(); // Prevent native scroll
+      try {
+        const scrollTop = scrollElement.current.scrollTop ?? 0;
+        if (deltaY > 0 && scrollTop === 0) {
+          e.preventDefault(); // Prevent native scroll
 
-        // Apply resistance to create smooth pull effect
-        const pullDistance = Math.min(deltaY / resistance, threshold * 1.5);
-        const canRefresh = pullDistance >= threshold;
+          // Apply resistance to create smooth pull effect
+          const pullDistance = Math.min(deltaY / resistance, threshold * 1.5);
+          const canRefresh = pullDistance >= threshold;
 
-        setPullState(prev => ({
-          ...prev,
-          isPulling: true,
-          pullDistance,
-          canRefresh,
-        }));
+          setPullState(prev => ({
+            ...prev,
+            isPulling: true,
+            pullDistance,
+            canRefresh,
+          }));
+        }
+      } catch (error) {
+        // Element doesn't support scrollTop or was unmounted, skip pull-to-refresh
+        console.warn('[usePullToRefresh] Error accessing scrollTop:', error);
+        return;
       }
     },
     [enabled, pullState.isRefreshing, threshold, resistance]

@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { signupAction, oauthSignInAction } from '@/app/auth/actions';
@@ -17,6 +18,7 @@ const initialState: AuthFormState = {
 };
 
 export default function SignupPage() {
+    const router = useRouter();
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         try {
@@ -33,8 +35,13 @@ export default function SignupPage() {
         }
     };
 
-    // The AuthForm component now handles showing the success toast automatically.
-    // We don't need an onSuccess redirect here because the user needs to confirm their email.
+    // Handle successful signup - redirect immediately when action indicates it
+    // If email confirmation is needed (no session), action sets shouldRedirect=false and we stay on page
+    const handleSignupSuccess = (state: AuthFormState) => {
+        if (state?.shouldRedirect) {
+            router.push('/discover');
+        }
+    };
 
     return (
         <ProtectedRoute allowUnauthenticated>
@@ -71,6 +78,7 @@ export default function SignupPage() {
                             action={signupAction}
                             initialState={initialState}
                             submitButtonText="Create Account"
+                            onSuccess={handleSignupSuccess}
                         >
                             {(state) => (
                                 <>

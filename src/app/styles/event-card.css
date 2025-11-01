@@ -496,23 +496,23 @@ div.event-detail-glass-sidebar {
 /* Event detail panel glassmorphism - modal variant */
 .event-detail-glass-modal {
     /* Override CSS custom properties and apply glass effect */
-    background: rgba(255, 255, 255, 0.15) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     backdrop-filter: blur(24px) saturate(120%) !important;
     -webkit-backdrop-filter: blur(24px) saturate(120%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
     /* Override CSS custom properties */
-    --card: rgba(255, 255, 255, 0.15) !important;
-    --background: rgba(255, 255, 255, 0.15) !important;
+    --card: rgba(255, 255, 255, 0.95) !important;
+    --background: rgba(255, 255, 255, 0.95) !important;
 }
 
 .dark .event-detail-glass-modal {
-    background: rgba(0, 0, 0, 0.3) !important;
+    background: rgba(30, 30, 30, 0.95) !important;
     backdrop-filter: blur(24px) saturate(120%) !important;
     -webkit-backdrop-filter: blur(24px) saturate(120%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
     /* Override CSS custom properties for dark mode */
-    --card: rgba(0, 0, 0, 0.3) !important;
-    --background: rgba(0, 0, 0, 0.3) !important;
+    --card: rgba(30, 30, 30, 0.95) !important;
+    --background: rgba(30, 30, 30, 0.95) !important;
 }
 
 /* Event Card Basic Info Container */
