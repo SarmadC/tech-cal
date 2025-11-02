@@ -200,7 +200,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       className="w-full"
     >
       <div className={cn(
-        "discovery-card-glass event-card-enhanced-depth cursor-pointer transition-all duration-300 hover:shadow-lg relative bento-card-medium",
+        "glass-card cursor-pointer relative bento-card-medium",
         variant === 'featured' && "md:col-span-2",
         variant === 'compact' && "flex-row items-center gap-4",
         className
@@ -213,7 +213,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
            {/* Event title and logo on same line */}
            <div className="w-full flex items-start justify-between gap-3">
              <h3
-               className="font-semibold leading-tight tracking-tight text-foreground-primary text-xl flex-1"
+               className="font-semibold leading-tight tracking-tight text-glass-primary text-xl flex-1"
                title={event.title}
              >
                {event.title}
@@ -295,7 +295,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                      style={{ width: `${displayScore}%` }}
                    />
                  </div>
-                 <span className="font-medium text-foreground-secondary text-sm">
+                 <span className="font-medium text-glass-secondary text-sm">
                    {Math.round(displayScore)}%
                  </span>
 
@@ -378,7 +378,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
           )}
 
           {/* Date and time on one line */}
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+          <div className="flex items-center gap-4 text-sm text-glass-secondary">
             <div className="flex items-center gap-1">
               <Calendar size={14} />
               <span>{formatEventDate(event.startTime)}</span>
@@ -392,7 +392,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
 
           {/* Location on separate line */}
           {event.location && (
-            <div className="flex items-center gap-1 text-sm text-gray-500">
+            <div className="flex items-center gap-1 text-sm text-glass-tertiary">
               <MapPin size={14} />
               <span className="max-w-64">
                 {event.location.length > 28
@@ -404,7 +404,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
           )}
 
           {event.attendeeCount && event.attendeeCount > 0 && (
-            <div className="flex items-center gap-1 text-sm text-gray-500">
+            <div className="flex items-center gap-1 text-sm text-glass-tertiary">
               <Users size={14} />
               <span>{event.attendeeCount} attending</span>
             </div>

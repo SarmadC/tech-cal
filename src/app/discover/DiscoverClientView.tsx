@@ -7,10 +7,11 @@ import { Event, EventType, AppProfile } from '@/types';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
 import MobileDiscoveryView from '@/components/calendar/mobile/discovery/MobileDiscoveryView';
-import DiscoveryHeader from '@/components/calendar/DiscoveryHeader';
 import { CalendarProvider } from '@/contexts/CalendarContext';
-import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
+import Navbar from '@/components/common/Navbar';
+import MobileNavbar from '@/components/common/MobileNavbar';
 import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
@@ -118,25 +119,6 @@ export default function DiscoverClientView({
         />
     );
 
-    // Header wrapper component
-    const HeaderWrapper = () => {
-        return <DiscoveryHeader />;
-    };
-
-    // Main content wrapper that adjusts margin based on sidebar state
-    const MainContentWithSidebarOffset = ({ children }: { children: React.ReactNode }) => {
-        const { open } = useSidebar();
-        return (
-            <div 
-                className={`flex-1 flex flex-col transition-[margin] duration-200 ease-in-out ${
-                    !isMobile ? (open ? 'md:ml-64' : 'md:ml-16') : 'ml-0'
-                }`}
-            >
-                {children}
-            </div>
-        );
-    };
-
     return (
         <CalendarProvider
             selectedDate={selectedDate}
@@ -149,77 +131,89 @@ export default function DiscoverClientView({
             onCloseEventDetail={handleCloseEventDetail}
         >
             <SidebarProvider>
-                <div className="flex min-h-screen calendar-page">
-                    {/* App Sidebar - Hidden on mobile */}
-                    {!isMobile && <AppSidebar />}
-                    
-                    <MainContentWithSidebarOffset>
-                        {/* Discovery Header */}
-                        <div className="hidden md:block">
-                            <HeaderWrapper />
-                        </div>
-                        
-                        {/* Main Content */}
-                        <div className="flex-1 flex flex-col" data-view="discovery">
-                            <div className={`flex-1 relative ${isMobile ? 'p-0' : 'p-4 md:p-6'}`}>
-                                <SmartLoader
-                                    loading={eventData.isLoading}
-                                    error={eventData.error}
-                                    onRetry={eventData.refetch}
-                                    skeleton={loadingSkeleton}
-                                >
-                                    <div aria-busy={eventData.rateLimitWaitMs > 0 || eventData.isLoading}>
-                                        {/* Rate limit wait feedback */}
-                                        {eventData.rateLimitWaitMs > 0 && (
-                                            <div
-                                                className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3 text-sm text-text-secondary"
-                                                role="status"
-                                                aria-live="polite"
-                                            >
-                                                Fetching results... (waiting {Math.ceil(eventData.rateLimitWaitMs / 1000)}s to avoid rate limit)
-                                            </div>
-                                        )}
-
-                                        {/* Cold start indicator */}
-                                        {eventData.isColdStart && !eventData.isLoading && (
-                                            <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                                                <div className="flex items-start">
-                                                    <div className="flex-shrink-0">
-                                                        <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                                        </svg>
-                                                    </div>
-                                                    <div className="ml-3">
-                                                        <h3 className="text-sm font-medium text-blue-800">Personalized for You</h3>
-                                                        <p className="mt-1 text-sm text-blue-700">
-                                                            We&apos;re showing you events that similar professionals found valuable. 
-                                                            As you interact with events, we&apos;ll learn your preferences and improve recommendations.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Empty-results hint for budget tiers */}
-                                        {!eventData.isLoading && eventData.filteredEvents.length === 0 && eventData.filters.budget !== 'all' && (
-                                            <div className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3">
-                                                <p className="text-sm text-foreground-secondary">No events found for the selected budget tier. Budget filtering is USD-only.</p>
-                                                <div className="mt-2">
-                                                    <button
-                                                        onClick={() => eventData.updateFilter('budget', 'all' as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
-                                                        className="inline-flex items-center rounded-md border border-border-default px-3 py-1 text-sm text-foreground-primary hover:bg-background-muted"
-                                                    >
-                                                        Show all budgets
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {mainContent}
+                {/* Mobile Navigation - Only visible on mobile */}
+                <MobileNavbar />
+                <div className="flex h-screen bg-background">
+                    <AppSidebar />
+                    <main className="flex-1 flex flex-col overflow-hidden">
+                        {/* Main Navbar - Hidden on mobile */}
+                        <Navbar />
+                        <div className="flex-1 overflow-auto">
+                            {/* Glassmorphic Discovery with gradient background */}
+                            <div className="min-h-screen glass-bg-gradient relative">
+                                {/* Subtle atmospheric overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
+                                
+                                <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
+                                    {/* Header */}
+                                    <div className="mb-8">
+                                        <h1 className="text-3xl font-bold text-glass-primary mb-2">
+                                            Discover
+                                        </h1>
                                     </div>
-                                </SmartLoader>
+                                    
+                                    {/* Main Content */}
+                                    <div className="flex-1 flex flex-col" data-view="discovery">
+                                        <SmartLoader
+                                            loading={eventData.isLoading}
+                                            error={eventData.error}
+                                            onRetry={eventData.refetch}
+                                            skeleton={loadingSkeleton}
+                                        >
+                                            <div aria-busy={eventData.rateLimitWaitMs > 0 || eventData.isLoading}>
+                                                {/* Rate limit wait feedback */}
+                                                {eventData.rateLimitWaitMs > 0 && (
+                                                    <div
+                                                        className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3 text-sm text-text-secondary"
+                                                        role="status"
+                                                        aria-live="polite"
+                                                    >
+                                                        Fetching results... (waiting {Math.ceil(eventData.rateLimitWaitMs / 1000)}s to avoid rate limit)
+                                                    </div>
+                                                )}
+
+                                                {/* Cold start indicator */}
+                                                {eventData.isColdStart && !eventData.isLoading && (
+                                                    <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                                                        <div className="flex items-start">
+                                                            <div className="flex-shrink-0">
+                                                                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                                                </svg>
+                                                            </div>
+                                                            <div className="ml-3">
+                                                                <h3 className="text-sm font-medium text-blue-800">Personalized for You</h3>
+                                                                <p className="mt-1 text-sm text-blue-700">
+                                                                    We&apos;re showing you events that similar professionals found valuable. 
+                                                                    As you interact with events, we&apos;ll learn your preferences and improve recommendations.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Empty-results hint for budget tiers */}
+                                                {!eventData.isLoading && eventData.filteredEvents.length === 0 && eventData.filters.budget !== 'all' && (
+                                                    <div className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3">
+                                                        <p className="text-sm text-foreground-secondary">No events found for the selected budget tier. Budget filtering is USD-only.</p>
+                                                        <div className="mt-2">
+                                                            <button
+                                                                onClick={() => eventData.updateFilter('budget', 'all' as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
+                                                                className="inline-flex items-center rounded-md border border-border-default px-3 py-1 text-sm text-foreground-primary hover:bg-background-muted"
+                                                            >
+                                                                Show all budgets
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {mainContent}
+                                            </div>
+                                        </SmartLoader>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </MainContentWithSidebarOffset>
+                    </main>
 
                     {/* Event Detail Panel */}
                     {selectedEvent && (
