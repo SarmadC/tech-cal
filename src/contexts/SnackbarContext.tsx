@@ -1,7 +1,9 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useTheme as useNextTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 
 // Lazy‑load MUI surfaces only when needed to keep them out of the base bundle
@@ -50,7 +52,54 @@ export interface SnackbarContextType {
 
 const SnackbarContext = createContext<SnackbarContextType | null>(null);
 
+// Themed dialog component
+function ThemedDialog({ children, theme }: { children: React.ReactNode, theme: string | undefined }) {
+  // Dynamically import and wrap with MUI Theme
+  const [ThemeProvider, setThemeProvider] = useState<any>(null);
+  const [muiTheme, setMuiTheme] = useState<any>(null);
+  
+  React.useEffect(() => {
+    import('@mui/material/styles').then((mui) => {
+      const darkTheme = mui.createTheme({
+        palette: {
+          mode: 'dark',
+          background: {
+            default: '#121212',
+            paper: '#1e1e1e',
+          },
+          text: {
+            primary: '#ffffff',
+            secondary: '#b3b3b3',
+          },
+        },
+      });
+      
+      const lightTheme = mui.createTheme({
+        palette: {
+          mode: 'light',
+          background: {
+            default: '#ffffff',
+            paper: '#ffffff',
+          },
+          text: {
+            primary: '#0f0f0f',
+            secondary: '#666666',
+          },
+        },
+      });
+
+      setThemeProvider(mui.ThemeProvider);
+      setMuiTheme(theme === 'dark' ? darkTheme : lightTheme);
+    });
+  }, [theme]);
+
+  if (!ThemeProvider || !muiTheme) return <>{children}</>;
+  
+  return <ThemeProvider theme={muiTheme}>{children}</ThemeProvider>;
+}
+
 export function SnackbarProvider({ children }: { children: React.ReactNode }) {
+  const { theme } = useNextTheme();
   const [snackbar, setSnackbar] = useState<SnackbarMessage | null>(null);
   const [confirmation, setConfirmation] = useState<ConfirmationDialog>({
     open: false,
@@ -162,28 +211,30 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
 
       {/* Confirmation Dialog: mount only when open to defer MUI loading */}
       {confirmation.open && (
-        <MuiDialog
-          open
-          onClose={confirmation.onCancel}
-          aria-labelledby="confirmation-dialog-title"
-        >
-          <MuiDialogTitle id="confirmation-dialog-title">
-            {confirmation.title}
-          </MuiDialogTitle>
-          <MuiDialogContent>
-            <MuiDialogContentText>
-              {confirmation.message}
-            </MuiDialogContentText>
-          </MuiDialogContent>
-          <MuiDialogActions>
-            <Button onClick={confirmation.onCancel} variant="outline">
-              {confirmation.cancelText}
-            </Button>
-            <Button onClick={confirmation.onConfirm} autoFocus>
-              {confirmation.confirmText}
-            </Button>
-          </MuiDialogActions>
-        </MuiDialog>
+        <ThemedDialog theme={theme}>
+          <MuiDialog
+            open
+            onClose={confirmation.onCancel}
+            aria-labelledby="confirmation-dialog-title"
+          >
+            <MuiDialogTitle id="confirmation-dialog-title">
+              {confirmation.title}
+            </MuiDialogTitle>
+            <MuiDialogContent>
+              <MuiDialogContentText>
+                {confirmation.message}
+              </MuiDialogContentText>
+            </MuiDialogContent>
+            <MuiDialogActions>
+              <Button onClick={confirmation.onCancel} variant="outline">
+                {confirmation.cancelText}
+              </Button>
+              <Button onClick={confirmation.onConfirm} variant="destructive" autoFocus>
+                {confirmation.confirmText}
+              </Button>
+            </MuiDialogActions>
+          </MuiDialog>
+        </ThemedDialog>
       )}
     </SnackbarContext.Provider>
   );

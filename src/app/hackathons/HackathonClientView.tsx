@@ -20,6 +20,8 @@ import { TeamSearchFilter } from '@/components/hackathon/TeamSearchFilter';
 import { EnhancedTeamCard } from '@/components/hackathon/EnhancedTeamCard';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
+import Navbar from '@/components/common/Navbar';
+import MobileNavbar from '@/components/common/MobileNavbar';
 import { createHackathonActions } from '@/utils/hackathonActions';
 import { getUserCreatedTeam, canUserCreateTeam } from '@/utils/teamUtils';
 import { formatDate, formatTime, getDateRange, calculateProgress, formatProgress } from '@/utils/hackathonUiUtils';
@@ -64,7 +66,6 @@ function HackathonCard({
   const [contentHeight, setContentHeight] = useState(0);
   const [filteredTeams, setFilteredTeams] = useState<HackathonTeam[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
-  const isLongDuration = isLongDurationHackathon(hackathon);
 
   // Get available teams (excluding user's own team)
   const availableTeams = useMemo(() => 
@@ -85,31 +86,27 @@ function HackathonCard({
   }, [isCollapsed, hackathon.teams, hackathon.userParticipation]);
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl p-6 border transition-all hover:shadow-lg ${
-      isLongDuration
-        ? 'border-orange-200 dark:border-orange-700'
-        : 'border-gray-200 dark:border-gray-700'
-    }`}>
+    <div className="glass-card p-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h3 className="text-xl font-bold text-glass-primary">
               {hackathon.title}
             </h3>
             {isRunning && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
                 <span className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
                 Live
               </span>
             )}
             {hasEnded && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
                 Ended
               </span>
             )}
           </div>
-          <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 line-clamp-2">
+          <p className="text-glass-secondary text-sm mb-3 line-clamp-2">
             {hackathon.description}
           </p>
         </div>
@@ -117,7 +114,7 @@ function HackathonCard({
         {/* Collapse/Expand Button */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="ml-4 p-2 text-glass-tertiary hover:text-glass-secondary transition-colors"
           aria-label={isCollapsed ? 'Expand hackathon details' : 'Collapse hackathon details'}
         >
           <MaterialIcon
@@ -138,19 +135,19 @@ function HackathonCard({
         }}
       >
       {/* Event Details */}
-      <div className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4 transition-all duration-300 ${
+      <div className={`rounded-lg p-4 mb-4 transition-all duration-300 border border-white/10 ${
         isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
       }`}>
-        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+        <h4 className="text-sm font-semibold text-glass-primary mb-3">
           Event Details
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-glass-secondary">
             <MaterialIcon name="calendar" size={16} />
             <span>{getDateRange(hackathon)}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-glass-secondary">
             <MaterialIcon name="time" size={16} />
             <span>
               {formatTime(hackathon.startDate)}
@@ -158,48 +155,48 @@ function HackathonCard({
             </span>
           </div>
           {hackathon.location && (
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-2 text-sm text-glass-secondary">
               <MaterialIcon name="location" size={16} />
               <span className="truncate">{hackathon.location}</span>
             </div>
           )}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-glass-secondary">
             <MaterialIcon name="people" size={16} />
             <span>{hackathon.totalParticipants} participants</span>
           </div>
         </div>
           <div className="space-y-2">
             {hackathon.organizerName && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <MaterialIcon name="building" size={16} className="text-gray-500 dark:text-gray-400" />
+              <div className="flex items-center gap-2 text-sm text-glass-secondary">
+                <MaterialIcon name="building" size={16} />
                 <span>{hackathon.organizerName}</span>
               </div>
             )}
             {/* Debug: Show organizer info even if name is empty */}
             {hackathon.organizerId && !hackathon.organizerName && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-2 text-sm text-glass-secondary">
                 <span>Organizer ID: {hackathon.organizerId}</span>
       </div>
             )}
             {hackathon.registrationDeadline && (
               <div>
-                <span className="text-gray-600 dark:text-gray-400">Registration Deadline:</span>
-                <span className="ml-1 font-medium text-gray-900 dark:text-white">
+                <span className="text-glass-secondary">Registration Deadline:</span>
+                <span className="ml-1 font-medium text-glass-primary">
                   {formatDate(hackathon.registrationDeadline)}
                 </span>
               </div>
             )}
             {hackathon.submissionDeadline && (
               <div>
-                <span className="text-gray-600 dark:text-gray-400">Submission Deadline:</span>
-                <span className="ml-1 font-medium text-gray-900 dark:text-white">
+                <span className="text-glass-secondary">Submission Deadline:</span>
+                <span className="ml-1 font-medium text-glass-primary">
                   {formatDate(hackathon.submissionDeadline)}
                 </span>
               </div>
             )}
               <div>
-                <span className="text-gray-600 dark:text-gray-400">Max Team Size:</span>
-                <span className="ml-1 font-medium text-gray-900 dark:text-white">
+                <span className="text-glass-secondary">Max Team Size:</span>
+                <span className="ml-1 font-medium text-glass-primary">
                 {hackathon.maxTeamSize} {hackathon.maxTeamSize === 1 ? 'member' : 'members'}
               </span>
             </div>
@@ -209,11 +206,11 @@ function HackathonCard({
 
       {/* Teams Section - Only show if hackathon allows teams */}
       {hackathon.maxTeamSize > 1 && (
-        <div className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4 transition-all duration-300 delay-100 ${
+        <div className={`rounded-lg p-4 mb-4 transition-all duration-300 delay-100 border border-white/10 ${
           isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
         }`}>
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+            <h4 className="text-sm font-semibold text-glass-primary">
               Teams ({hackathon.teams?.length || 0})
             </h4>
             {(() => {
@@ -223,12 +220,12 @@ function HackathonCard({
               if (userCreatedTeam) {
                 return (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                    <span className="text-xs text-glass-secondary">
                       Your team: {userCreatedTeam.name}
                     </span>
                     <button
                       onClick={() => onDeleteTeam(userCreatedTeam.id, userCreatedTeam.name)}
-                      className="px-3 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                      className="px-3 py-1 text-xs font-medium text-red-400 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors border border-red-500/30"
                     >
                       Delete Team
                     </button>
@@ -238,14 +235,14 @@ function HackathonCard({
                 return (
                   <button
                     onClick={() => onCreateTeam(hackathon.id)}
-                    className="px-3 py-1 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-400 dark:bg-green-900/20 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                    className="px-3 py-1 text-xs font-medium text-green-400 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors border border-green-500/30"
                   >
                     Create Team
-                  </button>
+                    </button>
                 );
               } else if (!canCreate.canCreate) {
                 return (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-glass-tertiary">
                     {canCreate.reason}
                   </span>
                 );
@@ -283,7 +280,7 @@ function HackathonCard({
                 
                 {filteredTeams.length > 6 && (
                   <div className="text-center py-2">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-glass-tertiary">
                       +{filteredTeams.length - 6} more teams
                 </span>
               </div>
@@ -291,8 +288,8 @@ function HackathonCard({
                 
                 {filteredTeams.length === 0 && (
                   <div className="text-center py-4">
-                    <MaterialIcon name="search" size={32} className="text-gray-400 mx-auto mb-2" />
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <MaterialIcon name="search" size={32} className="text-glass-tertiary mx-auto mb-2" />
+                    <div className="text-sm text-glass-tertiary">
                       No teams match your search criteria
                     </div>
                   </div>
@@ -301,14 +298,14 @@ function HackathonCard({
             </div>
           ) : (
             <div className="text-center py-4">
-              <MaterialIcon name="people" size={32} className="text-gray-400 mx-auto mb-2" />
-              <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              <MaterialIcon name="people" size={32} className="text-glass-tertiary mx-auto mb-2" />
+              <div className="text-sm text-glass-tertiary mb-2">
                 No teams available to join
               </div>
               {!hasTeam && !hasEnded && (
                 <button
                   onClick={() => onCreateTeam(hackathon.id)}
-                  className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 dark:text-green-400 dark:bg-green-900/20 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-green-400 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors border border-green-500/30"
                 >
                   Create First Team
                 </button>
@@ -323,11 +320,11 @@ function HackathonCard({
         <div className={`mb-4 transition-all duration-300 delay-200 ${
           isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
         }`}>
-          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
+          <div className="flex items-center justify-between text-xs text-glass-secondary mb-2">
             <span>Progress</span>
             <span>{formatProgress(hackathon)}</span>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+          <div className="w-full bg-white/10 rounded-full h-2">
             <div
               className="bg-orange-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${calculateProgress(hackathon)}%` }}
@@ -360,13 +357,13 @@ function HackathonCard({
             {!hasTeam && !hasEnded ? (
                 <button
                   onClick={() => onJoinTeam(hackathon.id)}
-                className="px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-purple-400 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors border border-purple-500/30"
                 >
                 Find a Team
                 </button>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="px-4 py-2 text-sm font-medium text-green-400 bg-green-500/20 rounded-lg border border-green-500/30">
                   {hasTeam ? (
                     `Team: ${hackathon.userParticipation?.team?.name || 'Team Member'}`
                   ) : (
@@ -380,7 +377,7 @@ function HackathonCard({
                     href={hackathon.registrationUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    className="px-3 py-1 text-xs font-medium text-blue-400 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors border border-blue-500/30"
                   >
                     Register Externally
                   </a>
@@ -389,7 +386,7 @@ function HackathonCard({
                 {hasTeam && !hasEnded && (
                   <button
                     onClick={() => onLeaveTeam(hackathon.id)}
-                    className="px-3 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    className="px-3 py-1 text-xs font-medium text-red-400 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors border border-red-500/30"
                   >
                     Leave Team
                   </button>
@@ -609,17 +606,22 @@ export default function HackathonClientView({
   if (isLoading && !initialHackathons.length) {
     return (
       <SidebarProvider>
-        <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+        <MobileNavbar />
+        <div className="flex h-screen bg-background">
           <AppSidebar />
           <main className="flex-1 flex flex-col overflow-hidden">
+            <Navbar />
             <div className="flex-1 overflow-auto">
-              <div className="max-w-7xl mx-auto px-4 py-8">
-                <div className="animate-pulse space-y-6">
-                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64"></div>
-                  <div className="grid gap-6">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
-                    ))}
+              <div className="min-h-screen glass-bg-gradient relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
+                <div className="relative max-w-[1600px] mx-auto px-6 py-8">
+                  <div className="animate-pulse space-y-6">
+                    <div className="h-8 bg-white/10 rounded w-64"></div>
+                    <div className="grid gap-6">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="h-64 glass-card"></div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -632,128 +634,135 @@ export default function HackathonClientView({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      <MobileNavbar />
+      <div className="flex h-screen bg-background">
         <AppSidebar />
         <main className="flex-1 flex flex-col overflow-hidden">
+          <Navbar />
           <div className="flex-1 overflow-auto">
-            <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Hackathons
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Discover and participate in exciting coding competitions and events
-        </p>
-      </div>
+            <div className="min-h-screen glass-bg-gradient relative">
+              {/* Subtle atmospheric overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
+              
+              <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
+                {/* Header */}
+                <div className="mb-8">
+                  <h1 className="text-3xl font-bold text-glass-primary mb-2">
+                    Hackathons
+                  </h1>
+                  <p className="text-glass-secondary">
+                    Discover and participate in exciting coding competitions and events
+                  </p>
+                </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4 mb-6">
-        <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-          {(['all', 'upcoming', 'running', 'past'] as const).map(filterOption => (
-            <button
-              key={filterOption}
-              onClick={() => setFilter(filterOption)}
-              className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                filter === filterOption
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
-              {filterOption.charAt(0).toUpperCase() + filterOption.slice(1)}
-              <span className="ml-1 text-xs">({getFilterCount(filterOption)})</span>
-            </button>
-          ))}
-        </div>
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-4 mb-6">
+                  <div className="flex items-center glass-card p-1">
+                    {(['all', 'upcoming', 'running', 'past'] as const).map(filterOption => (
+                      <button
+                        key={filterOption}
+                        onClick={() => setFilter(filterOption)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          filter === filterOption
+                            ? 'bg-white/10 text-glass-primary shadow-sm'
+                            : 'text-glass-tertiary hover:text-glass-secondary'
+                        }`}
+                      >
+                        {filterOption.charAt(0).toUpperCase() + filterOption.slice(1)}
+                        <span className="ml-1 text-xs">({getFilterCount(filterOption)})</span>
+                      </button>
+                    ))}
+                  </div>
 
-        <button
-          onClick={() => setShowShort(!showShort)}
-          className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-            showShort
-              ? 'text-gray-700 bg-gray-100 dark:text-gray-300 dark:bg-gray-700'
-              : 'text-gray-500 bg-gray-50 dark:text-gray-500 dark:bg-gray-800'
-          }`}
-        >
-          <MaterialIcon name="filter" size={16} />
-          Short Hackathons
-        </button>
-      </div>
+                  <button
+                    onClick={() => setShowShort(!showShort)}
+                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors glass-card ${
+                      showShort
+                        ? 'text-glass-primary'
+                        : 'text-glass-tertiary'
+                    }`}
+                  >
+                    <MaterialIcon name="filter" size={16} />
+                    Short Hackathons
+                  </button>
+                </div>
 
-      {/* Hackathons Grid */}
-      {error ? (
-        <div className="text-center py-12">
-          <MaterialIcon name="error" size={48} className="text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Error Loading Hackathons
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {error instanceof Error ? error.message : 'Something went wrong'}
-          </p>
-          <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['hackathonEvents', userId] })}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
-      ) : filteredHackathons.length === 0 ? (
-        <div className="text-center py-12">
-          <MaterialIcon name="event" size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            No {filter !== 'all' ? filter : ''} hackathons found
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            {filter === 'upcoming' && 'Check back later for new hackathons to register for.'}
-            {filter === 'running' && 'No hackathons are currently in progress.'}
-            {filter === 'past' && 'No completed hackathons to show yet.'}
-            {filter === 'all' && 'No hackathons available at the moment.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-6">
-          {filteredHackathons.map(hackathon => {
-            const isRegistered = !!hackathon.userParticipation;
-            const hasTeam = !!hackathon.userParticipation?.teamId;
-            const isRunning = isHackathonRunning(hackathon);
-            const hasEnded = isHackathonEnded(hackathon);
-            
-            return (
-            <HackathonCard
-              key={hackathon.id}
-              hackathon={hackathon}
-                userId={userId}
-                isRegistered={isRegistered}
-                hasTeam={hasTeam}
-                hasEnded={hasEnded}
-                isRunning={isRunning}
-                onJoinTeam={handleJoinTeam}
-                onJoinTeamById={handleJoinTeamById}
-              onCreateTeam={handleCreateTeam}
-                onDeleteTeam={handleDeleteTeam}
-              onLeaveTeam={handleLeaveTeam}
-                joiningTeamId={joiningTeamId}
-            />
-            );
-          })}
-        </div>
-      )}
+                {/* Hackathons Grid */}
+                {error ? (
+                  <div className="text-center py-12">
+                    <MaterialIcon name="error" size={48} className="text-red-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-glass-primary mb-2">
+                      Error Loading Hackathons
+                    </h3>
+                    <p className="text-glass-secondary mb-4">
+                      {error instanceof Error ? error.message : 'Something went wrong'}
+                    </p>
+                    <button
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ['hackathonEvents', userId] })}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : filteredHackathons.length === 0 ? (
+                  <div className="text-center py-12">
+                    <MaterialIcon name="event" size={48} className="text-glass-tertiary mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-glass-primary mb-2">
+                      No {filter !== 'all' ? filter : ''} hackathons found
+                    </h3>
+                    <p className="text-glass-secondary">
+                      {filter === 'upcoming' && 'Check back later for new hackathons to register for.'}
+                      {filter === 'running' && 'No hackathons are currently in progress.'}
+                      {filter === 'past' && 'No completed hackathons to show yet.'}
+                      {filter === 'all' && 'No hackathons available at the moment.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-6">
+                    {filteredHackathons.map(hackathon => {
+                      const isRegistered = !!hackathon.userParticipation;
+                      const hasTeam = !!hackathon.userParticipation?.teamId;
+                      const isRunning = isHackathonRunning(hackathon);
+                      const hasEnded = isHackathonEnded(hackathon);
+                      
+                      return (
+                        <HackathonCard
+                          key={hackathon.id}
+                          hackathon={hackathon}
+                          userId={userId}
+                          isRegistered={isRegistered}
+                          hasTeam={hasTeam}
+                          hasEnded={hasEnded}
+                          isRunning={isRunning}
+                          onJoinTeam={handleJoinTeam}
+                          onJoinTeamById={handleJoinTeamById}
+                          onCreateTeam={handleCreateTeam}
+                          onDeleteTeam={handleDeleteTeam}
+                          onLeaveTeam={handleLeaveTeam}
+                          joiningTeamId={joiningTeamId}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
 
-      {/* Team Selection Dialog */}
-      <TeamSelectionDialog
-        open={teamSelection.open}
-        teams={teamSelection.teams}
-        onClose={() => setTeamSelection({ open: false, hackathonId: '', teams: [] })}
-        onSelectTeam={handleSelectTeam}
-      />
+                {/* Team Selection Dialog */}
+                <TeamSelectionDialog
+                  open={teamSelection.open}
+                  teams={teamSelection.teams}
+                  onClose={() => setTeamSelection({ open: false, hackathonId: '', teams: [] })}
+                  onSelectTeam={handleSelectTeam}
+                />
 
-      {/* Team Creation Dialog */}
-      <TeamCreationDialog
-        open={teamCreation.open}
-        hackathonTitle={teamCreation.hackathonTitle}
-        onClose={() => setTeamCreation(prev => ({ ...prev, open: false }))}
-        onCreateTeam={handleCreateTeamSubmit}
-        isCreating={teamCreation.isCreating}
-      />
+                {/* Team Creation Dialog */}
+                <TeamCreationDialog
+                  open={teamCreation.open}
+                  hackathonTitle={teamCreation.hackathonTitle}
+                  onClose={() => setTeamCreation(prev => ({ ...prev, open: false }))}
+                  onCreateTeam={handleCreateTeamSubmit}
+                  isCreating={teamCreation.isCreating}
+                />
+              </div>
             </div>
           </div>
         </main>
