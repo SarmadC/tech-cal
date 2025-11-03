@@ -63,8 +63,8 @@ export default function PricingPage() {
     return (
         <div className="min-h-screen bg-background-main pt-20">
             {/* Header */}
-            <section className="py-16 px-4">
-                <div className="max-w-7xl mx-auto text-center">
+            <section className="py-16 px-6">
+                <div className="max-w-[1600px] mx-auto text-center">
                     <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">
                         Simple, Transparent Pricing
                     </h1>
@@ -75,8 +75,8 @@ export default function PricingPage() {
             </section>
 
             {/* Pricing Cards */}
-            <section className="pb-20 px-4">
-                <div className="max-w-7xl mx-auto">
+            <section className="pb-20 px-6">
+                <div className="max-w-[1600px] mx-auto">
                     <div className="grid md:grid-cols-3 gap-8">
                         {plans.map((plan, index) => (
                             <div
@@ -160,7 +160,7 @@ export default function PricingPage() {
 
             {/* FAQ Section */}
             <section className="py-20 bg-background-secondary">
-                <div className="max-w-4xl mx-auto px-4">
+                <div className="max-w-[1600px] mx-auto px-6">
                     <h2 className="text-3xl font-bold text-center text-foreground-primary mb-12">
                         Frequently Asked Questions
                     </h2>
@@ -210,7 +210,7 @@ export default function PricingPage() {
 
             {/* CTA Section */}
             <section className="py-20 bg-background-main">
-                <div className="max-w-4xl mx-auto px-4 text-center">
+                <div className="max-w-[1600px] mx-auto px-6 text-center">
                     <h2 className="text-3xl font-bold text-foreground-primary mb-4">
                         Ready to Never Miss a Tech Event?
                     </h2>

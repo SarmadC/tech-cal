@@ -9,8 +9,8 @@ export default function ApiDocsPage() {
     return (
         <div className="min-h-screen bg-background-main pt-20">
             {/* Header */}
-            <section className="py-16 px-4 bg-background-secondary">
-                <div className="max-w-7xl mx-auto text-center">
+            <section className="py-16 px-6 bg-background-secondary">
+                <div className="max-w-[1600px] mx-auto text-center">
                     <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">
                         API Coming Soon
                     </h1>
@@ -20,7 +20,7 @@ export default function ApiDocsPage() {
                 </div>
             </section>
 
-            <div className="max-w-7xl mx-auto px-4 py-12">
+            <div className="max-w-[1600px] mx-auto px-6 py-12">
                 {/* Coming Soon Content */}
                 <div className="text-center mb-16">
                     <div className="w-32 h-32 bg-accent-primary/10 rounded-full flex items-center justify-center mx-auto mb-8">
