@@ -84,36 +84,36 @@ export default function PricingPage() {
                                 className={`
                   relative rounded-2xl p-8 transition-all
                   ${plan.highlighted
-                                        ? 'bg-accent-primary text-white shadow-2xl scale-105'
+                                        ? 'bg-accent-primary text-accent-primary-foreground shadow-2xl scale-105'
                                         : 'bg-background-secondary border border-border-color hover:border-accent-primary/30'
                                     }
                 `}
                             >
                                 {plan.highlighted && (
                                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                                        <span className="bg-white text-accent-primary text-sm font-semibold px-4 py-1 rounded-full">
+                                        <span className="bg-background-main text-accent-primary text-sm font-semibold px-4 py-1 rounded-full border border-border-default">
                                             Most Popular
                                         </span>
                                     </div>
                                 )}
 
                                 <div className="mb-8">
-                                    <h3 className={`text-2xl font-bold mb-2 ${plan.highlighted ? 'text-white' : 'text-foreground-primary'
+                                    <h3 className={`text-2xl font-bold mb-2 ${plan.highlighted ? 'text-accent-primary-foreground' : 'text-foreground-primary'
                                         }`}>
                                         {plan.name}
                                     </h3>
                                     <div className="flex items-baseline mb-4">
-                                        <span className={`text-4xl font-bold ${plan.highlighted ? 'text-white' : 'text-foreground-primary'
+                                        <span className={`text-4xl font-bold ${plan.highlighted ? 'text-accent-primary-foreground' : 'text-foreground-primary'
                                             }`}>
                                             {plan.price}
                                         </span>
-                                        <span className={`ml-2 ${plan.highlighted ? 'text-white/80' : 'text-foreground-tertiary'
+                                        <span className={`ml-2 ${plan.highlighted ? 'text-accent-primary-foreground opacity-80' : 'text-foreground-tertiary'
                                             }`}>
                                             {plan.period}
                                         </span>
                                     </div>
                                     <p className={
-                                        plan.highlighted ? 'text-white/80' : 'text-foreground-secondary'
+                                        plan.highlighted ? 'text-accent-primary-foreground opacity-80' : 'text-foreground-secondary'
                                     }>
                                         {plan.description}
                                     </p>
@@ -123,7 +123,7 @@ export default function PricingPage() {
                                     {plan.features.map((feature, featureIndex) => (
                                         <li key={featureIndex} className="flex items-start">
                                             <svg
-                                                className={`w-5 h-5 mr-3 flex-shrink-0 mt-0.5 ${plan.highlighted ? 'text-white' : 'text-accent-primary'
+                                                className={`w-5 h-5 mr-3 flex-shrink-0 mt-0.5 ${plan.highlighted ? 'text-accent-primary-foreground' : 'text-accent-primary'
                                                     }`}
                                                 fill="none"
                                                 stroke="currentColor"
@@ -132,7 +132,7 @@ export default function PricingPage() {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                             </svg>
                                             <span className={
-                                                plan.highlighted ? 'text-white/90' : 'text-foreground-secondary'
+                                                plan.highlighted ? 'text-accent-primary-foreground opacity-90' : 'text-foreground-secondary'
                                             }>
                                                 {feature}
                                             </span>
@@ -145,7 +145,7 @@ export default function PricingPage() {
                                     className={`
                     block w-full text-center font-semibold py-3 px-6 rounded-lg transition-all
                     ${plan.highlighted
-                                            ? 'bg-white text-accent-primary hover:bg-gray-100'
+                                            ? 'bg-background-main text-accent-primary hover:bg-background-secondary border border-border-default'
                                             : 'bg-accent-primary !text-accent-primary-foreground hover:bg-accent-primary-hover'
                                         }
                   `}
@@ -219,7 +219,7 @@ export default function PricingPage() {
                     </p>
                     <Link
                         href="/calendar"
-                        className="inline-block bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold py-4 px-8 rounded-xl transition-all transform hover:scale-105 shadow-lg"
+                        className="inline-block bg-accent-primary hover:bg-accent-primary-hover text-accent-primary-foreground font-semibold py-4 px-8 rounded-xl transition-all transform hover:scale-105 shadow-lg"
                     >
                         Start Free Today
                     </Link>
