@@ -667,6 +667,73 @@ export type Database = {
           },
         ]
       }
+      event_moderation_queue: {
+        Row: {
+          created_at: string
+          event_id: string | null
+          feedback: Json | null
+          id: string
+          ingestion_quality_score: number
+          reason_codes: string[] | null
+          recommended_tags: string[] | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          source_event_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id?: string | null
+          feedback?: Json | null
+          id?: string
+          ingestion_quality_score: number
+          reason_codes?: string[] | null
+          recommended_tags?: string[] | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          source_event_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string | null
+          feedback?: Json | null
+          id?: string
+          ingestion_quality_score?: number
+          reason_codes?: string[] | null
+          recommended_tags?: string[] | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          source_event_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_moderation_queue_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_moderation_queue_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_moderation_queue_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "source_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_prerequisites: {
         Row: {
           event_id: string
@@ -945,6 +1012,10 @@ export type Database = {
           external_status: string | null
           fts: unknown
           id: string
+          ingestion_confidence: number | null
+          ingestion_provenance: Json | null
+          ingestion_quality_score: number | null
+          ingestion_source_id: string | null
           is_multi_day: boolean | null
           language: string | null
           last_synced_at: string | null
@@ -993,6 +1064,10 @@ export type Database = {
           external_status?: string | null
           fts?: unknown
           id?: string
+          ingestion_confidence?: number | null
+          ingestion_provenance?: Json | null
+          ingestion_quality_score?: number | null
+          ingestion_source_id?: string | null
           is_multi_day?: boolean | null
           language?: string | null
           last_synced_at?: string | null
@@ -1041,6 +1116,10 @@ export type Database = {
           external_status?: string | null
           fts?: unknown
           id?: string
+          ingestion_confidence?: number | null
+          ingestion_provenance?: Json | null
+          ingestion_quality_score?: number | null
+          ingestion_source_id?: string | null
           is_multi_day?: boolean | null
           language?: string | null
           last_synced_at?: string | null
@@ -1083,6 +1162,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "event_type_analytics"
             referencedColumns: ["event_type_id"]
+          },
+          {
+            foreignKeyName: "events_ingestion_source_id_fkey"
+            columns: ["ingestion_source_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_sources"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "fk_events_organizer"
@@ -1288,32 +1374,191 @@ export type Database = {
           },
         ]
       }
+      ingestion_errors: {
+        Row: {
+          created_at: string
+          error_details: Json | null
+          error_message: string
+          error_type: string
+          id: string
+          job_id: string | null
+          source_event_id: string | null
+          source_id: string | null
+          stack_trace: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_details?: Json | null
+          error_message: string
+          error_type: string
+          id?: string
+          job_id?: string | null
+          source_event_id?: string | null
+          source_id?: string | null
+          stack_trace?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_details?: Json | null
+          error_message?: string
+          error_type?: string
+          id?: string
+          job_id?: string | null
+          source_event_id?: string | null
+          source_id?: string | null
+          stack_trace?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingestion_errors_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_errors_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "source_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_errors_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingestion_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          errors_count: number | null
+          events_fetched: number | null
+          events_normalized: number | null
+          id: string
+          metadata: Json | null
+          source_id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          errors_count?: number | null
+          events_fetched?: number | null
+          events_normalized?: number | null
+          id?: string
+          metadata?: Json | null
+          source_id: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          errors_count?: number | null
+          events_fetched?: number | null
+          events_normalized?: number | null
+          id?: string
+          metadata?: Json | null
+          source_id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingestion_jobs_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingestion_sources: {
+        Row: {
+          access_type: string
+          created_at: string
+          fetch_interval_minutes: number | null
+          id: string
+          is_active: boolean
+          last_fetched_at: string | null
+          metadata: Json | null
+          name: string
+          source_type: string
+          source_url: string
+          trust_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          access_type: string
+          created_at?: string
+          fetch_interval_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          last_fetched_at?: string | null
+          metadata?: Json | null
+          name: string
+          source_type: string
+          source_url: string
+          trust_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          access_type?: string
+          created_at?: string
+          fetch_interval_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          last_fetched_at?: string | null
+          metadata?: Json | null
+          name?: string
+          source_type?: string
+          source_url?: string
+          trust_score?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       organizers: {
         Row: {
+          auto_discovered: boolean
           created_at: string | null
           description: string | null
+          domain: string | null
           id: string
           logo_url: string | null
           name: string
           social_media: Json | null
+          trust_score: number | null
           website_url: string | null
         }
         Insert: {
+          auto_discovered?: boolean
           created_at?: string | null
           description?: string | null
+          domain?: string | null
           id?: string
           logo_url?: string | null
           name: string
           social_media?: Json | null
+          trust_score?: number | null
           website_url?: string | null
         }
         Update: {
+          auto_discovered?: boolean
           created_at?: string | null
           description?: string | null
+          domain?: string | null
           id?: string
           logo_url?: string | null
           name?: string
           social_media?: Json | null
+          trust_score?: number | null
           website_url?: string | null
         }
         Relationships: []
@@ -1452,6 +1697,7 @@ export type Database = {
           created_at: string | null
           full_name: string | null
           id: string
+          is_admin: boolean
           last_bookmark_at: string | null
           location: string | null
           preferences: Json | null
@@ -1469,6 +1715,7 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id: string
+          is_admin?: boolean
           last_bookmark_at?: string | null
           location?: string | null
           preferences?: Json | null
@@ -1486,6 +1733,7 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: string
+          is_admin?: boolean
           last_bookmark_at?: string | null
           location?: string | null
           preferences?: Json | null
@@ -1552,6 +1800,184 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "user_event_stats"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      source_allowlist: {
+        Row: {
+          allowed_at: string
+          allowed_by: string | null
+          auto_approve_threshold: number | null
+          id: string
+          reason: string | null
+          source_id: string
+        }
+        Insert: {
+          allowed_at?: string
+          allowed_by?: string | null
+          auto_approve_threshold?: number | null
+          id?: string
+          reason?: string | null
+          source_id: string
+        }
+        Update: {
+          allowed_at?: string
+          allowed_by?: string | null
+          auto_approve_threshold?: number | null
+          id?: string
+          reason?: string | null
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_allowlist_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: true
+            referencedRelation: "ingestion_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_blocklist: {
+        Row: {
+          blocked_at: string
+          blocked_by: string | null
+          id: string
+          reason: string | null
+          source_id: string | null
+          source_url_pattern: string | null
+        }
+        Insert: {
+          blocked_at?: string
+          blocked_by?: string | null
+          id?: string
+          reason?: string | null
+          source_id?: string | null
+          source_url_pattern?: string | null
+        }
+        Update: {
+          blocked_at?: string
+          blocked_by?: string | null
+          id?: string
+          reason?: string | null
+          source_id?: string | null
+          source_url_pattern?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_blocklist_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: true
+            referencedRelation: "ingestion_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_events: {
+        Row: {
+          checksum: string
+          created_at: string
+          error_message: string | null
+          fetch_job_id: string | null
+          fetch_status: string
+          id: string
+          normalized_event_id: string | null
+          raw_payload: Json
+          source_id: string
+          updated_at: string
+        }
+        Insert: {
+          checksum: string
+          created_at?: string
+          error_message?: string | null
+          fetch_job_id?: string | null
+          fetch_status?: string
+          id?: string
+          normalized_event_id?: string | null
+          raw_payload: Json
+          source_id: string
+          updated_at?: string
+        }
+        Update: {
+          checksum?: string
+          created_at?: string
+          error_message?: string | null
+          fetch_job_id?: string | null
+          fetch_status?: string
+          id?: string
+          normalized_event_id?: string | null
+          raw_payload?: Json
+          source_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_events_normalized_event_id_fkey"
+            columns: ["normalized_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_events_normalized_event_id_fkey"
+            columns: ["normalized_event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_events_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_trust_scores: {
+        Row: {
+          avg_quality_score: number | null
+          calculated_at: string
+          duplicate_rate: number | null
+          error_rate: number | null
+          events_approved: number | null
+          events_ingested: number | null
+          events_rejected: number | null
+          id: string
+          metadata: Json | null
+          source_id: string
+        }
+        Insert: {
+          avg_quality_score?: number | null
+          calculated_at?: string
+          duplicate_rate?: number | null
+          error_rate?: number | null
+          events_approved?: number | null
+          events_ingested?: number | null
+          events_rejected?: number | null
+          id?: string
+          metadata?: Json | null
+          source_id: string
+        }
+        Update: {
+          avg_quality_score?: number | null
+          calculated_at?: string
+          duplicate_rate?: number | null
+          error_rate?: number | null
+          events_approved?: number | null
+          events_ingested?: number | null
+          events_rejected?: number | null
+          id?: string
+          metadata?: Json | null
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_trust_scores_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_sources"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2199,6 +2625,21 @@ export type Database = {
         Args: { interactions: Json[] }
         Returns: undefined
       }
+      claim_pending_source_events: {
+        Args: { p_limit?: number; p_processing_status?: string }
+        Returns: {
+          checksum: string
+          created_at: string
+          error_message: string
+          fetch_job_id: string
+          fetch_status: string
+          id: string
+          normalized_event_id: string
+          raw_payload: Json
+          source_id: string
+          updated_at: string
+        }[]
+      }
       cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_interactions: { Args: never; Returns: number }
       filter_events:
@@ -2364,6 +2805,19 @@ export type Database = {
         Args: { p_external_id: string; p_source?: string }
         Returns: string
       }
+      find_similar_events: {
+        Args: {
+          p_organizer_id?: string
+          p_similarity_threshold?: number
+          p_start_time: string
+          p_title: string
+        }
+        Returns: {
+          event_id: string
+          similarity: number
+          title: string
+        }[]
+      }
       get_analytics_health: { Args: never; Returns: Json }
       get_event_types_with_counts: {
         Args: never
@@ -2416,6 +2870,25 @@ export type Database = {
       }
       make_user_admin: { Args: { user_email: string }; Returns: undefined }
       refresh_analytics_data: { Args: never; Returns: undefined }
+      set_attendance_status: {
+        Args: {
+          p_event_id: string
+          p_notes?: string
+          p_status: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      toggle_bookmark: {
+        Args: {
+          p_event_id: string
+          p_is_bookmarked: boolean
+          p_user_id: string
+        }
+        Returns: Json
+      }
       track_event_and_update_profile: {
         Args: {
           p_event_id: string
@@ -2427,23 +2900,6 @@ export type Database = {
       }
       untrack_event_and_update_profile: {
         Args: { p_event_id: string; p_user_id: string }
-        Returns: Json
-      }
-      toggle_bookmark: {
-        Args: {
-          p_user_id: string
-          p_event_id: string
-          p_is_bookmarked: boolean
-        }
-        Returns: Json
-      }
-      set_attendance_status: {
-        Args: {
-          p_user_id: string
-          p_event_id: string
-          p_status: string | null
-          p_notes?: string | null
-        }
         Returns: Json
       }
     }

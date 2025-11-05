@@ -57,3 +57,6 @@ When `careerImpact` is missing:
 
 **Performance**: Only compute for visible events, not all upcoming events.
 
+
+
+

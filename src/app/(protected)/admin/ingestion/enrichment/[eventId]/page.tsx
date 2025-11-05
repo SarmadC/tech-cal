@@ -1,0 +1,131 @@
+/**
+ * Event Enrichment Editor
+ * 
+ * Admin-only route for manually enriching a single event with agenda items,
+ * speakers, and organizer logos.
+ */
+
+export const dynamic = 'force-dynamic';
+
+import { createClient } from '@/utils/supabase/server';
+import { isAdminUser } from '@/lib/adminAuth';
+import { redirect, notFound } from 'next/navigation';
+import EnrichmentEditorClient, { type EventWithRelationships, type AgendaItemWithSpeakers } from './EnrichmentEditorClient';
+
+export default async function EnrichmentEditorPage({
+    params,
+}: {
+    params: Promise<{ eventId: string }>;
+}) {
+    const { eventId } = await params;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        redirect('/login');
+    }
+
+    // Check admin access
+    const isAdmin = await isAdminUser(user.id, supabase);
+    if (!isAdmin) {
+        redirect('/dashboard');
+    }
+
+    // Fetch event details with all relationships
+    const { data: event, error } = await supabase
+        .from('events')
+        .select(`
+            id,
+            title,
+            description,
+            start_time,
+            end_time,
+            location,
+            timezone,
+            language,
+            source_url,
+            registration_url,
+            livestream_url,
+            event_image_url,
+            agenda_url,
+            price_min,
+            price_max,
+            currency,
+            pricing_type,
+            difficulty_level,
+            event_format,
+            status,
+            prerequisites,
+            target_audience,
+            certificate_offered,
+            recording_available,
+            accessibility_features,
+            social_media_hashtag,
+            virtual_platform,
+            capacity,
+            attendee_count,
+            registration_deadline,
+            is_multi_day,
+            daily_schedule,
+            organizer:organizers(id, name, logo_url, description, website_url, social_media),
+            event_type:event_type(id, name, color, icon),
+            venue:venues(id, name, address, city, state_province, country, venue_type, capacity, latitude, longitude),
+            series:event_series(id, name, description, logo_url, website_url),
+            event_tag_relations(
+                tag_id,
+                event_tags(id, event_tag, category, color)
+            ),
+            event_target_audiences(
+                audience_id,
+                target_audiences(id, name, description)
+            ),
+            event_prerequisites(
+                prerequisite_id,
+                prerequisites(id, name, description)
+            ),
+            speaker_lineup,
+            event_agenda(id, title, start_time, end_time, agenda_type, description, location, day_number, track, sort_order, capacity, difficulty_level, prerequisites, is_required)
+        `)
+        .eq('id', eventId)
+        .single();
+
+    if (error || !event) {
+        notFound();
+    }
+
+    // Fetch existing agenda items with speakers
+    const { data: agendaItems } = await supabase
+        .from('event_agenda')
+        .select(`
+            *,
+            agenda_speakers(
+                speaker_id,
+                speakers(*)
+            )
+        `)
+        .eq('event_id', eventId)
+        .order('day_number', { ascending: true })
+        .order('sort_order', { ascending: true });
+
+    // Fetch all lookup data in parallel
+    const { EventEnrichmentService } = await import('@/services/ingestion/EventEnrichmentService');
+    const lookupData = await EventEnrichmentService.getEnrichmentLookupData(supabase);
+
+    return (
+        <div className="container mx-auto py-8 max-w-4xl">
+            <div className="mb-6">
+                <h1 className="text-3xl font-bold mb-2">Enrich Event</h1>
+                <p className="text-muted-foreground">
+                    Add agenda items, speakers, and organizer logo for: {event.title}
+                </p>
+            </div>
+
+            <EnrichmentEditorClient
+                event={event as EventWithRelationships}
+                initialAgendaItems={(agendaItems || []) as AgendaItemWithSpeakers[]}
+                lookupData={lookupData}
+            />
+        </div>
+    );
+}
+

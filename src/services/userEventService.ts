@@ -164,11 +164,14 @@ export class UserEventService {
         supabaseClient: SupabaseClientType
     ): Promise<{ previousStatus: string | null; newStatus: string | null; autoBookmarked: boolean }> {
         try {
+            if (!status) {
+                throw new Error('Status is required for set_attendance_status');
+            }
             const { data, error } = await supabaseClient.rpc('set_attendance_status', {
                 p_user_id: userId,
                 p_event_id: eventId,
-                p_status: status ?? null,
-                p_notes: notes ?? null
+                p_status: status,
+                p_notes: notes ?? undefined
             });
 
             if (error) {

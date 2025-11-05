@@ -1,0 +1,87 @@
+/**
+ * API Route: Event Core Fields & Relationships Enrichment
+ * 
+ * PUT: Update core event fields and relationships in one transaction
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
+import { isAdminUser } from '@/lib/adminAuth';
+import { EventEnrichmentService, type EventCoreFieldsInput, type EventRelationshipsInput } from '@/services/ingestion/EventEnrichmentService';
+
+export async function PUT(request: NextRequest) {
+    try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Check admin access
+        const isAdmin = await isAdminUser(user.id, supabase);
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        const body = await request.json();
+        const { eventId, coreFields, relationships } = body as {
+            eventId: string;
+            coreFields?: EventCoreFieldsInput;
+            relationships?: EventRelationshipsInput;
+        };
+
+        if (!eventId) {
+            return NextResponse.json(
+                { error: 'Missing required field: eventId' },
+                { status: 400 }
+            );
+        }
+
+        // Update core fields if provided
+        if (coreFields) {
+            const coreResult = await EventEnrichmentService.updateEventCoreFields(
+                eventId,
+                coreFields,
+                supabase,
+                user.id
+            );
+
+            if (!coreResult.success) {
+                return NextResponse.json(
+                    { error: coreResult.error || 'Failed to update core fields' },
+                    { status: 500 }
+                );
+            }
+        }
+
+        // Update relationships if provided
+        if (relationships) {
+            const relResult = await EventEnrichmentService.manageEventRelationships(
+                eventId,
+                relationships,
+                supabase,
+                user.id
+            );
+
+            if (!relResult.success) {
+                return NextResponse.json(
+                    { error: relResult.error || 'Failed to update relationships' },
+                    { status: 500 }
+                );
+            }
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Event updated successfully',
+        });
+    } catch (error) {
+        console.error('Error in event enrichment API:', error);
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
+    }
+}
+

@@ -14,6 +14,7 @@ We combine high-quality curation, adaptive scoring, intelligent scheduling, and 
   - [System Architecture](#system-architecture)
   - [Scoring \& Recommendations](#scoring--recommendations)
   - [Telemetry \& Monitoring](#telemetry--monitoring)
+  - [Event Ingestion Pipeline](#event-ingestion-pipeline)
   - [Project Structure](#project-structure)
   - [Getting Started](#getting-started)
     - [Local Development](#local-development)
@@ -115,6 +116,33 @@ NEXT_PUBLIC_ENABLE_DIVERSITY_ENHANCEMENT=true
 - **Recommendation Monitoring:** Aggregates CTR, score buckets, and trigger performance for tuning (`src/services/recommendationMonitoringService.ts`).
 - **Rate Limiting:** Upstash sliding window guards for high-traffic APIs with graceful client fallbacks.
 
+## Event Ingestion Pipeline
+
+KureCal includes an automated event ingestion pipeline that collects events from RSS feeds, APIs, ICS calendars, and HTML sources with quality control and moderation.
+
+**Key Features:**
+- Modular collectors for different source types (RSS, API, ICS, HTML)
+- Automatic deduplication with fuzzy matching
+- Quality scoring and auto-publish thresholds (75%+ auto-publish, <50% moderation queue)
+- Admin moderation dashboard at `/admin/ingestion/moderation`
+- Race-condition safe batch processing
+
+**Setup & Configuration:**
+See [Ingestion Setup Documentation](./docs/INGESTION_SETUP.md) for:
+- Database migration steps
+- Environment variable configuration (`CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `INGESTION_VERIFY_SPEAKERS`)
+- Manual testing procedures (`POST /api/admin/ingestion/run`)
+- Vercel cron configuration (configured in `vercel.json`)
+- Troubleshooting guide
+
+**Quick Start:**
+1. Run migrations: `supabase migration up`
+2. Set admin user: Get your UUID from Supabase Dashboard → Authentication → Users, then `UPDATE profiles SET is_admin = TRUE WHERE id = 'YOUR_UUID'`
+3. Test manually: `POST /api/admin/ingestion/run` (requires admin auth)
+4. Cron runs automatically via Vercel (hourly, configured in `vercel.json`)
+
+**Note:** See `docs/SET_ADMIN_USER.md` for detailed instructions on finding your user ID.
+
 ---
 
 ## Project Structure
@@ -175,6 +203,8 @@ Protected routes require Supabase auth and completion of the onboarding flow.
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...        # Required for server-side RPCs/automation (never expose publicly)
+CRON_SECRET=...                      # Required for ingestion cron jobs (generate with: openssl rand -hex 32)
+INGESTION_VERIFY_SPEAKERS=true      # Optional: Set to 'false' to disable speaker URL verification
 
 NEXT_PUBLIC_SENTRY_DSN=...           # Optional: Sentry breadcrumbs
 NEXT_PUBLIC_ENABLE_BEHAVIORAL_BOOST=true

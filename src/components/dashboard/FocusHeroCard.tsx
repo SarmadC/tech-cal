@@ -9,6 +9,7 @@ import type { TrackedEventRecord, Event, CareerProfile, EventType } from '@/type
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 
 // Dynamically import event detail modal
 const DashboardEventDetailModal = dynamic(
@@ -163,9 +164,11 @@ export function FocusHeroCard({
                     <span className="text-xs font-medium text-glass-secondary">Organized by:</span>
                     <span>{metrics.topRecommendedEvent.event.organizer}</span>
                     {metrics.topRecommendedEvent.event.organization?.logo && (
-                      <img
+                      <Image
                         src={metrics.topRecommendedEvent.event.organization.logo}
                         alt={metrics.topRecommendedEvent.event.organizer}
+                        width={16}
+                        height={16}
                         className="w-4 h-4 rounded"
                       />
                     )}

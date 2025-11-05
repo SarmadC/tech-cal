@@ -8,8 +8,9 @@
  * Usage: npm run analyze-recommendations [days]
  */
 
-import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { RecommendationMonitoringService, type MonitoringSummary } from '@/services/recommendationMonitoringService';
+import { IngestionMetricsService } from '@/services/ingestion/IngestionMetricsService';
 import { MONITORING_CONFIG } from '@/config/monitoringConstants';
 import 'dotenv/config';
 
@@ -138,8 +139,18 @@ async function runAnalysis(): Promise<void> {
 
     console.log(`🔍 Analyzing recommendation data for last ${days} days...\n`);
 
-    // Create Supabase client
-    const supabase = await createClient();
+    // Use service client for CLI (doesn't require Next.js request context)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Missing Supabase credentials:');
+      console.error('   NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓' : '✗');
+      console.error('   SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? '✓' : '✗');
+      process.exit(1);
+    }
+
+    const supabase = createServiceClient(supabaseUrl, supabaseServiceKey);
 
     // Get monitoring summary
     const summary = await RecommendationMonitoringService.getMonitoringSummary(supabase, days);
@@ -161,7 +172,101 @@ async function runAnalysis(): Promise<void> {
 
 // Run if called directly
 if (require.main === module) {
-  runAnalysis().catch(console.error);
+    runAnalysis().catch(console.error);
 }
 
-export { runAnalysis };
+// =============================================
+// INGESTION ANALYSIS
+// =============================================
+
+function printIngestionMetrics(metrics: Awaited<ReturnType<typeof IngestionMetricsService.getMetrics>>): void {
+    if (!metrics) {
+        console.log('❌ No ingestion metrics available');
+        return;
+    }
+
+    console.log(`\n📊 INGESTION METRICS (${metrics.dateRange.from} to ${metrics.dateRange.to})\n`);
+
+    // Overall stats
+    console.log(`📈 OVERVIEW`);
+    console.log(`Total Jobs: ${metrics.overall.totalJobs}`);
+    console.log(`Success Rate: ${metrics.overall.successRate.toFixed(1)}%`);
+    console.log(`Events Fetched: ${metrics.overall.totalEventsFetched}`);
+    console.log(`Events Normalized: ${metrics.overall.totalEventsNormalized}`);
+    console.log(`Events Published: ${metrics.overall.totalEventsPublished}`);
+    console.log(`Avg Quality Score: ${metrics.overall.averageQualityScore.toFixed(1)}%\n`);
+
+    // Quality distribution
+    console.log(`📋 QUALITY DISTRIBUTION\n`);
+    console.log(`High (>=75%): ${metrics.qualityDistribution.high}`);
+    console.log(`Medium (50-74%): ${metrics.qualityDistribution.medium}`);
+    console.log(`Low (<50%): ${metrics.qualityDistribution.low}\n`);
+
+    // Source metrics
+    if (metrics.sourceMetrics.length > 0) {
+        console.log(`📡 SOURCE METRICS\n`);
+        formatTable(
+            ['Source', 'Jobs', 'Success Rate', 'Fetched', 'Normalized', 'Avg Quality'],
+            metrics.sourceMetrics.map(source => [
+                source.sourceName.substring(0, 30),
+                source.jobsCount.toString(),
+                `${source.successRate.toFixed(1)}%`,
+                source.eventsFetched.toString(),
+                source.eventsNormalized.toString(),
+                `${source.averageQualityScore.toFixed(1)}%`,
+            ])
+        );
+    }
+
+    // Moderation queue
+    console.log(`\n👮 MODERATION QUEUE\n`);
+    console.log(`Pending: ${metrics.moderationQueue.pending}`);
+    console.log(`Approved: ${metrics.moderationQueue.approved}`);
+    console.log(`Rejected: ${metrics.moderationQueue.rejected}`);
+}
+
+async function runIngestionAnalysis(): Promise<void> {
+    try {
+        const days = process.argv[2] ? parseInt(process.argv[2], 10) : 7;
+
+        console.log(`🔍 Analyzing ingestion data for last ${days} days...\n`);
+
+        // Use service client for CLI (doesn't require Next.js request context)
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('❌ Missing Supabase credentials:');
+            console.error('   NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓' : '✗');
+            console.error('   SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? '✓' : '✗');
+            process.exit(1);
+        }
+
+        const supabase = createServiceClient(supabaseUrl, supabaseServiceKey);
+        const metrics = await IngestionMetricsService.getMetrics(supabase, days);
+
+        if (!metrics) {
+            console.log('❌ No ingestion metrics found for the specified period.');
+            return;
+        }
+
+        printIngestionMetrics(metrics);
+
+        // Check for alerts
+        const alerts = await IngestionMetricsService.checkAlerts(supabase, metrics);
+        if (alerts.length > 0) {
+            console.log(`\n⚠️  ALERTS\n`);
+            alerts.forEach(alert => {
+                const icon = alert.severity === 'error' ? '🔴' : '🟡';
+                console.log(`${icon} ${alert.message}`);
+            });
+        }
+
+        console.log(`\n✨ Ingestion analysis complete!`);
+    } catch (error) {
+        console.error('❌ Error analyzing ingestion data:', error);
+        process.exit(1);
+    }
+}
+
+export { runAnalysis, runIngestionAnalysis };
