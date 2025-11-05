@@ -10,7 +10,7 @@ export function generateICS(event: Event, minutesBefore = 30): string {
   const end = event.endTime ? new Date(event.endTime) : new Date(start.getTime() + 60 * 60 * 1000);
   const dtStart = formatDateToICS(start);
   const dtEnd = formatDateToICS(end);
-  const uid = `${event.id}@tech-cal`;
+  const uid = `${event.id}@kure-cal`;
   const summary = (event.title || 'Event').replace(/\n/g, ' ');
   const description = (event.description || '').slice(0, 500).replace(/\n/g, ' ');
   const location = event.location || '';
@@ -21,7 +21,7 @@ export function generateICS(event: Event, minutesBefore = 30): string {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//tech-cal//dashboard//EN',
+    'PRODID:-//kure-cal//dashboard//EN',
     'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
     `UID:${uid}`,
