@@ -125,7 +125,7 @@ export class GoogleCalendarService {
 
             const eventDescription = event.description + 
                 (event.sourceUrl ? `\n\nEvent Details: ${event.sourceUrl}` : '') +
-                '\n\n📅 Added by TechCal';
+                '\n\n📅 Added by Kure-Cal';
 
             const response = await calendar.events.insert({
                 calendarId,
@@ -142,7 +142,7 @@ export class GoogleCalendarService {
                         timeZone: 'UTC'
                     },
                     source: {
-                        title: 'TechCal',
+                        title: 'Kure-Cal',
                         url: event.sourceUrl || 'https://kurecal.app'
                     }
                 }
@@ -181,9 +181,9 @@ export class GoogleCalendarService {
             
             const calendar = google.calendar({ version: 'v3', auth });
 
-            const eventDescription = event.description + 
+            const eventDescription = event.description +
                 (event.sourceUrl ? `\n\nEvent Details: ${event.sourceUrl}` : '') +
-                '\n\n📅 Added by TechCal';
+                '\n\n📅 Added by Kure-Cal';
 
             await calendar.events.update({
                 calendarId,
@@ -201,7 +201,7 @@ export class GoogleCalendarService {
                         timeZone: 'UTC'
                     },
                     source: {
-                        title: 'TechCal',
+                        title: 'Kure-Cal',
                         url: event.sourceUrl || 'https://kurecal.app'
                     }
                 }

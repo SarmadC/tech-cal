@@ -158,7 +158,7 @@ export function ChaosToOrderSection() {
 
                     <div className="event-list-label" style={{ opacity: 0 }}>
                         <h3>Upcoming Events</h3>
-                        <p>Your personalized tech calendar</p>
+                        <p>Your personalized Kure calendar</p>
                     </div>
 
                     {animationEventsData.map((event, index) => (

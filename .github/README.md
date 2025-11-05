@@ -1,6 +1,6 @@
 # CI/CD Pipeline Documentation
 
-This directory contains GitHub Actions workflows for the Tech Calendar project.
+This directory contains GitHub Actions workflows for the Kure-Cal project.
 
 ## 🚀 Workflows
 
