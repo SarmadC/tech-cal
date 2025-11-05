@@ -5,7 +5,7 @@ import { ProfileService } from '@/services/profileService';
 import HackathonClientView from '@/app/hackathons/HackathonClientView';
 
 export const metadata = {
-  title: 'Hackathons - TechCal',
+  title: 'Hackathons - Kure-Cal',
   description: 'Discover and participate in exciting hackathons. Find teams, register for events, and showcase your coding skills.',
 };
 

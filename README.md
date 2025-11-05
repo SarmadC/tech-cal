@@ -1,13 +1,13 @@
-# KureCal (tech-cal)
+# Kure-Cal
 
-KureCal is a career operating system for discovering, planning, and acting on the tech events that move your professional goals forward.  
+Kure-Cal is a career operating system for discovering, planning, and acting on the tech events that move your professional goals forward.  
 We combine high-quality curation, adaptive scoring, intelligent scheduling, and longitudinal analytics to help teams and individual contributors focus on the events that matter.
 
 ---
 
 ## Table of Contents
 
-- [KureCal (tech-cal)](#kurecal-tech-cal)
+- [Kure-Cal](#kure-cal)
   - [Table of Contents](#table-of-contents)
   - [Product Overview](#product-overview)
   - [Feature Highlights](#feature-highlights)
