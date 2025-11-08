@@ -6,6 +6,8 @@
  */
 
 import type { EventSourceRecord, CollectorResult } from '@/types/ingestion';
+import { isValidUrl } from '../utils/urlResolver';
+import { TIMEOUT_CONFIG, VALIDATION_LIMITS } from '@/config/ingestionConstants';
 
 export interface CollectorConfig {
     sourceId: string;
@@ -33,8 +35,8 @@ export abstract class BaseCollector {
         const errors: string[] = [];
 
         // Required fields
-        if (!record.title || record.title.trim().length < 3) {
-            errors.push('Title is required and must be at least 3 characters');
+        if (!record.title || record.title.trim().length < VALIDATION_LIMITS.MIN_TITLE_LENGTH) {
+            errors.push(`Title is required and must be at least ${VALIDATION_LIMITS.MIN_TITLE_LENGTH} characters`);
         }
 
         if (!record.startTime) {
@@ -70,15 +72,15 @@ export abstract class BaseCollector {
         }
 
         // Validate URLs
-        if (record.sourceUrl && !this.isValidUrl(record.sourceUrl)) {
+        if (record.sourceUrl && !isValidUrl(record.sourceUrl)) {
             errors.push('Invalid source URL format');
         }
 
-        if (record.registrationUrl && !this.isValidUrl(record.registrationUrl)) {
+        if (record.registrationUrl && !isValidUrl(record.registrationUrl)) {
             errors.push('Invalid registration URL format');
         }
 
-        if (record.livestreamUrl && !this.isValidUrl(record.livestreamUrl)) {
+        if (record.livestreamUrl && !isValidUrl(record.livestreamUrl)) {
             errors.push('Invalid livestream URL format');
         }
 
@@ -123,12 +125,12 @@ export abstract class BaseCollector {
 
         // Title (required) - 20%
         maxScore += 20;
-        if (record.title && record.title.length >= 10) score += 20;
-        else if (record.title && record.title.length >= 3) score += 10;
+        if (record.title && record.title.length >= VALIDATION_LIMITS.MIN_TITLE_LENGTH_FOR_SCORE) score += 20;
+        else if (record.title && record.title.length >= VALIDATION_LIMITS.MIN_TITLE_LENGTH) score += 10;
 
         // Description - 15%
         maxScore += 15;
-        if (record.description && record.description.length >= 50) score += 15;
+        if (record.description && record.description.length >= VALIDATION_LIMITS.MIN_DESCRIPTION_LENGTH) score += 15;
         else if (record.description) score += 7;
 
         // Dates - 20%
@@ -179,25 +181,14 @@ export abstract class BaseCollector {
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    /**
-     * Validate URL format
-     */
-    private isValidUrl(url: string): boolean {
-        try {
-            new URL(url);
-            return true;
-        } catch {
-            return false;
-        }
-    }
 
     /**
      * Retry logic helper with exponential backoff
      */
     protected async retryWithBackoff<T>(
         fn: () => Promise<T>,
-        maxRetries: number = 3,
-        baseDelay: number = 1000
+        maxRetries: number = TIMEOUT_CONFIG.COLLECTOR_MAX_RETRIES,
+        baseDelay: number = TIMEOUT_CONFIG.COLLECTOR_BASE_DELAY_MS
     ): Promise<T> {
         let lastError: Error | unknown;
 

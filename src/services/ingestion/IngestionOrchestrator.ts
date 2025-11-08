@@ -10,8 +10,26 @@ import type { Database } from '@/types/supabase';
 import { IngestionSourceService } from './IngestionSourceService';
 import { RssCollector } from './collectors/RssCollector';
 import { IcsCollector } from './collectors/IcsCollector';
+import { ConfsTechCollector } from './collectors/ConfsTechCollector';
 import type { BaseCollector } from './collectors/BaseCollector';
+import { FILTERING_CONFIG } from '@/config/ingestionConstants';
 import * as Sentry from '@sentry/nextjs';
+
+// Supported collector types - only these can be processed
+const SUPPORTED_COLLECTOR_TYPES = ['RSS', 'ICS', 'API'] as const;
+
+/**
+ * Validate source type is supported
+ */
+function validateSourceType(sourceType: string): void {
+    if (!SUPPORTED_COLLECTOR_TYPES.includes(sourceType as typeof SUPPORTED_COLLECTOR_TYPES[number])) {
+        throw new Error(
+            `Unsupported source type: ${sourceType}. ` +
+            `Supported types: ${SUPPORTED_COLLECTOR_TYPES.join(', ')}. ` +
+            `Please use one of the supported types or implement a collector for this type.`
+        );
+    }
+}
 
 export interface OrchestratorResult {
     sourceId: string;
@@ -99,16 +117,9 @@ export class IngestionOrchestrator {
                 
                 for (const { record, rawItem } of result.records) {
                     try {
-                        // Calculate checksum from stable raw item fields (excludes volatile fields like timestamps)
-                        // This ensures duplicates can be detected even across different fetch runs
-                        // The record.provenance.raw_hash should already match this, but we calculate it again for verification
-                        const stablePayload = JSON.stringify(rawItem);
-                        const checksum = await this.calculateChecksum(stablePayload);
-                        
-                        // Verify checksum matches provenance hash (they should be the same)
-                        if (record.provenance.raw_hash !== checksum) {
-                            console.warn(`Checksum mismatch for record ${record.title}: provenance hash=${record.provenance.raw_hash}, calculated=${checksum}`);
-                        }
+                        // Use provenance hash directly (already calculated from stable fields by collector)
+                        // This ensures consistency and avoids recalculation issues
+                        const checksum = record.provenance.raw_hash;
 
                         // Insert into source_events
                         const { error: insertError } = await supabaseClient
@@ -264,7 +275,7 @@ export class IngestionOrchestrator {
             results.push(result);
 
             // Small delay between sources to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, FILTERING_CONFIG.SOURCE_DELAY_MS));
         }
 
         console.log(`[IngestionOrchestrator] Completed processing ${results.length} source(s)`);
@@ -281,6 +292,9 @@ export class IngestionOrchestrator {
             throw new Error('Source is required');
         }
 
+        // Validate source type before creating collector
+        validateSourceType(source.source_type);
+
         switch (source.source_type) {
             case 'RSS':
                 return new RssCollector({
@@ -294,27 +308,23 @@ export class IngestionOrchestrator {
                     sourceUrl: source.source_url,
                     metadata: source.metadata as unknown as Record<string, unknown>,
                 });
-            
-            // TODO: Add other collector types as they're implemented
-            case 'API':
-            case 'HTML':
-            case 'MANUAL_UPLOAD':
+            case 'API': {
+                const metadata = (source.metadata ?? {}) as Record<string, unknown>;
+                if ((metadata.provider as string | undefined) === 'confs.tech') {
+                    return new ConfsTechCollector({
+                        sourceId: source.id,
+                        sourceUrl: source.source_url,
+                        metadata,
+                    });
+                }
+                throw new Error(`Unsupported API provider for source ${source.name}`);
+            }
             default:
+                // This should never happen due to validateSourceType, but TypeScript requires it
                 throw new Error(`Collector not implemented for type: ${source.source_type}`);
         }
     }
 
-    /**
-     * Calculate SHA-256 checksum
-     */
-    private static async calculateChecksum(data: string): Promise<string> {
-        // Use Web Crypto API for SHA-256
-        const encoder = new TextEncoder();
-        const dataBuffer = encoder.encode(data);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
 
     /**
      * Log error to ingestion_errors table

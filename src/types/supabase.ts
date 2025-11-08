@@ -1007,6 +1007,8 @@ export type Database = {
           event_format: Database["public"]["Enums"]["event_format_enum"] | null
           event_image_url: string | null
           event_pattern: string | null
+          firecrawl_enrichment_metadata: Json | null
+          firecrawl_enrichment_status: string | null
           event_type_id: string | null
           external_id: string | null
           external_status: string | null
@@ -1059,6 +1061,8 @@ export type Database = {
           event_format?: Database["public"]["Enums"]["event_format_enum"] | null
           event_image_url?: string | null
           event_pattern?: string | null
+          firecrawl_enrichment_metadata?: Json | null
+          firecrawl_enrichment_status?: string | null
           event_type_id?: string | null
           external_id?: string | null
           external_status?: string | null
@@ -1111,6 +1115,8 @@ export type Database = {
           event_format?: Database["public"]["Enums"]["event_format_enum"] | null
           event_image_url?: string | null
           event_pattern?: string | null
+          firecrawl_enrichment_metadata?: Json | null
+          firecrawl_enrichment_status?: string | null
           event_type_id?: string | null
           external_id?: string | null
           external_status?: string | null

@@ -331,7 +331,7 @@ export class EventUpdateService {
      */
     static async queueForReview(
         eventId: string,
-        sourceEventId: string,
+        sourceEventId: string | null,
         reviewRequiredFields: FieldDiff[],
         supabaseClient: SupabaseClientType
     ): Promise<{ success: boolean; queueId?: string; error?: string }> {
@@ -341,14 +341,14 @@ export class EventUpdateService {
             }
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const tableClient = supabaseClient as any;
+        const tableClient = supabaseClient as any;
 
             // Create main queue entry
             const { data: queueEntry, error: queueError } = await tableClient
                 .from('event_update_queue')
                 .insert({
                     event_id: eventId,
-                    source_event_id: sourceEventId,
+                source_event_id: sourceEventId,
                     status: 'pending',
                     requires_review_reason: `Fields require review: ${reviewRequiredFields.map(f => f.fieldName).join(', ')}`,
                 })
@@ -395,7 +395,7 @@ export class EventUpdateService {
      */
     static async logAutoUpdate(
         eventId: string,
-        sourceEventId: string,
+        sourceEventId: string | null,
         updatedFields: string[],
         supabaseClient: SupabaseClientType
     ): Promise<{ success: boolean; error?: string }> {
@@ -405,13 +405,13 @@ export class EventUpdateService {
             }
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const tableClient = supabaseClient as any;
+        const tableClient = supabaseClient as any;
 
             const { error } = await tableClient
                 .from('event_update_log')
                 .insert({
                     event_id: eventId,
-                    source_event_id: sourceEventId,
+                source_event_id: sourceEventId,
                     updated_fields: updatedFields,
                 });
 

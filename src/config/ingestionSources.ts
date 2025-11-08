@@ -20,6 +20,10 @@ export interface SourceMetadata {
         params: Record<string, unknown>;
     };
     selector_patterns?: Record<string, string>; // For HTML scraping
+    provider?: string;
+    filters?: Record<string, unknown>;
+    categories?: string[];
+    years_ahead?: number;
 }
 
 export interface InitialSourceConfig {
@@ -99,6 +103,23 @@ export const INITIAL_SOURCES: InitialSourceConfig[] = [
         access_type: 'ics_feed',
         trust_score: 70.0,
         fetch_interval_minutes: 120,
+    },
+
+    {
+        name: 'Confs.tech Online',
+        source_url: 'https://confs.tech/?online=online',
+        source_type: 'API',
+        access_type: 'public_api',
+        trust_score: 65.0,
+        fetch_interval_minutes: 360,
+        metadata: {
+            provider: 'confs.tech',
+            filters: {
+                online_only: true,
+            },
+            years_ahead: 1,
+        },
+        is_active: true,
     },
 ];
 

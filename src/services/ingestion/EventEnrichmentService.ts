@@ -29,6 +29,7 @@ export interface AgendaItemInput {
     difficultyLevel?: string | null;
     prerequisites?: string | null;
     isRequired?: boolean | null;
+    durationMinutes?: number | null;
 }
 
 export interface EventCoreFieldsInput {
@@ -138,25 +139,57 @@ export class EventEnrichmentService {
             }
 
             // Insert new agenda items
-            const agendaInserts = items.map((item, index) => ({
-                event_id: eventId,
-                title: item.title,
-                start_time: item.startTime,
-                end_time: item.endTime,
-                agenda_type: item.type || 'other',
-                description: item.description || null,
-                location: item.location || null,
-                day_number: item.dayNumber || 1,
-                track: item.track || null,
-                sort_order: item.sortOrder ?? index,
-                duration_minutes: item.endTime && item.startTime
-                    ? Math.round((new Date(item.endTime).getTime() - new Date(item.startTime).getTime()) / 60000)
-                    : null,
-                capacity: item.capacity ?? null,
-                difficulty_level: item.difficultyLevel || null,
-                prerequisites: item.prerequisites || null,
-                is_required: item.isRequired ?? null,
-            }));
+            const agendaInserts = items.map((item, index) => {
+                const parseMinutes = (time: string | null | undefined): number | null => {
+                    if (!time) return null;
+                    const match = time.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+                    if (!match) {
+                        return null;
+                    }
+                    const hours = Number(match[1]);
+                    const minutes = Number(match[2]);
+                    const seconds = match[3] ? Number(match[3]) : 0;
+                    if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) {
+                        return null;
+                    }
+                    return hours * 60 + minutes + Math.round(seconds / 60);
+                };
+
+                const derivedDuration = (() => {
+                    if (typeof item.durationMinutes === 'number') {
+                        return item.durationMinutes;
+                    }
+                    const startMinutes = parseMinutes(item.startTime);
+                    const endMinutes = parseMinutes(item.endTime);
+                    if (startMinutes === null || endMinutes === null) {
+                        return null;
+                    }
+                    let diff = endMinutes - startMinutes;
+                    if (diff < 0) {
+                        diff += 24 * 60;
+                    }
+                    return diff;
+                })();
+
+                return {
+                    event_id: eventId,
+                    title: item.title,
+                    start_time: item.startTime,
+                    end_time: item.endTime,
+                    agenda_type: item.type || 'other',
+                    description: item.description || null,
+                    location: item.location || null,
+                    day_number: item.dayNumber || 1,
+                    track: item.track || null,
+                    sort_order: item.sortOrder ?? index,
+                    duration_minutes:
+                        derivedDuration !== null && derivedDuration !== undefined ? derivedDuration : null,
+                    capacity: item.capacity ?? null,
+                    difficulty_level: item.difficultyLevel || null,
+                    prerequisites: item.prerequisites || null,
+                    is_required: item.isRequired ?? null,
+                };
+            });
 
             const { data: insertedAgenda, error: insertError } = await supabaseClient
                 .from('event_agenda')
