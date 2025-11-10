@@ -1,6 +1,6 @@
 /* Desktop Discovery Styles */
 .desktop-discovery-view {
-  @apply p-6 max-w-7xl mx-auto;
+  @apply w-full;
 }
 
 .discovery-header {
@@ -21,7 +21,7 @@
 
 /* Desktop Grid Layout - V2 Bento */
 .discovery-grid-v2 {
-  @apply space-y-12 max-w-7xl mx-auto;
+  @apply space-y-12 w-full;
   /* Increased spacing to compensate for removed container padding */
 }
 

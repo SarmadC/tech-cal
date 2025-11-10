@@ -52,8 +52,8 @@ export default function ContactPage() {
     return (
         <div className="min-h-screen bg-background-main pt-20">
             {/* Header section (unchanged) */}
-            <section className="py-16 px-4 bg-background-secondary">
-                <div className="max-w-7xl mx-auto">
+            <section className="py-16 px-6 bg-background-secondary">
+                <div className="max-w-[1600px] mx-auto">
                     <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">
                         Get in Touch
                     </h1>
@@ -64,7 +64,7 @@ export default function ContactPage() {
                 </div>
             </section>
 
-            <div className="max-w-7xl mx-auto px-4 py-12">
+            <div className="max-w-[1600px] mx-auto px-6 py-12">
                 <div className="grid lg:grid-cols-2 gap-12">
                     {/* Contact Information section (unchanged) */}
                     <div>

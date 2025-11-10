@@ -508,6 +508,278 @@ export type Database = {
           },
         ]
       }
+      event_dedupe_candidates: {
+        Row: {
+          candidate_event_id: string | null
+          confidence: number | null
+          created_at: string
+          id: string
+          ingestion_id: string
+          resolution: Database["public"]["Enums"]["event_dedupe_resolution_enum"]
+          resolution_notes: string | null
+          resolved_at: string | null
+        }
+        Insert: {
+          candidate_event_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          ingestion_id: string
+          resolution?: Database["public"]["Enums"]["event_dedupe_resolution_enum"]
+          resolution_notes?: string | null
+          resolved_at?: string | null
+        }
+        Update: {
+          candidate_event_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          ingestion_id?: string
+          resolution?: Database["public"]["Enums"]["event_dedupe_resolution_enum"]
+          resolution_notes?: string | null
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_dedupe_candidates_ingestion_id_fkey"
+            columns: ["ingestion_id"]
+            isOneToOne: false
+            referencedRelation: "event_ingestions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_dedupe_candidates_candidate_event_id_fkey"
+            columns: ["candidate_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_dedupe_candidates_candidate_event_id_fkey"
+            columns: ["candidate_event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_ingestions: {
+        Row: {
+          created_at: string
+          dedupe_notes: string | null
+          dedupe_resolution:
+            | Database["public"]["Enums"]["event_dedupe_resolution_enum"]
+            | null
+          external_id: string | null
+          id: string
+          ingested_at: string
+          ingestion_details: Json
+          ingestion_method: Database["public"]["Enums"]["event_ingestion_method_enum"]
+          ingestion_state: Database["public"]["Enums"]["event_ingestion_state_enum"]
+          normalized_hash: string
+          processed_at: string | null
+          quality_score_snapshot: number | null
+          raw_payload_id: string | null
+          raw_start_time: string | null
+          raw_title: string | null
+          source_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dedupe_notes?: string | null
+          dedupe_resolution?:
+            | Database["public"]["Enums"]["event_dedupe_resolution_enum"]
+            | null
+          external_id?: string | null
+          id?: string
+          ingested_at?: string
+          ingestion_details?: Json
+          ingestion_method?: Database["public"]["Enums"]["event_ingestion_method_enum"]
+          ingestion_state?: Database["public"]["Enums"]["event_ingestion_state_enum"]
+          normalized_hash: string
+          processed_at?: string | null
+          quality_score_snapshot?: number | null
+          raw_payload_id?: string | null
+          raw_start_time?: string | null
+          raw_title?: string | null
+          source_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dedupe_notes?: string | null
+          dedupe_resolution?:
+            | Database["public"]["Enums"]["event_dedupe_resolution_enum"]
+            | null
+          external_id?: string | null
+          id?: string
+          ingested_at?: string
+          ingestion_details?: Json
+          ingestion_method?: Database["public"]["Enums"]["event_ingestion_method_enum"]
+          ingestion_state?: Database["public"]["Enums"]["event_ingestion_state_enum"]
+          normalized_hash?: string
+          processed_at?: string | null
+          quality_score_snapshot?: number | null
+          raw_payload_id?: string | null
+          raw_start_time?: string | null
+          raw_title?: string | null
+          source_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_ingestions_raw_payload_id_fkey"
+            columns: ["raw_payload_id"]
+            isOneToOne: false
+            referencedRelation: "event_raw_payloads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_ingestions_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "event_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_raw_payloads: {
+        Row: {
+          external_id: string | null
+          id: string
+          payload: Json
+          payload_hash: string
+          received_at: string
+          source_id: string
+        }
+        Insert: {
+          external_id?: string | null
+          id?: string
+          payload: Json
+          payload_hash: string
+          received_at?: string
+          source_id: string
+        }
+        Update: {
+          external_id?: string | null
+          id?: string
+          payload?: Json
+          payload_hash?: string
+          received_at?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_raw_payloads_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "event_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_source_metrics: {
+        Row: {
+          average_quality_score: number | null
+          created_at: string
+          events_ingested: number
+          events_published: number
+          id: string
+          last_active_at: string | null
+          metadata: Json
+          rejection_rate: number
+          source_id: string
+          timeframe: string
+        }
+        Insert: {
+          average_quality_score?: number | null
+          created_at?: string
+          events_ingested?: number
+          events_published?: number
+          id?: string
+          last_active_at?: string | null
+          metadata?: Json
+          rejection_rate?: number
+          source_id: string
+          timeframe: string
+        }
+        Update: {
+          average_quality_score?: number | null
+          created_at?: string
+          events_ingested?: number
+          events_published?: number
+          id?: string
+          last_active_at?: string | null
+          metadata?: Json
+          rejection_rate?: number
+          source_id?: string
+          timeframe?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_source_metrics_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "event_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_sources: {
+        Row: {
+          channel: string | null
+          contact_email: string | null
+          contact_notes: string | null
+          created_at: string
+          default_quality_score: number
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          region: string | null
+          slug: string
+          source_type: Database["public"]["Enums"]["event_source_type_enum"]
+          tags: string[] | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          channel?: string | null
+          contact_email?: string | null
+          contact_notes?: string | null
+          created_at?: string
+          default_quality_score?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          region?: string | null
+          slug: string
+          source_type?: Database["public"]["Enums"]["event_source_type_enum"]
+          tags?: string[] | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          channel?: string | null
+          contact_email?: string | null
+          contact_notes?: string | null
+          created_at?: string
+          default_quality_score?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          region?: string | null
+          slug?: string
+          source_type?: Database["public"]["Enums"]["event_source_type_enum"]
+          tags?: string[] | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       event_agenda: {
         Row: {
           agenda_type: string | null
@@ -747,8 +1019,10 @@ export type Database = {
           changes_detected: Json | null
           error_message: string | null
           event_id: string
+          ingestion_id: string | null
           id: string
           processing_time_ms: number | null
+          source_id: string | null
           sync_result: string
           sync_type: string
           synced_at: string | null
@@ -757,8 +1031,10 @@ export type Database = {
           changes_detected?: Json | null
           error_message?: string | null
           event_id: string
+          ingestion_id?: string | null
           id?: string
           processing_time_ms?: number | null
+          source_id?: string | null
           sync_result: string
           sync_type: string
           synced_at?: string | null
@@ -767,8 +1043,10 @@ export type Database = {
           changes_detected?: Json | null
           error_message?: string | null
           event_id?: string
+          ingestion_id?: string | null
           id?: string
           processing_time_ms?: number | null
+          source_id?: string | null
           sync_result?: string
           sync_type?: string
           synced_at?: string | null
@@ -786,6 +1064,20 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_sync_log_ingestion_id_fkey"
+            columns: ["ingestion_id"]
+            isOneToOne: false
+            referencedRelation: "event_ingestions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_sync_log_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "event_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -961,6 +1253,15 @@ export type Database = {
           series_id: string | null
           social_media_hashtag: string | null
           source_url: string | null
+          source_id: string | null
+          source_quality_score: number | null
+          source_last_verified: string | null
+          ingested_at: string | null
+          ingestion_method:
+            | Database["public"]["Enums"]["event_ingestion_method_enum"]
+            | null
+          ingestion_id: string | null
+          raw_data_hash: string | null
           speaker_lineup: Json | null
           start_time: string
           status: string | null
@@ -1009,6 +1310,15 @@ export type Database = {
           series_id?: string | null
           social_media_hashtag?: string | null
           source_url?: string | null
+          source_id?: string | null
+          source_quality_score?: number | null
+          source_last_verified?: string | null
+          ingested_at?: string | null
+          ingestion_method?:
+            | Database["public"]["Enums"]["event_ingestion_method_enum"]
+            | null
+          ingestion_id?: string | null
+          raw_data_hash?: string | null
           speaker_lineup?: Json | null
           start_time: string
           status?: string | null
@@ -1057,6 +1367,15 @@ export type Database = {
           series_id?: string | null
           social_media_hashtag?: string | null
           source_url?: string | null
+          source_id?: string | null
+          source_quality_score?: number | null
+          source_last_verified?: string | null
+          ingested_at?: string | null
+          ingestion_method?:
+            | Database["public"]["Enums"]["event_ingestion_method_enum"]
+            | null
+          ingestion_id?: string | null
+          raw_data_hash?: string | null
           speaker_lineup?: Json | null
           start_time?: string
           status?: string | null
@@ -1103,6 +1422,20 @@ export type Database = {
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_ingestion_id_fkey"
+            columns: ["ingestion_id"]
+            isOneToOne: false
+            referencedRelation: "event_ingestions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "event_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -1979,12 +2312,14 @@ export type Database = {
           error_message: string | null
           event_external_id: string | null
           event_id: string | null
+          ingestion_id: string | null
           id: string
           payload: Json | null
           processed_at: string | null
           processing_result: string | null
           signature_verified: boolean | null
           source: string
+          source_id: string | null
           webhook_id: string | null
         }
         Insert: {
@@ -1992,12 +2327,14 @@ export type Database = {
           error_message?: string | null
           event_external_id?: string | null
           event_id?: string | null
+          ingestion_id?: string | null
           id?: string
           payload?: Json | null
           processed_at?: string | null
           processing_result?: string | null
           signature_verified?: boolean | null
           source: string
+          source_id?: string | null
           webhook_id?: string | null
         }
         Update: {
@@ -2005,12 +2342,14 @@ export type Database = {
           error_message?: string | null
           event_external_id?: string | null
           event_id?: string | null
+          ingestion_id?: string | null
           id?: string
           payload?: Json | null
           processed_at?: string | null
           processing_result?: string | null
           signature_verified?: boolean | null
           source?: string
+          source_id?: string | null
           webhook_id?: string | null
         }
         Relationships: [
@@ -2026,6 +2365,20 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_events_ingestion_id_fkey"
+            columns: ["ingestion_id"]
+            isOneToOne: false
+            referencedRelation: "event_ingestions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_events_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "event_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -2132,6 +2485,47 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      events_with_sources: {
+        Row: {
+          dedupe_resolution:
+            | Database["public"]["Enums"]["event_dedupe_resolution_enum"]
+            | null
+          end_time: string | null
+          id: string
+          ingested_at: string | null
+          ingestion_external_id: string | null
+          ingestion_id: string | null
+          ingestion_method:
+            | Database["public"]["Enums"]["event_ingestion_method_enum"]
+            | null
+          ingestion_normalized_hash: string | null
+          ingestion_state:
+            | Database["public"]["Enums"]["event_ingestion_state_enum"]
+            | null
+          location: string | null
+          processed_at: string | null
+          quality_score_snapshot: number | null
+          raw_data_hash: string | null
+          registration_url: string | null
+          source_channel: string | null
+          source_default_quality_score: number | null
+          source_id: string | null
+          source_is_active: boolean | null
+          source_last_verified: string | null
+          source_name: string | null
+          source_quality_score: number | null
+          source_region: string | null
+          source_slug: string | null
+          source_type:
+            | Database["public"]["Enums"]["event_source_type_enum"]
+            | null
+          source_url: string | null
+          start_time: string | null
+          timezone: string | null
+          title: string | null
+        }
+        Relationships: []
       }
       telemetry_recommendation_batches_last7d: {
         Row: {
@@ -2484,6 +2878,31 @@ export type Database = {
         | "enterprise"
         | "freelance"
       event_format_enum: "Online" | "In-person" | "Hybrid"
+      event_dedupe_resolution_enum:
+        | "unique"
+        | "duplicate"
+        | "merged"
+        | "needs_review"
+      event_ingestion_method_enum:
+        | "pull"
+        | "push"
+        | "manual"
+        | "backfill"
+      event_ingestion_state_enum:
+        | "pending"
+        | "parsed"
+        | "normalized"
+        | "deduped"
+        | "completed"
+        | "failed"
+        | "skipped"
+      event_source_type_enum:
+        | "rss"
+        | "ics"
+        | "newsletter"
+        | "api"
+        | "partnership"
+        | "manual"
       event_status_enum: "Confirmed" | "Tentative" | "Cancelled" | "Postponed"
       learning_style_enum:
         | "hands-on"
@@ -2681,6 +3100,30 @@ export const Constants = {
         "freelance",
       ],
       event_format_enum: ["Online", "In-person", "Hybrid"],
+      event_dedupe_resolution_enum: [
+        "unique",
+        "duplicate",
+        "merged",
+        "needs_review",
+      ],
+      event_ingestion_method_enum: ["pull", "push", "manual", "backfill"],
+      event_ingestion_state_enum: [
+        "pending",
+        "parsed",
+        "normalized",
+        "deduped",
+        "completed",
+        "failed",
+        "skipped",
+      ],
+      event_source_type_enum: [
+        "rss",
+        "ics",
+        "newsletter",
+        "api",
+        "partnership",
+        "manual",
+      ],
       event_status_enum: ["Confirmed", "Tentative", "Cancelled", "Postponed"],
       learning_style_enum: [
         "hands-on",
