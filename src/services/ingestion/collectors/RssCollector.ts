@@ -8,6 +8,15 @@
 import { BaseCollector } from './BaseCollector';
 import type { EventSourceRecord, CollectorResult, CollectorError } from '@/types/ingestion';
 import { EventFilterService } from '../EventFilterService';
+import {
+    parseDate,
+    extractDateFromContent,
+    parseEventDateFromFields,
+    EVENT_START_DATE_FIELDS,
+    EVENT_END_DATE_FIELDS,
+} from '../utils/dateParser';
+import { extractDomain } from '../utils/urlResolver';
+import { RSS_DEFAULTS } from '@/config/ingestionConstants';
 import Parser, { type Item as ParserItem } from 'rss-parser';
 
 type RssFeedSpeaker = {
@@ -219,7 +228,7 @@ export class RssCollector extends BaseCollector {
         const rawHash = await this.hashStablePayload(stableFields);
 
         // Create provenance with pre-calculated hash
-        const provenance = this.createProvenance(fetchJobId, rawHash, '1.0.0');
+        const provenance = this.createProvenance(fetchJobId, rawHash, RSS_DEFAULTS.COLLECTOR_VERSION);
 
         // Create record
         const record: EventSourceRecord = {
@@ -229,7 +238,7 @@ export class RssCollector extends BaseCollector {
             endTime,
             location,
             organizer,
-            organizerDomain: this.extractDomain(item.link || this.config.sourceUrl),
+            organizerDomain: extractDomain(item.link || this.config.sourceUrl),
             sourceUrl,
             registrationUrl,
             eventImageUrl,
@@ -251,106 +260,30 @@ export class RssCollector extends BaseCollector {
      * Looks for event-specific date fields first, falls back to pubDate only if event-specific dates not found
      */
     private parseEventDate(item: RssFeedItem): string {
-        // Event-specific date fields (in order of preference)
-        const eventDateFields = [
-            'event:startdate',
-            'ev:startdate',
-            'ical:dtstart',
-            'event:start',
-            'startdate',
-            'event_date',
-            'eventDate',
-            'eventStart',
-            'startDate',
-        ];
-
-        // Check for event-specific dates first
         const itemRecord = item as unknown as Record<string, unknown>;
-        for (const field of eventDateFields) {
-            const candidate = itemRecord[field] ?? itemRecord[field.toLowerCase()];
-            const dateValue = typeof candidate === 'string' ? candidate : undefined;
-            if (dateValue) {
-                const parsed = this.parseDate(dateValue);
-                // Only use if it's not today (likely an event date, not pub date)
-                if (parsed) return parsed;
-            }
-        }
+        
+        // Check for event-specific dates first
+        const eventDate = parseEventDateFromFields(itemRecord, EVENT_START_DATE_FIELDS);
+        if (eventDate) return eventDate;
 
         // Parse from content/description if it contains date patterns
-        const contentSource = typeof item.content === 'string' ? item.content : (typeof item.description === 'string' ? item.description : '');
-        const contentDate = this.extractDateFromContent(contentSource);
+        const contentSource = typeof item.content === 'string' 
+            ? item.content 
+            : (typeof item.description === 'string' ? item.description : '');
+        const contentDate = extractDateFromContent(contentSource);
         if (contentDate) return contentDate;
 
         // Last resort: use pubDate, but only if we're confident it's an event date
         // (e.g., if the feed is event-specific)
-        return this.parseDate(item.pubDate || item.isoDate || item.date) || new Date().toISOString();
+        return parseDate(item.pubDate || item.isoDate || item.date) || new Date().toISOString();
     }
 
     /**
      * Parse event end date from RSS item
      */
     private parseEventEndDate(item: RssFeedItem): string | undefined {
-        const eventEndDateFields = [
-            'event:enddate',
-            'ev:enddate',
-            'ical:dtend',
-            'event:end',
-            'enddate',
-            'event_end_date',
-            'eventEnd',
-            'endDate',
-        ];
-
         const itemRecord = item as unknown as Record<string, unknown>;
-        for (const field of eventEndDateFields) {
-            const candidate = itemRecord[field] ?? itemRecord[field.toLowerCase()];
-            const dateValue = typeof candidate === 'string' ? candidate : undefined;
-            if (dateValue) {
-                return this.parseDate(dateValue);
-            }
-        }
-
-        return undefined;
-    }
-
-    /**
-     * Parse date string to ISO format
-     */
-    private parseDate(dateStr: string | undefined): string | undefined {
-        if (!dateStr) {
-            return undefined;
-        }
-
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) {
-            return undefined;
-        }
-
-        return date.toISOString();
-    }
-
-    /**
-     * Extract date from content/description using common patterns
-     */
-    private extractDateFromContent(content: string): string | undefined {
-        if (!content) return undefined;
-
-        // Common date patterns in event descriptions
-        const datePatterns = [
-            /(?:event|starts?|begins?|on)\s+(?:the\s+)?(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-            /(\w+\s+\d{1,2},?\s+\d{4})/i, // "January 15, 2024"
-            /(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/i, // ISO-like format
-        ];
-
-        for (const pattern of datePatterns) {
-            const match = content.match(pattern);
-            if (match) {
-                const parsed = this.parseDate(match[1]);
-                if (parsed) return parsed;
-            }
-        }
-
-        return undefined;
+        return parseEventDateFromFields(itemRecord, EVENT_END_DATE_FIELDS);
     }
 
     /**
@@ -398,14 +331,18 @@ export class RssCollector extends BaseCollector {
             const priceStr = String(item.price);
             const freeMatch = /free|gratis|0|zero/i.exec(priceStr);
             if (freeMatch) {
-                return { min: 0, max: 0, currency: 'USD' };
+                return { min: 0, max: 0, currency: RSS_DEFAULTS.DEFAULT_CURRENCY };
             }
 
             // Try to extract numeric price
             const priceMatch = priceStr.match(/(\d+(?:\.\d+)?)/);
             if (priceMatch) {
                 const price = parseFloat(priceMatch[1]);
-                return { min: price, max: price, currency: item.currency || 'USD' };
+                return {
+                    min: price,
+                    max: price,
+                    currency: item.currency || RSS_DEFAULTS.DEFAULT_CURRENCY,
+                };
             }
         }
 
@@ -444,17 +381,6 @@ export class RssCollector extends BaseCollector {
         return speakers.length > 0 ? speakers : undefined;
     }
 
-    /**
-     * Extract domain from URL
-     */
-    private extractDomain(url: string): string | undefined {
-        try {
-            const urlObj = new URL(url);
-            return urlObj.hostname.replace('www.', '');
-        } catch {
-            return undefined;
-        }
-    }
 
     /**
      * Extract stable fields from RSS item for checksum calculation

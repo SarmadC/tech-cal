@@ -6,6 +6,7 @@
  */
 
 import type { SupabaseClientType } from '@/types';
+import { TIMEOUT_CONFIG } from '@/config/ingestionConstants';
 import * as Sentry from '@sentry/nextjs';
 
 export interface OrganizerInput {
@@ -139,7 +140,7 @@ export class OrganizerEnrichmentService {
             // Verify the logo exists with a HEAD request (quick check)
             const response = await fetch(logoUrl, {
                 method: 'HEAD',
-                signal: AbortSignal.timeout(2000), // 2 second timeout
+                signal: AbortSignal.timeout(TIMEOUT_CONFIG.ORGANIZER_LOOKUP_MS),
             });
 
             if (response.ok) {

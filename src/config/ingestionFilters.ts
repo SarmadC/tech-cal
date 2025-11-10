@@ -34,6 +34,12 @@ export const FILTER_CATEGORIES: Record<string, FilterCategory> = {
         enabled: true,
         patterns: [
             {
+                pattern: '^earnings:',
+                isRegex: true,
+                category: 'financial',
+                reason: 'Earnings announcement - not a tech event',
+            },
+            {
                 pattern: 'earnings call',
                 isRegex: false,
                 category: 'financial',

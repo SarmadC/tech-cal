@@ -7,7 +7,36 @@
 import { BaseCollector } from './BaseCollector';
 import type { EventSourceRecord, CollectorResult, CollectorError } from '@/types/ingestion';
 import { EventFilterService } from '../EventFilterService';
+import { isTechMemeRedirect, extractUrlFromText } from '../utils/urlResolver';
+import { ICS_DEFAULTS } from '@/config/ingestionConstants';
 import ical from 'node-ical';
+import type { VEvent, DateWithTimeZone } from 'node-ical';
+
+type DateWithOptionalMeta = DateWithTimeZone & { dateOnly?: boolean };
+type ParsedVEvent = VEvent & {
+    start?: DateWithOptionalMeta;
+    end?: DateWithOptionalMeta;
+    exdate?: Record<string, Date>;
+};
+
+const isVEvent = (entry: ical.CalendarComponent): entry is ParsedVEvent =>
+    !!entry && entry.type === 'VEVENT';
+
+const getOrganizerUrl = (organizer: VEvent['organizer']): string | undefined => {
+    if (!organizer || typeof organizer === 'string') {
+        return undefined;
+    }
+
+    if ('url' in organizer && typeof organizer.url === 'string') {
+        return organizer.url;
+    }
+
+    if ('val' in organizer && typeof organizer.val === 'string') {
+        return organizer.val;
+    }
+
+    return undefined;
+};
 
 export class IcsCollector extends BaseCollector {
     protected getCollectorType(): EventSourceRecord['provenance']['collector'] {
@@ -25,21 +54,18 @@ export class IcsCollector extends BaseCollector {
                 return await ical.async.fromURL(this.config.sourceUrl);
             });
 
-            const entries = Object.values(data || {});
+            const entries = Object.values(data || {}) as ical.CalendarComponent[];
             let filteredCount = 0;
 
             for (const entry of entries) {
                 try {
-                    // Only process VEVENTs
-                    // node-ical uses type === 'VEVENT' for event components
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const ev: any = entry as any;
-                    if (!ev || ev.type !== 'VEVENT') continue;
+                    if (!isVEvent(entry)) continue;
+                    const ev = entry;
 
                     // Minimal recurrence support: ingest master DTSTART only
                     // Skip if EXDATE matches DTSTART
-                    const dtstart: Date | undefined = ev.start instanceof Date ? ev.start : undefined;
-                    const dtend: Date | undefined = ev.end instanceof Date ? ev.end : undefined;
+                    let dtstart: Date | undefined = ev.start instanceof Date ? ev.start : undefined;
+                    let dtend: Date | undefined = ev.end instanceof Date ? ev.end : undefined;
 
                     if (!dtstart) {
                         errors.push({
@@ -50,51 +76,68 @@ export class IcsCollector extends BaseCollector {
                         continue;
                     }
 
+                    // Handle DATE-only values (datetype === 'date')
+                    // When ICS uses DATE instead of DATE-TIME, node-ical defaults to midnight in the feed's timezone
+                    // For Techmeme (PST/PDT), this becomes 07:00:00 UTC, which is incorrect
+                    // We should default DATE-only events to a reasonable time (e.g., 09:00 local time)
+                    const isDateOnly = ev.start?.dateOnly === true || ev.datetype === 'date';
+                    
+                    if (isDateOnly) {
+                        // For DATE-only events, default to 9am in UTC (a reasonable default for events)
+                        if (dtstart) {
+                            const year = dtstart.getUTCFullYear();
+                            const month = dtstart.getUTCMonth();
+                            const day = dtstart.getUTCDate();
+                        
+                            // Create new date at default start hour UTC for the same date
+                            dtstart = new Date(
+                                Date.UTC(year, month, day, ICS_DEFAULTS.DEFAULT_START_HOUR, 0, 0)
+                            );
+                        }
+                        
+                        if (dtend) {
+                            const endYear = dtend.getUTCFullYear();
+                            const endMonth = dtend.getUTCMonth();
+                            const endDay = dtend.getUTCDate();
+                            // Default end time to default end hour UTC
+                            dtend = new Date(
+                                Date.UTC(endYear, endMonth, endDay, ICS_DEFAULTS.DEFAULT_END_HOUR, 0, 0)
+                            );
+                        }
+                        
+                        console.log(
+                            `[IcsCollector] Event "${ev.summary || 'Untitled'}" has DATE-only value. ` +
+                            `Defaulting to ${dtstart.toISOString()} (was ${ev.start?.toISOString()})`
+                        );
+                    }
+
                     // If EXDATE includes the DTSTART, skip
                     if (ev.exdate && typeof ev.exdate === 'object') {
                         // exdate is an object map: { 'YYYYMMDDTHHmmssZ': Date }
-                        const exdates = Object.values(ev.exdate) as Date[];
+                        const exdates = Object.values(ev.exdate);
                         if (exdates.some((d) => d instanceof Date && d.getTime() === dtstart.getTime())) {
                             continue;
                         }
                     }
 
                     const title: string = ev.summary || 'Untitled';
-                    const location: string = ev.location || 'TBD';
+                    const location: string = ev.location || ICS_DEFAULTS.DEFAULT_LOCATION;
                     const description: string = ev.description || '';
                     
                     // Try multiple URL sources
-                    let url: string | undefined = ev.url || (ev.organizer && ev.organizer.url) || undefined;
+                    let url: string | undefined = ev.url || getOrganizerUrl(ev.organizer);
                     
                     // If no URL found, try extracting from description
                     if (!url && description) {
-                        const urlMatch = description.match(/https?:\/\/[^\s<>"{}|\\^`\[\]]+/i);
-                        if (urlMatch) {
-                            url = urlMatch[0];
+                        url = extractUrlFromText(description);
+                        if (url) {
                             console.log(`[IcsCollector] Extracted URL from description for "${title}": ${url}`);
                         }
                     }
                     
-                    // Handle Techmeme redirect URLs - extract canonical URL
-                    // Pattern: https://www.techmeme.com/r2/www.domain.com_path_segments-base64.htm
-                    // Example: https://www.techmeme.com/r2/www.anyscale.com_ray-summit_2025-lIFlr5uJ.htm
-                    // Extract: https://www.anyscale.com/ray-summit/2025
-                    if (url && url.includes('techmeme.com/r2/')) {
-                        // Match: techmeme.com/r2/www.domain.com_path_segments-suffix.htm
-                        // The domain part includes www. if present, path uses underscores for slashes
-                        const techmemeMatch = url.match(/techmeme\.com\/r2\/([^_]+)_(.+?)(?:-[a-zA-Z0-9]+)?\.htm$/);
-                        if (techmemeMatch) {
-                            const domain = techmemeMatch[1]; // www.anyscale.com or anyscale.com
-                            const pathSegments = techmemeMatch[2]; // ray-summit_2025 or similar
-                            // Replace underscores with slashes, but keep hyphens
-                            const path = pathSegments.replace(/_/g, '/');
-                            // Construct canonical URL - domain already has www if it was there
-                            const canonicalUrl = `https://${domain}/${path}`;
-                            console.log(`[IcsCollector] Resolved Techmeme redirect for "${title}": ${url} -> ${canonicalUrl}`);
-                            url = canonicalUrl;
-                        } else {
-                            console.warn(`[IcsCollector] Could not parse Techmeme redirect URL pattern: ${url}`);
-                        }
+                    // Log Techmeme redirect URLs (but don't resolve - let Firecrawl handle redirects)
+                    if (url && isTechMemeRedirect(url)) {
+                        console.log(`[IcsCollector] Ingesting event "${title}" with Techmeme redirect URL: ${url} (Firecrawl will follow redirect)`);
                     }
 
                     const startIso = dtstart.toISOString();
@@ -126,9 +169,9 @@ export class IcsCollector extends BaseCollector {
                         startTime: startIso,
                         endTime: endIso,
                         location,
-                        sourceUrl: eventSourceUrl,
-                        registrationUrl: url, // Keep separate - may be same as event URL or a different registration link
-                        provenance: this.createProvenance(fetchJobId, rawHash, '1.0.0'),
+                        sourceUrl: eventSourceUrl, // Store original URL (TechMeme redirects will be handled by Firecrawl)
+                        registrationUrl: url, // Store original URL (TechMeme redirects will be handled by Firecrawl)
+                        provenance: this.createProvenance(fetchJobId, rawHash, ICS_DEFAULTS.COLLECTOR_VERSION),
                         confidence: 0,
                     };
 
