@@ -11,12 +11,13 @@ import { IngestionSourceService } from './IngestionSourceService';
 import { RssCollector } from './collectors/RssCollector';
 import { IcsCollector } from './collectors/IcsCollector';
 import { ConfsTechCollector } from './collectors/ConfsTechCollector';
+import { HtmlCollector } from './collectors/HtmlCollector';
 import type { BaseCollector } from './collectors/BaseCollector';
 import { FILTERING_CONFIG } from '@/config/ingestionConstants';
 import * as Sentry from '@sentry/nextjs';
 
 // Supported collector types - only these can be processed
-const SUPPORTED_COLLECTOR_TYPES = ['RSS', 'ICS', 'API'] as const;
+const SUPPORTED_COLLECTOR_TYPES = ['RSS', 'ICS', 'API', 'HTML'] as const;
 
 /**
  * Validate source type is supported
@@ -36,7 +37,7 @@ export interface OrchestratorResult {
     sourceName: string;
     success: boolean;
     eventsFetched: number;
-    eventsNormalized: number;
+    recordsQueued: number;
     errors: number;
     errorMessage?: string;
 }
@@ -51,7 +52,7 @@ export class IngestionOrchestrator {
     ): Promise<OrchestratorResult> {
         const jobId = crypto.randomUUID();
         let eventsFetched = 0;
-        let eventsNormalized = 0;
+        let recordsQueued = 0;
         let errors = 0;
 
         try {
@@ -67,7 +68,7 @@ export class IngestionOrchestrator {
                     sourceName: source.name,
                     success: false,
                     eventsFetched: 0,
-                    eventsNormalized: 0,
+                    recordsQueued: 0,
                     errors: 0,
                     errorMessage: 'Source is not active',
                 };
@@ -81,7 +82,7 @@ export class IngestionOrchestrator {
                     sourceName: source.name,
                     success: false,
                     eventsFetched: 0,
-                    eventsNormalized: 0,
+                    recordsQueued: 0,
                     errors: 0,
                     errorMessage: 'Source is blocklisted',
                 };
@@ -147,9 +148,9 @@ export class IngestionOrchestrator {
                                 `Failed to insert source event: ${insertError.message}`
                             );
                         } else {
-                            eventsNormalized++;
-                            if (eventsNormalized % 10 === 0) {
-                                console.log(`[IngestionOrchestrator] Persisted ${eventsNormalized}/${result.records.length} events`);
+                            recordsQueued++;
+                            if (recordsQueued % 10 === 0) {
+                                console.log(`[IngestionOrchestrator] Queued ${recordsQueued}/${result.records.length} source events for normalization`);
                             }
                         }
                     } catch (error) {
@@ -182,14 +183,14 @@ export class IngestionOrchestrator {
                 }
 
                 // Update job status
-                console.log(`[IngestionOrchestrator] Job ${jobId} completed: ${eventsFetched} fetched, ${eventsNormalized} normalized, ${errors} errors`);
+                console.log(`[IngestionOrchestrator] Job ${jobId} completed: ${eventsFetched} fetched, ${recordsQueued} queued, ${errors} errors`);
                 await supabaseClient
                     .from('ingestion_jobs')
                     .update({
                         status: 'completed',
                         completed_at: new Date().toISOString(),
                         events_fetched: eventsFetched,
-                        events_normalized: eventsNormalized,
+                        events_normalized: recordsQueued,
                         errors_count: errors,
                     })
                     .eq('id', jobId);
@@ -199,14 +200,14 @@ export class IngestionOrchestrator {
 
                 // Process normalization for newly fetched events (optional - can be done separately)
                 // For now, we'll normalize in a separate step, but this could be done here
-                // const normalizationResult = await NormalizationProcessor.processPendingEvents(supabaseClient, eventsNormalized);
+                // const normalizationResult = await NormalizationProcessor.processPendingEvents(supabaseClient, recordsQueued);
 
                 return {
                     sourceId,
                     sourceName: source.name,
                     success: true,
                     eventsFetched,
-                    eventsNormalized,
+                    recordsQueued,
                     errors,
                 };
             } catch (collectionError) {
@@ -235,7 +236,7 @@ export class IngestionOrchestrator {
                 sourceName: 'Unknown',
                 success: false,
                 eventsFetched,
-                eventsNormalized,
+                    recordsQueued,
                 errors: errors + 1,
                 errorMessage,
             };
@@ -319,6 +320,12 @@ export class IngestionOrchestrator {
                 }
                 throw new Error(`Unsupported API provider for source ${source.name}`);
             }
+            case 'HTML':
+                return new HtmlCollector({
+                    sourceId: source.id,
+                    sourceUrl: source.source_url,
+                    metadata: source.metadata as unknown as Record<string, unknown>,
+                });
             default:
                 // This should never happen due to validateSourceType, but TypeScript requires it
                 throw new Error(`Collector not implemented for type: ${source.source_type}`);

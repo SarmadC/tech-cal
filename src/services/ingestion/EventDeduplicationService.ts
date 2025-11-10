@@ -117,7 +117,8 @@ export class EventDeduplicationService {
         supabaseClient: SupabaseClientType
     ): Promise<{ eventId: string } | null> {
         try {
-            const normalizedSourceUrl = normalizeCanonicalUrl(record.sourceUrl);
+            const normalizedSourceUrl =
+                record.normalizedSourceUrl ?? normalizeCanonicalUrl(record.sourceUrl);
             if (!normalizedSourceUrl) {
                 return null;
             }
@@ -134,13 +135,12 @@ export class EventDeduplicationService {
             // Build query - try to narrow by domain if possible
             let query = supabaseClient
                 .from('events')
-                .select('id, source_url, registration_url')
-                .not('source_url', 'is', null);
+                .select('id, source_url, registration_url');
 
             // If we have a domain, use ILIKE to filter by domain (more efficient)
             if (domain) {
                 // Match URLs containing the domain (case-insensitive)
-                query = query.ilike('source_url', `%${domain}%`);
+                query = query.or(`source_url.ilike.%${domain}%,registration_url.ilike.%${domain}%`);
             }
 
             const { data: events, error } = await query.limit(QUERY_LIMITS.DEDUPLICATION_CHECK);
@@ -153,20 +153,28 @@ export class EventDeduplicationService {
                 return null;
             }
 
-            // Find matching event by comparing normalized URLs
+            const normalizedRecordSourceUrl =
+                record.normalizedSourceUrl ?? normalizeCanonicalUrl(record.sourceUrl);
+            const normalizedRecordRegistrationUrl =
+                record.normalizedRegistrationUrl ?? normalizeCanonicalUrl(record.registrationUrl);
+            const recordUrlSet = new Set<string>();
+            if (normalizedRecordSourceUrl) {
+                recordUrlSet.add(normalizedRecordSourceUrl);
+            }
+            if (normalizedRecordRegistrationUrl) {
+                recordUrlSet.add(normalizedRecordRegistrationUrl);
+            }
+
+            // Find matching event by comparing normalized URLs (source and registration)
             for (const event of events) {
                 const normalizedEventUrl = normalizeCanonicalUrl(event.source_url ?? undefined);
-                if (normalizedEventUrl === normalizedSourceUrl) {
+                if (normalizedEventUrl && recordUrlSet.has(normalizedEventUrl)) {
                     return { eventId: event.id };
                 }
 
-                // Also check registration_url if source_url doesn't match
-                if (record.registrationUrl) {
-                    const normalizedRegistrationUrl = normalizeCanonicalUrl(record.registrationUrl);
-                    const normalizedEventRegistrationUrl = normalizeCanonicalUrl(event.registration_url ?? undefined);
-                    if (normalizedRegistrationUrl && normalizedEventRegistrationUrl === normalizedRegistrationUrl) {
-                        return { eventId: event.id };
-                    }
+                const normalizedEventRegistrationUrl = normalizeCanonicalUrl(event.registration_url ?? undefined);
+                if (normalizedEventRegistrationUrl && recordUrlSet.has(normalizedEventRegistrationUrl)) {
+                    return { eventId: event.id };
                 }
             }
 

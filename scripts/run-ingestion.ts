@@ -54,7 +54,7 @@ async function runIngestion() {
             console.log(`   ${idx + 1}. ${result.sourceName}:`);
             console.log(`      ✅ Success: ${result.success}`);
             console.log(`      📥 Events fetched: ${result.eventsFetched}`);
-            console.log(`      ✅ Events normalized: ${result.eventsNormalized}`);
+            console.log(`      🗂️  Records queued: ${result.recordsQueued}`);
             console.log(`      ❌ Errors: ${result.errors}`);
             if (result.errorMessage) {
                 console.log(`      ⚠️  ${result.errorMessage}`);
@@ -62,10 +62,10 @@ async function runIngestion() {
         });
 
         const totalFetched = ingestionResults.reduce((sum, r) => sum + r.eventsFetched, 0);
-        const totalNormalized = ingestionResults.reduce((sum, r) => sum + r.eventsNormalized, 0);
+        const totalQueued = ingestionResults.reduce((sum, r) => sum + r.recordsQueued, 0);
         const totalErrors = ingestionResults.reduce((sum, r) => sum + r.errors, 0);
 
-        console.log(`\n   📊 Total: ${totalFetched} fetched, ${totalNormalized} normalized, ${totalErrors} errors`);
+        console.log(`\n   📊 Total: ${totalFetched} fetched, ${totalQueued} queued, ${totalErrors} errors`);
 
         // Step 2: Process normalization (including retry mechanism)
         console.log('\n🔄 Step 2: Processing normalization (including retries)...');

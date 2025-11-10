@@ -18,7 +18,10 @@ import { EventUpdateService } from './EventUpdateService';
 import { FirecrawlEnrichmentService } from './FirecrawlEnrichmentService';
 import type { EventSourceRecord } from '@/types/ingestion';
 import { RETRY_CONFIG } from '@/config/ingestionConstants';
+import { applyUrlCanonicalization } from './utils/urlCanonicalizer';
 import * as Sentry from '@sentry/nextjs';
+import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
+import { isDescriptionThin } from '@/utils/ingestion/DescriptionHeuristics';
 
 export interface NormalizationResult {
     processed: number;
@@ -322,6 +325,17 @@ export class NormalizationProcessor {
 
                     const record = rawPayload.record as EventSourceRecord;
 
+                    applyUrlCanonicalization(record);
+
+                    if (record.description) {
+                        const sanitizedDescription = cleanEventDescription(record.description);
+                        if (sanitizedDescription !== undefined) {
+                            record.description = sanitizedDescription;
+                        } else {
+                            record.description = record.description.trim();
+                        }
+                    }
+
                     // Secondary filter check (for sophisticated rules that may require source metadata)
                     // Collector already does basic filtering, but this allows more complex rules
                     const source = await IngestionSourceService.getSourceById(
@@ -356,6 +370,30 @@ export class NormalizationProcessor {
                         }
 
                         continue;
+                    }
+
+                    if (isDescriptionThin(record.description, record.title) && record.sourceUrl) {
+                        try {
+                            const preview = await FirecrawlEnrichmentService.fetchDescriptionPreview(
+                                record.sourceUrl,
+                                record.registrationUrl,
+                                record.description
+                            );
+
+                            if (
+                                preview?.description &&
+                                !isDescriptionThin(preview.description, record.title)
+                            ) {
+                                record.description =
+                                    cleanEventDescription(preview.description) ??
+                                    preview.description.trim();
+                            }
+                        } catch (previewError) {
+                            console.warn(
+                                `[NormalizationProcessor] Inline description enrichment failed for ${record.sourceUrl}:`,
+                                previewError
+                            );
+                        }
                     }
 
                     // Check for duplicates before normalizing

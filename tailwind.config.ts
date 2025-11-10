@@ -28,6 +28,9 @@ const config: Config = {
         'bg-pink-500/20', 'border-pink-500/30', 'text-pink-300', 'text-pink-700',
         'bg-gray-500/20', 'border-gray-500/30', 'text-gray-300', 'text-gray-700',
     ],
+    blocklist: [
+        '[-:.]',
+    ],
 
     theme: {
         extend: {

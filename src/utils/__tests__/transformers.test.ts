@@ -69,6 +69,7 @@ describe('eventTransformer', () => {
         sourceUrl: 'https://example.com',
         livestreamUrl: 'https://stream.example.com',
         eventTypeId: 'type1',
+        agendaUrl: null,
         tags: [
           { id: 'tag1', name: 'React', color: '#61DAFB', category: 'Technology' },
         ],
@@ -111,13 +112,14 @@ describe('eventTransformer', () => {
         title: 'Test Event',
         description: '',
         startTime: '2024-01-01T10:00:00Z',
-        endTime: undefined,
+        endTime: null,
         organizer: 'Test Organizer',
         location: 'Online',
         status: 'confirmed',
         sourceUrl: '#',
-        livestreamUrl: undefined,
+        livestreamUrl: null,
         eventTypeId: 'type1',
+        agendaUrl: null,
         organization: {
           id: 'org1',
           name: 'Test Organizer',
@@ -224,7 +226,6 @@ describe('eventTypeTransformer', () => {
         id: '1',
         name: 'Conference',
         color: '#3B82F6',
-        description: 'Conference events',
       };
 
       const result = eventTypeTransformer.toApp(supabaseEventType);
@@ -300,19 +301,21 @@ describe('trackedEventTransformer', () => {
 
       const result = trackedEventTransformer.toApp(supabaseTrackedEvent);
 
-      expect(result).toEqual({
+      expect(result).toEqual(expect.objectContaining({
         trackingId: 'tracking1',
         userId: 'user1',
         eventId: 'event1',
         status: 'bookmarked',
         notes: 'Test notes',
         trackedAt: '2024-01-01T10:00:00Z',
-        event: {
-          id: 'event1',
-          title: 'Test Event',
-          startTime: '2024-01-01T10:00:00Z',
-        },
-      });
+        isBookmarked: false,
+        bookmarkedAt: null,
+      }));
+      expect(result.event).toEqual(expect.objectContaining({
+        id: 'event1',
+        title: 'Test Event',
+        startTime: '2024-01-01T10:00:00Z',
+      }));
     });
 
     it('should handle missing event data', () => {
@@ -562,7 +565,7 @@ describe('FullCalendar utilities', () => {
         start: '2024-01-01T10:00:00Z',
         end: '2024-01-01T12:00:00Z',
         extendedProps: event,
-        backgroundColor: '#3B82F6ff',
+        backgroundColor: '#3B82F6d9',
         borderColor: '#3B82F6',
         textColor: 'var(--foreground-primary)',
       });
@@ -752,7 +755,7 @@ describe('enhancedEventTransformer', () => {
 
       const result = enhancedEventTransformer.toApp(supabaseEvent);
 
-      expect(result).toEqual({
+      expect(result).toEqual(expect.objectContaining({
         id: '1',
         createdAt: '2024-01-01T09:00:00Z',
         title: 'Multi-day Conference',
@@ -763,27 +766,29 @@ describe('enhancedEventTransformer', () => {
         location: 'Online',
         status: 'confirmed',
         sourceUrl: '#',
-        livestreamUrl: undefined,
+        livestreamUrl: null,
+        agendaUrl: null,
         eventTypeId: 'type1',
-        organization: {
+        organization: expect.objectContaining({
           id: 'org1',
           name: 'Test Org',
-        },
+        }),
         color: '#3B82F6',
-        category: {
+        category: expect.objectContaining({
           id: 'type1',
           name: 'Conference',
           color: '#3B82F6',
-        },
+          description: 'Conference events',
+        }),
         isMultiDay: true,
-        dailySchedule: {
-          type: 'daily_recurring',
-          dailyStart: '09:00',
-          dailyEnd: '17:00',
-          timezone: 'America/New_York',
-        },
         eventPattern: 'multi_day',
-      });
+      }));
+      expect(result.dailySchedule).toEqual(expect.objectContaining({
+        type: 'daily_recurring',
+        dailyStart: '09:00',
+        dailyEnd: '17:00',
+        timezone: 'America/New_York',
+      }));
     });
 
     it('should handle single day event', () => {

@@ -3,11 +3,12 @@ import { GET } from '../route';
 import { NextRequest } from 'next/server';
 
 // Mock dependencies
+let currentUserId = 'test-user-id';
 vi.mock('@/utils/supabase/server', () => ({
   createClient: vi.fn(() => ({
     auth: {
       getUser: vi.fn(() => ({
-        data: { user: { id: 'test-user-id' } },
+        data: { user: { id: currentUserId } },
         error: null,
       })),
     },
@@ -64,80 +65,109 @@ vi.mock('@/services/scoring', () => ({
 }));
 
 describe('GET /api/events/[id]/score-breakdown', () => {
+  let userCounter = 0;
   beforeEach(() => {
     vi.clearAllMocks();
+    userCounter += 1;
+    currentUserId = `test-user-${userCounter}`;
   });
 
   it('returns 403 when disabled in production', async () => {
     const originalEnv = process.env.NODE_ENV;
-    const originalFlag = process.env.NEXT_PUBLIC_ENABLE_SCORE_BREAKDOWN;
+    const originalFlag = process.env.ENABLE_SCORE_BREAKDOWN;
+    process.env.NODE_ENV = 'production';
+    delete process.env.ENABLE_SCORE_BREAKDOWN;
 
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'production', writable: true });
-    process.env.NEXT_PUBLIC_ENABLE_SCORE_BREAKDOWN = undefined;
+    try {
+      const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
+      const params = Promise.resolve({ id: 'test-id' });
+      const response = await GET(request, { params });
+      const data = await response.json();
 
-    const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
-    const params = Promise.resolve({ id: 'test-id' });
-    const response = await GET(request, { params });
-    const data = await response.json();
-
-    expect(response.status).toBe(403);
-    expect(data.success).toBe(false);
-    expect(data.error).toContain('development');
-
-    Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, writable: true });
-    process.env.NEXT_PUBLIC_ENABLE_SCORE_BREAKDOWN = originalFlag;
+      expect(response.status).toBe(403);
+      expect(data.success).toBe(false);
+      expect(data.error).toContain('development');
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalFlag === undefined) {
+        delete process.env.ENABLE_SCORE_BREAKDOWN;
+      } else {
+        process.env.ENABLE_SCORE_BREAKDOWN = originalFlag;
+      }
+    }
   });
 
   it('returns all 5 components and algorithmVersion', async () => {
     const originalEnv = process.env.NODE_ENV;
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', writable: true });
+    const originalFlag = process.env.ENABLE_SCORE_BREAKDOWN;
+    process.env.NODE_ENV = 'development';
+    process.env.ENABLE_SCORE_BREAKDOWN = 'true';
 
-    const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
-    const params = Promise.resolve({ id: 'test-id' });
-    const response = await GET(request, { params });
-    const data = await response.json();
+    try {
+      const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
+      const params = Promise.resolve({ id: 'test-id' });
+      const response = await GET(request, { params });
+      const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data).toBeDefined();
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data).toBeDefined();
 
-    // Verify all 5 components
-    expect(data.data.components).toBeDefined();
-    expect(data.data.components.skillRelevance).toBe(22.5);
-    expect(data.data.components.careerStageMatch).toBe(18.75);
-    expect(data.data.components.networkingValue).toBe(15);
-    expect(data.data.components.industryRelevance).toBe(11.25);
-    expect(data.data.components.timingBonus).toBe(7.5);
+      // Verify all 5 components
+      expect(data.data.components).toBeDefined();
+      expect(data.data.components.skillRelevance).toBe(22.5);
+      expect(data.data.components.careerStageMatch).toBe(18.75);
+      expect(data.data.components.networkingValue).toBe(15);
+      expect(data.data.components.industryRelevance).toBe(11.25);
+      expect(data.data.components.timingBonus).toBe(7.5);
 
-    // Verify algorithmVersion
-    expect(data.data.algorithmVersion).toBe('v2.0.0');
-
-    Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, writable: true });
+      // Verify algorithmVersion
+      expect(data.data.algorithmVersion).toBe('v2.0.0');
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalFlag === undefined) {
+        delete process.env.ENABLE_SCORE_BREAKDOWN;
+      } else {
+        process.env.ENABLE_SCORE_BREAKDOWN = originalFlag;
+      }
+    }
   });
 
   it('includes scoringTriggers from metadata', async () => {
     const originalEnv = process.env.NODE_ENV;
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', writable: true });
+    const originalFlag = process.env.ENABLE_SCORE_BREAKDOWN;
+    process.env.NODE_ENV = 'development';
+    process.env.ENABLE_SCORE_BREAKDOWN = 'true';
 
-    const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
-    const params = Promise.resolve({ id: 'test-id' });
-    const response = await GET(request, { params });
-    const data = await response.json();
+    try {
+      const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
+      const params = Promise.resolve({ id: 'test-id' });
+      const response = await GET(request, { params });
+      const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data.scoringTriggers).toEqual(['type_pref_gate', 'beginner_boost']);
-
-    Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, writable: true });
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.scoringTriggers).toEqual(['type_pref_gate', 'beginner_boost']);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalFlag === undefined) {
+        delete process.env.ENABLE_SCORE_BREAKDOWN;
+      } else {
+        process.env.ENABLE_SCORE_BREAKDOWN = originalFlag;
+      }
+    }
   });
 
   it('caps scoringTriggers at 20 items', async () => {
     const originalEnv = process.env.NODE_ENV;
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', writable: true });
+    const originalFlag = process.env.ENABLE_SCORE_BREAKDOWN;
+    process.env.NODE_ENV = 'development';
+    process.env.ENABLE_SCORE_BREAKDOWN = 'true';
 
     // Mock strategy with 25 triggers
     const mockTriggers = Array.from({ length: 25 }, (_, i) => `trigger_${i}`);
-    vi.mocked(vi.importMock('@/services/scoring')).ScoringStrategyFactory.getDefaultStrategy.mockReturnValueOnce({
+    const scoringModule = await import('@/services/scoring');
+    vi.mocked(scoringModule.ScoringStrategyFactory.getDefaultStrategy).mockReturnValueOnce({
       version: 'v2.0.0',
       calculate: vi.fn(() => ({
         overall: 75,
@@ -162,75 +192,109 @@ describe('GET /api/events/[id]/score-breakdown', () => {
       })),
     });
 
-    const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
-    const params = Promise.resolve({ id: 'test-id' });
-    const response = await GET(request, { params });
-    const data = await response.json();
+    try {
+      const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
+      const params = Promise.resolve({ id: 'test-id' });
+      const response = await GET(request, { params });
+      const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data.scoringTriggers).toHaveLength(20);
-    expect(data.data.scoringTriggers[0]).toBe('trigger_0');
-    expect(data.data.scoringTriggers[19]).toBe('trigger_19');
-
-    Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, writable: true });
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.scoringTriggers).toHaveLength(20);
+      expect(data.data.scoringTriggers[0]).toBe('trigger_0');
+      expect(data.data.scoringTriggers[19]).toBe('trigger_19');
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalFlag === undefined) {
+        delete process.env.ENABLE_SCORE_BREAKDOWN;
+      } else {
+        process.env.ENABLE_SCORE_BREAKDOWN = originalFlag;
+      }
+    }
   });
 
   it('returns top 1-2 reasons', async () => {
     const originalEnv = process.env.NODE_ENV;
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', writable: true });
+    const originalFlag = process.env.ENABLE_SCORE_BREAKDOWN;
+    process.env.NODE_ENV = 'development';
+    process.env.ENABLE_SCORE_BREAKDOWN = 'true';
 
-    const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
-    const params = Promise.resolve({ id: 'test-id' });
-    const response = await GET(request, { params });
-    const data = await response.json();
+    try {
+      const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
+      const params = Promise.resolve({ id: 'test-id' });
+      const response = await GET(request, { params });
+      const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data.topReasons).toBeDefined();
-    expect(data.data.topReasons.length).toBeLessThanOrEqual(2);
-
-    Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, writable: true });
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.topReasons).toBeDefined();
+      expect(data.data.topReasons.length).toBeLessThanOrEqual(2);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalFlag === undefined) {
+        delete process.env.ENABLE_SCORE_BREAKDOWN;
+      } else {
+        process.env.ENABLE_SCORE_BREAKDOWN = originalFlag;
+      }
+    }
   });
 
   it('returns normalized event type', async () => {
     const originalEnv = process.env.NODE_ENV;
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', writable: true });
+    const originalFlag = process.env.ENABLE_SCORE_BREAKDOWN;
+    process.env.NODE_ENV = 'development';
+    process.env.ENABLE_SCORE_BREAKDOWN = 'true';
 
-    const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
-    const params = Promise.resolve({ id: 'test-id' });
-    const response = await GET(request, { params });
-    const data = await response.json();
+    try {
+      const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
+      const params = Promise.resolve({ id: 'test-id' });
+      const response = await GET(request, { params });
+      const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data.eventType).toBeDefined();
-    expect(data.data.eventType).toHaveProperty('raw');
-    expect(data.data.eventType).toHaveProperty('normalized');
-
-    Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, writable: true });
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.eventType).toBeDefined();
+      expect(data.data.eventType).toHaveProperty('raw');
+      expect(data.data.eventType).toHaveProperty('normalized');
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalFlag === undefined) {
+        delete process.env.ENABLE_SCORE_BREAKDOWN;
+      } else {
+        process.env.ENABLE_SCORE_BREAKDOWN = originalFlag;
+      }
+    }
   });
 
   it('enforces rate limit (429)', async () => {
     const originalEnv = process.env.NODE_ENV;
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', writable: true });
+    const originalFlag = process.env.ENABLE_SCORE_BREAKDOWN;
+    process.env.NODE_ENV = 'development';
+    process.env.ENABLE_SCORE_BREAKDOWN = 'true';
 
-    // Make 21 rapid requests (limit is 20 per minute)
-    const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
-    const params = Promise.resolve({ id: 'test-id' });
+    try {
+      // Make 21 rapid requests (limit is 20 per minute)
+      const request = new NextRequest('http://localhost/api/events/test-id/score-breakdown');
+      const params = Promise.resolve({ id: 'test-id' });
 
-    for (let i = 0; i < 20; i++) {
-      await GET(request, { params });
+      for (let i = 0; i < 20; i++) {
+        await GET(request, { params });
+      }
+
+      // 21st request should be rate limited
+      const response = await GET(request, { params });
+      const data = await response.json();
+
+      expect(response.status).toBe(429);
+      expect(data.success).toBe(false);
+      expect(data.error).toContain('Too many');
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalFlag === undefined) {
+        delete process.env.ENABLE_SCORE_BREAKDOWN;
+      } else {
+        process.env.ENABLE_SCORE_BREAKDOWN = originalFlag;
+      }
     }
-
-    // 21st request should be rate limited
-    const response = await GET(request, { params });
-    const data = await response.json();
-
-    expect(response.status).toBe(429);
-    expect(data.success).toBe(false);
-    expect(data.error).toContain('Too many');
-
-    Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, writable: true });
   });
 });

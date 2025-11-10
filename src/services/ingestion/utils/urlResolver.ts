@@ -25,25 +25,40 @@ export function resolveTechMemeRedirect(url: string): string[] {
 
     try {
         const parsed = new URL(url);
-        const pathParts = parsed.pathname.split('/').filter(Boolean);
-
-        if (pathParts.length < 2) {
+        const redirectSection = parsed.pathname.split('/r2/')[1];
+        if (!redirectSection) {
             return [];
         }
 
-        const rawTarget = pathParts[1]; // e.g. "websummit.com_-awzxRwUO"
-        const htmIndex = rawTarget.toLowerCase().indexOf('.htm');
-        const withoutSuffix = htmIndex >= 0 ? rawTarget.slice(0, htmIndex) : rawTarget;
-        const [domainAndPath] = withoutSuffix.split('_-'); // portion before the tracking suffix
-
-        if (!domainAndPath) {
+        const encodedTarget = redirectSection.split('/')[0];
+        if (!encodedTarget) {
             return [];
         }
 
-        // Convert underscores into potential path separators while preserving single underscores in domains.
-        const sections = domainAndPath.split('_').filter(Boolean);
-        const domainCandidate = sections.shift() ?? domainAndPath;
-        const candidatePath = sections.length > 0 ? `/${sections.join('/')}` : '';
+        const withoutExtension = encodedTarget.replace(/\.htm$/i, '');
+        const cleanTrackingSuffix = (value: string): string =>
+            value.replace(/-[A-Za-z0-9]{6,}$/, '');
+
+        const segments = withoutExtension.split('_').filter(Boolean);
+        if (segments.length === 0) {
+            return [];
+        }
+
+        const domainCandidateRaw = segments.shift()!;
+        const domainCandidate = cleanTrackingSuffix(domainCandidateRaw);
+        if (!domainCandidate) {
+            return [];
+        }
+
+        if (segments.length > 0) {
+            const lastIdx = segments.length - 1;
+            segments[lastIdx] = cleanTrackingSuffix(segments[lastIdx]);
+            if (!segments[lastIdx]) {
+                segments.pop();
+            }
+        }
+
+        const candidatePath = segments.length > 0 ? `/${segments.join('/')}` : '';
 
         const candidates = new Set<string>();
 

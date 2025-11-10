@@ -12,7 +12,7 @@ import { INITIAL_SOURCES } from '@/config/ingestionSources';
 import * as Sentry from '@sentry/nextjs';
 
 // Supported collector types - only these can be processed
-const SUPPORTED_COLLECTOR_TYPES = ['RSS', 'ICS', 'API'] as const;
+const SUPPORTED_COLLECTOR_TYPES = ['RSS', 'ICS', 'API', 'HTML'] as const;
 
 /**
  * Validate source type is supported

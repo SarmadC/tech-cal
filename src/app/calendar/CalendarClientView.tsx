@@ -120,7 +120,8 @@ function useEventData(profile: AppProfile | null) {
         refetch
     } = useUnifiedServerFiltering(
         profile,
-        {}
+        {},
+        { surface: 'calendar', autoLoadAllPages: true }
     );
 
     return {

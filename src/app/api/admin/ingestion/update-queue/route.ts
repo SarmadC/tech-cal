@@ -199,3 +199,64 @@ export async function GET(request: NextRequest) {
     }
 }
 
+export async function DELETE(_request: NextRequest) {
+    try {
+        const supabase = await createClient();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = supabase as any;
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const isAdmin = await isAdminUser(user.id, supabase);
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        const { data: pendingItems, error: fetchError } = await tableClient
+            .from('event_update_queue')
+            .select('id')
+            .eq('status', 'pending');
+
+        if (fetchError) {
+            throw new Error(`Failed to fetch pending queue items: ${fetchError.message}`);
+        }
+
+        const pendingIds = (pendingItems || []).map((item: { id: string }) => item.id);
+
+        if (pendingIds.length === 0) {
+            return NextResponse.json({ cleared: 0 });
+        }
+
+        const { error: fieldsError } = await tableClient
+            .from('event_update_queue_fields')
+            .delete()
+            .in('queue_id', pendingIds);
+
+        if (fieldsError) {
+            throw new Error(`Failed to delete queue fields: ${fieldsError.message}`);
+        }
+
+        const { error: queueDeleteError } = await tableClient
+            .from('event_update_queue')
+            .delete()
+            .in('id', pendingIds);
+
+        if (queueDeleteError) {
+            throw new Error(`Failed to delete queue items: ${queueDeleteError.message}`);
+        }
+
+        return NextResponse.json({
+            cleared: pendingIds.length,
+        });
+    } catch (error) {
+        console.error('Error clearing pending queue items:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return NextResponse.json({ error: message }, { status: 500 });
+    }
+}
+

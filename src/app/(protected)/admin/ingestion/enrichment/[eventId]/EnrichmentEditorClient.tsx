@@ -6,12 +6,31 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
 import type { Database } from '@/types/supabase';
+import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
+
+const toDateTimeLocalValue = (value?: string | null) => {
+    if (!value) return '';
+    const match = value.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+    if (match) return match[1];
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 16);
+};
+
+const parseDateTimeLocalValue = (value: string) => {
+    if (!value) return '';
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) {
+        return `${value}:00`;
+    }
+    return value;
+};
 
 interface Speaker {
     id?: string;
@@ -92,6 +111,7 @@ interface CoreFieldsState {
     timezone: string;
     end_time: string | null;
     language: string;
+    source_url: string;
     registration_url: string;
     livestream_url: string;
     event_image_url: string;
@@ -156,6 +176,7 @@ export default function EnrichmentEditorClient({
         timezone: event.timezone ?? '',
         end_time: event.end_time ?? null,
         language: event.language ?? '',
+        source_url: event.source_url ?? '',
         registration_url: event.registration_url ?? '',
         livestream_url: event.livestream_url ?? '',
         event_image_url: event.event_image_url ?? '',
@@ -211,6 +232,15 @@ export default function EnrichmentEditorClient({
         website_url: event.organizer?.website_url || '',
         social_media: event.organizer?.social_media || null,
     });
+
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+    const expandedDescriptionRef = useRef<HTMLTextAreaElement | null>(null);
+
+    useEffect(() => {
+        if (isDescriptionExpanded) {
+            expandedDescriptionRef.current?.focus();
+        }
+    }, [isDescriptionExpanded]);
 
     // Agenda state (with enhanced metadata)
     const [agendaItems, setAgendaItems] = useState<AgendaItemInput[]>(
@@ -453,19 +483,21 @@ export default function EnrichmentEditorClient({
                 <CardContent>
                     <div className="space-y-2">
                         <p><strong>Title:</strong> {event.title}</p>
-                        {event.source_url && (
-                            <p>
-                                <strong>Source URL:</strong>{' '}
+                        <p>
+                            <strong>Source URL:</strong>{' '}
+                            {coreFields.source_url ? (
                                 <a
-                                    href={event.source_url}
+                                    href={coreFields.source_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-primary hover:underline"
                                 >
-                                    {event.source_url}
+                                    {coreFields.source_url}
                                 </a>
-                            </p>
-                        )}
+                            ) : (
+                                <span className="text-slate-500">Not set</span>
+                            )}
+                        </p>
                         {event.organizer && (
                             <p><strong>Organizer:</strong> {event.organizer.name}</p>
                         )}
@@ -505,13 +537,26 @@ export default function EnrichmentEditorClient({
                 </CardHeader>
                 {expandedSections.basicInfo && (
                     <CardContent className="space-y-4">
-                        <textarea
-                            placeholder="Description"
-                            value={coreFields.description}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, description: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                            rows={4}
-                        />
+                        <div className="space-y-2">
+                            <textarea
+                                placeholder="Description"
+                                value={coreFields.description}
+                                onChange={(e) => setCoreFields(prev => ({ ...prev, description: e.target.value }))}
+                                className="w-full px-3 py-2 border rounded"
+                                rows={4}
+                            />
+                            <div className="flex justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsDescriptionExpanded(true)}
+                                    aria-haspopup="dialog"
+                                >
+                                    Expand editor
+                                </Button>
+                            </div>
+                        </div>
                         <input
                             type="text"
                             placeholder="Location"
@@ -529,8 +574,11 @@ export default function EnrichmentEditorClient({
                         <input
                             type="datetime-local"
                             placeholder="End Time"
-                            value={coreFields.end_time ? new Date(coreFields.end_time).toISOString().slice(0, 16) : ''}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, end_time: e.target.value ? new Date(e.target.value).toISOString() : null }))}
+                            value={toDateTimeLocalValue(coreFields.end_time)}
+                            onChange={(e) => {
+                                const next = parseDateTimeLocalValue(e.target.value);
+                                setCoreFields(prev => ({ ...prev, end_time: next || null }));
+                            }}
                             className="w-full px-3 py-2 border rounded"
                         />
                         <input
@@ -603,22 +651,17 @@ export default function EnrichmentEditorClient({
                             <option value="intermediate">Intermediate</option>
                             <option value="advanced">Advanced</option>
                         </select>
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Tags (multi-select)</label>
-                            <select
-                                multiple
-                                value={relationships.tagIds}
-                                onChange={(e) => {
-                                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                    setRelationships(prev => ({ ...prev, tagIds: selected }));
-                                }}
-                                className="w-full px-3 py-2 border rounded min-h-[100px]"
-                            >
-                                {lookupData.eventTags.map(tag => (
-                                    <option key={tag.id} value={tag.id}>{tag.event_tag}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <MultiSelectDropdown
+                            label="Tags"
+                            placeholder="Select tags..."
+                            options={lookupData.eventTags.map(tag => ({
+                                value: tag.id,
+                                label: tag.event_tag,
+                                category: tag.category ?? undefined,
+                            }))}
+                            selectedValues={relationships.tagIds}
+                            onChange={(values) => setRelationships(prev => ({ ...prev, tagIds: values }))}
+                        />
                         <div>
                             <label className="block text-sm font-medium mb-2">Target Audiences (multi-select + free-form)</label>
                             <select
@@ -688,8 +731,11 @@ export default function EnrichmentEditorClient({
                         <input
                             type="datetime-local"
                             placeholder="Registration Deadline"
-                            value={coreFields.registration_deadline ? new Date(coreFields.registration_deadline).toISOString().slice(0, 16) : ''}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, registration_deadline: e.target.value ? new Date(e.target.value).toISOString() : null }))}
+                            value={toDateTimeLocalValue(coreFields.registration_deadline)}
+                            onChange={(e) => {
+                                const next = parseDateTimeLocalValue(e.target.value);
+                                setCoreFields(prev => ({ ...prev, registration_deadline: next || null }));
+                            }}
                             className="w-full px-3 py-2 border rounded"
                         />
                         <input
@@ -793,6 +839,13 @@ export default function EnrichmentEditorClient({
                 </CardHeader>
                 {expandedSections.urlsMedia && (
                     <CardContent className="space-y-4">
+                        <input
+                            type="url"
+                            placeholder="Source URL"
+                            value={coreFields.source_url}
+                            onChange={(e) => setCoreFields(prev => ({ ...prev, source_url: e.target.value }))}
+                            className="w-full px-3 py-2 border rounded"
+                        />
                         <input
                             type="url"
                             placeholder="Registration URL"
@@ -996,15 +1049,15 @@ export default function EnrichmentEditorClient({
                                     <input
                                         type="datetime-local"
                                         placeholder="Start Time"
-                                        value={item.startTime ? new Date(item.startTime).toISOString().slice(0, 16) : ''}
-                                        onChange={(e) => handleUpdateAgendaItem(index, { startTime: new Date(e.target.value).toISOString() })}
+                                        value={toDateTimeLocalValue(item.startTime)}
+                                        onChange={(e) => handleUpdateAgendaItem(index, { startTime: parseDateTimeLocalValue(e.target.value) })}
                                         className="px-3 py-2 border rounded"
                                     />
                                     <input
                                         type="datetime-local"
                                         placeholder="End Time"
-                                        value={item.endTime ? new Date(item.endTime).toISOString().slice(0, 16) : ''}
-                                        onChange={(e) => handleUpdateAgendaItem(index, { endTime: new Date(e.target.value).toISOString() })}
+                                        value={toDateTimeLocalValue(item.endTime)}
+                                        onChange={(e) => handleUpdateAgendaItem(index, { endTime: parseDateTimeLocalValue(e.target.value) })}
                                         className="px-3 py-2 border rounded"
                                     />
                                 </div>
@@ -1454,6 +1507,55 @@ export default function EnrichmentEditorClient({
                     Back to Dashboard
                 </Button>
             </div>
+
+            {isDescriptionExpanded && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="description-editor-title"
+                >
+                    <div className="flex h-[80vh] w-[min(90vw,900px)] flex-col rounded-xl border border-slate-800 bg-slate-950 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+                            <h2 id="description-editor-title" className="text-base font-semibold text-slate-100">
+                                Edit Description
+                            </h2>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsDescriptionExpanded(false)}
+                                aria-label="Close description editor"
+                            >
+                                ×
+                            </Button>
+                        </div>
+                        <div className="flex-1 overflow-hidden px-5 py-4">
+                            <textarea
+                                ref={expandedDescriptionRef}
+                                value={coreFields.description}
+                                onChange={(e) => setCoreFields(prev => ({ ...prev, description: e.target.value }))}
+                                className="h-full w-full resize-none rounded-lg border border-slate-300 bg-slate-50 p-4 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/40 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-100"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-4">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setIsDescriptionExpanded(false)}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={() => setIsDescriptionExpanded(false)}
+                            >
+                                Done
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

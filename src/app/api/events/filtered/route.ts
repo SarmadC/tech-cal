@@ -38,6 +38,7 @@ interface FilteredEventsRequest {
   myNetwork?: boolean;
   recommended?: boolean;
   sessionId?: string;
+  surface?: 'calendar' | 'discover' | 'default';
 }
 
 interface FilteredEventsResponse {
@@ -114,9 +115,8 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request
     const rawBody: FilteredEventsRequest = await request.json();
-    const { sessionId: telemetrySessionId, ...body } = rawBody;
-    console.log('[API] Request body:', JSON.stringify(body, null, 2));
-    
+    const { sessionId: telemetrySessionId, surface: requestSurface, ...body } = rawBody;
+
     const {
       searchTerm,
       categories = [],
@@ -173,7 +173,8 @@ export async function POST(request: NextRequest) {
       popularity,
       duration,
       myNetwork,
-      recommended
+      recommended,
+      surface: requestSurface
     };
 
     const cacheKey = `fe2:${createHash('sha1').update(JSON.stringify(normalizedSignature)).digest('hex')}`;
@@ -246,7 +247,8 @@ export async function POST(request: NextRequest) {
         user.id,
         page,
         pageSize,
-        telemetryContext
+        telemetryContext,
+        { skipColdStart: requestSurface === 'calendar' }
       );
 
       filteredEvents = result.events;
@@ -279,7 +281,8 @@ export async function POST(request: NextRequest) {
               filteredEvents,
               careerProfile,
               supabase,
-              user.id
+              user.id,
+              false // Disable diversity enhancement for calendar - we want all events, not curated top 20
             );
       }
     } catch (error) {

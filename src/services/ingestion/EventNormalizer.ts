@@ -10,6 +10,8 @@ import type { SupabaseClientType } from '@/types';
 import type { EventSourceRecord } from '@/types/ingestion';
 import type { Database } from '@/types/supabase';
 import * as Sentry from '@sentry/nextjs';
+import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
+import { EventRepository } from './repositories/EventRepository';
 
 export interface NormalizedEventInput {
     sourceEventId: string;
@@ -53,9 +55,12 @@ export class EventNormalizer {
             // Prepare event insert
             type EventInsert = Database['public']['Tables']['events']['Insert'];
 
+            const normalizedDescription =
+                cleanEventDescription(record.description) ?? record.description?.trim() ?? '';
+
             const eventData: EventInsert = {
                 title: record.title,
-                description: record.description ?? '',
+                description: normalizedDescription,
                 start_time: record.startTime,
                 end_time: record.endTime ?? null,
                 timezone: timezone ?? null,
@@ -85,32 +90,31 @@ export class EventNormalizer {
             };
 
             // Insert event
-            const { data: event, error: insertError } = await supabaseClient
-                .from('events')
-                .insert(eventData)
-                .select('id')
-                .single();
-
-            if (insertError) {
-                throw new Error(`Failed to insert event: ${insertError.message}`);
-            }
+            const { eventId } = await EventRepository.upsertEvent(
+                supabaseClient,
+                eventData,
+                {
+                    normalizedUrl: record.normalizedSourceUrl ?? record.sourceUrl,
+                    sourceDomain: record.sourceDomain ?? null,
+                }
+            );
 
             // Link tags if present
             if (record.tags && record.tags.length > 0) {
-                await this.linkEventTags(event.id, record.tags, supabaseClient);
+                await this.linkEventTags(eventId, record.tags, supabaseClient);
             }
 
             // Update source_event to mark as normalized
             await supabaseClient
                 .from('source_events')
                 .update({
-                    normalized_event_id: event.id,
+                    normalized_event_id: eventId,
                     fetch_status: 'normalized',
                 })
                 .eq('id', input.sourceEventId);
 
             return {
-                eventId: event.id,
+                eventId,
                 success: true,
             };
         } catch (error) {

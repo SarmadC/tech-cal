@@ -54,7 +54,7 @@ describe('Atomic Event Tracking', () => {
         p_user_id: 'user1',
         p_event_id: 'event1',
         p_status: 'bookmarked',
-        p_notes: null
+        p_notes: undefined
       });
     });
 

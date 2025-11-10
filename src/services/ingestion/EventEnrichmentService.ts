@@ -9,6 +9,7 @@ import type { SupabaseClientType } from '@/types';
 import type { Database } from '@/types/supabase';
 import * as Sentry from '@sentry/nextjs';
 import { EventUpdateService } from './EventUpdateService';
+import { EventRepository } from './repositories/EventRepository';
 
 // Type aliases for enum validation
 type EventFormatEnum = Database['public']['Enums']['event_format_enum'];
@@ -113,31 +114,6 @@ export class EventEnrichmentService {
                 .select('id, title, start_time, end_time')
                 .eq('event_id', eventId);
 
-            // Delete existing agenda_speakers links first (before deleting parent records)
-            if (existingAgendaItems && existingAgendaItems.length > 0) {
-                const agendaIds = existingAgendaItems.map(a => a.id);
-                const { error: deleteLinksError } = await supabaseClient
-                    .from('agenda_speakers')
-                    .delete()
-                    .in('agenda_id', agendaIds);
-
-                if (deleteLinksError) {
-                    console.warn('Error deleting agenda_speakers links:', deleteLinksError);
-                    // Continue - links might not exist
-                }
-            }
-
-            // Now delete event_agenda rows (after clearing referential integrity issues)
-            const { error: deleteError } = await supabaseClient
-                .from('event_agenda')
-                .delete()
-                .eq('event_id', eventId);
-
-            if (deleteError) {
-                console.error('Error deleting existing agenda items:', deleteError);
-                // Continue - might not have any existing items
-            }
-
             // Insert new agenda items
             const agendaInserts = items.map((item, index) => {
                 const parseMinutes = (time: string | null | undefined): number | null => {
@@ -191,23 +167,20 @@ export class EventEnrichmentService {
                 };
             });
 
-            const { data: insertedAgenda, error: insertError } = await supabaseClient
-                .from('event_agenda')
-                .insert(agendaInserts)
-                .select('id');
-
-            if (insertError || !insertedAgenda) {
-                throw new Error(`Failed to insert agenda items: ${insertError?.message || 'Unknown error'}`);
-            }
+            const insertedAgendaIds = await EventRepository.replaceAgendaItems(
+                supabaseClient,
+                eventId,
+                agendaInserts
+            );
 
             // Link speakers to agenda items
             const agendaSpeakerLinks: Array<{ agenda_id: string; speaker_id: string }> = [];
-            insertedAgenda.forEach((agendaItem, index) => {
+            insertedAgendaIds.forEach((agendaId, index) => {
                 const itemInput = items[index];
                 if (itemInput.speakerIds && itemInput.speakerIds.length > 0) {
                     itemInput.speakerIds.forEach(speakerId => {
                         agendaSpeakerLinks.push({
-                            agenda_id: agendaItem.id,
+                            agenda_id: agendaId,
                             speaker_id: speakerId,
                         });
                     });
@@ -233,15 +206,12 @@ export class EventEnrichmentService {
                 end_time: item.end_time,
             }));
 
-            const newAgendaItems = items.map((item, index) => {
-                const inserted = insertedAgenda[index];
-                return {
-                    id: inserted.id,
-                    title: item.title,
-                    start_time: item.startTime,
-                    end_time: item.endTime,
-                };
-            });
+            const newAgendaItems = items.map((item, index) => ({
+                id: insertedAgendaIds[index],
+                title: item.title,
+                start_time: item.startTime,
+                end_time: item.endTime,
+            }));
 
             // Track edit (upsert to keep only latest)
             await EventUpdateService.trackManualEdit(
@@ -256,7 +226,7 @@ export class EventEnrichmentService {
 
             return {
                 success: true,
-                agendaItemIds: insertedAgenda.map(a => a.id),
+                agendaItemIds: insertedAgendaIds,
             };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -296,73 +266,7 @@ export class EventEnrichmentService {
 
             const previousSpeakerLineup = existingEvent?.speaker_lineup || null;
 
-            const speakerIds: string[] = [];
-
-            for (const speakerInput of speakers) {
-                // Try to find existing speaker by LinkedIn URL
-                let speakerId: string | null = null;
-
-                if (speakerInput.linkedinUrl) {
-                    const { data: existingSpeaker } = await supabaseClient
-                        .from('speakers')
-                        .select('id')
-                        .eq('linkedin_url', speakerInput.linkedinUrl)
-                        .single();
-
-                    if (existingSpeaker) {
-                        speakerId = existingSpeaker.id;
-
-                        // Update existing speaker with new data (only update provided fields)
-                        const updateData: Record<string, unknown> = {
-                            name: speakerInput.name, // Always update name
-                        };
-
-                        // Only update optional fields if they are provided (don't overwrite with null)
-                        if (speakerInput.title !== undefined) updateData.title = speakerInput.title || null;
-                        if (speakerInput.company !== undefined) updateData.company = speakerInput.company || null;
-                        if (speakerInput.bio !== undefined) updateData.bio = speakerInput.bio || null;
-                        if (speakerInput.photoUrl !== undefined) updateData.photo_url = speakerInput.photoUrl || null;
-                        if (speakerInput.twitterUrl !== undefined) updateData.twitter_url = speakerInput.twitterUrl || null;
-                        if (speakerInput.websiteUrl !== undefined) updateData.website_url = speakerInput.websiteUrl || null;
-
-                        const { error: updateError } = await supabaseClient
-                            .from('speakers')
-                            .update(updateData)
-                            .eq('id', speakerId);
-
-                        if (updateError) {
-                            console.warn(`Failed to update speaker ${speakerId}:`, updateError);
-                        }
-                    }
-                }
-
-                // Create new speaker if not found
-                if (!speakerId) {
-                    const { data: newSpeaker, error: createError } = await supabaseClient
-                        .from('speakers')
-                        .insert({
-                            name: speakerInput.name,
-                            linkedin_url: speakerInput.linkedinUrl || null,
-                            title: speakerInput.title || null,
-                            company: speakerInput.company || null,
-                            bio: speakerInput.bio || null,
-                            photo_url: speakerInput.photoUrl || null,
-                            twitter_url: speakerInput.twitterUrl || null,
-                            website_url: speakerInput.websiteUrl || null,
-                        })
-                        .select('id')
-                        .single();
-
-                    if (createError || !newSpeaker) {
-                        console.error(`Failed to create speaker ${speakerInput.name}:`, createError);
-                        continue; // Skip this speaker but continue with others
-                    }
-
-                    speakerId = newSpeaker.id;
-                }
-
-                speakerIds.push(speakerId);
-            }
+            const speakerIds = await EventRepository.upsertSpeakers(supabaseClient, speakers);
 
             // Update event's speaker_lineup JSONB
             const speakerLineup = speakers.map((s) => ({

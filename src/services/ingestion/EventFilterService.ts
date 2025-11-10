@@ -27,6 +27,8 @@ export interface SourceFilterConfig {
     disabled?: boolean;
     /** Additional fields to check (beyond title, description, tags) */
     checkFields?: string[];
+    /** Allow thin online events (location placeholder + no description) */
+    allowThinOnline?: boolean;
 }
 
 /**
@@ -54,7 +56,7 @@ export class EventFilterService {
         }
 
         // Check for low quality indicators (missing data, placeholders)
-        const lowQualityCheck = this.checkLowQuality(record);
+        const lowQualityCheck = this.checkLowQuality(record, sourceConfig);
         if (lowQualityCheck.filtered) {
             return lowQualityCheck;
         }
@@ -172,7 +174,8 @@ export class EventFilterService {
      * @returns FilterResult indicating if event should be filtered due to low quality
      */
     private static checkLowQuality(
-        record: EventSourceRecord
+        record: EventSourceRecord,
+        sourceConfig?: SourceFilterConfig
     ): FilterResult {
         // Check for placeholder organizer
         if (record.organizer) {
@@ -192,13 +195,20 @@ export class EventFilterService {
             const locationLower = record.location.toLowerCase().trim();
             const placeholderLocations = ['tbd', 'tba', 'to be determined', 'to be announced', 'online', 'virtual'];
             if (placeholderLocations.includes(locationLower) && !record.description) {
-                // If location is placeholder AND no description, likely incomplete
-                return {
-                    filtered: true,
-                    reason: 'Location is placeholder and event has no description',
-                    matchedPattern: 'placeholder_location',
-                    category: 'low-quality',
-                };
+                const hasStrongMetadata =
+                    !!record.registrationUrl ||
+                    !!record.livestreamUrl ||
+                    (Array.isArray(record.tags) && record.tags.length > 0) ||
+                    (Array.isArray(record.speakerLineup) && record.speakerLineup.length > 0);
+                if (!hasStrongMetadata && !sourceConfig?.allowThinOnline) {
+                    // If location is placeholder AND no description, and no strong metadata signals, treat as low quality
+                    return {
+                        filtered: true,
+                        reason: 'Location is placeholder and event has no description',
+                        matchedPattern: 'placeholder_location',
+                        category: 'low-quality',
+                    };
+                }
             }
         }
 
@@ -302,12 +312,14 @@ export class EventFilterService {
             disabled?: boolean;
             filterPatterns?: FilterPattern[];
             checkFields?: string[];
+            allow_thin_online?: boolean;
         };
 
         return {
             disabled: filterRules.disabled,
             filterPatterns: filterRules.filterPatterns,
             checkFields: filterRules.checkFields,
+            allowThinOnline: filterRules.allow_thin_online === true,
         };
     }
 

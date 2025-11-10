@@ -1199,6 +1199,125 @@ export type Database = {
           },
         ]
       }
+      extraction_job_log: {
+        Row: {
+          adapter: string | null
+          cache_hit: boolean | null
+          completed_at: string | null
+          confidence: number | null
+          decision: string
+          duration_ms: number | null
+          error: Json | null
+          event_id: string | null
+          firecrawl_credits_spent: number | null
+          firecrawl_used: boolean
+          id: string
+          metadata: Json | null
+          normalized_url: string
+          parser_version: string | null
+          source_domain: string | null
+          source_url: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          adapter?: string | null
+          cache_hit?: boolean | null
+          completed_at?: string | null
+          confidence?: number | null
+          decision: string
+          duration_ms?: number | null
+          error?: Json | null
+          event_id?: string | null
+          firecrawl_credits_spent?: number | null
+          firecrawl_used: boolean
+          id?: string
+          metadata?: Json | null
+          normalized_url: string
+          parser_version?: string | null
+          source_domain?: string | null
+          source_url: string
+          started_at?: string
+          status: string
+        }
+        Update: {
+          adapter?: string | null
+          cache_hit?: boolean | null
+          completed_at?: string | null
+          confidence?: number | null
+          decision?: string
+          duration_ms?: number | null
+          error?: Json | null
+          event_id?: string | null
+          firecrawl_credits_spent?: number | null
+          firecrawl_used?: boolean
+          id?: string
+          metadata?: Json | null
+          normalized_url?: string
+          parser_version?: string | null
+          source_domain?: string | null
+          source_url?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extraction_job_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      page_cache: {
+        Row: {
+          content_hash: string
+          etag: string | null
+          expires_at: string | null
+          extracted: Json | null
+          fetch_metadata: Json | null
+          fetched_at: string
+          id: string
+          last_modified: string | null
+          last_seen_at: string
+          normalized_url: string
+          raw_html: string | null
+          source_domain: string | null
+          status_code: number | null
+        }
+        Insert: {
+          content_hash: string
+          etag?: string | null
+          expires_at?: string | null
+          extracted?: Json | null
+          fetch_metadata?: Json | null
+          fetched_at?: string
+          id?: string
+          last_modified?: string | null
+          last_seen_at?: string
+          normalized_url: string
+          raw_html?: string | null
+          source_domain?: string | null
+          status_code?: number | null
+        }
+        Update: {
+          content_hash?: string
+          etag?: string | null
+          expires_at?: string | null
+          extracted?: Json | null
+          fetch_metadata?: Json | null
+          fetched_at?: string
+          id?: string
+          last_modified?: string | null
+          last_seen_at?: string
+          normalized_url?: string
+          raw_html?: string | null
+          source_domain?: string | null
+          status_code?: number | null
+        }
+        Relationships: []
+      }
       hackathon_participants: {
         Row: {
           availability_pattern: Json | null

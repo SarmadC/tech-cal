@@ -222,6 +222,64 @@ export class EventService {
         }
     }
 
+    /**
+     * Fetch the complete upcoming events dataset for calendar views
+     * without applying user-facing filters or pagination.
+     */
+    static async getCalendarEvents(
+        supabaseClient: SupabaseClientType,
+        options: { startDate?: Date; endDate?: Date; limit?: number; horizonDays?: number } = {}
+    ): Promise<MultiDayEvent[]> {
+        try {
+            const now = new Date();
+            const defaultLowerBound = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lowerBound = options.startDate ?? defaultLowerBound;
+            const horizonDays = options.horizonDays ?? 180;
+            const defaultUpperBound = new Date(now.getTime() + horizonDays * 24 * 60 * 60 * 1000);
+            const upperBound = options.endDate ?? defaultUpperBound;
+            const limit = options.limit ?? 1000;
+
+            let query = supabaseClient
+                .from('events')
+                .select(`
+                    *,
+                    event_type:event_type_id (
+                        id,
+                        name,
+                        color,
+                        description,
+                        icon
+                    ),
+                    organizer:organizers (
+                        id,
+                        name,
+                        logo_url,
+                        website_url
+                    )
+                `)
+                .order('start_time', { ascending: true })
+                .limit(limit);
+
+            query = query
+                .gte('start_time', lowerBound.toISOString())
+                .lte('start_time', upperBound.toISOString());
+
+            const { data, error } = await query;
+
+            if (error) throw error;
+
+            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
+
+            return eventsWithTags.map(enhancedEventTransformer.toApp);
+        } catch (error) {
+            console.error('Error fetching calendar events:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getCalendarEvents' }
+            });
+            throw new Error('Failed to fetch calendar events.');
+        }
+    }
+
     // Refactored: Use events_detailed view (60% less code, tags pre-aggregated)
     static async getEvents(
         filters: EventFilters = {},
@@ -1372,7 +1430,8 @@ export class EventService {
         userId?: string,
         page: number = 1,
         pageSize: number = 100,
-        telemetry?: RecommendationTelemetryContext
+        telemetry?: RecommendationTelemetryContext,
+        options: { skipColdStart?: boolean } = {}
     ): Promise<{ events: Event[]; totalCount: number; isColdStart: boolean }> {
         try {
             // Validate inputs
@@ -1380,9 +1439,12 @@ export class EventService {
             if (pageSize < 1 || pageSize > 1000) pageSize = 100;
             
             // Check if user is in cold start state
-            const isColdStart = userId ? await LookalikeUserService.isColdStartUser(userId, supabaseClient) : false;
-            
-            if (isColdStart && careerProfile && !filters.searchTerm && !filters.categories?.length) {
+            const skipColdStart = options.skipColdStart ?? false;
+            const isColdStart = !skipColdStart && userId
+                ? await LookalikeUserService.isColdStartUser(userId, supabaseClient)
+                : false;
+
+            if (!skipColdStart && isColdStart && careerProfile && !filters.searchTerm && !filters.categories?.length) {
                 // Use lookalike recommendations for cold start users
                 return await this.getColdStartRecommendations(
                     careerProfile,

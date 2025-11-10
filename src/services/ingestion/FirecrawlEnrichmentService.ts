@@ -49,6 +49,8 @@ import {
     buildSpeakerKey,
 } from '@/utils/ingestion/ExtractNormalization';
 import { MultiTrackScheduleFetcher } from './scheduleFetchers/MultiTrackScheduleFetcher';
+import { RulesFirstExtractionService } from './RulesFirstExtractionService';
+import { BudgetGuardService } from './BudgetGuardService';
 
 /**
  * Create a timeout promise that rejects after the specified duration
@@ -117,6 +119,7 @@ const resolveMetadataUrl = (metadata?: MetadataRecord): string | undefined => {
 
 const QUALITY_THRESHOLD_REVIEW = 0.85;
 const QUALITY_THRESHOLD_MODERATION = 0.6;
+const RULES_FIRST_CONFIDENCE_THRESHOLD = 0.7;
 
 const isFeatureFlagEnabled = (value: string | undefined): boolean => {
     if (!value) return true;
@@ -425,18 +428,36 @@ export class FirecrawlEnrichmentService {
             }
         }
 
-        // Update status to in_progress
-        await this.updateEnrichmentStatus(
-            eventId,
-            'in_progress',
-            {
-                ...metadata,
-                attempted_at: new Date().toISOString(),
-                retry_count: retryCount + 1,
-            },
-            null,
-            supabaseClient
-        );
+        const nextMetadata: FirecrawlEnrichmentMetadata = {
+            ...metadata,
+            attempted_at: new Date().toISOString(),
+            retry_count: retryCount + 1,
+        };
+
+        const { data: claimedEvent, error: claimError } = await supabaseClient
+            .from('events')
+            .update({
+                firecrawl_enrichment_status: 'in_progress',
+                firecrawl_enrichment_metadata: nextMetadata as Json,
+            })
+            .eq('id', eventId)
+            .eq('firecrawl_enrichment_status', 'pending')
+            .select('id')
+            .single();
+
+        if (claimError) {
+            console.error(`[FirecrawlEnrichmentService] Failed to claim event ${eventId} for enrichment:`, claimError);
+            return { success: false, error: `Failed to mark event ${eventId} as in_progress` };
+        }
+
+        if (!claimedEvent) {
+            return { success: false, error: 'Another worker claimed this job' };
+        }
+
+        const extractionStartedAt = Date.now();
+        let creditsUsedForLog = 0;
+        let primarySourceForLog: string | null = null;
+        let primaryDomainForLog: string | undefined;
 
         try {
             // Get URLs from event and derive effective targets for Firecrawl
@@ -448,6 +469,7 @@ export class FirecrawlEnrichmentService {
             }
 
             let primarySourceUrl = sourceUrl;
+            primarySourceForLog = sourceUrl;
             const techMemeSourceCandidates = isTechMemeRedirect(sourceUrl)
                 ? resolveTechMemeRedirect(sourceUrl)
                 : [];
@@ -473,6 +495,15 @@ export class FirecrawlEnrichmentService {
             console.log(
                 `[FirecrawlEnrichmentService] Processing enrichment for event ${eventId}, originalSource=${sourceUrl}, effectiveSource=${primarySourceUrl}`
             );
+
+            primaryDomainForLog = (() => {
+                try {
+                    return new URL(primarySourceUrl).hostname.replace(/^www\./, '');
+                } catch {
+                    return undefined;
+                }
+            })();
+            primarySourceForLog = primarySourceUrl;
 
             const isTechMemeSource = techMemeSourceCandidates.length > 0 || isTechMemeRedirect(sourceUrl);
             const useTechMemeFlow = isTechMemeSource && this.isTechMemeExperimentEnabled();
@@ -533,6 +564,7 @@ export class FirecrawlEnrichmentService {
             sourcePages = extractResult.sourcePages;
             pagesScraped = extractResult.pagesProcessed;
             creditsUsed = typeof extractResult.creditsUsed === 'number' ? extractResult.creditsUsed : pagesScraped;
+            creditsUsedForLog = creditsUsed;
             const extractUrls = extractResult.extractUrls;
             let usedScheduleLinks = Array.from(new Set(extractResult.usedScheduleLinks));
             const totalScheduleCredits = Math.min(
@@ -601,6 +633,214 @@ export class FirecrawlEnrichmentService {
 
             // Extract and merge data
             const existingDescription = (event.description as string) || undefined;
+
+            let rulesFirstResult: Awaited<ReturnType<typeof RulesFirstExtractionService.extractFromUrl>> | null = null;
+            try {
+                rulesFirstResult = await RulesFirstExtractionService.extractFromUrl(
+                    primarySourceUrl,
+                    {
+                        minConfidence: RULES_FIRST_CONFIDENCE_THRESHOLD - 0.1,
+                    },
+                    supabaseClient
+                );
+            } catch (rulesError) {
+                console.warn(
+                    `[FirecrawlEnrichmentService] Rules-first extraction failed for ${primarySourceUrl}:`,
+                    rulesError
+                );
+                Sentry.captureException(rulesError, {
+                    extra: { function: 'rulesFirstExtraction', eventId, sourceUrl: primarySourceUrl },
+                });
+            }
+
+            if (rulesFirstResult) {
+                nextMetadata.rules_first = {
+                    confidence: rulesFirstResult.confidence,
+                    field_confidence: rulesFirstResult.fieldConfidence,
+                    content_hash: rulesFirstResult.contentHash,
+                    normalized_url: rulesFirstResult.normalizedUrl,
+                    normalized_url_hash: rulesFirstResult.normalizedUrlHash,
+                    source_domain: rulesFirstResult.sourceDomain,
+                    status_code: rulesFirstResult.statusCode,
+                    cache_hit: rulesFirstResult.cacheHit ?? false,
+                    fallback: !(
+                        rulesFirstResult.success &&
+                        (rulesFirstResult.confidence ?? 0) >= RULES_FIRST_CONFIDENCE_THRESHOLD
+                    ),
+                    reason: !rulesFirstResult.success
+                        ? rulesFirstResult.error || 'rules_first_failed'
+                        : (rulesFirstResult.confidence ?? 0) < RULES_FIRST_CONFIDENCE_THRESHOLD
+                        ? 'confidence_below_threshold'
+                        : undefined,
+                };
+            }
+
+            if (
+                rulesFirstResult?.success &&
+                rulesFirstResult.data &&
+                (rulesFirstResult.confidence ?? 0) >= RULES_FIRST_CONFIDENCE_THRESHOLD
+            ) {
+                console.log(
+                    `[FirecrawlEnrichmentService] Rules-first extraction succeeded for ${primarySourceUrl} (confidence=${(rulesFirstResult.confidence ?? 0).toFixed(2)})`
+                );
+
+                const mergedRulesData = mergeExtractedData([rulesFirstResult.data]);
+                const normalizedRulesData: ExtractedEventData = {
+                    ...mergedRulesData,
+                    description: normalizeDescription(mergedRulesData.description, existingDescription),
+                    agenda: mergedRulesData.agenda ? normalizeAgenda(mergedRulesData.agenda) : undefined,
+                    speakers: mergedRulesData.speakers ? normalizeSpeakers(mergedRulesData.speakers) : undefined,
+                    pricing: mergedRulesData.pricing ? normalizePricing(mergedRulesData.pricing) : undefined,
+                };
+
+                const { fieldsUpdated, fieldDiffs } = await this.updateEventFields(
+                    eventId,
+                    normalizedRulesData,
+                    supabaseClient
+                );
+
+                const uniqueFieldsUpdated = Array.from(new Set(fieldsUpdated));
+                const qualityScore = calculateQualityScore(normalizedRulesData);
+                const ingestionConfidence = Math.max(rulesFirstResult.confidence ?? 0, qualityScore);
+
+                await supabaseClient
+                    .from('events')
+                    .update({ ingestion_confidence: ingestionConfidence })
+                    .eq('id', eventId);
+
+                if (fieldDiffs.length > 0 && uniqueFieldsUpdated.length > 0 && sourceEventRef) {
+                    const autoUpdateResult = await EventUpdateService.logAutoUpdate(
+                        eventId,
+                        sourceEventRef,
+                        uniqueFieldsUpdated,
+                        supabaseClient
+                    );
+                    if (!autoUpdateResult.success) {
+                        console.warn(
+                            `[FirecrawlEnrichmentService] Failed to log auto-update (rules-first) for event ${eventId}: ${autoUpdateResult.error}`
+                        );
+                    }
+                }
+
+                await this.logExtractionJob({
+                    supabaseClient,
+                    eventId,
+                    sourceUrl: primarySourceUrl,
+                    normalizedUrl: rulesFirstResult.normalizedUrl ?? primarySourceUrl,
+                    sourceDomain: rulesFirstResult.sourceDomain ?? primaryDomainForLog ?? null,
+                    firecrawlUsed: false,
+                    firecrawlCredits: 0,
+                    decision: 'rules_first_success',
+                    status: 'completed',
+                    confidence: rulesFirstResult.confidence,
+                    metadata: {
+                        fieldConfidence: rulesFirstResult.fieldConfidence,
+                        cacheHit: rulesFirstResult.cacheHit ?? false,
+                    },
+                    startedAt: new Date(extractionStartedAt),
+                    durationMs: Date.now() - extractionStartedAt,
+                });
+
+                const rulesMetadata: FirecrawlEnrichmentMetadata = {
+                    ...nextMetadata,
+                    attempted_at: nextMetadata.attempted_at || new Date().toISOString(),
+                    completed_at: new Date().toISOString(),
+                    retry_count: retryCount + 1,
+                    enrichment_strategy: 'rules_first',
+                    credits_used: 0,
+                    extraction_quality_score: qualityScore,
+                    ingestion_confidence: ingestionConfidence,
+                    fields_updated: uniqueFieldsUpdated,
+                    rules_first: {
+                        confidence: rulesFirstResult.confidence,
+                        field_confidence: rulesFirstResult.fieldConfidence,
+                        content_hash: rulesFirstResult.contentHash,
+                        normalized_url: rulesFirstResult.normalizedUrl,
+                        normalized_url_hash: rulesFirstResult.normalizedUrlHash,
+                        source_domain: rulesFirstResult.sourceDomain,
+                        status_code: rulesFirstResult.statusCode,
+                        cache_hit: rulesFirstResult.cacheHit ?? false,
+                        fallback: false,
+                    },
+                };
+
+                await this.updateEnrichmentStatus(
+                    eventId,
+                    'completed',
+                    rulesMetadata,
+                    null,
+                    supabaseClient
+                );
+
+                return { success: true };
+            }
+
+            if (rulesFirstResult) {
+                await this.logExtractionJob({
+                    supabaseClient,
+                    eventId,
+                    sourceUrl: primarySourceUrl,
+                    normalizedUrl: rulesFirstResult.normalizedUrl ?? primarySourceUrl,
+                    sourceDomain: rulesFirstResult.sourceDomain ?? primaryDomainForLog ?? null,
+                    firecrawlUsed: false,
+                    firecrawlCredits: 0,
+                    decision: 'rules_first_fallback',
+                    status: 'skipped',
+                    confidence: rulesFirstResult.confidence,
+                    metadata: {
+                        fieldConfidence: rulesFirstResult.fieldConfidence,
+                        cacheHit: rulesFirstResult.cacheHit ?? false,
+                    },
+                    startedAt: new Date(extractionStartedAt),
+                    durationMs: Date.now() - extractionStartedAt,
+                });
+            }
+
+            const budgetCheck = await BudgetGuardService.check(supabaseClient, {
+                sourceDomain: primaryDomainForLog,
+                creditsRequested: FIRECRAWL_CONFIG.ESTIMATED_CREDITS_PER_RUN,
+            });
+
+            if (!budgetCheck.allow) {
+                const budgetMetadata: FirecrawlEnrichmentMetadata = {
+                    ...nextMetadata,
+                    attempted_at: nextMetadata.attempted_at || new Date().toISOString(),
+                    completed_at: new Date().toISOString(),
+                    retry_count: retryCount + 1,
+                    enrichment_strategy: 'skipped_budget',
+                    credits_used: 0,
+                    error_message: budgetCheck.reason || 'Budget cap exceeded',
+                    rules_first: nextMetadata.rules_first,
+                };
+
+                await this.updateEnrichmentStatus(
+                    eventId,
+                    'skipped',
+                    budgetMetadata,
+                    budgetCheck.reason || 'Budget cap exceeded',
+                    supabaseClient
+                );
+
+                await this.logExtractionJob({
+                    supabaseClient,
+                    eventId,
+                    sourceUrl: primarySourceUrl,
+                    normalizedUrl: primarySourceUrl,
+                    sourceDomain: primaryDomainForLog ?? null,
+                    firecrawlUsed: false,
+                    firecrawlCredits: 0,
+                    decision: budgetCheck.reason || 'budget_cap',
+                    status: 'skipped',
+                    metadata: {
+                        usage: budgetCheck.usage,
+                    },
+                    startedAt: new Date(extractionStartedAt),
+                    durationMs: Date.now() - extractionStartedAt,
+                });
+
+                return { success: false, error: budgetCheck.reason || 'Budget cap exceeded' };
+            }
+
             const normalizedExtractedData = this.extractEventFields(
                 sourceResult,
                 sourcePages.length > 0 ? sourcePages : undefined,
@@ -885,6 +1125,30 @@ export class FirecrawlEnrichmentService {
                 );
             }
 
+            const logStatus: 'completed' | 'skipped' =
+                finalStatus === 'completed' ? 'completed' : 'skipped';
+
+            await this.logExtractionJob({
+                supabaseClient,
+                eventId,
+                sourceUrl: primarySourceUrl,
+                normalizedUrl: finalSourceUrl,
+                sourceDomain: primaryDomainForLog ?? null,
+                firecrawlUsed: true,
+                firecrawlCredits: creditsUsedForLog,
+                decision: 'firecrawl_extract',
+                status: logStatus,
+                confidence: ingestionConfidence,
+                metadata: {
+                    fieldsUpdated: uniqueFieldsUpdated,
+                    qualityScore,
+                    scheduleLinksUsed: usedScheduleLinks,
+                    scheduleLinksPending: remainingScheduleLinks,
+                },
+                startedAt: new Date(extractionStartedAt),
+                durationMs: Date.now() - extractionStartedAt,
+            });
+
             return { success: true };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -926,7 +1190,189 @@ export class FirecrawlEnrichmentService {
                 );
             }
 
+            await this.logExtractionJob({
+                supabaseClient,
+                eventId,
+                sourceUrl: primarySourceForLog ?? (event.source_url as string),
+                normalizedUrl: primarySourceForLog ?? (event.source_url as string),
+                sourceDomain: primaryDomainForLog ?? null,
+                firecrawlUsed: true,
+                firecrawlCredits: creditsUsedForLog || 0,
+                decision: 'firecrawl_failed',
+                status: 'failed',
+                metadata: {
+                    error: errorMessage,
+                },
+                startedAt: new Date(extractionStartedAt),
+                durationMs: Date.now() - extractionStartedAt,
+                error: errorMessage,
+            });
+
             return { success: false, error: errorMessage };
+        }
+    }
+
+    private static async logExtractionJob(params: {
+        supabaseClient: SupabaseClientType;
+        eventId: string;
+        sourceUrl: string;
+        normalizedUrl?: string;
+        sourceDomain?: string | null;
+        adapter?: string | null;
+        firecrawlUsed: boolean;
+        firecrawlCredits?: number;
+        decision: string;
+        status: 'completed' | 'skipped' | 'failed';
+        confidence?: number;
+        metadata?: Record<string, unknown>;
+        startedAt?: Date;
+        durationMs?: number;
+        error?: string | null;
+    }): Promise<void> {
+        const {
+            supabaseClient,
+            eventId,
+            sourceUrl,
+            normalizedUrl,
+            sourceDomain,
+            adapter,
+            firecrawlUsed,
+            firecrawlCredits,
+            decision,
+            status,
+            confidence,
+            metadata,
+            startedAt,
+            durationMs,
+            error,
+        } = params;
+
+        try {
+            await supabaseClient
+                .from('extraction_job_log')
+                .insert({
+                    event_id: eventId,
+                    source_url: sourceUrl,
+                    normalized_url: normalizedUrl ?? sourceUrl,
+                    source_domain: sourceDomain ?? null,
+                    adapter: adapter ?? null,
+                    firecrawl_used: firecrawlUsed,
+                    firecrawl_credits_spent: firecrawlCredits ?? null,
+                    decision,
+                    status,
+                    confidence: confidence ?? null,
+                    metadata: metadata ? (metadata as Json) : null,
+                    started_at: startedAt?.toISOString() ?? new Date().toISOString(),
+                    completed_at: new Date().toISOString(),
+                    duration_ms: durationMs ?? null,
+                    error: error ? ({ message: error } as Json) : null,
+                });
+        } catch (logError) {
+            console.warn(
+                '[FirecrawlEnrichmentService] Failed to log extraction job:',
+                logError
+            );
+        }
+    }
+
+    static async fetchDescriptionPreview(
+        sourceUrl: string,
+        registrationUrl?: string | null,
+        existingDescription?: string
+    ): Promise<{ description: string; creditsUsed: number } | null> {
+        const config = getConfig();
+
+        if (!config.enabled) {
+            return null;
+        }
+
+        if (!sourceUrl) {
+            return null;
+        }
+
+        try {
+            let primarySourceUrl = sourceUrl;
+            const techMemeSourceCandidates = isTechMemeRedirect(sourceUrl)
+                ? resolveTechMemeRedirect(sourceUrl)
+                : [];
+            if (techMemeSourceCandidates.length > 0) {
+                primarySourceUrl = techMemeSourceCandidates[0];
+            }
+
+            let primaryRegistrationUrl = registrationUrl ?? null;
+            if (registrationUrl && isTechMemeRedirect(registrationUrl)) {
+                const registrationCandidates = resolveTechMemeRedirect(registrationUrl);
+                if (registrationCandidates.length > 0) {
+                    primaryRegistrationUrl = registrationCandidates[0];
+                }
+            }
+
+            const siteAnalysis = await FirecrawlSiteAnalyzer.analyze(
+                primarySourceUrl,
+                primaryRegistrationUrl || undefined,
+                {
+                    cachedScheduleLinks: [],
+                    cachedScheduleDetails: [],
+                }
+            );
+
+            const isTechMemeSource =
+                techMemeSourceCandidates.length > 0 || isTechMemeRedirect(sourceUrl);
+            const useTechMemeFlow = isTechMemeSource && this.isTechMemeExperimentEnabled();
+
+            const extractResult = await this.runExtractStrategy({
+                primarySourceUrl,
+                primaryRegistrationUrl,
+                siteAnalysis,
+                semanticSchema: useTechMemeFlow ? getSemanticEventSchema() : null,
+                extractionPrompt: useTechMemeFlow
+                    ? extractionPrompts.techMemeExtract
+                    : extractionPrompts.contextualFallback,
+                priorityUrls: siteAnalysis.priorityPages || [],
+                techMemeCandidates: techMemeSourceCandidates,
+                scheduleLinks: [],
+                useScheduleChunks: false,
+            });
+
+            const finalSourceUrl =
+                resolveMetadataUrl(
+                    extractResult.sourceResult.data?.metadata as MetadataRecord | undefined
+                ) || primarySourceUrl;
+
+            if (isBlockedDomain(finalSourceUrl)) {
+                return null;
+            }
+
+            const extractedData = this.extractEventFields(
+                extractResult.sourceResult,
+                extractResult.sourcePages,
+                existingDescription
+            );
+
+            const candidateDescription = extractedData.description?.trim();
+
+            if (!candidateDescription) {
+                return null;
+            }
+
+            if (
+                existingDescription &&
+                candidateDescription.toLowerCase() === existingDescription.trim().toLowerCase()
+            ) {
+                return null;
+            }
+
+            return {
+                description: candidateDescription,
+                creditsUsed:
+                    typeof extractResult.creditsUsed === 'number' ? extractResult.creditsUsed : 0,
+            };
+        } catch (error) {
+            console.warn('[FirecrawlEnrichmentService] Description preview failed:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'fetchDescriptionPreview', sourceUrl },
+            });
+            return null;
         }
     }
 

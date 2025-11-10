@@ -19,16 +19,23 @@ const createMockSupabaseClient = () => {
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
+    not: vi.fn().mockReturnThis(),
     textSearch: vi.fn().mockReturnThis(),
-    single: vi.fn(),
-    maybeSingle: vi.fn(),
-    then: vi.fn(),
+    single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    then: vi.fn((onFulfilled?: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) =>
+      Promise.resolve({ data: [], error: null }).then(onFulfilled, onRejected)
+    ),
   };
 
-  return {
-    from: vi.fn().mockReturnValue(mockQuery),
-    ...mockQuery,
-  };
+  return Object.assign(
+    {
+      from: vi.fn().mockReturnValue(mockQuery),
+      rpc: vi.fn(),
+      __query: mockQuery,
+    },
+    mockQuery
+  );
 };
 
 // Mock Sentry
@@ -57,6 +64,18 @@ vi.mock('@/utils/transformers', () => ({
         name: event.organizer?.name || 'Unknown Organizer',
         logo: event.organizer?.logo_url,
       },
+    })),
+  },
+  eventDetailedTransformer: {
+    toApp: vi.fn((event) => ({
+      id: event.id,
+      title: event.title || 'Untitled Event',
+      description: event.description || '',
+      startTime: event.start_time || new Date().toISOString(),
+      endTime: event.end_time,
+      organizer: event.organizer?.name || 'Unknown Organizer',
+      eventTypeId: event.event_type_id || '',
+      organization: event.organizer,
     })),
   },
   eventTypeTransformer: {
@@ -118,9 +137,7 @@ describe('EventService', () => {
         },
       ];
 
-      // Mock the query chain to return a promise
-      const mockQuery = mockSupabase.from('events');
-      mockQuery.then.mockResolvedValue({
+      mockSupabase.__query.then.mockResolvedValue({
         data: mockEvents,
         error: null,
       });
@@ -132,15 +149,15 @@ describe('EventService', () => {
 
       const result = await EventService.getEvents(filters, mockSupabase as unknown as SupabaseClient, 1, 10);
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('events');
-      expect(mockQuery.select).toHaveBeenCalled();
-      expect(mockQuery.gte).toHaveBeenCalledWith('start_time', '2024-01-01T00:00:00.000Z');
-      expect(mockQuery.lte).toHaveBeenCalledWith('start_time', '2024-01-31T23:59:59.999Z');
+      expect(mockSupabase.from).toHaveBeenCalledWith('events_detailed');
+      expect(mockSupabase.select).toHaveBeenCalled();
+      expect(mockSupabase.gte).toHaveBeenCalledWith('start_time', '2024-01-01T00:00:00.000Z');
+      expect(mockSupabase.lte).toHaveBeenCalledWith('start_time', '2024-01-31T00:00:00.000Z');
       expect(result).toHaveLength(2);
     });
 
     it('should handle empty results', async () => {
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__query.then.mockResolvedValue({
         data: [],
         error: null,
       });
@@ -156,7 +173,7 @@ describe('EventService', () => {
 
     it('should handle database errors', async () => {
       const mockError = new Error('Database connection failed');
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__query.then.mockResolvedValue({
         data: null,
         error: mockError,
       });
@@ -166,7 +183,7 @@ describe('EventService', () => {
       };
 
       await expect(EventService.getEvents(filters, mockSupabase as unknown as SupabaseClient, 1, 10))
-        .rejects.toThrow('Database connection failed');
+        .rejects.toThrow('Failed to fetch events.');
     });
 
     it('should apply search filters', async () => {
@@ -179,7 +196,7 @@ describe('EventService', () => {
         },
       ];
 
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__query.then.mockResolvedValue({
         data: mockEvents,
         error: null,
       });
@@ -191,7 +208,11 @@ describe('EventService', () => {
 
       await EventService.getEvents(filters, mockSupabase as unknown as SupabaseClient, 1, 10);
 
-      expect(mockSupabase.textSearch).toHaveBeenCalledWith('title,description', 'react');
+      expect(mockSupabase.textSearch).toHaveBeenCalledWith(
+        'fts',
+        'react',
+        expect.objectContaining({ type: 'websearch', config: 'english' })
+      );
     });
 
     it('should apply event type filters', async () => {
@@ -205,7 +226,7 @@ describe('EventService', () => {
         },
       ];
 
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__query.then.mockResolvedValue({
         data: mockEvents,
         error: null,
       });
@@ -237,21 +258,20 @@ describe('EventService', () => {
 
       const result = await EventService.getEventById('1', mockSupabase as unknown as SupabaseClient);
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('events');
+      expect(mockSupabase.from).toHaveBeenCalledWith('events_detailed');
       expect(mockSupabase.eq).toHaveBeenCalledWith('id', '1');
       expect(mockSupabase.single).toHaveBeenCalled();
       expect(result).toBeDefined();
     });
 
-    it('should return null if event not found', async () => {
+    it('should throw when event not found', async () => {
       mockSupabase.single.mockResolvedValue({
         data: null,
         error: { code: 'PGRST116', message: 'No rows found' },
       });
 
-      const result = await EventService.getEventById('nonexistent', mockSupabase as unknown as SupabaseClient);
-
-      expect(result).toBeNull();
+      await expect(EventService.getEventById('nonexistent', mockSupabase as unknown as SupabaseClient))
+        .rejects.toThrow('Failed to fetch event with ID: nonexistent.');
     });
 
     it('should throw error for database errors', async () => {
@@ -262,7 +282,7 @@ describe('EventService', () => {
       });
 
       await expect(EventService.getEventById('1', mockSupabase as unknown as SupabaseClient))
-        .rejects.toThrow('Database error');
+        .rejects.toThrow('Failed to fetch event with ID: 1.');
     });
   });
 
@@ -277,10 +297,15 @@ describe('EventService', () => {
         },
       ];
 
-      mockSupabase.then.mockResolvedValue({
-        data: mockEvents,
-        error: null,
-      });
+      mockSupabase.__query.then
+        .mockResolvedValueOnce({
+          data: [{ id: 'type1' }],
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: mockEvents,
+          error: null,
+        });
 
       const result = await EventService.getRecommendedEvents(
         ['React', 'JavaScript'],
@@ -288,16 +313,12 @@ describe('EventService', () => {
         mockSupabase as unknown as SupabaseClient
       );
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('events');
+      expect(mockSupabase.from).toHaveBeenNthCalledWith(1, 'event_type');
+      expect(mockSupabase.from).toHaveBeenNthCalledWith(2, 'events');
       expect(result).toHaveLength(1);
     });
 
     it('should handle empty categories', async () => {
-      mockSupabase.then.mockResolvedValue({
-        data: [],
-        error: null,
-      });
-
       const result = await EventService.getRecommendedEvents(
         [],
         [],
@@ -305,6 +326,7 @@ describe('EventService', () => {
       );
 
       expect(result).toEqual([]);
+      expect(mockSupabase.from).not.toHaveBeenCalled();
     });
   });
 
@@ -319,7 +341,7 @@ describe('EventService', () => {
         },
       ];
 
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__query.then.mockResolvedValue({
         data: mockEvents,
         error: null,
       });
@@ -335,7 +357,7 @@ describe('EventService', () => {
     });
 
     it('should sanitize search query', async () => {
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__query.then.mockResolvedValue({
         data: [],
         error: null,
       });
@@ -387,29 +409,28 @@ describe('EventService', () => {
       expect(result).toBeDefined();
     });
 
-    it('should return null if event not found', async () => {
+    it('should throw if event not found', async () => {
       mockSupabase.single.mockResolvedValue({
         data: null,
         error: { code: 'PGRST116', message: 'No rows found' },
       });
 
-      const result = await EventService.getEventWithAgenda('nonexistent', mockSupabase as unknown as SupabaseClient);
-
-      expect(result).toBeNull();
+      await expect(EventService.getEventWithAgenda('nonexistent', mockSupabase as unknown as SupabaseClient))
+        .rejects.toThrow('Failed to fetch event with agenda for ID: nonexistent. Unknown error');
     });
   });
 
   describe('error handling', () => {
     it('should capture exceptions with Sentry', async () => {
       const mockError = new Error('Test error');
-      mockSupabase.then.mockRejectedValue(mockError);
+      mockSupabase.__query.then.mockRejectedValue(mockError);
 
       const { captureException } = await import('@sentry/nextjs');
 
       await expect(EventService.getEvents({ startDate: new Date() }, mockSupabase as unknown as SupabaseClient, 1, 10))
-        .rejects.toThrow('Test error');
+        .rejects.toThrow('Failed to fetch events.');
 
-      expect(captureException).toHaveBeenCalledWith(mockError);
+      expect(captureException).toHaveBeenCalledWith(mockError, expect.anything());
     });
   });
 });

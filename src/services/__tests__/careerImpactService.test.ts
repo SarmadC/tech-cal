@@ -90,7 +90,7 @@ describe('CareerImpactService', () => {
 
       const result = await CareerImpactService.calculateCareerImpactScore(mockInput, customOptions);
 
-      expect(result.metadata.algorithmVersion).toBe('2.0.0');
+      expect(result.metadata.algorithmVersion).toBe('v2.0.0');
       expect(result.explanation.reasons.length).toBeGreaterThan(0);
     });
 

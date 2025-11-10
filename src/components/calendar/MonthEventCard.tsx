@@ -2,7 +2,7 @@
 
 import React, { memo } from 'react';
 import Image from 'next/image';
-import { Event, MultiDayEventInstance } from '@/types';
+import { Event, MultiDayEvent, MultiDayEventInstance } from '@/types';
 import { isEventPast } from '@/utils/dateUtils';
 
 interface MonthEventCardProps {
@@ -14,6 +14,177 @@ interface MonthEventCardProps {
     style?: React.CSSProperties;
 }
 
+const FALLBACK_ACCENT = 'var(--accent-primary)';
+const FALLBACK_SURFACE = 'rgba(148, 163, 184, 0.14)';
+const FALLBACK_SURFACE_HOVER = 'rgba(148, 163, 184, 0.24)';
+
+const hexToRgba = (hex: string, alpha: number): string | null => {
+    if (!hex.startsWith('#')) {
+        return null;
+    }
+
+    const normalized = hex.length === 4
+        ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+        : hex;
+
+    if (normalized.length !== 7) {
+        return null;
+    }
+
+    const r = parseInt(normalized.slice(1, 3), 16);
+    const g = parseInt(normalized.slice(3, 5), 16);
+    const b = parseInt(normalized.slice(5, 7), 16);
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const getCategoryColor = (event: Event | MultiDayEventInstance) => {
+    if (event.category?.color) return event.category.color;
+    if (event.color) return event.color;
+
+    const categoryName = event.category?.name?.toLowerCase();
+
+    switch (categoryName) {
+        case 'tech summit':
+        case 'summit':
+            return '#3b82f6';
+        case 'workshop':
+            return '#8b5cf6';
+        case 'networking':
+            return '#10b981';
+        case 'conference':
+            return '#0ea5e9';
+        case 'webinar':
+            return '#f97316';
+        case 'startup':
+            return '#ec4899';
+        case 'trade show':
+            return '#6366f1';
+        case 'product launch':
+            return '#f59e0b';
+        case 'training':
+            return '#14b8a6';
+        default:
+            return FALLBACK_ACCENT;
+    }
+};
+
+const getAccentSurfaces = (color: string) => {
+    const surface = hexToRgba(color, 0.18) ?? FALLBACK_SURFACE;
+    const hover = hexToRgba(color, 0.28) ?? FALLBACK_SURFACE_HOVER;
+
+    return { surface, hover };
+};
+
+const formatDateRange = (start: Date, end: Date) => {
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const sameMonth = sameYear && start.getMonth() === end.getMonth();
+
+    const startFormatter = new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        ...(sameYear ? {} : { year: 'numeric' })
+    });
+
+    const endFormatter = new Intl.DateTimeFormat(undefined, {
+        month: sameMonth ? undefined : 'short',
+        day: 'numeric',
+        ...(sameYear ? {} : { year: 'numeric' })
+    });
+
+    const startLabel = startFormatter.format(start);
+    const endLabel = endFormatter.format(end);
+    return startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
+};
+
+const formatSingleDate = (date: Date) =>
+    new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date);
+
+const formatTimeLabel = (event: Event | MultiDayEventInstance) => {
+    const start = new Date(event.startTime);
+    if (Number.isNaN(start.getTime())) {
+        return '';
+    }
+
+    if ('isInstance' in event && event.isInstance && event.dayInfo && event.multiDayStart && event.multiDayEnd) {
+        const originalStart = new Date(event.multiDayStart);
+        const originalEnd = new Date(event.multiDayEnd);
+
+        if (event.dayInfo.isFirstDay) {
+            return formatDateRange(originalStart, originalEnd);
+        }
+
+        if (event.dayInfo.isLastDay) {
+            return `Ends ${formatSingleDate(originalEnd)}`;
+        }
+
+        return `Continues • Ends ${formatSingleDate(originalEnd)}`;
+    }
+
+    const hasMultiDay =
+        'isMultiDay' in event && (event as MultiDayEvent).isMultiDay && event.endTime;
+
+    if (hasMultiDay) {
+        const end = new Date(event.endTime as string);
+        if (!Number.isNaN(end.getTime())) {
+            return formatDateRange(start, end);
+        }
+    }
+
+    const eventPattern = 'eventPattern' in event ? (event as MultiDayEvent).eventPattern : undefined;
+    if (eventPattern === 'all_day') {
+        return 'All day';
+    }
+
+    const formatOptions: Intl.DateTimeFormatOptions = {
+        hour: 'numeric',
+        minute: '2-digit'
+    };
+
+    const startLabel = start.toLocaleTimeString(undefined, formatOptions);
+
+    if (!event.endTime) {
+        return startLabel;
+    }
+
+    const end = new Date(event.endTime);
+    if (Number.isNaN(end.getTime()) || start.toDateString() !== end.toDateString()) {
+        return startLabel;
+    }
+
+    const endLabel = end.toLocaleTimeString(undefined, formatOptions);
+    return startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
+};
+
+const getDurationLabel = (event: Event | MultiDayEventInstance) => {
+    if ('isInstance' in event && event.isInstance && event.dayInfo) {
+        const { totalDays, isFirstDay, isLastDay } = event.dayInfo;
+        if (totalDays <= 1) return null;
+        if (isFirstDay) return `${totalDays} days`;
+        if (isLastDay) return 'Final day';
+        return null;
+    }
+
+    if ('isMultiDay' in event && (event as MultiDayEvent).isMultiDay && event.endTime) {
+        const start = new Date(event.startTime);
+        const end = new Date(event.endTime);
+
+        if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+            const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            if (diff > 1) {
+                return `${diff} days`;
+            }
+        }
+    }
+
+    const eventPattern = 'eventPattern' in event ? (event as MultiDayEvent).eventPattern : undefined;
+    if (eventPattern === 'all_day') {
+        return 'All day';
+    }
+
+    return null;
+};
+
 const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     event,
     onClick,
@@ -22,280 +193,112 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     className = '',
     style = {}
 }) => {
-    // Get category-based background color
-    const getCategoryColor = () => {
-        if (event.category?.color) return event.category.color;
-        if (event.color) return event.color;
-        
-        const categoryName = event.category?.name?.toLowerCase();
-        switch (categoryName) {
-            case 'tech summit':
-            case 'summit':
-                return '#bfdbfe';
-            case 'workshop':
-                return '#e9d7ff';
-            case 'networking':
-                return '#b8ffcc';
-            case 'conference':
-                return '#a7f3d0';
-            case 'webinar':
-                return '#fed8ae';
-            case 'startup':
-                return '#fecaca';
-            case 'trade show':
-                return '#faf3dd';
-            case 'product launch':
-                return '#ffa69e';
-            case 'training':
-                return '#b8f2e6';
-            default:
-                return '#f1f5f9';
-        }
-    };
-
-    // Generate vibrant color for text and elements
-    const getVibrantColor = (baseColor: string) => {
-        if (baseColor.startsWith('#')) {
-            const hex = baseColor.slice(1);
-            const num = parseInt(hex, 16);
-            const r = (num >> 16) & 0xFF;
-            const g = (num >> 8) & 0xFF;
-            const b = num & 0xFF;
-            
-            // Create a darker, more vibrant version
-            const newR = Math.max(0, Math.round(r * 0.6));
-            const newG = Math.max(0, Math.round(g * 0.6));
-            const newB = Math.max(0, Math.round(b * 0.6));
-            
-            return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
-        }
-        return '#374151'; // Fallback dark gray
-    };
-
-    const categoryColor = getCategoryColor();
-    const textColor = getVibrantColor(categoryColor);
+    const accentColor = getCategoryColor(event);
+    const { surface, hover } = getAccentSurfaces(accentColor);
     const isPast = isEventPast(event.startTime, event.endTime);
+    const timeLabelRaw = formatTimeLabel(event);
+    const durationLabelRaw = getDurationLabel(event);
 
-    // Get multi-day dots if applicable
-    const getMultiDayDots = () => {
-        if ('isInstance' in event && event.isInstance && event.dayInfo) {
-            const { currentDay, totalDays } = event.dayInfo;
-            const maxDots = Math.min(totalDays, 5);
-            
-            return (
-                <div 
-                    className="event-day-dots"
-                    style={{
-                        position: 'absolute',
-                        bottom: '12px',
-                        right: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '2px',
-                        zIndex: 10
-                    }}
-                >
-                    {Array.from({ length: maxDots }, (_, i) => (
-                        <div 
-                            key={i} 
-                            className={`day-dot ${i + 1 === currentDay ? 'active' : ''}`}
-                        />
-                    ))}
-                </div>
-            );
+    const composedStyle: React.CSSProperties = {
+        ...style,
+        ['--event-accent-color' as string]: accentColor,
+        ['--event-accent-surface' as string]: surface,
+        ['--event-accent-surface-hover' as string]: hover
+    };
+
+    const spanInfo =
+        'isInstance' in event && event.isInstance && event.dayInfo && event.dayInfo.totalDays > 1
+            ? {
+                isFirst: event.dayInfo.isFirstDay,
+                isLast: event.dayInfo.isLastDay,
+                isSingle: event.dayInfo.isFirstDay && event.dayInfo.isLastDay
+            }
+            : null;
+
+    const spanClasses: string[] = [];
+    if (spanInfo) {
+        if (spanInfo.isSingle) {
+            spanClasses.push('month-event-card--span-single');
+        } else {
+            if (spanInfo.isFirst) spanClasses.push('month-event-card--span-start');
+            if (!spanInfo.isFirst && !spanInfo.isLast) spanClasses.push('month-event-card--span-middle');
+            if (spanInfo.isLast) spanClasses.push('month-event-card--span-end');
         }
-        return null;
-    };
+    }
 
-    const cardStyle: React.CSSProperties = {
-        padding: '12px',
-        height: '120px',
-        minHeight: '120px',
-        position: 'relative',
-        display: 'block',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-        margin: 0,
-        borderRadius: '8px',
-        cursor: 'pointer',
-        // No transitions on the card itself - hover effects are instant
-        // This prevents flickering and provides immediate visual feedback
-        // Month cards in dark mode use neutral dark card; keep text vars for contrast control
-        ['--category-title-color' as unknown as string]: textColor,
-        ['--text-on-pastel' as unknown as string]: textColor,
-        ...style
-    };
+    const isMultiDayInstance =
+        spanInfo !== null ||
+        ('isMultiDay' in event && (event as MultiDayEvent).isMultiDay && !!event.endTime);
+    const isMultiDayFirstDay = spanInfo ? spanInfo.isFirst : !('isInstance' in event);
 
-    // Handle click with proper event propagation
-    const handleClick = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent event bubbling
-        onLeave(); // Immediately hide preview on click
+    const timeLabel = isMultiDayInstance ? '' : timeLabelRaw;
+    const durationLabel = isMultiDayInstance ? null : durationLabelRaw;
+    const showCategory = event.category?.name && (!isMultiDayInstance || isMultiDayFirstDay);
+    const hasMeta = Boolean(timeLabel) || Boolean(durationLabel) || Boolean(showCategory);
+
+    const handleClick = (clickEvent: React.MouseEvent) => {
+        clickEvent.stopPropagation();
+        onLeave();
         onClick();
+    };
+
+    const handleKeyDown = (keyEvent: React.KeyboardEvent) => {
+        if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+            keyEvent.preventDefault();
+            onLeave();
+            onClick();
+        }
     };
 
     return (
         <div
-            style={cardStyle}
-            className={`event-card event-card-v8 ${isPast ? 'past completed-event' : ''} ${className}`}
+            style={composedStyle}
+            className={`month-event-card ${isPast ? 'month-event-card--past' : ''} ${spanClasses.join(' ')} ${className}`.trim()}
             onClick={handleClick}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onLeave(); // Hide preview before triggering click
-                    onClick();
-                }
-            }}
+            onKeyDown={handleKeyDown}
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
             tabIndex={0}
             role="button"
-            aria-label={`Event: ${event.title}${event.location ? ` at ${event.location}` : ''}${event.organizer ? ` by ${event.organizer}` : ''}`}
+            aria-label={`${event.title}${timeLabel ? `, ${timeLabel}` : ''}${durationLabel ? `, ${durationLabel}` : ''}${showCategory ? `, ${event.category!.name}` : ''}`}
         >
-            {/* Event name - top left */}
-            <div 
-                className="event-title" 
-                style={{ 
-                    color: textColor,
-                    position: 'absolute',
-                    top: '12px',
-                    left: '8px',
-                    right: '50px',
-                    fontSize: '0.9rem',
-                    fontWeight: '700',
-                    lineHeight: '1.2',
-                    textAlign: 'left',
-                    margin: 0,
-                    padding: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                }}
-            >
-                {event.title}
-            </div>
-            
-            {/* Time - below event name */}
-            <div 
-                className="event-time" 
-                style={{ 
-                    color: textColor,
-                    position: 'absolute',
-                    top: '34px',
-                    left: '8px',
-                    right: '50px',
-                    fontSize: '0.7rem',
-                    fontWeight: '500',
-                    lineHeight: '1.2',
-                    textAlign: 'left',
-                    margin: 0,
-                    padding: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                }}
-            >
-                {new Date(event.startTime).toLocaleTimeString('en-US', { 
-                    hour: 'numeric', 
-                    minute: '2-digit', 
-                    hour12: true 
-                }).toLowerCase()}
-                {event.endTime && ` - ${new Date(event.endTime).toLocaleTimeString('en-US', { 
-                    hour: 'numeric', 
-                    minute: '2-digit', 
-                    hour12: true 
-                }).toLowerCase()}`}
-            </div>
+            <span className="month-event-card-accent" aria-hidden="true" />
+            <span className="month-event-card-label">{event.title}</span>
 
-            {/* Logo - top right (white-bordered square like mockup) */}
+            {hasMeta && (
+                <span className="month-event-card-meta">
+                    {timeLabel && (
+                        <span className="month-event-card-meta-text">{timeLabel}</span>
+                    )}
+                    {durationLabel && (
+                        <span className="month-event-card-pill">{durationLabel}</span>
+                    )}
+                    {showCategory && (
+                        <span className="month-event-card-pill month-event-card-pill--category">
+                            {event.category!.name}
+                        </span>
+                    )}
+                </span>
+            )}
+
             {event.organization?.logo && (
-                <div 
-                    className="event-organizer-logo-corner"
-                    style={{
-                        position: 'absolute',
-                        top: '12px',
-                        right: '12px',
-                        // Explicitly unset inherited bottom/left from base styles
-                        bottom: 'auto',
-                        left: 'auto',
-                        width: '32px',
-                        height: '32px',
-                        zIndex: 20,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        borderRadius: '4px',
-                        padding: '2px',
-                        boxSizing: 'border-box'
-                    }}
-                >
+                <span className="month-event-card-logo">
                     <Image
                         src={event.organization.logo}
                         alt={`${event.organization.name} logo`}
-                        width={24}
-                        height={24}
-                        className="organizer-logo-corner-image"
-                        onError={(e) => {
-                            e.currentTarget.style.display = 'none';
+                        width={20}
+                        height={20}
+                        onError={(imageEvent) => {
+                            imageEvent.currentTarget.style.visibility = 'hidden';
                         }}
                     />
-                </div>
+                </span>
             )}
-
-            {/* Category pill - below time, left-aligned with title and time */}
-            {event.category?.name && (
-                <div
-                    className="event-category-badge"
-                    style={{
-                        position: 'absolute',
-                        left: '8px',
-                        top: '58px',
-                        zIndex: 30,
-                        pointerEvents: 'none',
-                        margin: 0,
-                        padding: 0,
-                        textAlign: 'left'
-                    }}
-                >
-                    <span
-                        className="event-category-pill"
-                        style={{
-                            backgroundColor: textColor,
-                            color: categoryColor,
-                            padding: '2px 8px',
-                            borderRadius: '9999px',
-                            fontSize: '0.75rem',
-                            fontWeight: 800,
-                            lineHeight: 1.2,
-                            letterSpacing: '0.02em',
-                            border: '1px solid rgba(0,0,0,0.1)',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                            display: 'inline-block',
-                            maxWidth: '100%',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            textAlign: 'center',
-                            margin: 0
-                        }}
-                    >
-                        {event.category.name}
-                    </span>
-                </div>
-            )}
-
-            {/* Dots - bottom right */}
-            {getMultiDayDots()}
         </div>
     );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-// Only re-render if the event ID or handlers actually change
 export const MonthEventCard = memo(MonthEventCardComponent, (prevProps, nextProps) => {
-    // Custom comparison function for better performance
     return (
         prevProps.event.id === nextProps.event.id &&
         prevProps.event.title === nextProps.event.title &&
@@ -303,7 +306,6 @@ export const MonthEventCard = memo(MonthEventCardComponent, (prevProps, nextProp
         prevProps.onHover === nextProps.onHover &&
         prevProps.onLeave === nextProps.onLeave &&
         prevProps.className === nextProps.className
-        // Note: We deliberately don't compare style as it's often a new object
     );
 });
 

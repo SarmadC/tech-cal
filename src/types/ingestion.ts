@@ -27,6 +27,11 @@ export interface EventSourceRecord {
     difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
     eventFormat?: 'virtual' | 'in-person' | 'hybrid';
     speakerLineup?: SpeakerRecord[];
+    normalizedSourceUrl?: string;
+    normalizedSourceUrlHash?: string;
+    normalizedRegistrationUrl?: string;
+    normalizedRegistrationUrlHash?: string;
+    sourceDomain?: string;
     
     // Provenance and confidence
     provenance: IngestionProvenance;
@@ -41,6 +46,8 @@ export interface SpeakerRecord {
     linkedinUrl?: string;
     githubUrl?: string;
     photoUrl?: string;
+    twitterUrl?: string;
+    websiteUrl?: string;
 }
 
 export interface IngestionProvenance {
@@ -56,6 +63,12 @@ export interface IngestionProvenance {
     };
     fetched_at: string; // ISO timestamp
     collector_version?: string;
+    normalized_url?: string;
+    normalized_url_hash?: string;
+    registration_normalized_url?: string;
+    registration_normalized_url_hash?: string;
+    source_domain?: string;
+    cache_hit?: boolean;
 }
 
 export interface CollectorResult {

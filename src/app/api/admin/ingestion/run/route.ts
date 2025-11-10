@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
                 successful: results.filter(r => r.success).length,
                 failed: results.filter(r => !r.success).length,
                 totalEventsFetched: results.reduce((sum, r) => sum + r.eventsFetched, 0),
-                totalEventsNormalized: results.reduce((sum, r) => sum + r.eventsNormalized, 0),
+                totalRecordsQueued: results.reduce((sum, r) => sum + r.recordsQueued, 0),
                 totalErrors: results.reduce((sum, r) => sum + r.errors, 0),
             },
             normalization: {

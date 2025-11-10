@@ -4,12 +4,40 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { format, formatDistanceToNow } from 'date-fns';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-import { format } from 'date-fns';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { AdminDataTable, type AdminDataTableColumn } from '@/components/admin/AdminDataTable';
+import { useAdminToolbar } from '@/contexts/AdminToolbarContext';
+import useAdminHotkeys from '@/components/admin/useAdminHotkeys';
+import { useDebounce } from '@/hooks/useDebounce';
+import { cn } from '@/lib/utils';
+import { MaterialIcon } from '@/components/ui/Icon';
+import { useSnackbar } from '@/contexts/SnackbarContext';
+
+const STATUS_OPTIONS = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+    { value: 'all', label: 'All' },
+] as const;
+
+const VIEW_STORAGE_KEY = 'techcal.admin.updateQueue.view';
+const PAGE_SIZE_STORAGE_KEY = 'techcal.admin.updateQueue.pageSize';
+const COLUMNS_STORAGE_KEY = 'techcal.admin.updateQueue.columns';
+
+type ColumnVisibility = {
+    status: boolean;
+    metrics: boolean;
+    created: boolean;
+    actions: boolean;
+};
 
 interface QueueItem {
     id: string;
@@ -35,212 +63,794 @@ interface QueueItem {
     };
 }
 
+const statusBadgeStyles: Record<QueueItem['status'], string> = {
+    pending: 'bg-amber-400/15 text-amber-200 border border-amber-500/30',
+    approved: 'bg-emerald-400/15 text-emerald-200 border border-emerald-500/30',
+    rejected: 'bg-rose-500/15 text-rose-200 border border-rose-500/30',
+    auto_applied: 'bg-sky-500/15 text-sky-200 border border-sky-500/30',
+    partially_approved: 'bg-purple-500/15 text-purple-200 border border-purple-500/30',
+};
+
 export default function UpdateQueueClient() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
+    const statusParam = searchParams.get('status') ?? 'pending';
+    const sortParam = searchParams.get('sort') ?? 'created_at';
+    const directionParam = searchParams.get('direction') === 'asc' ? 'asc' : 'desc';
+    const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10) || 1;
+    const pageSizeParam = Number.parseInt(searchParams.get('pageSize') ?? '20', 10) || 20;
+    const viewParam = searchParams.get('view');
+    const queryParam = searchParams.get('q') ?? '';
+
     const [items, setItems] = useState<QueueItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [statusFilter, setStatusFilter] = useState<string>('pending');
-    const [page, setPage] = useState(1);
+    const [clearing, setClearing] = useState(false);
+    const [shortcutsOpen, setShortcutsOpen] = useState(false);
+    const [selectedRows, setSelectedRows] = useState<string[]>([]);
     const [pagination, setPagination] = useState({
-        page: 1,
-        pageSize: 20,
+        page: pageParam,
+        pageSize: pageSizeParam,
         total: 0,
         totalPages: 0,
     });
+    const [visibleColumns, setVisibleColumns] = useState<ColumnVisibility>({
+        status: true,
+        metrics: true,
+        created: true,
+        actions: true,
+    });
+    const [columnsPanelOpen, setColumnsPanelOpen] = useState(false);
+
+    const viewMode = viewParam === 'cards' ? 'cards' : 'table';
+
+    const [searchTerm, setSearchTerm] = useState(queryParam);
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+    const {
+        setTitle,
+        setSubtitle,
+        setSearch,
+        setQuickFilters,
+        setToolbarContent,
+        focusSearch,
+    } = useAdminToolbar();
+    const { showSuccess, showError, showInfo } = useSnackbar();
+
+    const columnsPanelRef = useRef<HTMLDivElement>(null);
+
+    const updateQuery = useCallback(
+        (updates: Record<string, string | number | undefined>, options: { resetPage?: boolean } = {}) => {
+            const next = new URLSearchParams(searchParams.toString());
+
+            Object.entries(updates).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') {
+                    next.delete(key);
+                } else {
+                    next.set(key, String(value));
+                }
+            });
+
+            if (options.resetPage && updates.page === undefined) {
+                next.set('page', '1');
+            }
+
+            const searchString = next.toString();
+            router.replace(searchString ? `${pathname}?${searchString}` : pathname, { scroll: false });
+        },
+        [pathname, router, searchParams]
+    );
+
+    useEffect(() => {
+        setTitle('Update Queue');
+        setSubtitle('Review ingestion merges, auto-applied updates, and manual overrides at scale.');
+    }, [setTitle, setSubtitle]);
+
+    useEffect(() => {
+        setSearch({
+            placeholder: 'Search titles, organizers, event or source IDs',
+            value: searchTerm,
+            onChange: (value: string) => {
+                setSearchTerm(value);
+            },
+            onSubmit: (value: string) => {
+                setSearchTerm(value);
+                updateQuery({ q: value || undefined, page: 1 }, { resetPage: true });
+            },
+        });
+
+        return () => {
+            setSearch(undefined);
+        };
+    }, [searchTerm, setSearch, updateQuery]);
+
+    useEffect(() => {
+        if (debouncedSearchTerm === queryParam) return;
+        updateQuery({ q: debouncedSearchTerm || undefined, page: 1 }, { resetPage: true });
+    }, [debouncedSearchTerm, queryParam, updateQuery]);
+
+    useEffect(() => {
+        setToolbarContent(undefined);
+        return () => setToolbarContent(undefined);
+    }, [setToolbarContent]);
+
+    useEffect(() => {
+        setSearchTerm(queryParam);
+    }, [queryParam]);
+
+    useEffect(() => {
+        const statusCounts = items.reduce<Record<string, number>>((acc, item) => {
+            acc[item.status] = (acc[item.status] ?? 0) + 1;
+            return acc;
+        }, {});
+        const totalCount = items.length;
+
+        setQuickFilters(
+            STATUS_OPTIONS.map((option) => ({
+                id: option.value,
+                label: option.label,
+                active: option.value === 'all' ? statusParam === 'all' : statusParam === option.value,
+                badge:
+                    option.value === 'all'
+                        ? totalCount || undefined
+                        : statusCounts[option.value] || undefined,
+                onToggle: () => {
+                    setSelectedRows([]);
+                    if (option.value === 'all') {
+                        updateQuery({ status: undefined, page: 1 }, { resetPage: true });
+                    } else {
+                        updateQuery({ status: option.value, page: 1 }, { resetPage: true });
+                    }
+                },
+            }))
+        );
+    }, [items, statusParam, setQuickFilters, updateQuery]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        if (!viewParam) {
+            const storedView = window.localStorage.getItem(VIEW_STORAGE_KEY);
+            if (storedView === 'table' || storedView === 'cards') {
+                updateQuery({ view: storedView });
+            }
+        }
+    }, [viewParam, updateQuery]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        if (!searchParams.has('pageSize')) {
+            const storedPageSize = window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY);
+            const parsed = storedPageSize ? Number.parseInt(storedPageSize, 10) : null;
+            if (parsed && !Number.isNaN(parsed) && parsed !== pageSizeParam) {
+                updateQuery({ pageSize: parsed });
+            }
+        }
+    }, [pageSizeParam, searchParams, updateQuery]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const stored = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
+        if (!stored) return;
+        try {
+            const parsed = JSON.parse(stored) as Partial<ColumnVisibility>;
+            setVisibleColumns((prev) => ({
+                ...prev,
+                ...Object.fromEntries(
+                    Object.entries(parsed).map(([key, value]) => [key, Boolean(value)])
+                ) as ColumnVisibility,
+            }));
+        } catch {
+            // ignore parse errors
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.localStorage.setItem(VIEW_STORAGE_KEY, viewMode);
+    }, [viewMode]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(pageSizeParam));
+    }, [pageSizeParam]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(visibleColumns));
+    }, [visibleColumns]);
+
+    useEffect(() => {
+        if (!columnsPanelOpen) return;
+        const handleClick = (event: MouseEvent) => {
+            if (columnsPanelRef.current && !columnsPanelRef.current.contains(event.target as Node)) {
+                setColumnsPanelOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [columnsPanelOpen]);
 
     const fetchQueueItems = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(
-                `/api/admin/ingestion/update-queue?status=${statusFilter}&page=${page}&pageSize=20`
-            );
+            const query = new URLSearchParams();
+            if (statusParam !== 'all') {
+                query.set('status', statusParam);
+            }
+            query.set('page', String(pageParam));
+            query.set('pageSize', String(pageSizeParam));
+            query.set('sort', sortParam);
+            query.set('direction', directionParam);
+            if (queryParam) {
+                query.set('q', queryParam);
+            }
+
+            const response = await fetch(`/api/admin/ingestion/update-queue?${query.toString()}`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
                 const errorMessage = errorData.error || `HTTP ${response.status}: Failed to fetch queue items`;
-                
-                // Check if it's a table not found error
                 if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
-                    setError('Database tables not found. Please run migrations: 20250101000010, 20250101000011, 20250101000012');
+                    setError(
+                        'Database tables not found. Please run migrations: 20250101000010, 20250101000011, 20250101000012'
+                    );
                 } else {
                     setError(errorMessage);
                 }
                 throw new Error(errorMessage);
             }
+
             const data = await response.json();
             setItems(data.items || []);
-            setPagination(data.pagination || {
-                page,
-                pageSize: 20,
-                total: 0,
-                totalPages: 0,
-            });
-        } catch (error) {
-            console.error('Error fetching queue items:', error);
-            // Error state is already set above
+            setPagination(
+                data.pagination || {
+                    page: pageParam,
+                    pageSize: pageSizeParam,
+                    total: data.items?.length ?? 0,
+                    totalPages: data.pagination?.totalPages ?? Math.max(1, Math.ceil((data.pagination?.total ?? data.items?.length ?? 0) / pageSizeParam)),
+                }
+            );
+            setSelectedRows([]);
+        } catch (err) {
+            console.error('Error fetching queue items:', err);
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, page]);
+    }, [statusParam, pageParam, pageSizeParam, sortParam, directionParam, queryParam]);
 
     useEffect(() => {
         fetchQueueItems();
     }, [fetchQueueItems]);
 
-    const getStatusBadge = (status: string) => {
-        const colors = {
-            pending: 'bg-yellow-100 text-yellow-800',
-            approved: 'bg-green-100 text-green-800',
-            rejected: 'bg-red-100 text-red-800',
-            auto_applied: 'bg-blue-100 text-blue-800',
-            partially_approved: 'bg-orange-100 text-orange-800',
-        };
-        return (
-            <Badge className={colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
-                {status.replace('_', ' ').toUpperCase()}
-            </Badge>
-        );
-    };
+    useEffect(() => {
+        if (viewMode === 'cards' && selectedRows.length > 0) {
+            setSelectedRows([]);
+        }
+    }, [viewMode, selectedRows.length]);
 
-    if (loading && items.length === 0) {
-        return <div className="text-center py-8">Loading queue items...</div>;
-    }
+    useEffect(() => {
+        setSelectedRows((prev) =>
+            prev.filter((id) => items.some((item) => item.id === id))
+        );
+    }, [items]);
+
+    const handleClearPending = useCallback(async () => {
+        setClearing(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/admin/ingestion/update-queue', {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Failed to clear pending updates.' }));
+                throw new Error(errorData.error || `HTTP ${response.status}: Failed to clear pending updates.`);
+            }
+
+            const { cleared = 0 } = await response.json().catch(() => ({ cleared: 0 }));
+
+            showSuccess(`Cleared ${cleared} pending ${cleared === 1 ? 'update' : 'updates'}.`);
+            updateQuery({ page: 1 }, { resetPage: true });
+            await fetchQueueItems();
+        } catch (err) {
+            console.error('Error clearing pending queue items:', err);
+            const message = err instanceof Error ? err.message : 'Failed to clear pending updates.';
+            setError(message);
+            showError(message);
+        } finally {
+            setClearing(false);
+        }
+    }, [fetchQueueItems, showError, showSuccess, updateQuery]);
+
+    const toggleColumnVisibility = useCallback((key: keyof ColumnVisibility) => {
+        setVisibleColumns((prev) => {
+            const activeCount = Object.values(prev).filter(Boolean).length;
+            const nextValue = !prev[key];
+            if (!nextValue && activeCount <= 1) {
+                return prev;
+            }
+            return {
+                ...prev,
+                [key]: nextValue,
+            };
+        });
+    }, []);
+
+    const moveSelection = useCallback(
+        (direction: 'next' | 'prev') => {
+            if (viewMode !== 'table') return;
+            if (items.length === 0) return;
+            const ids = items.map((item) => item.id);
+            setSelectedRows((prev) => {
+                if (prev.length === 0) {
+                    const fallback = direction === 'next' ? ids[0] : ids[ids.length - 1];
+                    return [fallback];
+                }
+                const currentId = prev[prev.length - 1];
+                const currentIndex = ids.indexOf(currentId);
+                if (currentIndex === -1) {
+                    const fallback = direction === 'next' ? ids[0] : ids[ids.length - 1];
+                    return [fallback];
+                }
+                const nextIndex =
+                    direction === 'next'
+                        ? Math.min(ids.length - 1, currentIndex + 1)
+                        : Math.max(0, currentIndex - 1);
+                return [ids[nextIndex]];
+            });
+        },
+        [items, viewMode]
+    );
+
+    const handleUnavailableBulkAction = useCallback(
+        (label: string) => {
+            if (selectedRows.length === 0) {
+                showInfo('Select rows in table view before triggering bulk actions.');
+                return;
+            }
+            showInfo(`Bulk ${label} is coming soon. Review items individually in the meantime.`);
+        },
+        [selectedRows.length, showInfo]
+    );
+
+    useAdminHotkeys({
+        focusSearch,
+        openHelp: () => setShortcutsOpen(true),
+        onApproveSelected: () => handleUnavailableBulkAction('approve'),
+        onRejectSelected: () => handleUnavailableBulkAction('reject'),
+        onMarkPending: () => handleUnavailableBulkAction('reset'),
+        onNavigateNext: () => moveSelection('next'),
+        onNavigatePrevious: () => moveSelection('prev'),
+    });
+
+    useEffect(() => {
+        if (!shortcutsOpen) return;
+        const handleKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setShortcutsOpen(false);
+            }
+        };
+        document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, [shortcutsOpen]);
+
+    const columns: AdminDataTableColumn<QueueItem>[] = useMemo(() => {
+        const base: AdminDataTableColumn<QueueItem>[] = [
+            {
+                key: 'event',
+                header: 'Event',
+                render: (item) => (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-slate-100">{item.event?.title ?? 'Untitled Event'}</span>
+                            {item.requires_review_reason && (
+                                <Badge className="bg-slate-800 text-xs text-slate-200">
+                                    Needs review
+                                </Badge>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-xs text-slate-400">
+                            <span>{item.event?.organizer?.name ?? 'Unknown organizer'}</span>
+                            {item.event?.start_time && (
+                                <span>{format(new Date(item.event.start_time), 'MMM d, yyyy')}</span>
+                            )}
+                            <span>Update ID: {item.id}</span>
+                            <span>
+                                Source:{' '}
+                                {item.event?.title ? (
+                                    <span className="font-medium text-slate-200">{item.event.title}</span>
+                                ) : (
+                                    item.source_event_id ?? 'N/A'
+                                )}
+                            </span>
+                        </div>
+                    </div>
+                ),
+            },
+        ];
+
+        if (visibleColumns.status) {
+            base.push({
+                key: 'status',
+                header: 'Status',
+                render: (item) => (
+                    <Badge className={cn('px-3 py-1 text-[11px] font-medium uppercase tracking-wide', statusBadgeStyles[item.status])}>
+                        {item.status.replace('_', ' ')}
+                    </Badge>
+                ),
+                align: 'center',
+                width: 120,
+            });
+        }
+
+        if (visibleColumns.metrics) {
+            base.push({
+                key: 'metrics',
+                header: 'Fields',
+                render: (item) => (
+                    <div className="grid gap-1 text-xs text-slate-300">
+                        <div className="flex items-center justify-between gap-6">
+                            <span className="text-slate-400">Total</span>
+                            <span className="font-medium text-slate-100">{item.fieldCounts.total}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-6">
+                            <span className="text-slate-400">Pending</span>
+                            <span className="font-medium text-amber-300">{item.fieldCounts.pending}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-6">
+                            <span className="text-slate-400">Approved</span>
+                            <span className="font-medium text-emerald-300">{item.fieldCounts.approved}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-6">
+                            <span className="text-slate-400">Rejected</span>
+                            <span className="font-medium text-rose-300">{item.fieldCounts.rejected}</span>
+                        </div>
+                    </div>
+                ),
+                width: 200,
+            });
+        }
+
+        if (visibleColumns.created) {
+            base.push({
+                key: 'created_at',
+                header: 'Queued',
+                sortable: true,
+                render: (item) => (
+                    <div className="flex flex-col text-xs text-slate-300">
+                        <span>{format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}</span>
+                        <span className="text-slate-500">
+                            {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                        </span>
+                    </div>
+                ),
+                width: 160,
+            });
+        }
+
+        if (visibleColumns.actions) {
+            base.push({
+                key: 'actions',
+                header: 'Review',
+                render: (item) => (
+                    <Link href={`/admin/ingestion/update-queue/${item.id}`} className="inline-flex">
+                        <Button size="sm" variant="secondary">
+                            Open
+                        </Button>
+                    </Link>
+                ),
+                align: 'center',
+                width: 120,
+            });
+        }
+
+        return base;
+    }, [visibleColumns]);
+
+    const bulkActions = useMemo(
+        () => [
+            {
+                id: 'bulk-approve',
+                label: 'Approve',
+                icon: <MaterialIcon name="check" size={14} />,
+                shortcut: 'a',
+                tooltip: 'Bulk approve is coming soon.',
+                disabled: true,
+                onSelect: () => handleUnavailableBulkAction('approve'),
+            },
+            {
+                id: 'bulk-reject',
+                label: 'Reject',
+                icon: <MaterialIcon name="clear" size={14} />,
+                shortcut: 'r',
+                tooltip: 'Bulk reject is coming soon.',
+                disabled: true,
+                onSelect: () => handleUnavailableBulkAction('reject'),
+            },
+            {
+                id: 'bulk-reset',
+                label: 'Mark pending',
+                icon: <MaterialIcon name="refresh" size={14} />,
+                shortcut: 'p',
+                tooltip: 'Bulk status changes are coming soon.',
+                disabled: true,
+                onSelect: () => handleUnavailableBulkAction('reset'),
+            },
+        ],
+        [handleUnavailableBulkAction]
+    );
+
+    const tableToolbar = (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs uppercase tracking-wide text-slate-400">
+                {loading
+                    ? 'Loading...'
+                    : `Showing ${items.length} of ${pagination.total || items.length} items`}
+            </div>
+            <div className="flex items-center gap-2">
+                <div ref={columnsPanelRef} className="relative">
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setColumnsPanelOpen((prev) => !prev)}
+                        className="bg-slate-900/60 text-slate-200 hover:bg-slate-800"
+                        aria-expanded={columnsPanelOpen}
+                        aria-haspopup="true"
+                    >
+                        <MaterialIcon name="settings" size={14} />
+                        Columns
+                    </Button>
+                    {columnsPanelOpen && (
+                        <div className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-slate-800 bg-slate-950 p-3 shadow-xl">
+                            <p className="mb-2 text-xs font-semibold uppercase text-slate-400">Visible columns</p>
+                            <div className="space-y-2 text-sm text-slate-200">
+                                {(
+                                    [
+                                        ['status', 'Status & badges'],
+                                        ['metrics', 'Field metrics'],
+                                        ['created', 'Queued date'],
+                                        ['actions', 'Quick actions'],
+                                    ] as Array<[keyof ColumnVisibility, string]>
+                                ).map(([key, label]) => (
+                                    <label key={key} className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-primary focus:ring-2 focus:ring-primary"
+                                            checked={visibleColumns[key]}
+                                            onChange={() => toggleColumnVisibility(key)}
+                                        />
+                                        <span>{label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <p className="mt-3 text-[11px] text-slate-500">
+                                Preferences sync to your browser.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
+    const viewControls = (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800/60 bg-slate-950/60 px-4 py-3">
+            <div className="flex items-center gap-2">
+                <span className="text-xs uppercase tracking-wide text-slate-500">View</span>
+                <Button
+                    type="button"
+                    size="sm"
+                    variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                    onClick={() => updateQuery({ view: 'table' })}
+                    aria-pressed={viewMode === 'table'}
+                >
+                    Table
+                </Button>
+                <Button
+                    type="button"
+                    size="sm"
+                    variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
+                    onClick={() => updateQuery({ view: 'cards' })}
+                    aria-pressed={viewMode === 'cards'}
+                >
+                    Cards
+                </Button>
+            </div>
+            <div className="flex items-center gap-2">
+                {statusParam === 'pending' && (
+                    <ConfirmationDialog
+                        triggerLabel="Clear pending"
+                        title="Clear all pending updates?"
+                        description="This permanently deletes every pending queue entry. This action cannot be undone."
+                        confirmLabel="Delete"
+                        cancelLabel="Cancel"
+                        variant="destructive"
+                        onConfirm={handleClearPending}
+                        disabled={clearing || loading}
+                    />
+                )}
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShortcutsOpen(true)}
+                >
+                    <MaterialIcon name="info" size={14} />
+                    Shortcuts
+                </Button>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
-            {/* Error Message */}
+        <div className="space-y-5">
             {error && (
-                <Card className="border-red-200 bg-red-50">
-                    <CardContent className="pt-6">
-                        <div className="text-red-800">
-                            <strong>Error:</strong> {error}
+                <Card className="border border-rose-500/30 bg-rose-500/10 text-rose-100">
+                    <CardContent className="flex items-start justify-between gap-4 pt-4">
+                        <div>
+                            <strong className="block text-sm font-semibold">Error</strong>
+                            <p className="text-sm">{error}</p>
                         </div>
+                        <Button variant="ghost" size="sm" onClick={() => setError(null)} className="text-rose-200 hover:bg-rose-500/20">
+                            Dismiss
+                        </Button>
                     </CardContent>
                 </Card>
             )}
 
-            {/* Filters */}
-            <Card>
-                <CardContent className="pt-6">
-                    <div className="flex gap-2">
-                        {['pending', 'approved', 'rejected', 'all'].map((status) => (
-                            <Button
-                                key={status}
-                                variant={statusFilter === status ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => {
-                                    setStatusFilter(status);
-                                    setPage(1);
-                                }}
-                            >
-                                {status.charAt(0).toUpperCase() + status.slice(1)}
-                            </Button>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+            {viewControls}
 
-            {/* Queue Items */}
-            {!loading && !error && items.length === 0 ? (
-                <Card>
-                    <CardContent className="py-8 text-center text-gray-500">
-                        No queue items found for status: {statusFilter}
-                    </CardContent>
-                </Card>
+            {viewMode === 'table' ? (
+                <AdminDataTable
+                    columns={columns}
+                    rows={items}
+                    getRowId={(item) => item.id}
+                    sortKey={sortParam}
+                    sortDirection={directionParam}
+                    onSortChange={(key, direction) => {
+                        updateQuery({ sort: key, direction });
+                    }}
+                    isLoading={loading}
+                    selectable
+                    selectedRowIds={selectedRows}
+                    onSelectionChange={setSelectedRows}
+                    bulkActions={bulkActions}
+                    page={pageParam}
+                    pageSize={pageSizeParam}
+                    total={pagination.total}
+                    onPageChange={(nextPage) => updateQuery({ page: nextPage })}
+                    onPageSizeChange={(nextSize) => updateQuery({ pageSize: nextSize, page: 1 }, { resetPage: true })}
+                    toolbar={tableToolbar}
+                />
             ) : (
                 <div className="space-y-4">
-                    {items.map((item) => (
-                        <Card key={item.id} className="hover:shadow-md transition-shadow">
-                            <CardHeader>
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <CardTitle className="text-lg mb-2">
-                                            {item.event?.title || 'Untitled Event'}
-                                        </CardTitle>
-                                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                                            {item.event?.organizer && (
-                                                <span>Organizer: {item.event.organizer.name}</span>
-                                            )}
-                                            {item.event?.start_time && (
-                                                <span>
-                                                    {format(new Date(item.event.start_time), 'MMM d, yyyy')}
-                                                </span>
-                                            )}
+                    {loading && items.length === 0 ? (
+                        <div className="rounded-lg border border-slate-800/60 bg-slate-950/60 px-6 py-12 text-center text-sm text-slate-400">
+                            Loading queue items…
+                        </div>
+                    ) : items.length === 0 ? (
+                        <div className="rounded-lg border border-slate-800/60 bg-slate-950/60 px-6 py-12 text-center text-sm text-slate-400">
+                            No queue items match the current filters.
+                        </div>
+                    ) : (
+                        items.map((item) => (
+                            <Card key={item.id} className="border border-slate-800/60 bg-slate-950/70 text-slate-200 shadow-sm">
+                                <CardHeader className="flex flex-col gap-2">
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <CardTitle className="text-lg font-semibold text-slate-100">
+                                                {item.event?.title ?? 'Untitled Event'}
+                                            </CardTitle>
+                                            <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-400">
+                                                <span>{item.event?.organizer?.name ?? 'Unknown organizer'}</span>
+                                                {item.event?.start_time && (
+                                                    <span>{format(new Date(item.event.start_time), 'MMM d, yyyy')}</span>
+                                                )}
+                                                <span>Update ID: {item.id}</span>
+                                                <span>Source: {item.source_event_id ?? 'N/A'}</span>
+                                            </div>
                                         </div>
+                                        <Badge className={cn('px-3 py-1 text-[11px] font-medium uppercase tracking-wide', statusBadgeStyles[item.status])}>
+                                            {item.status.replace('_', ' ')}
+                                        </Badge>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        {getStatusBadge(item.status)}
+                                    {item.requires_review_reason && (
+                                        <p className="text-sm text-slate-300">
+                                            <span className="font-medium text-slate-200">Review:</span> {item.requires_review_reason}
+                                        </p>
+                                    )}
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-3 text-sm text-slate-300 md:grid-cols-4">
+                                        <MetricItem label="Total fields" value={item.fieldCounts.total} />
+                                        <MetricItem label="Pending" value={item.fieldCounts.pending} tone="amber" />
+                                        <MetricItem label="Approved" value={item.fieldCounts.approved} tone="emerald" />
+                                        <MetricItem label="Rejected" value={item.fieldCounts.rejected} tone="rose" />
                                     </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-4 gap-4 mb-4 text-sm">
-                                    <div>
-                                        <div className="text-gray-500">Total Fields</div>
-                                        <div className="font-semibold">{item.fieldCounts.total}</div>
+                                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+                                        <span>
+                                            Created {format(new Date(item.created_at), 'MMM d, yyyy HH:mm')} (
+                                            {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })})
+                                        </span>
+                                        <Link href={`/admin/ingestion/update-queue/${item.id}`}>
+                                            <Button size="sm" variant="secondary">
+                                                Review details
+                                            </Button>
+                                        </Link>
                                     </div>
-                                    <div>
-                                        <div className="text-gray-500">Pending</div>
-                                        <div className="font-semibold text-yellow-600">
-                                            {item.fieldCounts.pending}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="text-gray-500">Approved</div>
-                                        <div className="font-semibold text-green-600">
-                                            {item.fieldCounts.approved}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="text-gray-500">Rejected</div>
-                                        <div className="font-semibold text-red-600">
-                                            {item.fieldCounts.rejected}
-                                        </div>
-                                    </div>
-                                </div>
-                                {item.requires_review_reason && (
-                                    <div className="mb-4 text-sm text-gray-600">
-                                        <strong>Reason:</strong> {item.requires_review_reason}
-                                    </div>
-                                )}
-                                <div className="flex items-center justify-between">
-                                    <div className="text-xs text-gray-500">
-                                        Created: {format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}
-                                    </div>
-                                    <Link href={`/admin/ingestion/update-queue/${item.id}`}>
-                                        <Button size="sm">Review Details</Button>
-                                    </Link>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                </CardContent>
+                            </Card>
+                        ))
+                    )}
                 </div>
             )}
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                    >
-                        Previous
-                    </Button>
-                    <span className="text-sm text-gray-600">
-                        Page {pagination.page} of {pagination.totalPages}
-                    </span>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                        disabled={page === pagination.totalPages}
-                    >
-                        Next
+            {shortcutsOpen && (
+                <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />
+            )}
+        </div>
+    );
+}
+
+function MetricItem({ label, value, tone }: { label: string; value: number; tone?: 'amber' | 'emerald' | 'rose' }) {
+    const toneClasses =
+        tone === 'amber'
+            ? 'text-amber-300'
+            : tone === 'emerald'
+            ? 'text-emerald-300'
+            : tone === 'rose'
+            ? 'text-rose-300'
+            : 'text-slate-100';
+    return (
+        <div className="rounded-md border border-slate-800/60 bg-slate-950/60 px-3 py-2">
+            <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
+            <p className={cn('text-lg font-semibold', toneClasses)}>{value}</p>
+        </div>
+    );
+}
+
+function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
+    const shortcuts: Array<{ keys: string; description: string }> = [
+        { keys: 'g u', description: 'Go to Update Queue' },
+        { keys: 'g m', description: 'Go to Moderation' },
+        { keys: 'g e', description: 'Go to Enrichment' },
+        { keys: '/', description: 'Focus search' },
+        { keys: 'j / k', description: 'Move selection down/up' },
+        { keys: 'a', description: 'Approve selection (coming soon)' },
+        { keys: 'r', description: 'Reject selection (coming soon)' },
+        { keys: 'p', description: 'Mark pending (coming soon)' },
+        { keys: '?', description: 'Show this help' },
+    ];
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
+            <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-950 p-6 shadow-2xl">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                        <h2 className="text-lg font-semibold text-slate-100">Keyboard shortcuts</h2>
+                        <p className="text-sm text-slate-400">Speed through high-volume review without touching your mouse.</p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-300 hover:bg-slate-800">
+                        <MaterialIcon name="close" size={16} />
                     </Button>
                 </div>
-            )}
+                <div className="space-y-3">
+                    {shortcuts.map((shortcut) => (
+                        <div key={shortcut.keys} className="flex items-center justify-between gap-3 rounded-md border border-slate-800/60 bg-slate-900/60 px-3 py-2">
+                            <span className="text-xs font-mono uppercase tracking-wide text-slate-200">
+                                {shortcut.keys}
+                            </span>
+                            <span className="text-sm text-slate-300">{shortcut.description}</span>
+                        </div>
+                    ))}
+                </div>
+                <p className="mt-4 text-center text-xs text-slate-500">Press Esc to close.</p>
+            </div>
         </div>
     );
 }

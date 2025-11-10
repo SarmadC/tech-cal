@@ -2,6 +2,8 @@
  * Optimized for compact, thinner cards on mobile devices
  */
 
+@import '../shared-event-card-styles.css';
+
 /* Mobile Discovery View Layout */
 .mobile-discovery-view {
   display: flex;
@@ -318,9 +320,6 @@
 /* ============================================== */
 /* OPTIMIZED FROSTED GLASS DISCOVERY CARDS       */
 /* ============================================== */
-
-/* Import shared event card depth styles */
-@import '../shared-event-card-styles.css';
 
 /* Discovery Card - now uses glass-card styling from globals.css */
 /* Spacing preserved for glass-card */

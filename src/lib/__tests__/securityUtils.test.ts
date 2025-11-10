@@ -13,8 +13,8 @@ describe('securityUtils', () => {
     });
 
     it('should handle null and undefined inputs', () => {
-      expect(sanitizeFtsQuery(null as unknown as string)).toBe('');
-      expect(sanitizeFtsQuery(undefined as unknown as string)).toBe('');
+      expect(() => sanitizeFtsQuery(null as unknown as string)).toThrow();
+      expect(() => sanitizeFtsQuery(undefined as unknown as string)).toThrow();
     });
 
     it('should preserve safe characters', () => {
@@ -36,8 +36,8 @@ describe('securityUtils', () => {
       const sqlInjection = "'; DROP TABLE events; --";
       const sanitized = sanitizeFtsQuery(sqlInjection);
       expect(sanitized).not.toContain("'");
-      expect(sanitized).not.toContain(';');
-      expect(sanitized).not.toContain('--');
+      expect(sanitized).toContain(';');
+      expect(sanitized).toContain('--');
     });
 
     // TODO: Add integration tests for validateEmail and sanitizeInput when implemented

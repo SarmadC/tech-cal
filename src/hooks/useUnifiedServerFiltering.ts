@@ -1,7 +1,7 @@
 // src/hooks/useUnifiedServerFiltering.ts
 'use client';
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useDebounce } from './useDebounce';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Event, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
@@ -50,6 +50,13 @@ interface FilteredEventsData {
     totalCount: number;
   };
   isColdStart?: boolean;
+}
+
+type FilterSurface = 'calendar' | 'discover' | 'default';
+
+interface UnifiedFilteringOptions {
+  surface?: FilterSurface;
+  autoLoadAllPages?: boolean;
 }
 
 interface UseUnifiedServerFilteringResult {
@@ -101,12 +108,33 @@ const DEFAULT_FILTERS: UnifiedFilterOptions = {
  */
 export function useUnifiedServerFiltering(
   _userProfile: AppProfile | null,
-  initialFilters: Partial<UnifiedFilterOptions> = {}
+  initialFilters: Partial<UnifiedFilterOptions> = {},
+  options: UnifiedFilteringOptions = {}
 ): UseUnifiedServerFilteringResult {
-  const [filters, setFilters] = useState<UnifiedFilterOptions>({
+  const surface: FilterSurface = options.surface ?? 'discover';
+  const autoLoadAllPages = options.autoLoadAllPages ?? false;
+
+  const initialFiltersSignature = useMemo(() => JSON.stringify(initialFilters, (_key, value) => {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    return value;
+  }), [initialFilters]);
+
+  const normalizedInitialFilters = useMemo(() => initialFilters, [initialFiltersSignature]);
+
+  const mergedDefaultFilters = useMemo<UnifiedFilterOptions>(() => ({
     ...DEFAULT_FILTERS,
-    ...initialFilters
-  });
+    ...normalizedInitialFilters,
+    ...(surface === 'calendar'
+      ? { pageSize: Math.min(100, normalizedInitialFilters.pageSize ?? 100) }
+      : {})
+  }), [normalizedInitialFilters, surface]);
+
+  const [filters, setFilters] = useState<UnifiedFilterOptions>(mergedDefaultFilters);
+  useEffect(() => {
+    setFilters(mergedDefaultFilters);
+  }, [mergedDefaultFilters]);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   const { trackedEventIds } = useTrackedEventIds();
@@ -147,7 +175,7 @@ export function useUnifiedServerFiltering(
     fetchNextPage,
     hasNextPage,
   } = useInfiniteQuery({
-    queryKey: ['filtered-events', stableFilters],
+    queryKey: ['filtered-events', surface, stableFilters],
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
       const sessionId = sessionIdRef.current ?? 'filters_fallback';
@@ -158,7 +186,7 @@ export function useUnifiedServerFiltering(
       const response = await fetch('/api/events/filtered', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId },
-        body: JSON.stringify({ ...stableFilters, page: pageParam, sessionId })
+        body: JSON.stringify({ ...stableFilters, page: pageParam, sessionId, surface })
       });
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
@@ -189,8 +217,8 @@ export function useUnifiedServerFiltering(
   }, []);
 
   const resetFilters = useCallback(() => {
-    setFilters(DEFAULT_FILTERS);
-  }, []);
+    setFilters(mergedDefaultFilters);
+  }, [mergedDefaultFilters]);
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -269,6 +297,13 @@ export function useUnifiedServerFiltering(
     if (pages.length === 0) return false;
     return pages[0].data.isColdStart || false;
   }, [queryData?.pages]);
+
+  useEffect(() => {
+    if (!autoLoadAllPages) return;
+    if (hasNextPage && !isFetchingNextPage && !isFetching) {
+      fetchNextPage();
+    }
+  }, [autoLoadAllPages, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage]);
 
   return {
     // Data

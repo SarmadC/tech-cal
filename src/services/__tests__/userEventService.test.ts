@@ -18,11 +18,12 @@ const createMockSupabaseClient = () => ({
   order: vi.fn().mockReturnThis(),
   limit: vi.fn().mockReturnThis(),
   range: vi.fn().mockReturnThis(),
-  single: vi.fn(),
-  maybeSingle: vi.fn(),
-  then: vi.fn(),
-  data: null,
-  error: null,
+  single: vi.fn().mockResolvedValue({ data: null, error: null }),
+  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  then: vi.fn((onFulfilled?: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) =>
+    Promise.resolve({ data: [], error: null }).then(onFulfilled, onRejected)
+  ),
+  rpc: vi.fn(),
 });
 
 // Mock Sentry
@@ -76,74 +77,52 @@ describe('UserEventService', () => {
 
   describe('trackEvent', () => {
     it('should track an event successfully', async () => {
-      const mockTrackedEvent = {
-        id: 'tracking1',
-        user_id: 'user1',
-        event_id: 'event1',
-        status: 'bookmarked',
-        notes: '',
-        created_at: '2024-01-01T10:00:00Z',
-      };
-
-      mockSupabase.single.mockResolvedValue({
-        data: mockTrackedEvent,
+      mockSupabase.rpc.mockResolvedValue({
+        data: { success: true, is_new_tracking: true },
         error: null,
       });
 
-      const result = await UserEventService.trackEvent(
+      await expect(UserEventService.trackEvent(
         'user1',
         'event1',
         'bookmarked',
         '',
         mockSupabase as unknown as SupabaseClient
-      );
+      )).resolves.toBeUndefined();
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('user_events');
-      expect(mockSupabase.insert).toHaveBeenCalledWith({
-        user_id: 'user1',
-        event_id: 'event1',
-        status: 'bookmarked',
-        notes: '',
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('track_event_and_update_profile', {
+        p_user_id: 'user1',
+        p_event_id: 'event1',
+        p_status: 'bookmarked',
+        p_notes: '',
       });
-      expect(mockSupabase.single).toHaveBeenCalled();
-      expect(result).toBeDefined();
     });
 
     it('should track an event with notes', async () => {
-      const mockTrackedEvent = {
-        id: 'tracking1',
-        user_id: 'user1',
-        event_id: 'event1',
-        status: 'attending',
-        notes: 'Looking forward to this event',
-        created_at: '2024-01-01T10:00:00Z',
-      };
-
-      mockSupabase.single.mockResolvedValue({
-        data: mockTrackedEvent,
+      mockSupabase.rpc.mockResolvedValue({
+        data: { success: true, is_new_tracking: false },
         error: null,
       });
 
-      const result = await UserEventService.trackEvent(
+      await expect(UserEventService.trackEvent(
         'user1',
         'event1',
         'attending',
         'Looking forward to this event',
         mockSupabase as unknown as SupabaseClient
-      );
+      )).resolves.toBeUndefined();
 
-      expect(mockSupabase.insert).toHaveBeenCalledWith({
-        user_id: 'user1',
-        event_id: 'event1',
-        status: 'attending',
-        notes: 'Looking forward to this event',
+      expect(mockSupabase.rpc).toHaveBeenLastCalledWith('track_event_and_update_profile', {
+        p_user_id: 'user1',
+        p_event_id: 'event1',
+        p_status: 'attending',
+        p_notes: 'Looking forward to this event',
       });
-      expect(result).toBeDefined();
     });
 
     it('should handle database errors', async () => {
       const mockError = new Error('Database constraint violation');
-      mockSupabase.single.mockResolvedValue({
+      mockSupabase.rpc.mockResolvedValue({
         data: null,
         error: mockError,
       });
@@ -154,12 +133,12 @@ describe('UserEventService', () => {
         'bookmarked',
         '',
         mockSupabase as unknown as SupabaseClient
-      )).rejects.toThrow('Database constraint violation');
+      )).rejects.toThrow('Failed to track event.');
     });
 
     it('should handle duplicate tracking attempts', async () => {
       const mockError = { code: '23505', message: 'duplicate key value violates unique constraint' };
-      mockSupabase.single.mockResolvedValue({
+      mockSupabase.rpc.mockResolvedValue({
         data: null,
         error: mockError,
       });
@@ -170,14 +149,14 @@ describe('UserEventService', () => {
         'bookmarked',
         '',
         mockSupabase as unknown as SupabaseClient
-      )).rejects.toThrow('duplicate key value violates unique constraint');
+      )).rejects.toThrow('Failed to track event.');
     });
   });
 
   describe('untrackEvent', () => {
     it('should untrack an event successfully', async () => {
-      mockSupabase.then.mockResolvedValue({
-        data: { id: 'tracking1' },
+      mockSupabase.rpc.mockResolvedValue({
+        data: { success: true, external_calendar_event_id: 'cal-1', external_provider: 'google' },
         error: null,
       });
 
@@ -188,27 +167,30 @@ describe('UserEventService', () => {
         p_event_id: 'event1'
       });
       expect(result).toEqual({
-        external_calendar_event_id: undefined,
-        external_provider: undefined
+        external_calendar_event_id: 'cal-1',
+        external_provider: 'google'
       });
     });
 
     it('should handle event not found', async () => {
-      mockSupabase.then.mockResolvedValue({
-        data: null,
-        error: { code: 'PGRST116', message: 'No rows found' },
+      mockSupabase.rpc.mockResolvedValue({
+        data: { success: false, message: 'Event not found' },
+        error: null,
       });
 
       await expect(UserEventService.untrackEvent('user1', 'nonexistent', mockSupabase as unknown as SupabaseClient))
-        .rejects.toThrow();
+        .rejects.toThrow('Failed to untrack event.');
     });
 
     it('should handle database errors', async () => {
       const mockError = new Error('Database error');
-      mockSupabase.then.mockRejectedValue(mockError);
+      mockSupabase.rpc.mockResolvedValue({
+        data: null,
+        error: mockError,
+      });
 
       await expect(UserEventService.untrackEvent('user1', 'event1', mockSupabase as unknown as SupabaseClient))
-        .rejects.toThrow('Database error');
+        .rejects.toThrow('Failed to untrack event.');
     });
   });
 
@@ -260,10 +242,13 @@ describe('UserEventService', () => {
 
     it('should handle database errors', async () => {
       const mockError = new Error('Database error');
-      mockSupabase.then.mockRejectedValue(mockError);
+      mockSupabase.then.mockResolvedValue({
+        data: null,
+        error: mockError,
+      });
 
       await expect(UserEventService.getTrackedEvents('user1', mockSupabase as unknown as SupabaseClient))
-        .rejects.toThrow('Database error');
+        .rejects.toThrow('Failed to fetch tracked events.');
     });
   });
 
@@ -288,7 +273,7 @@ describe('UserEventService', () => {
       const result = await UserEventService.getLightweightTrackedEvents('user1', mockSupabase as unknown as SupabaseClient);
 
       expect(mockSupabase.from).toHaveBeenCalledWith('user_events');
-      expect(mockSupabase.select).toHaveBeenCalledWith('id, user_id, event_id, status, notes, created_at');
+      expect(mockSupabase.select).toHaveBeenCalledWith(expect.stringContaining('events ('));
       expect(result).toHaveLength(1);
     });
   });
@@ -331,14 +316,17 @@ describe('UserEventService', () => {
   describe('error handling', () => {
     it('should capture exceptions with Sentry', async () => {
       const mockError = new Error('Test error');
-      mockSupabase.single.mockRejectedValue(mockError);
+      mockSupabase.rpc.mockResolvedValue({
+        data: null,
+        error: mockError,
+      });
 
       const { captureException } = await import('@sentry/nextjs');
 
       await expect(UserEventService.trackEvent('user1', 'event1', 'bookmarked', '', mockSupabase as unknown as SupabaseClient))
-        .rejects.toThrow('Test error');
+        .rejects.toThrow('Failed to track event.');
 
-      expect(captureException).toHaveBeenCalledWith(mockError);
+      expect(captureException).toHaveBeenCalledWith(mockError, expect.anything());
     });
   });
 });

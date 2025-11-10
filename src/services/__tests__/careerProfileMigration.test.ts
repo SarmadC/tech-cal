@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CareerProfileService } from '../careerProfileService';
+import { CareerImpactService } from '../careerImpactService';
 import { CareerProfile } from '@/types/career';
 
 // Mock Supabase client
@@ -17,6 +18,21 @@ const mockSupabaseClient = {
   })),
   rpc: vi.fn()
 } as unknown as ReturnType<typeof import('@supabase/supabase-js').createClient>;
+
+const createSelectEqSingleMock = <T>(response: { data: T; error: unknown }) => {
+  const single = vi.fn().mockResolvedValue(response);
+  const eq = vi.fn(() => ({ single }));
+  const select = vi.fn(() => ({ eq }));
+  return { select, eq, single };
+};
+
+const createUpsertSelectSingleMock = <T>(response: { data: T; error: unknown }) => {
+  const single = vi.fn().mockResolvedValue(response);
+  const eq = vi.fn(() => ({ single }));
+  const select = vi.fn(() => ({ eq, single }));
+  const upsert = vi.fn(() => ({ select }));
+  return { upsert, select, single, eq };
+};
 
 describe('CareerProfileService Migration', () => {
   const userId = 'test-user-123';
@@ -49,7 +65,10 @@ describe('CareerProfileService Migration', () => {
   };
 
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
+    vi.spyOn(CareerImpactService, 'invalidateProfileCache').mockResolvedValue(0);
+    vi.spyOn(CareerProfileService, 'saveCareerProfileToPreferences').mockResolvedValue();
   });
 
   describe('transformRowToCareerProfile', () => {
@@ -217,21 +236,39 @@ describe('CareerProfileService Migration', () => {
 
   describe('saveCareerProfile', () => {
     it('should save career profile to database', async () => {
-      const mockUpsert = vi.fn().mockResolvedValue({
-        data: null,
+      const { upsert } = createUpsertSelectSingleMock({
+        data: { user_id: userId },
         error: null
       });
-
-      const mockFrom = vi.fn(() => ({
-        upsert: mockUpsert
+      const { select: preferencesSelect } = createSelectEqSingleMock({
+        data: { preferences: {} },
+        error: null
+      });
+      const update = vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ error: null })
       }));
+
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'career_profiles') {
+          return { upsert };
+        }
+
+        if (table === 'profiles') {
+          return {
+            select: preferencesSelect,
+            update
+          };
+        }
+
+        return {} as never;
+      });
 
       mockSupabaseClient.from = mockFrom;
 
       await CareerProfileService.saveCareerProfile(userId, mockCareerProfile, mockSupabaseClient);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('career_profiles');
-      expect(mockUpsert).toHaveBeenCalledWith({
+      expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
         user_id: userId,
         current_role: mockCareerProfile.currentRole,
         seniority: mockCareerProfile.seniority,
@@ -247,22 +284,27 @@ describe('CareerProfileService Migration', () => {
         available_time: mockCareerProfile.availableTime,
         budget: mockCareerProfile.budget,
         networking_goals: mockCareerProfile.networkingGoals,
-        preferred_event_types: mockCareerProfile.preferredEventTypes,
-        updated_at: expect.any(String)
-      });
+        preferred_event_types: mockCareerProfile.preferredEventTypes
+      }));
     });
 
     it('should handle save errors', async () => {
-      const mockUpsert = vi.fn().mockResolvedValue({
+      const { upsert } = createUpsertSelectSingleMock({
         data: null,
         error: { message: 'Save failed' }
       });
 
-      const mockFrom = vi.fn(() => ({
-        upsert: mockUpsert
-      }));
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'career_profiles') {
+          return { upsert };
+        }
+        return {} as never;
+      });
 
       mockSupabaseClient.from = mockFrom;
+      vi.spyOn(CareerProfileService, 'saveCareerProfileToPreferences').mockRejectedValueOnce(
+        new Error('Fallback failed')
+      );
 
       await expect(
         CareerProfileService.saveCareerProfile(userId, mockCareerProfile, mockSupabaseClient)
@@ -312,42 +354,31 @@ describe('CareerProfileService Migration', () => {
 
   describe('migrateCareerProfileData', () => {
     it('should migrate data from preferences to new table', async () => {
-      const mockUpsert = vi.fn().mockResolvedValue({
+      const { select: existingProfileSelect } = createSelectEqSingleMock({
         data: null,
         error: null
       });
-
-      const mockFrom = vi.fn()
-        .mockReturnValueOnce({
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({
-                data: null,
-                error: { code: 'PGRST116' }
-              })
-            }))
-          }))
-        })
-        .mockReturnValueOnce({
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({
-                data: { preferences: { careerProfile: mockCareerProfile } },
-                error: null
-              })
-            }))
-          }))
-        })
-        .mockReturnValueOnce({
-          upsert: mockUpsert
-        });
+      const { select: preferencesSelect } = createSelectEqSingleMock({
+        data: { preferences: { careerProfile: mockCareerProfile } },
+        error: null
+      });
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'career_profiles') {
+          return { select: existingProfileSelect };
+        }
+        if (table === 'profiles') {
+          return { select: preferencesSelect };
+        }
+        return {} as never;
+      });
+      const saveSpy = vi.spyOn(CareerProfileService, 'saveCareerProfile').mockResolvedValue();
 
       mockSupabaseClient.from = mockFrom;
 
       const result = await CareerProfileService.migrateCareerProfileData(userId, mockSupabaseClient);
 
       expect(result).toBe(true);
-      expect(mockUpsert).toHaveBeenCalled();
+      expect(saveSpy).toHaveBeenCalledWith(userId, mockCareerProfile, mockSupabaseClient);
     });
 
     it('should return true if profile already migrated', async () => {

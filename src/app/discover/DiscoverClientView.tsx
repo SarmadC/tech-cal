@@ -54,7 +54,7 @@ export default function DiscoverClientView({
         return {};
     }, [profile]);
 
-    const eventData = useUnifiedServerFiltering(profile, initialFilters);
+    const eventData = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover' });
     const { showInfo } = useSnackbar();
     
     // Calendar state for CalendarProvider

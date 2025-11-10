@@ -19,7 +19,7 @@ export interface IngestionMetrics {
         failedJobs: number;
         successRate: number;
         totalEventsFetched: number;
-        totalEventsNormalized: number;
+        totalRecordsQueued: number;
         totalEventsPublished: number;
         averageQualityScore: number;
     };
@@ -29,7 +29,7 @@ export interface IngestionMetrics {
         jobsCount: number;
         successRate: number;
         eventsFetched: number;
-        eventsNormalized: number;
+        recordsQueued: number;
         averageQualityScore: number;
         lastFetchAt: string | null;
     }>;
@@ -43,6 +43,30 @@ export interface IngestionMetrics {
         approved: number;
         rejected: number;
     };
+}
+
+export interface EnrichmentMetricsSummary {
+    dateRange: {
+        from: string;
+        to: string;
+    };
+    totals: {
+        totalJobs: number;
+        rulesFirstSuccess: number;
+        rulesFirstFallback: number;
+        firecrawlRuns: number;
+        firecrawlFailures: number;
+        budgetSkips: number;
+        firecrawlCredits: number;
+        averageConfidence: number;
+    };
+    byDomain: Array<{
+        domain: string | null;
+        jobs: number;
+        rulesFirstSuccess: number;
+        firecrawlCredits: number;
+        averageConfidence: number;
+    }>;
 }
 
 export class IngestionMetricsService {
@@ -94,7 +118,7 @@ export class IngestionMetricsService {
             const successRate = totalJobs > 0 ? (successfulJobs / totalJobs) * 100 : 0;
 
             const totalEventsFetched = jobs?.reduce((sum, j) => sum + (j.events_fetched || 0), 0) || 0;
-            const totalEventsNormalized = jobs?.reduce((sum, j) => sum + (j.events_normalized || 0), 0) || 0;
+            const totalRecordsQueued = jobs?.reduce((sum, j) => sum + (j.events_normalized || 0), 0) || 0;
 
             // Count published events (not in moderation queue or approved)
             const { data: publishedEvents } = await supabaseClient
@@ -122,7 +146,7 @@ export class IngestionMetricsService {
                         : 0;
 
                     const sourceEventsFetched = sourceJobs.reduce((sum, j) => sum + (j.events_fetched || 0), 0);
-                    const sourceEventsNormalized = sourceJobs.reduce((sum, j) => sum + (j.events_normalized || 0), 0);
+                    const sourceRecordsQueued = sourceJobs.reduce((sum, j) => sum + (j.events_normalized || 0), 0);
 
                     // Get source quality scores
                     const { data: sourceEvents } = await supabaseClient
@@ -145,7 +169,7 @@ export class IngestionMetricsService {
                         jobsCount: sourceJobsCount,
                         successRate: sourceSuccessRate,
                         eventsFetched: sourceEventsFetched,
-                        eventsNormalized: sourceEventsNormalized,
+                        recordsQueued: sourceRecordsQueued,
                         averageQualityScore: sourceAvgQuality,
                         lastFetchAt: source.last_fetched_at,
                     };
@@ -177,7 +201,7 @@ export class IngestionMetricsService {
                     failedJobs,
                     successRate,
                     totalEventsFetched,
-                    totalEventsNormalized,
+                    totalRecordsQueued,
                     totalEventsPublished: publishedEvents?.length || 0,
                     averageQualityScore,
                 },
@@ -249,6 +273,132 @@ export class IngestionMetricsService {
         }
 
         return alerts;
+    }
+
+    static async getEnrichmentMetrics(
+        supabaseClient: SupabaseClientType,
+        days: number = 7
+    ): Promise<EnrichmentMetricsSummary | null> {
+        try {
+            const from = new Date();
+            from.setDate(from.getDate() - days);
+            const to = new Date();
+
+            const { data, error } = await supabaseClient
+                .from('extraction_job_log')
+                .select('decision, status, confidence, firecrawl_credits_spent, source_domain, metadata, firecrawl_used')
+                .gte('started_at', from.toISOString())
+                .lte('started_at', to.toISOString());
+
+            if (error) {
+                throw error;
+            }
+
+            let totalJobs = 0;
+            let rulesFirstSuccess = 0;
+            let rulesFirstFallback = 0;
+            let firecrawlRuns = 0;
+            let firecrawlFailures = 0;
+            let budgetSkips = 0;
+            let totalCredits = 0;
+            let totalConfidence = 0;
+            let confidenceCount = 0;
+
+            const domainMap = new Map<
+                string | null,
+                {
+                    jobs: number;
+                    rulesFirstSuccess: number;
+                    firecrawlCredits: number;
+                    confidenceSum: number;
+                    confidenceCount: number;
+                }
+            >();
+
+            (data || []).forEach((entry) => {
+                totalJobs += 1;
+                const domainKey = entry.source_domain ?? null;
+                if (!domainMap.has(domainKey)) {
+                    domainMap.set(domainKey, {
+                        jobs: 0,
+                        rulesFirstSuccess: 0,
+                        firecrawlCredits: 0,
+                        confidenceSum: 0,
+                        confidenceCount: 0,
+                    });
+                }
+                const domainStats = domainMap.get(domainKey)!;
+                domainStats.jobs += 1;
+
+                if (typeof entry.confidence === 'number') {
+                    totalConfidence += entry.confidence;
+                    confidenceCount += 1;
+                    domainStats.confidenceSum += entry.confidence;
+                    domainStats.confidenceCount += 1;
+                }
+
+                if (entry.firecrawl_used) {
+                    totalCredits += entry.firecrawl_credits_spent ?? 0;
+                    domainStats.firecrawlCredits += entry.firecrawl_credits_spent ?? 0;
+                }
+
+                switch (entry.decision) {
+                    case 'rules_first_success':
+                        rulesFirstSuccess += 1;
+                        domainStats.rulesFirstSuccess += 1;
+                        break;
+                    case 'rules_first_fallback':
+                        rulesFirstFallback += 1;
+                        break;
+                    case 'firecrawl_extract':
+                        if (entry.status === 'completed') {
+                            firecrawlRuns += 1;
+                        }
+                        break;
+                    case 'firecrawl_failed':
+                        firecrawlFailures += 1;
+                        break;
+                    default:
+                        if (entry.decision?.includes('cap')) {
+                            budgetSkips += 1;
+                        }
+                        break;
+                }
+            });
+
+            const byDomain = Array.from(domainMap.entries()).map(([domain, stats]) => ({
+                domain,
+                jobs: stats.jobs,
+                rulesFirstSuccess: stats.rulesFirstSuccess,
+                firecrawlCredits: stats.firecrawlCredits,
+                averageConfidence:
+                    stats.confidenceCount > 0 ? stats.confidenceSum / stats.confidenceCount : 0,
+            }));
+
+            return {
+                dateRange: {
+                    from: from.toISOString(),
+                    to: to.toISOString(),
+                },
+                totals: {
+                    totalJobs,
+                    rulesFirstSuccess,
+                    rulesFirstFallback,
+                    firecrawlRuns,
+                    firecrawlFailures,
+                    budgetSkips,
+                    firecrawlCredits: totalCredits,
+                    averageConfidence: confidenceCount > 0 ? totalConfidence / confidenceCount : 0,
+                },
+                byDomain,
+            };
+        } catch (error) {
+            console.error('Error calculating enrichment metrics:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEnrichmentMetrics', days },
+            });
+            return null;
+        }
     }
 }
 

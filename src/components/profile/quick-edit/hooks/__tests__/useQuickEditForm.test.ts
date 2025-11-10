@@ -1,4 +1,5 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
+import { vi } from 'vitest';
 import { useQuickEditForm } from '../useQuickEditForm';
 import { CareerProfile } from '@/types/career';
 
@@ -74,7 +75,7 @@ describe('useQuickEditForm', () => {
   });
 
   it('should save draft correctly with successful save', async () => {
-    const mockOnSave = jest.fn().mockResolvedValue(undefined);
+    const mockOnSave = vi.fn().mockResolvedValue(undefined);
 
     const { result } = renderHook(() => 
       useQuickEditForm({
@@ -112,7 +113,7 @@ describe('useQuickEditForm', () => {
   });
 
   it('should handle save validation failure', async () => {
-    const mockOnSave = jest.fn().mockResolvedValue(undefined);
+    const mockOnSave = vi.fn().mockResolvedValue(undefined);
     const failValidation = () => false;
 
     const { result } = renderHook(() => 

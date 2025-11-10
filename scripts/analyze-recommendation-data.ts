@@ -192,7 +192,7 @@ function printIngestionMetrics(metrics: Awaited<ReturnType<typeof IngestionMetri
     console.log(`Total Jobs: ${metrics.overall.totalJobs}`);
     console.log(`Success Rate: ${metrics.overall.successRate.toFixed(1)}%`);
     console.log(`Events Fetched: ${metrics.overall.totalEventsFetched}`);
-    console.log(`Events Normalized: ${metrics.overall.totalEventsNormalized}`);
+    console.log(`Records Queued: ${metrics.overall.totalRecordsQueued}`);
     console.log(`Events Published: ${metrics.overall.totalEventsPublished}`);
     console.log(`Avg Quality Score: ${metrics.overall.averageQualityScore.toFixed(1)}%\n`);
 
@@ -206,13 +206,13 @@ function printIngestionMetrics(metrics: Awaited<ReturnType<typeof IngestionMetri
     if (metrics.sourceMetrics.length > 0) {
         console.log(`📡 SOURCE METRICS\n`);
         formatTable(
-            ['Source', 'Jobs', 'Success Rate', 'Fetched', 'Normalized', 'Avg Quality'],
+            ['Source', 'Jobs', 'Success Rate', 'Fetched', 'Queued', 'Avg Quality'],
             metrics.sourceMetrics.map(source => [
                 source.sourceName.substring(0, 30),
                 source.jobsCount.toString(),
                 `${source.successRate.toFixed(1)}%`,
                 source.eventsFetched.toString(),
-                source.eventsNormalized.toString(),
+                source.recordsQueued.toString(),
                 `${source.averageQualityScore.toFixed(1)}%`,
             ])
         );

@@ -43,13 +43,25 @@ export interface FirecrawlEnrichmentMetadata {
     error_message?: string | null;
     retry_count?: number; // Number of retry attempts (capped at max retries)
     next_retry_at?: string; // ISO timestamp for next retry (exponential backoff)
-    enrichment_strategy?: 'scrape' | 'crawl' | 'extract'; // Strategy used for enrichment
+    enrichment_strategy?: 'scrape' | 'crawl' | 'extract' | 'rules_first' | 'rules_first_fallback' | 'skipped_budget'; // Strategy used for enrichment
     site_complexity?: 'SIMPLE' | 'MULTI_PAGE' | 'COMPLEX'; // Detected site complexity
     pages_crawled?: number; // Number of pages crawled (if using crawl mode)
     credits_used?: number; // Firecrawl credits consumed
     extraction_quality_score?: number; // 0-1 score for extraction quality
     ingestion_confidence?: number; // Final confidence score stored during enrichment
     partial_coverage?: 'agenda' | 'speakers' | 'pricing' | 'other';
+    rules_first?: {
+        confidence?: number;
+        field_confidence?: Record<string, number>;
+        content_hash?: string;
+        normalized_url?: string;
+        normalized_url_hash?: string;
+        source_domain?: string;
+        status_code?: number;
+        cache_hit?: boolean;
+        fallback?: boolean;
+        reason?: string;
+    };
 }
 
 /**
