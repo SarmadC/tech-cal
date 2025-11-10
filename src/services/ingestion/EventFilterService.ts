@@ -11,6 +11,7 @@ import {
     DEFAULT_FILTER_CONFIG,
     type FilterPattern,
 } from '@/config/ingestionFilters';
+import { FILTERING_CONFIG, VALIDATION_LIMITS } from '@/config/ingestionConstants';
 
 export interface FilterResult {
     filtered: boolean;
@@ -56,6 +57,12 @@ export class EventFilterService {
         const lowQualityCheck = this.checkLowQuality(record);
         if (lowQualityCheck.filtered) {
             return lowQualityCheck;
+        }
+
+        // Check if the source URL looks like a blog post (e.g., /blog/ paths)
+        const blogUrlCheck = this.checkBlogUrl(record);
+        if (blogUrlCheck.filtered) {
+            return blogUrlCheck;
         }
 
         // If filtering is disabled for this source, skip pattern checks
@@ -110,21 +117,21 @@ export class EventFilterService {
             const eventDate = new Date(record.startTime);
             const now = new Date();
             
-            // Check if event is too far in the future (more than 2 years) - likely data errors
-            const maxFutureYears = 2;
-            const maxFutureDate = new Date(now.getTime() + (maxFutureYears * 365 * 24 * 60 * 60 * 1000));
+            // Check if event is too far in the future - likely data errors
+            const maxFutureDate = new Date(
+                now.getTime() + (FILTERING_CONFIG.MAX_FUTURE_YEARS * 365 * 24 * 60 * 60 * 1000)
+            );
             if (eventDate > maxFutureDate) {
                 return {
                     filtered: true,
-                    reason: `Event is more than ${maxFutureYears} years in the future - likely a data error`,
+                    reason: `Event is more than ${FILTERING_CONFIG.MAX_FUTURE_YEARS} years in the future - likely a data error`,
                     matchedPattern: 'future_event',
                     category: 'future-event',
                 };
             }
             
-            // Allow some grace period (e.g., events that ended within last 7 days might still be relevant)
-            // But reject events that are clearly in the past (more than 7 days ago)
-            const gracePeriodDays = 7;
+            // Allow some grace period (e.g., events that ended within last N days might still be relevant)
+            // But reject events that are clearly in the past (more than grace period days ago)
             
             // Check if source has date filter override
             const dateFilterOverride = sourceMetadata?.date_filter_override as {
@@ -137,7 +144,7 @@ export class EventFilterService {
                 return { filtered: false };
             }
 
-            const maxAgeDays = dateFilterOverride?.maxAgeDays ?? gracePeriodDays;
+            const maxAgeDays = dateFilterOverride?.maxAgeDays ?? FILTERING_CONFIG.GRACE_PERIOD_DAYS;
             const cutoffDate = new Date(now.getTime() - (maxAgeDays * 24 * 60 * 60 * 1000));
 
             if (eventDate < cutoffDate) {
@@ -208,11 +215,11 @@ export class EventFilterService {
                 };
             }
 
-            // Very short titles (less than 5 chars) are likely incomplete
-            if (record.title.trim().length < 5) {
+            // Very short titles are likely incomplete
+            if (record.title.trim().length < VALIDATION_LIMITS.MIN_TITLE_LENGTH_STRICT) {
                 return {
                     filtered: true,
-                    reason: 'Title is too short (less than 5 characters)',
+                    reason: `Title is too short (less than ${VALIDATION_LIMITS.MIN_TITLE_LENGTH_STRICT} characters)`,
                     matchedPattern: 'short_title',
                     category: 'low-quality',
                 };
@@ -221,6 +228,62 @@ export class EventFilterService {
 
         // Check for missing description (optional but indicates lower quality)
         // Note: We don't filter on this alone, but it's a quality indicator
+
+        return { filtered: false };
+    }
+
+    /**
+     * Check if the source or registration URL indicates the content is a blog post.
+     * This happens when the URL contains common blog path segments like "/blog/".
+     */
+    private static checkBlogUrl(record: EventSourceRecord): FilterResult {
+        const urlCandidates = [record.sourceUrl, record.registrationUrl, record.livestreamUrl].filter(
+            (url): url is string => typeof url === 'string' && url.trim().length > 0
+        );
+
+        if (urlCandidates.length === 0) {
+            return { filtered: false };
+        }
+
+        const blogPathPatterns: RegExp[] = [
+            /\/blog\//i,
+            /\/blogs\//i,
+            /\/blog[-_]/i,
+        ];
+
+        const blogHostPatterns: RegExp[] = [
+            /^blog\./i,
+            /\.blog\./i,
+        ];
+
+        for (const urlCandidate of urlCandidates) {
+            try {
+                const parsed = new URL(urlCandidate);
+                const hostname = parsed.hostname.toLowerCase();
+                const pathname = parsed.pathname.toLowerCase();
+
+                if (blogHostPatterns.some((pattern) => pattern.test(hostname))) {
+                    return {
+                        filtered: true,
+                        reason: 'URL host indicates blog content',
+                        matchedPattern: hostname,
+                        category: 'blog-post',
+                    };
+                }
+
+                if (blogPathPatterns.some((pattern) => pattern.test(pathname))) {
+                    return {
+                        filtered: true,
+                        reason: 'URL path indicates blog content',
+                        matchedPattern: pathname,
+                        category: 'blog-post',
+                    };
+                }
+            } catch (error) {
+                // Ignore malformed URLs - they will be handled by other validation steps
+                console.warn('Failed to parse URL while checking for blog content:', urlCandidate, error);
+            }
+        }
 
         return { filtered: false };
     }
