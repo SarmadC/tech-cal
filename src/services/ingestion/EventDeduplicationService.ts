@@ -7,13 +7,20 @@
 
 import type { SupabaseClientType } from '@/types';
 import type { EventSourceRecord } from '@/types/ingestion';
+import {
+    DEDUPLICATION_CONFIG,
+    QUERY_LIMITS,
+    DEDUPLICATION_TIME_WINDOW_MS,
+    SIMILARITY_THRESHOLDS,
+} from '@/config/ingestionConstants';
+import { normalizeCanonicalUrl } from './utils/urlResolver';
 import * as Sentry from '@sentry/nextjs';
 
 export interface DuplicateCheckResult {
     isDuplicate: boolean;
     existingEventId?: string;
     similarity?: number;
-    matchReason?: 'exact_checksum' | 'fuzzy_title' | 'series_match';
+    matchReason?: 'exact_checksum' | 'canonical_url' | 'fuzzy_title' | 'series_match';
 }
 
 export class EventDeduplicationService {
@@ -38,6 +45,21 @@ export class EventDeduplicationService {
                     existingEventId: checksumMatch.eventId,
                     similarity: 1.0,
                     matchReason: 'exact_checksum',
+                };
+            }
+
+            // Step 1.5: Check for canonical URL match (high confidence for multi-source duplicates)
+            const canonicalUrlMatch = await this.checkCanonicalUrlDuplicate(
+                record,
+                supabaseClient
+            );
+
+            if (canonicalUrlMatch) {
+                return {
+                    isDuplicate: true,
+                    existingEventId: canonicalUrlMatch.eventId,
+                    similarity: 1.0,
+                    matchReason: 'canonical_url',
                 };
             }
 
@@ -85,6 +107,76 @@ export class EventDeduplicationService {
         }
     }
 
+
+    /**
+     * Check for canonical URL match in events table
+     * High-confidence duplicate detection for multi-source events
+     */
+    private static async checkCanonicalUrlDuplicate(
+        record: EventSourceRecord,
+        supabaseClient: SupabaseClientType
+    ): Promise<{ eventId: string } | null> {
+        try {
+            const normalizedSourceUrl = normalizeCanonicalUrl(record.sourceUrl);
+            if (!normalizedSourceUrl) {
+                return null;
+            }
+
+            // Extract domain from normalized URL for more efficient querying
+            let domain: string | null = null;
+            try {
+                const urlObj = new URL(normalizedSourceUrl);
+                domain = urlObj.hostname.toLowerCase().replace(/^www\./, '');
+            } catch {
+                // If URL parsing fails, fall back to full table scan (shouldn't happen)
+            }
+
+            // Build query - try to narrow by domain if possible
+            let query = supabaseClient
+                .from('events')
+                .select('id, source_url, registration_url')
+                .not('source_url', 'is', null);
+
+            // If we have a domain, use ILIKE to filter by domain (more efficient)
+            if (domain) {
+                // Match URLs containing the domain (case-insensitive)
+                query = query.ilike('source_url', `%${domain}%`);
+            }
+
+            const { data: events, error } = await query.limit(QUERY_LIMITS.DEDUPLICATION_CHECK);
+
+            if (error) {
+                throw error;
+            }
+
+            if (!events || events.length === 0) {
+                return null;
+            }
+
+            // Find matching event by comparing normalized URLs
+            for (const event of events) {
+                const normalizedEventUrl = normalizeCanonicalUrl(event.source_url ?? undefined);
+                if (normalizedEventUrl === normalizedSourceUrl) {
+                    return { eventId: event.id };
+                }
+
+                // Also check registration_url if source_url doesn't match
+                if (record.registrationUrl) {
+                    const normalizedRegistrationUrl = normalizeCanonicalUrl(record.registrationUrl);
+                    const normalizedEventRegistrationUrl = normalizeCanonicalUrl(event.registration_url ?? undefined);
+                    if (normalizedRegistrationUrl && normalizedEventRegistrationUrl === normalizedRegistrationUrl) {
+                        return { eventId: event.id };
+                    }
+                }
+            }
+
+            return null;
+        } catch (error) {
+            console.error('Error checking canonical URL duplicate:', error);
+            return null;
+        }
+    }
+
     /**
      * Check for exact checksum match in source_events
      */
@@ -119,7 +211,7 @@ export class EventDeduplicationService {
 
     /**
      * Check for fuzzy title match using pg_trgm similarity
-     * Matches on: similar title + same start_time (within 1 hour) + same organizer
+     * Matches on: similar title + same start_time (within 1 hour) + organizer match (or domain match)
      */
     private static async checkFuzzyDuplicate(
         record: EventSourceRecord,
@@ -127,7 +219,8 @@ export class EventDeduplicationService {
     ): Promise<{ eventId: string; similarity: number } | null> {
         try {
             // Use PostgreSQL similarity function (pg_trgm)
-            // Query events with similar title, matching time window, and organizer
+            // Query events with similar title and matching time window
+            // Organizer matching is handled client-side with domain fallback
             const rpcPayload: {
                 p_title: string;
                 p_start_time: string;
@@ -136,12 +229,11 @@ export class EventDeduplicationService {
             } = {
                 p_title: record.title,
                 p_start_time: record.startTime,
-                p_similarity_threshold: 0.6, // 60% similarity threshold
+                p_similarity_threshold: DEDUPLICATION_CONFIG.SIMILARITY_THRESHOLD,
             };
 
-            if (record.organizer && record.organizer.trim().length > 0) {
-                rpcPayload.p_organizer_id = record.organizer;
-            }
+            // Don't pass organizer_id to RPC - we'll do domain matching client-side
+            // This allows matching across different organizers when domains align
 
             const { data, error } = await supabaseClient.rpc('find_similar_events', rpcPayload);
 
@@ -154,14 +246,48 @@ export class EventDeduplicationService {
                 throw error;
             }
 
-            // Find best match from results
+            // Find best match from results, checking organizer match with domain fallback
             if (data && Array.isArray(data) && data.length > 0) {
-                const bestMatch = data[0];
-                if (bestMatch.similarity >= 0.6) {
-                    return {
-                        eventId: bestMatch.event_id,
-                        similarity: bestMatch.similarity,
-                    };
+                // Fetch full event data to check organizer matching
+                const eventIds = data.map((d: { event_id: string }) => d.event_id);
+                const { data: eventsWithOrganizers, error: eventsError } = await supabaseClient
+                    .from('events')
+                    .select('id, organizer_id, source_url, organizers(id, name, website_url)')
+                    .in('id', eventIds);
+
+                if (eventsError) {
+                    throw eventsError;
+                }
+
+                // Find best match that passes organizer check (with domain fallback)
+                for (const match of data) {
+                    const event = eventsWithOrganizers?.find((e: { id: string }) => e.id === match.event_id);
+                    if (!event) continue;
+
+                    // If source_url matches, skip strict organizer matching (for syndicated feeds merging into manual entries)
+                    const eventSourceUrl = event.source_url as string | null;
+                    const sourceUrlMatch = eventSourceUrl && 
+                        normalizeCanonicalUrl(record.sourceUrl) === normalizeCanonicalUrl(eventSourceUrl);
+
+                    let organizerMatch = false;
+                    if (sourceUrlMatch) {
+                        // Source URLs match - skip organizer check (prefer merging into manual record)
+                        organizerMatch = true;
+                    } else {
+                        // Check organizer match with domain fallback
+                        organizerMatch = this.matchOrganizerWithDomainFallback(
+                            record,
+                            event.organizers as { id: string; name: string; website_url: string | null } | null,
+                            eventSourceUrl
+                        );
+                    }
+
+                    if (organizerMatch && match.similarity >= DEDUPLICATION_CONFIG.FUZZY_MATCH_THRESHOLD) {
+                        return {
+                            eventId: match.event_id,
+                            similarity: match.similarity,
+                        };
+                    }
                 }
             }
 
@@ -181,8 +307,8 @@ export class EventDeduplicationService {
     ): Promise<{ eventId: string; similarity: number } | null> {
         try {
             const startTime = new Date(record.startTime);
-            const timeWindowStart = new Date(startTime.getTime() - 2 * 60 * 60 * 1000); // 2 hours before
-            const timeWindowEnd = new Date(startTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after
+            const timeWindowStart = new Date(startTime.getTime() - DEDUPLICATION_TIME_WINDOW_MS);
+            const timeWindowEnd = new Date(startTime.getTime() + DEDUPLICATION_TIME_WINDOW_MS);
 
             // Query events in time window
             const { data: events, error } = await supabaseClient
@@ -190,7 +316,7 @@ export class EventDeduplicationService {
                 .select('id, title, start_time, organizer_id, organizers(name)')
                 .gte('start_time', timeWindowStart.toISOString())
                 .lte('start_time', timeWindowEnd.toISOString())
-                .limit(50); // Reasonable limit for comparison
+                .limit(QUERY_LIMITS.DEDUPLICATION_COMPARISON);
 
             if (error) {
                 throw error;
@@ -204,12 +330,33 @@ export class EventDeduplicationService {
             let bestMatch: { eventId: string; similarity: number } | null = null;
             let bestSimilarity = 0;
 
+            // Fetch organizer data for domain matching
+            const eventIds = events.map(e => e.id);
+            const { data: eventsWithOrganizers } = await supabaseClient
+                .from('events')
+                .select('id, source_url, organizers(id, name, website_url)')
+                .in('id', eventIds);
+
             for (const event of events) {
-                // Check organizer match
-                const organizerMatch = this.matchOrganizer(
-                    record.organizer,
-                    event.organizers as { name: string } | null
-                );
+                const eventWithOrg = eventsWithOrganizers?.find((e: { id: string }) => e.id === event.id);
+                const eventSourceUrl = eventWithOrg?.source_url as string | null;
+                
+                // If source_url matches, skip strict organizer matching (for syndicated feeds merging into manual entries)
+                const sourceUrlMatch = eventSourceUrl && 
+                    normalizeCanonicalUrl(record.sourceUrl) === normalizeCanonicalUrl(eventSourceUrl);
+
+                let organizerMatch = false;
+                if (sourceUrlMatch) {
+                    // Source URLs match - skip organizer check (prefer merging into manual record)
+                    organizerMatch = true;
+                } else {
+                    // Check organizer match with domain fallback
+                    organizerMatch = this.matchOrganizerWithDomainFallback(
+                        record,
+                        eventWithOrg?.organizers as { id: string; name: string; website_url: string | null } | null,
+                        eventSourceUrl
+                    );
+                }
 
                 if (!organizerMatch) {
                     continue; // Skip if organizers don't match
@@ -221,7 +368,7 @@ export class EventDeduplicationService {
                     (event.title || '').toLowerCase()
                 );
 
-                if (similarity >= 0.6 && similarity > bestSimilarity) {
+                if (similarity >= DEDUPLICATION_CONFIG.FUZZY_MATCH_THRESHOLD && similarity > bestSimilarity) {
                     bestSimilarity = similarity;
                     bestMatch = {
                         eventId: event.id,
@@ -255,7 +402,7 @@ export class EventDeduplicationService {
                 .select('id, title, series_id, start_time')
                 .not('series_id', 'is', null)
                 .ilike('title', `%${record.title.split(' ')[0]}%`) // Match first word
-                .limit(10);
+                .limit(QUERY_LIMITS.DEDUPLICATION_FUZZY);
 
             if (error || !similarEvents || similarEvents.length === 0) {
                 return null;
@@ -268,7 +415,7 @@ export class EventDeduplicationService {
                     (event.title || '').toLowerCase()
                 );
 
-                if (similarity >= 0.7) {
+                if (similarity >= SIMILARITY_THRESHOLDS.MEDIUM) {
                     // Found a likely series match
                     return {
                         eventId: event.id,
@@ -341,6 +488,55 @@ export class EventDeduplicationService {
     }
 
     /**
+     * Match organizer with domain fallback
+     * Matches by organizer name OR by domain comparison when source URLs are available
+     */
+    private static matchOrganizerWithDomainFallback(
+        record: EventSourceRecord,
+        organizer: { id: string; name: string; website_url: string | null } | null,
+        eventSourceUrl: string | null
+    ): boolean {
+        // If no organizer data, can't match
+        if (!organizer) {
+            return false;
+        }
+
+        // First try name-based matching
+        if (record.organizer) {
+            const nameMatch = this.matchOrganizer(record.organizer, organizer);
+            if (nameMatch) {
+                return true;
+            }
+        }
+
+        // Fallback: domain comparison from source URLs
+        // Extract domains from both source URLs and compare
+        const recordDomain = this.extractDomain(record.sourceUrl);
+        const eventDomain = this.extractDomain(eventSourceUrl || organizer.website_url || null);
+
+        if (recordDomain && eventDomain && recordDomain === eventDomain) {
+            // Domains match - allow fuzzy match to proceed
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Extract normalized domain from URL
+     */
+    private static extractDomain(url: string | null | undefined): string | null {
+        if (!url) return null;
+
+        try {
+            const urlObj = new URL(url);
+            return urlObj.hostname.toLowerCase().replace(/^www\./, ''); // Remove www. prefix
+        } catch {
+            return null;
+        }
+    }
+
+    /**
      * Match organizer names (fuzzy)
      */
     private static matchOrganizer(
@@ -363,7 +559,7 @@ export class EventDeduplicationService {
 
         // Check similarity
         const similarity = this.calculateStringSimilarity(name1, name2);
-        return similarity >= 0.8;
+        return similarity >= SIMILARITY_THRESHOLDS.HIGH;
     }
 
     /**

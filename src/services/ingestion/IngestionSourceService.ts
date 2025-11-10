@@ -11,6 +11,22 @@ import type { IngestionSourceType, SourceMetadata } from '@/config/ingestionSour
 import { INITIAL_SOURCES } from '@/config/ingestionSources';
 import * as Sentry from '@sentry/nextjs';
 
+// Supported collector types - only these can be processed
+const SUPPORTED_COLLECTOR_TYPES = ['RSS', 'ICS'] as const;
+
+/**
+ * Validate source type is supported
+ */
+function validateSourceType(sourceType: string): void {
+    if (!SUPPORTED_COLLECTOR_TYPES.includes(sourceType as typeof SUPPORTED_COLLECTOR_TYPES[number])) {
+        throw new Error(
+            `Unsupported source type: ${sourceType}. ` +
+            `Supported types: ${SUPPORTED_COLLECTOR_TYPES.join(', ')}. ` +
+            `Please use one of the supported types or implement a collector for this type.`
+        );
+    }
+}
+
 export interface IngestionSource {
     id: string;
     name: string;
@@ -95,6 +111,9 @@ export class IngestionSourceService {
         supabaseClient: SupabaseClientType
     ): Promise<IngestionSource> {
         try {
+            // Validate source type before creating
+            validateSourceType(input.source_type);
+
             const { data, error } = await supabaseClient
                 .from('ingestion_sources')
                 .insert({
@@ -179,6 +198,14 @@ export class IngestionSourceService {
             const sources: IngestionSource[] = [];
 
             for (const sourceConfig of INITIAL_SOURCES) {
+                // Skip sources with unsupported types
+                if (!SUPPORTED_COLLECTOR_TYPES.includes(sourceConfig.source_type as typeof SUPPORTED_COLLECTOR_TYPES[number])) {
+                    console.warn(
+                        `[IngestionSourceService] Skipping source "${sourceConfig.name}" with unsupported type: ${sourceConfig.source_type}`
+                    );
+                    continue;
+                }
+
                 // Check if source already exists
                 const { data: existing } = await supabaseClient
                     .from('ingestion_sources')
