@@ -15,7 +15,9 @@ import { QualityScoringService } from './QualityScoringService';
 import { EventFilterService } from './EventFilterService';
 import { IngestionSourceService } from './IngestionSourceService';
 import { EventUpdateService } from './EventUpdateService';
+import { FirecrawlEnrichmentService } from './FirecrawlEnrichmentService';
 import type { EventSourceRecord } from '@/types/ingestion';
+import { RETRY_CONFIG } from '@/config/ingestionConstants';
 import * as Sentry from '@sentry/nextjs';
 
 export interface NormalizationResult {
@@ -23,6 +25,75 @@ export interface NormalizationResult {
     succeeded: number;
     failed: number;
     errors: Array<{ sourceEventId: string; error: string }>;
+}
+
+// Retry metadata interface
+interface RetryMetadata {
+    error: string;
+    retry_count: number;
+    last_retry_at?: string;
+    next_retry_at: string;
+}
+
+/**
+ * Encode retry metadata into error_message field as JSON string
+ */
+function encodeRetryMetadata(error: string, retryCount: number, lastRetryAt?: string): string {
+    const now = new Date();
+    const delay = Math.min(
+        RETRY_CONFIG.BASE_DELAY_MS * Math.pow(2, retryCount),
+        RETRY_CONFIG.MAX_DELAY_MS
+    );
+    const nextRetryAt = new Date(now.getTime() + delay);
+
+    const metadata: RetryMetadata = {
+        error,
+        retry_count: retryCount,
+        last_retry_at: lastRetryAt || now.toISOString(),
+        next_retry_at: nextRetryAt.toISOString(),
+    };
+
+    return JSON.stringify(metadata);
+}
+
+/**
+ * Decode retry metadata from error_message field
+ */
+function decodeRetryMetadata(errorMessage: string | null): RetryMetadata | null {
+    if (!errorMessage) return null;
+
+    try {
+        const parsed = JSON.parse(errorMessage);
+        // Check if it has retry metadata structure
+        if (parsed && typeof parsed === 'object' && 'retry_count' in parsed && 'next_retry_at' in parsed) {
+            return parsed as RetryMetadata;
+        }
+    } catch {
+        // Not JSON or not retry metadata - return null
+    }
+
+    return null;
+}
+
+/**
+ * Check if an event with error status should be retried
+ */
+function shouldRetry(errorMessage: string | null): boolean {
+    const metadata = decodeRetryMetadata(errorMessage);
+    if (!metadata) {
+        // No retry metadata means first failure - eligible for retry
+        return true;
+    }
+
+    // Check if max retries exceeded
+    if (metadata.retry_count >= RETRY_CONFIG.MAX_ATTEMPTS_NORMALIZATION) {
+        return false;
+    }
+
+    // Check if next retry time has passed
+    const nextRetryAt = new Date(metadata.next_retry_at);
+    const now = new Date();
+    return now >= nextRetryAt;
 }
 
 type ClaimPendingSourceEventsReturn = Database['public']['Functions']['claim_pending_source_events']['Returns'];
@@ -98,6 +169,45 @@ export class NormalizationProcessor {
         limit: number = 100
     ): Promise<NormalizationResult> {
         try {
+            // First, get error events eligible for retry and reset them to pending
+            const { data: errorEvents } = await supabaseClient
+                .from('source_events')
+                .select('id, error_message')
+                .eq('fetch_status', 'error')
+                .limit(limit);
+
+            if (errorEvents && errorEvents.length > 0) {
+                const eligibleForRetry: string[] = [];
+                const now = new Date();
+
+                for (const event of errorEvents) {
+                    if (shouldRetry(event.error_message)) {
+                        const metadata = decodeRetryMetadata(event.error_message);
+                        const newRetryCount = metadata ? metadata.retry_count + 1 : 1;
+                        const newErrorMessage = encodeRetryMetadata(
+                            metadata?.error || event.error_message || 'Unknown error',
+                            newRetryCount,
+                            now.toISOString()
+                        );
+
+                        // Reset status to pending with updated retry metadata
+                        await supabaseClient
+                            .from('source_events')
+                            .update({
+                                fetch_status: 'pending',
+                                error_message: newErrorMessage,
+                            })
+                            .eq('id', event.id);
+
+                        eligibleForRetry.push(event.id);
+                    }
+                }
+
+                if (eligibleForRetry.length > 0) {
+                    console.log(`[NormalizationProcessor] Reset ${eligibleForRetry.length} error event(s) to pending for retry`);
+                }
+            }
+
             // Atomically claim pending events by updating their status to "processing"
             // This prevents race conditions when multiple cron jobs run simultaneously
             // Using raw SQL for atomic UPDATE ... WHERE ... RETURNING pattern
@@ -107,32 +217,54 @@ export class NormalizationProcessor {
                     p_processing_status: 'processing',
                 });
 
-            // Fallback: If RPC doesn't exist, use client-side update pattern
-            // Note: This fallback has a small race condition window. Run migration
-            // 20250101000004_add_claim_pending_events_function.sql for proper atomic locking.
+            // Fallback: If RPC doesn't exist, use improved client-side update pattern
+            // This fallback uses a more atomic approach with row-level locking simulation
             if (fetchError && (fetchError.message.includes('does not exist') || fetchError.message.includes('function'))) {
                 console.warn(
-                    'claim_pending_source_events RPC function not found. Using fallback method which may have race conditions. ' +
-                    'Run migration 20250101000004_add_claim_pending_events_function.sql for proper atomic locking.'
+                    '[NormalizationProcessor] claim_pending_source_events RPC function not found. ' +
+                    'Using improved fallback method. Run migration 20250101000004_add_claim_pending_events_function.sql ' +
+                    'for proper atomic locking.'
                 );
                 
-                // Fallback: UPDATE with RETURNING using Supabase query builder
-                // This is less safe than the RPC function but better than nothing
+                // Improved fallback: Fetch pending events first, then update them atomically
+                // This reduces (but doesn't eliminate) the race condition window
+                const { data: pendingEvents, error: fetchPendingError } = await supabaseClient
+                    .from('source_events')
+                    .select('id')
+                    .eq('fetch_status', 'pending')
+                    .order('created_at', { ascending: true })
+                    .limit(limit);
+
+                if (fetchPendingError) {
+                    throw new Error(`Failed to fetch pending events: ${fetchPendingError.message}`);
+                }
+
+                if (!pendingEvents || pendingEvents.length === 0) {
+                    return { processed: 0, succeeded: 0, failed: 0, errors: [] };
+                }
+
+                // Update each event individually to minimize race condition window
+                // Use .in() with the fetched IDs for better atomicity
+                const pendingIds = pendingEvents.map(e => e.id);
                 const { data: claimedEvents, error: claimError } = await supabaseClient
                     .from('source_events')
                     .update({ fetch_status: 'processing' })
-                    .eq('fetch_status', 'pending')
-                    .select('*')
-                    .limit(limit)
-                    .order('created_at', { ascending: true });
+                    .in('id', pendingIds)
+                    .eq('fetch_status', 'pending') // Double-check status hasn't changed
+                    .select('*');
 
                 if (claimError) {
                     throw new Error(`Failed to claim pending events: ${claimError.message}`);
                 }
 
-                // Cast the RPC result or fallback result to expected type
+                // Only process events that were successfully claimed
+                if (!claimedEvents || claimedEvents.length === 0) {
+                    console.warn('[NormalizationProcessor] No events were successfully claimed (possible race condition)');
+                    return { processed: 0, succeeded: 0, failed: 0, errors: [] };
+                }
+
                 return await this.processClaimedEvents(
-                    mapToClaimedEvents(claimedEvents ?? []),
+                    mapToClaimedEvents(claimedEvents),
                     supabaseClient
                 );
             }
@@ -367,17 +499,37 @@ export class NormalizationProcessor {
                             );
                         }
 
-                        succeeded++;
-                    } else {
-                        errors.push({
-                            sourceEventId: sourceEvent.id,
-                            error: result.error || 'Unknown error',
+                        // Enqueue Firecrawl enrichment (non-blocking)
+                        FirecrawlEnrichmentService.enqueueEnrichment(
+                            result.eventId,
+                            record.sourceUrl,
+                            record.registrationUrl,
+                            supabaseClient
+                        ).catch(error => {
+                            console.error(`[NormalizationProcessor] Failed to enqueue enrichment for event ${result.eventId}:`, error);
+                            // Continue - enrichment is non-critical
                         });
 
-                        // Mark as error status
+                        succeeded++;
+                    } else {
+                        const errorMessage = result.error || 'Unknown error';
+                        errors.push({
+                            sourceEventId: sourceEvent.id,
+                            error: errorMessage,
+                        });
+
+                        // Check existing retry metadata to determine retry count
+                        const existingMetadata = decodeRetryMetadata(sourceEvent.error_message);
+                        const retryCount = existingMetadata ? existingMetadata.retry_count : 0;
+                        const retryErrorMessage = encodeRetryMetadata(errorMessage, retryCount);
+
+                        // Mark as error status with retry metadata
                         await supabaseClient
                             .from('source_events')
-                            .update({ fetch_status: 'error', error_message: result.error })
+                            .update({ 
+                                fetch_status: 'error', 
+                                error_message: retryErrorMessage 
+                            })
                             .eq('id', sourceEvent.id);
                     }
                 } catch (error) {
@@ -387,11 +539,19 @@ export class NormalizationProcessor {
                         error: errorMessage,
                     });
 
-                    // Mark as error status
+                    // Check existing retry metadata to determine retry count
+                    const existingMetadata = decodeRetryMetadata(sourceEvent.error_message);
+                    const retryCount = existingMetadata ? existingMetadata.retry_count : 0;
+                    const retryErrorMessage = encodeRetryMetadata(errorMessage, retryCount);
+
+                    // Mark as error status with retry metadata
                     try {
                         await supabaseClient
                             .from('source_events')
-                            .update({ fetch_status: 'error', error_message: errorMessage })
+                            .update({ 
+                                fetch_status: 'error', 
+                                error_message: retryErrorMessage 
+                            })
                             .eq('id', sourceEvent.id);
                     } catch {
                         // Ignore errors in error handling
