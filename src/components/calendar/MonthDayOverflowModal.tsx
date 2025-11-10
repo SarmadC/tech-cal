@@ -2,7 +2,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Event, MultiDayEvent, MultiDayEventInstance } from '@/types';
+import { Event, MultiDayEventInstance } from '@/types';
+import { isParentMultiDayEvent } from '@/utils/multiDayEventUtils';
 
 interface MonthDayOverflowModalProps {
     date: Date;
@@ -56,18 +57,16 @@ const formatTimeRange = (event: Event | MultiDayEventInstance) => {
         return `Continues • Ends ${formatSingleDate(originalEnd)}`;
     }
 
-    const isMultiDay =
-        'isMultiDay' in event && (event as MultiDayEvent).isMultiDay && event.endTime;
+    const isMultiDayParent = isParentMultiDayEvent(event) && event.isMultiDay && event.endTime;
 
-    if (isMultiDay) {
+    if (isMultiDayParent) {
         const end = new Date(event.endTime as string);
         if (!Number.isNaN(end.getTime())) {
             return formatDateRange(start, end);
         }
     }
 
-    const eventPattern = 'eventPattern' in event ? (event as MultiDayEvent).eventPattern : undefined;
-    if (eventPattern === 'all_day') {
+    if (isParentMultiDayEvent(event) && event.eventPattern === 'all_day') {
         return 'All day';
     }
 
@@ -95,7 +94,7 @@ const formatDuration = (event: Event | MultiDayEventInstance) => {
         return null;
     }
 
-    if ('isMultiDay' in event && (event as MultiDayEvent).isMultiDay && event.endTime) {
+    if (isParentMultiDayEvent(event) && event.isMultiDay && event.endTime) {
         const start = new Date(event.startTime);
         const end = new Date(event.endTime);
         if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
@@ -106,8 +105,7 @@ const formatDuration = (event: Event | MultiDayEventInstance) => {
         }
     }
 
-    const eventPattern = 'eventPattern' in event ? (event as MultiDayEvent).eventPattern : undefined;
-    if (eventPattern === 'all_day') {
+    if (isParentMultiDayEvent(event) && event.eventPattern === 'all_day') {
         return 'All day';
     }
 

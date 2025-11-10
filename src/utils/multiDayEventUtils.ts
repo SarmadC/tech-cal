@@ -2,6 +2,13 @@
 
 import type { Event, MultiDayEvent, MultiDayEventInstance } from '@/types';
 
+export const isParentMultiDayEvent = (
+    event: Event | MultiDayEventInstance
+): event is MultiDayEvent =>
+    'eventPattern' in event &&
+    'isMultiDay' in event &&
+    typeof event.isMultiDay === 'boolean';
+
 
 /**
  * Generates specific daily instances for a given multi-day event on a specific view date.

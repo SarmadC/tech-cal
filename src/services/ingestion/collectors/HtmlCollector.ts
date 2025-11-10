@@ -85,6 +85,34 @@ function mapPriceRange(data: ExtractedEventData): EventSourceRecord['priceRange'
     };
 }
 
+function mapDifficultyLevel(
+    difficulty: ExtractedEventData['difficulty']
+): EventSourceRecord['difficultyLevel'] {
+    if (!difficulty) {
+        return undefined;
+    }
+
+    const normalized = difficulty.toLowerCase().trim();
+
+    if (normalized.includes('beginner')) {
+        return 'beginner';
+    }
+
+    if (
+        normalized.includes('intermediate') ||
+        normalized.includes('mid-level') ||
+        normalized.includes('mid level')
+    ) {
+        return 'intermediate';
+    }
+
+    if (normalized.includes('advanced') || normalized.includes('expert')) {
+        return 'advanced';
+    }
+
+    return undefined;
+}
+
 export class HtmlCollector extends BaseCollector {
     protected getCollectorType(): EventSourceRecord['provenance']['collector'] {
         return 'html';
@@ -176,7 +204,7 @@ export class HtmlCollector extends BaseCollector {
                 eventImageUrl: data.imageUrl ?? undefined,
                 tags: mapTags(data),
                 priceRange: mapPriceRange(data),
-                difficultyLevel: data.difficulty ?? undefined,
+                difficultyLevel: mapDifficultyLevel(data.difficulty),
                 eventFormat: data.format === 'online' ? 'virtual' : data.format === 'hybrid' ? 'hybrid' : undefined,
                 speakerLineup: mapSpeakers(data),
                 provenance,

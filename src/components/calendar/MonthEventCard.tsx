@@ -2,8 +2,9 @@
 
 import React, { memo } from 'react';
 import Image from 'next/image';
-import { Event, MultiDayEvent, MultiDayEventInstance } from '@/types';
+import { Event, MultiDayEventInstance } from '@/types';
 import { isEventPast } from '@/utils/dateUtils';
+import { isParentMultiDayEvent } from '@/utils/multiDayEventUtils';
 
 interface MonthEventCardProps {
     event: Event | MultiDayEventInstance;
@@ -121,8 +122,7 @@ const formatTimeLabel = (event: Event | MultiDayEventInstance) => {
         return `Continues • Ends ${formatSingleDate(originalEnd)}`;
     }
 
-    const hasMultiDay =
-        'isMultiDay' in event && (event as MultiDayEvent).isMultiDay && event.endTime;
+    const hasMultiDay = isParentMultiDayEvent(event) && event.isMultiDay && event.endTime;
 
     if (hasMultiDay) {
         const end = new Date(event.endTime as string);
@@ -131,8 +131,7 @@ const formatTimeLabel = (event: Event | MultiDayEventInstance) => {
         }
     }
 
-    const eventPattern = 'eventPattern' in event ? (event as MultiDayEvent).eventPattern : undefined;
-    if (eventPattern === 'all_day') {
+    if (isParentMultiDayEvent(event) && event.eventPattern === 'all_day') {
         return 'All day';
     }
 
@@ -165,7 +164,7 @@ const getDurationLabel = (event: Event | MultiDayEventInstance) => {
         return null;
     }
 
-    if ('isMultiDay' in event && (event as MultiDayEvent).isMultiDay && event.endTime) {
+    if (isParentMultiDayEvent(event) && event.isMultiDay && event.endTime) {
         const start = new Date(event.startTime);
         const end = new Date(event.endTime);
 
@@ -177,8 +176,7 @@ const getDurationLabel = (event: Event | MultiDayEventInstance) => {
         }
     }
 
-    const eventPattern = 'eventPattern' in event ? (event as MultiDayEvent).eventPattern : undefined;
-    if (eventPattern === 'all_day') {
+    if (isParentMultiDayEvent(event) && event.eventPattern === 'all_day') {
         return 'All day';
     }
 
@@ -228,7 +226,7 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
 
     const isMultiDayInstance =
         spanInfo !== null ||
-        ('isMultiDay' in event && (event as MultiDayEvent).isMultiDay && !!event.endTime);
+        (isParentMultiDayEvent(event) && event.isMultiDay && !!event.endTime);
     const isMultiDayFirstDay = spanInfo ? spanInfo.isFirst : !('isInstance' in event);
 
     const timeLabel = isMultiDayInstance ? '' : timeLabelRaw;

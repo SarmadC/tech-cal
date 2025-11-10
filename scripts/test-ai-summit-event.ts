@@ -2,17 +2,23 @@
  * Test script to verify if "The AI Summit New York" event is returned by the API
  */
 
-import fetch from 'node-fetch';
-
 const API_URL = 'http://localhost:3000/api/events/filtered';
 const EVENT_ID = '87bf871e-b7a2-4e62-8552-9c91d07399c1';
 
 async function testEventInAPI() {
   try {
+    const fetchClient = globalThis.fetch;
+
+    if (!fetchClient) {
+      throw new Error(
+        'Global fetch is unavailable. Run this script in Node 18+ or another environment with fetch support.'
+      );
+    }
+
     console.log('🔍 Testing if "The AI Summit New York" event is returned by API...\n');
 
     // Make a POST request to the filtered events endpoint
-    const response = await fetch(API_URL, {
+    const response = await fetchClient(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
