@@ -150,8 +150,8 @@ function parseScheduleHtml(html: string, limit: number): EventAgendaSchema[] {
 
         agenda.push({
             title,
-            startTimeLocal,
-            endTimeLocal,
+            startTime: startTimeLocal,
+            endTime: endTimeLocal,
             dayNumber,
             track,
             location: locationText,

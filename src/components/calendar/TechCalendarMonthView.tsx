@@ -7,18 +7,18 @@ import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } fr
 import { useEventPreview } from '@/hooks/useEventPreview';
 import EventPreviewCard from './EventPreviewCard';
 import { MonthEventCard } from './MonthEventCard';
-import MonthDayOverflowModal from './MonthDayOverflowModal';
+import MonthDayPopover from './MonthDayPopover';
 import '@/app/styles/event-card.css';
 import '@/app/styles/monthly-view.css';
 
-const MAX_INLINE_EVENTS = 3;
-const MAX_RIBBON_ROWS = 3;
+const MAX_VISIBLE_EVENTS_PER_DAY = 3;
+const MAX_RIBBON_ROWS = 10;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const DAY_HEADER_HEIGHT = 24;
 const DAY_HEADER_GAP = 8;
-const DAY_HEADER_EXTRA_GAP = 12;
-const RIBBON_HEIGHT = 42;
-const RIBBON_GAP = 6;
+const DAY_HEADER_EXTRA_GAP = 8;
+const RIBBON_HEIGHT = 28;
+const RIBBON_GAP = 3;
 const RIBBON_TOP_OFFSET = DAY_HEADER_HEIGHT + DAY_HEADER_GAP + DAY_HEADER_EXTRA_GAP;
 
 interface WeekSegment {
@@ -34,7 +34,6 @@ interface DayData {
     dateKey: string;
     inlineEvents: (Event | MultiDayEventInstance)[];
     overflowEvents: (Event | MultiDayEventInstance)[];
-    modalEvents: (Event | MultiDayEventInstance)[];
     isCurrentMonth: boolean;
     isToday: boolean;
 }
@@ -59,11 +58,6 @@ interface SegmentInput {
     eventStart: Date;
     eventEnd: Date;
 }
-
-type OverflowDayState = {
-    date: Date;
-    events: (Event | MultiDayEventInstance)[];
-};
 
 const startOfDay = (date: Date) => {
     const d = new Date(date);
@@ -91,6 +85,74 @@ export interface TechCalendarMonthViewProps {
     className?: string;
 }
 
+type InlineEvent = Event | MultiDayEventInstance;
+
+const getInlineAccent = (event: InlineEvent) => {
+    if (event.category?.color) return event.category.color;
+    if ('color' in event && event.color) return event.color;
+    return 'var(--accent-primary)';
+};
+
+const formatInlineMeta = (event: InlineEvent) => {
+    // Don't show any metadata - keep inline events clean with just title
+    return '';
+};
+
+interface MonthInlineEventRowProps {
+    event: InlineEvent;
+    onSelect: (event: InlineEvent) => void;
+    onHover: (event: InlineEvent, e: React.MouseEvent<HTMLButtonElement>) => void;
+    onLeave: () => void;
+}
+
+const MonthInlineEventRow: React.FC<MonthInlineEventRowProps> = ({
+    event,
+    onSelect,
+    onHover,
+    onLeave
+}) => {
+    const accent = getInlineAccent(event);
+    const meta = formatInlineMeta(event);
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
+        onLeave();
+        onSelect(event);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onLeave();
+            onSelect(event);
+        }
+    };
+
+    return (
+        <button
+            type="button"
+            className="month-inline-event"
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            onMouseEnter={(e) => onHover(event, e)}
+            onMouseLeave={onLeave}
+        >
+            <span
+                className="month-inline-event-accent"
+                style={{ backgroundColor: accent }}
+                aria-hidden="true"
+            />
+
+            <span className="month-inline-event-content">
+                <span className="month-inline-event-title" title={event.title}>
+                    {event.title}
+                </span>
+                {meta && <span className="month-inline-event-meta">{meta}</span>}
+            </span>
+        </button>
+    );
+};
+
 const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     events,
     initialDate,
@@ -105,7 +167,19 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     const _activeCalendarRef = calendarRef || internalCalendarRef;
     const [_isMobile, setIsMobile] = useState(false);
     const { hidePreview, previewState, showPreview, cancelHide, forceHidePreview } = useEventPreview();
-    const [overflowState, setOverflowState] = useState<OverflowDayState | null>(null);
+    const [expandedDays, setExpandedDays] = useState<Record<string, true>>({});
+    const [popoverState, setPopoverState] = useState<{
+        isOpen: boolean;
+        dateKey: string;
+        date: Date;
+        events: (Event | MultiDayEventInstance)[];
+        position?: { x: number; y: number };
+    }>({
+        isOpen: false,
+        dateKey: '',
+        date: new Date(),
+        events: []
+    });
 
     // Event click handler - force hide preview immediately to prevent double-click issue
     const handleEventClick = useCallback((event: Event | MultiDayEventInstance) => {
@@ -130,20 +204,44 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         fontSize: '0.75rem'
     }), []);
 
-    const handleShowMore = useCallback(
-        (day: Date, eventsForDay: (Event | MultiDayEventInstance)[]) => {
-            forceHidePreview();
-            setOverflowState({
-                date: new Date(day),
-                events: eventsForDay
-            });
-        },
-        [forceHidePreview]
-    );
+    const toggleDayExpanded = useCallback((dateKey: string) => {
+        setExpandedDays((prev) => {
+            if (prev[dateKey]) {
+                const { [dateKey]: _, ...rest } = prev;
+                return rest;
+            }
+            return { ...prev, [dateKey]: true };
+        });
+        hidePreview();
+    }, [hidePreview]);
 
-    const handleCloseOverflow = useCallback(() => {
-        setOverflowState(null);
+    const openOverflowPopover = useCallback((
+        dateKey: string,
+        date: Date,
+        events: (Event | MultiDayEventInstance)[],
+        e: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setPopoverState({
+            isOpen: true,
+            dateKey,
+            date,
+            events,
+            position: {
+                x: rect.left + rect.width / 2,
+                y: rect.bottom
+            }
+        });
+        hidePreview();
+    }, [hidePreview]);
+
+    const closeOverflowPopover = useCallback(() => {
+        setPopoverState((prev) => ({ ...prev, isOpen: false }));
     }, []);
+
+    React.useEffect(() => {
+        setExpandedDays({});
+    }, [initialDate]);
 
     // Custom month grid component using computed weeks
     const CustomMonthGrid: React.FC = () => {
@@ -209,11 +307,15 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                         RIBBON_TOP_OFFSET +
                                         week.ribbonHeight +
                                         (week.ribbonHeight > 0 ? 12 : 8);
+                                    const isExpanded = !!expandedDays[dayData.dateKey];
+                                    const visibleEvents = isExpanded
+                                        ? [...dayData.inlineEvents, ...dayData.overflowEvents]
+                                        : dayData.inlineEvents;
 
                                     return (
                                         <div
                                             key={dayData.dateKey}
-                                            className={`month-grid-day ${dayData.isCurrentMonth ? 'current-month' : 'other-month'} ${dayData.isToday ? 'today' : ''}`}
+                                            className={`month-grid-day ${dayData.isCurrentMonth ? 'current-month' : 'other-month'} ${dayData.isToday ? 'today' : ''} ${isExpanded ? 'expanded' : ''}`}
                                         >
                                             <div className="month-grid-day-number">
                                                 {dayData.date.getDate()}
@@ -223,14 +325,13 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                 className="month-grid-day-events"
                                                 style={{ marginTop: eventOffset }}
                                             >
-                                                {dayData.inlineEvents.map((event, eventIndex) => (
+                                                {visibleEvents.map((event, eventIndex) => (
                                                     <div key={`${event.id}-${eventIndex}`} className="month-grid-event">
-                                                        <MonthEventCard
+                                                        <MonthInlineEventRow
                                                             event={event}
-                                                            onClick={() => handleEventClick(event)}
-                                                            onHover={(e) => handleEventHover(event, e)}
+                                                            onSelect={handleEventClick}
+                                                            onHover={handleEventHover}
                                                             onLeave={hidePreview}
-                                                            style={cardStyle}
                                                         />
                                                     </div>
                                                 ))}
@@ -239,7 +340,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                     <button
                                                         type="button"
                                                         className="month-grid-more-button"
-                                                        onClick={() => handleShowMore(dayData.date, dayData.modalEvents)}
+                                                        onClick={(e) => openOverflowPopover(dayData.dateKey, dayData.date, dayData.overflowEvents, e)}
                                                         onMouseEnter={() => hidePreview()}
                                                         onFocus={() => hidePreview()}
                                                         aria-label={`Show ${dayData.overflowEvents.length} more events on ${dayData.date.toLocaleDateString(undefined, {
@@ -248,7 +349,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                                                             day: 'numeric'
                                                         })}`}
                                                     >
-                                                        +{dayData.overflowEvents.length} more
+                                                        {`+${dayData.overflowEvents.length} more`}
                                                     </button>
                                                 )}
                                             </div>
@@ -266,13 +367,13 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     // Process events for multi-day support - create individual day instances
     const processedEvents = useMemo(() => {
         const processed: (Event | MultiDayEventInstance)[] = [];
-        
+
         events.forEach(event => {
             // Check if this is a multi-day event (spans more than 1 day)
-            const startDate = new Date(event.startTime);
-            const endDate = event.endTime ? new Date(event.endTime) : new Date(event.startTime);
-            const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-            
+            const startDate = startOfDay(new Date(event.startTime));
+            const endDate = startOfDay(event.endTime ? new Date(event.endTime) : new Date(event.startTime));
+            const daysDiff = diffInDays(endDate, startDate);
+
             if (daysDiff > 0) {
                 // Create individual day instances for multi-day events
                 for (let dayOffset = 0; dayOffset <= daysDiff; dayOffset++) {
@@ -364,6 +465,45 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
     const weeks = useMemo<WeekData[]>(() => {
         const weekDataList: WeekData[] = [];
 
+        // Phase 1: Identify events that span 2 or more days (multi-day events)
+        const multiDayEvents: Array<{
+            event: Event;
+            daySpan: number;
+        }> = [];
+
+        events.forEach((event) => {
+            const eventStart = startOfDay(new Date(event.startTime));
+            const rawEnd = event.endTime ? new Date(event.endTime) : new Date(event.startTime);
+            const eventEnd = startOfDay(rawEnd);
+
+            // Calculate how many days this event spans
+            const daySpan = diffInDays(eventEnd, eventStart) + 1;
+
+            // If event spans 2 or more days, add to multi-day list
+            if (daySpan >= 2) {
+                multiDayEvents.push({
+                    event,
+                    daySpan
+                });
+            }
+        });
+
+        // Phase 2: Allocate ribbon rows to multi-day events
+        // Sort by: daySpan DESC (longer first), then start date ASC, then title ASC
+        multiDayEvents.sort((a, b) => {
+            if (a.daySpan !== b.daySpan) return b.daySpan - a.daySpan;
+            const aStart = a.event.startTime;
+            const bStart = b.event.startTime;
+            if (aStart !== bStart) return aStart.localeCompare(bStart);
+            return a.event.title.localeCompare(b.event.title);
+        });
+
+        const multiDayAllocation = new Map<string, number>(); // eventId → ribbonRow
+        for (let i = 0; i < Math.min(multiDayEvents.length, MAX_RIBBON_ROWS); i++) {
+            const event = multiDayEvents[i].event;
+            multiDayAllocation.set(event.id, i);
+        }
+
         for (let weekIndex = 0; weekIndex < 6; weekIndex++) {
             const weekDays = monthDays.slice(weekIndex * 7, weekIndex * 7 + 7);
             const weekStart = startOfDay(weekDays[0]);
@@ -421,7 +561,13 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
 
         segmentsInput.forEach((segment) => {
             let placed = false;
-            for (let row = 0; row < MAX_RIBBON_ROWS; row++) {
+
+            // Check if this event has a pre-allocated row for multi-day events
+            const preallocatedRow = multiDayAllocation.get(segment.event.id);
+
+            if (preallocatedRow !== undefined) {
+                // Try to place in pre-allocated row first
+                const row = preallocatedRow;
                 let canPlace = true;
                 for (let offset = 0; offset < segment.span; offset++) {
                     const dayIndex = segment.startIndex + offset;
@@ -431,54 +577,114 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     }
                 }
 
-                if (!canPlace) {
-                    continue;
-                }
-
-                for (let offset = 0; offset < segment.span; offset++) {
-                    const dayIndex = segment.startIndex + offset;
-                    if (dayIndex < 7) {
-                        occupancy[row][dayIndex] = true;
+                if (canPlace) {
+                    for (let offset = 0; offset < segment.span; offset++) {
+                        const dayIndex = segment.startIndex + offset;
+                        if (dayIndex < 7) {
+                            occupancy[row][dayIndex] = true;
+                        }
                     }
+
+                    const baseId = `${segment.event.id}-week${weekIndex}-row${row}-start${segment.startIndex}`;
+                    const continuationType = segment.isFirstSegment
+                        ? 'start'
+                        : segment.isLastSegment
+                            ? 'end'
+                            : 'middle';
+
+                    const cardEvent: MultiDayEventInstance = {
+                        ...segment.event,
+                        id: baseId,
+                        isInstance: true,
+                        originalEventId: segment.event.id,
+                        instanceDate: segment.segmentStart.toISOString().split('T')[0],
+                        dayInfo: {
+                            currentDay: segment.currentDay,
+                            totalDays: segment.totalDays,
+                            isFirstDay: segment.isFirstSegment,
+                            isLastDay: segment.isLastSegment,
+                            continuationType
+                        },
+                        isMultiDay: true,
+                        multiDaySpan: segment.totalDays,
+                        multiDayStart: new Date(segment.eventStart),
+                        multiDayEnd: new Date(segment.eventEnd)
+                    };
+
+                    segments.push({
+                        id: cardEvent.id ?? baseId,
+                        startIndex: segment.startIndex,
+                        span: Math.min(segment.span, 7 - segment.startIndex),
+                        row,
+                        cardEvent
+                    });
+
+                    rowsUsed = Math.max(rowsUsed, row + 1);
+                    placed = true;
                 }
+            }
 
-                const baseId = `${segment.event.id}-week${weekIndex}-row${row}-start${segment.startIndex}`;
-                const continuationType = segment.isFirstSegment
-                    ? 'start'
-                    : segment.isLastSegment
-                        ? 'end'
-                        : 'middle';
+            // If not pre-allocated or didn't fit, try other rows
+            if (!placed) {
+                for (let row = 0; row < MAX_RIBBON_ROWS; row++) {
+                    let canPlace = true;
+                    for (let offset = 0; offset < segment.span; offset++) {
+                        const dayIndex = segment.startIndex + offset;
+                        if (dayIndex >= 7 || occupancy[row][dayIndex]) {
+                            canPlace = false;
+                            break;
+                        }
+                    }
 
-                const cardEvent: MultiDayEventInstance = {
-                    ...segment.event,
-                    id: baseId,
-                    isInstance: true,
-                    originalEventId: segment.event.id,
-                    instanceDate: segment.segmentStart.toISOString().split('T')[0],
-                    dayInfo: {
-                        currentDay: segment.currentDay,
-                        totalDays: segment.totalDays,
-                        isFirstDay: segment.isFirstSegment,
-                        isLastDay: segment.isLastSegment,
-                        continuationType
-                    },
-                    isMultiDay: true,
-                    multiDaySpan: segment.totalDays,
-                    multiDayStart: new Date(segment.eventStart),
-                    multiDayEnd: new Date(segment.eventEnd)
-                };
+                    if (!canPlace) {
+                        continue;
+                    }
 
-                segments.push({
-                    id: cardEvent.id ?? baseId,
-                    startIndex: segment.startIndex,
-                    span: Math.min(segment.span, 7 - segment.startIndex),
-                    row,
-                    cardEvent
-                });
+                    for (let offset = 0; offset < segment.span; offset++) {
+                        const dayIndex = segment.startIndex + offset;
+                        if (dayIndex < 7) {
+                            occupancy[row][dayIndex] = true;
+                        }
+                    }
 
-                rowsUsed = Math.max(rowsUsed, row + 1);
-                placed = true;
-                break;
+                    const baseId = `${segment.event.id}-week${weekIndex}-row${row}-start${segment.startIndex}`;
+                    const continuationType = segment.isFirstSegment
+                        ? 'start'
+                        : segment.isLastSegment
+                            ? 'end'
+                            : 'middle';
+
+                    const cardEvent: MultiDayEventInstance = {
+                        ...segment.event,
+                        id: baseId,
+                        isInstance: true,
+                        originalEventId: segment.event.id,
+                        instanceDate: segment.segmentStart.toISOString().split('T')[0],
+                        dayInfo: {
+                            currentDay: segment.currentDay,
+                            totalDays: segment.totalDays,
+                            isFirstDay: segment.isFirstSegment,
+                            isLastDay: segment.isLastSegment,
+                            continuationType
+                        },
+                        isMultiDay: true,
+                        multiDaySpan: segment.totalDays,
+                        multiDayStart: new Date(segment.eventStart),
+                        multiDayEnd: new Date(segment.eventEnd)
+                    };
+
+                    segments.push({
+                        id: cardEvent.id ?? baseId,
+                        startIndex: segment.startIndex,
+                        span: Math.min(segment.span, 7 - segment.startIndex),
+                        row,
+                        cardEvent
+                    });
+
+                    rowsUsed = Math.max(rowsUsed, row + 1);
+                    placed = true;
+                    break;
+                }
             }
 
             if (!placed) {
@@ -512,37 +718,125 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
             const ribbonHeight =
                 rowsUsed > 0 ? rowsUsed * RIBBON_HEIGHT + (rowsUsed - 1) * RIBBON_GAP : 0;
 
-            const daysData: DayData[] = weekDays.map((day) => {
+            const daysData: DayData[] = weekDays.map((day, dayIndexInWeek) => {
                 const dateKey = day.toISOString().split('T')[0];
                 const allEvents = processedEventsByDate.get(dateKey) ?? [];
+
+                // Collect all original event IDs that are being rendered as ribbon segments
+                const ribbonEventIds = new Set<string>();
+                segments.forEach(segment => {
+                    if ('originalEventId' in segment.cardEvent && segment.cardEvent.originalEventId) {
+                        ribbonEventIds.add(segment.cardEvent.originalEventId);
+                    }
+                });
+
+                // Exclude events with dayInfo (multi-day instances) and events already in ribbons
                 const inlineCandidates = allEvents.filter(
-                    (event) => !('dayInfo' in event && event.dayInfo)
+                    (event) => {
+                        // Exclude multi-day day instances (have dayInfo property)
+                        if ('dayInfo' in event && event.dayInfo) {
+                            return false;
+                        }
+                        // Exclude events that are already rendered as ribbon segments
+                        // Check both the event's own ID and its originalEventId (if it's a segment instance)
+                        if (ribbonEventIds.has(event.id)) {
+                            return false;
+                        }
+                        if ('originalEventId' in event && event.originalEventId && ribbonEventIds.has(event.originalEventId)) {
+                            return false;
+                        }
+                        return true;
+                    }
                 );
-            const inlineEventsBase = inlineCandidates.slice(0, MAX_INLINE_EVENTS);
-            const overflowEventsBase = inlineCandidates.slice(MAX_INLINE_EVENTS);
-            const multiDayOverflow = overflowMultiDayMap.get(dateKey) ?? [];
-            const remainingSlots = Math.max(0, MAX_INLINE_EVENTS - inlineEventsBase.length);
-            const multiDayInline = multiDayOverflow.slice(0, remainingSlots);
-            const inlineEvents = [...inlineEventsBase, ...multiDayInline];
-            const overflowEvents = [
-                ...overflowEventsBase,
-                ...multiDayOverflow.slice(multiDayInline.length)
-            ];
+
+                // Count ribbon segments that appear on this day
+                const ribbonSegmentsOnDay = segments.filter(segment =>
+                    segment.startIndex <= dayIndexInWeek && dayIndexInWeek < segment.startIndex + segment.span
+                );
+                // Count unique ribbon rows (multiple segments on same row = 1 visual event)
+                const uniqueRibbonRows = new Set(ribbonSegmentsOnDay.map(s => s.row)).size;
+
+                // Calculate available inline slots based on ribbon count
+                const availableInlineSlots = Math.max(0, MAX_VISIBLE_EVENTS_PER_DAY - uniqueRibbonRows);
+
+                // Slice inline events to fit available slots
+                const inlineEventsBase = inlineCandidates.slice(0, availableInlineSlots);
+                const overflowEventsBase = inlineCandidates.slice(availableInlineSlots);
+
+                const multiDayOverflow = overflowMultiDayMap.get(dateKey) ?? [];
+                const remainingSlots = Math.max(0, availableInlineSlots - inlineEventsBase.length);
+                const multiDayInline = multiDayOverflow.slice(0, remainingSlots);
+                const inlineEvents = [...inlineEventsBase, ...multiDayInline];
+
+                // If there are too many ribbons, hide the excess ones
+                let hiddenRibbonEvents: (Event | MultiDayEventInstance)[] = [];
+                if (uniqueRibbonRows > MAX_VISIBLE_EVENTS_PER_DAY) {
+                    // We have more ribbons than allowed, hide the excess
+                    const visibleRibbonRows = MAX_VISIBLE_EVENTS_PER_DAY;
+                    const hiddenRibbonSegments = ribbonSegmentsOnDay.slice(visibleRibbonRows);
+                    // Only add to overflow if this is the starting day of the event
+                    // (don't show the same event in overflow on multiple days it spans)
+                    const addedEventIds = new Set<string>();
+                    hiddenRibbonEvents = hiddenRibbonSegments
+                        .filter(seg => seg.startIndex === dayIndexInWeek)
+                        .filter(seg => {
+                            // Avoid adding the same event multiple times
+                            if (addedEventIds.has(seg.cardEvent.id)) {
+                                return false;
+                            }
+                            addedEventIds.add(seg.cardEvent.id);
+                            return true;
+                        })
+                        .map(seg => seg.cardEvent);
+                }
+
+                const overflowEvents = [
+                    ...overflowEventsBase,
+                    ...multiDayOverflow.slice(multiDayInline.length),
+                    ...hiddenRibbonEvents
+                ];
 
                 return {
                     date: day,
                     dateKey,
                     inlineEvents,
                     overflowEvents,
-                    modalEvents: allEvents,
                     isCurrentMonth: day.getMonth() === initialDate.getMonth(),
                     isToday: day.toDateString() === new Date().toDateString()
                 };
             });
 
+            // Filter segments to exclude ones that are hidden due to per-day limits
+            const hiddenSegmentIds = new Set<string>();
+
+            weekDays.forEach((day, dayIndexInWeek) => {
+                const ribbonSegmentsOnDay = segments.filter(segment =>
+                    segment.startIndex <= dayIndexInWeek && dayIndexInWeek < segment.startIndex + segment.span
+                );
+                const uniqueRibbonRows = new Set(ribbonSegmentsOnDay.map(s => s.row)).size;
+
+                // If too many ribbons on this day, mark the excess ones as hidden
+                if (uniqueRibbonRows > MAX_VISIBLE_EVENTS_PER_DAY) {
+                    // Sort segments by row to ensure consistent ordering
+                    const sortedSegments = [...ribbonSegmentsOnDay].sort((a, b) => a.row - b.row);
+
+                    // Get the first MAX_VISIBLE_EVENTS_PER_DAY unique rows
+                    const visibleRows = new Set(
+                        [...new Set(sortedSegments.map(s => s.row))]
+                            .slice(0, MAX_VISIBLE_EVENTS_PER_DAY)
+                    );
+
+                    // Hide segments on non-visible rows
+                    const hiddenSegments = sortedSegments.filter(s => !visibleRows.has(s.row));
+                    hiddenSegments.forEach(seg => hiddenSegmentIds.add(seg.id));
+                }
+            });
+
+            const visibleSegments = segments.filter(seg => !hiddenSegmentIds.has(seg.id));
+
             weekDataList.push({
                 days: daysData,
-                segments,
+                segments: visibleSegments,
                 rowsUsed,
                 ribbonHeight
             });
@@ -566,18 +860,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         <div className={`tech-calendar-month-view ${className}`}>
             <CustomMonthGrid />
 
-            {overflowState && (
-                <MonthDayOverflowModal
-                    date={overflowState.date}
-                    events={overflowState.events}
-                    onClose={handleCloseOverflow}
-                    onSelectEvent={(event) => {
-                        handleEventClick(event);
-                        handleCloseOverflow();
-                    }}
-                />
-            )}
-
             {/* Event Preview Card */}
             {previewState.event && (
                 <EventPreviewCard
@@ -589,8 +871,24 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     onLeave={hidePreview}
                 />
             )}
+
+            {/* Month Day Overflow Popover */}
+            <MonthDayPopover
+                events={popoverState.events}
+                date={popoverState.date}
+                isOpen={popoverState.isOpen}
+                onClose={closeOverflowPopover}
+                position={popoverState.position}
+                onEventSelect={handleEventClick}
+                onEventHover={handleEventHover}
+                onEventLeave={hidePreview}
+            />
         </div>
     );
 };
+
+// Export helper components and functions for use in MonthDayPopover
+export { MonthInlineEventRow, getInlineAccent, formatInlineMeta };
+export type { InlineEvent };
 
 export default TechCalendarMonthView;

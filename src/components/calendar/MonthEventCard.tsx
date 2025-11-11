@@ -263,19 +263,11 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
             <span className="month-event-card-accent" aria-hidden="true" />
             <span className="month-event-card-label">{event.title}</span>
 
-            {hasMeta && (
+            {showCategory && (
                 <span className="month-event-card-meta">
-                    {timeLabel && (
-                        <span className="month-event-card-meta-text">{timeLabel}</span>
-                    )}
-                    {durationLabel && (
-                        <span className="month-event-card-pill">{durationLabel}</span>
-                    )}
-                    {showCategory && (
-                        <span className="month-event-card-pill month-event-card-pill--category">
-                            {event.category!.name}
-                        </span>
-                    )}
+                    <span className="month-event-card-pill month-event-card-pill--category">
+                        {event.category!.name}
+                    </span>
                 </span>
             )}
 

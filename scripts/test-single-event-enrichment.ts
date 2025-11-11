@@ -168,28 +168,33 @@ async function testSingleEventEnrichment(eventId: string) {
 
     // Check for agenda items and speakers in JSONB fields
     console.log('\nChecking for agenda items and speakers...');
-    const { data: agendaData } = await supabase
+    const agendaResponse = await supabase
         .from('events')
         .select('agenda, speakers')
         .eq('id', eventId)
         .single();
 
-    if (agendaData) {
-        console.log(`Agenda Items: ${agendaData.agenda ? (Array.isArray(agendaData.agenda) ? `${agendaData.agenda.length} items` : 'Present') : '❌ MISSING'}`);
-        console.log(`Speakers: ${agendaData.speakers ? (Array.isArray(agendaData.speakers) ? `${agendaData.speakers.length} speakers` : 'Present') : '❌ MISSING'}`);
+    if (agendaResponse.error) {
+        console.log(`⚠️  Unable to load agenda/speakers JSON: ${agendaResponse.error.message}`);
+    } else if (agendaResponse.data) {
+        const agendaRecord = agendaResponse.data as { agenda?: unknown; speakers?: unknown };
+        const { agenda, speakers } = agendaRecord;
+
+        console.log(`Agenda Items: ${agenda ? (Array.isArray(agenda) ? `${agenda.length} items` : 'Present') : '❌ MISSING'}`);
+        console.log(`Speakers: ${speakers ? (Array.isArray(speakers) ? `${speakers.length} speakers` : 'Present') : '❌ MISSING'}`);
         
-        if (agendaData.agenda && Array.isArray(agendaData.agenda) && agendaData.agenda.length > 0) {
+        if (agenda && Array.isArray(agenda) && agenda.length > 0) {
             console.log('\nFirst 3 Agenda Items:');
-            agendaData.agenda.slice(0, 3).forEach((item: any, idx: number) => {
+            agenda.slice(0, 3).forEach((item: any, idx: number) => {
                 console.log(`  ${idx + 1}. ${item.title || 'Untitled'}`);
                 console.log(`     Time: ${item.startTime || 'N/A'} - ${item.endTime || 'N/A'}`);
                 console.log(`     Speakers: ${item.speakers?.join(', ') || 'N/A'}`);
             });
         }
 
-        if (agendaData.speakers && Array.isArray(agendaData.speakers) && agendaData.speakers.length > 0) {
+        if (speakers && Array.isArray(speakers) && speakers.length > 0) {
             console.log('\nFirst 5 Speakers:');
-            agendaData.speakers.slice(0, 5).forEach((speaker: any, idx: number) => {
+            speakers.slice(0, 5).forEach((speaker: any, idx: number) => {
                 console.log(`  ${idx + 1}. ${speaker.name || 'Unknown'}`);
                 console.log(`     Title: ${speaker.title || 'N/A'}`);
                 console.log(`     Company: ${speaker.company || 'N/A'}`);

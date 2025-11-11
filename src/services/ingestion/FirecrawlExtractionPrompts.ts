@@ -5,6 +5,7 @@
  * Handles variations in terminology (e.g., "Sessions" vs "Agenda", "Presenters" vs "Speakers")
  */
 
+import { z } from 'zod';
 export const extractionPrompts = {
     /**
      * Semantic-aware description extraction
@@ -242,7 +243,7 @@ Return complete event metadata including all extracted fields.`,
  * Includes alternate field names to handle terminology variations
  */
 export function getSemanticEventSchema() {
-    return {
+    const jsonSchema = {
         type: 'object' as const,
         properties: {
             description: {
@@ -426,5 +427,82 @@ export function getSemanticEventSchema() {
                     'CRITICAL: For multi-day events, extract daily schedule from schedule/agenda pages. Include each day with actual start/end times. If times vary by day, include all days.',
             },
         },
+    };
+
+    const agendaItemSchema = z
+        .object({
+            title: z.string().optional(),
+            startTime: z.string().optional(),
+            endTime: z.string().optional(),
+            duration: z.string().optional(),
+            description: z.string().optional(),
+            speakers: z.array(z.string()).optional(),
+            location: z.string().optional(),
+            track: z.string().optional(),
+        })
+        .passthrough();
+
+    const speakerSchema = z
+        .object({
+            name: z.string().optional(),
+            title: z.string().optional(),
+            company: z.string().optional(),
+            bio: z.string().optional(),
+            linkedinUrl: z.string().optional(),
+            twitterUrl: z.string().optional(),
+            photoUrl: z.string().optional(),
+            websiteUrl: z.string().optional(),
+        })
+        .passthrough();
+
+    const venueSchema = z
+        .object({
+            name: z.string().optional(),
+            address: z.string().optional(),
+            city: z.string().optional(),
+            state_province: z.string().optional(),
+            country: z.string().optional(),
+            latitude: z.number().optional(),
+            longitude: z.number().optional(),
+        })
+        .passthrough();
+
+    const pricingSchema = z
+        .object({
+            priceMin: z.number().optional(),
+            priceMax: z.number().optional(),
+            currency: z.string().optional(),
+            pricingType: z.enum(['Free', 'Paid', 'Varies']).optional(),
+        })
+        .passthrough();
+
+    const dailyScheduleSchema = z
+        .object({
+            dayNumber: z.number().optional(),
+            date: z.string().optional(),
+            startTime: z.string().optional(),
+            endTime: z.string().optional(),
+            dayLabel: z.string().optional(),
+            notes: z.string().optional(),
+        })
+        .passthrough();
+
+    const zodSchema = z
+        .object({
+            description: z.string().optional(),
+            startTime: z.string().optional(),
+            endTime: z.string().optional(),
+            agenda: z.array(agendaItemSchema).optional(),
+            speakers: z.array(speakerSchema).optional(),
+            venue: venueSchema.optional(),
+            pricing: pricingSchema.optional(),
+            imageUrl: z.string().optional(),
+            dailySchedule: z.array(dailyScheduleSchema).optional(),
+        })
+        .passthrough();
+
+    return {
+        jsonSchema,
+        zodSchema,
     };
 }

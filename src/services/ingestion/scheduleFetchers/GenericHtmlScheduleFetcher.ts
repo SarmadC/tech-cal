@@ -160,8 +160,8 @@ function extractAgendaFromHtml(html: string, limit: number, context: ExtractionC
 
         const agendaItem: EventAgendaSchema = {
             title,
-            startTimeLocal,
-            endTimeLocal,
+            startTime: startTimeLocal,
+            endTime: endTimeLocal,
             location,
             track: track || undefined,
             dayNumber: deriveDayNumber(context.dayLabel),

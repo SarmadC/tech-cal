@@ -58,7 +58,7 @@ async function testSingleEventEnrichmentFast(eventId: string) {
     // Test with scrape strategy (faster) - use FirecrawlEnrichmentService's private client
     console.log('🚀 Testing with scrape strategy...\n');
     
-    const schema = getSemanticEventSchema();
+    const { zodSchema: semanticZodSchema } = getSemanticEventSchema();
     
     // Access the firecrawlClient singleton through the service
     // We'll need to use the service's processEnrichment method or access client directly
@@ -117,7 +117,7 @@ async function testSingleEventEnrichmentFast(eventId: string) {
         const scrapeResult = await firecrawl.scrapeUrl(testUrl, {
             formats: ['markdown', 'extract'],
             extract: {
-                schema: schema,
+                schema: semanticZodSchema,
                 prompt: 'CRITICAL: Extract timezone, pricing, agenda items, speakers, daily schedule, and agenda URL from this event page. Extract ALL available information.',
             },
         });
@@ -168,50 +168,6 @@ async function testSingleEventEnrichmentFast(eventId: string) {
         }
     } catch (error) {
         console.log(`❌ Error during direct API test: ${error}\n`);
-    }
-
-    if (result.success && result.data?.json) {
-        const extracted = result.data.json as any;
-        console.log('✅ Extraction successful!\n');
-        console.log('📊 Extracted Data:');
-        console.log('─────────────────────────────────────────────────────────────');
-        console.log(`Timezone: ${extracted.timezone || '❌ MISSING'}`);
-        console.log(`Start Time: ${extracted.startTime || '❌ MISSING'}`);
-        console.log(`End Time: ${extracted.endTime || '❌ MISSING'}`);
-        console.log(`Pricing: ${extracted.pricing ? JSON.stringify(extracted.pricing) : '❌ MISSING'}`);
-        console.log(`Daily Schedule: ${extracted.dailySchedule ? JSON.stringify(extracted.dailySchedule).substring(0, 200) + '...' : '❌ MISSING'}`);
-        console.log(`Agenda Items: ${extracted.agenda ? `${extracted.agenda.length} items` : '❌ MISSING'}`);
-        console.log(`Speakers: ${extracted.speakers ? `${extracted.speakers.length} speakers` : '❌ MISSING'}`);
-        
-        if (extracted.agenda && Array.isArray(extracted.agenda) && extracted.agenda.length > 0) {
-            console.log('\n📅 First 3 Agenda Items:');
-            extracted.agenda.slice(0, 3).forEach((item: any, idx: number) => {
-                console.log(`  ${idx + 1}. ${item.title || 'Untitled'}`);
-                console.log(`     Time: ${item.startTime || 'N/A'} - ${item.endTime || 'N/A'}`);
-                console.log(`     Speakers: ${item.speakers?.join(', ') || 'N/A'}`);
-            });
-        }
-
-        if (extracted.speakers && Array.isArray(extracted.speakers) && extracted.speakers.length > 0) {
-            console.log('\n👥 First 5 Speakers:');
-            extracted.speakers.slice(0, 5).forEach((speaker: any, idx: number) => {
-                console.log(`  ${idx + 1}. ${speaker.name || 'Unknown'}`);
-                console.log(`     ${speaker.title || ''}${speaker.company ? ` at ${speaker.company}` : ''}`);
-            });
-        }
-
-        if (extracted.dailySchedule && Array.isArray(extracted.dailySchedule)) {
-            console.log('\n📆 Daily Schedule:');
-            extracted.dailySchedule.forEach((day: any) => {
-                console.log(`  Day ${day.dayNumber || '?'}: ${day.startTime || 'N/A'} - ${day.endTime || 'N/A'}`);
-                if (day.dayLabel) console.log(`     ${day.dayLabel}`);
-            });
-        }
-
-        console.log('\n📄 Full JSON (first 1000 chars):');
-        console.log(JSON.stringify(extracted, null, 2).substring(0, 1000) + '...\n');
-    } else {
-        console.log(`❌ Extraction failed: ${result.error || 'Unknown error'}\n`);
     }
 
     console.log('✅ Test complete!\n');

@@ -38,6 +38,7 @@ export interface OrchestratorResult {
     success: boolean;
     eventsFetched: number;
     recordsQueued: number;
+    eventsNormalized: number;
     errors: number;
     errorMessage?: string;
 }
@@ -69,6 +70,7 @@ export class IngestionOrchestrator {
                     success: false,
                     eventsFetched: 0,
                     recordsQueued: 0,
+                    eventsNormalized: 0,
                     errors: 0,
                     errorMessage: 'Source is not active',
                 };
@@ -83,6 +85,7 @@ export class IngestionOrchestrator {
                     success: false,
                     eventsFetched: 0,
                     recordsQueued: 0,
+                    eventsNormalized: 0,
                     errors: 0,
                     errorMessage: 'Source is blocklisted',
                 };
@@ -208,6 +211,7 @@ export class IngestionOrchestrator {
                     success: true,
                     eventsFetched,
                     recordsQueued,
+                    eventsNormalized: recordsQueued,
                     errors,
                 };
             } catch (collectionError) {
@@ -236,7 +240,8 @@ export class IngestionOrchestrator {
                 sourceName: 'Unknown',
                 success: false,
                 eventsFetched,
-                    recordsQueued,
+                recordsQueued,
+                eventsNormalized: recordsQueued,
                 errors: errors + 1,
                 errorMessage,
             };

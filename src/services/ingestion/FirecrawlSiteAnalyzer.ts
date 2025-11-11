@@ -10,6 +10,42 @@ import * as Sentry from '@sentry/nextjs';
 
 export type SiteComplexity = 'SIMPLE' | 'MULTI_PAGE' | 'COMPLEX';
 
+export type ScheduleHint =
+    | 'track-filter'
+    | 'day-tabs'
+    | 'time-filter'
+    | 'api-endpoint'
+    | 'json-data'
+    | 'graphql-data'
+    | 'ics-download'
+    | 'pdf-download'
+    | (string & {});
+
+export type ScheduleLinkType = 'schedule' | 'speakers' | 'registration' | 'api' | 'calendar' | 'other' | (string & {});
+
+export type ScheduleContentFormat =
+    | 'html'
+    | 'json'
+    | 'graphql'
+    | 'markdown'
+    | 'ics'
+    | 'pdf'
+    | 'csv'
+    | 'rss'
+    | 'xml'
+    | 'text'
+    | 'unknown'
+    | (string & {});
+
+export interface ScheduleLinkDetail {
+    url: string;
+    type: ScheduleLinkType;
+    contentFormat?: ScheduleContentFormat;
+    label?: string;
+    method?: 'GET' | 'POST';
+    hints?: ScheduleHint[];
+}
+
 export interface SiteAnalysis {
     complexity: SiteComplexity;
     strategy: 'scrape' | 'crawl' | 'extract';
@@ -17,6 +53,10 @@ export interface SiteAnalysis {
     priorityPages: string[]; // Schedule/agenda/speakers pages (critical for data extraction)
     needsMultiPageCrawl: boolean;
     confidence: number; // 0-1
+    scheduleLinks: string[];
+    scheduleLinkDetails: ScheduleLinkDetail[];
+    scheduleHints: ScheduleHint[];
+    isMultiTrack: boolean;
 }
 
 // Common patterns for multi-page event sites
@@ -65,7 +105,11 @@ export class FirecrawlSiteAnalyzer {
     /**
      * Analyze a source URL to determine site complexity and optimal strategy
      */
-    static async analyze(sourceUrl: string, registrationUrl?: string): Promise<SiteAnalysis> {
+    static async analyze(
+        sourceUrl: string,
+        registrationUrl?: string,
+        _options: Record<string, unknown> = {}
+    ): Promise<SiteAnalysis> {
         try {
             const urlObj = new URL(sourceUrl);
             const hostname = urlObj.hostname.toLowerCase();
@@ -125,6 +169,13 @@ export class FirecrawlSiteAnalyzer {
             const priorityPages = relatedPages.filter(isPriorityPage);
             const otherPages = relatedPages.filter(url => !isPriorityPage(url));
 
+            const scheduleMetadata = this.buildScheduleMetadata({
+                sourceUrl,
+                hostname,
+                relatedPages,
+                priorityPages,
+            });
+
             return {
                 complexity,
                 strategy,
@@ -132,6 +183,7 @@ export class FirecrawlSiteAnalyzer {
                 priorityPages,
                 needsMultiPageCrawl: relatedPages.length > 0 || complexity === 'COMPLEX',
                 confidence,
+                ...scheduleMetadata,
             };
         } catch (error) {
             Sentry.captureException(error, {
@@ -151,6 +203,10 @@ export class FirecrawlSiteAnalyzer {
                 priorityPages: [],
                 needsMultiPageCrawl: false,
                 confidence: 0.3,
+                scheduleLinks: [],
+                scheduleLinkDetails: [],
+                scheduleHints: [],
+                isMultiTrack: false,
             };
         }
     }
@@ -295,5 +351,144 @@ export class FirecrawlSiteAnalyzer {
                 onlyMainContent: true,
             },
         };
+    }
+
+    /**
+     * Derive schedule-specific metadata from detected related pages.
+     */
+    private static buildScheduleMetadata(params: {
+        sourceUrl: string;
+        hostname: string;
+        relatedPages: string[];
+        priorityPages: string[];
+    }): {
+        scheduleLinks: string[];
+        scheduleLinkDetails: ScheduleLinkDetail[];
+        scheduleHints: ScheduleHint[];
+        isMultiTrack: boolean;
+    } {
+        const candidateLinks = new Set<string>();
+
+        if (isPriorityPage(params.sourceUrl)) {
+            candidateLinks.add(params.sourceUrl);
+        }
+
+        for (const url of params.priorityPages) {
+            candidateLinks.add(url);
+        }
+        for (const url of params.relatedPages) {
+            candidateLinks.add(url);
+        }
+
+        const scheduleLinks = Array.from(candidateLinks);
+        const scheduleLinkDetails = scheduleLinks.map((url) => this.inferScheduleLinkDetail(url, params.hostname));
+        const scheduleHints = this.aggregateScheduleHints(scheduleLinkDetails);
+        const isMultiTrack = this.detectMultiTrack(scheduleLinkDetails, scheduleHints);
+
+        return {
+            scheduleLinks,
+            scheduleLinkDetails,
+            scheduleHints,
+            isMultiTrack,
+        };
+    }
+
+    /**
+     * Build a schedule link detail with simple heuristics for format and hint detection.
+     */
+    private static inferScheduleLinkDetail(url: string, hostname: string): ScheduleLinkDetail {
+        const detail: ScheduleLinkDetail = {
+            url,
+            type: 'schedule',
+            contentFormat: 'html',
+            hints: [],
+        };
+
+        const normalized = url.toLowerCase();
+        const hints = new Set<ScheduleHint>();
+
+        if (normalized.includes('speakers')) {
+            detail.type = 'speakers';
+        }
+
+        if (normalized.includes('register') || normalized.includes('tickets')) {
+            detail.type = detail.type === 'schedule' ? 'registration' : detail.type;
+        }
+
+        if (
+            normalized.includes('api') ||
+            normalized.includes('graphql') ||
+            normalized.endsWith('.json') ||
+            /[?&]format=json/.test(normalized)
+        ) {
+            detail.type = 'api';
+            detail.contentFormat = normalized.includes('graphql') ? 'graphql' : 'json';
+            hints.add('api-endpoint');
+            if (detail.contentFormat === 'graphql') {
+                hints.add('graphql-data');
+            } else {
+                hints.add('json-data');
+            }
+        }
+
+        if (normalized.endsWith('.ics') || normalized.includes('calendar')) {
+            detail.type = detail.type === 'schedule' ? 'calendar' : detail.type;
+            detail.contentFormat = 'ics';
+            hints.add('ics-download');
+        }
+
+        if (normalized.endsWith('.pdf')) {
+            detail.contentFormat = 'pdf';
+            hints.add('pdf-download');
+        }
+
+        if (
+            /[?&](track|stage|stream|pillar|channel)=/.test(normalized) ||
+            normalized.includes('/track/') ||
+            normalized.includes('/stage/')
+        ) {
+            hints.add('track-filter');
+        }
+
+        if (/[?&](day|date|sessionday|day_number|dayid)=/.test(normalized) || normalized.includes('/day/')) {
+            hints.add('day-tabs');
+        }
+
+        if (/[?&](time|hour|start)=/.test(normalized)) {
+            hints.add('time-filter');
+        }
+
+        if (detail.type === 'schedule' && normalized.startsWith(`https://${hostname}/sessions/`)) {
+            hints.add('track-filter');
+        }
+
+        if (hints.size > 0) {
+            detail.hints = Array.from(hints);
+        } else {
+            delete detail.hints;
+        }
+
+        return detail;
+    }
+
+    private static aggregateScheduleHints(details: ScheduleLinkDetail[]): ScheduleHint[] {
+        const hints = new Set<ScheduleHint>();
+        for (const detail of details) {
+            if (detail.hints) {
+                for (const hint of detail.hints) {
+                    hints.add(hint);
+                }
+            }
+        }
+        return Array.from(hints);
+    }
+
+    private static detectMultiTrack(details: ScheduleLinkDetail[], scheduleHints: ScheduleHint[]): boolean {
+        if (scheduleHints.some((hint) => hint === 'track-filter' || hint === 'day-tabs' || hint === 'time-filter')) {
+            return true;
+        }
+
+        const scheduleLinkCount = details.filter((detail) => detail.type === 'schedule').length;
+        return scheduleLinkCount > 5;
     }
 }

@@ -87,14 +87,14 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0;
-  padding-top: 16px;
+  padding-top: 8px;
 }
 
 .month-grid-day {
   border-right: 1px solid rgba(0, 0, 0, 0.06);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   padding: 4px;
-  min-height: 180px; /* Increased from 160px to give more space */
+  min-height: 160px;
   display: flex !important;
   flex-direction: column !important;
   position: relative;
@@ -160,6 +160,21 @@
   border-color: var(--accent-200);
 }
 
+.month-grid-day.expanded {
+  background: var(--background-elevated, var(--background-secondary));
+  border-color: rgba(148, 163, 184, 0.45);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+  z-index: 2;
+}
+
+@media (prefers-color-scheme: dark) {
+  .month-grid-day.expanded {
+    background: rgba(30, 41, 59, 0.72);
+    border-color: rgba(148, 163, 184, 0.55);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
+  }
+}
+
 .month-grid-day.today .month-grid-day-number {
   background: var(--accent-500);
   color: white;
@@ -183,12 +198,17 @@
 }
 
 .month-grid-day-events {
-  --month-event-gap: 6px;
+  --month-event-gap: 4px;
   display: flex;
   flex-direction: column;
   gap: var(--month-event-gap);
   min-height: 0;
   overflow: visible;
+  flex: 1;
+}
+
+.month-grid-day.expanded .month-grid-day-events {
+  --month-event-gap: 6px;
 }
 
 .month-grid-event {
@@ -380,20 +400,21 @@
 .month-event-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--event-accent-surface, rgba(148, 163, 184, 0.14));
+  padding: 2px 4px;
+  border-radius: 6px;
+  background: var(--event-accent-surface, rgba(148, 163, 184, 0.08));
   color: var(--foreground-primary);
   transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   cursor: pointer;
   position: relative;
+  min-height: 18px;
 }
 
 .month-event-card:hover,
 .month-event-card:focus-visible {
-  background: var(--event-accent-surface-hover, rgba(148, 163, 184, 0.22));
+  background: var(--event-accent-surface-hover, rgba(148, 163, 184, 0.14));
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16);
   outline: none;
 }
@@ -403,7 +424,7 @@
 }
 
 .month-event-card-accent {
-  width: 4px;
+  width: 3px;
   align-self: stretch;
   border-radius: 999px;
   background: var(--event-accent-color);
@@ -411,9 +432,9 @@
 
 .month-event-card-label {
   flex: 1;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.1;
   color: inherit;
   white-space: nowrap;
   overflow: hidden;
@@ -430,7 +451,7 @@
 }
 
 .month-event-card-meta-text {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--foreground-secondary);
   font-weight: 500;
 }
@@ -439,13 +460,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 6px;
-  font-size: 0.65rem;
+  padding: 1px 5px;
+  font-size: 0.55rem;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.14);
+  background: rgba(148, 163, 184, 0.08);
   color: var(--foreground-secondary);
   font-weight: 500;
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .month-event-card-pill--category {
@@ -506,8 +527,8 @@
 }
 
 .month-event-card-logo {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -544,13 +565,12 @@
   border-radius: 8px !important;
   width: 100% !important;
   position: relative !important;
-  display: block !important; /* Changed from flex to block for absolute positioning */
+  display: block !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
   margin: 0 !important;
-  /* Let the card grow naturally with the larger cell */
-  min-height: 80px !important;
-  height: 100px !important; /* Force larger height */
+  min-height: 56px !important;
+  height: auto !important;
   flex: 1 !important;
 }
 
@@ -576,7 +596,7 @@
 /* Month grid event container - allow larger cards */
 .tech-calendar-month-view .month-grid-event {
   height: auto !important;
-  min-height: 100px !important;
+  min-height: 0 !important;
   width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
@@ -970,10 +990,10 @@
 }
 
 .month-grid-more-button {
-  margin-top: 4px;
+  margin-top: auto;
   width: 100%;
-  padding: 6px 8px;
-  font-size: 0.72rem;
+  padding: 3px 5px;
+  font-size: 0.65rem;
   font-weight: 600;
   color: var(--foreground-secondary);
   background: transparent;
@@ -986,9 +1006,9 @@
 .month-grid-more-button:hover,
 .month-grid-more-button:focus-visible {
   color: var(--foreground-primary);
-  background: rgba(148, 163, 184, 0.14);
-  border-color: rgba(148, 163, 184, 0.4);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
   outline: none;
 }
 
@@ -1237,4 +1257,63 @@
   padding: 2px 6px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.18);
+}
+
+/* ==========================================================================
+   INLINE EVENT ROWS
+   ========================================================================== */
+
+.month-inline-event {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--foreground-primary);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  text-align: left;
+}
+
+.month-inline-event:hover,
+.month-inline-event:focus-visible {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.16);
+  color: var(--foreground-primary);
+  outline: none;
+}
+
+.month-inline-event-accent {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.month-inline-event-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.month-inline-event-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.month-inline-event-meta {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--foreground-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

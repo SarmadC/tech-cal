@@ -1,0 +1,135 @@
+/* Month Day Popover Styles */
+
+.month-day-popover {
+    background: var(--color-surface-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    min-width: 280px;
+    max-width: 400px;
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.month-day-popover-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.month-day-popover-title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+}
+
+.month-day-popover-close {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.month-day-popover-close:hover {
+    background: var(--color-background-hover);
+    color: var(--color-text-primary);
+}
+
+.month-day-popover-content {
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.month-day-popover-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--color-text-tertiary);
+    font-size: 0.875rem;
+}
+
+.month-day-popover-events {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.month-day-popover-event {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: inherit;
+    width: 100%;
+}
+
+.month-day-popover-event:not(:last-child) {
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.month-day-popover-event .month-inline-event {
+    border-radius: 0;
+    width: 100%;
+    padding: 8px 16px;
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+.month-day-popover-event .month-inline-event:hover {
+    background-color: var(--color-background-hover);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .month-day-popover {
+        background: var(--color-surface-primary);
+        border-color: var(--color-border);
+    }
+
+    .month-day-popover-close:hover {
+        background: var(--color-background-hover);
+    }
+
+    .month-day-popover-event:not(:last-child) {
+        border-bottom-color: var(--color-border-subtle);
+    }
+}
+
+/* Scrollbar styling */
+.month-day-popover-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.month-day-popover-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.month-day-popover-content::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+}
+
+.month-day-popover-content::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-secondary);
+}

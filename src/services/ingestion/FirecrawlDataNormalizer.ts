@@ -214,7 +214,7 @@ export function normalizeAgenda(items: unknown[]): EventAgendaSchema[] {
                 speakers: speakers.filter((s) => s),
                 location: pickString(agenda.location, agenda.venue, agenda.room),
                 track: pickString(agenda.track, agenda.category, agenda.type),
-            };
+            } as EventAgendaSchema;
         })
         .filter((item): item is EventAgendaSchema => item !== null);
 }
@@ -325,7 +325,7 @@ export function normalizeSpeakers(items: unknown[]): EventSpeakersSchema[] {
                 twitterUrl,
                 photoUrl,
                 websiteUrl,
-            };
+            } as EventSpeakersSchema;
         })
         .filter((item): item is EventSpeakersSchema => item !== null);
 }
@@ -387,12 +387,12 @@ export function mergeExtractedData(sources: ExtractedEventData[]): ExtractedEven
     const merged: ExtractedEventData = {};
 
     // For string fields, prefer longer (more complete) values
-    const stringFields: (keyof ExtractedEventData)[] = [
+    const stringFields = [
         'description',
         'startTime',
         'endTime',
         'imageUrl',
-    ];
+    ] as const;
 
     for (const field of stringFields) {
         let bestValue = '';

@@ -215,8 +215,8 @@ function mapSessionRecord(
 
     const agendaItem: EventAgendaSchema = {
         title,
-        startTimeLocal: start,
-        endTimeLocal: end,
+        startTime: start,
+        endTime: end,
         location: location ?? undefined,
         track: track ?? undefined,
         description: description ?? undefined,

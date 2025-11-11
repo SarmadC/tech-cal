@@ -16,6 +16,7 @@ import type {
     EventSpeakersSchema,
     EventDailyScheduleEntry,
     FirecrawlScrapeResponse,
+    FirecrawlExtractResponse,
 } from '@/types/firecrawl';
 import { EventEnrichmentService } from './EventEnrichmentService';
 import { FirecrawlSiteAnalyzer, type SiteAnalysis } from './FirecrawlSiteAnalyzer';
@@ -36,6 +37,7 @@ import {
 } from '@/config/ingestionConstants';
 import { normalizeUrl, resolveTechMemeRedirect, isTechMemeRedirect } from './utils/urlResolver';
 import * as Sentry from '@sentry/nextjs';
+import { RulesFirstExtractionService } from './RulesFirstExtractionService';
 
 /**
  * Create a timeout promise that rejects after the specified duration
@@ -119,11 +121,13 @@ const resolveMetadataUrl = (metadata?: MetadataRecord): string | undefined => {
     return undefined;
 };
 
+type SemanticEventJsonSchema = ReturnType<typeof getSemanticEventSchema>['jsonSchema'];
+
 interface ExtractStrategyParams {
     primarySourceUrl: string;
     primaryRegistrationUrl?: string | null;
     siteAnalysis: SiteAnalysis;
-    semanticSchema: { type: string; properties: Record<string, unknown> };
+    semanticSchema: SemanticEventJsonSchema | null;
     extractionPrompt: string;
     priorityUrls: string[];
     techMemeCandidates: string[];
@@ -264,6 +268,47 @@ class FirecrawlClientAdapter {
 const firecrawlClient = new FirecrawlClientAdapter();
 
 export class FirecrawlEnrichmentService {
+    static async fetchDescriptionPreview(
+        sourceUrl: string,
+        registrationUrl?: string | null,
+        existingDescription?: string | null
+    ): Promise<{ description?: string; confidence?: number } | null> {
+        const urlsToTry = [sourceUrl];
+        if (registrationUrl && registrationUrl !== sourceUrl) {
+            urlsToTry.push(registrationUrl);
+        }
+
+        for (const url of urlsToTry) {
+            try {
+                const extraction = await RulesFirstExtractionService.extractFromUrl(url, {
+                    minConfidence: 0.4,
+                });
+
+                if (extraction.success && extraction.data?.description) {
+                    const normalized =
+                        normalizeDescription(
+                            extraction.data.description,
+                            existingDescription ?? undefined
+                        ) ?? extraction.data.description.trim();
+
+                    if (normalized) {
+                        return {
+                            description: normalized,
+                            confidence: extraction.confidence ?? undefined,
+                        };
+                    }
+                }
+            } catch (error) {
+                console.warn(
+                    `[FirecrawlEnrichmentService] Failed to fetch description preview from ${url}:`,
+                    error
+                );
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Enqueue event for Firecrawl enrichment
      * Marks event as pending and stores initial metadata
@@ -415,7 +460,7 @@ export class FirecrawlEnrichmentService {
 
             // Use semantic event schema from FirecrawlExtractionPrompts
             // This schema handles terminology variations and provides comprehensive field definitions
-            const semanticSchema = getSemanticEventSchema();
+            const { jsonSchema: semanticSchema } = getSemanticEventSchema();
 
             // Analyze site complexity and determine strategy
             const siteAnalysis = await FirecrawlSiteAnalyzer.analyze(
@@ -961,7 +1006,7 @@ export class FirecrawlEnrichmentService {
     private static normalizeDailySchedule(
         entries: EventDailyScheduleEntry[],
         timezone?: string | null
-    ): Record<string, unknown> | null {
+    ): Database['public']['Tables']['events']['Insert']['daily_schedule'] {
         if (!entries || entries.length === 0) {
             return null;
         }
@@ -1007,10 +1052,18 @@ export class FirecrawlEnrichmentService {
         const dailyStart = startTimes.length > 0 ? startTimes.reduce((min, time) => (time < min ? time : min), startTimes[0]) : undefined;
         const dailyEnd = endTimes.length > 0 ? endTimes.reduce((max, time) => (time > max ? time : max), endTimes[0]) : undefined;
 
-        const schedulePayload: Record<string, unknown> = {
-            type: allSameStart && allSameEnd ? 'daily_recurring' : 'daily_custom',
-            custom_schedule: normalizedEntries,
-        };
+        const jsonEntries = normalizedEntries.map((entry) => ({
+            day: entry.day,
+            ...(entry.start ? { start: entry.start } : {}),
+            ...(entry.end ? { end: entry.end } : {}),
+        }));
+
+        const schedulePayload = {
+            type: (allSameStart && allSameEnd ? 'daily_recurring' : 'daily_custom') as
+                | 'daily_recurring'
+                | 'daily_custom',
+            custom_schedule: jsonEntries,
+        } as Record<string, unknown>;
 
         // Only include daily_start/daily_end if we have valid times
         if (dailyStart) {
@@ -1024,7 +1077,7 @@ export class FirecrawlEnrichmentService {
             schedulePayload.timezone = timezone;
         }
 
-        return schedulePayload;
+        return schedulePayload as Database['public']['Tables']['events']['Insert']['daily_schedule'];
     }
 
     /**
@@ -1329,7 +1382,13 @@ export class FirecrawlEnrichmentService {
 
             // Create/update agenda items
             if (extractedData.agenda && extractedData.agenda.length > 0) {
-                const agendaItems = extractedData.agenda.map((item, index) => {
+                const agendaItems = extractedData.agenda.flatMap((item, index) => {
+                    const title = (item.title ?? '').trim();
+
+                    if (!title) {
+                        return [];
+                    }
+
                     // Convert ISO timestamps to TIME format (HH:MM:SS) if needed
                     // The database expects TIME type, but Firecrawl may return ISO timestamps
                     let startTime = item.startTime;
@@ -1368,48 +1427,78 @@ export class FirecrawlEnrichmentService {
                             console.warn(`[FirecrawlEnrichmentService] Failed to parse agenda endTime: ${item.endTime}`, error);
                         }
                     }
+                    if (!startTime) {
+                        return [];
+                    }
+
+                    if (!endTime) {
+                        endTime = startTime;
+                    }
                     
-                    return {
-                        title: item.title,
-                        startTime: startTime,
-                        endTime: endTime,
+                    return [{
+                        title,
+                        startTime,
+                        endTime,
                         type: item.track || 'other',
-                        description: item.description || null,
-                        location: item.location || null,
+                        description: item.description ?? undefined,
+                        location: item.location ?? undefined,
                         dayNumber: 1,
                         sortOrder: index,
-                    };
+                    }];
                 });
 
-                await EventEnrichmentService.createOrUpdateAgendaItems(
-                    eventId,
-                    agendaItems,
-                    supabaseClient
-                );
-                fieldsUpdated.push('agenda');
-                console.log(`[FirecrawlEnrichmentService] Updated agenda for event ${eventId} (${extractedData.agenda.length} items)`);
+                if (agendaItems.length > 0) {
+                    await EventEnrichmentService.createOrUpdateAgendaItems(
+                        eventId,
+                        agendaItems,
+                        supabaseClient
+                    );
+                    fieldsUpdated.push('agenda');
+                    console.log(`[FirecrawlEnrichmentService] Updated agenda for event ${eventId} (${agendaItems.length} items)`);
+                } else {
+                    console.log(
+                        `[FirecrawlEnrichmentService] Skipped agenda update for event ${eventId}: no agenda entries with valid title/start time`
+                    );
+                }
             }
 
             // Create/update speakers
             if (extractedData.speakers && extractedData.speakers.length > 0) {
-                const speakers = extractedData.speakers.map(speaker => ({
-                    name: speaker.name,
-                    title: speaker.title || undefined,
-                    company: speaker.company || undefined,
-                    bio: speaker.bio || undefined,
-                    linkedinUrl: speaker.linkedinUrl || undefined,
-                    photoUrl: speaker.photoUrl || undefined,
-                    twitterUrl: speaker.twitterUrl || undefined,
-                    websiteUrl: speaker.websiteUrl || undefined,
-                }));
+                const speakers = extractedData.speakers.flatMap((speaker) => {
+                    const name = (speaker.name ?? '').trim();
+                    if (!name) {
+                        return [];
+                    }
 
-                await EventEnrichmentService.createOrUpdateSpeakers(
-                    eventId,
-                    speakers,
-                    supabaseClient
-                );
-                fieldsUpdated.push('speakers');
-                console.log(`[FirecrawlEnrichmentService] Updated speakers for event ${eventId} (${extractedData.speakers.length} speakers)`);
+                    return [
+                        {
+                            name,
+                            title: speaker.title ?? undefined,
+                            company: speaker.company ?? undefined,
+                            bio: speaker.bio ?? undefined,
+                            linkedinUrl: speaker.linkedinUrl ?? undefined,
+                            photoUrl: speaker.photoUrl ?? undefined,
+                            twitterUrl: speaker.twitterUrl ?? undefined,
+                            websiteUrl: speaker.websiteUrl ?? undefined,
+                        },
+                    ];
+                });
+
+                if (speakers.length > 0) {
+                    await EventEnrichmentService.createOrUpdateSpeakers(
+                        eventId,
+                        speakers,
+                        supabaseClient
+                    );
+                    fieldsUpdated.push('speakers');
+                    console.log(
+                        `[FirecrawlEnrichmentService] Updated speakers for event ${eventId} (${speakers.length} speakers)`
+                    );
+                } else {
+                    console.log(
+                        `[FirecrawlEnrichmentService] Skipped speakers update for event ${eventId}: no speakers with valid names`
+                    );
+                }
             }
 
             // Update pricing if provided
@@ -1493,7 +1582,8 @@ export class FirecrawlEnrichmentService {
                 .from('events')
                 .update({
                     firecrawl_enrichment_status: status,
-                    firecrawl_enrichment_metadata: metadata as unknown as Record<string, unknown>,
+                    firecrawl_enrichment_metadata:
+                        metadata as Database['public']['Tables']['events']['Update']['firecrawl_enrichment_metadata'],
                 })
                 .eq('id', eventId);
         } catch (error) {

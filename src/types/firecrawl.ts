@@ -53,6 +53,7 @@ export interface EventAgendaSchema {
     title?: string;
     name?: string;
     sessionName?: string;
+    session_name?: string;
 
     // Time fields
     startTime?: string; // ISO timestamp or time string
@@ -61,11 +62,14 @@ export interface EventAgendaSchema {
     time?: string;
     begin?: string;
     beginTime?: string;
+    begin_time?: string;
 
     endTime?: string; // ISO timestamp or time string
     end_time?: string;
     end?: string;
     duration?: string; // Alternative: duration in minutes or text
+    finish?: string;
+    finishTime?: string;
 
     // Content fields
     description?: string;
@@ -91,6 +95,7 @@ export interface EventAgendaSchema {
     track?: string;
     category?: string;
     type?: string;
+    dayNumber?: number;
 }
 
 /**
@@ -140,22 +145,30 @@ export interface EventSpeakersSchema {
     linkedinUrl?: string;
     linkedin?: string;
     linkedin_url?: string;
+    linkedIn_url?: string;
 
     twitterUrl?: string;
     twitter?: string;
     twitter_url?: string;
     twitterHandle?: string;
+    twitter_handle?: string;
 
     photoUrl?: string;
     photo_url?: string;
     photo?: string;
     image?: string;
     imageUrl?: string;
+    image_url?: string;
+    avatar?: string;
+    avatarUrl?: string;
 
     websiteUrl?: string;
     website?: string;
     website_url?: string;
     personalWebsite?: string;
+    personal_website?: string;
+
+    org?: string;
 }
 
 /**
@@ -172,6 +185,7 @@ export interface EventPricingSchema {
  * Combined extracted data from Firecrawl
  */
 export interface ExtractedEventData {
+    title?: string;
     description?: string; // Markdown description
     startTime?: string; // ISO timestamp for event start time
     endTime?: string; // ISO timestamp for event end time
@@ -179,6 +193,13 @@ export interface ExtractedEventData {
     speakers?: EventSpeakersSchema[];
     pricing?: EventPricingSchema;
     imageUrl?: string;
+    agendaUrl?: string;
+    timezone?: string;
+    registrationUrl?: string;
+    livestreamUrl?: string;
+    format?: string;
+    difficulty?: string;
+    tags?: Array<string | null | undefined>;
     venue?: {
         name?: string;
         address?: string;
@@ -187,6 +208,21 @@ export interface ExtractedEventData {
         country?: string;
         latitude?: number;
         longitude?: number;
+    };
+    location?: {
+        venue?: string;
+        address?: string;
+        city?: string;
+        country?: string;
+        state?: string;
+        state_province?: string;
+        virtualPlatform?: string;
+        [key: string]: unknown;
+    };
+    sourceUrls?: {
+        finalUrl?: string;
+        sourceUrl?: string;
+        [key: string]: unknown;
     };
     dailySchedule?: EventDailyScheduleEntry[];
 }

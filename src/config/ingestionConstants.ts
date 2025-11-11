@@ -19,7 +19,10 @@ export const FIRECRAWL_CONFIG = {
     DEFAULT_CONCURRENCY: 2,
     DEFAULT_BATCH_SIZE: 10,
     DEFAULT_WORKER_INTERVAL_MS: 60000, // 1 minute
-    BLOCKED_DOMAINS: ['techmeme.com', 'www.techmeme.com'],
+    BLOCKED_DOMAINS: ['techmeme.com', 'www.techmeme.com'] as readonly string[],
+    DAILY_CREDIT_CAP: 0,
+    MONTHLY_CREDIT_CAP: 0,
+    PER_DOMAIN_DAILY_CAP: 0,
 } as const;
 
 // Deduplication Thresholds
