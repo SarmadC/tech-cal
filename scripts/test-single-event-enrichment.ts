@@ -43,23 +43,35 @@ async function testSingleEventEnrichment(eventId: string) {
         process.exit(1);
     }
 
-    console.log(`✅ Found event: ${event.title}`);
-    console.log(`   Source URL: ${event.source_url}`);
-    console.log(`   Registration URL: ${event.registration_url || 'N/A'}`);
-    console.log(`   Current Status: ${event.firecrawl_enrichment_status || 'NULL'}`);
-    console.log(`   Timezone: ${event.timezone || 'MISSING'}`);
-    const priceStr = event.price_min || event.price_max 
-        ? `${event.price_min || 'N/A'}-${event.price_max || 'N/A'} ${(event as any).price_currency || ''}` 
+    const eventData = event as unknown as {
+        title: string;
+        source_url: string | null;
+        registration_url: string | null;
+        firecrawl_enrichment_status: string | null;
+        timezone: string | null;
+        price_min: number | null;
+        price_max: number | null;
+        currency: string | null;
+        agenda_url: string | null;
+        daily_schedule: unknown;
+    };
+    console.log(`✅ Found event: ${eventData.title}`);
+    console.log(`   Source URL: ${eventData.source_url}`);
+    console.log(`   Registration URL: ${eventData.registration_url || 'N/A'}`);
+    console.log(`   Current Status: ${eventData.firecrawl_enrichment_status || 'NULL'}`);
+    console.log(`   Timezone: ${eventData.timezone || 'MISSING'}`);
+    const priceStr = eventData.price_min || eventData.price_max 
+        ? `${eventData.price_min || 'N/A'}-${eventData.price_max || 'N/A'} ${eventData.currency || ''}` 
         : 'MISSING';
     console.log(`   Pricing: ${priceStr}`);
-    console.log(`   Agenda URL: ${event.agenda_url || 'MISSING'}`);
-    console.log(`   Daily Schedule: ${event.daily_schedule ? JSON.stringify(event.daily_schedule).substring(0, 100) + '...' : 'MISSING'}`);
+    console.log(`   Agenda URL: ${eventData.agenda_url || 'MISSING'}`);
+    console.log(`   Daily Schedule: ${eventData.daily_schedule ? JSON.stringify(eventData.daily_schedule).substring(0, 100) + '...' : 'MISSING'}`);
     console.log('');
 
     // Try to extract actual domain from TechMeme redirect URL
     // TechMeme URLs have pattern: techmeme.com/r2/[domain]-[hash].htm
     console.log('🔍 Attempting to extract actual domain from TechMeme redirect (for reference)...');
-    const sourceUrl = event.source_url as string;
+    const sourceUrl = eventData.source_url as string;
     if (sourceUrl.includes('techmeme.com/r2/')) {
         const match = sourceUrl.match(/techmeme\.com\/r2\/([^\/_-]+)/);
         if (match && match[1]) {
@@ -90,7 +102,7 @@ async function testSingleEventEnrichment(eventId: string) {
                 attempted_at: null,
                 error_message: null,
             },
-        })
+        } as Record<string, unknown>)
         .eq('id', eventId);
     console.log('✅ Status reset\n');
 
@@ -124,13 +136,28 @@ async function testSingleEventEnrichment(eventId: string) {
         return;
     }
 
+    const updatedEventData = updatedEvent as unknown as {
+        firecrawl_enrichment_status: string | null;
+        firecrawl_enrichment_metadata: unknown;
+        timezone: string | null;
+        price_min: number | null;
+        price_max: number | null;
+        currency: string | null;
+        agenda_url: string | null;
+        daily_schedule: unknown;
+        description: string | null;
+        location: string | null;
+        start_time: string | null;
+        end_time: string | null;
+    };
+    
     console.log('📈 Enrichment Results:');
     console.log('─────────────────────────────────────────────────────────────');
-    console.log(`Status: ${updatedEvent.firecrawl_enrichment_status}`);
+    console.log(`Status: ${updatedEventData.firecrawl_enrichment_status}`);
     console.log('');
 
     // Check metadata
-    const metadata = updatedEvent.firecrawl_enrichment_metadata as any;
+    const metadata = updatedEventData.firecrawl_enrichment_metadata as any;
     if (metadata) {
         console.log('Metadata:');
         console.log(`  Strategy: ${metadata.enrichment_strategy || 'N/A'}`);
@@ -149,16 +176,16 @@ async function testSingleEventEnrichment(eventId: string) {
     console.log('─────────────────────────────────────────────────────────────');
     
     const fields = {
-        'Timezone': updatedEvent.timezone,
-        'Pricing': updatedEvent.price_min || updatedEvent.price_max 
-            ? `${updatedEvent.price_min || ''}-${updatedEvent.price_max || ''} ${(updatedEvent as any).price_currency || ''}`.trim()
+        'Timezone': updatedEventData.timezone,
+        'Pricing': updatedEventData.price_min || updatedEventData.price_max 
+            ? `${updatedEventData.price_min || ''}-${updatedEventData.price_max || ''} ${updatedEventData.currency || ''}`.trim()
             : null,
-        'Agenda URL': updatedEvent.agenda_url,
-        'Daily Schedule': updatedEvent.daily_schedule,
-        'Description': updatedEvent.description ? updatedEvent.description.substring(0, 100) + '...' : null,
-        'Location': updatedEvent.location,
-        'Start Time': updatedEvent.start_time,
-        'End Time': updatedEvent.end_time,
+        'Agenda URL': updatedEventData.agenda_url,
+        'Daily Schedule': updatedEventData.daily_schedule,
+        'Description': updatedEventData.description ? updatedEventData.description.substring(0, 100) + '...' : null,
+        'Location': updatedEventData.location,
+        'Start Time': updatedEventData.start_time,
+        'End Time': updatedEventData.end_time,
     };
 
     for (const [field, value] of Object.entries(fields)) {
@@ -168,31 +195,40 @@ async function testSingleEventEnrichment(eventId: string) {
 
     // Check for agenda items and speakers in JSONB fields
     console.log('\nChecking for agenda items and speakers...');
-    const { data: agendaData } = await supabase
-        .from('events')
-        .select('agenda, speakers')
-        .eq('id', eventId)
-        .single();
+    // Query agenda and speakers from related tables
+    const { data: agendaItems } = await supabase
+        .from('event_agenda')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('day_number', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(10);
 
-    if (agendaData) {
-        console.log(`Agenda Items: ${agendaData.agenda ? (Array.isArray(agendaData.agenda) ? `${agendaData.agenda.length} items` : 'Present') : '❌ MISSING'}`);
-        console.log(`Speakers: ${agendaData.speakers ? (Array.isArray(agendaData.speakers) ? `${agendaData.speakers.length} speakers` : 'Present') : '❌ MISSING'}`);
+    const { data: speakers } = await supabase
+        .from('speakers')
+        .select('*, agenda_speakers!inner(agenda_id)')
+        .limit(10);
+
+    if (agendaItems || speakers) {
+        console.log(`Agenda Items: ${agendaItems && agendaItems.length > 0 ? `${agendaItems.length} items` : '❌ MISSING'}`);
+        console.log(`Speakers: ${speakers && speakers.length > 0 ? `${speakers.length} speakers` : '❌ MISSING'}`);
         
-        if (agendaData.agenda && Array.isArray(agendaData.agenda) && agendaData.agenda.length > 0) {
+        if (agendaItems && agendaItems.length > 0) {
             console.log('\nFirst 3 Agenda Items:');
-            agendaData.agenda.slice(0, 3).forEach((item: any, idx: number) => {
-                console.log(`  ${idx + 1}. ${item.title || 'Untitled'}`);
-                console.log(`     Time: ${item.startTime || 'N/A'} - ${item.endTime || 'N/A'}`);
-                console.log(`     Speakers: ${item.speakers?.join(', ') || 'N/A'}`);
+            agendaItems.slice(0, 3).forEach((item: any, idx: number) => {
+                const itemData = item as { title: string; start_time: string; end_time: string | null };
+                console.log(`  ${idx + 1}. ${itemData.title || 'Untitled'}`);
+                console.log(`     Time: ${itemData.start_time || 'N/A'} - ${itemData.end_time || 'N/A'}`);
             });
         }
 
-        if (agendaData.speakers && Array.isArray(agendaData.speakers) && agendaData.speakers.length > 0) {
+        if (speakers && speakers.length > 0) {
             console.log('\nFirst 5 Speakers:');
-            agendaData.speakers.slice(0, 5).forEach((speaker: any, idx: number) => {
-                console.log(`  ${idx + 1}. ${speaker.name || 'Unknown'}`);
-                console.log(`     Title: ${speaker.title || 'N/A'}`);
-                console.log(`     Company: ${speaker.company || 'N/A'}`);
+            speakers.slice(0, 5).forEach((speaker: any, idx: number) => {
+                const speakerData = speaker as { name: string; title: string | null; company: string | null };
+                console.log(`  ${idx + 1}. ${speakerData.name || 'Unknown'}`);
+                console.log(`     Title: ${speakerData.title || 'N/A'}`);
+                console.log(`     Company: ${speakerData.company || 'N/A'}`);
             });
         }
     }

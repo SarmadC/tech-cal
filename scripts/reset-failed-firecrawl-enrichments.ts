@@ -41,16 +41,20 @@ async function resetFailedEnrichments() {
         process.exit(1);
     }
 
-    if (!completedEvents || completedEvents.length === 0) {
+    if (!completedEvents || !Array.isArray(completedEvents) || completedEvents.length === 0) {
         console.log('✅ No completed events found');
         return;
     }
 
     // Filter events with empty fields_updated
     const failedEvents = completedEvents.filter(event => {
-        const metadata = (event.firecrawl_enrichment_metadata as any) || {};
+        const eventData = event as unknown as {
+            id: string;
+            firecrawl_enrichment_metadata: unknown;
+        };
+        const metadata = (eventData.firecrawl_enrichment_metadata as { fields_updated?: unknown[] }) || {};
         const fieldsUpdated = metadata.fields_updated || [];
-        return fieldsUpdated.length === 0;
+        return Array.isArray(fieldsUpdated) && fieldsUpdated.length === 0;
     });
 
     console.log(`📊 Found ${completedEvents.length} completed events`);
@@ -62,13 +66,17 @@ async function resetFailedEnrichments() {
     }
 
     // Reset to pending
-    const eventIds = failedEvents.map(e => e.id);
+    const eventIds = failedEvents.map(e => {
+        const eventData = e as unknown as { id: string };
+        return eventData.id;
+    });
+    const updateData = {
+        firecrawl_enrichment_status: 'pending',
+        firecrawl_enrichment_metadata: {},
+    } as Record<string, unknown>;
     const { error: updateError } = await supabase
         .from('events')
-        .update({
-            firecrawl_enrichment_status: 'pending',
-            firecrawl_enrichment_metadata: {},
-        })
+        .update(updateData)
         .in('id', eventIds);
 
     if (updateError) {
@@ -79,7 +87,8 @@ async function resetFailedEnrichments() {
     console.log(`✅ Reset ${failedEvents.length} events to pending status\n`);
     console.log('📋 Reset events:');
     failedEvents.slice(0, 10).forEach((event, idx) => {
-        console.log(`   ${idx + 1}. ${event.title} (${event.id})`);
+        const eventData = event as unknown as { id: string; title: string | null };
+        console.log(`   ${idx + 1}. ${eventData.title || 'Untitled'} (${eventData.id})`);
     });
     if (failedEvents.length > 10) {
         console.log(`   ... and ${failedEvents.length - 10} more`);

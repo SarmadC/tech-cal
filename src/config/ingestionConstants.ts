@@ -109,6 +109,13 @@ export const FIRECRAWL_EXTRACT_CONFIG = {
     POLL_INTERVAL_MS: 5000, // Polling interval in milliseconds
 } as const;
 
+// FireCrawl Extract Defaults
+export const FIRECRAWL_EXTRACT_DEFAULTS = {
+    ENABLE_WEB_SEARCH: process.env.FIRECRAWL_ENABLE_WEB_SEARCH === 'true', // Default: false
+    USE_AGENT: process.env.FIRECRAWL_USE_AGENT === 'true', // Default: false
+    AGENT_MODEL: process.env.FIRECRAWL_AGENT_MODEL || undefined, // Default: undefined (uses FIRE-1 if USE_AGENT is true)
+} as const;
+
 // Data Validation Limits
 export const VALIDATION_LIMITS = {
     MIN_TITLE_LENGTH: 3, // Minimum title length
@@ -117,4 +124,61 @@ export const VALIDATION_LIMITS = {
     MAX_DESCRIPTION_LENGTH: 5000, // Maximum description length
     MIN_TITLE_LENGTH_FOR_SCORE: 10, // Minimum title length for full score
 } as const;
+
+/**
+ * Firecrawl Configuration Getter
+ * Centralizes config access with environment variable support
+ */
+export interface FirecrawlConfig {
+    apiKey: string | undefined;
+    enabled: boolean;
+    timeout: number;
+    concurrency: number;
+}
+
+/**
+ * Get Firecrawl configuration from environment variables
+ * Re-checks on each call to handle late-loaded env vars
+ */
+export function getFirecrawlConfig(): FirecrawlConfig {
+    const apiKey = process.env.FIRECRAWL_API_KEY;
+    const enabled = process.env.FIRECRAWL_ENABLED !== 'false'; // Default: true
+    const timeout = parseInt(
+        process.env.FIRECRAWL_TIMEOUT_MS || String(FIRECRAWL_CONFIG.DEFAULT_TIMEOUT_MS),
+        10
+    );
+    const concurrency = parseInt(
+        process.env.FIRECRAWL_CONCURRENCY || String(FIRECRAWL_CONFIG.DEFAULT_CONCURRENCY),
+        10
+    );
+
+    return {
+        apiKey,
+        enabled: enabled && !!apiKey,
+        timeout,
+        concurrency,
+    };
+}
+
+/**
+ * Calculate timeout for Firecrawl operations based on operation type
+ */
+export function getFirecrawlTimeout(operation: 'extract' | 'crawl' | 'crawl_with_extraction'): number {
+    const baseTimeout = getFirecrawlConfig().timeout;
+    const multiplier = FIRECRAWL_TIMEOUT_MULTIPLIERS[operation === 'crawl_with_extraction' ? 'CRAWL_WITH_EXTRACTION' : operation.toUpperCase() as keyof typeof FIRECRAWL_TIMEOUT_MULTIPLIERS] || 1;
+    return baseTimeout * multiplier;
+}
+
+/**
+ * Check if a domain is blocked for Firecrawl enrichment
+ */
+export function isBlockedDomain(url: string): boolean {
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '') as string;
+        return (FIRECRAWL_CONFIG.BLOCKED_DOMAINS as readonly string[]).includes(hostname);
+    } catch {
+        return false;
+    }
+}
 
