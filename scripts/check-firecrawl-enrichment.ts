@@ -69,17 +69,11 @@ async function checkFirecrawlEnrichment() {
         if (recentEvents && recentEvents.length > 0) {
             console.log('\n   Recent events:');
             recentEvents.forEach((event, idx) => {
-                console.log(`   ${idx + 1}. ${eventData.title || 'Untitled'}`);
-                console.log(`      ID: ${eventData.id}`);
-                console.log(`      Status: ${eventData.firecrawl_enrichment_status || 'NULL'}`);
+                console.log(`   ${idx + 1}. ${event.title || 'Untitled'}`);
+                console.log(`      ID: ${event.id}`);
+                console.log(`      Status: ${event.firecrawl_enrichment_status || 'NULL'}`);
+                console.log(`      Source URL: ${(event.source_url as string)?.substring(0, 50) || 'N/A'}...`);
             });
-                const eventData = event as unknown as {
-                    id: string;
-                    title: string | null;
-                    created_at: string;
-                    firecrawl_enrichment_status: string | null;
-                    source_url: string | null;
-                };
         }
     }
     console.log('');
@@ -95,12 +89,11 @@ async function checkFirecrawlEnrichment() {
         console.error(`   ❌ Error: ${statusError.message}`);
     } else {
         const counts = (statusBreakdown || []).reduce((acc, event) => {
+            const status = event.firecrawl_enrichment_status as string;
             acc[status] = (acc[status] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
 
-            const eventData = event as unknown as { firecrawl_enrichment_status: string | null };
-            const status = eventData.firecrawl_enrichment_status as string;
         if (Object.keys(counts).length === 0) {
             console.log('   ⚠️  No events with enrichment status (all are NULL)');
             console.log('   This means enrichment has not been enqueued yet.');
@@ -142,10 +135,6 @@ async function checkFirecrawlEnrichment() {
 }
 
 checkFirecrawlEnrichment().catch(console.error);
-
-
-
-
 
 
 

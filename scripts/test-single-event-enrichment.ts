@@ -166,56 +166,35 @@ async function testSingleEventEnrichment(eventId: string) {
         console.log(`${status} ${field}: ${value ? (typeof value === 'object' ? JSON.stringify(value).substring(0, 200) : String(value)) : 'MISSING'}`);
     }
 
-    // Check agenda items from event_agenda table and speaker_lineup JSON
+    // Check for agenda items and speakers in JSONB fields
     console.log('\nChecking for agenda items and speakers...');
-    const { data: agendaItems, error: agendaError } = await supabase
-        .from('event_agenda')
-        .select('title,start_time,end_time,location')
-        .eq('event_id', eventId)
-        .order('sort_order', { ascending: true });
+    const { data: agendaData } = await supabase
+        .from('events')
+        .select('agenda, speakers')
+        .eq('id', eventId)
+        .single();
 
-    if (agendaError) {
-        console.warn('⚠️  Unable to fetch agenda items:', agendaError.message);
-    } else {
-        console.log(
-            `Agenda Items: ${
-                agendaItems && agendaItems.length > 0
-                    ? `${agendaItems.length} items`
-                    : '❌ MISSING'
-            }`
-        );
-
-        if (agendaItems && agendaItems.length > 0) {
+    if (agendaData) {
+        console.log(`Agenda Items: ${agendaData.agenda ? (Array.isArray(agendaData.agenda) ? `${agendaData.agenda.length} items` : 'Present') : '❌ MISSING'}`);
+        console.log(`Speakers: ${agendaData.speakers ? (Array.isArray(agendaData.speakers) ? `${agendaData.speakers.length} speakers` : 'Present') : '❌ MISSING'}`);
+        
+        if (agendaData.agenda && Array.isArray(agendaData.agenda) && agendaData.agenda.length > 0) {
             console.log('\nFirst 3 Agenda Items:');
-            agendaItems.slice(0, 3).forEach((item, idx) => {
+            agendaData.agenda.slice(0, 3).forEach((item: any, idx: number) => {
                 console.log(`  ${idx + 1}. ${item.title || 'Untitled'}`);
-                console.log(`     Time: ${item.start_time || 'N/A'} - ${item.end_time || 'N/A'}`);
-                if (item.location) console.log(`     Location: ${item.location}`);
+                console.log(`     Time: ${item.startTime || 'N/A'} - ${item.endTime || 'N/A'}`);
+                console.log(`     Speakers: ${item.speakers?.join(', ') || 'N/A'}`);
             });
         }
-    }
 
-    const speakerLineup = updatedEvent.speaker_lineup as Array<{
-        name?: string;
-        title?: string;
-        company?: string;
-    }> | null;
-
-    console.log(
-        `Speakers: ${
-            speakerLineup && speakerLineup.length > 0
-                ? `${speakerLineup.length} speakers`
-                : '❌ MISSING'
-        }`
-    );
-
-    if (speakerLineup && speakerLineup.length > 0) {
-        console.log('\nFirst 5 Speakers:');
-        speakerLineup.slice(0, 5).forEach((speaker, idx) => {
-            console.log(`  ${idx + 1}. ${speaker.name || 'Unknown'}`);
-            console.log(`     Title: ${speaker.title || 'N/A'}`);
-            console.log(`     Company: ${speaker.company || 'N/A'}`);
-        });
+        if (agendaData.speakers && Array.isArray(agendaData.speakers) && agendaData.speakers.length > 0) {
+            console.log('\nFirst 5 Speakers:');
+            agendaData.speakers.slice(0, 5).forEach((speaker: any, idx: number) => {
+                console.log(`  ${idx + 1}. ${speaker.name || 'Unknown'}`);
+                console.log(`     Title: ${speaker.title || 'N/A'}`);
+                console.log(`     Company: ${speaker.company || 'N/A'}`);
+            });
+        }
     }
 
     console.log('\n✅ Test complete!\n');
@@ -225,3 +204,4 @@ async function testSingleEventEnrichment(eventId: string) {
 const eventId = process.argv[2] || '358207a0-09a4-4148-b770-968cfc25fba7'; // Web Summit
 
 testSingleEventEnrichment(eventId).catch(console.error);
+

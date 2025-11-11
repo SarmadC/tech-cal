@@ -20,10 +20,6 @@ export const FIRECRAWL_CONFIG = {
     DEFAULT_BATCH_SIZE: 10,
     DEFAULT_WORKER_INTERVAL_MS: 60000, // 1 minute
     BLOCKED_DOMAINS: ['techmeme.com', 'www.techmeme.com'],
-    DAILY_CREDIT_CAP: 250,
-    MONTHLY_CREDIT_CAP: 4000,
-    PER_DOMAIN_DAILY_CAP: 80,
-    ESTIMATED_CREDITS_PER_RUN: 1,
 } as const;
 
 // Deduplication Thresholds
@@ -111,16 +107,6 @@ export const FIRECRAWL_EXTRACT_CONFIG = {
     MAX_URLS: 5, // Maximum number of URLs to extract from in a single call
     POLL_MAX_ATTEMPTS: 30, // Maximum polling attempts for async extract jobs
     POLL_INTERVAL_MS: 5000, // Polling interval in milliseconds
-} as const;
-
-export const TECHMEME_SCHEDULE_CONFIG = {
-    MAX_TRACK_LINKS: 3, // Limit track-specific schedule URLs to avoid credit spikes
-    MAX_TOTAL_LINKS: 4, // Base schedule + limited track links per extract
-    MAX_CREDITS_PER_EVENT: 6, // Fail-safe cap on Firecrawl credits for a single event run
-    MAX_INITIAL_AGENDA_ITEMS: 10, // Limit number of sessions pulled in the first pass
-    MAX_AGENDA_ITEMS_PER_EVENT: 10, // Alias for initial agenda item cap (for multi-track fallback)
-    MAX_AUTO_RETRY_ATTEMPTS: 3, // Number of automatic enrichment passes before requiring manual review
-    AUTO_RETRY_DELAY_MS: 5 * 60 * 1000, // Delay between automatic retry passes (5 minutes)
 } as const;
 
 // Data Validation Limits

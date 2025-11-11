@@ -11,25 +11,12 @@ import type {
     EventSpeakersSchema,
     EventPricingSchema,
 } from '@/types/firecrawl';
-import { parseLocalTime, deriveEndTime, parseDurationMinutes } from '@/utils/ingestion/ExtractNormalization';
-import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 
-type AgendaInput = Partial<Record<keyof EventAgendaSchema, unknown>> &
-    Record<string, unknown> & {
-        session_name?: unknown;
-        start_time?: unknown;
-        begin_time?: unknown;
-        end_time?: unknown;
-        finishTime?: unknown;
-        finish?: unknown;
-    };
-type SpeakerInput = Partial<Record<keyof EventSpeakersSchema, unknown>> &
-    Record<string, unknown> & {
-        firstName?: string;
-        lastName?: string;
-        linkedIn_url?: string;
-        twitter_handle?: string;
-    };
+type AgendaInput = Partial<Record<keyof EventAgendaSchema, unknown>>;
+type SpeakerInput = Partial<Record<keyof EventSpeakersSchema, unknown>> & {
+    firstName?: string;
+    lastName?: string;
+};
 type PricingInput = Partial<
     Record<
         | keyof EventPricingSchema
@@ -86,32 +73,6 @@ const toStringArray = (value: unknown): string[] => {
 };
 import { VALIDATION_LIMITS } from '@/config/ingestionConstants';
 
-const NOISY_DESCRIPTION_PATTERNS: RegExp[] = [
-    /techmeme/i,
-    /register (now|today)/i,
-    /subscribe/i,
-    /share on/i,
-    /cookie/i,
-    /privacy policy/i,
-    /terms of service/i,
-    /skip to content/i,
-    /https?:\/\//i,
-];
-
-function looksNoisy(description?: string | null): boolean {
-    if (!description) {
-        return true;
-    }
-    const trimmed = description.trim();
-    if (trimmed.length === 0) {
-        return true;
-    }
-    if (trimmed.length < 40) {
-        return true;
-    }
-    return NOISY_DESCRIPTION_PATTERNS.some((pattern) => pattern.test(trimmed));
-}
-
 /**
  * Normalize description by extracting relevant event content
  * Removes navigation, footer, and non-event-specific content
@@ -121,39 +82,64 @@ export function normalizeDescription(
     raw: string | undefined,
     existingDescription: string | undefined
 ): string | undefined {
-    const cleanedNew = cleanEventDescription(raw);
-    const cleanedExisting = cleanEventDescription(existingDescription);
-
-    if (cleanedNew && cleanedExisting) {
-        if (looksNoisy(existingDescription)) {
-            return cleanedNew;
-        }
-
-        if (cleanedNew.length >= cleanedExisting.length * 1.1) {
-            return cleanedNew;
-        }
-
-        return cleanedExisting.substring(0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
+    if (!raw) {
+        return existingDescription;
     }
 
-    if (cleanedNew) {
-        return cleanedNew;
+    // Filter out common non-content patterns
+    const normalized = raw
+        .split('\n')
+        .filter((line) => {
+            const trimmed = line.trim().toLowerCase();
+            // Remove navigation, footer, sidebar content
+            if (
+                trimmed.includes('menu') ||
+                trimmed.includes('footer') ||
+                trimmed.includes('sidebar') ||
+                trimmed.includes('share this') ||
+                trimmed.includes('subscribe') ||
+                trimmed.includes('advertisement') ||
+                trimmed.includes('cookie') ||
+                trimmed.includes('terms of service') ||
+                trimmed.includes('privacy policy') ||
+                trimmed.includes('navigation') ||
+                trimmed.includes('related') ||
+                trimmed.includes('link') ||
+                trimmed.includes('sign up') ||
+                trimmed.includes('register now') ||
+                trimmed.includes('skip to')
+            ) {
+                return false;
+            }
+            // Remove very short lines (likely headers/nav items)
+            return line.trim().length > 20;
+        })
+        .join('\n')
+        .trim();
+
+    // Quality assessment: prefer cleaned description over existing if:
+    // 1. Existing is clearly noisy (too short after cleaning would indicate noise), OR
+    // 2. New is significantly cleaner (much longer after cleaning), OR
+    // 3. Existing doesn't exist yet
+    if (!existingDescription) {
+        return normalized.substring(0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
     }
 
-    if (cleanedExisting) {
-        return cleanedExisting.substring(0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
+    // Check if existing description looks noisy
+    // (very different length from cleaned new, or contains noise keywords)
+    const existingLooksNoisy =
+        existingDescription.length < normalized.length * 0.8 ||  // Existing is much shorter
+        existingDescription.toLowerCase().includes('menu') ||
+        existingDescription.toLowerCase().includes('footer') ||
+        existingDescription.toLowerCase().includes('navigation');
+
+    // Prefer normalized if it's significantly larger (cleaner, more content) or existing looks noisy
+    if (normalized.length > existingDescription.length * 1.2 || existingLooksNoisy) {
+        return normalized.substring(0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
     }
 
-    const fallback = raw?.trim() || existingDescription?.trim();
-    if (!fallback) {
-        return undefined;
-    }
-
-    if (looksNoisy(fallback)) {
-        return undefined;
-    }
-
-    return fallback.substring(0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
+    // Otherwise keep existing if it's already reasonable
+    return existingDescription.substring(0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
 }
 
 /**
@@ -165,99 +151,72 @@ export function normalizeAgenda(items: unknown[]): EventAgendaSchema[] {
         return [];
     }
 
-    const normalized: EventAgendaSchema[] = [];
+    return items
+        .map((item) => {
+            if (!item || typeof item !== 'object') {
+                return null;
+            }
 
-    items.forEach((item) => {
-        if (!item || typeof item !== 'object') {
-            return;
-        }
+            const agenda = item as AgendaInput;
 
-        const agenda = item as AgendaInput;
+            // Try various field name combinations
+            const title = pickString(
+                agenda.title,
+                agenda.name,
+                agenda.sessionName,
+                agenda.session_name
+            );
+            const startTime = pickString(
+                agenda.startTime,
+                agenda.start_time,
+                agenda.start,
+                agenda.begin,
+                agenda.beginTime,
+                agenda.begin_time
+            );
+            const endTime = pickString(
+                agenda.endTime,
+                agenda.end_time,
+                agenda.end,
+                agenda.duration,
+                agenda.finish,
+                agenda.finishTime
+            );
 
-        const title = pickString(
-            agenda.title,
-            agenda.name,
-            agenda.sessionName,
-            agenda.session_name
-        );
-        const rawStart = pickString(
-            agenda.startTimeLocal,
-            agenda.startTime,
-            agenda.start_time,
-            agenda.start,
-            agenda.begin,
-            agenda.beginTime,
-            agenda.begin_time,
-            agenda.time
-        );
-        const rawEnd = pickString(
-            agenda.endTimeLocal,
-            agenda.endTime,
-            agenda.end_time,
-            agenda.end,
-            agenda.finish,
-            agenda.finishTime
-        );
-        const durationInput =
-            (typeof agenda.durationMinutes === 'number' ? agenda.durationMinutes : undefined) ??
-            (typeof agenda.duration === 'number' || typeof agenda.duration === 'string'
-                ? agenda.duration
-                : undefined);
+            // Skip items without title or time
+            if (!title) {
+                return null;
+            }
 
-        const derived = deriveEndTime(rawStart, rawEnd, durationInput);
-        const startLocal = parseLocalTime(rawStart);
-        const endLocal = derived.endTimeLocal ?? parseLocalTime(rawEnd);
-        const durationMinutes =
-            (typeof agenda.durationMinutes === 'number' ? agenda.durationMinutes : undefined) ??
-            derived.durationMinutes ??
-            (typeof agenda.duration === 'string' || typeof agenda.duration === 'number'
-                ? parseDurationMinutes(agenda.duration)
-                : undefined);
+            // Extract speakers with semantic field names
+            const speakerField =
+                agenda.speakers ||
+                agenda.speaker ||
+                agenda.presenters ||
+                agenda.presenter ||
+                agenda.instructors ||
+                agenda.instructor;
 
-        if (!title) {
-            return;
-        }
+            const speakers = toStringArray(speakerField);
 
-        if (!startLocal) {
-            return;
-        }
-
-        const speakerField =
-            agenda.speakers ||
-            agenda.speaker ||
-            agenda.presenters ||
-            agenda.presenter ||
-            agenda.instructors ||
-            agenda.instructor;
-
-        const speakers = toStringArray(speakerField).filter(Boolean);
-
-        normalized.push({
-            title,
-            startTime: startLocal,
-            endTime: endLocal || undefined,
-            startTimeLocal: startLocal,
-            endTimeLocal: endLocal || undefined,
-            dayNumber:
-                typeof agenda.dayNumber === 'number'
-                    ? Math.max(1, Math.floor(agenda.dayNumber))
-                    : undefined,
-            durationMinutes: durationMinutes ?? undefined,
-            description:
-                pickString(
-                    agenda.description,
-                    agenda.summary,
-                    agenda.abstract,
-                    agenda.overview
-                ) || undefined,
-            speakers,
-            location: pickString(agenda.location, agenda.venue, agenda.room),
-            track: pickString(agenda.track, agenda.category),
-            type: pickString(agenda.type, agenda.agenda_type, agenda.category),
-        });
-    });
-
-    return normalized;
+            return {
+                title,
+                startTime,
+                endTime,
+                description:
+                    pickString(
+                        agenda.description,
+                        agenda.summary,
+                        agenda.abstract,
+                        agenda.overview
+                    ) ||
+                    undefined,
+                speakers: speakers.filter((s) => s),
+                location: pickString(agenda.location, agenda.venue, agenda.room),
+                track: pickString(agenda.track, agenda.category, agenda.type),
+            };
+        })
+        .filter((item): item is EventAgendaSchema => item !== null);
 }
 
 /**
@@ -269,103 +228,106 @@ export function normalizeSpeakers(items: unknown[]): EventSpeakersSchema[] {
         return [];
     }
 
-    const normalized: EventSpeakersSchema[] = [];
+    return items
+        .map((item) => {
+            if (!item || typeof item !== 'object') {
+                return null;
+            }
 
-    items.forEach((item) => {
-        if (!item || typeof item !== 'object') {
-            return;
-        }
+            const speaker = item as SpeakerInput;
 
-        const speaker = item as SpeakerInput;
-
-        const name =
-            pickString(
-                speaker.name,
-                speaker.fullName,
-                speaker.full_name,
-                speaker.speaker,
-                speaker.presenter
-            ) ||
-            (speaker.firstName && speaker.lastName
-                ? `${speaker.firstName} ${speaker.lastName}`
-                : undefined);
-
-        if (!name) {
-            return;
-        }
-
-        const linkedinUrl =
-            pickString(
-                speaker.linkedinUrl,
-                speaker.linkedin,
-                speaker.linkedin_url,
-                speaker.linkedIn_url
-            ) || undefined;
-        const twitterUrl =
-            pickString(
-                speaker.twitterUrl,
-                speaker.twitter,
-                speaker.twitter_url,
-                speaker.twitterHandle,
-                speaker.twitter_handle
-            ) ||
-            (typeof speaker.twitter === 'string' && speaker.twitter.startsWith('@')
-                ? `https://twitter.com/${speaker.twitter.substring(1)}`
-                : undefined);
-        const photoUrl =
-            pickString(
-                speaker.photoUrl,
-                speaker.photo_url,
-                speaker.photo,
-                speaker.image,
-                speaker.imageUrl,
-                speaker.image_url,
-                speaker.avatar,
-                speaker.avatarUrl
-            ) || undefined;
-
-        const websiteUrl =
-            pickString(
-                speaker.websiteUrl,
-                speaker.website,
-                speaker.website_url,
-                speaker.personalWebsite,
-                speaker.personal_website
-            ) || undefined;
-
-        normalized.push({
-            name,
-            title:
+            // Extract name with multiple field variations
+            const name =
                 pickString(
-                    speaker.title,
-                    speaker.role,
-                    speaker.position,
-                    speaker.jobTitle,
-                    speaker.job_title
-                ) || undefined,
-            company:
-                pickString(
-                    speaker.company,
-                    speaker.organization,
-                    speaker.employer,
-                    speaker.org
-                ) || undefined,
-            bio:
-                pickString(
-                    speaker.bio,
-                    speaker.biography,
-                    speaker.description,
-                    speaker.summary,
-                    speaker.about
-                ) || undefined,
-            linkedinUrl,
-            twitterUrl,
-            photoUrl,
-            websiteUrl,
-        });
-    });
+                    speaker.name,
+                    speaker.fullName,
+                    speaker.full_name,
+                    speaker.speaker,
+                    speaker.presenter
+                ) ||
+                (speaker.firstName && speaker.lastName
+                    ? `${speaker.firstName} ${speaker.lastName}`
+                    : undefined);
 
-    return normalized;
+            if (!name) {
+                return null;
+            }
+
+            // Extract social URLs with variations
+            const linkedinUrl =
+                pickString(
+                    speaker.linkedinUrl,
+                    speaker.linkedin,
+                    speaker.linkedin_url,
+                    speaker.linkedIn_url
+                ) || undefined;
+            const twitterUrl =
+                pickString(
+                    speaker.twitterUrl,
+                    speaker.twitter,
+                    speaker.twitter_url,
+                    speaker.twitterHandle,
+                    speaker.twitter_handle
+                ) ||
+                (typeof speaker.twitter === 'string' && speaker.twitter.startsWith('@')
+                    ? `https://twitter.com/${speaker.twitter.substring(1)}`
+                    : undefined);
+            const photoUrl =
+                pickString(
+                    speaker.photoUrl,
+                    speaker.photo_url,
+                    speaker.photo,
+                    speaker.image,
+                    speaker.imageUrl,
+                    speaker.image_url,
+                    speaker.avatar,
+                    speaker.avatarUrl
+                ) || undefined;
+
+            const websiteUrl =
+                pickString(
+                    speaker.websiteUrl,
+                    speaker.website,
+                    speaker.website_url,
+                    speaker.personalWebsite,
+                    speaker.personal_website
+                ) || undefined;
+
+            return {
+                name,
+                title:
+                    pickString(
+                        speaker.title,
+                        speaker.role,
+                        speaker.position,
+                        speaker.jobTitle,
+                        speaker.job_title
+                    ) ||
+                    undefined,
+                company:
+                    pickString(
+                        speaker.company,
+                        speaker.organization,
+                        speaker.employer,
+                        speaker.org
+                    ) ||
+                    undefined,
+                bio:
+                    pickString(
+                        speaker.bio,
+                        speaker.biography,
+                        speaker.description,
+                        speaker.summary,
+                        speaker.about
+                    ) ||
+                    undefined,
+                linkedinUrl,
+                twitterUrl,
+                photoUrl,
+                websiteUrl,
+            };
+        })
+        .filter((item): item is EventSpeakersSchema => item !== null);
 }
 
 /**
@@ -425,8 +387,7 @@ export function mergeExtractedData(sources: ExtractedEventData[]): ExtractedEven
     const merged: ExtractedEventData = {};
 
     // For string fields, prefer longer (more complete) values
-    type StringField = 'description' | 'startTime' | 'endTime' | 'imageUrl';
-    const stringFields: StringField[] = [
+    const stringFields: (keyof ExtractedEventData)[] = [
         'description',
         'startTime',
         'endTime',

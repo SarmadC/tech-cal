@@ -235,25 +235,6 @@ When there are conflicts, prefer:
 3. Detailed content over summaries
 
 Return complete event metadata including all extracted fields.`,
-
-    /**
-     * High-precision extraction prompt for TechMeme-sourced destinations
-     * Focuses on factual fidelity and anti-hallucination for the extract API
-     */
-    techMemeExtract: `You are parsing an event page reached from a TechMeme listing. Extract ONLY facts explicitly present on the page or embedded structured data. If a value is missing, leave it null/omitted instead of guessing.
-
-Return JSON that strictly matches the provided schema.
-
-Rules:
-- Prefer structured data (JSON-LD, microdata, RDFa). If multiple sources conflict, pick the most specific event page over summaries.
-- Event timing must include timezone when present. Use ISO 8601 (e.g. 2025-08-04T09:00:00-07:00).
-- Agenda times must be local HH:MM (24-hour). If only “9:00 AM” is shown, convert to 09:00.
-- Speakers require exact display names. Do not invent social links or companies.
-- Price fields must be numbers. Strip currency symbols. If a range is given, set both min and max.
-- Never infer start/end dates from context like blog timestamps. Extract only explicit event details.
-- Capture the canonical/registration URLs exactly as shown.
-
-If information is repeated across sections, keep the most complete version. Omit marketing fluff, navigation, unrelated news, or historical recaps.`,
 };
 
 /**
@@ -264,94 +245,186 @@ export function getSemanticEventSchema() {
     return {
         type: 'object' as const,
         properties: {
-            event: {
-                type: 'object' as const,
-                properties: {
-                    title: { type: 'string' },
-                    description: { type: 'string' },
-                    startDateTime: {
-                        type: 'string',
-                        description: 'ISO 8601 date-time with timezone when present.',
-                    },
-                    endDateTime: { type: 'string' },
-                    timezone: {
-                        type: 'string',
-                        description: 'IANA timezone identifier if explicitly stated.',
-                    },
-                    status: { type: 'string' },
-                    format: { type: 'string' },
-                    location: {
-                        type: 'object' as const,
-                        properties: {
-                            venue: { type: 'string' },
-                            address: { type: 'string' },
-                            city: { type: 'string' },
-                            country: { type: 'string' },
-                            virtualPlatform: { type: 'string' },
-                        },
-                    },
-                    registrationUrl: { type: 'string' },
-                    agendaUrl: { type: 'string' },
-                    priceMin: { type: 'number' },
-                    priceMax: { type: 'number' },
-                    currency: { type: 'string' },
-                    language: { type: 'string' },
-                    difficulty: { type: 'string' },
-                    targetAudience: { type: 'string' },
-                },
-                required: ['title', 'startDateTime'],
+            description: {
+                type: 'string',
+                description:
+                    'Event description focusing on content, not page structure. Should be concise and event-specific.',
             },
-            speakers: {
-                type: 'array' as const,
-                items: {
-                    type: 'object' as const,
-                    properties: {
-                        name: { type: 'string' },
-                        title: { type: 'string' },
-                        company: { type: 'string' },
-                        bio: { type: 'string' },
-                        photoUrl: { type: 'string' },
-                        linkedin: { type: 'string' },
-                        twitter: { type: 'string' },
-                        website: { type: 'string' },
-                    },
-                    required: ['name'],
-                },
+            startTime: {
+                type: 'string',
+                description:
+                    'Event start date/time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS) or readable format. Extract even if labeled as "Date", "When", "Begin", "Registration".',
+            },
+            endTime: {
+                type: 'string',
+                description:
+                    'Event end date/time. Handle labels like "End", "Until", "Concludes", "Last day".',
             },
             agenda: {
-                type: 'array' as const,
+                type: 'array',
                 items: {
-                    type: 'object' as const,
+                    type: 'object',
                     properties: {
-                        title: { type: 'string' },
-                        description: { type: 'string' },
-                        dayNumber: { type: 'integer', minimum: 1 },
-                        startTimeLocal: {
+                        title: {
                             type: 'string',
-                            description: 'Local start time, HH:mm or ISO.',
+                            description:
+                                'Session/activity title. Look for "Session", "Workshop", "Talk", "Panel", "Break", "Keynote".',
                         },
-                        endTimeLocal: { type: 'string' },
-                        durationMinutes: { type: 'integer' },
-                        location: { type: 'string' },
-                        track: { type: 'string' },
-                        type: { type: 'string' },
+                        startTime: {
+                            type: 'string',
+                            description: 'Start time in HH:MM (24-hour) or ISO format.',
+                        },
+                        endTime: {
+                            type: 'string',
+                            description: 'End time in HH:MM (24-hour) or ISO format.',
+                        },
+                        duration: {
+                            type: 'string',
+                            description: 'Duration if times not available (e.g., "60 minutes").',
+                        },
+                        description: {
+                            type: 'string',
+                            description: 'Session description, abstract, or summary.',
+                        },
                         speakers: {
-                            type: 'array' as const,
+                            type: 'array',
                             items: { type: 'string' },
+                            description:
+                                'Speaker/presenter names. Even if labeled as "Facilitator", "Instructor", "Host".',
+                        },
+                        location: {
+                            type: 'string',
+                            description: 'Room, hall, or venue for this session.',
+                        },
+                        track: {
+                            type: 'string',
+                            description: 'Track category for multi-track conferences.',
                         },
                     },
-                    required: ['title', 'startTimeLocal'],
                 },
+                description:
+                    'Agenda items, sessions, or schedule entries. Look for any of: Agenda, Schedule, Program, Sessions, Tracks, Timetable.',
             },
-            source: {
-                type: 'object' as const,
-                properties: {
-                    finalUrl: { type: 'string' },
-                    sourceUrl: { type: 'string' },
-                    ogUrl: { type: 'string' },
+            speakers: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                        name: {
+                            type: 'string',
+                            description: 'Full speaker name.',
+                        },
+                        title: {
+                            type: 'string',
+                            description: 'Job title or role (CEO, Engineer, etc.).',
+                        },
+                        company: {
+                            type: 'string',
+                            description: 'Organization or company name.',
+                        },
+                        bio: {
+                            type: 'string',
+                            description: 'Professional biography or background.',
+                        },
+                        linkedinUrl: {
+                            type: 'string',
+                            description: 'LinkedIn profile URL.',
+                        },
+                        twitterUrl: {
+                            type: 'string',
+                            description: 'Twitter/X profile URL or handle.',
+                        },
+                        photoUrl: {
+                            type: 'string',
+                            description: 'URL to speaker headshot or photo.',
+                        },
+                        websiteUrl: {
+                            type: 'string',
+                            description: 'Personal website or blog URL.',
+                        },
+                    },
                 },
+                description:
+                    'Featured speakers or presenters. Look for: Speakers, Presenters, Keynotes, Instructors, Facilitators, Panelists.',
+            },
+            venue: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: 'Venue name.' },
+                    address: { type: 'string', description: 'Street address.' },
+                    city: { type: 'string', description: 'City.' },
+                    state_province: { type: 'string', description: 'State or province.' },
+                    country: { type: 'string', description: 'Country.' },
+                    latitude: { type: 'number', description: 'Latitude coordinate.' },
+                    longitude: { type: 'number', description: 'Longitude coordinate.' },
+                },
+                description: 'Event venue and location details.',
+            },
+            pricing: {
+                type: 'object',
+                properties: {
+                    priceMin: {
+                        type: 'number',
+                        description: 'Minimum ticket price.',
+                    },
+                    priceMax: {
+                        type: 'number',
+                        description: 'Maximum ticket price.',
+                    },
+                    currency: {
+                        type: 'string',
+                        description: 'Currency code (USD, EUR, GBP, etc.).',
+                    },
+                    pricingType: {
+                        type: 'string',
+                        enum: ['Free', 'Paid', 'Varies'],
+                        description: 'Whether event is free, paid, or has varying prices.',
+                    },
+                },
+                description: 'Pricing and ticket information.',
+            },
+            imageUrl: {
+                type: 'string',
+                description:
+                    'Event image URL (from Open Graph, hero image, or featured image). Prefer high-quality images.',
+            },
+            dailySchedule: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                        dayNumber: {
+                            type: 'number',
+                            description: 'Day number (1, 2, 3, ...). REQUIRED. Extract from schedule pages or agenda.',
+                        },
+                        date: {
+                            type: 'string',
+                            description: 'Date in YYYY-MM-DD format if available on the page.',
+                        },
+                        startTime: {
+                            type: 'string',
+                            description:
+                                'Daily start time in 24-hour HH:MM LOCAL time format (e.g., "09:00", "14:30"). REQUIRED. Extract ACTUAL times from schedule/agenda pages, not defaults.',
+                        },
+                        endTime: {
+                            type: 'string',
+                            description:
+                                'Daily end time in 24-hour HH:MM LOCAL time format (e.g., "17:00", "18:00"). REQUIRED when available. Extract ACTUAL times from schedule/agenda pages.',
+                        },
+                        dayLabel: {
+                            type: 'string',
+                            description: 'Optional day label (e.g., "Day 1: Keynotes", "Monday Workshops").',
+                        },
+                        notes: {
+                            type: 'string',
+                            description: 'Optional notes or highlights for this day.',
+                        },
+                    },
+                    required: ['dayNumber', 'startTime'],
+                },
+                description:
+                    'CRITICAL: For multi-day events, extract daily schedule from schedule/agenda pages. Include each day with actual start/end times. If times vary by day, include all days.',
             },
         },
-        required: ['event'],
     };
 }

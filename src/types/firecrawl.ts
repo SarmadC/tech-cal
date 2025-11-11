@@ -23,45 +23,15 @@ export interface FirecrawlEnrichmentMetadata {
         source_url?: string;
         registration_url?: string | null;
     };
-    schedule_links_used?: string[];
-    schedule_links_remaining?: string[];
-    schedule_links_processed?: string[];
-    schedule_links_pending?: string[];
-    schedule_next_cursor?: string | null;
-    schedule_link_details?: Array<{
-        url: string;
-        type?: string;
-        label?: string;
-        contentFormat?: 'html' | 'json' | 'graphql';
-        queryParams?: string[];
-        hints?: string[];
-    }>;
-    schedule_hints?: string[];
-    schedule_auto_retry_count?: number;
-    schedule_credits_used?: number;
     fields_updated?: string[]; // Array of field names that were updated
     error_message?: string | null;
     retry_count?: number; // Number of retry attempts (capped at max retries)
     next_retry_at?: string; // ISO timestamp for next retry (exponential backoff)
-    enrichment_strategy?: 'scrape' | 'crawl' | 'extract' | 'rules_first' | 'rules_first_fallback' | 'skipped_budget'; // Strategy used for enrichment
+    enrichment_strategy?: 'scrape' | 'crawl' | 'extract'; // Strategy used for enrichment
     site_complexity?: 'SIMPLE' | 'MULTI_PAGE' | 'COMPLEX'; // Detected site complexity
     pages_crawled?: number; // Number of pages crawled (if using crawl mode)
     credits_used?: number; // Firecrawl credits consumed
     extraction_quality_score?: number; // 0-1 score for extraction quality
-    ingestion_confidence?: number; // Final confidence score stored during enrichment
-    partial_coverage?: 'agenda' | 'speakers' | 'pricing' | 'other';
-    rules_first?: {
-        confidence?: number;
-        field_confidence?: Record<string, number>;
-        content_hash?: string;
-        normalized_url?: string;
-        normalized_url_hash?: string;
-        source_domain?: string;
-        status_code?: number;
-        cache_hit?: boolean;
-        fallback?: boolean;
-        reason?: string;
-    };
 }
 
 /**
@@ -83,7 +53,6 @@ export interface EventAgendaSchema {
     title?: string;
     name?: string;
     sessionName?: string;
-    dayNumber?: number;
 
     // Time fields
     startTime?: string; // ISO timestamp or time string
@@ -92,14 +61,11 @@ export interface EventAgendaSchema {
     time?: string;
     begin?: string;
     beginTime?: string;
-    startTimeLocal?: string;
 
     endTime?: string; // ISO timestamp or time string
     end_time?: string;
     end?: string;
     duration?: string; // Alternative: duration in minutes or text
-    endTimeLocal?: string;
-    durationMinutes?: number;
 
     // Content fields
     description?: string;
@@ -125,7 +91,6 @@ export interface EventAgendaSchema {
     track?: string;
     category?: string;
     type?: string;
-    agenda_type?: string;
 }
 
 /**
@@ -180,7 +145,6 @@ export interface EventSpeakersSchema {
     twitter?: string;
     twitter_url?: string;
     twitterHandle?: string;
-    twitter_handle?: string;
 
     photoUrl?: string;
     photo_url?: string;
@@ -208,26 +172,9 @@ export interface EventPricingSchema {
  * Combined extracted data from Firecrawl
  */
 export interface ExtractedEventData {
-    title?: string;
     description?: string; // Markdown description
     startTime?: string; // ISO timestamp for event start time
     endTime?: string; // ISO timestamp for event end time
-    timezone?: string;
-    status?: string;
-    format?: string;
-    registrationUrl?: string;
-    agendaUrl?: string;
-    language?: string;
-    difficulty?: string;
-    targetAudience?: string;
-    tags?: string[];
-    location?: {
-        venue?: string;
-        address?: string;
-        city?: string;
-        country?: string;
-        virtualPlatform?: string;
-    };
     agenda?: EventAgendaSchema[];
     speakers?: EventSpeakersSchema[];
     pricing?: EventPricingSchema;
@@ -242,11 +189,6 @@ export interface ExtractedEventData {
         longitude?: number;
     };
     dailySchedule?: EventDailyScheduleEntry[];
-    sourceUrls?: {
-        finalUrl?: string;
-        sourceUrl?: string;
-        ogUrl?: string;
-    };
 }
 
 /**

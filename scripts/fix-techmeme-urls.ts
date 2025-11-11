@@ -6,7 +6,6 @@
  * replacing them with canonical URLs.
  */
 
-import { resolveTechMemeRedirect } from '@/services/ingestion/utils/urlResolver';
 import { createServiceClient } from '@/utils/supabase/service';
 import { config } from 'dotenv';
 import { resolve } from 'path';
@@ -24,8 +23,38 @@ function resolveTechmemeUrl(techmemeUrl: string): string | null {
         return null;
     }
 
-    const candidates = resolveTechMemeRedirect(techmemeUrl);
-    return candidates[0] ?? null;
+    // Remove query parameters first
+    const urlWithoutQuery = techmemeUrl.split('?')[0];
+    
+    // Match: techmeme.com/r2/domain_path_segments-base64.htm
+    const techmemeMatch = urlWithoutQuery.match(/techmeme\.com\/r2\/([^_]+)_(.+?)\.htm$/);
+    if (techmemeMatch) {
+        const domain = techmemeMatch[1];
+        let pathSegments = techmemeMatch[2];
+        
+        // Check if pathSegments is just a base64 suffix (starts with dash + alphanumeric)
+        if (/^-[a-zA-Z0-9]+$/.test(pathSegments)) {
+            // This is just a base64 suffix, no actual path
+            return `https://${domain}`;
+        } else {
+            // There's a real path - remove trailing base64 suffix if present
+            pathSegments = pathSegments.replace(/-[a-zA-Z0-9]+$/, '');
+            
+            // Replace underscores with slashes, but keep hyphens
+            const path = pathSegments.replace(/_/g, '/');
+            
+            // Construct canonical URL
+            return `https://${domain}/${path}`;
+        }
+    } else {
+        // Try alternative pattern: handle cases where there's no underscore (domain only)
+        const altMatch = urlWithoutQuery.match(/techmeme\.com\/r2\/([^_]+)\.htm$/);
+        if (altMatch && altMatch[1]) {
+            return `https://${altMatch[1]}`;
+        }
+    }
+
+    return null;
 }
 
 async function fixTechmemeUrls() {

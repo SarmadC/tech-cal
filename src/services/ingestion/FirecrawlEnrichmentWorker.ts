@@ -28,7 +28,7 @@ const DEFAULT_CONCURRENCY = parseInt(
 export async function processPendingEnrichments(
     batchSize: number = DEFAULT_BATCH_SIZE,
     concurrency: number = DEFAULT_CONCURRENCY
-): Promise<{ processed: number; succeeded: number; failed: number; deferred: number }> {
+): Promise<{ processed: number; succeeded: number; failed: number }> {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -51,7 +51,7 @@ export async function processPendingEnrichments(
     }
 
     if (!events || events.length === 0) {
-        return { processed: 0, succeeded: 0, failed: 0, deferred: 0 };
+        return { processed: 0, succeeded: 0, failed: 0 };
     }
 
     // Process with concurrency limit using batch processing
@@ -67,27 +67,12 @@ export async function processPendingEnrichments(
     }
 
     const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-    const deferred = results.filter(
-        r =>
-            r.status === 'fulfilled' &&
-            !r.value.success &&
-            typeof r.value.error === 'string' &&
-            r.value.error.toLowerCase().includes('retry scheduled')
-    ).length;
-    const rejectedFailures = results.filter(r => r.status === 'rejected').length;
-    const hardFailures = results.filter(
-        r =>
-            r.status === 'fulfilled' &&
-            !r.value.success &&
-            (!r.value.error || !r.value.error.toLowerCase().includes('retry scheduled'))
-    ).length;
-    const failed = rejectedFailures + hardFailures;
+    const failed = results.length - succeeded;
 
     return {
-        processed: succeeded + failed,
+        processed: events.length,
         succeeded,
         failed,
-        deferred,
     };
 }
 
@@ -106,9 +91,9 @@ export async function runWorkerLoop(
         try {
             const result = await processPendingEnrichments(batchSize, concurrency);
             
-            if (result.processed > 0 || result.deferred > 0) {
+            if (result.processed > 0) {
                 console.log(
-                    `[FirecrawlEnrichmentWorker] Processed ${result.processed} enrichments (${result.deferred} deferred): ` +
+                    `[FirecrawlEnrichmentWorker] Processed ${result.processed} enrichments: ` +
                     `${result.succeeded} succeeded, ${result.failed} failed`
                 );
             }

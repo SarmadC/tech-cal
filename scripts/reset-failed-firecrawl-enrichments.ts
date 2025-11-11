@@ -48,8 +48,7 @@ async function resetFailedEnrichments() {
 
     // Filter events with empty fields_updated
     const failedEvents = completedEvents.filter(event => {
-        const eventData = event as unknown as { firecrawl_enrichment_metadata: unknown };
-        const metadata = (eventData.firecrawl_enrichment_metadata as any) || {};
+        const metadata = (event.firecrawl_enrichment_metadata as any) || {};
         const fieldsUpdated = metadata.fields_updated || [];
         return fieldsUpdated.length === 0;
     });
@@ -63,24 +62,24 @@ async function resetFailedEnrichments() {
     }
 
     // Reset to pending
-    const eventIds = failedEvents.map(e => {
-        const eventData = e as unknown as { id: string };
-        return eventData.id;
-    });
-    const updateData: Record<string, unknown> = {
-        firecrawl_enrichment_status: 'pending',
-        firecrawl_enrichment_metadata: {},
-    };
+    const eventIds = failedEvents.map(e => e.id);
     const { error: updateError } = await supabase
         .from('events')
-        .update(updateData)
+        .update({
+            firecrawl_enrichment_status: 'pending',
+            firecrawl_enrichment_metadata: {},
+        })
         .in('id', eventIds);
+
+    if (updateError) {
+        console.error(`❌ Error resetting events: ${updateError.message}`);
+        process.exit(1);
+    }
 
     console.log(`✅ Reset ${failedEvents.length} events to pending status\n`);
     console.log('📋 Reset events:');
     failedEvents.slice(0, 10).forEach((event, idx) => {
-        const eventData = event as unknown as { id: string; title: string | null };
-        console.log(`   ${idx + 1}. ${eventData.title || 'Untitled'} (${eventData.id})`);
+        console.log(`   ${idx + 1}. ${event.title} (${event.id})`);
     });
     if (failedEvents.length > 10) {
         console.log(`   ... and ${failedEvents.length - 10} more`);
@@ -89,9 +88,5 @@ async function resetFailedEnrichments() {
 }
 
 resetFailedEnrichments().catch(console.error);
-
-
-
-
 
 
