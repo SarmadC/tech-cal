@@ -116,62 +116,6 @@ async function checkRetryMetadata() {
     console.log(`   - Eligible for retry now: ${eligibleForRetry}`);
     console.log(`   - Max retries reached: ${maxRetriesReached}`);
     console.log('\n✅ Retry metadata check complete!\n');
-
-    // Check for Firecrawl-specific retry metadata
-    console.log('🔍 Firecrawl Enrichment Retry Check:');
-    const { data: firecrawlErrors, error: firecrawlError } = await supabase
-        .from('events')
-        .select('id, title, firecrawl_enrichment_status, firecrawl_enrichment_metadata')
-        .eq('firecrawl_enrichment_status', 'failed')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-    if (firecrawlError) {
-        console.error(`   ❌ Error: ${firecrawlError.message}`);
-    } else if (firecrawlErrors && Array.isArray(firecrawlErrors)) {
-        if (firecrawlErrors.length > 0) {
-            console.log(`   Found ${firecrawlErrors.length} failed Firecrawl enrichments`);
-            firecrawlErrors.forEach((event, idx) => {
-                const eventData = event as unknown as {
-                    id: string;
-                    title: string | null;
-                    firecrawl_enrichment_status: string | null;
-                    firecrawl_enrichment_metadata: unknown;
-                };
-                const metadata = eventData.firecrawl_enrichment_metadata as {
-                    retry_count?: number;
-                    next_retry_at?: string;
-                    error_message?: string;
-                    job_id?: string;
-                } | null;
-                console.log(`   ${idx + 1}. ${eventData.title || 'Untitled'} (${eventData.id})`);
-                if (metadata) {
-                    console.log(`      Retry count: ${metadata.retry_count || 0}/${5}`);
-                    if (metadata.next_retry_at) {
-                        const nextRetry = new Date(metadata.next_retry_at);
-                        const now = new Date();
-                        if (now >= nextRetry) {
-                            console.log(`      Status: ✅ Eligible for retry`);
-                        } else {
-                            console.log(`      Status: ⏳ Waiting until ${metadata.next_retry_at}`);
-                        }
-                    }
-                    if (metadata.job_id) {
-                        console.log(`      Job ID: ${metadata.job_id} (check if polling completed)`);
-                    }
-                }
-            });
-        } else {
-            console.log('   ✅ No failed Firecrawl enrichments found');
-        }
-    }
-    console.log('');
-
-    console.log('💡 Verification Notes:');
-    console.log('   - Check worker logs for "scrapeOptions.formats" to verify JSON extraction format');
-    console.log('   - Check logs for "enableWebSearch" and "useAgent" flags based on site complexity');
-    console.log('   - Events with job_id in metadata should have completed polling');
-    console.log('   - Processing status events should be polled until completion or failure\n');
 }
 
 checkRetryMetadata().catch(console.error);

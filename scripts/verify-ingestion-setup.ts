@@ -92,17 +92,13 @@ async function verifySetup() {
     // Check 3: Verify functions (schema check - may have false negatives due to schema search path)
     console.log('\n3️⃣ Checking functions (schema)...');
     const functions = ['find_similar_events', 'claim_pending_source_events', 'update_updated_at_column'];
-    const functionPresence: Record<string, boolean> = {};
 
     for (const func of functions) {
         const { data: functionRows } = await execSql(
             `SELECT 1 FROM pg_proc WHERE proname = '${func}' LIMIT 1`
         ).catch(() => ({ data: null }));
 
-        const hasFunction = Array.isArray(functionRows) && functionRows.length > 0;
-        functionPresence[func] = hasFunction;
-
-        if (!hasFunction) {
+        if (!functionRows) {
             console.log(`   ⚠️  Function ${func}: not found in schema (will verify callability below)`);
             // Don't fail here - callability test is authoritative
         } else {
@@ -120,21 +116,11 @@ async function verifySetup() {
 
         if (rpcError) {
             if (rpcError.message.includes('does not exist') || rpcError.message.includes('function')) {
-                const schemaDetected = functionPresence['claim_pending_source_events'] === true;
-
-                if (schemaDetected) {
-                    console.error('   ❌ RPC function definition found, but invocation failed.');
-                    console.error(`   Error: ${rpcError.message}`);
-                    console.error('\n   📋 Action required:');
-                    console.error('   - Verify the function definition matches the expected signature.');
-                    console.error('   - Confirm the service role has execute permissions.');
-                } else {
-                    console.error('   ❌ RPC function is missing from the database.');
-                    console.error(`   Error: ${rpcError.message}`);
-                    console.error('\n   📋 Action required:');
-                    console.error('   - Apply migration 20250101000004_add_claim_pending_events_function.sql, or');
-                    console.error('   - Manually create the function via Supabase (Dashboard > Database > Functions).');
-                }
+                console.error('   ❌ RPC function exists in schema but is not callable');
+                console.error(`   Error: ${rpcError.message}`);
+                console.error('\n   📋 Action required:');
+                console.error('   Run migration 20250101000004_add_claim_pending_events_function.sql');
+                console.error('   Or check Supabase dashboard > Database > Functions to verify deployment.');
                 allChecksPassed = false;
             } else {
                 // Other errors (like no pending events) are fine - means function exists
