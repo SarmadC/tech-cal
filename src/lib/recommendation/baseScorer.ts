@@ -171,10 +171,139 @@ export type AlignmentResult = BaseScorerResult;
 export type CoreAlignmentResult = BaseScorerResult;
 
 /**
+ * Calculate cold start score based on event quality metrics
+ * Used when user has no career profile to provide baseline recommendations
+ */
+function calculateColdStartScore(event: Event): BaseScorerResult {
+  let score = 0;
+  const alignmentReasons: AlignmentReason[] = [];
+  
+  // 1. Popularity score (0-15 points)
+  const attendeeCount = event.attendeeCount || 0;
+  if (attendeeCount > 1000) {
+    score += 15;
+    alignmentReasons.push({
+      type: 'networking',
+      reason: 'Highly popular event with 1000+ attendees',
+      contribution: 15
+    });
+  } else if (attendeeCount > 500) {
+    score += 12;
+    alignmentReasons.push({
+      type: 'networking',
+      reason: 'Popular event with 500+ attendees',
+      contribution: 12
+    });
+  } else if (attendeeCount > 100) {
+    score += 8;
+    alignmentReasons.push({
+      type: 'networking',
+      reason: 'Well-attended event',
+      contribution: 8
+    });
+  } else if (attendeeCount > 50) {
+    score += 5;
+  }
+  
+  // 2. Recency/Timing score (0-10 points)
+  const eventDate = new Date(event.startTime);
+  const now = new Date();
+  const daysUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+  
+  if (daysUntilEvent > 0 && daysUntilEvent <= 14) {
+    score += 10;
+    alignmentReasons.push({
+      type: 'interest',
+      reason: 'Happening soon - great timing',
+      contribution: 10
+    });
+  } else if (daysUntilEvent > 0 && daysUntilEvent <= 30) {
+    score += 7;
+  } else if (daysUntilEvent > 0 && daysUntilEvent <= 60) {
+    score += 4;
+  }
+  
+  // 3. Organizer reputation (0-8 points)
+  const orgName = (event.organization?.name || event.organizer || '').toLowerCase();
+  const majorOrgs = ['google', 'microsoft', 'amazon', 'meta', 'apple', 'netflix', 'uber', 'airbnb', 'stripe', 'github'];
+  if (majorOrgs.some(org => orgName.includes(org))) {
+    score += 8;
+    alignmentReasons.push({
+      type: 'interest',
+      reason: 'Hosted by a leading tech organization',
+      contribution: 8
+    });
+  } else if (orgName && orgName.length > 0) {
+    score += 3; // Any organizer is better than none
+  }
+  
+  // 4. Event quality signals (0-7 points)
+  const eventText = `${event.title} ${event.description || ''}`.toLowerCase();
+  
+  // High-quality event types
+  const qualityKeywords = ['conference', 'summit', 'workshop', 'bootcamp', 'masterclass'];
+  if (qualityKeywords.some(keyword => eventText.includes(keyword))) {
+    score += 5;
+    alignmentReasons.push({
+      type: 'interest',
+      reason: 'High-quality professional development event',
+      contribution: 5
+    });
+  }
+  
+  // Has registration URL (indicates active event)
+  if (event.registrationUrl) {
+    score += 2;
+  }
+  
+  // Has detailed description (indicates quality)
+  if (event.description && event.description.length > 200) {
+    score += 2;
+  }
+  
+  // 5. Virtual events get bonus (accessibility)
+  if (event.location?.toLowerCase().includes('virtual') || 
+      event.location?.toLowerCase().includes('online') ||
+      event.livestreamUrl) {
+    score += 3;
+    alignmentReasons.push({
+      type: 'interest',
+      reason: 'Virtual event - join from anywhere',
+      contribution: 3
+    });
+  }
+  
+  // Normalize to 20-40% range for cold start
+  // This ensures events are visible but clearly differentiated from personalized scores
+  const normalizedScore = Math.min(40, Math.max(20, score));
+  
+  return {
+    overall: normalizedScore,
+    components: {
+      skillRelevance: 0,
+      careerStageMatch: normalizedScore * 0.4,
+      networkingValue: normalizedScore * 0.3,
+      industryRelevance: normalizedScore * 0.2,
+      timingBonus: normalizedScore * 0.1
+    },
+    alignmentReasons: alignmentReasons.length > 0 
+      ? alignmentReasons 
+      : [{
+          type: 'interest',
+          reason: 'Popular event worth exploring',
+          contribution: normalizedScore
+        }],
+    matchedSkills: [],
+    matchedGoals: []
+  };
+}
+
+/**
  * Calculate base career score for an event
  * 
  * This is the foundational scoring algorithm used throughout the application.
  * It analyzes event content against user career profile and returns a detailed breakdown.
+ * For users without profiles (cold start), it provides baseline scores based on event quality.
  * 
  * @param event - The event to score
  * @param careerProfile - User's career profile (or null for unauthenticated users)
@@ -184,21 +313,9 @@ export function calculateBaseScore(
   event: Event,
   careerProfile: CareerProfile | null
 ): BaseScorerResult {
-  // Early return for missing profile
+  // Cold start: provide baseline scores when no profile exists
   if (!careerProfile) {
-    return {
-      overall: 0,
-      components: {
-        skillRelevance: 0,
-        careerStageMatch: 0,
-        networkingValue: 0,
-        industryRelevance: 0,
-        timingBonus: 0
-      },
-      alignmentReasons: [],
-      matchedSkills: [],
-      matchedGoals: []
-    };
+    return calculateColdStartScore(event);
   }
 
   const alignmentReasons: AlignmentReason[] = [];

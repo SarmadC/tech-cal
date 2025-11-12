@@ -100,3 +100,34 @@ export function hasCompleteCareerProfile(careerProfile: CareerProfile | null): b
     careerProfile.careerGoals?.length
   );
 }
+
+/**
+ * Check if user profile is empty (no skills, interests, or goals)
+ * This is profile-based cold start detection - checks if profile has meaningful data.
+ * 
+ * Note: This is different from interaction-based cold start (see behavioralBoostUtils.ts)
+ * which checks if user has < 3 interactions. Both can be true for a new user.
+ */
+export function isProfileEmpty(userProfile: AppProfile | null): boolean {
+  if (!userProfile) return true;
+  
+  const careerProfile = extractCareerProfile(userProfile);
+  if (!careerProfile) return true;
+  
+  // Check if profile is essentially empty (no meaningful data)
+  const hasSkills = (careerProfile.primarySkills?.length ?? 0) > 0 || 
+                   (careerProfile.skillsToLearn?.length ?? 0) > 0;
+  const hasInterests = (careerProfile.interests?.length ?? 0) > 0;
+  const hasGoals = (careerProfile.careerGoals?.length ?? 0) > 0;
+  
+  // Profile is empty if user has no skills, interests, or goals
+  return !hasSkills && !hasInterests && !hasGoals;
+}
+
+/**
+ * @deprecated Use isProfileEmpty() instead. This name was ambiguous.
+ * Kept for backward compatibility - will be removed in future version.
+ */
+export function isColdStartUser(userProfile: AppProfile | null): boolean {
+  return isProfileEmpty(userProfile);
+}

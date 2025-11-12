@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Event, EventType, AppProfile } from '@/types';
+import { isProfileEmpty } from '@/utils/profileTypeGuards';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
 import MobileDiscoveryView from '@/components/calendar/mobile/discovery/MobileDiscoveryView';
@@ -43,15 +44,29 @@ export default function DiscoverClientView({
     const isMobile = useIsMobile();
     
     const initialFilters = useMemo(() => {
+        const filters: Partial<ReturnType<typeof useUnifiedServerFiltering>['filters']> = {};
+        
         try {
             const budget = (profile as unknown as { careerProfile?: { budget?: string } } | null)?.careerProfile?.budget;
             if (budget && typeof budget === 'string') {
-                return { budget } as Partial<ReturnType<typeof useUnifiedServerFiltering>['filters']>;
+                // Validate budget is one of the allowed values
+                const validBudgets = ['all', 'free-only', 'low', 'moderate', 'high', 'unlimited'] as const;
+                if (validBudgets.includes(budget as typeof validBudgets[number])) {
+                    filters.budget = budget as typeof validBudgets[number];
+                }
             }
         } catch {
             // no-op
         }
-        return {};
+        
+        // Set default sort to career-impact for users with profiles (not empty)
+        // This ensures best recommendations appear first in discovery view
+        if (profile && !isProfileEmpty(profile)) {
+            filters.sortBy = 'career-impact';
+            filters.sortDirection = 'desc'; // Highest scores first
+        }
+        
+        return filters;
     }, [profile]);
 
     const eventData = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover' });

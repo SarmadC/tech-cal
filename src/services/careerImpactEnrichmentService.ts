@@ -63,8 +63,10 @@ interface ScoringTelemetry {
 /**
  * Enrich events with career impact scores using alignment core
  * 
+ * For users without profiles (cold start), provides baseline scores based on event quality.
+ * 
  * @param events - Events to enrich
- * @param careerProfile - User's career profile
+ * @param careerProfile - User's career profile (null for cold start users)
  * @param supabaseClient - Supabase client (unused currently, reserved for future features)
  * @param userId - User ID for telemetry
  * @returns Events enriched with careerImpact data
@@ -75,44 +77,94 @@ export async function enrichEventsWithCareerImpact(
   _supabaseClient: SupabaseClientType,
   userId?: string
 ): Promise<EventWithCareerImpact[]> {
-  // Early return if no profile or no events
-  if (!careerProfile || events.length === 0) {
+  // Early return only if no events
+  if (events.length === 0) {
     return events as EventWithCareerImpact[];
   }
 
   const startTime = Date.now();
   const strategy = getScoringStrategy();
   const rerank = getRerankStrategy();
+  const isColdStart = !careerProfile;
 
   try {
     // Server scoring (DRY base scorer)
+    // baseScorer now handles null profiles with cold start scoring
     const enrichedEvents: EventWithCareerImpact[] = events.map(event => {
-      const alignment = calculateBaseScore(event, careerProfile);
-      
-      return {
-        ...event,
-        careerImpact: {
-          overall: alignment.overall,
-          confidence: 1.0, // High confidence in alignment core
-          components: alignment.components,
-          explanation: {
-            // Maintain legacy shape while preserving detailed reasons
-            reasons: alignment.alignmentReasons.map(r => r.reason),
-            alignmentReasons: alignment.alignmentReasons, // Preserve detailed reasons with contributions
-            matchedSkills: alignment.matchedSkills,
-            speakerHighlights: [],
-            careerImpactCategory: getAlignmentCategory(alignment.overall),
-            confidenceFactors: ['Alignment core v1.0'],
+      try {
+        const alignment = calculateBaseScore(event, careerProfile);
+        
+        // Debug: log events that get 0 scores
+        if (process.env.NODE_ENV !== 'production' && alignment.overall === 0) {
+          console.warn('[Enrichment] Event got 0 score:', {
+            eventId: event.id,
+            title: event.title?.substring(0, 50),
+            hasStartTime: !!event.startTime,
+            hasDescription: !!event.description,
+            attendeeCount: event.attendeeCount,
+            isColdStart
+          });
+        }
+        
+        return {
+          ...event,
+          careerImpact: {
+            overall: alignment.overall,
+            confidence: isColdStart ? 0.6 : 1.0, // Lower confidence for cold start scores
+            components: alignment.components,
+            explanation: {
+              // Maintain legacy shape while preserving detailed reasons
+              reasons: alignment.alignmentReasons.map(r => r.reason),
+              alignmentReasons: alignment.alignmentReasons, // Preserve detailed reasons with contributions
+              matchedSkills: alignment.matchedSkills,
+              speakerHighlights: [],
+              careerImpactCategory: getAlignmentCategory(alignment.overall),
+              confidenceFactors: isColdStart 
+                ? ['Cold start scoring - complete your profile for better recommendations']
+                : ['Alignment core v1.0'],
+            },
+            metadata: {
+              algorithmVersion: isColdStart ? 'alignment-core-v1-coldstart' : 'alignment-core-v1',
+              calculatedAt: new Date().toISOString(),
+              careerProfileHash: '', // Could add profile fingerprint for debugging
+              eventDataHash: ''
+            }
           },
-          metadata: {
-            algorithmVersion: 'alignment-core-v1',
-            calculatedAt: new Date().toISOString(),
-            careerProfileHash: '', // Could add profile fingerprint for debugging
-            eventDataHash: ''
-          }
-        },
-        isCareerScored: true
-      };
+          isCareerScored: true
+        };
+      } catch (error) {
+        // If scoring fails for an event, still return it with 0 score rather than crashing
+        console.error('[Enrichment] Error scoring event:', event.id, error);
+        return {
+          ...event,
+          careerImpact: {
+            overall: 0,
+            confidence: 0,
+            components: {
+              skillRelevance: 0,
+              careerStageMatch: 0,
+              networkingValue: 0,
+              industryRelevance: 0,
+              timingBonus: 0
+            },
+            explanation: {
+              reasons: ['Scoring failed'],
+              alignmentReasons: [],
+              matchedSkills: [],
+              speakerHighlights: [],
+              careerImpactCategory: 'low' as const,
+              confidenceFactors: ['Scoring error']
+            },
+            metadata: {
+              algorithmVersion: 'error',
+              calculatedAt: new Date().toISOString(),
+              careerProfileHash: '',
+              eventDataHash: ''
+            }
+          },
+          isCareerScored: false
+        };
+      }
     });
 
     // Telemetry (sampled)
@@ -122,7 +174,8 @@ export async function enrichEventsWithCareerImpact(
     }
 
     // Shadow mode: compare with legacy scoring (if enabled)
-    if (strategy === 'shadow') {
+    // Skip shadow mode for cold start users (no legacy comparison needed)
+    if (strategy === 'shadow' && !isColdStart) {
       try {
         // Limit comparison to avoid overhead
         const sampleSize = Math.min(30, events.length);
@@ -188,18 +241,19 @@ export async function enrichEventsWithCareerImpact(
     }
 
     // Optional advanced reranking stage
+    // Skip reranking for cold start users (no behavioral data available)
     try {
-      if (rerank === 'advanced') {
+      if (rerank === 'advanced' && !isColdStart) {
         const reranked = await rerankWithBehavioral(
           enrichedEvents,
-          careerProfile,
+          careerProfile!,
           _supabaseClient,
           { topK: 50, userId }
         );
         return reranked as EventWithCareerImpact[];
       }
 
-      if (rerank === 'shadow') {
+      if (rerank === 'shadow' && !isColdStart) {
         // Compute advanced order but return original order; log deltas
         const startShadow = Date.now();
         const reranked = await rerankWithBehavioral(

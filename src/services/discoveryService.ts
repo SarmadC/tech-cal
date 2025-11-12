@@ -38,6 +38,8 @@ export interface DiscoveryEvent extends Event {
 export class DiscoveryService {
   /**
    * Get personalized recommendations for a user
+   * 
+   * For users without profiles (cold start), falls back to trending events.
    */
   static getPersonalizedRecommendations(
     events: Event[],
@@ -46,7 +48,13 @@ export class DiscoveryService {
     limit: number = 5,
     userLocation?: { city?: string; country?: string; timezone?: string }
   ): DiscoveryEvent[] {
-    if (!userProfile || events.length === 0) return [];
+    // Early return if no events
+    if (events.length === 0) return [];
+
+    // Cold start: fall back to trending events when no profile
+    if (!userProfile) {
+      return this.getTrendingEvents(events, limit, userLocation);
+    }
 
     const trackedEventIds = new Set(trackedEvents.map(te => te.id));
     const availableEvents = events.filter(event => !trackedEventIds.has(event.id));
@@ -81,9 +89,22 @@ export class DiscoveryService {
       } as DiscoveryEvent;
     });
 
-    return scoredEvents
+    const personalizedResults = scoredEvents
       .sort((a, b) => (b.discoveryMetrics?.personalizedScore || 0) - (a.discoveryMetrics?.personalizedScore || 0))
       .slice(0, limit);
+
+    // If personalized results are insufficient, supplement with trending events
+    if (personalizedResults.length < limit) {
+      const personalizedIds = new Set(personalizedResults.map(e => e.id));
+      const trendingFallback = this.getTrendingEvents(
+        events.filter(e => !personalizedIds.has(e.id)),
+        limit - personalizedResults.length,
+        userLocation
+      );
+      return [...personalizedResults, ...trendingFallback];
+    }
+
+    return personalizedResults;
   }
 
   /**

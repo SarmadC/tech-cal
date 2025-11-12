@@ -1266,9 +1266,9 @@ export class EventService {
                     .order('attendee_count', { ascending: !ascending, nullsLast: true })
                     .order('start_time', { ascending: true });
             case 'career-impact':
-                return query
-                    .order('attendee_count', { ascending: !ascending, nullsLast: true })
-                    .order('start_time', { ascending: true });
+                // Career impact scores are calculated during enrichment, not available in DB
+                // Sort by date as fallback - actual career impact sorting happens post-enrichment
+                return query.order('start_time', { ascending });
             case 'date':
             default:
                 return query.order('start_time', { ascending });

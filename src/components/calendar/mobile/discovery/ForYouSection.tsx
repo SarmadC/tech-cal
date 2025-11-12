@@ -5,6 +5,7 @@ import { User } from '@phosphor-icons/react';
 import { Event, AppProfile, TrackedEvent } from '@/types';
 // Use consolidated Event type - recommendation functionality handled through EventWithCareerImpact
 import { useForYouTracking } from '@/hooks/useRecommendationTracking';
+import { DiscoveryService } from '@/services/discoveryService';
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 // import CareerProfilePrompt from './CareerProfilePrompt'; // Removed - using enhanced empty state instead
@@ -59,11 +60,78 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
   const personalizedEvents: Event[] = events;
 
   // Use passed events directly (they are already scored by the server)
+  // If no personalized events, fall back to trending events
   const finalEvents = React.useMemo(() => {
-    // Filter out past events and limit results
     const now = new Date();
-    return events.filter(event => new Date(event.startTime) > now).slice(0, limit);
-  }, [events, limit]);
+    
+    // Filter to upcoming events, handling incomplete fields gracefully
+    const upcomingEvents = events.filter(event => {
+      // Check for incomplete event fields
+      if (!event.startTime) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ForYouSection] Event missing startTime:', event.id, event.title);
+        }
+        return false; // Skip events without startTime
+      }
+      
+      try {
+        const eventDate = new Date(event.startTime);
+        return eventDate > now;
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ForYouSection] Invalid startTime:', event.id, event.startTime, error);
+        }
+        return false; // Skip events with invalid dates
+      }
+    });
+    
+    // Get score helper
+    const getScore = (e: Event): number => {
+      return (e as { careerImpact?: { overall: number } }).careerImpact?.overall ?? 0;
+    };
+    
+    // If we have events with scores, use them (be more lenient - accept any score > 0)
+    const scoredEvents = upcomingEvents.filter(event => getScore(event) > 0);
+    
+    if (scoredEvents.length > 0) {
+      // Sort by score and take top events
+      const sorted = [...scoredEvents].sort((a, b) => {
+        const aScore = getScore(a);
+        const bScore = getScore(b);
+        return bScore - aScore;
+      });
+      
+      // Debug logging (dev mode only)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[ForYouSection] Event filtering debug:', {
+          totalEvents: events.length,
+          upcomingEvents: upcomingEvents.length,
+          eventsWithScores: scoredEvents.length,
+          topScores: sorted.slice(0, 5).map(e => getScore(e)),
+          returningCount: Math.min(sorted.length, limit)
+        });
+      }
+      
+      return sorted.slice(0, limit);
+    }
+    
+    // Fallback: use trending events if no scored events available
+    if (upcomingEvents.length > 0) {
+      const trending = DiscoveryService.getTrendingEvents(upcomingEvents, limit, _userLocation);
+      if (trending.length > 0) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[ForYouSection] Using trending fallback -', trending.length, 'events');
+        }
+        return trending.map(discoveryEvent => discoveryEvent as unknown as Event).slice(0, limit);
+      }
+    }
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[ForYouSection] No events to display - total:', events.length, 'upcoming:', upcomingEvents.length);
+    }
+    
+    return [];
+  }, [events, limit, _userLocation]);
 
   // Debug logging (dev only)
   React.useEffect(() => {
@@ -209,9 +277,10 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
     );
   }
 
-  // Show empty state with helpful message if no events found OR if profile is incomplete
+  // Show empty state with helpful message if no events found
   if (finalEvents.length === 0) {
-    console.log('Rendering empty state:', { hasCareerProfile, finalEventsLength: finalEvents.length });
+    const isColdStart = !userProfile;
+    const hasUpcomingEvents = events.some(event => new Date(event.startTime) > new Date());
 
     return (
       <DiscoverySection
@@ -225,22 +294,30 @@ const ForYouSection = React.memo<ForYouSectionProps>(({
             <div className="empty-icon-bg"></div>
           </div>
           <div className="empty-title">
-            Building your personalized feed
+            {isColdStart 
+              ? 'Complete your profile for personalized recommendations'
+              : 'Building your personalized feed'}
           </div>
           <div className="empty-subtitle">
-            We&apos;re analyzing upcoming events to find the best matches.
+            {isColdStart
+              ? 'Tell us about your skills and interests to get tailored event recommendations.'
+              : hasUpcomingEvents
+                ? 'We\'re analyzing upcoming events to find the best matches for you.'
+                : 'No upcoming events available at the moment. Check back soon!'}
           </div>
           <div className="empty-actions">
+            {isColdStart && (
+              <button 
+                className="empty-cta-primary"
+                onClick={() => {
+                  console.log('Navigate to profile completion');
+                }}
+              >
+                Complete Profile
+              </button>
+            )}
             <button 
-              className="empty-cta-primary"
-              onClick={() => {
-                console.log('Navigate to profile completion');
-              }}
-            >
-              Refresh Recommendations
-            </button>
-            <button 
-              className="empty-cta-secondary"
+              className={isColdStart ? "empty-cta-secondary" : "empty-cta-primary"}
               onClick={() => {
                 console.log('Navigate to explore more');
               }}
