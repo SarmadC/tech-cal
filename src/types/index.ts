@@ -1,9 +1,8 @@
 // src/types/index.ts
 
 import { User, Session } from '@supabase/supabase-js';
-// 1. FIX: Explicitly IMPORT `Json` first, then re-export it.
 import type { Json } from './supabase';
-export type { Json }; // This makes it available to other files.
+export type { Json };
 
 // ============================================
 // RE-EXPORT ALL EVENT-RELATED TYPES
@@ -100,7 +99,6 @@ export type AppProfile = {
     updatedAt: string | null;
 };
 
-// ... The rest of your non-event types ...
 export const CALENDAR_VIEWS = { MONTH: 'month', WEEK: 'week', DAY: 'day' } as const;
 export type CalendarView = typeof CALENDAR_VIEWS[keyof typeof CALENDAR_VIEWS];
 
@@ -115,6 +113,7 @@ export type EventFilters = {
   collection?: string; 
   status?: string[]; 
   eventIds?: string[];
+  locations?: string[];
   // Enhanced filtering options
   budget?: 'all' | 'free-only' | 'low' | 'moderate' | 'high' | 'unlimited';
   format?: 'all' | 'virtual' | 'in-person' | 'hybrid';
@@ -126,7 +125,8 @@ export type EventFilters = {
   myTracked?: boolean;
   myNetwork?: boolean;
   recommended?: boolean;
-  sortBy?: 'date' | 'popularity' | 'career-impact';
+  sortBy?: 'date' | 'popularity' | 'career-impact' | 'title' | 'location';
+  sortDirection?: 'asc' | 'desc';
 };
 export type SearchSuggestion = { id: string; title: string; organizer: string; startTime: string; type: 'event' | 'organizer' | 'category'; };
 export type LoginForm = { email: string; password: string; rememberMe?: boolean; };

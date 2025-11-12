@@ -19,6 +19,7 @@ const ratelimit = new Ratelimit({
 interface FilteredEventsRequest {
   searchTerm?: string;
   categories?: string[];
+  locations?: string[];
   format?: 'all' | 'virtual' | 'in-person' | 'hybrid';
   budget?: 'all' | 'free-only' | 'low' | 'moderate' | 'high' | 'unlimited';
   cost?: 'all' | 'free' | 'paid';
@@ -27,7 +28,8 @@ interface FilteredEventsRequest {
     start?: string;
     end?: string;
   };
-  sortBy?: 'date' | 'popularity' | 'career-impact';
+  sortBy?: 'date' | 'popularity' | 'career-impact' | 'title' | 'location';
+  sortDirection?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
   // Additional filters from useSmartFilters
@@ -57,6 +59,7 @@ interface FilteredEventsResponse {
         categories: Array<{ id: string; name: string; count: number }>;
         difficulties: Array<{ value: string; count: number }>;
         formats: Array<{ value: string; count: number }>;
+        locations?: Array<{ value: string; count: number }>;
       };
     };
     stats: {
@@ -120,12 +123,14 @@ export async function POST(request: NextRequest) {
     const {
       searchTerm,
       categories = [],
+      locations = [],
       format = 'all',
     budget = 'all',
       cost = 'all',
       difficulty = 'all',
       dateRange,
       sortBy = 'date',
+      sortDirection = 'asc',
       page = 1,
       pageSize = 50,
       availability: _availability = 'all',
@@ -160,6 +165,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       searchTerm: body.searchTerm || '',
       categories: (body.categories || []).slice().sort(),
+      locations: (body.locations || []).slice().sort(),
       format,
       budget,
       cost,
@@ -167,6 +173,7 @@ export async function POST(request: NextRequest) {
       dateStart: body.dateRange?.start || null,
       dateEnd: body.dateRange?.end || null,
       sortBy,
+      sortDirection,
       page,
       pageSize,
       availability: _availability,
@@ -196,6 +203,7 @@ export async function POST(request: NextRequest) {
     // Build comprehensive server-side filters
     const eventFilters: EventFilters = {
       categories: categories.length > 0 ? categories : undefined,
+      locations: locations.length > 0 ? locations : undefined,
       searchTerm: searchTerm || undefined,
       startDate: dateRange?.start ? new Date(dateRange.start) : undefined,
       endDate: dateRange?.end ? new Date(dateRange.end) : undefined,
@@ -209,7 +217,8 @@ export async function POST(request: NextRequest) {
       myTracked: _myTracked || undefined,
       myNetwork: myNetwork || undefined,
       recommended: recommended || undefined,
-      sortBy: sortBy !== 'date' ? sortBy : undefined
+      sortBy: sortBy !== 'date' ? sortBy : 'date',
+      sortDirection: sortDirection === 'desc' ? 'desc' : 'asc'
     };
 
     const telemetryContext: RecommendationTelemetryContext | undefined = hasTelemetryConsent ? {
@@ -303,7 +312,8 @@ export async function POST(request: NextRequest) {
         { value: 'virtual', count: 0 }, // Would need separate queries for accurate counts
         { value: 'in-person', count: 0 },
         { value: 'hybrid', count: 0 },
-      ]
+      ],
+      locations: []
     };
 
     const processingTime = Date.now() - startTime;
@@ -319,7 +329,7 @@ export async function POST(request: NextRequest) {
           hasMore: page * pageSize < totalEvents
         },
         filters: {
-          applied: { searchTerm, categories, format, cost, difficulty, dateRange, sortBy },
+          applied: { searchTerm, categories, locations, format, cost, difficulty, dateRange, sortBy },
           available: availableFilters
         },
         stats: {

@@ -30,18 +30,21 @@ export default function Navbar() {
     ];
 
     // Add authenticated-only links
-    const authenticatedLinks = user ? [
+    const authenticatedLinks = [
         { href: '/discover', label: 'Discover' },
         { href: '/calendar?view=month', label: 'Calendar' },
+        { href: '/events', label: 'Events' },
         { href: '/dashboard', label: 'Dashboard' },
-    ] : [];
+    ];
 
-    const allNavLinks = [...navLinks, ...authenticatedLinks];
+    // Show only authenticated links when logged in, marketing links when not
+    const allNavLinks = user ? authenticatedLinks : navLinks;
 
     // Always show background on dashboard and other protected pages
     const isProtectedPage = pathname?.startsWith('/dashboard') || 
                            pathname?.startsWith('/calendar') || 
                            pathname?.startsWith('/discover') ||
+                           pathname?.startsWith('/events') ||
                            pathname?.startsWith('/hackathons');
     
     const shouldShowBackground = isScrolled || isProtectedPage;

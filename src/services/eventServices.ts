@@ -54,6 +54,15 @@ export class EventService {
             if (filters.categories?.length) {
                 query = query.in('event_type_id', filters.categories);
             }
+            if (filters.locations?.length) {
+                query = query.in('location', filters.locations);
+            }
+            if (filters.locations?.length) {
+                query = query.in('location', filters.locations);
+            }
+            if (filters.locations?.length) {
+                query = query.in('location', filters.locations);
+            }
             if (filters.searchTerm) {
                 query = query.textSearch('fts', sanitizeFtsQuery(filters.searchTerm));
             }
@@ -187,6 +196,7 @@ export class EventService {
 
             // Apply filters (same logic, cleaner code)
             if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
+            if (filters.locations?.length) query = query.in('location', filters.locations);
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
             if (filters.searchTerm?.trim()) {
@@ -199,6 +209,7 @@ export class EventService {
             if (filters.eventIds?.length) query = query.in('id', filters.eventIds);
 
             query = this.applyEnhancedFilters(query, filters);
+            query = this.applySorting(query, filters.sortBy, filters.sortDirection);
 
             const { data, error } = await query;
 
@@ -298,6 +309,7 @@ export class EventService {
 
             // Apply filters (same logic, cleaner code)
             if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
+            if (filters.locations?.length) query = query.in('location', filters.locations);
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
             if (filters.searchTerm?.trim()) {
@@ -310,7 +322,7 @@ export class EventService {
             if (filters.eventIds?.length) query = query.in('id', filters.eventIds);
 
             query = this.applyEnhancedFilters(query, filters);
-            query = this.applySorting(query, filters.sortBy);
+            query = this.applySorting(query, filters.sortBy, filters.sortDirection);
 
             const { data, error } = await query;
             
@@ -527,6 +539,9 @@ export class EventService {
 
             if (filters.categories?.length) {
                 query = query.in('event_type_id', filters.categories);
+            }
+            if (filters.locations?.length) {
+                query = query.in('location', filters.locations);
             }
 
             if (filters.searchTerm) {
@@ -1232,20 +1247,31 @@ export class EventService {
      */
     private static applySorting(
         query: EventQueryBuilder, 
-        sortBy?: string
+        sortBy?: string,
+        sortDirection: 'asc' | 'desc' = 'asc'
     ): EventQueryBuilder {
+        const ascending = sortDirection !== 'desc';
+
         switch (sortBy) {
+            case 'title':
+                return query
+                    .order('title', { ascending, nullsLast: true })
+                    .order('start_time', { ascending: true });
+            case 'location':
+                return query
+                    .order('location', { ascending, nullsLast: true })
+                    .order('start_time', { ascending: true });
             case 'popularity':
-                return query.order('attendee_count', { ascending: false, nullsLast: true })
-                           .order('start_time', { ascending: true });
+                return query
+                    .order('attendee_count', { ascending: !ascending, nullsLast: true })
+                    .order('start_time', { ascending: true });
             case 'career-impact':
-                // For now, sort by attendee count as a proxy for career impact
-                // This can be enhanced when career impact scores are available
-                return query.order('attendee_count', { ascending: false, nullsLast: true })
-                           .order('start_time', { ascending: true });
+                return query
+                    .order('attendee_count', { ascending: !ascending, nullsLast: true })
+                    .order('start_time', { ascending: true });
             case 'date':
             default:
-                return query.order('start_time', { ascending: true });
+                return query.order('start_time', { ascending });
         }
     }
 

@@ -33,7 +33,7 @@ export interface SmartFilterOptions {
     myNetwork: boolean;
     recommended: boolean;
     duration: 'all' | 'short' | 'medium' | 'long' | 'multi-day';
-    sortBy: 'default' | 'date' | 'popularity' | 'career-impact';
+    sortBy: 'default' | 'date' | 'popularity' | 'career-impact' | 'title' | 'location';
 }
 
 const defaultFilters: SmartFilterOptions = {

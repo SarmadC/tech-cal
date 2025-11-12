@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useDebounce } from './useDebounce';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Event, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { useTrackedEventIds } from './useTrackedEventsUnified';
 import { FILTERING_CONSTANTS } from '@/config/filteringConstants';
@@ -12,6 +12,7 @@ interface UnifiedFilterOptions {
   // Basic filters
   searchTerm: string;
   categories: string[];
+  locations: string[];
   dateRange: { start: Date | null; end: Date | null; };
   
   // Event properties
@@ -29,7 +30,8 @@ interface UnifiedFilterOptions {
   recommended: boolean;
   
   // Sorting
-  sortBy: 'default' | 'date' | 'popularity' | 'career-impact';
+  sortBy: 'default' | 'date' | 'popularity' | 'career-impact' | 'title' | 'location';
+  sortDirection: 'asc' | 'desc';
   
   // Pagination
   page: number;
@@ -65,6 +67,16 @@ interface UseUnifiedServerFilteringResult {
   isLoading: boolean;
   error: string | null;
   isColdStart: boolean;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  totalCount: number;
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    totalItems: number;
+    hasMore: boolean;
+  };
 
   // Filter state
   filters: UnifiedFilterOptions;
@@ -86,6 +98,7 @@ interface UseUnifiedServerFilteringResult {
 const DEFAULT_FILTERS: UnifiedFilterOptions = {
   searchTerm: '',
   categories: [],
+  locations: [],
   dateRange: { start: null, end: null },
   budget: 'all',
   format: 'all',
@@ -98,6 +111,7 @@ const DEFAULT_FILTERS: UnifiedFilterOptions = {
   myNetwork: false,
   recommended: false,
   sortBy: 'default',
+  sortDirection: 'asc',
   page: 1,
   pageSize: 50
 };
@@ -113,6 +127,7 @@ export function useUnifiedServerFiltering(
 ): UseUnifiedServerFilteringResult {
   const surface: FilterSurface = options.surface ?? 'discover';
   const autoLoadAllPages = options.autoLoadAllPages ?? false;
+  const isPagedMode = !autoLoadAllPages;
 
   const initialFiltersSignature = useMemo(() => JSON.stringify(initialFilters, (_key, value) => {
     if (value instanceof Date) {
@@ -164,21 +179,25 @@ export function useUnifiedServerFiltering(
   const debouncedFiltersSignature = useDebounce(apiFiltersSignature, FILTERING_CONSTANTS.FILTERS_DEBOUNCE_MS);
   const stableFilters = useMemo(() => JSON.parse(debouncedFiltersSignature) as typeof apiFilters, [debouncedFiltersSignature]);
 
-  // React Query: infinite query for filtered events
+  const fetchFilters = useMemo(() => ({
+    ...stableFilters,
+    page: filters.page,
+    pageSize: filters.pageSize,
+    sessionId: sessionIdRef.current ?? 'filters_fallback',
+    surface,
+  }), [stableFilters, filters.page, filters.pageSize, surface]);
+
+  // React Query: paged query for filtered events
   const {
-    data: queryData,
-    isLoading,
-    isFetching,
-    isFetchingNextPage,
-    error: queryError,
-    refetch: queryRefetch,
-    fetchNextPage,
-    hasNextPage,
-  } = useInfiniteQuery({
-    queryKey: ['filtered-events', surface, stableFilters],
-    initialPageParam: 1,
-    queryFn: async ({ pageParam = 1 }) => {
-      const sessionId = sessionIdRef.current ?? 'filters_fallback';
+    data: pagedData,
+    isLoading: pagedLoading,
+    isFetching: pagedFetching,
+    error: pagedError,
+    refetch: pagedRefetch,
+  } = useQuery({
+    queryKey: ['filtered-events', 'paged', fetchFilters],
+    enabled: isPagedMode,
+    queryFn: async () => {
       const requestId = typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function'
         ? globalThis.crypto.randomUUID()
         : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -186,7 +205,48 @@ export function useUnifiedServerFiltering(
       const response = await fetch('/api/events/filtered', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId },
-        body: JSON.stringify({ ...stableFilters, page: pageParam, sessionId, surface })
+        body: JSON.stringify(fetchFilters),
+      });
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to filter events');
+      }
+      return result as { success: true; data: FilteredEventsData };
+    },
+    staleTime: FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
+    gcTime: FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
+    retry: (failureCount, error) => {
+      if (error instanceof Error && /401|403|412|429/.test(error.message)) return false;
+      return failureCount < 2;
+    },
+  });
+
+  // React Query: infinite query for filtered events when auto loading pages
+  const {
+    data: infiniteData,
+    isLoading: infiniteLoading,
+    isFetching: infiniteFetching,
+    isFetchingNextPage,
+    error: infiniteError,
+    refetch: infiniteRefetch,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['filtered-events', 'infinite', fetchFilters],
+    enabled: autoLoadAllPages,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam = 1 }) => {
+      const requestId = typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID()
+        : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+      const response = await fetch('/api/events/filtered', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId },
+        body: JSON.stringify({ ...fetchFilters, page: pageParam }),
       });
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
@@ -209,8 +269,12 @@ export function useUnifiedServerFiltering(
     },
   });
 
+  const activeQueryError = isPagedMode ? pagedError : infiniteError;
+  const queryError = activeQueryError instanceof Error ? activeQueryError.message : null;
+  const isLoading = isPagedMode ? (pagedLoading || pagedFetching) : (infiniteLoading || infiniteFetching);
+
   const updateFilter = useCallback(<K extends keyof UnifiedFilterOptions>(
-    key: K, 
+    key: K,
     value: UnifiedFilterOptions[K]
   ) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -221,19 +285,28 @@ export function useUnifiedServerFiltering(
   }, [mergedDefaultFilters]);
 
   const loadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+    if (autoLoadAllPages) {
+      if (hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    } else {
+      setFilters(prev => ({ ...prev, page: prev.page + 1 }));
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [autoLoadAllPages, fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const refetch = useCallback(() => {
-    queryRefetch();
-  }, [queryRefetch]);
+    if (isPagedMode) {
+      pagedRefetch();
+    } else {
+      infiniteRefetch();
+    }
+  }, [isPagedMode, pagedRefetch, infiniteRefetch]);
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.categories.length > 0) count++;
+    if (filters.locations.length > 0) count++;
     if (filters.searchTerm) count++;
     if (filters.dateRange.start || filters.dateRange.end) count++;
     if (filters.budget !== 'all') count++;
@@ -286,31 +359,81 @@ export function useUnifiedServerFiltering(
   }, []);
 
   // Flatten pages and enrich tracking info
-  const flattenedEvents: TrackedEvent[] = useMemo(() => {
-    const pages = queryData?.pages ?? [];
+  const pagedEvents = useMemo(() => {
+    const events = pagedData?.data.events ?? [];
+    return events.map((event: Event) => enrichWithTracking(event, trackedEventIds?.has(event.id) || false));
+  }, [pagedData?.data.events, trackedEventIds]);
+
+  const infiniteEvents = useMemo(() => {
+    const pages = infiniteData?.pages ?? [];
     const events = pages.flatMap(p => p.data.events || []);
     return events.map((event: Event) => enrichWithTracking(event, trackedEventIds?.has(event.id) || false));
-  }, [queryData?.pages, trackedEventIds]);
+  }, [infiniteData?.pages, trackedEventIds]);
+
+  const filteredEvents = isPagedMode ? pagedEvents : infiniteEvents;
+
+  const currentPagination = useMemo(() => {
+    if (isPagedMode) {
+      const pagination = pagedData?.data.pagination;
+      const total = pagination?.total ?? pagedData?.data.stats.totalCount ?? 0;
+      const pageSize = pagination?.pageSize ?? filters.pageSize;
+      const page = pagination?.page ?? filters.page;
+      const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
+      return {
+        page,
+        pageSize,
+        totalPages,
+        totalItems: total,
+        hasMore: pagination?.hasMore ?? (page < totalPages),
+      };
+    }
+
+    const firstPage = infiniteData?.pages?.[0]?.data;
+    const lastPage = infiniteData?.pages?.[infiniteData.pages.length - 1]?.data;
+    const total = firstPage?.pagination.total ?? firstPage?.stats.totalCount ?? 0;
+    const pageSize = filters.pageSize;
+    const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
+    const currentPage = lastPage?.pagination.page ?? filters.page;
+    const hasMore = Boolean(hasNextPage);
+
+    return {
+      page: currentPage,
+      pageSize,
+      totalPages,
+      totalItems: total,
+      hasMore,
+    };
+  }, [isPagedMode, pagedData?.data, filters.page, filters.pageSize, infiniteData?.pages, hasNextPage]);
+
+  const totalCount = currentPagination.totalItems;
 
   const combinedIsColdStart = useMemo(() => {
-    const pages = queryData?.pages ?? [];
+    if (isPagedMode) {
+      return pagedData?.data.isColdStart ?? false;
+    }
+    const pages = infiniteData?.pages ?? [];
     if (pages.length === 0) return false;
     return pages[0].data.isColdStart || false;
-  }, [queryData?.pages]);
+  }, [isPagedMode, pagedData?.data, infiniteData?.pages]);
 
   useEffect(() => {
     if (!autoLoadAllPages) return;
-    if (hasNextPage && !isFetchingNextPage && !isFetching) {
+    if (hasNextPage && !isFetchingNextPage && !infiniteFetching) {
       fetchNextPage();
     }
-  }, [autoLoadAllPages, hasNextPage, isFetchingNextPage, isFetching, fetchNextPage]);
+  }, [autoLoadAllPages, hasNextPage, isFetchingNextPage, infiniteFetching, fetchNextPage]);
+
+  const effectiveHasNextPage = isPagedMode ? currentPagination.hasMore : Boolean(hasNextPage);
+  const effectiveIsFetchingNextPage = autoLoadAllPages ? Boolean(isFetchingNextPage) : false;
 
   return {
     // Data
-    filteredEvents: flattenedEvents,
-    isLoading: isLoading || isFetching,
-    error: queryError instanceof Error ? queryError.message : null,
+    filteredEvents,
+    isLoading,
+    error: queryError,
     isColdStart: combinedIsColdStart,
+    totalCount,
+    pagination: currentPagination,
 
     // Filter state
     filters,
@@ -327,5 +450,7 @@ export function useUnifiedServerFiltering(
     isFilterPanelOpen,
     setIsFilterPanelOpen,
     rateLimitWaitMs: 0,
+    hasNextPage: effectiveHasNextPage,
+    isFetchingNextPage: effectiveIsFetchingNextPage,
   };
 }
