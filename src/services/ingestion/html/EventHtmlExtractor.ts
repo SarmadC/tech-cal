@@ -88,7 +88,7 @@ function derivePricingType(min?: number | null, max?: number | null): 'Free' | '
 
 function extractFromJsonLd(document: Document) {
     const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-    const events: Array<Record<string, any>> = [];
+    const events: Array<Record<string, unknown>> = [];
 
     for (const script of scripts) {
         const raw = script.textContent?.trim();
@@ -100,17 +100,20 @@ function extractFromJsonLd(document: Document) {
         const payloads = Array.isArray(parsed) ? parsed : [parsed];
         for (const payload of payloads) {
             if (!payload || typeof payload !== 'object') continue;
-            const type = payload['@type'] || payload['@context'];
+            const payloadObj = payload as Record<string, unknown>;
+            const type = payloadObj['@type'] || payloadObj['@context'];
 
             if (Array.isArray(type) ? type.includes('Event') : type === 'Event') {
-                events.push(payload as Record<string, any>);
-            } else if ((payload as Record<string, any>)['@graph']) {
-                const graphPayload = (payload as Record<string, any>)['@graph'];
+                events.push(payloadObj);
+            } else if (payloadObj['@graph']) {
+                const graphPayload = payloadObj['@graph'];
                 if (Array.isArray(graphPayload)) {
                     graphPayload.forEach(item => {
-                        const itemType = item?.['@type'];
+                        if (!item || typeof item !== 'object') return;
+                        const itemObj = item as Record<string, unknown>;
+                        const itemType = itemObj['@type'];
                         if (Array.isArray(itemType) ? itemType.includes('Event') : itemType === 'Event') {
-                            events.push(item as Record<string, any>);
+                            events.push(itemObj);
                         }
                     });
                 }
@@ -161,7 +164,7 @@ function validateUrlHost(url: string, allowedHosts: string[]): string | undefine
     }
 }
 
-function extractSpeakersFromJsonLd(eventPayload: Record<string, any>): SpeakerRecord[] {
+function extractSpeakersFromJsonLd(eventPayload: Record<string, unknown>): SpeakerRecord[] {
     const performers = [
         ...asArray(eventPayload.performer),
         ...asArray(eventPayload.performers),
@@ -173,18 +176,21 @@ function extractSpeakersFromJsonLd(eventPayload: Record<string, any>): SpeakerRe
 
     for (const performer of performers) {
         if (!performer || typeof performer !== 'object') continue;
-        const name = performer.name || performer.alternateName;
+        const performerObj = performer as Record<string, unknown>;
+        const name = (performerObj.name || performerObj.alternateName) as string | undefined;
         if (!name || typeof name !== 'string') continue;
 
-        const sameAs = typeof performer.sameAs === 'string' ? performer.sameAs : undefined;
+        const sameAs = typeof performerObj.sameAs === 'string' ? performerObj.sameAs : undefined;
+        const affiliation = performerObj.affiliation as Record<string, unknown> | undefined;
+        const worksFor = performerObj.worksFor as Record<string, unknown> | undefined;
         
         speakers.push({
             name: name.trim(),
-            title: performer.jobTitle || undefined,
-            company: performer.affiliation?.name || performer.worksFor?.name || undefined,
-            bio: performer.description || undefined,
+            title: (performerObj.jobTitle as string | undefined) || undefined,
+            company: (affiliation?.name as string | undefined) || (worksFor?.name as string | undefined) || undefined,
+            bio: (performerObj.description as string | undefined) || undefined,
             linkedinUrl: sameAs ? validateUrlHost(sameAs, ['linkedin.com']) : undefined,
-            photoUrl: performer.image || performer.logo || undefined,
+            photoUrl: (performerObj.image as string | undefined) || (performerObj.logo as string | undefined) || undefined,
             githubUrl: sameAs ? validateUrlHost(sameAs, ['github.com']) : undefined,
         });
     }
@@ -192,33 +198,37 @@ function extractSpeakersFromJsonLd(eventPayload: Record<string, any>): SpeakerRe
     return speakers;
 }
 
-function extractScheduleFromJsonLd(eventPayload: Record<string, any>): ExtractedScheduleItem[] {
+function extractScheduleFromJsonLd(eventPayload: Record<string, unknown>): ExtractedScheduleItem[] {
     const scheduleItems: ExtractedScheduleItem[] = [];
 
     const eventSchedule = asArray(eventPayload.eventSchedule);
     for (const schedule of eventSchedule) {
         if (!schedule || typeof schedule !== 'object') continue;
+        const scheduleObj = schedule as Record<string, unknown>;
+        const location = scheduleObj.location as Record<string, unknown> | undefined;
         scheduleItems.push({
-            date: toISODate(schedule.startDate),
-            startTime: toISODate(schedule.startTime),
-            endTime: toISODate(schedule.endDate),
-            title: schedule.name || undefined,
-            description: schedule.description || undefined,
-            location: schedule.location?.name || undefined,
+            date: toISODate(scheduleObj.startDate as string | undefined),
+            startTime: toISODate(scheduleObj.startTime as string | undefined),
+            endTime: toISODate(scheduleObj.endDate as string | undefined),
+            title: (scheduleObj.name as string | undefined) || undefined,
+            description: (scheduleObj.description as string | undefined) || undefined,
+            location: (location?.name as string | undefined) || undefined,
         });
     }
 
     const subEvents = asArray(eventPayload.subEvent || eventPayload.subEvents);
     for (const subEvent of subEvents) {
         if (!subEvent || typeof subEvent !== 'object') continue;
+        const subEventObj = subEvent as Record<string, unknown>;
+        const location = subEventObj.location as Record<string, unknown> | undefined;
         scheduleItems.push({
-            date: toISODate(subEvent.startDate),
-            startTime: toISODate(subEvent.startDate),
-            endTime: toISODate(subEvent.endDate),
-            title: subEvent.name || undefined,
-            description: subEvent.description || undefined,
-            speakers: extractSpeakersFromJsonLd(subEvent).map(speaker => speaker.name),
-            location: subEvent.location?.name || undefined,
+            date: toISODate(subEventObj.startDate as string | undefined),
+            startTime: toISODate(subEventObj.startDate as string | undefined),
+            endTime: toISODate(subEventObj.endDate as string | undefined),
+            title: (subEventObj.name as string | undefined) || undefined,
+            description: (subEventObj.description as string | undefined) || undefined,
+            speakers: extractSpeakersFromJsonLd(subEventObj).map(speaker => speaker.name),
+            location: (location?.name as string | undefined) || undefined,
         });
     }
 
@@ -410,13 +420,13 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
             result.confidence.title = 0.95;
             result.provenance.sources.push('jsonld.name');
         }
-        const startDate = toISODate(primaryEvent.startDate);
+        const startDate = toISODate(primaryEvent.startDate as string | undefined);
         if (startDate) {
             result.startTime = startDate;
             result.confidence.startTime = 0.95;
             result.provenance.sources.push('jsonld.startDate');
         }
-        const endDate = toISODate(primaryEvent.endDate);
+        const endDate = toISODate(primaryEvent.endDate as string | undefined);
         if (endDate) {
             result.endTime = endDate;
             result.confidence.endTime = 0.8;
@@ -429,8 +439,10 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
             result.provenance.sources.push('jsonld.description');
         }
         const jsonLocation = primaryEvent.location;
-        if (jsonLocation && typeof jsonLocation === 'object') {
-            const locationName = jsonLocation.name || jsonLocation.address?.streetAddress;
+        if (jsonLocation && typeof jsonLocation === 'object' && jsonLocation !== null) {
+            const locationObj = jsonLocation as Record<string, unknown>;
+            const address = locationObj.address as Record<string, unknown> | undefined;
+            const locationName = (locationObj.name as string | undefined) || (address?.streetAddress as string | undefined);
             if (locationName && typeof locationName === 'string') {
                 result.location = locationName.trim();
                 result.confidence.location = 0.85;
@@ -448,10 +460,10 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
         }
         const offers = asArray(primaryEvent.offers);
         if (offers.length > 0) {
-            const offer = offers[0];
+            const offer = offers[0] as Record<string, unknown>;
             const price = offer.price != null ? Number(offer.price) : undefined;
             const highPrice = offer.highPrice != null ? Number(offer.highPrice) : undefined;
-            const currency = normalizeCurrency(offer.priceCurrency || offer.currency);
+            const currency = normalizeCurrency((offer.priceCurrency || offer.currency) as string | undefined);
 
             result.pricing = {
                 priceMin: Number.isFinite(price) ? price : null,

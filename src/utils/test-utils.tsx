@@ -5,6 +5,8 @@ import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext, AuthContextType } from '@/contexts/AuthContext';
 import { User } from '@supabase/supabase-js';
+import { SupabaseProvider } from '@/components/providers/SupabaseProvider';
+import { SnackbarProvider } from '@/contexts/SnackbarContext';
 
 // Create a new QueryClient for each test run to ensure tests are isolated
 const createTestQueryClient = () => new QueryClient({
@@ -43,9 +45,13 @@ const customRender = (
 
   const AllTheProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <QueryClientProvider client={testQueryClient}>
-      <AuthContext.Provider value={mockAuthContext as AuthContextType}>
-        {children}
-      </AuthContext.Provider>
+      <SupabaseProvider>
+        <SnackbarProvider>
+          <AuthContext.Provider value={mockAuthContext as AuthContextType}>
+            {children}
+          </AuthContext.Provider>
+        </SnackbarProvider>
+      </SupabaseProvider>
     </QueryClientProvider>
   );
 

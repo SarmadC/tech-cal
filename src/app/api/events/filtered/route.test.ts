@@ -53,27 +53,32 @@ vi.mock('@/utils/onboarding', () => ({
   requireOnboardedApi: (...args: any[]) => mockRequireOnboardedApi(...args) // eslint-disable-line @typescript-eslint/no-explicit-any
 }));
 
-const mockKvGet = vi.fn().mockResolvedValue(null);
-const mockKvSet = vi.fn().mockResolvedValue(undefined);
-vi.mock('@vercel/kv', () => ({
-  kv: {
-    get: mockKvGet,
-    set: mockKvSet
-  }
-}));
+// Mock @vercel/kv - define mocks inside factory to avoid hoisting issues
+vi.mock('@vercel/kv', () => {
+  const mockKvGet = vi.fn().mockResolvedValue(null);
+  const mockKvSet = vi.fn().mockResolvedValue(undefined);
+  return {
+    kv: {
+      get: mockKvGet,
+      set: mockKvSet
+    }
+  };
+});
 
-// Define RatelimitMock class before vi.mock to avoid initialization error
-const mockRateLimit = vi.fn().mockResolvedValue({ success: true });
-class RatelimitMock {
-  limit = mockRateLimit;
-  constructor() {}
-  static slidingWindow() {
-    return vi.fn();
+// Mock Ratelimit - define class inside factory to avoid hoisting issues
+vi.mock('@upstash/ratelimit', () => {
+  const mockRateLimit = vi.fn().mockResolvedValue({ success: true });
+  class RatelimitMock {
+    limit = mockRateLimit;
+    constructor() {}
+    static slidingWindow() {
+      return vi.fn();
+    }
   }
-}
-vi.mock('@upstash/ratelimit', () => ({
-  Ratelimit: RatelimitMock
-}));
+  return {
+    Ratelimit: RatelimitMock
+  };
+});
 
 function buildRequest(body: unknown) {
   return new Request('http://localhost/api/events/filtered', {

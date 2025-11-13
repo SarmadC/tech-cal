@@ -31,9 +31,18 @@ describe('EventTracking Component', () => {
     const user = userEvent.setup();
     const mockUser = createMockUser();
 
+    // Mock fetch globally
+    global.fetch = vi.fn();
+
     // This runs before each test, ensuring our mocks are clean for every scenario
     beforeEach(() => {
         vi.clearAllMocks(); // Resets call counts for our mock functions
+        // Mock fetch to resolve successfully
+        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ success: true }),
+        } as Response);
     });
 
     it('should show a "Sign in" link if the user is logged out', () => {
@@ -48,93 +57,113 @@ describe('EventTracking Component', () => {
 
         // FIX #1: Get the parent element of the link and check its full text content.
         const parentDiv = signInLink.parentElement;
-        expect(parentDiv).toHaveTextContent(/sign in to track this event/i);
+        expect(parentDiv).toHaveTextContent(/sign in to manage attendance/i);
     });
 
     it('should show tracking options if the user is logged in and the event is not tracked', async () => {
-        // Arrange: Tell our mock service to simulate a successful API call
-        vi.spyOn(UserEventService.UserEventService, 'isEventTracked')
-            .mockResolvedValue({ isTracked: false });
+        // Arrange: Mock getTrackedEvents to return empty array (event not tracked)
+        vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
+            .mockResolvedValue([]);
 
         // Act: Render with a logged-in user
         render(<EventTracking event={mockEvent} />, { mockUser });
 
-        // Assert: Use findBy to wait for the component to finish loading its data
-        const bookmarkButton = await screen.findByRole('button', { name: /bookmark/i });
-        expect(bookmarkButton).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /attending/i })).toBeInTheDocument();
+        // Assert: Wait for loading to complete, then check for attendance button
+        // The component shows an attendance toggle button when not tracked
+        await screen.findByText(/not attending/i, {}, { timeout: 5000 });
+        const attendanceButton = screen.getByRole('button', { name: /attending/i });
+        expect(attendanceButton).toBeInTheDocument();
     });
 
-    it('should call the trackEvent service when the user clicks "Bookmark"', async () => {
-        // Arrange
-        vi.spyOn(UserEventService.UserEventService, 'isEventTracked')
-            .mockResolvedValue({ isTracked: false });
-
-        // This is a mock implementation of the hook's mutation function
-        const mockTrackEventMutation = vi.fn();
-        vi.spyOn(UserEventService.UserEventService, 'trackEvent').mockImplementation(mockTrackEventMutation);
+    it('should call setAttendanceStatus when the user clicks attendance button', async () => {
+        // Arrange: Mock getTrackedEvents to return empty array (event not tracked)
+        vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
+            .mockResolvedValue([]);
+        
+        // Mock setAttendanceStatus
+        const setAttendanceStatusSpy = vi.spyOn(UserEventService.UserEventService, 'setAttendanceStatus')
+            .mockResolvedValue({ previousStatus: null, newStatus: 'attending', autoBookmarked: true });
 
         render(<EventTracking event={mockEvent} />, { mockUser });
 
-        // Act
-        const bookmarkButton = await screen.findByRole('button', { name: /bookmark/i });
-        await user.click(bookmarkButton);
+        // Wait for component to load
+        await screen.findByText(/not attending/i, {}, { timeout: 5000 });
 
-        // Assert
-        // Note: We test the mutation hook's call, not the service directly now.
-        // The hook calls the service, so this is still a valid test.
-        // We can check the arguments passed to the hook.
+        // Act: Click the attendance button
+        const attendanceButton = screen.getByRole('button', { name: /attending/i });
+        await user.click(attendanceButton);
 
-        // A more robust way to test hooks is to mock the hook itself, but mocking the service
-        // it calls is a valid and often simpler approach.
-
-        // Re-creating the spy for the service call itself to check the arguments.
-        const trackEventSpy = vi.spyOn(UserEventService.UserEventService, 'trackEvent')
-            .mockResolvedValue(undefined);
-
-        // Need to re-render and click after re-spying to capture the call
-        render(<EventTracking event={mockEvent} />, { mockUser });
-        const newBookmarkButton = await screen.findByRole('button', { name: /bookmark/i });
-        await user.click(newBookmarkButton);
-
-        expect(trackEventSpy).toHaveBeenCalledTimes(1);
-
-        // FIX #2: Change `undefined` to an empty string `""` to match the component's state.
-        expect(trackEventSpy).toHaveBeenCalledWith(
+        // Assert: Check that setAttendanceStatus was called
+        expect(setAttendanceStatusSpy).toHaveBeenCalledTimes(1);
+        expect(setAttendanceStatusSpy).toHaveBeenCalledWith(
             mockUser.id,
             mockEvent.id,
-            'bookmarked', // The status we expect
-            ""            // The notes field is an empty string by default
+            'attending',
+            undefined,
+            expect.anything() // supabase client
         );
     });
 
-    it('should show the current status and a "Remove" button if the event is already tracked', async () => {
-        // Arrange
-        vi.spyOn(UserEventService.UserEventService, 'isEventTracked')
-            .mockResolvedValue({ isTracked: true, status: 'attending' });
+    it('should show the current status if the event is already tracked', async () => {
+        // Arrange: Mock getTrackedEvents to return event with attending status
+        vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
+            .mockResolvedValue([{
+                trackingId: 'track-123',
+                userId: mockUser.id,
+                eventId: mockEvent.id,
+                isBookmarked: true,
+                bookmarkedAt: new Date().toISOString(),
+                status: 'attending',
+                notes: null,
+                trackedAt: new Date().toISOString(),
+                event: null
+            }]);
 
         render(<EventTracking event={mockEvent} />, { mockUser });
 
-        // Assert
-        expect(await screen.findByText(/tracked as attending/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /remove/i })).toBeInTheDocument();
+        // Assert: Wait for component to load and check for attending status
+        await screen.findByText(/attending/i, {}, { timeout: 5000 });
+        // The component shows the attendance status, not a "remove" button
+        // It shows a toggle button to change status
+        expect(screen.getByRole('button')).toBeInTheDocument();
     });
 
-    it('should call the untrackEvent service when the user clicks "Remove"', async () => {
-        // Arrange
-        vi.spyOn(UserEventService.UserEventService, 'isEventTracked')
-            .mockResolvedValue({ isTracked: true, status: 'attending' });
-        const untrackEventSpy = vi.spyOn(UserEventService.UserEventService, 'untrackEvent')
-            .mockResolvedValue({ external_calendar_event_id: 'test-id', external_provider: 'google' });
+    it('should call setAttendanceStatus with null when removing attendance', async () => {
+        // Arrange: Mock getTrackedEvents to return event with attended status
+        // (when status is 'attended', nextAction is null, so clicking will remove attendance)
+        vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
+            .mockResolvedValue([{
+                trackingId: 'track-123',
+                userId: mockUser.id,
+                eventId: mockEvent.id,
+                isBookmarked: true,
+                bookmarkedAt: new Date().toISOString(),
+                status: 'attended',
+                notes: null,
+                trackedAt: new Date().toISOString(),
+                event: null
+            }]);
+        
+        const setAttendanceStatusSpy = vi.spyOn(UserEventService.UserEventService, 'setAttendanceStatus')
+            .mockResolvedValue({ previousStatus: 'attended', newStatus: null, autoBookmarked: false });
 
         render(<EventTracking event={mockEvent} />, { mockUser });
 
-        // Act
-        const removeButton = await screen.findByRole('button', { name: /remove/i });
-        await user.click(removeButton);
+        // Wait for component to load
+        await screen.findByText(/attended/i, {}, { timeout: 5000 });
 
-        // Assert
-        expect(untrackEventSpy).toHaveBeenCalledTimes(1);
-        expect(untrackEventSpy).toHaveBeenCalledWith(mockUser.id, mockEvent.id);
+        // Act: Click the button to remove attendance (toggle off)
+        const toggleButton = screen.getByRole('button');
+        await user.click(toggleButton);
+
+        // Assert: Check that setAttendanceStatus was called with null
+        expect(setAttendanceStatusSpy).toHaveBeenCalledTimes(1);
+        expect(setAttendanceStatusSpy).toHaveBeenCalledWith(
+            mockUser.id,
+            mockEvent.id,
+            null,
+            undefined,
+            expect.anything() // supabase client
+        );
     });
 });

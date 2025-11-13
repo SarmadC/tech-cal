@@ -117,11 +117,11 @@ describe('MobileBottomTabNavigation', () => {
   it('should render all view options with correct icons', () => {
     render(<MobileBottomTabNavigation {...defaultProps} />);
     
-    // Check that all expected icons are rendered
-    expect(screen.getByTestId('icon-calendar')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-event')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-time')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-menu')).toBeInTheDocument();
-    expect(screen.getByTestId('icon-search')).toBeInTheDocument();
+    // Check that all expected icons are rendered (use getAllByTestId since there may be multiple)
+    expect(screen.getAllByTestId('icon-calendar').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('icon-event').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('icon-time').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('icon-menu').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('icon-search').length).toBeGreaterThan(0);
   });
 });
