@@ -10,9 +10,12 @@
  *    {
  *      "crons": [{
  *        "path": "/api/cron/ingestion",
- *        "schedule": "0 * * * *"
+ *        "schedule": "0 2 * * *"  // Daily at 2 AM (Hobby plan: once per day max)
  *      }]
  *    }
+ * 
+ * Note: Hobby plan allows max 2 cron jobs per account, triggered once per day.
+ *       For hourly schedules, upgrade to Pro plan (40 cron jobs, unlimited invocations).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
