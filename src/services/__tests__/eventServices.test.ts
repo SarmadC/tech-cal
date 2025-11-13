@@ -7,6 +7,9 @@ import type { EventFilters } from '@/types';
 
 // Mock Supabase client
 const createMockSupabaseClient = () => {
+  // Store the promise that will be returned by then()
+  let thenPromise = Promise.resolve({ data: [], error: null });
+
   const mockQuery = {
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
@@ -23,9 +26,17 @@ const createMockSupabaseClient = () => {
     textSearch: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({ data: null, error: null }),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    then: vi.fn((onFulfilled?: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) =>
-      Promise.resolve({ data: [], error: null }).then(onFulfilled, onRejected)
-    ),
+    then: vi.fn((onFulfilled?: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) => {
+      return thenPromise.then(onFulfilled, onRejected);
+    }),
+    // Helper to set what the then() promise resolves to
+    __setThenValue: (value: { data: unknown; error: unknown }) => {
+      thenPromise = Promise.resolve(value);
+    },
+    // Helper to set what the then() promise rejects with
+    __setThenError: (error: unknown) => {
+      thenPromise = Promise.reject(error);
+    },
   };
 
   return Object.assign(
@@ -137,7 +148,7 @@ describe('EventService', () => {
         },
       ];
 
-      mockSupabase.__query.then.mockResolvedValue({
+      mockSupabase.__query.__setThenValue({
         data: mockEvents,
         error: null,
       });
@@ -157,7 +168,7 @@ describe('EventService', () => {
     });
 
     it('should handle empty results', async () => {
-      mockSupabase.__query.then.mockResolvedValue({
+      mockSupabase.__query.__setThenValue({
         data: [],
         error: null,
       });
@@ -173,7 +184,7 @@ describe('EventService', () => {
 
     it('should handle database errors', async () => {
       const mockError = new Error('Database connection failed');
-      mockSupabase.__query.then.mockResolvedValue({
+      mockSupabase.__query.__setThenValue({
         data: null,
         error: mockError,
       });
@@ -196,7 +207,7 @@ describe('EventService', () => {
         },
       ];
 
-      mockSupabase.__query.then.mockResolvedValue({
+      mockSupabase.__query.__setThenValue({
         data: mockEvents,
         error: null,
       });
@@ -226,7 +237,7 @@ describe('EventService', () => {
         },
       ];
 
-      mockSupabase.__query.then.mockResolvedValue({
+      mockSupabase.__query.__setThenValue({
         data: mockEvents,
         error: null,
       });
@@ -297,15 +308,18 @@ describe('EventService', () => {
         },
       ];
 
-      mockSupabase.__query.then
-        .mockResolvedValueOnce({
-          data: [{ id: 'type1' }],
-          error: null,
-        })
-        .mockResolvedValueOnce({
-          data: mockEvents,
-          error: null,
-        });
+      // getRecommendedEvents makes two queries: event_type and events
+      // We need to handle sequential calls
+      const originalFrom = mockSupabase.from;
+      mockSupabase.from = vi.fn((table: string) => {
+        const query = originalFrom(table);
+        if (table === 'event_type') {
+          query.__setThenValue({ data: [{ id: 'type1' }], error: null });
+        } else if (table === 'events') {
+          query.__setThenValue({ data: mockEvents, error: null });
+        }
+        return query;
+      });
 
       const result = await EventService.getRecommendedEvents(
         ['React', 'JavaScript'],
@@ -341,7 +355,7 @@ describe('EventService', () => {
         },
       ];
 
-      mockSupabase.__query.then.mockResolvedValue({
+      mockSupabase.__query.__setThenValue({
         data: mockEvents,
         error: null,
       });
@@ -357,7 +371,7 @@ describe('EventService', () => {
     });
 
     it('should sanitize search query', async () => {
-      mockSupabase.__query.then.mockResolvedValue({
+      mockSupabase.__query.__setThenValue({
         data: [],
         error: null,
       });
@@ -423,7 +437,7 @@ describe('EventService', () => {
   describe('error handling', () => {
     it('should capture exceptions with Sentry', async () => {
       const mockError = new Error('Test error');
-      mockSupabase.__query.then.mockRejectedValue(mockError);
+      mockSupabase.__query.__setThenError(mockError);
 
       const { captureException } = await import('@sentry/nextjs');
 

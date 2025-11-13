@@ -2,7 +2,6 @@
 
 import React from 'react';
 import type { AppProfile, Event, EventType, TrackedEvent } from '@/types';
-import { isProfileEmpty } from '@/utils/profileTypeGuards';
 import { ForYouSection, ExploreMoreSection } from './';
 import MobileDiscoveryNavbar from './MobileDiscoveryNavbar';
 import './mobile-discovery.css';
@@ -24,10 +23,9 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
   onEventSelect,
   className = ''
 }) => {
-  const now = new Date();
-  
   // Filter to upcoming events, handling incomplete fields gracefully
   const upcomingEvents = React.useMemo(() => {
+    const now = new Date();
     return events.filter(event => {
       // Check for incomplete event fields
       if (!event.startTime) {
@@ -47,10 +45,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
         return false; // Skip events with invalid dates
       }
     });
-  }, [events, now]);
-  
-  // Detect if profile is empty (profile-based cold start)
-  const isColdStart = React.useMemo(() => isProfileEmpty(profile), [profile]);
+  }, [events]);
   
   // For "For You" section, prioritize events with career impact scores
   // For cold start users, events will have baseline scores (20-40%)

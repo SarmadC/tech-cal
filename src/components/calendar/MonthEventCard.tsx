@@ -232,7 +232,6 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
     const timeLabel = isMultiDayInstance ? '' : timeLabelRaw;
     const durationLabel = isMultiDayInstance ? null : durationLabelRaw;
     const showCategory = event.category?.name && (!isMultiDayInstance || isMultiDayFirstDay);
-    const hasMeta = Boolean(timeLabel) || Boolean(durationLabel) || Boolean(showCategory);
 
     const handleClick = (clickEvent: React.MouseEvent) => {
         clickEvent.stopPropagation();

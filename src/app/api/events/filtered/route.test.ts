@@ -62,6 +62,7 @@ vi.mock('@vercel/kv', () => ({
   }
 }));
 
+// Define RatelimitMock class before vi.mock to avoid initialization error
 const mockRateLimit = vi.fn().mockResolvedValue({ success: true });
 class RatelimitMock {
   limit = mockRateLimit;

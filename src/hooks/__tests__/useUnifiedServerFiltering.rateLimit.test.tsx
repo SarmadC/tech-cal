@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@/utils/test-utils';
 import { useUnifiedServerFiltering } from '../useUnifiedServerFiltering';
 import { FILTERING_CONSTANTS } from '@/config/filteringConstants';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactNode } from 'react';
 
 // Mock dependencies
 vi.mock('../useTrackedEventsUnified', () => ({
@@ -16,14 +18,30 @@ vi.mock('../useDebounce', () => ({
 global.fetch = vi.fn();
 
 describe('useUnifiedServerFiltering - Rate Limiting', () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    queryClient.clear();
   });
+
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
 
   it('sets rateLimitWaitMs when requests are made within RATE_LIMIT_INTERVAL_MS', async () => {
     const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
@@ -40,7 +58,7 @@ describe('useUnifiedServerFiltering - Rate Limiting', () => {
       }),
     } as Response);
 
-    const { result } = renderHook(() => useUnifiedServerFiltering(null));
+    const { result } = renderHook(() => useUnifiedServerFiltering(null), { wrapper });
 
     // Wait for initial fetch
     await waitFor(() => {
@@ -77,7 +95,7 @@ describe('useUnifiedServerFiltering - Rate Limiting', () => {
       }),
     } as Response);
 
-    const { result } = renderHook(() => useUnifiedServerFiltering(null));
+    const { result } = renderHook(() => useUnifiedServerFiltering(null), { wrapper });
 
     // Wait for initial fetch
     await waitFor(() => {
@@ -97,7 +115,26 @@ describe('useUnifiedServerFiltering - Rate Limiting', () => {
   });
 
   it('clears rateLimitWaitMs on unmount', async () => {
-    const { result, unmount } = renderHook(() => useUnifiedServerFiltering(null));
+    const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          events: [],
+          pagination: { page: 1, pageSize: 50, total: 0, hasMore: false },
+          filters: { applied: {}, available: { categories: [], difficulties: [], formats: [] } },
+          stats: { processingTimeMs: 10, filteredCount: 0, totalCount: 0 },
+        },
+      }),
+    } as Response);
+
+    const { result, unmount } = renderHook(() => useUnifiedServerFiltering(null), { wrapper });
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
 
     // Set rateLimitWaitMs by triggering a filter change
     result.current.updateFilter('searchTerm', 'test');

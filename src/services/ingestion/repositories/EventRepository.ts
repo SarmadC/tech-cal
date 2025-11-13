@@ -1,7 +1,6 @@
 import type { SupabaseClientType } from '@/types';
 import type { Database } from '@/types/supabase';
 
-type EventRow = Database['public']['Tables']['events']['Row'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
 type EventUpdate = Database['public']['Tables']['events']['Update'];
 type EventAgendaInsert = Database['public']['Tables']['event_agenda']['Insert'];

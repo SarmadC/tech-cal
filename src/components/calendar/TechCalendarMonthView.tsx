@@ -93,7 +93,7 @@ const getInlineAccent = (event: InlineEvent) => {
     return 'var(--accent-primary)';
 };
 
-const formatInlineMeta = (event: InlineEvent) => {
+const formatInlineMeta = (_event: InlineEvent) => {
     // Don't show any metadata - keep inline events clean with just title
     return '';
 };
@@ -203,17 +203,6 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
         minHeight: '24px',
         fontSize: '0.75rem'
     }), []);
-
-    const toggleDayExpanded = useCallback((dateKey: string) => {
-        setExpandedDays((prev) => {
-            if (prev[dateKey]) {
-                const { [dateKey]: _, ...rest } = prev;
-                return rest;
-            }
-            return { ...prev, [dateKey]: true };
-        });
-        hidePreview();
-    }, [hidePreview]);
 
     const openOverflowPopover = useCallback((
         dateKey: string,

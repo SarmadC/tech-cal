@@ -7,8 +7,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { format, formatDistanceToNow } from 'date-fns';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -459,13 +459,13 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
 
 function LinkBackToQueue() {
     return (
-        <a
+        <Link
             href="/admin/ingestion/update-queue"
             className="inline-flex items-center gap-1 text-xs text-slate-400 transition hover:text-slate-200"
         >
             <MaterialIcon name="arrow_back" size={12} />
             Back to update queue
-        </a>
+        </Link>
     );
 }
 

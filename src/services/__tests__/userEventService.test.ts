@@ -5,26 +5,39 @@ import { UserEventService } from '../userEventService';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Mock Supabase client
-const createMockSupabaseClient = () => ({
-  from: vi.fn().mockReturnThis(),
-  select: vi.fn().mockReturnThis(),
-  insert: vi.fn().mockReturnThis(),
-  update: vi.fn().mockReturnThis(),
-  delete: vi.fn().mockReturnThis(),
-  eq: vi.fn().mockReturnThis(),
-  in: vi.fn().mockReturnThis(),
-  gte: vi.fn().mockReturnThis(),
-  lte: vi.fn().mockReturnThis(),
-  order: vi.fn().mockReturnThis(),
-  limit: vi.fn().mockReturnThis(),
-  range: vi.fn().mockReturnThis(),
-  single: vi.fn().mockResolvedValue({ data: null, error: null }),
-  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-  then: vi.fn((onFulfilled?: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) =>
-    Promise.resolve({ data: [], error: null }).then(onFulfilled, onRejected)
-  ),
-  rpc: vi.fn(),
-});
+const createMockSupabaseClient = () => {
+  // Store the promise that will be returned by then()
+  let thenPromise = Promise.resolve({ data: [], error: null });
+
+  return {
+    from: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    gte: vi.fn().mockReturnThis(),
+    lte: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    range: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    then: vi.fn((onFulfilled?: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) => {
+      return thenPromise.then(onFulfilled, onRejected);
+    }),
+    // Helper to set what the then() promise resolves to
+    __setThenValue: (value: { data: unknown; error: unknown }) => {
+      thenPromise = Promise.resolve(value);
+    },
+    // Helper to set what the then() promise rejects with
+    __setThenError: (error: unknown) => {
+      thenPromise = Promise.reject(error);
+    },
+    rpc: vi.fn(),
+  };
+};
 
 // Mock Sentry
 vi.mock('@sentry/nextjs', () => ({
@@ -217,7 +230,7 @@ describe('UserEventService', () => {
         },
       ];
 
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__setThenValue({
         data: mockTrackedEvents,
         error: null,
       });
@@ -230,7 +243,7 @@ describe('UserEventService', () => {
     });
 
     it('should handle empty results', async () => {
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__setThenValue({
         data: [],
         error: null,
       });
@@ -242,7 +255,7 @@ describe('UserEventService', () => {
 
     it('should handle database errors', async () => {
       const mockError = new Error('Database error');
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__setThenValue({
         data: null,
         error: mockError,
       });
@@ -265,7 +278,7 @@ describe('UserEventService', () => {
         },
       ];
 
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__setThenValue({
         data: mockTrackedEvents,
         error: null,
       });
@@ -286,7 +299,7 @@ describe('UserEventService', () => {
         { event_id: 'event3' },
       ];
 
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__setThenValue({
         data: mockTrackedEvents,
         error: null,
       });
@@ -300,7 +313,7 @@ describe('UserEventService', () => {
     });
 
     it('should handle empty results', async () => {
-      mockSupabase.then.mockResolvedValue({
+      mockSupabase.__setThenValue({
         data: [],
         error: null,
       });

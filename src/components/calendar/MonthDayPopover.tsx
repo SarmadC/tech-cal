@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Event, MultiDayEventInstance } from '@/types';
-import { MonthInlineEventRow, getInlineAccent, formatInlineMeta, type InlineEvent } from './TechCalendarMonthView';
+import { MonthInlineEventRow, type InlineEvent } from './TechCalendarMonthView';
 import '@/app/styles/month-day-popover.css';
 
 interface MonthDayPopoverProps {

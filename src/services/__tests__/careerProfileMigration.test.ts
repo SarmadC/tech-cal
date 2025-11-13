@@ -27,11 +27,10 @@ const createSelectEqSingleMock = <T>(response: { data: T; error: unknown }) => {
 };
 
 const createUpsertSelectSingleMock = <T>(response: { data: T; error: unknown }) => {
-  const single = vi.fn().mockResolvedValue(response);
-  const eq = vi.fn(() => ({ single }));
-  const select = vi.fn(() => ({ eq, single }));
+  // select() should return a thenable (promise-like) that resolves to { data, error }
+  const select = vi.fn(() => Promise.resolve(response));
   const upsert = vi.fn(() => ({ select }));
-  return { upsert, select, single, eq };
+  return { upsert, select };
 };
 
 describe('CareerProfileService Migration', () => {

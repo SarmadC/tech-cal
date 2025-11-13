@@ -2,7 +2,7 @@ import type { HtmlCoreExtractionResult } from '../EventHtmlExtractor';
 import type { HtmlDomainAdapter } from './types';
 import { toISODateTime } from './utils/dateUtils';
 
-function parseNextData(document: Document): any | null {
+function parseNextData(document: Document): unknown | null {
     const script = document.querySelector('#__NEXT_DATA__');
     if (!script?.textContent) {
         return null;
@@ -14,13 +14,13 @@ function parseNextData(document: Document): any | null {
     }
 }
 
-function extractMeetupEvent(nextData: any): any | null {
+function extractMeetupEvent(nextData: unknown): Record<string, unknown> | null {
     if (!nextData || typeof nextData !== 'object') return null;
-    return (
-        nextData?.props?.pageProps?.event ||
-        nextData?.props?.pageProps?.data?.event ||
-        null
-    );
+    const data = nextData as Record<string, unknown>;
+    const props = data?.props as Record<string, unknown> | undefined;
+    const pageProps = props?.pageProps as Record<string, unknown> | undefined;
+    const event = (pageProps?.event || (pageProps?.data as Record<string, unknown> | undefined)?.event) as Record<string, unknown> | undefined;
+    return event || null;
 }
 
 export const meetupAdapter: HtmlDomainAdapter = {
@@ -35,34 +35,35 @@ export const meetupAdapter: HtmlDomainAdapter = {
             return;
         }
 
-        if (eventData.title && (!result.title || result.title.length < eventData.title.length)) {
-            result.title = eventData.title.trim();
+        const title = eventData.title as string | undefined;
+        if (title && (!result.title || result.title.length < title.length)) {
+            result.title = title.trim();
             result.confidence.title = Math.max(result.confidence.title ?? 0, 0.95);
             result.provenance.sources.push('meetup.next_data.title');
         }
 
-        const description = eventData.description_plain || eventData.description;
+        const description = (eventData.description_plain || eventData.description) as string | undefined;
         if (description && (!result.description || description.length > (result.description?.length ?? 0))) {
             result.description = description.trim();
             result.confidence.description = Math.max(result.confidence.description ?? 0, 0.85);
             result.provenance.sources.push('meetup.next_data.description');
         }
 
-        const startIso = toISODateTime(eventData.dateTime);
+        const startIso = toISODateTime(eventData.dateTime as string | undefined);
         if (startIso) {
             result.startTime = startIso;
             result.confidence.startTime = Math.max(result.confidence.startTime ?? 0, 0.9);
             result.provenance.sources.push('meetup.next_data.start');
         }
 
-        const endIso = toISODateTime(eventData.endTime || eventData.dateTimeEnd);
+        const endIso = toISODateTime((eventData.endTime || eventData.dateTimeEnd) as string | undefined);
         if (endIso) {
             result.endTime = endIso;
             result.confidence.endTime = Math.max(result.confidence.endTime ?? 0, 0.75);
             result.provenance.sources.push('meetup.next_data.end');
         }
 
-        const venue = eventData.venue || eventData.venueInfo;
+        const venue = (eventData.venue || eventData.venueInfo) as Record<string, unknown> | undefined;
         if (venue) {
             const locationParts = [
                 venue.name,
@@ -71,7 +72,7 @@ export const meetupAdapter: HtmlDomainAdapter = {
                 venue.country,
             ]
                 .filter((value) => typeof value === 'string' && value.trim().length > 0)
-                .map((value) => value.trim())
+                .map((value) => (value as string).trim())
                 .join(', ');
 
             if (locationParts) {
@@ -81,19 +82,20 @@ export const meetupAdapter: HtmlDomainAdapter = {
             }
         }
 
-        if (eventData.featuredPhoto?.baseUrl && !result.eventImageUrl) {
-            result.eventImageUrl = eventData.featuredPhoto.baseUrl;
+        const featuredPhoto = eventData.featuredPhoto as { baseUrl?: string } | undefined;
+        if (featuredPhoto?.baseUrl && !result.eventImageUrl) {
+            result.eventImageUrl = featuredPhoto.baseUrl;
             result.confidence.eventImageUrl = Math.max(result.confidence.eventImageUrl ?? 0, 0.75);
             result.provenance.sources.push('meetup.next_data.image');
         }
 
-        if (eventData.fee) {
-            const fee = eventData.fee;
+        const fee = eventData.fee as { amount?: number; required?: boolean; accepts?: Array<{ amount: number }>; currency?: string } | undefined;
+        if (fee) {
             const amount =
                 typeof fee.amount === 'number'
                     ? fee.amount
                     : fee.required && fee.accepts
-                    ? fee.accepts.map((item: { amount: number }) => item.amount)[0]
+                    ? fee.accepts.map((item) => item.amount)[0]
                     : undefined;
 
             if (amount !== undefined) {

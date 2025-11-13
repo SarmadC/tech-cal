@@ -129,14 +129,7 @@ export function useUnifiedServerFiltering(
   const autoLoadAllPages = options.autoLoadAllPages ?? false;
   const isPagedMode = !autoLoadAllPages;
 
-  const initialFiltersSignature = useMemo(() => JSON.stringify(initialFilters, (_key, value) => {
-    if (value instanceof Date) {
-      return value.toISOString();
-    }
-    return value;
-  }), [initialFilters]);
-
-  const normalizedInitialFilters = useMemo(() => initialFilters, [initialFiltersSignature]);
+  const normalizedInitialFilters = useMemo(() => initialFilters, [initialFilters]);
 
   const mergedDefaultFilters = useMemo<UnifiedFilterOptions>(() => ({
     ...DEFAULT_FILTERS,

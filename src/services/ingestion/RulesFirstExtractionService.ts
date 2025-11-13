@@ -151,7 +151,7 @@ function toExtractedEventData(
 
 function computeAggregateConfidence(fieldConfidence: Record<string, number>): number {
     const meaningful = Object.entries(fieldConfidence).filter(
-        ([field, score]) => score != null && Number.isFinite(score) && score > 0
+        ([_field, score]) => score != null && Number.isFinite(score) && score > 0
     );
     if (meaningful.length === 0) {
         return 0;
@@ -189,7 +189,7 @@ export class RulesFirstExtractionService {
     ): Promise<RulesFirstExtractionResult> {
         const minConfidence = options?.minConfidence ?? 0.55;
         const requestedNormalization = normalizeUrlForCaching(url);
-        let cacheEntry = supabaseClient && requestedNormalization
+        const cacheEntry = supabaseClient && requestedNormalization
             ? await PageCacheService.get(supabaseClient, requestedNormalization.normalizedUrl)
             : null;
 
@@ -360,7 +360,6 @@ export class RulesFirstExtractionService {
             const existingSchedule = extraction.schedule ?? [];
             const combined = [...existingSchedule];
             for (const item of agendaExtraction.schedule) {
-                const key = `${item.startTime || ''}|${item.title || ''}`;
                 const exists = combined.some(
                     (existing) =>
                         (existing.startTime || '') === (item.startTime || '') &&

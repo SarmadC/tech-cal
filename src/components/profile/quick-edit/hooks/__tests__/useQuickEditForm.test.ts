@@ -31,12 +31,22 @@ describe('useQuickEditForm', () => {
       })
     );
 
-    // Check initial draft
-    expect(result.current.draft).toEqual({
+    // Check initial draft - hook merges section defaults with full profile
+    expect(result.current.draft).toMatchObject({
       currentRole: 'Software Engineer',
       seniority: 'mid-level',
       industry: 'Technology/Software',
-      companySize: 'medium'
+      companySize: 'medium',
+      primarySkills: ['React', 'TypeScript'],
+      skillsToLearn: ['GraphQL'],
+      interests: ['AI'],
+      careerGoals: ['skill-development'],
+      timeframe: 'immediate',
+      learningStyle: ['hands-on'],
+      availableTime: 'moderate',
+      budget: 'moderate',
+      networkingGoals: [],
+      preferredEventTypes: []
     });
 
     // Check initial state
@@ -62,12 +72,22 @@ describe('useQuickEditForm', () => {
       });
     });
 
-    // Check updated draft
-    expect(result.current.draft).toEqual({
+    // Check updated draft - hook merges updates with existing draft
+    expect(result.current.draft).toMatchObject({
       currentRole: 'Senior Software Engineer',
       seniority: 'senior',
       industry: 'Technology/Software',
-      companySize: 'medium'
+      companySize: 'medium',
+      primarySkills: ['React', 'TypeScript'],
+      skillsToLearn: ['GraphQL'],
+      interests: ['AI'],
+      careerGoals: ['skill-development'],
+      timeframe: 'immediate',
+      learningStyle: ['hands-on'],
+      availableTime: 'moderate',
+      budget: 'moderate',
+      networkingGoals: [],
+      preferredEventTypes: []
     });
 
     // Check dirty state

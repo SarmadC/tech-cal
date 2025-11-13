@@ -192,9 +192,10 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
     }, [selectedDate, view, isAnimating]);
 
     const handleDateSelect = useCallback((date: Date) => {
-        // Simple single-click selection for QuickDatePicker
         setSelectedDate(date);
-    }, []);
+        onDateChange(date);
+        onClose();
+    }, [onDateChange, onClose]);
 
     const _goToToday = useCallback(() => {
         const today = new Date();

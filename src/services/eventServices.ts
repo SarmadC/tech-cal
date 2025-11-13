@@ -407,7 +407,7 @@ export class EventService {
             const { data, error } = await supabaseClient
                 .from('events')
                 .select(`id, title, start_time, organizer:organizers (name)`)
-                .textSearch('fts', term, {
+                .textSearch('fts', sanitizeFtsQuery(term), {
                     type: 'websearch',
                     config: 'english'
                 })

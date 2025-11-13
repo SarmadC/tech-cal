@@ -161,7 +161,7 @@ describe('RecommendationMonitoringService', () => {
       ];
 
       mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'event_analytics') {
+        if (table === 'career_impact_analytics') {
           const analyticsQuery: any = {
             select: vi.fn(() => analyticsQuery),
             gte: vi.fn(() => analyticsQuery),

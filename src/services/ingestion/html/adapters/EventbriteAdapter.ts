@@ -2,7 +2,7 @@ import type { HtmlCoreExtractionResult } from '../EventHtmlExtractor';
 import type { HtmlDomainAdapter } from './types';
 import { toISODateTime } from './utils/dateUtils';
 
-function parseNextData(document: Document): any | null {
+function parseNextData(document: Document): unknown | null {
     const script = document.querySelector('#__NEXT_DATA__');
     if (!script?.textContent) {
         return null;
@@ -14,7 +14,7 @@ function parseNextData(document: Document): any | null {
     }
 }
 
-function extractEventbriteData(nextData: any): {
+function extractEventbriteData(nextData: unknown): {
     title?: string;
     description?: string;
     start?: string;
@@ -30,36 +30,51 @@ function extractEventbriteData(nextData: any): {
         return null;
     }
 
-    const eventData =
-        nextData?.props?.pageProps?.event ||
-        nextData?.props?.pageProps?.apolloState?.data?.[`Event:${nextData?.props?.pageProps?.event?.id}`];
+    const data = nextData as Record<string, unknown>;
+    const props = data?.props as Record<string, unknown> | undefined;
+    const pageProps = props?.pageProps as Record<string, unknown> | undefined;
+    let eventData = pageProps?.event as Record<string, unknown> | undefined;
+    
+    if (!eventData && pageProps?.apolloState) {
+        const apolloState = pageProps.apolloState as Record<string, unknown>;
+        const eventId = (pageProps.event as Record<string, unknown> | undefined)?.id as string | undefined;
+        if (eventId && apolloState.data) {
+            const apolloData = apolloState.data as Record<string, unknown>;
+            eventData = apolloData[`Event:${eventId}`] as Record<string, unknown> | undefined;
+        }
+    }
 
     if (!eventData) {
         return null;
     }
 
-    const ticketInfo = eventData.ticketAvailability || eventData.ticket_availability;
-    const venue = eventData.venue || eventData.primary_venue;
+    const ticketInfo = (eventData.ticketAvailability || eventData.ticket_availability) as Record<string, unknown> | undefined;
+    const venue = (eventData.venue || eventData.primary_venue) as Record<string, unknown> | undefined;
 
-    const priceMin = typeof ticketInfo?.minimumTicketPrice?.majorValue === 'number'
-        ? ticketInfo.minimumTicketPrice.majorValue
-        : undefined;
-    const priceMax = typeof ticketInfo?.maximumTicketPrice?.majorValue === 'number'
-        ? ticketInfo.maximumTicketPrice.majorValue
-        : undefined;
-    const currency = ticketInfo?.minimumTicketPrice?.currency || ticketInfo?.maximumTicketPrice?.currency || null;
+    const minTicketPrice = ticketInfo?.minimumTicketPrice as Record<string, unknown> | undefined;
+    const maxTicketPrice = ticketInfo?.maximumTicketPrice as Record<string, unknown> | undefined;
+    const priceMin = typeof minTicketPrice?.majorValue === 'number' ? minTicketPrice.majorValue : undefined;
+    const priceMax = typeof maxTicketPrice?.majorValue === 'number' ? maxTicketPrice.majorValue : undefined;
+    const currency = (minTicketPrice?.currency || maxTicketPrice?.currency) as string | null | undefined;
+
+    const name = eventData.name as { text?: string } | string | undefined;
+    const description = eventData.description as { text?: string } | string | undefined;
+    const venueName = venue?.name as { text?: string } | string | undefined;
+    const venueAddress = venue?.address as Record<string, unknown> | undefined;
+    const image = eventData.image as { url?: string } | undefined;
+    const logo = eventData.logo as { url?: string } | undefined;
 
     return {
-        title: eventData.name?.text || eventData.name,
-        description: eventData.description?.text || eventData.description,
-        start: eventData.startDate || eventData.start_date,
-        end: eventData.endDate || eventData.end_date,
-        venueName: venue?.name?.text || venue?.name || undefined,
-        address: venue?.address?.localized_address_display,
-        city: venue?.address?.city,
-        country: venue?.address?.country,
-        imageUrl: eventData.image?.url || eventData.logo?.url,
-        priceRange: { min: priceMin, max: priceMax, currency },
+        title: (typeof name === 'object' ? name?.text : name) as string | undefined,
+        description: (typeof description === 'object' ? description?.text : description) as string | undefined,
+        start: (eventData.startDate || eventData.start_date) as string | undefined,
+        end: (eventData.endDate || eventData.end_date) as string | undefined,
+        venueName: (typeof venueName === 'object' ? venueName?.text : venueName) as string | undefined,
+        address: venueAddress?.localized_address_display as string | undefined,
+        city: venueAddress?.city as string | undefined,
+        country: venueAddress?.country as string | undefined,
+        imageUrl: image?.url || logo?.url,
+        priceRange: { min: priceMin, max: priceMax, currency: currency ?? null },
     };
 }
 

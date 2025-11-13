@@ -71,7 +71,8 @@ const toStringArray = (value: unknown): string[] => {
 
     return [];
 };
-import { VALIDATION_LIMITS } from '@/config/ingestionConstants';
+
+import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 
 /**
  * Normalize description by extracting relevant event content
@@ -82,64 +83,34 @@ export function normalizeDescription(
     raw: string | undefined,
     existingDescription: string | undefined
 ): string | undefined {
-    if (!raw) {
-        return existingDescription;
+    // Clean both raw and existing descriptions using cleanEventDescription to strip URLs and boilerplate
+    const cleanedRaw = raw ? cleanEventDescription(raw) : undefined;
+    const cleanedExisting = existingDescription ? cleanEventDescription(existingDescription) : undefined;
+
+    if (!cleanedRaw) {
+        return cleanedExisting;
     }
 
-    // Filter out common non-content patterns
-    const normalized = raw
-        .split('\n')
-        .filter((line) => {
-            const trimmed = line.trim().toLowerCase();
-            // Remove navigation, footer, sidebar content
-            if (
-                trimmed.includes('menu') ||
-                trimmed.includes('footer') ||
-                trimmed.includes('sidebar') ||
-                trimmed.includes('share this') ||
-                trimmed.includes('subscribe') ||
-                trimmed.includes('advertisement') ||
-                trimmed.includes('cookie') ||
-                trimmed.includes('terms of service') ||
-                trimmed.includes('privacy policy') ||
-                trimmed.includes('navigation') ||
-                trimmed.includes('related') ||
-                trimmed.includes('link') ||
-                trimmed.includes('sign up') ||
-                trimmed.includes('register now') ||
-                trimmed.includes('skip to')
-            ) {
-                return false;
-            }
-            // Remove very short lines (likely headers/nav items)
-            return line.trim().length > 20;
-        })
-        .join('\n')
-        .trim();
-
-    // Quality assessment: prefer cleaned description over existing if:
-    // 1. Existing is clearly noisy (too short after cleaning would indicate noise), OR
-    // 2. New is significantly cleaner (much longer after cleaning), OR
-    // 3. Existing doesn't exist yet
-    if (!existingDescription) {
-        return normalized.substring(0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
+    // If existing description is not available or looks noisy, prefer the cleaned raw
+    if (!cleanedExisting) {
+        return cleanedRaw;
     }
 
     // Check if existing description looks noisy
     // (very different length from cleaned new, or contains noise keywords)
     const existingLooksNoisy =
-        existingDescription.length < normalized.length * 0.8 ||  // Existing is much shorter
-        existingDescription.toLowerCase().includes('menu') ||
-        existingDescription.toLowerCase().includes('footer') ||
-        existingDescription.toLowerCase().includes('navigation');
+        cleanedExisting.length < cleanedRaw.length * 0.8 ||  // Existing is much shorter
+        cleanedExisting.toLowerCase().includes('menu') ||
+        cleanedExisting.toLowerCase().includes('footer') ||
+        cleanedExisting.toLowerCase().includes('navigation');
 
-    // Prefer normalized if it's significantly larger (cleaner, more content) or existing looks noisy
-    if (normalized.length > existingDescription.length * 1.2 || existingLooksNoisy) {
-        return normalized.substring(0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
+    // Prefer cleaned raw if it's significantly larger (cleaner, more content) or existing looks noisy
+    if (cleanedRaw.length > cleanedExisting.length * 1.2 || existingLooksNoisy) {
+        return cleanedRaw;
     }
 
     // Otherwise keep existing if it's already reasonable
-    return existingDescription.substring(0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
+    return cleanedExisting;
 }
 
 /**

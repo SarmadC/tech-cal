@@ -77,6 +77,15 @@ const nextConfig: NextConfig = {
       "@mui/material"
     ],
   },
+  // Mark server-only packages as external to prevent client-side bundling
+  serverComponentsExternalPackages: [
+    'googleapis',
+    '@mendable/firecrawl-js',
+    'node-ical',
+    'rss-parser',
+    '@mozilla/readability',
+    'jsdom'
+  ],
   // ... you can add other Next.js config options here if needed in the future
 };
 

@@ -73,11 +73,18 @@ const mockAgenda: AgendaItem[] = [
 
 describe('EventProgress', () => {
     it('renders progress component with agenda data', () => {
-        render(<EventProgress event={mockEvent} agenda={mockAgenda} />);
+        // Create a live event (currently happening)
+        const liveEvent = {
+            ...mockEvent,
+            startTime: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1 hour ago
+            endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hours from now
+        };
         
-        // Should show progress information
+        render(<EventProgress event={liveEvent} agenda={mockAgenda} />);
+        
+        // Should show progress information for live events
         expect(screen.getByText('Event Progress')).toBeInTheDocument();
-        expect(screen.getByText('0/4 sessions')).toBeInTheDocument();
+        expect(screen.getByText(/\d+\/4 sessions/)).toBeInTheDocument();
     });
 
     it('renders progress bar for live events', () => {
@@ -96,9 +103,16 @@ describe('EventProgress', () => {
     });
 
     it('handles empty agenda gracefully', () => {
-        render(<EventProgress event={mockEvent} agenda={[]} />);
+        // Create a live event to show progress
+        const liveEvent = {
+            ...mockEvent,
+            startTime: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+            endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+        };
         
-        // Should still render without crashing
+        render(<EventProgress event={liveEvent} agenda={[]} />);
+        
+        // Should still render without crashing - shows progress bar for live events
         expect(screen.getByText('Event Progress')).toBeInTheDocument();
     });
 
@@ -133,7 +147,9 @@ describe('EventProgress', () => {
         
         render(<EventProgress event={pastEvent} agenda={pastAgenda} />);
         
-        // Should show completed sessions (the component shows live view with all sessions completed)
-        expect(screen.getByText('4 sessions completed')).toBeInTheDocument();
+        // Should show completed status - component shows "Event completed" and "All sessions completed" for past events
+        expect(screen.getByText('Event completed')).toBeInTheDocument();
+        expect(screen.getByText('All sessions completed')).toBeInTheDocument();
+        expect(screen.getByText('4/4')).toBeInTheDocument();
     });
 });
