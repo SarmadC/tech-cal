@@ -88,7 +88,7 @@ function derivePricingType(min?: number | null, max?: number | null): 'Free' | '
 
 function extractFromJsonLd(document: Document) {
     const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-    const events: Array<Record<string, unknown>> = [];
+    const events: Array<Record<string, any>> = [];
 
     for (const script of scripts) {
         const raw = script.textContent?.trim();
@@ -103,14 +103,14 @@ function extractFromJsonLd(document: Document) {
             const type = payload['@type'] || payload['@context'];
 
             if (Array.isArray(type) ? type.includes('Event') : type === 'Event') {
-                events.push(payload as Record<string, unknown>);
-            } else if ((payload as Record<string, unknown>)['@graph']) {
-                const graphPayload = (payload as Record<string, unknown>)['@graph'];
+                events.push(payload as Record<string, any>);
+            } else if ((payload as Record<string, any>)['@graph']) {
+                const graphPayload = (payload as Record<string, any>)['@graph'];
                 if (Array.isArray(graphPayload)) {
                     graphPayload.forEach(item => {
                         const itemType = item?.['@type'];
                         if (Array.isArray(itemType) ? itemType.includes('Event') : itemType === 'Event') {
-                            events.push(item as Record<string, unknown>);
+                            events.push(item as Record<string, any>);
                         }
                     });
                 }
@@ -126,7 +126,42 @@ function asArray<T>(value: T | T[] | undefined | null): T[] {
     return Array.isArray(value) ? value : [value];
 }
 
-function extractSpeakersFromJsonLd(eventPayload: Record<string, unknown>): SpeakerRecord[] {
+/**
+ * Validates that a URL belongs to an allowed host or its subdomains.
+ * This prevents security issues from substring matching on URLs.
+ * 
+ * @param url - The URL string to validate
+ * @param allowedHosts - Array of allowed hostnames (e.g., ['linkedin.com', 'github.com'])
+ * @returns The URL if valid, undefined otherwise
+ */
+function validateUrlHost(url: string, allowedHosts: string[]): string | undefined {
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase();
+        
+        for (const allowedHost of allowedHosts) {
+            const normalizedAllowedHost = allowedHost.toLowerCase();
+            
+            // Exact match
+            if (hostname === normalizedAllowedHost) {
+                return url;
+            }
+            
+            // Subdomain match (e.g., www.linkedin.com, api.github.com)
+            // Must end with '.' + allowedHost to prevent evil-linkedin.com from matching
+            if (hostname.endsWith('.' + normalizedAllowedHost)) {
+                return url;
+            }
+        }
+        
+        return undefined;
+    } catch {
+        // Invalid URL
+        return undefined;
+    }
+}
+
+function extractSpeakersFromJsonLd(eventPayload: Record<string, any>): SpeakerRecord[] {
     const performers = [
         ...asArray(eventPayload.performer),
         ...asArray(eventPayload.performers),
@@ -138,59 +173,52 @@ function extractSpeakersFromJsonLd(eventPayload: Record<string, unknown>): Speak
 
     for (const performer of performers) {
         if (!performer || typeof performer !== 'object') continue;
-        const performerObj = performer as Record<string, unknown>;
-        const name = performerObj.name || performerObj.alternateName;
+        const name = performer.name || performer.alternateName;
         if (!name || typeof name !== 'string') continue;
 
-        const affiliation = performerObj.affiliation as Record<string, unknown> | undefined;
-        const worksFor = performerObj.worksFor as Record<string, unknown> | undefined;
-        const sameAs = performerObj.sameAs as string | undefined;
-
+        const sameAs = typeof performer.sameAs === 'string' ? performer.sameAs : undefined;
+        
         speakers.push({
             name: name.trim(),
-            title: performerObj.jobTitle as string | undefined,
-            company: (affiliation?.name || worksFor?.name) as string | undefined,
-            bio: performerObj.description as string | undefined,
-            linkedinUrl: sameAs && sameAs.includes('linkedin.com') ? sameAs : undefined,
-            photoUrl: (performerObj.image || performerObj.logo) as string | undefined,
-            githubUrl: sameAs && sameAs.includes('github.com') ? sameAs : undefined,
+            title: performer.jobTitle || undefined,
+            company: performer.affiliation?.name || performer.worksFor?.name || undefined,
+            bio: performer.description || undefined,
+            linkedinUrl: sameAs ? validateUrlHost(sameAs, ['linkedin.com']) : undefined,
+            photoUrl: performer.image || performer.logo || undefined,
+            githubUrl: sameAs ? validateUrlHost(sameAs, ['github.com']) : undefined,
         });
     }
 
     return speakers;
 }
 
-function extractScheduleFromJsonLd(eventPayload: Record<string, unknown>): ExtractedScheduleItem[] {
+function extractScheduleFromJsonLd(eventPayload: Record<string, any>): ExtractedScheduleItem[] {
     const scheduleItems: ExtractedScheduleItem[] = [];
 
     const eventSchedule = asArray(eventPayload.eventSchedule);
     for (const schedule of eventSchedule) {
         if (!schedule || typeof schedule !== 'object') continue;
-        const scheduleObj = schedule as Record<string, unknown>;
-        const location = scheduleObj.location as Record<string, unknown> | undefined;
         scheduleItems.push({
-            date: toISODate(scheduleObj.startDate as string | undefined),
-            startTime: toISODate(scheduleObj.startTime as string | undefined),
-            endTime: toISODate(scheduleObj.endDate as string | undefined),
-            title: scheduleObj.name as string | undefined,
-            description: scheduleObj.description as string | undefined,
-            location: location?.name as string | undefined,
+            date: toISODate(schedule.startDate),
+            startTime: toISODate(schedule.startTime),
+            endTime: toISODate(schedule.endDate),
+            title: schedule.name || undefined,
+            description: schedule.description || undefined,
+            location: schedule.location?.name || undefined,
         });
     }
 
     const subEvents = asArray(eventPayload.subEvent || eventPayload.subEvents);
     for (const subEvent of subEvents) {
         if (!subEvent || typeof subEvent !== 'object') continue;
-        const subEventObj = subEvent as Record<string, unknown>;
-        const location = subEventObj.location as Record<string, unknown> | undefined;
         scheduleItems.push({
-            date: toISODate(subEventObj.startDate as string | undefined),
-            startTime: toISODate(subEventObj.startDate as string | undefined),
-            endTime: toISODate(subEventObj.endDate as string | undefined),
-            title: subEventObj.name as string | undefined,
-            description: subEventObj.description as string | undefined,
-            speakers: extractSpeakersFromJsonLd(subEventObj).map(speaker => speaker.name),
-            location: location?.name as string | undefined,
+            date: toISODate(subEvent.startDate),
+            startTime: toISODate(subEvent.startDate),
+            endTime: toISODate(subEvent.endDate),
+            title: subEvent.name || undefined,
+            description: subEvent.description || undefined,
+            speakers: extractSpeakersFromJsonLd(subEvent).map(speaker => speaker.name),
+            location: subEvent.location?.name || undefined,
         });
     }
 
@@ -377,19 +405,18 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
 
     if (jsonLdEvents.length > 0) {
         const primaryEvent = jsonLdEvents[0];
-        const name = primaryEvent.name;
-        if (name && typeof name === 'string') {
-            result.title = name.trim();
+        if (primaryEvent.name && typeof primaryEvent.name === 'string') {
+            result.title = primaryEvent.name.trim();
             result.confidence.title = 0.95;
             result.provenance.sources.push('jsonld.name');
         }
-        const startDate = toISODate(primaryEvent.startDate as string | undefined);
+        const startDate = toISODate(primaryEvent.startDate);
         if (startDate) {
             result.startTime = startDate;
             result.confidence.startTime = 0.95;
             result.provenance.sources.push('jsonld.startDate');
         }
-        const endDate = toISODate(primaryEvent.endDate as string | undefined);
+        const endDate = toISODate(primaryEvent.endDate);
         if (endDate) {
             result.endTime = endDate;
             result.confidence.endTime = 0.8;
@@ -403,9 +430,7 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
         }
         const jsonLocation = primaryEvent.location;
         if (jsonLocation && typeof jsonLocation === 'object') {
-            const locationObj = jsonLocation as Record<string, unknown>;
-            const address = locationObj.address as Record<string, unknown> | undefined;
-            const locationName = (locationObj.name || address?.streetAddress) as string | undefined;
+            const locationName = jsonLocation.name || jsonLocation.address?.streetAddress;
             if (locationName && typeof locationName === 'string') {
                 result.location = locationName.trim();
                 result.confidence.location = 0.85;
@@ -414,7 +439,7 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
         }
         const jsonImage = primaryEvent.image;
         if (jsonImage) {
-            const image = Array.isArray(jsonImage) ? (jsonImage as unknown[])[0] : jsonImage;
+            const image = Array.isArray(jsonImage) ? jsonImage[0] : jsonImage;
             if (typeof image === 'string') {
                 result.eventImageUrl = image;
                 result.confidence.eventImageUrl = 0.8;
@@ -423,10 +448,10 @@ export function extractCoreFieldsFromHtml(html: string, baseUrl?: string): HtmlC
         }
         const offers = asArray(primaryEvent.offers);
         if (offers.length > 0) {
-            const offer = offers[0] as Record<string, unknown>;
+            const offer = offers[0];
             const price = offer.price != null ? Number(offer.price) : undefined;
             const highPrice = offer.highPrice != null ? Number(offer.highPrice) : undefined;
-            const currency = normalizeCurrency((offer.priceCurrency || offer.currency) as string | undefined);
+            const currency = normalizeCurrency(offer.priceCurrency || offer.currency);
 
             result.pricing = {
                 priceMin: Number.isFinite(price) ? price : null,

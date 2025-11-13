@@ -78,7 +78,7 @@ const nextConfig: NextConfig = {
     ],
   },
   // Mark server-only packages as external to prevent client-side bundling
-  serverComponentsExternalPackages: [
+  serverExternalPackages: [
     'googleapis',
     '@mendable/firecrawl-js',
     'node-ical',
