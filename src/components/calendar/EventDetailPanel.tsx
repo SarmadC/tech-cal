@@ -1,8 +1,7 @@
 'use client';
 
-import { FC, useState, useEffect, useRef } from 'react';
+import { FC, useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import Link from 'next/link';
 import { XIcon, ArrowSquareOutIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon, Star } from '@phosphor-icons/react';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 
@@ -13,6 +12,7 @@ import { createClient } from '@/utils/supabase/client';
 import EventInfo from './EventInfo';
 import EventTracking from './EventTracking';
 import AdaptiveTimeline from './AdaptiveTimeline';
+import TrackAgendaView, { groupAgendaByTrack } from './TrackAgendaView';
 import { useEventActions } from '@/hooks/useEventActions';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useAuth } from '@/contexts';
@@ -36,19 +36,29 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const moreMenuRef = useRef<HTMLDivElement>(null);
     const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [agendaView, setAgendaView] = useState<'timeline' | 'tracks'>('timeline');
     
     // Add bookmark functionality
     const { user } = useAuth();
     const { isBookmarked, toggleBookmark, isLoading: isBookmarkLoading } = useEventEngagement();
     
+    // Get the display event (with agenda if available)
+    const displayEvent = eventWithAgenda;
+    const trackGroups = useMemo(() => groupAgendaByTrack(displayEvent.agenda || []), [displayEvent.agenda]);
+    const hasTrackAgenda = trackGroups.length > 0;
+    
     // Update eventWithAgenda when event prop changes
     useEffect(() => {
         setEventWithAgenda(event);
         setIsLoading(true);
+        setAgendaView('timeline');
     }, [event]); // Update when event prop changes
     
-    // Get the display event (with agenda if available)
-    const displayEvent = eventWithAgenda;
+    useEffect(() => {
+        if (!hasTrackAgenda && agendaView === 'tracks') {
+            setAgendaView('timeline');
+        }
+    }, [hasTrackAgenda, agendaView]);
     
     // Event actions hook - use displayEvent to ensure it updates with new events
     const { handleShare, handleIcsDownload } = useEventActions(displayEvent);
@@ -225,8 +235,46 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 <EventInfo event={displayEvent} category={category} />
                 
                 {/* Adaptive Timeline Section */}
-                {/* Show loading skeleton while fetching, then timeline if agenda exists */}
+                {/* Show loading skeleton while fetching, then timeline or track view if agenda exists */}
                 <div className="mt-6 pt-6 border-t border-white/20 dark:border-white/10">
+                    <div className="flex items-center justify-between mb-5">
+                        <div>
+                            <p className="text-xs font-semibold tracking-widest text-gray-500 dark:text-gray-400 uppercase">
+                                Agenda
+                            </p>
+                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {agendaView === 'tracks' ? 'Track View' : 'Timeline View'}
+                            </h4>
+                        </div>
+                        {hasTrackAgenda && (
+                            <div className="inline-flex items-center gap-1 rounded-full border border-white/30 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur px-1 py-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setAgendaView('timeline')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                                        agendaView === 'timeline'
+                                            ? 'bg-white text-gray-900 shadow-sm'
+                                            : 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+                                    }`}
+                                    aria-pressed={agendaView === 'timeline'}
+                                >
+                                    Timeline
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setAgendaView('tracks')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                                        agendaView === 'tracks'
+                                            ? 'bg-white text-gray-900 shadow-sm'
+                                            : 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+                                    }`}
+                                    aria-pressed={agendaView === 'tracks'}
+                                >
+                                    Tracks
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     {isLoading ? (
                         <div className="space-y-4 animate-pulse">
                             <div className="flex items-center gap-2">
@@ -240,7 +288,11 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                             </div>
                         </div>
                     ) : displayEvent.agenda && displayEvent.agenda.length > 0 ? (
-                        <AdaptiveTimeline event={displayEvent} />
+                        agendaView === 'tracks' && hasTrackAgenda ? (
+                            <TrackAgendaView tracks={trackGroups} />
+                        ) : (
+                            <AdaptiveTimeline event={displayEvent} />
+                        )
                     ) : null}
                 </div>
             </div>
@@ -316,15 +368,17 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                             <span>View full agenda</span>
                                         </a>
                                     ) : (
-                                        <Link
-                                            href={`/events/${generateEventSlug(displayEvent.title, displayEvent.id)}`}
+                                        <a
+                                            href={displayEvent.sourceUrl || `/events/${generateEventSlug(displayEvent.title, displayEvent.id)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
                                             onClick={() => setShowMoreMenu(false)}
                                             className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-t-lg transition-colors focus:outline-none"
                                             role="menuitem"
                                         >
                                             <ArrowSquareOutIcon className="w-4 h-4" />
                                             <span>View full page</span>
-                                        </Link>
+                                        </a>
                                     )}
                                     <button
                                         onClick={() => {
