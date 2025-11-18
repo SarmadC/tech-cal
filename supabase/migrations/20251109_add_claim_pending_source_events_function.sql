@@ -53,3 +53,4 @@ $function$;
 comment on function public.claim_pending_source_events(integer, text)
     is 'Claims pending rows from source_events using row-level locking to avoid double-processing.';
 
+

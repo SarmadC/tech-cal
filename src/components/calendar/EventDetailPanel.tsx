@@ -291,7 +291,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         agendaView === 'tracks' && hasTrackAgenda ? (
                             <TrackAgendaView tracks={trackGroups} />
                         ) : (
-                            <AdaptiveTimeline event={displayEvent} />
+                        <AdaptiveTimeline event={displayEvent} />
                         )
                     ) : null}
                 </div>

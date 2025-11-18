@@ -420,6 +420,30 @@ body::-webkit-scrollbar-track { background: transparent; }
 body::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
 body::-webkit-scrollbar-thumb:hover { background: var(--border-strong); opacity: 0.8; }
 
+/* Track view scrollable container - custom scrollbar */
+.track-view-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+
+.track-view-scrollable::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.track-view-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.track-view-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 3px;
+}
+
+.track-view-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
 /* ============================================== */
 /* 3. GLOBAL COMPONENT STYLES                     */
 /* ============================================== */

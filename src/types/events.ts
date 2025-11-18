@@ -236,6 +236,7 @@ export interface Speaker {
 
 
 // Database schema for agenda items
+// Note: Speakers are linked via agenda_speakers join table, not directly on agenda items
 export interface DatabaseAgendaItem {
     id: string;
     event_id: string;
@@ -247,7 +248,6 @@ export interface DatabaseAgendaItem {
     location: string;
     agenda_type: string;
     duration_minutes: number;
-    speaker_id: string | null;
     track: string;
     difficulty_level: string | null;
     prerequisites: string | null;

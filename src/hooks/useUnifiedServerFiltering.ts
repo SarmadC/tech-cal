@@ -139,10 +139,7 @@ export function useUnifiedServerFiltering(
       : {})
   }), [normalizedInitialFilters, surface]);
 
-  const [filters, setFilters] = useState<UnifiedFilterOptions>(mergedDefaultFilters);
-  useEffect(() => {
-    setFilters(mergedDefaultFilters);
-  }, [mergedDefaultFilters]);
+  const [filters, setFilters] = useState<UnifiedFilterOptions>(() => mergedDefaultFilters);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   const { trackedEventIds } = useTrackedEventIds();

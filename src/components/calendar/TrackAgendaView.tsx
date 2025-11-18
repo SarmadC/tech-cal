@@ -90,10 +90,90 @@ interface TrackAgendaViewProps {
     tracks: TrackGroup[];
 }
 
+const TIME_COLUMN_WIDTH = 84; // px
+const MIN_TRACK_WIDTH = 220; // px
+
 const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks }) => {
     const theme = useTimelineTheme();
 
-    const orderedTracks = useMemo(() => tracks.filter(track => track.items.length > 0), [tracks]);
+    const orderedTracks = useMemo(
+        () => tracks.filter(track => track.items.length > 0),
+        [tracks]
+    );
+
+    const trackNames = useMemo(
+        () => orderedTracks.map(t => t.track),
+        [orderedTracks]
+    );
+
+    type TimeSlot = {
+        key: string;
+        label: string;
+        minutes: number;
+        itemsByTrack: Record<string, AgendaItem[]>;
+    };
+
+    const timeSlots: TimeSlot[] = useMemo(() => {
+        const slots: Record<string, TimeSlot> = {};
+
+        const toMinutesAndLabel = (timeString: string): { minutes: number; label: string } => {
+            if (!timeString) {
+                return { minutes: 0, label: '' };
+            }
+
+            // Handle ISO strings and time-only strings
+            if (timeString.includes('T') || timeString.includes(' ')) {
+                const d = new Date(timeString);
+                const hours = d.getHours();
+                const minutes = d.getMinutes();
+                const label = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                return { minutes: hours * 60 + minutes, label };
+            }
+
+            const [h, m] = timeString.split(':');
+            const hours = parseInt(h || '0', 10);
+            const minutes = parseInt(m || '0', 10);
+            const label = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            return { minutes: hours * 60 + minutes, label };
+        };
+
+        orderedTracks.forEach(({ track, items }) => {
+            items.forEach(item => {
+                const { minutes, label } = toMinutesAndLabel(item.startTime);
+                if (!label) return;
+
+                const key = label;
+                if (!slots[key]) {
+                    slots[key] = {
+                        key,
+                        label,
+                        minutes,
+                        itemsByTrack: {}
+                    };
+                }
+
+                if (!slots[key].itemsByTrack[track]) {
+                    slots[key].itemsByTrack[track] = [];
+                }
+
+                slots[key].itemsByTrack[track].push(item);
+            });
+        });
+
+        return Object.values(slots).sort((a, b) => a.minutes - b.minutes);
+    }, [orderedTracks]);
+
+    const gridTemplateColumns = useMemo(() => {
+        const trackColumns = trackNames.length
+            ? `repeat(${trackNames.length}, minmax(${MIN_TRACK_WIDTH}px, 1fr))`
+            : '';
+        return `${TIME_COLUMN_WIDTH}px${trackColumns ? ` ${trackColumns}` : ''}`;
+    }, [trackNames.length]);
+
+    const minGridWidth = useMemo(
+        () => TIME_COLUMN_WIDTH + trackNames.length * MIN_TRACK_WIDTH,
+        [trackNames.length]
+    );
 
     if (orderedTracks.length === 0) {
         return (
@@ -107,94 +187,146 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks }) => {
 
     return (
         <div className="space-y-5">
-            <div className="grid gap-4 lg:grid-cols-2">
-                {orderedTracks.map(({ track, items }) => {
-                    const accent = getTrackAccent(track);
-                    return (
-                    <section
-                        key={track}
-                        className={`rounded-2xl border p-4 md:p-6 backdrop-blur-sm ${theme.bgCard} ${theme.borderCard}`}
-                        aria-label={`${formatTrackName(track)} track`}
+            <div className="overflow-x-auto -mx-6 px-6 track-view-scrollable">
+                <div className="space-y-4" style={{ minWidth: `${minGridWidth}px` }}>
+                    {/* Track header row */}
+                    <div
+                        className="grid items-stretch gap-3"
+                        style={{ gridTemplateColumns }}
                     >
-                        <header className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className={`text-xs uppercase tracking-wide ${theme.textMuted}`}>
-                                    Track
-                                </p>
-                                <h4 className={`text-lg font-semibold ${theme.textPrimary}`}>
-                                    {formatTrackName(track)}
-                                </h4>
-                            </div>
-                            <span className={`inline-flex items-center gap-2 px-3 py-1 text-xs font-medium rounded-full border ${accent.border} ${accent.bg} ${accent.text}`}>
-                                <span className="w-2 h-2 rounded-full bg-current opacity-80"></span>
-                                {items.length} session{items.length !== 1 ? 's' : ''}
-                            </span>
-                        </header>
+                        <div style={{ width: TIME_COLUMN_WIDTH }} aria-hidden="true" />
+                        {trackNames.map(track => {
+                            const accent = getTrackAccent(track);
+                            return (
+                                <div
+                                    key={track}
+                                    className={`rounded-2xl border px-4 py-3 shadow-sm transition-colors ${theme.bgCard} ${theme.borderCard}`}
+                                    aria-label={`${formatTrackName(track)} track`}
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span
+                                            className={`text-sm font-semibold tracking-tight truncate ${theme.textPrimary}`}
+                                            title={formatTrackName(track)}
+                                        >
+                                            {formatTrackName(track)}
+                                        </span>
+                                        <span
+                                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${accent.border} ${accent.bg} ${accent.text}`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+                                            Track
+                                        </span>
+                                    </div>
+                                    <p className={`mt-1 text-[12px] ${theme.textMuted}`}>
+                                        Sessions scheduled
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                        <div className="mt-5 space-y-4">
-                            {items.map(item => {
-                                const startLabel = formatTimelineTime(item.startTime);
-                                const endLabel = item.endTime ? formatTimelineTime(item.endTime) : 'TBD';
-                                const sessionType = item.type || 'Session';
+                    {/* Time rows */}
+                    <div className="space-y-3">
+                        {timeSlots.map(slot => (
+                            <div
+                                key={slot.key}
+                                className="grid items-stretch gap-3"
+                                data-testid={`time-row-${slot.key}`}
+                                style={{ gridTemplateColumns }}
+                            >
+                                {/* Time rail */}
+                                <div className="flex items-start justify-center">
+                                    <div className="inline-flex items-center justify-center rounded-full bg-yellow-400/95 text-black text-[12px] font-semibold px-3 py-1 shadow-sm tracking-tight">
+                                        {slot.label}
+                                    </div>
+                                </div>
 
-                                return (
-                                    <article
-                                        key={`${track}-${item.id}-${item.startTime}`}
-                                        className={`rounded-xl border p-4 transition-all duration-200 ${theme.bgElevated} ${theme.borderLight} ${theme.hoverBorder} ${theme.hoverCard}`}
-                                    >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <p className={`text-xs font-medium uppercase tracking-tight ${theme.textMuted}`}>
-                                                    {sessionType}
-                                                </p>
-                                                <h5 className={`text-base font-semibold ${theme.textPrimary}`}>
-                                                    {item.title}
-                                                </h5>
-                                            </div>
-                                            <div className="flex flex-col items-end text-right text-xs text-gray-500 dark:text-gray-400">
-                                                <span className="inline-flex items-center gap-1 font-medium">
-                                                    <ClockIcon className="w-3.5 h-3.5" />
-                                                    {startLabel} – {endLabel}
-                                                </span>
-                                                {item.dayNumber && (
-                                                    <span className="mt-1">
-                                                        Day {item.dayNumber}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
+                                {/* Track cells */}
+                                {trackNames.map(track => {
+                                    const items = slot.itemsByTrack[track] || [];
 
-                                        {item.description && (
-                                            <p className={`mt-2 text-sm leading-relaxed ${theme.textSecondary}`}>
-                                                {item.description}
-                                            </p>
-                                        )}
+                                    if (items.length === 0) {
+                                        return (
+                                            <div
+                                                key={track}
+                                                data-testid={`cell-${slot.key}-${track}`}
+                                                className="min-h-[3.5rem] rounded-2xl border border-dashed border-white/5 dark:border-white/10"
+                                            />
+                                        );
+                                    }
 
-                                        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-                                            {item.location && (
-                                                <span className={`inline-flex items-center gap-1 ${theme.textMuted}`}>
-                                                    <MapPinIcon className="w-4 h-4" />
-                                                    {item.location}
-                                                </span>
-                                            )}
-                                            {(() => {
-                                                const speakerCount = item.speakers?.length || (item.speaker ? 1 : 0);
-                                                if (!speakerCount) return null;
+                                    return (
+                                        <div
+                                            key={track}
+                                            data-testid={`cell-${slot.key}-${track}`}
+                                            className="space-y-3"
+                                        >
+                                            {items.map(item => {
+                                                const startLabel = formatTimelineTime(item.startTime);
+                                                const endLabel = item.endTime ? formatTimelineTime(item.endTime) : 'TBD';
+                                                const sessionType = item.type || 'Session';
+
                                                 return (
-                                                    <span className={`inline-flex items-center gap-1 ${theme.textMuted}`}>
-                                                        <UsersIcon className="w-4 h-4" />
-                                                        {speakerCount} speaker{speakerCount !== 1 ? 's' : ''}
-                                                    </span>
+                                                    <article
+                                                        key={`${track}-${item.id}-${item.startTime}`}
+                                                        className={`rounded-2xl border px-5 py-4 transition-all duration-200 shadow-sm ${theme.bgElevated} ${theme.borderLight} ${theme.hoverBorder} ${theme.hoverCard}`}
+                                                    >
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <div className="flex-1 min-w-0 space-y-1.5">
+                                                                <p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${theme.textMuted}`}>
+                                                                    {sessionType}
+                                                                </p>
+                                                                <h5 className={`text-base font-semibold leading-snug ${theme.textPrimary}`}>
+                                                                    {item.title}
+                                                                </h5>
+                                                            </div>
+                                                            <div className="flex flex-col items-end text-right text-[12px] text-gray-600 dark:text-gray-300 gap-1">
+                                                                <span className="inline-flex items-center gap-1.5 font-semibold">
+                                                                    <ClockIcon className="w-4 h-4" />
+                                                                    {startLabel} – {endLabel}
+                                                                </span>
+                                                                {item.dayNumber && (
+                                                                    <span className="px-2 py-0.5 rounded-full border border-white/10 text-[11px] font-medium">
+                                                                        Day {item.dayNumber}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {item.description && (
+                                                            <p className={`mt-3 text-[13px] leading-relaxed ${theme.textSecondary}`}>
+                                                                {item.description}
+                                                            </p>
+                                                        )}
+
+                                                        <div className="mt-4 pt-3 border-t border-white/10 dark:border-white/5 flex flex-wrap items-center gap-3 text-[12px]">
+                                                            {item.location && (
+                                                                <span className={`inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2 py-1 ${theme.textMuted}`}>
+                                                                    <MapPinIcon className="w-4 h-4" />
+                                                                    {item.location}
+                                                                </span>
+                                                            )}
+                                                            {(() => {
+                                                                const speakerCount = item.speakers?.length || (item.speaker ? 1 : 0);
+                                                                if (!speakerCount) return null;
+                                                                return (
+                                                                    <span className={`inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2 py-1 ${theme.textMuted}`}>
+                                                                        <UsersIcon className="w-4 h-4" />
+                                                                        {speakerCount} speaker{speakerCount !== 1 ? 's' : ''}
+                                                                    </span>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </article>
                                                 );
-                                            })()}
+                                            })}
                                         </div>
-                                    </article>
-                                );
-                            })}
-                        </div>
-                    </section>
-                );
-                })}
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -141,7 +141,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
             
             {/* Title and individual time */}
             <div className="pr-20">
-                <h5 className={`font-medium mb-1 ${theme.textPrimary}`}>
+                <h5 className={`font-medium mb-1 whitespace-normal break-words ${theme.textPrimary}`}>
                     {item.title}
                 </h5>
                 {showIndividualTime && (
