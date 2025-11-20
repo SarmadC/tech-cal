@@ -13,7 +13,7 @@ import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useRecommendationTracking } from '@/hooks/useRecommendationTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import { formatTime, formatDate, getEventDuration, getTimeUntilEvent } from '@/utils/dateUtils';
+import { formatTime, formatDate, getTimeUntilEvent } from '@/utils/dateUtils';
 // Career impact components removed - using inline implementation
 import { createAnalyticsContext } from '@/utils/analyticsUtils';
 
@@ -199,45 +199,34 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
         >
             {/* Header */}
             <div className="event-preview-glass-header p-4 border-b border-white/20 dark:border-white/10">
-                {/* Urgency indicator */}
-                <div className="mb-3">
-                    <span className={`event-preview-urgency ${getUrgencyColor().replace('bg-', '').replace('-500', '')}`}>
-                        {getUrgencyText()}
-                    </span>
-                </div>
-
-                <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center flex-wrap gap-1.5 flex-1 mr-3">
-                        {/* Show ALL tags in preview - this is the key difference from card */}
-                        {event.tags && event.tags.length > 0 ? (
-                            event.tags.map((tag, index) => (
-                                <span
-                                    key={index}
-                                    className="px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 rounded-md bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm border border-white/20 dark:border-white/10"
-                                >
-                                    {tag.name}
-                                </span>
-                            ))
-                        ) : (
-                            event.eventTypeId && (
-                                <span className="px-2.5 py-1 text-xs font-medium bg-white/60 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 rounded-md backdrop-blur-sm border border-white/20 dark:border-white/10">
-                                    Event
-                                </span>
-                            )
-                        )}
-                        {isPinned && (
-                            <span className="px-2.5 py-1 text-xs font-medium bg-white/60 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 rounded-md backdrop-blur-sm border border-white/20 dark:border-white/10 flex items-center gap-1.5">
-                                <BookmarkSimpleIcon className="w-3 h-3" />
-                                <span>Pinned</span>
-                            </span>
-                        )}
+                {/* Urgency indicator and tags on same line */}
+                <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2 flex-1 flex-wrap">
+                        <span className={`event-preview-urgency ${getUrgencyColor().replace('bg-', '').replace('-500', '')}`}>
+                            {getUrgencyText()}
+                        </span>
+                        {(event.tags && event.tags.length > 0) || isPinned ? (
+                            <div className="flex items-center flex-wrap gap-1.5">
+                                {/* Show ALL tags in preview - this is the key difference from card */}
+                                {event.tags && event.tags.length > 0 && (
+                                    event.tags.map((tag, index) => (
+                                        <span
+                                            key={index}
+                                            className="px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 rounded-md bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm border border-white/20 dark:border-white/10"
+                                        >
+                                            {tag.name}
+                                        </span>
+                                    ))
+                                )}
+                                {isPinned && (
+                                    <span className="px-2.5 py-1 text-xs font-medium bg-white/60 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 rounded-md backdrop-blur-sm border border-white/20 dark:border-white/10 flex items-center gap-1.5">
+                                        <BookmarkSimpleIcon className="w-3 h-3" />
+                                        <span>Pinned</span>
+                                    </span>
+                                )}
+                            </div>
+                        ) : null}
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors text-lg leading-none flex-shrink-0 p-1 rounded-md hover:bg-white/20 dark:hover:bg-white/10"
-                    >
-                        ×
-                    </button>
                 </div>
 
                 {/* Career Impact Badge in Preview - moved to top right */}
@@ -260,21 +249,22 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
 
             {/* Content */}
             <div className="p-4 space-y-3">
-                {/* Enhanced temporal information */}
-                <div className="event-preview-temporal event-preview-glass-section p-3 rounded-lg">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
-                            <ClockIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                            <span>{formatDate(event.startTime, event.timezone)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 ml-6">
-                            <span>{formatTime(event.startTime, event.timezone)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 ml-6">
-                            <CalendarIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                            <span>{getEventDuration(event.startTime, event.endTime)}</span>
-                        </div>
-                    </div>
+                {/* Date */}
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
+                    <CalendarIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <span>{formatDate(event.startTime, event.timezone)}</span>
+                </div>
+
+                {/* Time */}
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <ClockIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <span>{formatTime(event.startTime, event.timezone)}</span>
+                </div>
+
+                {/* Organizer */}
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <UsersIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <span className="line-clamp-1">{event.organizer}</span>
                 </div>
 
                 {/* Location with map context */}
@@ -302,14 +292,10 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                     )}
                 </div>
 
-                {/* Organizer */}
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                    <UsersIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                    <span className="line-clamp-1">{event.organizer}</span>
-                </div>
-
-                {/* Expandable description */}
-                {event.description && (
+                {/* Expandable description - only show if not redundant (not just the title) */}
+                {event.description && 
+                 event.description.trim() !== event.title.trim() && 
+                 !event.description.trim().startsWith(event.title.trim()) && (
                     <div className="pt-2">
                         <p className={`event-preview-description text-sm text-gray-600 dark:text-gray-300 leading-relaxed ${
                             isDescriptionExpanded ? 'expanded' : 'collapsed'

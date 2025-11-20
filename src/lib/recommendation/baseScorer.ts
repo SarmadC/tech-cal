@@ -379,6 +379,13 @@ export function calculateBaseScore(
     if (speaker.company) collectSkillIds(speaker.company);
   });
 
+  (event.agenda ?? []).forEach(item => {
+    addStructuredValue(item.title);
+    addStructuredValue(item.description, { splitTokens: false });
+    collectSkillIds(item.title);
+    collectSkillIds(item.description ?? undefined);
+  });
+
   const eventText = [
     event.title,
     event.description,
@@ -388,7 +395,8 @@ export function calculateBaseScore(
     event.targetAudience,
     event.prerequisites,
     event.location,
-    ...(event.speakerLineup ?? []).map(s => `${s.name ?? ''} ${s.title ?? ''}`)
+    ...(event.speakerLineup ?? []).map(s => `${s.name ?? ''} ${s.title ?? ''}`),
+    ...(event.agenda ?? []).map(item => `${item.title} ${item.description ?? ''}`)
   ]
     .filter(Boolean)
     .join(' ');

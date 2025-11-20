@@ -305,6 +305,9 @@ export class TagBasedMatchingService {
         organizer:organizers (*),
         tags:event_tag_relations (
           event_tags (event_tag, category, color)
+        ),
+        event_agenda (
+          id, title, description, start_time, end_time, agenda_type
         )
       `)
       .eq('status', 'confirmed')
@@ -424,6 +427,22 @@ export class TagBasedMatchingService {
 
     const scored = candidateEvents.map((eventRecord) => {
       const appEvent = eventTransformer.toApp(eventRecord);
+
+      // Attach agenda for scoring if available
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const agendaData = (eventRecord as any).event_agenda;
+      if (Array.isArray(agendaData)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        appEvent.agenda = agendaData.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          startTime: item.start_time,
+          endTime: item.end_time,
+          type: item.agenda_type
+        }));
+      }
+
       const match = this.calculateTagSimilarity(appEvent, careerProfile);
       const impactScore = this.calculateTagBasedCareerImpact(appEvent, careerProfile);
       const { boost: profileBoost, reasons: profileReasons } = this.calculateProfileBoost(appEvent, careerProfile, match);
@@ -548,7 +567,10 @@ export class TagBasedMatchingService {
     let boost = 0;
     const reasons: string[] = [];
     const tagNames = new Set((event.tags || []).map(tag => tag.name.toLowerCase()));
-    const text = `${event.title} ${event.description || ''}`.toLowerCase();
+    const agendaText = (event.agenda || [])
+      .map(item => `${item.title} ${item.description || ''}`)
+      .join(' ');
+    const text = `${event.title} ${event.description || ''} ${agendaText}`.toLowerCase();
 
     // Check preferred event types using category name (case-insensitive)
     // Normalize both the preference list and event name for reliable comparison

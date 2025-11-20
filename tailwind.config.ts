@@ -125,6 +125,12 @@ const config: Config = {
                     'ui-sans-serif',
                     'system-ui',
                     'sans-serif'
+                ],
+                aeonik: [
+                    'Aeonik',
+                    'ui-sans-serif',
+                    'system-ui',
+                    'sans-serif'
                 ]
             },
             animation: {
