@@ -82,9 +82,7 @@ export function isPriorityPage(url: string): boolean {
 
 // Domain patterns that typically require crawling
 const COMPLEX_DOMAIN_PATTERNS = [
-    'eventbrite.com',
     'conference.io',
-    'meetup.com',
     'lanyrd.com',
     'sessionize.com',
     'pathable.com',

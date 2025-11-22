@@ -1,6 +1,5 @@
 import { GenericHtmlScheduleFetcher } from './GenericHtmlScheduleFetcher';
 import { GenericJsonScheduleFetcher } from './GenericJsonScheduleFetcher';
-import { WebSummitScheduleFetcher } from './WebSummitScheduleFetcher';
 import type { ScheduleFallbackRequest, ScheduleFallbackResult, SiteScheduleFetcher } from './types';
 
 /**
@@ -10,7 +9,7 @@ import type { ScheduleFallbackRequest, ScheduleFallbackResult, SiteScheduleFetch
  * patterns (e.g., bespoke markup or authenticated APIs).
  */
 // Ordered list of specialized fetchers; generic HTML fallback executes when none match.
-const SITE_FETCHERS: SiteScheduleFetcher[] = [WebSummitScheduleFetcher, GenericJsonScheduleFetcher];
+const SITE_FETCHERS: SiteScheduleFetcher[] = [GenericJsonScheduleFetcher];
 
 export class MultiTrackScheduleFetcher {
     static async fetch(request: ScheduleFallbackRequest): Promise<ScheduleFallbackResult> {
