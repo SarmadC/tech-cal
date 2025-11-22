@@ -29,6 +29,7 @@ export type SupabaseEvent = {
     description: string | null;
     start_time: string;
     end_time: string | null;
+    timezone: string | null;
     organizer_id: string | null;
     location: string | null;
     status: string | null;

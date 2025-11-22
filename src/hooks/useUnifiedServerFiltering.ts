@@ -178,6 +178,12 @@ export function useUnifiedServerFiltering(
   }), [stableFilters, filters.page, filters.pageSize, surface]);
 
   // React Query: paged query for filtered events
+  // In development, use shorter staleTime to see changes immediately
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  // Versioned query key for cache busting (v2 for tag enrichment improvements)
+  const queryKeyVersion = 'v2';
+  
   const {
     data: pagedData,
     isLoading: pagedLoading,
@@ -185,16 +191,24 @@ export function useUnifiedServerFiltering(
     error: pagedError,
     refetch: pagedRefetch,
   } = useQuery({
-    queryKey: ['filtered-events', 'paged', fetchFilters],
+    queryKey: ['filtered-events', queryKeyVersion, 'paged', fetchFilters],
     enabled: isPagedMode,
+    staleTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
+    gcTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
+    refetchOnMount: isDevelopment ? true : false, // Always refetch in dev
     queryFn: async () => {
       const requestId = typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function'
         ? globalThis.crypto.randomUUID()
         : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const requestTimestamp = new Date().toISOString();
 
       const response = await fetch('/api/events/filtered', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'X-Request-Id': requestId,
+          'X-Request-Timestamp': requestTimestamp
+        },
         body: JSON.stringify(fetchFilters),
       });
       if (!response.ok) {
@@ -206,8 +220,6 @@ export function useUnifiedServerFiltering(
       }
       return result as { success: true; data: FilteredEventsData };
     },
-    staleTime: FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
-    gcTime: FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
     retry: (failureCount, error) => {
       if (error instanceof Error && /401|403|412|429/.test(error.message)) return false;
       return failureCount < 2;
@@ -225,17 +237,25 @@ export function useUnifiedServerFiltering(
     fetchNextPage,
     hasNextPage,
   } = useInfiniteQuery({
-    queryKey: ['filtered-events', 'infinite', fetchFilters],
+    queryKey: ['filtered-events', queryKeyVersion, 'infinite', fetchFilters],
     enabled: autoLoadAllPages,
     initialPageParam: 1,
+    staleTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
+    gcTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
+    refetchOnMount: isDevelopment ? true : false,
     queryFn: async ({ pageParam = 1 }) => {
       const requestId = typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function'
         ? globalThis.crypto.randomUUID()
         : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const requestTimestamp = new Date().toISOString();
 
       const response = await fetch('/api/events/filtered', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'X-Request-Id': requestId,
+          'X-Request-Timestamp': requestTimestamp
+        },
         body: JSON.stringify({ ...fetchFilters, page: pageParam }),
       });
       if (!response.ok) {
@@ -251,8 +271,6 @@ export function useUnifiedServerFiltering(
       const { page, hasMore } = lastPage.data.pagination;
       return hasMore ? page + 1 : undefined;
     },
-    staleTime: FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
-    gcTime: FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
     retry: (failureCount, error) => {
       if (error instanceof Error && /401|403|412|429/.test(error.message)) return false;
       return failureCount < 2;

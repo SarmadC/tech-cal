@@ -77,7 +77,14 @@ interface FilteredEventsResponse {
  * Server-side event filtering with pagination and statistics
  */
 export async function POST(request: NextRequest) {
-  console.log('[API] Starting filtered events request');
+  const requestTimestamp = request.headers.get('X-Request-Timestamp');
+  const requestId = request.headers.get('X-Request-Id') || randomUUID();
+  
+  console.log('[API] Starting filtered events request', {
+    requestId,
+    requestTimestamp: requestTimestamp || 'not provided',
+    serverTime: new Date().toISOString()
+  });
   
   try {
     const supabase = await createClient();

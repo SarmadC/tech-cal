@@ -12,6 +12,7 @@ import type { Database } from '@/types/supabase';
 import * as Sentry from '@sentry/nextjs';
 import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 import { EventRepository } from './repositories/EventRepository';
+import { EventTagEnrichmentService } from '@/services/eventTagEnrichmentService';
 
 export interface NormalizedEventInput {
     sourceEventId: string;
@@ -58,6 +59,9 @@ export class EventNormalizer {
             const normalizedDescription =
                 cleanEventDescription(record.description) ?? record.description?.trim() ?? '';
 
+            const normalizedSourceUrl = record.normalizedSourceUrl ?? record.sourceUrl;
+            const normalizedRegistrationUrl = record.normalizedRegistrationUrl ?? record.registrationUrl ?? null;
+
             const eventData: EventInsert = {
                 title: record.title,
                 description: normalizedDescription,
@@ -66,8 +70,8 @@ export class EventNormalizer {
                 timezone: timezone ?? null,
                 location,
                 organizer_id: organizerId,
-                source_url: record.sourceUrl,
-                registration_url: record.registrationUrl ?? null,
+                source_url: normalizedSourceUrl,
+                registration_url: normalizedRegistrationUrl,
                 livestream_url: record.livestreamUrl ?? null,
                 event_image_url: record.eventImageUrl ?? null,
                 event_type_id: eventTypeId ?? null,
@@ -102,6 +106,26 @@ export class EventNormalizer {
             // Link tags if present
             if (record.tags && record.tags.length > 0) {
                 await this.linkEventTags(eventId, record.tags, supabaseClient);
+            }
+
+            // Auto-enrich with tags from content (if no tags were provided)
+            // Note: Agenda items may not exist yet at normalization time, so we enrich with title/description first
+            // Agenda-based enrichment can happen later via backfill if needed
+            if (!record.tags || record.tags.length === 0) {
+                try {
+                    await EventTagEnrichmentService.enrichEventTags(
+                        eventId,
+                        {
+                            title: record.title,
+                            description: normalizedDescription,
+                            agenda: undefined // Agenda items may not exist yet at normalization time
+                        },
+                        supabaseClient
+                    );
+                } catch (enrichmentError) {
+                    // Don't fail normalization if enrichment fails
+                    console.warn('Tag enrichment failed (non-critical):', enrichmentError);
+                }
             }
 
             // Update source_event to mark as normalized
@@ -347,5 +371,4 @@ export class EventNormalizer {
         }
     }
 }
-
 

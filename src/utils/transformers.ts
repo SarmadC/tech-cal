@@ -212,6 +212,7 @@ export const eventTransformer = {
             description: supabaseEvent.description || '',
             startTime: supabaseEvent.start_time || new Date().toISOString(),
             endTime: supabaseEvent.end_time,
+            timezone: supabaseEvent.timezone ?? null,
             organizer: organizerName,
             location: supabaseEvent.location || 'Online',
             status: supabaseEvent.status || 'confirmed',

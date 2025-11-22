@@ -5,7 +5,8 @@ import { ClockIcon, MapPinIcon, UsersIcon } from '@phosphor-icons/react';
 
 import { AgendaItem } from '@/types';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
-import { formatTimelineTime, formatTrackName } from '@/utils/timelineUtils';
+import { formatTimeRange as formatEventTimeRange } from '@/utils/dateUtils';
+import { formatTrackName } from '@/utils/timelineUtils';
 
 export type TrackGroup = {
     track: string;
@@ -88,13 +89,15 @@ export const groupAgendaByTrack = (agenda: AgendaItem[] = []): TrackGroup[] => {
 
 interface TrackAgendaViewProps {
     tracks: TrackGroup[];
+    timezone?: string | null;
 }
 
 const TIME_COLUMN_WIDTH = 84; // px
 const MIN_TRACK_WIDTH = 220; // px
 
-const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks }) => {
+const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks, timezone }) => {
     const theme = useTimelineTheme();
+    const eventTimezone = timezone;
 
     const orderedTracks = useMemo(
         () => tracks.filter(track => track.items.length > 0),
@@ -262,8 +265,9 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks }) => {
                                             className="space-y-3"
                                         >
                                             {items.map(item => {
-                                                const startLabel = formatTimelineTime(item.startTime);
-                                                const endLabel = item.endTime ? formatTimelineTime(item.endTime) : 'TBD';
+                                                const timeDisplay = item.endTime
+                                                    ? formatEventTimeRange(item.startTime, item.endTime, eventTimezone)
+                                                    : `${formatEventTimeRange(item.startTime, undefined, eventTimezone)} – TBD`;
                                                 const sessionType = item.type || 'Session';
 
                                                 return (
@@ -283,7 +287,7 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks }) => {
                                                             <div className="flex flex-col items-end text-right text-[12px] text-gray-600 dark:text-gray-300 gap-1">
                                                                 <span className="inline-flex items-center gap-1.5 font-semibold">
                                                                     <ClockIcon className="w-4 h-4" />
-                                                                    {startLabel} – {endLabel}
+                                                                    {timeDisplay}
                                                                 </span>
                                                                 {item.dayNumber && (
                                                                     <span className="px-2 py-0.5 rounded-full border border-white/10 text-[11px] font-medium">
@@ -333,4 +337,3 @@ const TrackAgendaView: FC<TrackAgendaViewProps> = ({ tracks }) => {
 };
 
 export default TrackAgendaView;
-

@@ -94,12 +94,13 @@ export default function EventListView({ initialCategories, profile, locationOpti
     } = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover' });
 
     const [selectedEvent, setSelectedEvent] = useState<TrackedEvent | null>(null);
+    const [isClosing, setIsClosing] = useState(false);
     const isMobile = useIsMobile();
 
     const rows: EventRow[] = useMemo(() => filteredEvents.map((event: TrackedEvent) => {
-        const startDisplay = formatDate(event.startTime, event.timezone ?? undefined);
-        const timeDisplay = formatTime(event.startTime, event.timezone ?? undefined);
-        const endDisplay = event.endTime ? formatTime(event.endTime, event.timezone ?? undefined) : null;
+        const startDisplay = formatDate(event.startTime, event.timezone);
+        const timeDisplay = formatTime(event.startTime, event.timezone);
+        const endDisplay = event.endTime ? formatTime(event.endTime, event.timezone) : null;
         const slug = generateEventSlug(event.title, event.id);
         return {
             id: event.id,
@@ -118,11 +119,17 @@ export default function EventListView({ initialCategories, profile, locationOpti
     }), [filteredEvents]);
 
     const handleOpenDetails = useCallback((event: TrackedEvent) => {
+        setIsClosing(false);
         setSelectedEvent(event);
     }, []);
 
     const handleCloseDetails = useCallback(() => {
-        setSelectedEvent(null);
+        setIsClosing(true);
+        // Wait for animation to complete before removing from DOM
+        setTimeout(() => {
+            setSelectedEvent(null);
+            setIsClosing(false);
+        }, 300); // Match the animation duration
     }, []);
 
     const columns: AdminDataTableColumn<EventRow>[] = useMemo(() => [
@@ -136,7 +143,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                     <span className="text-xs text-foreground-secondary">{row.organizer}</span>
                 </div>
             ),
-            width: '28%',
+            width: '35%',
         },
         {
             key: 'startDisplay',
@@ -150,7 +157,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                     )}
                 </div>
             ),
-            width: '18%',
+            width: '25%',
         },
         {
             key: 'location',
@@ -159,7 +166,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
             render: (row) => (
                 <span className="text-sm text-foreground-primary">{row.location}</span>
             ),
-            width: '16%',
+            width: '20%',
         },
         {
             key: 'category',
@@ -179,33 +186,9 @@ export default function EventListView({ initialCategories, profile, locationOpti
                     <span className="text-sm text-foreground-secondary">—</span>
                 )
             ),
-            width: '14%',
+            width: '20%',
         },
-        {
-            key: 'priceRange',
-            header: 'Pricing',
-            render: (row) => (
-                <span className="text-sm text-foreground-primary">
-                    {row.priceRange ?? 'N/A'}
-                </span>
-            ),
-            width: '10%',
-        },
-        {
-            key: 'actions',
-            header: 'Actions',
-            render: (row) => (
-                <button
-                    type="button"
-                    onClick={() => handleOpenDetails(row.event)}
-                    className="text-xs font-semibold text-foreground-primary hover:text-accent-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"
-                >
-                    View
-                </button>
-            ),
-            width: '8%',
-        },
-    ], [handleOpenDetails]);
+    ], []);
 
     const handleSortChange = (key: string, direction: 'asc' | 'desc') => {
         switch (key) {
@@ -409,6 +392,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                             sortDirection={filters.sortDirection}
                                             onSortChange={handleSortChange}
                                             isLoading={isLoading}
+                                            onRowClick={(row) => handleOpenDetails(row.event)}
                                             className="glass-card border border-white/10 px-6 py-6 text-foreground-primary backdrop-blur-xl"
                                             containerClassName="glass-card border border-white/10 bg-white/[0.04] backdrop-blur-xl [&_thead]:bg-white/[0.08] [&_tbody_tr]:border-white/[0.05] [&_tbody_tr:hover]:bg-white/[0.06]"
                                             footerClassName="glass-card border border-white/10 bg-white/[0.04] text-foreground-secondary"
@@ -452,12 +436,18 @@ export default function EventListView({ initialCategories, profile, locationOpti
                             />
                         ) : (
                             <div
-                                className="fixed inset-0 z-40 flex justify-end bg-black/40 backdrop-blur-sm"
+                                className={`fixed inset-0 z-40 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
+                                    isClosing ? 'opacity-0' : 'opacity-100'
+                                }`}
                                 onClick={handleCloseDetails}
                                 role="presentation"
                             >
                                 <div
-                                    className="h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform translate-x-0 animate-in slide-in-from-right duration-300 ease-out"
+                                    className={`h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform translate-x-0 duration-300 ease-out ${
+                                        isClosing 
+                                            ? 'animate-out slide-out-to-right' 
+                                            : 'animate-in slide-in-from-right'
+                                    }`}
                                     onClick={(event) => event.stopPropagation()}
                                     role="dialog"
                                     aria-modal="true"

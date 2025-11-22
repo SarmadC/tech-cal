@@ -1,7 +1,7 @@
-/* Bento Grid Layout */
+/* Bento Grid Layout - 8pt Grid System */
 .bento-grid {
   display: grid;
-  gap: 1rem;
+  gap: 1rem; /* 16px - 8pt multiple */
   grid-auto-flow: dense;
   width: 100%;
 }
@@ -29,7 +29,7 @@
 @media (max-width: 768px) {
   .bento-grid {
     grid-template-columns: 1fr;
-    gap: 2rem; /* Increased spacing for mobile */
+    gap: 2rem; /* 32px - 8pt multiple */
   }
 
   /* Large cards get emphasis via font size (padding handled by glass-card p-6) */
@@ -63,7 +63,7 @@
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
     grid-auto-rows: minmax(280px, auto);
-    gap: 1.5rem;
+    gap: 1.5rem; /* 24px - 8pt multiple */
   }
   
   .bento-card-large,
@@ -81,7 +81,7 @@
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
     grid-auto-rows: minmax(320px, auto);
-    gap: 2rem;
+    gap: 2rem; /* 32px - 8pt multiple */
   }
   
   .bento-card-large,
@@ -108,14 +108,18 @@
 /* Career Impact Display */
 .bento-card-large .flex.items-center.gap-3 > div:first-child,
 .bento-card-medium .flex.items-center.gap-3 > div:first-child,
-.bento-card-small .flex.items-center.gap-3 > div:first-child {
+.bento-card-small .flex.items-center.gap-3 > div:first-child,
+.bento-card-large .flex.items-center.gap-2 > div:first-child,
+.bento-card-medium .flex.items-center.gap-2 > div:first-child,
+.bento-card-small .flex.items-center.gap-2 > div:first-child {
   transition: all 0.2s ease-in-out;
 }
 
 .bento-card-large:hover .flex.items-center.gap-3 > div:first-child,
-.bento-card-medium:hover .flex.items-center.gap-3 > div:first-child {
+.bento-card-medium:hover .flex.items-center.gap-3 > div:first-child,
+.bento-card-large:hover .flex.items-center.gap-2 > div:first-child,
+.bento-card-medium:hover .flex.items-center.gap-2 > div:first-child {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Career Impact Meter Animation */

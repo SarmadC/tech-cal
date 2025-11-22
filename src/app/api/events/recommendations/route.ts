@@ -74,6 +74,16 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
     const sessionId = searchParams.get('sessionId');
     const requestId = request.headers.get('x-request-id') || randomUUID();
 
+    // Log API request for debugging
+    console.info('[Recommendations API] Request received', {
+      userId: user.id,
+      requestId,
+      timestamp: new Date().toISOString(),
+      url: request.url,
+      limit,
+      tagsCount: tags.length
+    });
+
     const startTime = Date.now();
 
     // Get user profile and career profile
@@ -191,6 +201,17 @@ export async function GET(request: NextRequest): Promise<NextResponse<Recommenda
     }
 
     const processingTime = Date.now() - startTime;
+
+    // Log API response for debugging
+    console.info('[Recommendations API] Response prepared', {
+      userId: user.id,
+      requestId,
+      returnedCount: events.length,
+      processingTimeMs: processingTime,
+      matchedTagsCount: matchedTags.length,
+      hasRecommendationMetadata: events.some(e => (e as { recommendationMetadata?: unknown }).recommendationMetadata),
+      topEventIds: events.slice(0, 5).map(e => e.id)
+    });
 
     if (hasTelemetryConsent) {
       const recommendationSummary = events.slice(0, 10).map((event, index) => {

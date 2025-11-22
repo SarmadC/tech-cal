@@ -6,33 +6,6 @@ import { AgendaItem } from '@/types';
  */
 
 /**
- * Unified time formatting for timeline components
- * Handles both ISO strings and time-only strings consistently
- */
-export function formatTimelineTime(timeString: string): string {
-    if (!timeString) return '';
-    
-    if (timeString.includes('T') || timeString.includes(' ')) {
-        // Handle ISO strings or datetime strings
-        return new Date(timeString).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    } else {
-        // Handle time-only strings (HH:MM format)
-        const [hours, minutes] = timeString.split(':');
-        const date = new Date();
-        date.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-        return date.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    }
-}
-
-/**
  * Centralized type color system for agenda items
  * Provides consistent theme-aware colors across all timeline components
  */

@@ -289,7 +289,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         </div>
                     ) : displayEvent.agenda && displayEvent.agenda.length > 0 ? (
                         agendaView === 'tracks' && hasTrackAgenda ? (
-                            <TrackAgendaView tracks={trackGroups} />
+                                                <TrackAgendaView tracks={trackGroups} timezone={displayEvent.timezone} />
                         ) : (
                         <AdaptiveTimeline event={displayEvent} />
                         )

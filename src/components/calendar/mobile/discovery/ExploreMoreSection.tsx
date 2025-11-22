@@ -1,13 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Compass, Fire, Sparkle, Lightning } from '@phosphor-icons/react';
+import { Compass } from '@phosphor-icons/react';
 import type { Event } from '@/types';
 import { DiscoveryService } from '@/services/discoveryService';
 import DiscoverySection from './DiscoverySection';
 import DiscoveryCard from './DiscoveryCard';
 import BentoGrid from '../../desktop/discovery/BentoGrid';
-import { Badge } from '@/components/ui/badge';
 
 export interface ExploreMoreSectionProps {
   events: Event[];
@@ -94,39 +93,6 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
     onEventSelect?.(event);
   }, [onEventSelect]);
 
-  const getEventBadges = (types: string[]) => {
-    return (
-      <div className="flex flex-wrap gap-1 mt-2">
-        {types.map((type, index) => {
-          switch (type) {
-            case 'trending':
-              return (
-                <Badge key={`${type}-${index}`} variant="secondary" className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 border-orange-200">
-                  <Fire size={10} weight="fill" />
-                  Trending
-                </Badge>
-              );
-            case 'new':
-              return (
-                <Badge key={`${type}-${index}`} variant="secondary" className="flex items-center gap-1 text-xs bg-blue-100 text-blue-700 border-blue-200">
-                  <Sparkle size={10} weight="fill" />
-                  New
-                </Badge>
-              );
-            case 'quick':
-              return (
-                <Badge key={`${type}-${index}`} variant="secondary" className="flex items-center gap-1 text-xs bg-green-100 text-green-700 border-green-200">
-                  <Lightning size={10} weight="fill" />
-                  Quick
-                </Badge>
-              );
-            default:
-              return null;
-          }
-        })}
-      </div>
-    );
-  };
 
   if (exploreEvents.length === 0) {
     return (
@@ -157,7 +123,7 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
       className={className}
     >
       <BentoGrid>
-        {exploreEvents.map(({ event, types }, index) => (
+        {exploreEvents.map(({ event }, index) => (
           <DiscoveryCard
             key={`${event.id}-${index}`}
             event={event}
@@ -165,7 +131,7 @@ const ExploreMoreSection = React.memo<ExploreMoreSectionProps>(({
             onLearnMore={() => handleLearnMore(event)}
             variant="default"
             showLearnMore={false}
-            badges={getEventBadges(types)}
+            showCareerImpact={false}
             className=""
           />
         ))}

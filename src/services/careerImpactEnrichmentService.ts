@@ -94,17 +94,6 @@ export async function enrichEventsWithCareerImpact(
       try {
         const alignment = calculateBaseScore(event, careerProfile);
         
-        // Debug: log events that get 0 scores
-        if (process.env.NODE_ENV !== 'production' && alignment.overall === 0) {
-          console.warn('[Enrichment] Event got 0 score:', {
-            eventId: event.id,
-            title: event.title?.substring(0, 50),
-            hasStartTime: !!event.startTime,
-            hasDescription: !!event.description,
-            attendeeCount: event.attendeeCount,
-            isColdStart
-          });
-        }
         
         return {
           ...event,

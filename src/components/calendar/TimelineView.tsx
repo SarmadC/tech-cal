@@ -4,7 +4,8 @@ import { FC, useState } from 'react';
 import { ClockIcon, MapPinIcon, UserIcon, UsersIcon, CalendarIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
-import { formatTimelineTime, getTypeColor, getEmptyState, eventsOverlap, getSpeakerAvatarUrl } from '@/utils/timelineUtils';
+import { formatTimeRange as formatEventTimeRange } from '@/utils/dateUtils';
+import { getTypeColor, getEmptyState, eventsOverlap, getSpeakerAvatarUrl } from '@/utils/timelineUtils';
 
 interface TimelineViewProps {
     event: Event;
@@ -50,8 +51,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
             </div>
         );
     }
-    
-    const formatTime = formatTimelineTime;
+    const eventTimezone = event.timezone;
     
     // Helper function to convert time string to minutes
     const toMinutes = (timeString: string): number => {
@@ -112,7 +112,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
             if (!addedToCluster) {
                 // Create new cluster
                 clusters.push({
-                    timeSlot: `${formatTime(item.startTime)} - ${formatTime(item.endTime)}`,
+                    timeSlot: formatEventTimeRange(item.startTime, item.endTime, eventTimezone),
                     startMinutes: itemStart,
                     endMinutes: itemEnd,
                     items: [item]
@@ -147,7 +147,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                 {showIndividualTime && (
                     <div className={`flex items-center gap-1 text-xs ${theme.textMuted} mb-2`}>
                         <ClockIcon className="w-3 h-3" />
-                        <span>{formatTime(item.startTime)} - {formatTime(item.endTime)}</span>
+                        <span>{formatEventTimeRange(item.startTime, item.endTime, eventTimezone)}</span>
                     </div>
                 )}
             </div>

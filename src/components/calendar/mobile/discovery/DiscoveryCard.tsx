@@ -14,6 +14,7 @@ import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { cn } from '@/lib/utils';
 import ShinyText from '../../shared/ShinyText';
 import '../../shared/ShinyText.css';
+import { formatDate, formatTime } from '@/utils/dateUtils';
 
 export interface DiscoveryCardProps {
   event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore };
@@ -118,32 +119,30 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array - only run once on mount
+  
   // Format date for display - show actual date instead of countdown
-  const formatEventDate = (dateString: string) => {
+  // Uses utility function but preserves "Today"/"Tomorrow" logic
+  const formatEventDate = (dateString: string, timezone?: string | null) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate difference in days using local timezone dates
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
     // Always show actual date, but keep special cases for very near dates
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Tomorrow';
     
-    // For all other dates, show the actual date
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-    });
-  };
-
-  // Format time for display
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
-    });
+    // For all other dates, use the utility function but extract just the date part
+    const formatted = formatDate(dateString, timezone);
+    // formatDate returns "Sep 17, 2025" or "Sep 17, 2025" - we want "Sep 17" or "Sep 17, 2025"
+    const parts = formatted.split(',');
+    if (date.getFullYear() !== now.getFullYear()) {
+      return formatted; // Include year if different
+    }
+    return parts[0]; // Just month and day if same year
   };
 
 
@@ -190,7 +189,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
       onClick={onClick}
       role="listitem"
       tabIndex={0}
-      aria-label={`${event.title} - ${formatEventDate(event.startTime)} at ${formatTime(event.startTime)}`}
+      aria-label={`${event.title} - ${formatEventDate(event.startTime, event.timezone)} at ${formatTime(event.startTime, event.timezone)}`}
       onKeyDown={(e: React.KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -381,12 +380,12 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
           <div className="flex items-center gap-4 text-sm text-glass-secondary">
             <div className="flex items-center gap-1">
               <Calendar size={14} />
-              <span>{formatEventDate(event.startTime)}</span>
+              <span>{formatEventDate(event.startTime, event.timezone)}</span>
             </div>
             
             <div className="flex items-center gap-1">
               <Clock size={14} />
-              <span>{formatTime(event.startTime)}</span>
+              <span>{formatTime(event.startTime, event.timezone)}</span>
             </div>
           </div>
 

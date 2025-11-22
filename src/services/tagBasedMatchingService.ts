@@ -31,7 +31,8 @@ export interface TagRecommendationResult {
  */
 export class TagBasedMatchingService {
   // Tag similarity mappings for better matching
-  private static readonly TAG_SIMILARITIES: TagSimilarityMap = {
+  // We will normalize this to be bidirectional at runtime
+  private static readonly RAW_TAG_SIMILARITIES: TagSimilarityMap = {
     // Programming Languages
     'javascript': ['js', 'node.js', 'nodejs', 'typescript', 'ts'],
     'python': ['django', 'flask', 'fastapi', 'pandas', 'numpy'],
@@ -63,6 +64,9 @@ export class TagBasedMatchingService {
     'project management': ['agile', 'scrum', 'planning']
   };
 
+  // Normalized bidirectional similarity map
+  private static TAG_SIMILARITIES: Map<string, Set<string>> | null = null;
+
   // Category weights for different types of matches
   private static readonly CATEGORY_WEIGHTS = {
     'Programming': 1.0,      // Highest weight for technical skills
@@ -77,8 +81,37 @@ export class TagBasedMatchingService {
     'Difficulty': 0.3,       // Lower weight for difficulty levels
     'Soft-Skills': 0.6,      // Medium weight for soft skills
     'Career-Stage': 0.5,     // Medium weight for career stages
-    'Community': 0.4         // Lower weight for community aspects
+    'Community': 0.4,        // Lower weight for community aspects
+    'Agenda': 0.7            // Good weight for agenda-derived matches
   };
+
+  /**
+   * Initialize the bidirectional similarity map
+   */
+  private static initializeSimilarities() {
+    if (this.TAG_SIMILARITIES) return;
+
+    this.TAG_SIMILARITIES = new Map<string, Set<string>>();
+    
+    Object.entries(this.RAW_TAG_SIMILARITIES).forEach(([key, values]) => {
+      const normalizedKey = key.toLowerCase();
+      if (!this.TAG_SIMILARITIES!.has(normalizedKey)) {
+        this.TAG_SIMILARITIES!.set(normalizedKey, new Set());
+      }
+      
+      values.forEach(val => {
+        const normalizedVal = val.toLowerCase();
+        // A -> B
+        this.TAG_SIMILARITIES!.get(normalizedKey)!.add(normalizedVal);
+        
+        // B -> A (ensure entry exists first)
+        if (!this.TAG_SIMILARITIES!.has(normalizedVal)) {
+          this.TAG_SIMILARITIES!.set(normalizedVal, new Set());
+        }
+        this.TAG_SIMILARITIES!.get(normalizedVal)!.add(normalizedKey);
+      });
+    });
+  }
 
   /**
    * Calculate tag-based similarity between user profile and event
@@ -90,7 +123,8 @@ export class TagBasedMatchingService {
     event: Event,
     careerProfile: CareerProfile
   ): TagMatchResult {
-    const eventTags = event.tags || [];
+    this.initializeSimilarities();
+
     const userSkills = careerProfile.primarySkills || [];
     const userInterests = careerProfile.interests || [];
     const userGoals = careerProfile.careerGoals || [];
@@ -100,37 +134,55 @@ export class TagBasedMatchingService {
     // Determine if user is a beginner (for weighted skill matching)
     const isBeginner = learningStyle.includes('hands-on') || userSkills.length < 3;
 
+    // Derive tags from agenda and merge with existing tags
+    const candidateTerms = this.buildCandidateTerms(careerProfile);
+    const derivedTags = this.deriveTagsFromAgenda(event, candidateTerms);
+    
+    // Create a merged list of tags, preferring existing tags over derived ones if duplicates exist
+    const existingTagNames = new Set((event.tags || []).map(t => t.name.toLowerCase()));
+    const mergedTags = [...(event.tags || [])];
+    
+    derivedTags.forEach(tag => {
+      if (!existingTagNames.has(tag.name.toLowerCase())) {
+        mergedTags.push(tag);
+      }
+    });
+
     let totalScore = 0;
     const matchedTags: string[] = [];
     const matchedCategories: string[] = [];
     const explanations: string[] = [];
 
-    // Match on primary skills, interests, and goals (always 100% weight)
+    // Define weights based on experience level
+    // Beginner: 60% Learning, 40% Primary
+    // Standard: 20% Learning, 80% Primary
+    const primaryWeight = isBeginner ? 0.6 : 1.0;
+    const learnWeight = isBeginner ? 1.0 : 0.4;
+
+    // Match on primary skills, interests, and goals
     const primaryTerms = [...userSkills, ...userInterests, ...userGoals];
 
-    const directMatches = this.findDirectMatches(eventTags, primaryTerms);
-    totalScore += directMatches.score;
+    const directMatches = this.findDirectMatches(mergedTags, primaryTerms);
+    totalScore += directMatches.score * primaryWeight;
     matchedTags.push(...directMatches.tags);
     matchedCategories.push(...directMatches.categories);
     explanations.push(...directMatches.explanations);
 
-    const similarityMatches = this.findSimilarityMatches(eventTags, primaryTerms);
-    totalScore += similarityMatches.score;
+    const similarityMatches = this.findSimilarityMatches(mergedTags, primaryTerms);
+    totalScore += similarityMatches.score * primaryWeight;
     matchedTags.push(...similarityMatches.tags);
     matchedCategories.push(...similarityMatches.categories);
     explanations.push(...similarityMatches.explanations);
 
-    const categoryMatches = this.findCategoryMatches(eventTags, primaryTerms);
-    totalScore += categoryMatches.score;
+    const categoryMatches = this.findCategoryMatches(mergedTags, primaryTerms);
+    totalScore += categoryMatches.score * primaryWeight;
     matchedTags.push(...categoryMatches.tags);
     matchedCategories.push(...categoryMatches.categories);
     explanations.push(...categoryMatches.explanations);
 
-    // Match on skillsToLearn (weighted based on experience level)
+    // Match on skillsToLearn
     if (skillsToLearn.length > 0) {
-      const learnWeight = isBeginner ? 0.67 : 0.4; // 40% for beginners (60/40 split), 40% for others
-
-      const learnDirectMatches = this.findDirectMatches(eventTags, skillsToLearn);
+      const learnDirectMatches = this.findDirectMatches(mergedTags, skillsToLearn);
       totalScore += learnDirectMatches.score * learnWeight;
       matchedTags.push(...learnDirectMatches.tags);
       matchedCategories.push(...learnDirectMatches.categories);
@@ -138,7 +190,7 @@ export class TagBasedMatchingService {
         explanations.push(`Learning: ${learnDirectMatches.explanations[0]}`);
       }
 
-      const learnSimilarityMatches = this.findSimilarityMatches(eventTags, skillsToLearn);
+      const learnSimilarityMatches = this.findSimilarityMatches(mergedTags, skillsToLearn);
       totalScore += learnSimilarityMatches.score * learnWeight;
       matchedTags.push(...learnSimilarityMatches.tags);
       matchedCategories.push(...learnSimilarityMatches.categories);
@@ -150,7 +202,7 @@ export class TagBasedMatchingService {
     // Role alignment check
     if (careerProfile.currentRole) {
       const roleKeywords = getRoleKeywords(careerProfile.currentRole);
-      const roleMatches = this.findDirectMatches(eventTags, roleKeywords);
+      const roleMatches = this.findDirectMatches(mergedTags, roleKeywords);
       if (roleMatches.score > 0) {
         totalScore += roleMatches.score * 0.5; // Modest boost
         matchedTags.push(...roleMatches.tags);
@@ -168,6 +220,53 @@ export class TagBasedMatchingService {
       matchedCategories: [...new Set(matchedCategories)],
       explanation: explanations.length > 0 ? explanations[0] : 'No specific matches found'
     };
+  }
+
+  /**
+   * Derive synthetic tags from event agenda and description
+   */
+  private static deriveTagsFromAgenda(event: Event, candidateTerms: string[]): EventTag[] {
+    const derivedTags: EventTag[] = [];
+    
+    // Combine all text content
+    const agendaText = (event.agenda || [])
+      .map(item => `${item.title} ${item.description || ''}`)
+      .join(' ');
+    const fullText = `${event.title} ${event.description || ''} ${agendaText}`;
+    
+    // Use a Set to avoid duplicates within the same event
+    const foundTerms = new Set<string>();
+
+    candidateTerms.forEach(term => {
+      if (!term) return;
+      
+      // Escape special characters for regex (e.g., C++, Node.js)
+      const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
+      // Smart word boundary detection
+      // Only apply \b if the term starts/ends with a word character
+      const startBoundary = /^\w/.test(term) ? '\\b' : '';
+      const endBoundary = /\w$/.test(term) ? '\\b' : '';
+      
+      // Flag 'i' for case-insensitive
+      const regex = new RegExp(`${startBoundary}${escapedTerm}${endBoundary}`, 'i');
+      
+      if (regex.test(fullText)) {
+        // Store normalized lowercase version for deduplication
+        const lowerTerm = term.toLowerCase();
+        if (!foundTerms.has(lowerTerm)) {
+          foundTerms.add(lowerTerm);
+          derivedTags.push({
+            id: `synthetic-${lowerTerm}-${Date.now()}`, // Temporary ID
+            name: term, // Keep original casing from candidate term
+            color: '#a855f7', // Distinct color for derived tags
+            category: 'Agenda'
+          });
+        }
+      }
+    });
+
+    return derivedTags;
   }
 
   /**
@@ -209,6 +308,7 @@ export class TagBasedMatchingService {
     eventTags: EventTag[],
     userTerms: string[]
   ): { score: number; tags: string[]; categories: string[]; explanations: string[] } {
+    this.initializeSimilarities();
     let score = 0;
     const tags: string[] = [];
     const categories: string[] = [];
@@ -221,9 +321,9 @@ export class TagBasedMatchingService {
 
       for (const userTerm of userTerms) {
         const term = userTerm.toLowerCase();
-        const similarities = this.TAG_SIMILARITIES[term] || [];
+        const similarities = this.TAG_SIMILARITIES!.get(term);
         
-        if (similarities.includes(tagName)) {
+        if (similarities && similarities.has(tagName)) {
           score += 20 * categoryWeight; // Medium score for similarity matches
           tags.push(eventTag.name);
           categories.push(category);
@@ -288,20 +388,82 @@ export class TagBasedMatchingService {
     supabaseClient: SupabaseClientType,
     limit: number = 10
   ): Promise<TagRecommendationResult[]> {
+    this.initializeSimilarities();
     const candidateTerms = this.buildCandidateTerms(careerProfile);
-    if (candidateTerms.length === 0) {
-      return [];
+    const queryTerms = this.normalizeQueryTerms(candidateTerms);
+    const textSearchTerms = this.extractHighValueTerms(careerProfile);
+
+    // Log profile validation for debugging
+    const hasCurrentRole = !!careerProfile.currentRole;
+    const hasPrimarySkills = (careerProfile.primarySkills || []).length > 0;
+    const hasSkillsToLearn = (careerProfile.skillsToLearn || []).length > 0;
+    const hasInterests = (careerProfile.interests || []).length > 0;
+    
+    console.info('[TagBasedMatching] Profile validation', {
+      hasCurrentRole,
+      hasPrimarySkills,
+      primarySkillsCount: (careerProfile.primarySkills || []).length,
+      hasSkillsToLearn,
+      skillsToLearnCount: (careerProfile.skillsToLearn || []).length,
+      hasInterests,
+      interestsCount: (careerProfile.interests || []).length,
+      queryTermsCount: queryTerms.length,
+      textSearchTermsCount: textSearchTerms.length,
+      textSearchTerms: textSearchTerms.slice(0, 5) // Log first 5 for debugging
+    });
+
+    if (queryTerms.length === 0 && textSearchTerms.length === 0) {
+      console.warn('[TagBasedMatching] No candidate terms available, falling back to discovery-only mode', {
+        hasCurrentRole,
+        hasPrimarySkills,
+        hasSkillsToLearn,
+        hasInterests
+      });
+      return this.getDiscoveryEventsOnly(careerProfile, supabaseClient, limit);
     }
+    
+    // 1. Primary Query: Tag-based matches
+    const tagFetchLimit = 40;
+    const limitedQueryTerms = queryTerms.slice(0, 100);
+    const hasTagTerms = limitedQueryTerms.length > 0;
+    
+    const tagQueryPromise = hasTagTerms
+      ? supabaseClient
+          .from('events')
+          .select(`
+            *,
+            event_type:event_type_id!inner(*),
+            organizer:organizers (*),
+            tags:event_tag_relations (
+              event_tags (event_tag, category, color)
+            ),
+            event_agenda (
+              id, title, description, start_time, end_time, agenda_type
+            )
+          `)
+          .eq('status', 'confirmed')
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(tagFetchLimit)
+          .in('tags.event_tags.event_tag', limitedQueryTerms)
+      : Promise.resolve({ data: [], error: null });
 
-    const fetchLimit = Math.min(limit * 5, 100);
-    const queryTerms = candidateTerms.slice(0, 100);
+    // 2. Text Search Query: High-value term matches
+    const textFetchLimit = 30;
+    const textQueryPromise = this.getTextSearchCandidates(
+      careerProfile,
+      supabaseClient,
+      textSearchTerms,
+      textFetchLimit
+    );
 
-    // Get events with matching tags
-    let query = supabaseClient
+    // 3. Discovery Query: Fallback/Broad retrieval
+    const discoveryFetchLimit = 30;
+    let discoveryQuery = supabaseClient
       .from('events')
       .select(`
         *,
-        event_type:event_type_id (*),
+        event_type:event_type_id!inner(*),
         organizer:organizers (*),
         tags:event_tag_relations (
           event_tags (event_tag, category, color)
@@ -313,119 +475,77 @@ export class TagBasedMatchingService {
       .eq('status', 'confirmed')
       .gte('start_time', new Date().toISOString())
       .order('start_time', { ascending: true })
-      .limit(fetchLimit);
+      .limit(discoveryFetchLimit);
 
-    // Apply flexible tag filtering (case-insensitive approximations)
-    if (queryTerms.length > 0) {
-      query = query.in('tags.event_tags.event_tag', queryTerms);
-    }
+    // Apply preferred event type guardrail
+    discoveryQuery = this.applyPreferredEventTypeGuard(discoveryQuery, careerProfile.preferredEventTypes);
 
-    const { data: events, error } = await query;
+    // Execute all queries in parallel
+    const [tagResults, textResults, discoveryResults] = await Promise.all([
+      tagQueryPromise,
+      textQueryPromise,
+      discoveryQuery
+    ]);
 
-    if (error) {
-      console.error('Error fetching recommended events:', error);
-      return [];
-    }
+    if (tagResults.error) console.error('Error fetching tag candidates:', tagResults.error);
+    // Text query error handled inside helper
+    if (discoveryResults.error) console.error('Error fetching discovery candidates:', discoveryResults.error);
 
-    const normalizedEvents = (events || []).map((event: Record<string, unknown>) => {
-      const relations = Array.isArray(event.tags)
-        ? (event.tags as Array<{ event_tags?: { id: string; event_tag: string; color?: string | null; category?: string | null } | null }>)
-        : [];
+    const rawTagEvents = hasTagTerms ? (tagResults.data || []) : [];
+    const rawTextEvents = textResults || [];
+    const rawDiscoveryEvents = discoveryResults.data || [];
 
-      const normalizedTags: EventTag[] = relations.flatMap((relation) => {
-        if (!relation?.event_tags) return [];
-        const tag = relation.event_tags;
-        return [{
-          id: tag.id,
-          name: tag.event_tag,
-          color: tag.color || '#6b7280',
-          category: tag.category || 'General'
-        }];
-      });
+    // Debug logging: Log candidate counts from each source
+    console.info('[TagBasedMatching] Candidate sources', {
+      tag: rawTagEvents.length,
+      text: rawTextEvents.length,
+      discovery: rawDiscoveryEvents.length,
+      totalCandidates: rawTagEvents.length + rawTextEvents.length + rawDiscoveryEvents.length,
+      hasTagTerms,
+      queryTermsCount: limitedQueryTerms.length,
+      textSearchTermsCount: textSearchTerms.length
+    });
 
-      return {
-        ...event,
-        tags: normalizedTags
-      };
-    }) as unknown as SupabaseEventWithDetails[];
+    // Merge and deduplicate by ID with priority: Tag -> Text -> Discovery
+    // Enforce hard cap of 100
+    const eventMap = new Map<string, Record<string, unknown>>();
+    const MAX_CANDIDATES = 100;
 
-    let candidateEvents: SupabaseEventWithDetails[] = normalizedEvents;
-
-    if (candidateEvents.length === 0 && (careerProfile.preferredEventTypes?.length ?? 0) > 0) {
-      // Use case-insensitive SQL filtering to avoid loading thousands of events into memory
-      // Build multiple queries for each preferred type, then combine and deduplicate results
-      const fallbackPromises = careerProfile.preferredEventTypes.map(type => 
-        supabaseClient
-          .from('events')
-          .select(`
-            *,
-            event_type:event_type_id (*),
-            organizer:organizers (*),
-            tags:event_tag_relations (
-              event_tags (event_tag, category, color)
-            )
-          `)
-          .eq('status', 'confirmed')
-          .gte('start_time', new Date().toISOString())
-          .ilike('event_type.name', type) // Exact match (case-insensitive)
-          .order('start_time', { ascending: true })
-          .limit(fetchLimit)
-      );
-      
-      const fallbackResults = await Promise.all(fallbackPromises);
-      
-      // Check for errors in any query result
-      const hasErrors = fallbackResults.some(result => result.error);
-      if (hasErrors) {
-        console.warn('[TagBasedMatching] Some fallback queries failed:', 
-          fallbackResults.filter(r => r.error).map(r => r.error));
-      }
-      
-      // Collect unique events by ID to avoid duplicates
-      const eventMap = new Map<string, Record<string, unknown>>();
-      fallbackResults.forEach(result => {
-        if (result.data) {
-          result.data.forEach((event: Record<string, unknown>) => {
-            const eventId = String(event.id);
-            if (!eventMap.has(eventId)) {
-              eventMap.set(eventId, event);
-            }
-          });
+    const addEvents = (events: Record<string, unknown>[]) => {
+      for (const event of events) {
+        if (eventMap.size >= MAX_CANDIDATES) return;
+        const id = String(event.id);
+        if (!eventMap.has(id)) {
+          eventMap.set(id, event);
         }
-      });
-      
-      const allFallbackEvents = Array.from(eventMap.values());
-
-      if (allFallbackEvents.length > 0) {
-        candidateEvents = allFallbackEvents.map((event: Record<string, unknown>) => {
-          const relations = Array.isArray(event.tags)
-            ? (event.tags as Array<{ event_tags?: { id: string; event_tag: string; color?: string | null; category?: string | null } | null }>)
-            : [];
-
-          const normalizedTags: EventTag[] = relations.flatMap((relation) => {
-            if (!relation?.event_tags) return [];
-            const tag = relation.event_tags;
-            return [{
-              id: tag.id,
-              name: tag.event_tag,
-              color: tag.color || '#6b7280',
-              category: tag.category || 'General'
-            }];
-          });
-
-          return {
-            ...event,
-            tags: normalizedTags
-          };
-        }) as unknown as SupabaseEventWithDetails[];
       }
-    }
+    };
 
-    if (candidateEvents.length === 0) {
+    addEvents(rawTagEvents);
+    addEvents(rawTextEvents);
+    addEvents(rawDiscoveryEvents);
+
+    const allCandidateEvents = Array.from(eventMap.values());
+
+    if (allCandidateEvents.length === 0) {
       return [];
     }
 
-    const scored = candidateEvents.map((eventRecord) => {
+    // Normalize events
+    const normalizedEvents = allCandidateEvents.map(event => this.normalizeSupabaseEvent(event));
+
+    // Sort deterministically before scoring to prevent flickering
+    normalizedEvents.sort((a, b) => {
+      const timeA = new Date(a.start_time as string).getTime();
+      const timeB = new Date(b.start_time as string).getTime();
+      if (timeA !== timeB) return timeA - timeB;
+      return String(a.id).localeCompare(String(b.id));
+    });
+
+    // Cache for match results to avoid re-calculation
+    const matchCache = new Map<string, TagMatchResult>();
+
+    const scored = normalizedEvents.map((eventRecord) => {
       const appEvent = eventTransformer.toApp(eventRecord);
 
       // Attach agenda for scoring if available
@@ -443,8 +563,12 @@ export class TagBasedMatchingService {
         }));
       }
 
+      // Calculate match and cache it
       const match = this.calculateTagSimilarity(appEvent, careerProfile);
-      const impactScore = this.calculateTagBasedCareerImpact(appEvent, careerProfile);
+      matchCache.set(appEvent.id, match);
+
+      // Pass cached match to impact calculator
+      const impactScore = this.calculateTagBasedCareerImpact(appEvent, careerProfile, match);
       const { boost: profileBoost, reasons: profileReasons } = this.calculateProfileBoost(appEvent, careerProfile, match);
       const recencyBoost = this.calculateRecencyBoost(appEvent);
       const popularityBoost = this.calculatePopularityBoost(appEvent);
@@ -491,7 +615,140 @@ export class TagBasedMatchingService {
       })
       .slice(0, limit);
 
+    // Debug logging: Log final sorted results
+    console.info('[TagBasedMatching] Final recommendations', {
+      totalCandidates: scored.length,
+      returnedCount: sorted.length,
+      topScores: sorted.slice(0, 5).map(r => ({
+        eventId: r.event.id,
+        totalScore: Math.round(r.totalScore),
+        matchScore: Math.round(r.match.score),
+        matchedTags: r.match.matchedTags.slice(0, 3),
+        hasTextMatch: r.reasons.some(reason => reason.toLowerCase().includes('agenda') || reason.toLowerCase().includes('text'))
+      }))
+    });
+
     return sorted;
+  }
+
+  /**
+   * Optimized discovery query when no tags are present
+   */
+  private static async getDiscoveryEventsOnly(
+    careerProfile: CareerProfile,
+    supabaseClient: SupabaseClientType,
+    limit: number
+  ): Promise<TagRecommendationResult[]> {
+    const fetchLimit = Math.min(limit * 3, 100);
+    const textTerms = this.extractHighValueTerms(careerProfile);
+    
+    let query = supabaseClient
+      .from('events')
+      .select(`
+        *,
+        event_type:event_type_id!inner(*),
+        organizer:organizers (*),
+        tags:event_tag_relations (
+          event_tags (event_tag, category, color)
+        ),
+        event_agenda (
+          id, title, description, start_time, end_time, agenda_type
+        )
+      `)
+      .eq('status', 'confirmed')
+      .gte('start_time', new Date().toISOString())
+      .order('start_time', { ascending: true })
+      .limit(fetchLimit);
+
+    // Apply preferred event type guardrail
+    query = this.applyPreferredEventTypeGuard(query, careerProfile.preferredEventTypes);
+
+    const [discoveryResult, textResults] = await Promise.all([
+      query,
+      this.getTextSearchCandidates(careerProfile, supabaseClient, textTerms, 30)
+    ]);
+    
+    if (discoveryResult.error) {
+      console.error('Error fetching discovery events:', discoveryResult.error);
+      return [];
+    }
+
+    const rawDiscoveryEvents = discoveryResult.data || [];
+    const rawTextEvents = textResults || [];
+    
+    // Debug logging: Log candidate counts from discovery-only path
+    console.info('[TagBasedMatching] Discovery-only candidate sources', {
+      text: rawTextEvents.length,
+      discovery: rawDiscoveryEvents.length,
+      totalCandidates: rawTextEvents.length + rawDiscoveryEvents.length,
+      textSearchTermsCount: textTerms.length
+    });
+    
+    const candidateMap = new Map<string, Record<string, unknown>>();
+    const HARD_CAP = 100;
+
+    const addEvents = (events: Record<string, unknown>[]) => {
+      for (const event of events) {
+        const id = String(event.id);
+        if (!candidateMap.has(id)) {
+          candidateMap.set(id, event);
+          if (candidateMap.size >= HARD_CAP) return true;
+        }
+      }
+      return false;
+    };
+
+    if (rawTextEvents.length > 0) {
+      addEvents(rawTextEvents);
+    }
+    if (candidateMap.size < HARD_CAP) {
+      addEvents(rawDiscoveryEvents);
+    }
+
+    const normalizedEvents = Array.from(candidateMap.values()).map(event => this.normalizeSupabaseEvent(event));
+
+    const scored = normalizedEvents.map((eventRecord) => {
+        const appEvent = eventTransformer.toApp(eventRecord);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const agendaData = (eventRecord as any).event_agenda;
+        if (Array.isArray(agendaData)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          appEvent.agenda = agendaData.map((item: any) => ({
+            id: item.id, title: item.title, description: item.description,
+            startTime: item.start_time, endTime: item.end_time, type: item.agenda_type
+          }));
+        }
+  
+        const match = this.calculateTagSimilarity(appEvent, careerProfile);
+        const impactScore = this.calculateTagBasedCareerImpact(appEvent, careerProfile, match);
+        const { boost: profileBoost, reasons: profileReasons } = this.calculateProfileBoost(appEvent, careerProfile, match);
+        const recencyBoost = this.calculateRecencyBoost(appEvent);
+        const popularityBoost = this.calculatePopularityBoost(appEvent);
+  
+        const totalScore = match.score * 0.6 + impactScore * 0.25 + profileBoost + recencyBoost + popularityBoost;
+        const reasons = [match.explanation, ...profileReasons.filter(Boolean)].filter(Boolean);
+  
+        return {
+          event: eventRecord, match, impactScore, profileBoost, recencyBoost, popularityBoost, totalScore, reasons
+        } as TagRecommendationResult;
+      });
+
+      const sorted = scored
+        .sort((a, b) => b.totalScore - a.totalScore)
+        .slice(0, limit);
+      
+      // Debug logging: Log final discovery-only results
+      console.info('[TagBasedMatching] Discovery-only final recommendations', {
+        totalCandidates: scored.length,
+        returnedCount: sorted.length,
+        topScores: sorted.slice(0, 5).map(r => ({
+          eventId: r.event.id,
+          totalScore: Math.round(r.totalScore),
+          matchScore: Math.round(r.match.score)
+        }))
+      });
+      
+      return sorted;
   }
 
   /**
@@ -499,9 +756,10 @@ export class TagBasedMatchingService {
    */
   static calculateTagBasedCareerImpact(
     event: Event,
-    careerProfile: CareerProfile
+    careerProfile: CareerProfile,
+    preCalculatedMatch?: TagMatchResult
   ): number {
-    const matchResult = this.calculateTagSimilarity(event, careerProfile);
+    const matchResult = preCalculatedMatch || this.calculateTagSimilarity(event, careerProfile);
     
     // Convert similarity score to career impact score (0-100)
     // Higher similarity = higher career impact potential
@@ -522,41 +780,383 @@ export class TagBasedMatchingService {
   }
 
   private static buildCandidateTerms(careerProfile: CareerProfile): string[] {
+    this.initializeSimilarities();
     const terms = new Set<string>();
+    const processedTerms = new Set<string>(); // To prevent infinite recursion
 
-    const addTerm = (term: string) => {
+    // Queue for BFS traversal of similarity graph
+    const queue: string[] = [];
+
+    const addToQueue = (term: string) => {
       const trimmed = term.trim();
       if (!trimmed) return;
       const lower = trimmed.toLowerCase();
-      terms.add(trimmed);
-      terms.add(lower);
-      terms.add(this.toTitleCase(lower));
-
-      const similar = this.TAG_SIMILARITIES[lower];
-      if (similar) {
-        similar.forEach(addTerm);
+      
+      if (!processedTerms.has(lower)) {
+        processedTerms.add(lower);
+        queue.push(lower);
+        
+        // Add variations to the final terms set
+        terms.add(trimmed);
+        terms.add(lower);
+        terms.add(this.toTitleCase(lower));
       }
     };
 
-    const seedTerms = [
+    // 1. Seed the queue with user profile terms
+    [
       ...(careerProfile.primarySkills || []),
       ...(careerProfile.skillsToLearn || []),
       ...(careerProfile.interests || [])
-    ];
+    ].forEach(addToQueue);
 
-    seedTerms.forEach(addTerm);
+    (careerProfile.preferredEventTypes || []).forEach(addToQueue);
+    (careerProfile.careerGoals || []).forEach(goal => addToQueue(goal.replace(/[-_]/g, ' ')));
+    (careerProfile.learningStyle || []).forEach(style => addToQueue(style.replace(/[-_]/g, ' ')));
+    (careerProfile.networkingGoals || []).forEach(goal => addToQueue(goal.replace(/[-_]/g, ' ')));
 
-    (careerProfile.preferredEventTypes || []).forEach(addTerm);
-    (careerProfile.careerGoals || []).forEach(goal => addTerm(goal.replace(/[-_]/g, ' ')));
-    (careerProfile.learningStyle || []).forEach(style => addTerm(style.replace(/[-_]/g, ' ')));
-    (careerProfile.networkingGoals || []).forEach(goal => addTerm(goal.replace(/[-_]/g, ' ')));
-
-    // Add role keywords for matching
     if (careerProfile.currentRole) {
-      getRoleKeywords(careerProfile.currentRole).forEach(addTerm);
+      getRoleKeywords(careerProfile.currentRole).forEach(addToQueue);
+    }
+
+    // 2. Process queue to find transitive similarities
+    // Limit depth/iterations to prevent performance issues if graph is huge (though it's small now)
+    let iterations = 0;
+    const MAX_ITERATIONS = 1000; 
+
+    while (queue.length > 0 && iterations < MAX_ITERATIONS) {
+      const currentTerm = queue.shift()!;
+      iterations++;
+
+      const similarSet = this.TAG_SIMILARITIES!.get(currentTerm);
+      if (similarSet) {
+        similarSet.forEach(sim => {
+          // If we haven't processed this similar term yet, add it to queue
+          if (!processedTerms.has(sim)) {
+             addToQueue(sim);
+          }
+        });
+      }
     }
 
     return Array.from(terms);
+  }
+
+  /**
+   * Extract high-value terms for text search query
+   * Selection: Role + Top 2 Primary Skills + fallback to SkillsToLearn
+   * Limit: 5 terms, min 3 chars
+   */
+  private static extractHighValueTerms(careerProfile: CareerProfile): string[] {
+    const MAX_TERMS = 5;
+    const terms: string[] = [];
+    const seen = new Set<string>();
+
+    const addIfValid = (term?: string) => {
+      if (!term || terms.length >= MAX_TERMS) return;
+      const trimmed = term.trim();
+      if (trimmed.length < 3) return;
+      const lower = trimmed.toLowerCase();
+      if (seen.has(lower)) return;
+      seen.add(lower);
+      terms.push(trimmed);
+    };
+
+    addIfValid(careerProfile.currentRole);
+    (careerProfile.primarySkills || []).slice(0, 2).forEach(addIfValid);
+
+    if (terms.length < MAX_TERMS) {
+      (careerProfile.skillsToLearn || []).forEach(skill => addIfValid(skill));
+    }
+
+    return terms.slice(0, MAX_TERMS);
+  }
+
+  /**
+   * Execute text-based search query
+   */
+  private static async getTextSearchCandidates(
+    careerProfile: CareerProfile,
+    supabaseClient: SupabaseClientType,
+    terms: string[],
+    limit: number
+  ): Promise<Record<string, unknown>[]> {
+    if (terms.length === 0) return [];
+
+    // Expand terms with synonyms before building filters
+    const expandedTerms = this.expandSearchTermsWithSynonyms(terms);
+
+    const filters = this.buildTextSearchFilters(expandedTerms);
+
+    if (filters.length === 0) {
+      console.warn('[TagBasedMatching] No valid text search terms after sanitization', { userId: careerProfile.userId });
+      return [];
+    }
+
+    const orClauses = filters.join(',');
+
+    // Fetch events matching title/description
+    const { data, error } = await supabaseClient
+      .from('events')
+      .select(`
+        *,
+        event_type:event_type_id!inner(*),
+        organizer:organizers (*),
+        tags:event_tag_relations (
+          event_tags (event_tag, category, color)
+        ),
+        event_agenda (
+          id, title, description, start_time, end_time, agenda_type
+        )
+      `)
+      .eq('status', 'confirmed')
+      .gte('start_time', new Date().toISOString())
+      .or(orClauses)
+      .order('start_time', { ascending: true })
+      .limit(limit * 2); // Fetch more to account for agenda filtering
+
+    if (error) {
+      console.error('Error fetching text search candidates:', error);
+      return [];
+    }
+
+    if (!data || data.length === 0) return [];
+
+    // Also search for events with matching agenda content
+    // Note: Supabase doesn't support direct filtering on joined tables in .or(),
+    // so we filter in memory after fetching agenda items
+    const agendaMatches = await this.findAgendaMatches(expandedTerms, supabaseClient, limit);
+
+    // Combine results, prioritizing agenda matches
+    const eventMap = new Map<string, Record<string, unknown> & { _matchLocation?: 'agenda' | 'description' | 'title' }>();
+    
+    // Add agenda matches first (higher priority)
+    agendaMatches.forEach(event => {
+      const id = String(event.id);
+      if (!eventMap.has(id)) {
+        eventMap.set(id, { ...event, _matchLocation: 'agenda' });
+      }
+    });
+
+    // Add title/description matches
+    (data || []).forEach(event => {
+      const id = String(event.id);
+      if (!eventMap.has(id)) {
+        // Determine match location
+        const title = String(event.title || '').toLowerCase();
+        const description = String(event.description || '').toLowerCase();
+        const matchedTerm = expandedTerms.find(term => 
+          title.includes(term.toLowerCase()) || description.includes(term.toLowerCase())
+        );
+        const matchLocation = title.includes(matchedTerm?.toLowerCase() || '') ? 'title' : 'description';
+        eventMap.set(id, { ...event, _matchLocation: matchLocation });
+      }
+    });
+
+    // Sort: agenda matches first, then description, then title-only
+    const sorted = Array.from(eventMap.values()).sort((a, b) => {
+      const priority = { agenda: 3, description: 2, title: 1 };
+      const aPriority = priority[a._matchLocation || 'title'] || 0;
+      const bPriority = priority[b._matchLocation || 'title'] || 0;
+      return bPriority - aPriority;
+    });
+
+    return sorted.slice(0, limit);
+  }
+
+  /**
+   * Expand search terms with synonyms from TAG_SIMILARITIES
+   */
+  private static expandSearchTermsWithSynonyms(terms: string[]): string[] {
+    this.initializeSimilarities();
+    if (!this.TAG_SIMILARITIES) return terms;
+
+    const expanded = new Set<string>();
+    
+    terms.forEach(term => {
+      const normalized = term.toLowerCase();
+      expanded.add(term); // Add original term
+      
+      // Add synonyms
+      const synonyms = this.TAG_SIMILARITIES!.get(normalized);
+      if (synonyms) {
+        synonyms.forEach(syn => expanded.add(syn));
+      }
+      
+      // Check if term is a synonym of another canonical term
+      for (const [canonical, synSet] of this.TAG_SIMILARITIES!.entries()) {
+        if (synSet.has(normalized)) {
+          expanded.add(canonical);
+        }
+      }
+    });
+
+    return Array.from(expanded);
+  }
+
+  /**
+   * Find events with matching agenda content
+   */
+  private static async findAgendaMatches(
+    terms: string[],
+    supabaseClient: SupabaseClientType,
+    limit: number
+  ): Promise<Record<string, unknown>[]> {
+    if (terms.length === 0) return [];
+
+    // Build filters for agenda search
+    const agendaFilters: string[] = [];
+    terms.forEach(term => {
+      const sanitized = this.sanitizeTextSearchTerm(term);
+      if (!sanitized) return;
+      const pattern = `%${sanitized}%`;
+      agendaFilters.push(`title.ilike.${pattern}`, `description.ilike.${pattern}`);
+    });
+
+    if (agendaFilters.length === 0) return [];
+
+    // Query agenda items that match
+    const { data: matchingAgenda, error: agendaError } = await supabaseClient
+      .from('event_agenda')
+      .select('event_id')
+      .or(agendaFilters.join(','))
+      .limit(limit * 2);
+
+    if (agendaError || !matchingAgenda || matchingAgenda.length === 0) {
+      return [];
+    }
+
+    // Get unique event IDs
+    const eventIds = [...new Set(matchingAgenda.map(item => item.event_id))].slice(0, limit);
+
+    // Fetch full event data for matching events
+    const { data: events, error: eventsError } = await supabaseClient
+      .from('events')
+      .select(`
+        *,
+        event_type:event_type_id!inner(*),
+        organizer:organizers (*),
+        tags:event_tag_relations (
+          event_tags (event_tag, category, color)
+        ),
+        event_agenda (
+          id, title, description, start_time, end_time, agenda_type
+        )
+      `)
+      .eq('status', 'confirmed')
+      .gte('start_time', new Date().toISOString())
+      .in('id', eventIds)
+      .order('start_time', { ascending: true })
+      .limit(limit);
+
+    if (eventsError) {
+      console.error('Error fetching agenda-matched events:', eventsError);
+      return [];
+    }
+
+    return events || [];
+  }
+
+  private static buildTextSearchFilters(terms: string[]): string[] {
+    const clauses: string[] = [];
+    terms.forEach(term => {
+      const sanitized = this.sanitizeTextSearchTerm(term);
+      if (!sanitized) return;
+      const pattern = `%${sanitized}%`;
+      clauses.push(`title.ilike.${pattern}`, `description.ilike.${pattern}`);
+    });
+    return clauses;
+  }
+
+  private static sanitizeTextSearchTerm(term: string): string | null {
+    const cleaned = term
+      .trim()
+      .toLowerCase()
+      .replace(/[,"]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (cleaned.length < 3) {
+      return null;
+    }
+
+    return cleaned.replace(/[%_]/g, match => `\\${match}`);
+  }
+
+  private static normalizeQueryTerms(terms: string[]): string[] {
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+    terms.forEach(term => {
+      const normalizedTerm = term.trim().toLowerCase();
+      if (!normalizedTerm || seen.has(normalizedTerm)) {
+        return;
+      }
+      seen.add(normalizedTerm);
+      normalized.push(normalizedTerm);
+    });
+    return normalized;
+  }
+
+  private static applyPreferredEventTypeGuard<T>(
+    query: T,
+    preferredTypes?: string[]
+  ): T {
+    if (!preferredTypes || preferredTypes.length === 0) {
+      return query;
+    }
+
+    const filters = preferredTypes
+      .map(type => this.buildEventTypeFilter(type))
+      .filter((filter): filter is string => Boolean(filter));
+
+    if (filters.length === 0) {
+      return query;
+    }
+
+    // Type-safe check for Supabase query builder
+    const queryWithOr = query as { or?: (filter: string, options?: { foreignTable?: string }) => T };
+    if (typeof queryWithOr.or === 'function') {
+      return queryWithOr.or(filters.join(','), { foreignTable: 'event_type' });
+    }
+
+    return query;
+  }
+
+  private static buildEventTypeFilter(rawType: string | undefined | null): string | null {
+    if (!rawType) return null;
+    const cleaned = rawType
+      .replace(/[,*"]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!cleaned) return null;
+
+    const wildcard = cleaned
+      .replace(/\*/g, '')
+      .replace(/[%_]/g, match => `\\${match}`);
+    return `name.ilike.*${wildcard}*`;
+  }
+
+  private static normalizeSupabaseEvent(event: Record<string, unknown>): SupabaseEventWithDetails {
+    const relations = Array.isArray(event.tags)
+      ? (event.tags as Array<{ event_tags?: { id: string; event_tag: string; color?: string | null; category?: string | null } | null }>)
+      : [];
+
+    const normalizedTags: EventTag[] = relations.flatMap((relation) => {
+      if (!relation?.event_tags) return [];
+      const tag = relation.event_tags;
+      return [{
+        id: tag.id,
+        name: tag.event_tag,
+        color: tag.color || '#6b7280',
+        category: tag.category || 'General'
+      }];
+    });
+
+    return {
+      ...event,
+      tags: normalizedTags
+    } as unknown as SupabaseEventWithDetails;
   }
 
   public static calculateProfileBoost(

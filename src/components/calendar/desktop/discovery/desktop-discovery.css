@@ -21,8 +21,8 @@
 
 /* Desktop Grid Layout - V2 Bento */
 .discovery-grid-v2 {
-  @apply space-y-12 w-full;
-  /* Increased spacing to compensate for removed container padding */
+  @apply space-y-8 w-full;
+  /* Consistent 32px spacing between sections aligned to 8pt grid */
 }
 
 /* Legacy grid styles - kept for backwards compatibility */
@@ -35,7 +35,7 @@
 }
 
 .discovery-secondary {
-  @apply lg:col-span-1 space-y-6;
+  @apply lg:col-span-1 space-y-8;
 }
 
 .discovery-section-wrapper {

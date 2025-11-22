@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, useState } from 'react';
-import { ClockIcon, MapPinIcon, TagIcon, CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
+import { ClockIcon, MapPinIcon, CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
 // 1. UPDATE IMPORTS: Use the new, specific type names.
 import { Event, EventType } from '@/types';
@@ -35,7 +35,7 @@ const EventInfo: FC<EventInfoProps> = ({ event, category: _category }) => {
                 <div className="flex items-center space-x-3 text-sm">
                     <ClockIcon className={`w-5 h-5 ${timelineTheme.textMuted}`} />
                     {/* 4. UPDATE FORMATTING: Use the new utility for consistent date/time display. */}
-                    <span className={timelineTheme.textSecondary}>{formatDateTime(event.startTime)}</span>
+                    <span className={timelineTheme.textSecondary}>{formatDateTime(event.startTime, event.timezone)}</span>
                 </div>
                 <div className="flex items-center space-x-3 text-sm">
                     <MapPinIcon className={`w-5 h-5 ${timelineTheme.textMuted}`} />
@@ -54,7 +54,6 @@ const EventInfo: FC<EventInfoProps> = ({ event, category: _category }) => {
                             color: getColorWithFullOpacity(tag.color, isDark) 
                         }}
                     >
-                        <TagIcon className="w-3 h-3" />
                         <span>{tag.name}</span>
                     </div>
                 ))}

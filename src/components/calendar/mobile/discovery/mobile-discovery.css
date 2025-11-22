@@ -16,9 +16,9 @@
 .mobile-discovery-stack {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  @apply gap-6; /* 24px - 8pt multiple */
   width: 100%;
-  padding: 1rem;
+  padding: 1rem; /* 16px - 8pt multiple */
   padding-top: 5rem; /* Add space for fixed navbar */
 }
 

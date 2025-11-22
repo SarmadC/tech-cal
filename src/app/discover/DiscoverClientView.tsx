@@ -75,10 +75,12 @@ export default function DiscoverClientView({
     // Calendar state for CalendarProvider
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const [isClosing, setIsClosing] = useState(false);
     const currentDate = new Date();
 
     // Navigation handlers
     const handleEventSelect = useCallback((event: Event) => {
+        setIsClosing(false);
         setSelectedEvent(event);
     }, []);
 
@@ -89,11 +91,17 @@ export default function DiscoverClientView({
     }, [nav]);
 
     const handleEventSelectForContext = useCallback((event: Event) => {
+        setIsClosing(false);
         setSelectedEvent(event);
     }, []);
 
     const handleCloseEventDetail = useCallback(() => {
-        setSelectedEvent(null);
+        setIsClosing(true);
+        // Wait for animation to complete before removing from DOM
+        setTimeout(() => {
+            setSelectedEvent(null);
+            setIsClosing(false);
+        }, 300); // Match the animation duration
     }, []);
 
     // Optional: surface hint about USD-only budget gating (once per session)
@@ -241,11 +249,17 @@ export default function DiscoverClientView({
                                 />
                             ) : (
                                 <div 
-                                    className="fixed inset-0 z-40"
+                                    className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
+                                        isClosing ? 'opacity-0' : 'opacity-100'
+                                    }`}
                                     onClick={handleCloseEventDetail}
                                 >
                                     <div 
-                                        className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
+                                        className={`fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform duration-300 ease-out ${
+                                            isClosing 
+                                                ? 'animate-out slide-out-to-right' 
+                                                : 'animate-in slide-in-from-right'
+                                        }`}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <EventDetailPanelDynamic 

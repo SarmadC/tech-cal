@@ -59,16 +59,34 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Configure external image domains
+  // Configure external image domains - migrated to remotePatterns for Next.js 16
   images: {
-    domains: [
-      'mddgtexrnnlctttbcpsy.supabase.co', // Your Supabase storage domain
-      'upload.wikimedia.org', // Wikipedia SVG logos (transparent)
-      'cdn.freebiesupply.com', // High-quality transparent logos
-      'logo.clearbit.com', // Clearbit logo API (fallback)
-      'lh3.googleusercontent.com', // Google profile images
-      'avatars.githubusercontent.com', // GitHub profile images
-        ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'mddgtexrnnlctttbcpsy.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.freebiesupply.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'logo.clearbit.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+    ],
   },
   experimental: {
     // Optimize package imports to avoid compiling entire libraries

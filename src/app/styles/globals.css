@@ -236,8 +236,6 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
   .glass-card:hover {
     transform: translateY(-2px);
     background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 24px 72px -12px rgba(0, 0, 0, 0.9),
-                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
     border-color: rgba(255, 255, 255, 0.15);
   }
 
@@ -254,8 +252,6 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
   .light .glass-card:hover {
     background: rgba(255, 255, 255, 0.8);
     border-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 24px 72px -12px rgba(0, 0, 0, 0.2),
-                0 0 0 1px rgba(255, 255, 255, 0.6) inset;
   }
 
   /* Gradient border effect for premium cards */

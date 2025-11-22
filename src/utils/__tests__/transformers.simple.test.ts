@@ -29,6 +29,7 @@ describe('transformers', () => {
           description: 'Test description',
           start_time: '2024-01-01T10:00:00Z',
           end_time: '2024-01-01T11:00:00Z',
+          timezone: 'America/New_York',
           location: 'Test location',
           status: 'confirmed',
           source_url: 'https://example.com',
@@ -51,6 +52,7 @@ describe('transformers', () => {
           id: '1',
           title: 'Test Event',
           startTime: '2024-01-01T10:00:00Z',
+          timezone: 'America/New_York',
           eventTypeId: 'type1',
           organizer: 'Test Organizer',
         });
@@ -63,6 +65,7 @@ describe('transformers', () => {
           description: null,
           start_time: '2024-01-01T10:00:00Z',
           end_time: null,
+          timezone: null,
           location: null,
           status: 'confirmed',
           source_url: null,
@@ -85,6 +88,7 @@ describe('transformers', () => {
         expect(result.location).toBe('Online');
         expect(result.status).toBe('confirmed');
         expect(result.sourceUrl).toBe('#');
+        expect(result.timezone).toBeNull();
       });
     });
 
