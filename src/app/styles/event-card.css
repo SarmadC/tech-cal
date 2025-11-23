@@ -325,15 +325,15 @@
 /* Main glassmorphism for event preview */
 .event-preview-glass {
     /* Fallback for browsers without backdrop-filter support */
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
 /* Glass effect for supported browsers */
 @supports (backdrop-filter: blur(20px)) {
     .event-preview-glass {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.75);
         backdrop-filter: blur(20px) saturate(120%);
         -webkit-backdrop-filter: blur(20px) saturate(120%);
     }
@@ -341,14 +341,14 @@
 
 .dark .event-preview-glass {
     /* Fallback for browsers without backdrop-filter support */
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
 }
 
 @supports (backdrop-filter: blur(20px)) {
     .dark .event-preview-glass {
-        background: rgba(0, 0, 0, 0.2);
+        background: rgba(0, 0, 0, 0.65);
         backdrop-filter: blur(20px) saturate(120%);
         -webkit-backdrop-filter: blur(20px) saturate(120%);
     }

@@ -207,16 +207,23 @@ const EventPreviewCard: FC<EventPreviewCardProps> = ({
                         </span>
                         {(event.tags && event.tags.length > 0) || isPinned ? (
                             <div className="flex items-center flex-wrap gap-1.5">
-                                {/* Show ALL tags in preview - this is the key difference from card */}
+                                {/* Show first 3 tags in preview */}
                                 {event.tags && event.tags.length > 0 && (
-                                    event.tags.map((tag, index) => (
-                                        <span
-                                            key={index}
-                                            className="px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 rounded-md bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm border border-white/20 dark:border-white/10"
-                                        >
-                                            {tag.name}
-                                        </span>
-                                    ))
+                                    <>
+                                        {event.tags.slice(0, 3).map((tag, index) => (
+                                            <span
+                                                key={index}
+                                                className="px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 rounded-md bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm border border-white/20 dark:border-white/10"
+                                            >
+                                                {tag.name}
+                                            </span>
+                                        ))}
+                                        {event.tags.length > 3 && (
+                                            <span className="px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 rounded-md bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm border border-white/20 dark:border-white/10">
+                                                +{event.tags.length - 3} more
+                                            </span>
+                                        )}
+                                    </>
                                 )}
                                 {isPinned && (
                                     <span className="px-2.5 py-1 text-xs font-medium bg-white/60 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 rounded-md backdrop-blur-sm border border-white/20 dark:border-white/10 flex items-center gap-1.5">

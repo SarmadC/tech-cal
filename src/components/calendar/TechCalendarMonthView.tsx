@@ -12,7 +12,7 @@ import '@/app/styles/event-card.css';
 import '@/app/styles/monthly-view.css';
 
 const MAX_VISIBLE_EVENTS_PER_DAY = 3;
-const MAX_RIBBON_ROWS = 10;
+const MAX_RIBBON_ROWS = 3; // Limit to 3 rows to match max visible events
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const DAY_HEADER_HEIGHT = 24;
 const DAY_HEADER_GAP = 8;
@@ -1037,13 +1037,271 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
             // Segments that cannot be placed within MAX_RIBBON_ROWS are redirected to overflow.
         });
 
+            // CRITICAL: Post-placement collision detection and resolution
+            // Check for any segments that overlap in the same grid position (same row, overlapping columns)
+            const collisionResolvedIds = new Set<string>();
+            const processedSegIds = new Set<string>();
+            
+            // For each segment, check if it overlaps with any other segment in the same row
+            segments.forEach((seg, segIndex) => {
+                if (processedSegIds.has(seg.id) || collisionResolvedIds.has(seg.id)) return;
+                
+                const segStart = seg.startIndex;
+                const segEnd = seg.startIndex + seg.span - 1;
+                
+                // Find all other segments that overlap with this one in the same row
+                const overlappingSegs: WeekSegment[] = [seg];
+                
+                segments.forEach((otherSeg, otherIndex) => {
+                    if (segIndex === otherIndex) return;
+                    if (processedSegIds.has(otherSeg.id) || collisionResolvedIds.has(otherSeg.id)) return;
+                    if (seg.row !== otherSeg.row) return; // Different rows, no collision
+                    
+                    const otherStart = otherSeg.startIndex;
+                    const otherEnd = otherSeg.startIndex + otherSeg.span - 1;
+                    
+                    // Check if column ranges overlap
+                    const overlaps = !(segEnd < otherStart || segStart > otherEnd);
+                    
+                    if (overlaps) {
+                        overlappingSegs.push(otherSeg);
+                    }
+                });
+                
+                // If we found overlaps, resolve them
+                if (overlappingSegs.length > 1) {
+                    // Sort by priority:
+                    // 1. Globally visible multi-day events (highest priority)
+                    // 2. Longer spans (more days)
+                    // 3. Earlier start index
+                    overlappingSegs.sort((a, b) => {
+                        const aIsGlobal = 'originalEventId' in a.cardEvent && a.cardEvent.originalEventId && 
+                                         globallyVisibleMultiDayEvents.has(a.cardEvent.originalEventId);
+                        const bIsGlobal = 'originalEventId' in b.cardEvent && b.cardEvent.originalEventId && 
+                                         globallyVisibleMultiDayEvents.has(b.cardEvent.originalEventId);
+                        
+                        if (aIsGlobal !== bIsGlobal) return aIsGlobal ? -1 : 1;
+                        
+                        // If both are global or both are not, prefer longer spans
+                        const spanDiff = b.span - a.span;
+                        if (spanDiff !== 0) return spanDiff;
+                        
+                        // Finally, prefer earlier start
+                        return a.startIndex - b.startIndex;
+                    });
+                    
+                    // Keep the first (highest priority), mark the rest for removal
+                    for (let i = 1; i < overlappingSegs.length; i++) {
+                        collisionResolvedIds.add(overlappingSegs[i].id);
+                        processedSegIds.add(overlappingSegs[i].id);
+                    }
+                }
+                
+                processedSegIds.add(seg.id);
+            });
+            
+            // Remove colliding segments from the segments array and add to overflow
+            if (collisionResolvedIds.size > 0) {
+                for (let i = segments.length - 1; i >= 0; i--) {
+                    if (collisionResolvedIds.has(segments[i].id)) {
+                        const seg = segments[i];
+                        
+                        // Clear occupancy for removed segment
+                        for (let offset = 0; offset < seg.span; offset++) {
+                            const dayIndex = seg.startIndex + offset;
+                            if (dayIndex < 7) {
+                                occupancy[seg.row][dayIndex] = false;
+                            }
+                        }
+                        
+                        // Add removed segment to overflow for each day it spans
+                        for (let offset = 0; offset < seg.span; offset++) {
+                            const dayIndex = seg.startIndex + offset;
+                            if (dayIndex >= 7) continue;
+                            const day = weekDays[dayIndex];
+                            const dateKey = day.toISOString().split('T')[0];
+                            const overflowList = overflowMultiDayMap.get(dateKey) ?? [];
+                            
+                            // Check if this is a multi-day event instance
+                            if ('isInstance' in seg.cardEvent && seg.cardEvent.isInstance && 
+                                'originalEventId' in seg.cardEvent && seg.cardEvent.originalEventId) {
+                                const cardEventInstance = seg.cardEvent as MultiDayEventInstance;
+                                const expectedDayNumber = cardEventInstance.dayInfo?.currentDay ?? (offset + 1);
+                                const dayEvents = processedEventsByDate.get(dateKey) ?? [];
+                                const targetInstance = dayEvents.find((evt) => {
+                                    if (!('isInstance' in evt) || !evt.isInstance) return false;
+                                    const instance = evt as MultiDayEventInstance;
+                                    if (!instance.originalEventId || instance.originalEventId !== cardEventInstance.originalEventId) return false;
+                                    return instance.dayInfo?.currentDay === expectedDayNumber;
+                                }) as MultiDayEventInstance | undefined;
+                                
+                                if (targetInstance && !overflowList.some(e => 
+                                    ('isInstance' in e && e.isInstance && 'originalEventId' in e && 
+                                     e.originalEventId === targetInstance.originalEventId && 
+                                     'instanceDate' in e && e.instanceDate === targetInstance.instanceDate)
+                                )) {
+                                    overflowList.push(targetInstance);
+                                    overflowMultiDayMap.set(dateKey, overflowList);
+                                }
+                        } else {
+                                // Single-day event - add the cardEvent itself (cast to MultiDayEventInstance for type compatibility)
+                                const cardEventAsInstance = seg.cardEvent as unknown as MultiDayEventInstance;
+                                if (!overflowList.some(e => e.id === seg.cardEvent.id)) {
+                                    overflowList.push(cardEventAsInstance);
+                                    overflowMultiDayMap.set(dateKey, overflowList);
+                                }
+                            }
+                        }
+                        
+                        segments.splice(i, 1);
+                    }
+                }
+            }
+
             rowsUsed = Math.min(rowsUsed, MAX_RIBBON_ROWS);
 
             const ribbonHeight =
                 rowsUsed > 0 ? rowsUsed * RIBBON_HEIGHT + (rowsUsed - 1) * RIBBON_GAP : 0;
 
+            const daysData: DayData[] = weekDays.map((day, dayIndexInWeek) => {
+                const dateKey = day.toISOString().split('T')[0];
+                const allEvents = processedEventsByDate.get(dateKey) ?? [];
+
+                // Collect all original event IDs that are being rendered as ribbon segments
+                const ribbonEventIds = new Set<string>();
+                segments.forEach(segment => {
+                    if ('originalEventId' in segment.cardEvent && segment.cardEvent.originalEventId) {
+                        ribbonEventIds.add(segment.cardEvent.originalEventId);
+                    }
+                });
+
+                // Exclude events with dayInfo (multi-day instances) and events already in ribbons
+                // Also exclude globally visible multi-day events (they must be in ribbons)
+                const inlineCandidates = allEvents.filter(
+                    (event) => {
+                        // Exclude multi-day day instances (have dayInfo property)
+                        if ('dayInfo' in event && event.dayInfo) {
+                            return false;
+                        }
+                        // Exclude events that are already rendered as ribbon segments
+                        // Check both the event's own ID and its originalEventId (if it's a segment instance)
+                        if (ribbonEventIds.has(event.id)) {
+                            return false;
+                        }
+                        if ('originalEventId' in event && event.originalEventId && ribbonEventIds.has(event.originalEventId)) {
+                            return false;
+                        }
+                        // Exclude globally visible multi-day events - they must be in ribbons
+                        if ('originalEventId' in event && event.originalEventId && globallyVisibleMultiDayEvents.has(event.originalEventId)) {
+                            return false;
+                        }
+                        if (globallyVisibleMultiDayEvents.has(event.id)) {
+                            return false;
+                        }
+                        return true;
+                    }
+                );
+
+                // Count ribbon segments that appear on this day
+                const ribbonSegmentsOnDay = segments.filter(segment =>
+                    segment.startIndex <= dayIndexInWeek && dayIndexInWeek < segment.startIndex + segment.span
+                );
+                // Count unique ribbon rows (multiple segments on same row = 1 visual event)
+                const uniqueRibbonRows = new Set(ribbonSegmentsOnDay.map(s => s.row)).size;
+
+                // Calculate available inline slots based on ribbon count
+                const availableInlineSlots = Math.max(0, MAX_VISIBLE_EVENTS_PER_DAY - uniqueRibbonRows);
+
+                // Slice inline events to fit available slots
+                const inlineEventsBase = inlineCandidates.slice(0, availableInlineSlots);
+                const overflowEventsBase = inlineCandidates.slice(availableInlineSlots);
+
+                const multiDayOverflow = overflowMultiDayMap.get(dateKey) ?? [];
+                // Filter out multi-day events that are already rendered in ribbons
+                // Also exclude globally visible multi-day events (cross-week unification)
+                const filteredMultiDayOverflow = multiDayOverflow.filter((event) => {
+                    // Exclude events that are already rendered as ribbon segments
+                    if ('originalEventId' in event && event.originalEventId) {
+                        if (ribbonEventIds.has(event.originalEventId) ||
+                            globallyVisibleMultiDayEvents.has(event.originalEventId)) {
+                            return false;
+                        }
+                    }
+                    // Also check the event's own ID in case it's the original event
+                    if (ribbonEventIds.has(event.id)) {
+                        return false;
+                    }
+                    return true;
+                });
+
+                // IMPORTANT: Multi-day events should NEVER be shown as inline events
+                // They should only appear as ribbons or in overflow popover
+                // Only single-day events can be inline
+                const inlineEvents = inlineEventsBase;
+
+                // If there are too many ribbons, hide the excess ones
+                let hiddenRibbonEvents: (Event | MultiDayEventInstance)[] = [];
+                if (uniqueRibbonRows > MAX_VISIBLE_EVENTS_PER_DAY) {
+                    // We have more ribbons than allowed, hide the excess
+                    // Note: Multi-day events are prioritized in the hiding logic below,
+                    // so they shouldn't appear here, but we filter them out as a safety measure
+                    const visibleRibbonRows = MAX_VISIBLE_EVENTS_PER_DAY;
+                    const hiddenRibbonSegments = ribbonSegmentsOnDay.slice(visibleRibbonRows);
+                    // Only add to overflow if this is the starting day of the event
+                    // (don't show the same event in overflow on multiple days it spans)
+                const addedEventIds = new Set<string>();
+                    hiddenRibbonEvents = hiddenRibbonSegments
+                    .filter(seg => seg.startIndex === dayIndexInWeek)
+                    .filter(seg => {
+                        // Avoid adding the same event multiple times
+                        if (addedEventIds.has(seg.cardEvent.id)) {
+                            return false;
+                        }
+                            // Don't add multi-day events that are already in ribbons (they should be unified)
+                            // Also exclude globally visible multi-day events (cross-week unification)
+                            if ('originalEventId' in seg.cardEvent && seg.cardEvent.originalEventId) {
+                                if (ribbonEventIds.has(seg.cardEvent.originalEventId) ||
+                                    globallyVisibleMultiDayEvents.has(seg.cardEvent.originalEventId)) {
+                                    return false;
+                                }
+                        }
+                        addedEventIds.add(seg.cardEvent.id);
+                        return true;
+                    })
+                    .map(seg => seg.cardEvent);
+                }
+
+                // Build overflow events, but EXCLUDE globally visible multi-day events
+                // These should NEVER appear in overflow - they must be in ribbons
+                const overflowEvents = [
+                    ...overflowEventsBase,
+                    ...filteredMultiDayOverflow, // Include all multi-day overflow events (not inline)
+                    ...hiddenRibbonEvents
+                ].filter(event => {
+                    // Filter out globally visible multi-day events
+                    if ('originalEventId' in event && event.originalEventId && typeof event.originalEventId === 'string') {
+                        if (globallyVisibleMultiDayEvents.has(event.originalEventId)) {
+                            return false;
+                        }
+                    }
+                    // Also check the event's own ID
+                    if (globallyVisibleMultiDayEvents.has(event.id)) {
+                        return false;
+                    }
+                    return true;
+                });
+
+                return {
+                    date: day,
+                    dateKey,
+                    inlineEvents,
+                    overflowEvents,
+                    isCurrentMonth: day.getMonth() === initialDate.getMonth(),
+                    isToday: day.toDateString() === new Date().toDateString()
+                };
+            });
+
             // Filter segments to exclude ones that are hidden due to per-day limits
-            // This MUST happen BEFORE daysData calculation so we use visible segments for counting
             // First, identify all multi-day events by their originalEventId
             const multiDayEventIds = new Set<string>();
             segments.forEach(segment => {
@@ -1073,7 +1331,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                         }
                     });
                 } else {
-                    // Some segments will be hidden - prioritize multi-day events
+                    // Some segments will be hidden - prioritize multi-day events up to limit
                     const sortedSegments = [...ribbonSegmentsOnDay].sort((a, b) => a.row - b.row);
                     const multiDaySegments = sortedSegments.filter(seg => {
                         if ('originalEventId' in seg.cardEvent && seg.cardEvent.originalEventId) {
@@ -1083,10 +1341,20 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     });
                     const multiDayRows = new Set(multiDaySegments.map(s => s.row));
                     const allUniqueRows = [...new Set(sortedSegments.map(s => s.row))];
-                    
+
+                    // Prioritize multi-day rows but enforce the 3-event limit
                     const prioritizedRows = new Set<number>();
-                    multiDayRows.forEach(row => prioritizedRows.add(row));
-                    
+
+                    // Add multi-day rows first, up to the limit
+                    for (const row of multiDayRows) {
+                        if (prioritizedRows.size < MAX_VISIBLE_EVENTS_PER_DAY) {
+                            prioritizedRows.add(row);
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Then add other rows up to the limit
                     for (const row of allUniqueRows) {
                         if (prioritizedRows.size >= MAX_VISIBLE_EVENTS_PER_DAY) break;
                         if (!prioritizedRows.has(row)) {
@@ -1094,7 +1362,7 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                         }
                     }
 
-                    // Mark multi-day events that will be visible on this day
+                    // Mark multi-day events that will be visible on this day (only those in prioritized rows)
                     sortedSegments
                         .filter(s => prioritizedRows.has(s.row))
                         .forEach(seg => {
@@ -1135,20 +1403,24 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                         }
                     });
                     
-                    // Build prioritized rows: start with unified multi-day event rows (prioritized, but still limited)
-                    // CRITICAL: We must enforce the 3-event limit strictly, even for unified multi-day events
+                    // Build prioritized rows: unified multi-day events get priority but count toward limit
+                    // All ribbons (multi-day + single-day) must respect the MAX_VISIBLE_EVENTS_PER_DAY limit
                     const prioritizedRows = new Set<number>();
-                    
-                    // First, prioritize unified multi-day events, but only up to the limit
-                    // Sort unified rows by row number for consistent ordering
-                    const sortedUnifiedRows = [...unifiedMultiDayRows].sort((a, b) => a - b);
-                    for (let i = 0; i < Math.min(sortedUnifiedRows.length, MAX_VISIBLE_EVENTS_PER_DAY); i++) {
-                        prioritizedRows.add(sortedUnifiedRows[i]);
+
+                    // First, add unified multi-day event rows (they get priority)
+                    let slotsUsed = 0;
+                    for (const row of unifiedMultiDayRows) {
+                        if (slotsUsed < MAX_VISIBLE_EVENTS_PER_DAY) {
+                            prioritizedRows.add(row);
+                            slotsUsed++;
+                        } else {
+                            break; // Stop adding once we hit the limit
+                        }
                     }
-                    
-                    // Then add other rows (non-unified multi-day events and single-day events) up to the limit
+
+                    // Then add other rows (non-unified) up to the remaining slots
                     const nonUnifiedRows = allUniqueRows.filter(row => !unifiedMultiDayRows.has(row));
-                    const remainingSlots = Math.max(0, MAX_VISIBLE_EVENTS_PER_DAY - prioritizedRows.size);
+                    const remainingSlots = MAX_VISIBLE_EVENTS_PER_DAY - slotsUsed;
                     for (let i = 0; i < remainingSlots && i < nonUnifiedRows.length; i++) {
                         prioritizedRows.add(nonUnifiedRows[i]);
                     }
@@ -1160,217 +1432,21 @@ const TechCalendarMonthView: React.FC<TechCalendarMonthViewProps> = ({
                     const segmentsToHide = sortedSegments.filter(s => !visibleRows.has(s.row));
                     
                     segmentsToHide.forEach(seg => {
-                        // CRITICAL: With strict 3-event limit, we may need to hide unified multi-day events
-                        // if there are too many of them. Only hide non-unified events first, but if we still
-                        // have too many unified events, hide the excess ones.
+                        // Never hide segments of unified multi-day events
+                        // Check both per-week and global cross-week visibility
                         const isUnifiedMultiDay = 'originalEventId' in seg.cardEvent && 
                             seg.cardEvent.originalEventId && 
                             (multiDayEventsVisibleOnAnyDay.has(seg.cardEvent.originalEventId) ||
                              globallyVisibleMultiDayEvents.has(seg.cardEvent.originalEventId));
                         
-                        // Hide non-unified events first
                         if (!isUnifiedMultiDay) {
                             hiddenSegmentIds.add(seg.id);
-                        } else {
-                            // For unified multi-day events, check if we've already filled our quota
-                            // If prioritizedRows.size >= MAX_VISIBLE_EVENTS_PER_DAY, hide excess unified events
-                            if (prioritizedRows.size >= MAX_VISIBLE_EVENTS_PER_DAY && !prioritizedRows.has(seg.row)) {
-                                hiddenSegmentIds.add(seg.id);
-                            }
                         }
                     });
                 }
             });
 
             const visibleSegments = segments.filter(seg => !hiddenSegmentIds.has(seg.id));
-
-            const daysData: DayData[] = weekDays.map((day, dayIndexInWeek) => {
-                const dateKey = day.toISOString().split('T')[0];
-                const allEvents = processedEventsByDate.get(dateKey) ?? [];
-
-                // Collect all event IDs that are being rendered as ribbon segments
-                // Include BOTH originalEventId (for multi-day events) AND cardEvent.id (for all events)
-                // This ensures single-day ribbon events are also excluded from inline lists
-                const ribbonEventIds = new Set<string>();
-                visibleSegments.forEach(segment => {
-                    // Always add the cardEvent.id (works for both single-day and multi-day events)
-                    if (segment.cardEvent.id) {
-                        ribbonEventIds.add(segment.cardEvent.id);
-                    }
-                    // Also add originalEventId if it exists (for multi-day events)
-                    if ('originalEventId' in segment.cardEvent && segment.cardEvent.originalEventId) {
-                        ribbonEventIds.add(segment.cardEvent.originalEventId);
-                    }
-                });
-
-                // Exclude events with dayInfo (multi-day instances) and events already in ribbons
-                // Also exclude globally visible multi-day events (they must be in ribbons)
-                const inlineCandidates = allEvents.filter(
-                    (event) => {
-                        // Exclude multi-day day instances (have dayInfo property)
-                        if ('dayInfo' in event && event.dayInfo) {
-                            return false;
-                        }
-                        // Exclude events that are already rendered as ribbon segments
-                        // Check both the event's own ID and its originalEventId (if it's a segment instance)
-                        if (ribbonEventIds.has(event.id)) {
-                            return false;
-                        }
-                        if ('originalEventId' in event && event.originalEventId && ribbonEventIds.has(event.originalEventId)) {
-                            return false;
-                        }
-                        // Exclude globally visible multi-day events - they must be in ribbons
-                        if ('originalEventId' in event && event.originalEventId && globallyVisibleMultiDayEvents.has(event.originalEventId)) {
-                            return false;
-                        }
-                        if (globallyVisibleMultiDayEvents.has(event.id)) {
-                            return false;
-                        }
-                        return true;
-                    }
-                );
-
-                // Count ribbon segments that appear on this day (using VISIBLE segments only)
-                const allRibbonSegmentsOnDay = visibleSegments.filter(segment =>
-                    segment.startIndex <= dayIndexInWeek && dayIndexInWeek < segment.startIndex + segment.span
-                );
-                
-                // CRITICAL: Filter to only include segments from the first MAX_VISIBLE_EVENTS_PER_DAY rows
-                // This ensures we never show more than 3 ribbon rows on any day, even if filtering didn't work correctly
-                const uniqueRows = [...new Set(allRibbonSegmentsOnDay.map(s => s.row))].sort((a, b) => a - b);
-                const visibleRows = uniqueRows.slice(0, MAX_VISIBLE_EVENTS_PER_DAY);
-                const ribbonSegmentsOnDay = allRibbonSegmentsOnDay.filter(seg => visibleRows.includes(seg.row));
-                
-                // Count unique ribbon rows (multiple segments on same row = 1 visual event)
-                const uniqueRibbonRows = new Set(ribbonSegmentsOnDay.map(s => s.row)).size;
-
-                // CRITICAL: Also check ALL segments (including hidden ones) to find events that should be in overflow
-                const allRibbonSegmentsOnDayIncludingHidden = segments.filter(segment =>
-                    segment.startIndex <= dayIndexInWeek && dayIndexInWeek < segment.startIndex + segment.span
-                );
-                const hiddenSegmentsOnDay = allRibbonSegmentsOnDayIncludingHidden.filter(seg => hiddenSegmentIds.has(seg.id));
-
-                // Calculate available inline slots based on ribbon count
-                // CRITICAL: If we already have MAX_VISIBLE_EVENTS_PER_DAY or more ribbon rows visible on this day,
-                // we cannot show any inline events. We must strictly enforce the 3-event limit.
-                // If uniqueRibbonRows > MAX_VISIBLE_EVENTS_PER_DAY, that means the week-level filtering
-                // didn't hide enough segments, but we still can't show inline events.
-                const maxAllowedInlineEvents = uniqueRibbonRows >= MAX_VISIBLE_EVENTS_PER_DAY 
-                    ? 0 
-                    : Math.max(0, MAX_VISIBLE_EVENTS_PER_DAY - uniqueRibbonRows);
-
-                // Slice inline events to fit available slots
-                const inlineEventsBase = inlineCandidates.slice(0, maxAllowedInlineEvents);
-                const overflowEventsBase = inlineCandidates.slice(maxAllowedInlineEvents);
-
-                const multiDayOverflow = overflowMultiDayMap.get(dateKey) ?? [];
-                // Filter out multi-day events that are already rendered in ribbons
-                // Also exclude globally visible multi-day events (cross-week unification)
-                const filteredMultiDayOverflow = multiDayOverflow.filter((event) => {
-                    // Exclude events that are already rendered as ribbon segments
-                    if ('originalEventId' in event && event.originalEventId) {
-                        if (ribbonEventIds.has(event.originalEventId) ||
-                            globallyVisibleMultiDayEvents.has(event.originalEventId)) {
-                            return false;
-                        }
-                    }
-                    // Also check the event's own ID in case it's the original event
-                    if (ribbonEventIds.has(event.id)) {
-                        return false;
-                    }
-                    return true;
-                });
-                
-                // Deduplicate inline events by originalEventId to ensure each multi-day event appears only once
-                const inlineEventsWithDedup: (Event | MultiDayEventInstance)[] = [];
-                const seenOriginalEventIds = new Set<string>();
-                
-                // First add single-day events (they don't have originalEventId)
-                inlineEventsBase.forEach(event => {
-                    if (inlineEventsWithDedup.length >= maxAllowedInlineEvents) return; // Stop if we've reached the limit
-                    if (!('originalEventId' in event && event.originalEventId)) {
-                        inlineEventsWithDedup.push(event);
-                    } else {
-                        // Multi-day event instance - check if we've seen this originalEventId
-                        if (!seenOriginalEventIds.has(event.originalEventId)) {
-                            seenOriginalEventIds.add(event.originalEventId);
-                            inlineEventsWithDedup.push(event);
-                        }
-                    }
-                });
-                
-                // Then add multi-day inline events, ensuring no duplicates and not exceeding the limit
-                filteredMultiDayOverflow.forEach(event => {
-                    if (inlineEventsWithDedup.length >= maxAllowedInlineEvents) return; // Stop if we've reached the limit
-                    if ('originalEventId' in event && event.originalEventId) {
-                        if (!seenOriginalEventIds.has(event.originalEventId)) {
-                            seenOriginalEventIds.add(event.originalEventId);
-                            inlineEventsWithDedup.push(event);
-                        }
-                    } else {
-                        inlineEventsWithDedup.push(event);
-                    }
-                });
-                
-                // CRITICAL FIX: Final enforcement - ensure total visible events (ribbons + inline) never exceeds MAX_VISIBLE_EVENTS_PER_DAY
-                // Recalculate uniqueRibbonRows from visibleSegments to ensure accuracy after filtering
-                const actualUniqueRibbonRows = Math.min(
-                    new Set(ribbonSegmentsOnDay.map(s => s.row)).size,
-                    MAX_VISIBLE_EVENTS_PER_DAY
-                );
-                const actualMaxAllowedInlineEvents = Math.max(0, MAX_VISIBLE_EVENTS_PER_DAY - actualUniqueRibbonRows);
-                
-                // Slice inline events to fit the actual available slots
-                const inlineEvents = inlineEventsWithDedup.slice(0, actualMaxAllowedInlineEvents);
-                
-                // Move any excess inline events to overflow
-                const excessInlineEvents = inlineEventsWithDedup.slice(actualMaxAllowedInlineEvents);
-
-                // CRITICAL: Add hidden ribbon segments to overflow
-                // Only add if this is the starting day of the event (to avoid duplicates across days)
-                const addedEventIds = new Set<string>();
-                const hiddenRibbonEvents = hiddenSegmentsOnDay
-                    .filter(seg => seg.startIndex === dayIndexInWeek)
-                    .filter(seg => {
-                        // Avoid adding the same event multiple times
-                        if (addedEventIds.has(seg.cardEvent.id)) {
-                            return false;
-                        }
-                        addedEventIds.add(seg.cardEvent.id);
-                        return true;
-                    })
-                    .map(seg => seg.cardEvent);
-
-                // Build overflow events, but EXCLUDE globally visible multi-day events
-                // These should NEVER appear in overflow - they must be in ribbons
-                // Note: excessInlineEvents already includes any multi-day events that exceeded the limit
-                const overflowEvents = [
-                    ...overflowEventsBase,
-                    ...excessInlineEvents, // Add any inline events that exceeded the limit
-                    ...hiddenRibbonEvents
-                ].filter(event => {
-                    // Filter out globally visible multi-day events
-                    if ('originalEventId' in event && event.originalEventId && typeof event.originalEventId === 'string') {
-                        if (globallyVisibleMultiDayEvents.has(event.originalEventId)) {
-                            return false;
-                        }
-                    }
-                    // Also check the event's own ID
-                    if (globallyVisibleMultiDayEvents.has(event.id)) {
-                        return false;
-                    }
-                    return true;
-                });
-
-                return {
-                    date: day,
-                    dateKey,
-                    inlineEvents,
-                    overflowEvents,
-                    isCurrentMonth: day.getMonth() === initialDate.getMonth(),
-                    isToday: day.toDateString() === new Date().toDateString()
-                };
-            });
 
             weekDataList.push({
                 days: daysData,
