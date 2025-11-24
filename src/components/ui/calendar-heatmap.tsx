@@ -192,7 +192,7 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
       {/* Day Headers */}
       <div className="grid grid-cols-7 gap-1 mb-1">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-          <div key={day} className="text-center text-xs text-gray-400 font-medium py-1">
+          <div key={day} className="text-center text-xs text-foreground-tertiary font-medium py-1">
             {day}
           </div>
         ))}
@@ -205,12 +205,16 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
           const hasWeight = day.weight > 0;
           // const variantIndex = Math.min(day.variant, variantClassnames.length - 1);
           const isSelected = selectedDateString ? day.date.toDateString() === selectedDateString : false;
-          const inRange = selectedRangeStart && selectedRangeEnd
-            ? day.date >= new Date(selectedRangeStart.getFullYear(), selectedRangeStart.getMonth(), selectedRangeStart.getDate()) &&
-              day.date <= new Date(selectedRangeEnd.getFullYear(), selectedRangeEnd.getMonth(), selectedRangeEnd.getDate())
-            : false;
           const isRangeStart = selectedRangeStart ? day.date.toDateString() === selectedRangeStart.toDateString() : false;
           const isRangeEnd = selectedRangeEnd ? day.date.toDateString() === selectedRangeEnd.toDateString() : false;
+          const inRange = selectedRangeStart && selectedRangeEnd
+            ? (() => {
+                const start = new Date(selectedRangeStart.getFullYear(), selectedRangeStart.getMonth(), selectedRangeStart.getDate());
+                const end = new Date(selectedRangeEnd.getFullYear(), selectedRangeEnd.getMonth(), selectedRangeEnd.getDate());
+                const dayDate = new Date(day.date.getFullYear(), day.date.getMonth(), day.date.getDate());
+                return dayDate >= start && dayDate <= end;
+              })()
+            : false;
           
           // Create descriptive text for accessibility
           const eventsText = day.weight === 1 ? 'event' : 'events';
@@ -228,14 +232,37 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
                 "relative aspect-square rounded-lg transition-all duration-200 cursor-pointer",
                 "flex items-center justify-center text-xs font-medium",
                 // Base: no backgrounds on tiles, just text color
-                isInRange ? "bg-transparent text-white" : "bg-transparent text-foreground-tertiary hover:text-foreground-secondary",
-                // Today's date: subtle ring only (when not selected)
-                day.isToday && !isSelected && !inRange && "ring-1 ring-[rgba(255,255,255,0.45)]",
-                // Range endpoints: subtle accent border without fill
-                (isRangeStart || isRangeEnd) && "border-2 border-[rgba(255,255,255,0.65)]",
-                // Single selected: prominent background and white text
-                isSelected && "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                isInRange ? "bg-transparent" : "bg-transparent text-foreground-tertiary hover:text-foreground-secondary",
+                // Today's date: subtle border only (when not selected)
+                day.isToday && !isSelected && !inRange && !isRangeStart && !isRangeEnd && "border",
+                // Range highlighting: background for dates in range
+                inRange && !isRangeStart && !isRangeEnd && "",
+                // Range endpoints: prominent background
+                (isRangeStart || isRangeEnd) && "border-2",
+                // Single selected: theme-adaptive background
+                isSelected && !inRange && ""
               )}
+              style={{
+                ...(day.isToday && !isSelected && !inRange && !isRangeStart && !isRangeEnd && {
+                  borderColor: 'var(--border-strong)',
+                  borderWidth: '1px'
+                }),
+                ...(inRange && {
+                  color: 'var(--foreground-primary)'
+                }),
+                ...(inRange && !isRangeStart && !isRangeEnd && {
+                  backgroundColor: 'var(--accent-primary-light)'
+                }),
+                ...((isRangeStart || isRangeEnd) && {
+                  backgroundColor: 'var(--accent-primary)',
+                  borderColor: 'var(--accent-border)',
+                  color: 'var(--accent-primary-foreground)'
+                }),
+                ...(isSelected && !inRange && {
+                  backgroundColor: 'var(--accent-primary-light)',
+                  color: 'var(--foreground-primary)'
+                })
+              }}
               aria-label={ariaLabel}
               role="button"
               tabIndex={0}
@@ -247,14 +274,23 @@ export const CalendarHeatmap = React.memo(function CalendarHeatmap({
               }}
               title={ariaLabel}
             >
-              <span className={cn(!isInRange && "text-foreground-tertiary", isInRange && "text-white")}>{day.dayNumber}</span>
+              <span style={{
+                color: (isRangeStart || isRangeEnd) 
+                  ? 'var(--accent-primary-foreground)' 
+                  : isInRange 
+                    ? 'var(--foreground-primary)' 
+                    : undefined
+              }} className={cn(!isInRange && !isRangeStart && !isRangeEnd && "text-foreground-tertiary")}>{day.dayNumber}</span>
               {hasWeight && (
                 <span
-                  className={cn(
-                    "absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full",
-                    day.weight >= 4 ? "bg-zinc-600" : day.weight >= 2 ? "bg-zinc-500" : "bg-zinc-400",
-                    "w-1 h-1"
-                  )}
+                  className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full w-1 h-1"
+                  style={{
+                    backgroundColor: day.weight >= 4 
+                      ? 'var(--accent-primary)' 
+                      : day.weight >= 2 
+                        ? 'var(--foreground-secondary)' 
+                        : 'var(--foreground-tertiary)'
+                  }}
                 />
               )}
             </button>

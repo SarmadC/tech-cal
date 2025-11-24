@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { EventClickArg, FullCalendar } from '@/types/fullcalendar';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance, TrackedEvent } from '@/types';
@@ -11,11 +11,20 @@ import TechCalendarMonthView from '../TechCalendarMonthView';
 import TechCalendarWeekView from '../TechCalendarWeekView';
 import { TechCalendarDayView } from '../TechCalendarDayView';
 import DesktopDiscoveryView from '../desktop/discovery/DesktopDiscoveryView';
+import { createDefaultUnifiedFilters, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
 
 // Mobile Components
 import MobileCalendarWeekView from '../mobile/MobileCalendarWeekView';
 import MobileCalendarDayView from '../mobile/MobileCalendarDayView';
 import MobileCalendarMonthView from '../mobile/MobileCalendarMonthView';
+
+const noopUpdateFilter: UpdateFilterHandler = () => {
+  // Legacy discover mode rendered via AdaptiveCalendarRenderer does not use filters.
+};
+
+const noopSearch = () => {
+  // Legacy discover mode rendered via AdaptiveCalendarRenderer does not perform search.
+};
 
 export interface AdaptiveCalendarProps {
   view: string;
@@ -134,6 +143,8 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
   }
 
   // Desktop/Web-optimized components (existing)
+  const fallbackDiscoverFilters = useMemo(() => createDefaultUnifiedFilters(), []);
+
   switch (view) {
     case 'discover':
       return (
@@ -144,6 +155,10 @@ const AdaptiveCalendarRenderer: React.FC<AdaptiveCalendarProps> = ({
           trackedEvents={trackedEvents}
           onEventSelect={onEventSelect as (event: Event) => void}
           className={className}
+          filters={fallbackDiscoverFilters}
+          onUpdateFilter={noopUpdateFilter}
+          onSearch={noopSearch}
+          totalCount={events.length}
         />
       );
 

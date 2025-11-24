@@ -109,9 +109,11 @@ export interface Event {
 
     // Additional metadata
     priceRange?: string | null;
+    priceMin?: number | null;
     capacity?: number | null;
     attendeeCount?: number | null;
     difficulty?: 'beginner' | 'intermediate' | 'advanced' | null;
+    eventFormat?: 'Online' | 'In-person' | 'Hybrid' | null;
     targetAudience?: string | null;
     prerequisites?: string | null;
 

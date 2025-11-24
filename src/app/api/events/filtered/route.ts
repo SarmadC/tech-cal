@@ -223,7 +223,7 @@ export async function POST(request: NextRequest) {
       startDate: dateRange?.start ? new Date(dateRange.start) : undefined,
       endDate: dateRange?.end ? new Date(dateRange.end) : undefined,
       format: format !== 'all' ? format : undefined,
-    budget: budget !== 'all' ? budget : undefined,
+      budget: budget !== 'all' ? budget : undefined,
       cost: cost !== 'all' ? cost : undefined,
       difficulty: difficulty !== 'all' ? difficulty : undefined,
       availability: _availability !== 'all' ? _availability : undefined,
@@ -235,6 +235,15 @@ export async function POST(request: NextRequest) {
       sortBy: sortBy !== 'date' ? sortBy : 'date',
       sortDirection: effectiveSortDirection === 'desc' ? 'desc' : 'asc'
     };
+
+    // Ensure discover surface only shows future events by default
+    if (requestSurface === 'discover' && !dateRange?.start) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (!eventFilters.startDate || eventFilters.startDate < today) {
+        eventFilters.startDate = today;
+      }
+    }
 
     const telemetryContext: RecommendationTelemetryContext | undefined = hasTelemetryConsent ? {
       userId: user.id,

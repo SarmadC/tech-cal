@@ -11,6 +11,8 @@
   width: 100%;
   min-height: 100vh;
   padding: 0;
+  background: var(--background);
+  color: var(--foreground);
 }
 
 .mobile-discovery-stack {
@@ -20,6 +22,7 @@
   width: 100%;
   padding: 1rem; /* 16px - 8pt multiple */
   padding-top: 5rem; /* Add space for fixed navbar */
+  background: transparent;
 }
 
 /* Add extra margin to first section to create gap below navbar */

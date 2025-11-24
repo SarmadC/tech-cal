@@ -2,6 +2,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Event, AppProfile, isTrackedEvent, TrackedEvent, CalendarEventData } from '@/types';
 import { UnifiedEventUtils, DurationCategory } from '@/utils/unifiedEventUtils';
+import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
 
 /**
  * Extract career impact score from event
@@ -83,22 +84,13 @@ export function useSmartFilters(
                 if (filters.dateRange.end && eventDate > filters.dateRange.end) return false;
             }
             if (filters.format !== 'all') {
-                const isVirtual = event.location.toLowerCase().includes('virtual') || event.livestreamUrl;
-                const isInPerson = !isVirtual && event.location !== 'TBA';
-                switch (filters.format) {
-                    case 'virtual': if (!isVirtual) return false; break;
-                    case 'in-person': if (!isInPerson) return false; break;
-                    case 'hybrid': if (!isVirtual || !isInPerson) return false; break;
-                }
+                const eventFormat = getEventFormat(event);
+                if (filters.format !== eventFormat) return false;
             }
             if (filters.cost !== 'all') {
-                // Determine if event is free based on actual data
-                const isFree = !event.priceRange || 
-                              event.priceRange.toLowerCase().includes('free') || 
-                              event.priceRange === '0' || 
-                              event.priceRange.toLowerCase().includes('no cost');
-                if (filters.cost === 'free' && !isFree) return false;
-                if (filters.cost === 'paid' && isFree) return false;
+                const eventIsFree = isEventFree(event);
+                if (filters.cost === 'free' && !eventIsFree) return false;
+                if (filters.cost === 'paid' && eventIsFree) return false;
             }
             if (filters.difficulty !== 'all') {
                 if (filters.difficulty !== getDifficultyFromEvent(event)) return false;

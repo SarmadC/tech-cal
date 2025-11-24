@@ -8,7 +8,7 @@ import { Event, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { useTrackedEventIds } from './useTrackedEventsUnified';
 import { FILTERING_CONSTANTS } from '@/config/filteringConstants';
 
-interface UnifiedFilterOptions {
+export interface UnifiedFilterOptions {
   // Basic filters
   searchTerm: string;
   categories: string[];
@@ -61,6 +61,8 @@ interface UnifiedFilteringOptions {
   autoLoadAllPages?: boolean;
 }
 
+export type UpdateFilterHandler = <K extends keyof UnifiedFilterOptions>(key: K, value: UnifiedFilterOptions[K]) => void;
+
 interface UseUnifiedServerFilteringResult {
   // Data
   filteredEvents: TrackedEvent[];
@@ -83,7 +85,7 @@ interface UseUnifiedServerFilteringResult {
   activeFilterCount: number;
 
   // Actions
-  updateFilter: <K extends keyof UnifiedFilterOptions>(key: K, value: UnifiedFilterOptions[K]) => void;
+  updateFilter: UpdateFilterHandler;
   resetFilters: () => void;
   loadMore: () => void;
   refetch: () => void;
@@ -115,6 +117,16 @@ const DEFAULT_FILTERS: UnifiedFilterOptions = {
   page: 1,
   pageSize: 50
 };
+
+export const createDefaultUnifiedFilters = (
+  overrides: Partial<UnifiedFilterOptions> = {}
+): UnifiedFilterOptions => ({
+  ...DEFAULT_FILTERS,
+  ...overrides,
+  categories: overrides.categories ?? [],
+  locations: overrides.locations ?? [],
+  dateRange: overrides.dateRange ?? { start: null, end: null }
+});
 
 /**
  * Unified server-side filtering hook that replaces useSmartFilters
@@ -281,10 +293,7 @@ export function useUnifiedServerFiltering(
   const queryError = activeQueryError instanceof Error ? activeQueryError.message : null;
   const isLoading = isPagedMode ? (pagedLoading || pagedFetching) : (infiniteLoading || infiniteFetching);
 
-  const updateFilter = useCallback(<K extends keyof UnifiedFilterOptions>(
-    key: K,
-    value: UnifiedFilterOptions[K]
-  ) => {
+  const updateFilter: UpdateFilterHandler = useCallback((key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   }, []);
 

@@ -85,7 +85,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
   const exploreMoreEvents = upcomingEvents.filter(event => !forYouIds.has(event.id));
 
   return (
-    <div className={`mobile-discovery-view ${className}`} role="main" aria-label="Discover tech events">
+    <div className={`mobile-discovery-view ${className} bg-background text-foreground`} role="main" aria-label="Discover tech events">
       <MobileDiscoveryNavbar />
       <div className="mobile-discovery-stack">
         <div className="mobile-discovery-section-wrapper">

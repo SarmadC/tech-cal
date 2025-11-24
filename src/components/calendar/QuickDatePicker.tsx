@@ -13,6 +13,10 @@ export interface QuickDatePickerProps {
     isOpen: boolean;
     onClose: () => void;
     events?: Event[];
+    // Range mode props
+    mode?: 'single' | 'range';
+    dateRange?: { start: Date | null; end: Date | null };
+    onDateRangeChange?: (range: { start: Date | null; end: Date | null }) => void;
 }
 
 const QuickDatePicker: FC<QuickDatePickerProps> = ({
@@ -21,7 +25,10 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
     view,
     isOpen,
     onClose,
-    events = []
+    events = [],
+    mode = 'single',
+    dateRange,
+    onDateRangeChange
 }) => {
     const [selectedDate, setSelectedDate] = useState(currentDate);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -31,11 +38,23 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
 
     const [inputValue, setInputValue] = useState('');
     const [parsedInputDate, setParsedInputDate] = useState<Date | null>(null);
+    
+    // Range mode state
+    const [rangeStart, setRangeStart] = useState<Date | null>(dateRange?.start || null);
+    const [rangeEnd, setRangeEnd] = useState<Date | null>(dateRange?.end || null);
 
     // Update selected date when currentDate changes
     useEffect(() => {
         setSelectedDate(currentDate);
     }, [currentDate]);
+
+    // Update range state when dateRange prop changes
+    useEffect(() => {
+        if (mode === 'range' && dateRange) {
+            setRangeStart(dateRange.start);
+            setRangeEnd(dateRange.end);
+        }
+    }, [mode, dateRange]);
 
     // Handle escape key
     useEffect(() => {
@@ -192,10 +211,38 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
     }, [selectedDate, view, isAnimating]);
 
     const handleDateSelect = useCallback((date: Date) => {
-        setSelectedDate(date);
-        onDateChange(date);
-        onClose();
-    }, [onDateChange, onClose]);
+        if (mode === 'range') {
+            // Range selection logic: first click sets start, second click sets end
+            const normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            const normalizedStart = rangeStart ? new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate()) : null;
+            const normalizedEnd = rangeEnd ? new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate()) : null;
+            
+            if (!normalizedStart || (normalizedStart && normalizedEnd)) {
+                // Start new range
+                setRangeStart(normalizedDate);
+                setRangeEnd(null);
+            } else if (normalizedStart && !normalizedEnd) {
+                // Set end date
+                if (normalizedDate.getTime() === normalizedStart.getTime()) {
+                    // Same date clicked - clear range
+                    setRangeStart(null);
+                    setRangeEnd(null);
+                } else if (normalizedDate < normalizedStart) {
+                    // If clicked date is before start, swap them
+                    setRangeEnd(normalizedStart);
+                    setRangeStart(normalizedDate);
+                } else {
+                    setRangeEnd(normalizedDate);
+                }
+            }
+            setSelectedDate(date);
+        } else {
+            // Single date mode
+            setSelectedDate(date);
+            onDateChange(date);
+            onClose();
+        }
+    }, [mode, rangeStart, rangeEnd, onDateChange, onClose]);
 
     const _goToToday = useCallback(() => {
         const today = new Date();
@@ -289,7 +336,9 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                     >
                         <MaterialIcon name="close" size={20} />
                     </button>
-                    <h3 className="quick-date-picker-title">Jump to Date</h3>
+                    <h3 className="quick-date-picker-title">
+                        {mode === 'range' ? 'Select Date Range' : 'Jump to Date'}
+                    </h3>
                     {/* Today pill removed to match mock */}
                 </div>
 
@@ -298,7 +347,27 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                     <div className="quick-date-left">
                         {/* Manual entry */}
                         <div className="quick-date-manual">
-                            <label htmlFor="quick-date-input" className="quick-date-section-title">Type a date</label>
+                            <label htmlFor="quick-date-input" className="quick-date-section-title">
+                                {mode === 'range' ? 'Type a date' : 'Type a date'}
+                            </label>
+                            {mode === 'range' && (rangeStart || rangeEnd) && (
+                                <div className="mb-2 p-2 rounded text-sm border" style={{
+                                    backgroundColor: 'var(--accent-primary-light)',
+                                    borderColor: 'var(--accent-border)',
+                                    color: 'var(--foreground-primary)'
+                                }}>
+                                    <div className="font-medium mb-1">Selected Range:</div>
+                                    <div>
+                                        {rangeStart && rangeEnd
+                                            ? `${formatDate(rangeStart)} - ${formatDate(rangeEnd)}`
+                                            : rangeStart
+                                            ? `Start: ${formatDate(rangeStart)} (click another date for end)`
+                                            : rangeEnd
+                                            ? `End: ${formatDate(rangeEnd)} (click a date for start)`
+                                            : ''}
+                                    </div>
+                                </div>
+                            )}
                             <input
                                 id="quick-date-input"
                                 ref={inputRef}
@@ -314,9 +383,15 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                                 aria-describedby="quick-date-help"
                             />
                             <div id="quick-date-help" className={`quick-date-hint ${parsedInputDate ? 'valid' : (inputValue ? 'invalid' : '')}`}>
-                                {parsedInputDate
-                                    ? `Will go to ${formatDate(parsedInputDate)}`
-                                    : (inputValue ? 'Unrecognized date. Try YYYY-MM-DD, "next Tue", or "in 2 weeks".' : 'Enter a date or phrase.')}
+                                {mode === 'range' ? (
+                                    parsedInputDate
+                                        ? `Will set ${!rangeStart ? 'start' : 'end'} date to ${formatDate(parsedInputDate)}`
+                                        : (inputValue ? 'Unrecognized date. Try YYYY-MM-DD, "next Tue", or "in 2 weeks".' : 'Click dates on calendar or enter a date.')
+                                ) : (
+                                    parsedInputDate
+                                        ? `Will go to ${formatDate(parsedInputDate)}`
+                                        : (inputValue ? 'Unrecognized date. Try YYYY-MM-DD, "next Tue", or "in 2 weeks".' : 'Enter a date or phrase.')
+                                )}
                             </div>
                         </div>
 
@@ -325,28 +400,112 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                             <h4 className="quick-date-section-title">Quick Select</h4>
                             <div className="quick-date-list">
                                 {(() => {
-                                    const presets = [
-                                        { label: 'Today', fn: () => new Date(), key: 'today' },
-                                        { label: 'Yesterday', fn: () => { const d = new Date(); d.setDate(d.getDate() - 1); return d; }, key: 'yesterday' },
-                                        { label: 'This week', fn: () => selectedDate, key: 'this-week' },
-                                        { label: 'Last week', fn: () => { const d = new Date(); d.setDate(d.getDate() - 7); return d; }, key: 'last-week' },
-                                        { label: 'This month', fn: () => { const d = new Date(); d.setDate(1); return d; }, key: 'this-month' },
-                                        { label: 'Last month', fn: () => { const d = new Date(); d.setMonth(d.getMonth() - 1, 1); return d; }, key: 'last-month' },
-                                        { label: 'This year', fn: () => { const d = new Date(); d.setMonth(0, 1); return d; }, key: 'this-year' },
-                                        { label: 'Last year', fn: () => { const d = new Date(); d.setFullYear(d.getFullYear() - 1, 0, 1); return d; }, key: 'last-year' },
-                                    ];
-                                    return presets.map((p) => (
-                                        <button
-                                            key={p.key}
-                                            onClick={() => handleDateSelect(p.fn())}
-                                            className={`quick-date-option ${p.key === 'today' ? 'today' : ''}`}
-                                        >
-                                            <div className="quick-date-option-content">
-                                                <span className="quick-date-option-label">{p.label}</span>
-                                            </div>
-                                            <MaterialIcon name="chevron_right" size={16} />
-                                        </button>
-                                    ));
+                                    if (mode === 'range') {
+                                        const today = new Date();
+                                        const clone = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                                        const getWeekRange = (date: Date) => {
+                                            const start = new Date(date);
+                                            const dayOfWeek = start.getDay();
+                                            const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                                            start.setDate(start.getDate() + daysToMonday);
+                                            const end = new Date(start);
+                                            end.setDate(start.getDate() + 6);
+                                            return { start, end };
+                                        };
+                                        const getMonthRange = (date: Date) => {
+                                            const start = new Date(date.getFullYear(), date.getMonth(), 1);
+                                            const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                                            return { start, end };
+                                        };
+                                        
+                                        const rangePresets = [
+                                            { 
+                                                label: 'This week', 
+                                                fn: () => {
+                                                    const range = getWeekRange(today);
+                                                    setRangeStart(range.start);
+                                                    setRangeEnd(range.end);
+                                                }, 
+                                                key: 'this-week' 
+                                            },
+                                            { 
+                                                label: 'Next week', 
+                                                fn: () => {
+                                                    const nextWeek = new Date(today);
+                                                    nextWeek.setDate(today.getDate() + 7);
+                                                    const range = getWeekRange(nextWeek);
+                                                    setRangeStart(range.start);
+                                                    setRangeEnd(range.end);
+                                                }, 
+                                                key: 'next-week' 
+                                            },
+                                            { 
+                                                label: 'Next month', 
+                                                fn: () => {
+                                                    const nextMonth = new Date(today);
+                                                    nextMonth.setMonth(today.getMonth() + 1);
+                                                    const range = getMonthRange(nextMonth);
+                                                    setRangeStart(range.start);
+                                                    setRangeEnd(range.end);
+                                                }, 
+                                                key: 'next-month' 
+                                            },
+                                            { 
+                                                label: 'Next 3 months', 
+                                                fn: () => {
+                                                    setRangeStart(clone(today));
+                                                    const end = clone(today);
+                                                    end.setMonth(end.getMonth() + 3);
+                                                    setRangeEnd(end);
+                                                }, 
+                                                key: 'next-3-months' 
+                                            },
+                                            { 
+                                                label: 'This year', 
+                                                fn: () => {
+                                                    setRangeStart(new Date(today.getFullYear(), 0, 1));
+                                                    setRangeEnd(new Date(today.getFullYear(), 11, 31));
+                                                }, 
+                                                key: 'this-year' 
+                                            },
+                                        ];
+                                        
+                                        return rangePresets.map((p) => (
+                                            <button
+                                                key={p.key}
+                                                onClick={p.fn}
+                                                className="quick-date-option"
+                                            >
+                                                <div className="quick-date-option-content">
+                                                    <span className="quick-date-option-label">{p.label}</span>
+                                                </div>
+                                                <MaterialIcon name="chevron_right" size={16} />
+                                            </button>
+                                        ));
+                                    } else {
+                                        const presets = [
+                                            { label: 'Today', fn: () => new Date(), key: 'today' },
+                                            { label: 'Yesterday', fn: () => { const d = new Date(); d.setDate(d.getDate() - 1); return d; }, key: 'yesterday' },
+                                            { label: 'This week', fn: () => selectedDate, key: 'this-week' },
+                                            { label: 'Last week', fn: () => { const d = new Date(); d.setDate(d.getDate() - 7); return d; }, key: 'last-week' },
+                                            { label: 'This month', fn: () => { const d = new Date(); d.setDate(1); return d; }, key: 'this-month' },
+                                            { label: 'Last month', fn: () => { const d = new Date(); d.setMonth(d.getMonth() - 1, 1); return d; }, key: 'last-month' },
+                                            { label: 'This year', fn: () => { const d = new Date(); d.setMonth(0, 1); return d; }, key: 'this-year' },
+                                            { label: 'Last year', fn: () => { const d = new Date(); d.setFullYear(d.getFullYear() - 1, 0, 1); return d; }, key: 'last-year' },
+                                        ];
+                                        return presets.map((p) => (
+                                            <button
+                                                key={p.key}
+                                                onClick={() => handleDateSelect(p.fn())}
+                                                className={`quick-date-option ${p.key === 'today' ? 'today' : ''}`}
+                                            >
+                                                <div className="quick-date-option-content">
+                                                    <span className="quick-date-option-label">{p.label}</span>
+                                                </div>
+                                                <MaterialIcon name="chevron_right" size={16} />
+                                            </button>
+                                        ));
+                                    }
                                 })()}
                             </div>
                         </div>
@@ -364,7 +523,9 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
                             weightedDates={eventsByDate}
                             startDate={selectedDate}
                             endDate={selectedDate}
-                            selectedDate={selectedDate}
+                            selectedDate={mode === 'range' ? undefined : selectedDate ?? undefined}
+                            selectedRangeStart={mode === 'range' ? rangeStart ?? undefined : undefined}
+                            selectedRangeEnd={mode === 'range' ? rangeEnd ?? undefined : undefined}
                             onDateSelect={(d) => handleDateSelect(d)}
                             onMonthChange={(d) => setSelectedDate(d)}
                             className="quick-date-calendar"
@@ -374,23 +535,59 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
 
                 {/* Action Buttons */}
                 <div className="quick-date-picker-actions">
-                    <button
-                        onClick={onClose}
-                        className="quick-date-picker-cancel"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={() => {
-                            const finalDate = parsedInputDate || selectedDate;
-                            onDateChange(finalDate);
-                            onClose();
-                        }}
-                        className="quick-date-picker-confirm"
-                        disabled={!!inputValue && !parsedInputDate}
-                    >
-                        {`Go to ${view === 'month' ? 'Month' : view === 'week' ? 'Week' : 'Day'}`}
-                    </button>
+                    {mode === 'range' ? (
+                        <>
+                            <button
+                                onClick={onClose}
+                                className="quick-date-picker-cancel"
+                            >
+                                Cancel
+                            </button>
+                            {rangeStart || rangeEnd ? (
+                                <button
+                                    onClick={() => {
+                                        setRangeStart(null);
+                                        setRangeEnd(null);
+                                        onDateRangeChange?.({ start: null, end: null });
+                                    }}
+                                    className="quick-date-picker-cancel"
+                                >
+                                    Clear
+                                </button>
+                            ) : null}
+                            <button
+                                onClick={() => {
+                                    if (onDateRangeChange) {
+                                        onDateRangeChange({ start: rangeStart, end: rangeEnd });
+                                    }
+                                    onClose();
+                                }}
+                                className="quick-date-picker-confirm"
+                            >
+                                Apply Range
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={onClose}
+                                className="quick-date-picker-cancel"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const finalDate = parsedInputDate || selectedDate;
+                                    onDateChange(finalDate);
+                                    onClose();
+                                }}
+                                className="quick-date-picker-confirm"
+                                disabled={!!inputValue && !parsedInputDate}
+                            >
+                                {`Go to ${view === 'month' ? 'Month' : view === 'week' ? 'Week' : 'Day'}`}
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

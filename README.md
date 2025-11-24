@@ -167,7 +167,7 @@ src/
 
 ### Prerequisites
 
-- Node.js 20+ and npm
+- Node.js 20.9+ (LTS) and npm
 - Supabase account and project
 - Environment variables configured (see [Environment Variables](#environment-variables))
 

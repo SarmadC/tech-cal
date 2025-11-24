@@ -42,10 +42,10 @@ export default function DiscoverClientView({
     const router = useRouter();
     const nav = useNavigation(router);
     const isMobile = useIsMobile();
-    
+
     const initialFilters = useMemo(() => {
         const filters: Partial<ReturnType<typeof useUnifiedServerFiltering>['filters']> = {};
-        
+
         try {
             const budget = (profile as unknown as { careerProfile?: { budget?: string } } | null)?.careerProfile?.budget;
             if (budget && typeof budget === 'string') {
@@ -58,20 +58,20 @@ export default function DiscoverClientView({
         } catch {
             // no-op
         }
-        
+
         // Set default sort to career-impact for users with profiles (not empty)
         // This ensures best recommendations appear first in discovery view
         if (profile && !isProfileEmpty(profile)) {
             filters.sortBy = 'career-impact';
             filters.sortDirection = 'desc'; // Highest scores first
         }
-        
+
         return filters;
     }, [profile]);
 
     const eventData = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover' });
     const { showInfo } = useSnackbar();
-    
+
     // Calendar state for CalendarProvider
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -139,6 +139,10 @@ export default function DiscoverClientView({
             profile={profile}
             trackedEvents={eventData.filteredEvents.filter(e => e.isTracked)}
             onEventSelect={handleEventSelect}
+            filters={eventData.filters}
+            onUpdateFilter={eventData.updateFilter}
+            onSearch={eventData.refetch}
+            totalCount={eventData.totalCount}
         />
     );
 
@@ -166,7 +170,7 @@ export default function DiscoverClientView({
                             <div className="min-h-screen glass-bg-gradient relative">
                                 {/* Subtle atmospheric overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
-                                
+
                                 <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
                                     {/* Header */}
                                     <div className="mb-8">
@@ -174,7 +178,7 @@ export default function DiscoverClientView({
                                             Discover
                                         </h1>
                                     </div>
-                                    
+
                                     {/* Main Content */}
                                     <div className="flex-1 flex flex-col" data-view="discovery">
                                         <SmartLoader
@@ -187,7 +191,7 @@ export default function DiscoverClientView({
                                                 {/* Rate limit wait feedback */}
                                                 {eventData.rateLimitWaitMs > 0 && (
                                                     <div
-                                                        className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3 text-sm text-text-secondary"
+                                                        className="mb-4 rounded-xl border border-border bg-background/70 dark:bg-background/30 text-sm text-muted-foreground p-3 backdrop-blur shadow-sm"
                                                         role="status"
                                                         aria-live="polite"
                                                     >
@@ -197,17 +201,17 @@ export default function DiscoverClientView({
 
                                                 {/* Cold start indicator */}
                                                 {eventData.isColdStart && !eventData.isLoading && (
-                                                    <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                                                    <div className="mb-4 rounded-xl border border-border bg-card/80 dark:bg-card/30 p-3 text-sm text-foreground shadow-sm backdrop-blur">
                                                         <div className="flex items-start">
                                                             <div className="flex-shrink-0">
-                                                                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                                                <svg className="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
                                                                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                                                                 </svg>
                                                             </div>
                                                             <div className="ml-3">
-                                                                <h3 className="text-sm font-medium text-blue-800">Personalized for You</h3>
-                                                                <p className="mt-1 text-sm text-blue-700">
-                                                                    We&apos;re showing you events that similar professionals found valuable. 
+                                                                <h3 className="text-sm font-semibold text-foreground">Personalized for You</h3>
+                                                                <p className="mt-1 text-sm text-muted-foreground">
+                                                                    We&apos;re showing you events that similar professionals found valuable.
                                                                     As you interact with events, we&apos;ll learn your preferences and improve recommendations.
                                                                 </p>
                                                             </div>
@@ -217,12 +221,12 @@ export default function DiscoverClientView({
 
                                                 {/* Empty-results hint for budget tiers */}
                                                 {!eventData.isLoading && eventData.filteredEvents.length === 0 && eventData.filters.budget !== 'all' && (
-                                                    <div className="mb-4 rounded-md border border-border-subtle bg-background-elevated p-3">
-                                                        <p className="text-sm text-foreground-secondary">No events found for the selected budget tier. Budget filtering is USD-only.</p>
+                                                    <div className="mb-4 rounded-xl border border-border bg-background/70 dark:bg-background/30 p-3 backdrop-blur">
+                                                        <p className="text-sm text-muted-foreground">No events found for the selected budget tier. Budget filtering is USD-only.</p>
                                                         <div className="mt-2">
                                                             <button
                                                                 onClick={() => eventData.updateFilter('budget', 'all' as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
-                                                                className="inline-flex items-center rounded-md border border-border-default px-3 py-1 text-sm text-foreground-primary hover:bg-background-muted"
+                                                                className="inline-flex items-center rounded-md border border-border px-3 py-1 text-sm text-foreground hover:bg-muted transition-colors"
                                                             >
                                                                 Show all budgets
                                                             </button>
@@ -242,30 +246,28 @@ export default function DiscoverClientView({
                     {selectedEvent && (
                         <>
                             {isMobile ? (
-                                <MobileEventDetailPanelDynamic 
-                                    event={selectedEvent} 
-                                    onClose={handleCloseEventDetail} 
-                                    categories={initialCategories} 
+                                <MobileEventDetailPanelDynamic
+                                    event={selectedEvent}
+                                    onClose={handleCloseEventDetail}
+                                    categories={initialCategories}
                                 />
                             ) : (
-                                <div 
-                                    className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
-                                        isClosing ? 'opacity-0' : 'opacity-100'
-                                    }`}
+                                <div
+                                    className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'
+                                        }`}
                                     onClick={handleCloseEventDetail}
                                 >
-                                    <div 
-                                        className={`fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform duration-300 ease-out ${
-                                            isClosing 
-                                                ? 'animate-out slide-out-to-right' 
+                                    <div
+                                        className={`fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform duration-300 ease-out ${isClosing
+                                                ? 'animate-out slide-out-to-right'
                                                 : 'animate-in slide-in-from-right'
-                                        }`}
+                                            }`}
                                         onClick={(e) => e.stopPropagation()}
                                     >
-                                        <EventDetailPanelDynamic 
-                                            event={selectedEvent} 
-                                            onClose={handleCloseEventDetail} 
-                                            categories={initialCategories} 
+                                        <EventDetailPanelDynamic
+                                            event={selectedEvent}
+                                            onClose={handleCloseEventDetail}
+                                            categories={initialCategories}
                                         />
                                     </div>
                                 </div>
