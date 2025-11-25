@@ -22,6 +22,7 @@ import {
     enhancedEventTransformer
 } from '@/utils/transformers';
 import { sanitizeFtsQuery } from '@/lib/securityUtils';
+import { applyLocationFilter } from '@/utils/locationFilterUtils';
 import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { CareerProfile } from '@/types/career';
 import { enrichEventsWithCareerImpact as enrichEventsWithNewScoring } from './careerImpactEnrichmentService';
@@ -54,15 +55,7 @@ export class EventService {
             if (filters.categories?.length) {
                 query = query.in('event_type_id', filters.categories);
             }
-            if (filters.locations?.length) {
-                query = query.in('location', filters.locations);
-            }
-            if (filters.locations?.length) {
-                query = query.in('location', filters.locations);
-            }
-            if (filters.locations?.length) {
-                query = query.in('location', filters.locations);
-            }
+            query = applyLocationFilter(query, filters.locations);
             if (filters.searchTerm) {
                 query = query.textSearch('fts', sanitizeFtsQuery(filters.searchTerm));
             }
@@ -196,7 +189,7 @@ export class EventService {
 
             // Apply filters (same logic, cleaner code)
             if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
-            if (filters.locations?.length) query = query.in('location', filters.locations);
+            query = applyLocationFilter(query, filters.locations);
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
             if (filters.searchTerm?.trim()) {
@@ -309,7 +302,7 @@ export class EventService {
 
             // Apply filters (same logic, cleaner code)
             if (filters.categories?.length) query = query.in('event_type_id', filters.categories);
-            if (filters.locations?.length) query = query.in('location', filters.locations);
+            query = applyLocationFilter(query, filters.locations);
             if (filters.startDate) query = query.gte('start_time', filters.startDate.toISOString());
             if (filters.endDate) query = query.lte('start_time', filters.endDate.toISOString());
             if (filters.searchTerm?.trim()) {
@@ -540,9 +533,7 @@ export class EventService {
             if (filters.categories?.length) {
                 query = query.in('event_type_id', filters.categories);
             }
-            if (filters.locations?.length) {
-                query = query.in('location', filters.locations);
-            }
+            query = applyLocationFilter(query, filters.locations);
 
             if (filters.searchTerm) {
                 query = query.textSearch('fts', sanitizeFtsQuery(filters.searchTerm));

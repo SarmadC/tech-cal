@@ -56,7 +56,8 @@
       "Bash(xargs kill:*)",
       "WebFetch(domain:docs.firecrawl.dev)",
       "Bash(tsx:*)",
-      "mcp__playwright__browser_network_requests"
+      "mcp__playwright__browser_network_requests",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

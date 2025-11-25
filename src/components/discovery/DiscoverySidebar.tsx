@@ -85,7 +85,8 @@ export interface DiscoverySidebarProps {
     };
 }
 
-const DiscoverySidebar: React.FC<DiscoverySidebarProps> = ({
+// Memoize to prevent unnecessary re-renders when parent updates
+const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
     filters,
     onUpdateFilter,
     categories,
@@ -174,6 +175,25 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = ({
             </div>
         </div>
     );
-};
+}, (prevProps, nextProps) => {
+    // Custom comparison for arrays and objects
+    const categoriesEqual = prevProps.filters.categories.length === nextProps.filters.categories.length &&
+        prevProps.filters.categories.every((cat, idx) => cat === nextProps.filters.categories[idx]);
+
+    const categoriesListEqual = prevProps.categories.length === nextProps.categories.length &&
+        prevProps.categories.every((cat, idx) => cat.id === nextProps.categories[idx].id);
+
+    return (
+        prevProps.filters.format === nextProps.filters.format &&
+        prevProps.filters.cost === nextProps.filters.cost &&
+        categoriesEqual &&
+        categoriesListEqual &&
+        prevProps.counts?.format === nextProps.counts?.format &&
+        prevProps.counts?.cost === nextProps.counts?.cost &&
+        prevProps.counts?.categories === nextProps.counts?.categories
+    );
+});
+
+DiscoverySidebar.displayName = 'DiscoverySidebar';
 
 export default DiscoverySidebar;

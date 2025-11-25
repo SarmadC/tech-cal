@@ -154,10 +154,37 @@ export function ErrorState({
   );
 }
 
-export function SmartLoader({ loading, error, children, skeleton, onRetry}: {loading: boolean; error?: string | null; children: React.ReactNode; skeleton: React.ReactNode; onRetry?: () => void;}) {
-  if (loading) return <>{skeleton}</>;
+export function SmartLoader({
+  loading,
+  error,
+  children,
+  skeleton,
+  onRetry,
+  isBackgroundRefetch = false
+}: {
+  loading: boolean;
+  error?: string | null;
+  children: React.ReactNode;
+  skeleton: React.ReactNode;
+  onRetry?: () => void;
+  isBackgroundRefetch?: boolean;
+}) {
+  // Show full skeleton only for initial load (no background refetch)
+  if (loading && !isBackgroundRefetch) return <>{skeleton}</>;
+
   if (error) {
     return <ErrorState error={error} onRetry={onRetry} />;
   }
-  return <>{children}</>;
+
+  // Show children with subtle indicator during background refetch
+  return (
+    <div className="relative">
+      {children}
+      {isBackgroundRefetch && (
+        <div className="fixed bottom-4 right-4 z-50 px-3 py-2 bg-card/95 dark:bg-card/40 backdrop-blur-sm border border-border rounded-lg shadow-lg text-sm text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-200">
+          Updating results...
+        </div>
+      )}
+    </div>
+  );
 }

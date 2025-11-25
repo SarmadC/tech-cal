@@ -25,7 +25,9 @@ const CARD_ACCENTS = [
   'hover:border-indigo-300/60 focus-visible:ring-indigo-300/30',
 ];
 
-const EventCard: React.FC<EventCardProps> = ({ event, onClick, onBookmark, isBookmarked = false, isBookmarking = false }) => {
+// Memoize to prevent unnecessary re-renders when parent updates
+// Only compare data props, not callbacks (callbacks change on every render due to inline functions)
+const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBookmark, isBookmarked = false, isBookmarking = false }) => {
   // Deterministic color based on event ID
   const colorIndex = event.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % CARD_ACCENTS.length;
   const accentClass = CARD_ACCENTS[colorIndex];
@@ -87,14 +89,14 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onBookmark, isBoo
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-white border border-border/20 flex items-center justify-center overflow-hidden shadow-sm">
+          <div className="w-12 h-12 rounded-md bg-white border border-border/20 flex items-center justify-center overflow-hidden shadow-sm">
             {activeLogoSrc ? (
               <Image 
                 src={activeLogoSrc} 
                 alt={logoAltText} 
                 width={48} 
                 height={48} 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 onError={handleLogoError}
               />
             ) : (
@@ -173,6 +175,16 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick, onBookmark, isBoo
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison: only compare data that affects rendering
+  // Skip onClick/onBookmark as they change every render (inline functions in parent)
+  return (
+    prevProps.event.id === nextProps.event.id &&
+    prevProps.isBookmarked === nextProps.isBookmarked &&
+    prevProps.isBookmarking === nextProps.isBookmarking
+  );
+});
+
+EventCard.displayName = 'EventCard';
 
 export default EventCard;

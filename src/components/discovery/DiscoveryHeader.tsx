@@ -53,7 +53,8 @@ const formatDateRange = (range: { start: Date | null; end: Date | null }): strin
     return 'Any Date';
 };
 
-const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = ({
+// Memoize to prevent unnecessary re-renders when parent updates
+const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     searchTerm,
     onSearchChange,
     location,
@@ -143,6 +144,19 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = ({
             </div>
         </div>
     );
-};
+}, (prevProps, nextProps) => {
+    // Custom comparison for date range
+    const dateRangeEqual =
+        prevProps.dateRange.start?.getTime() === nextProps.dateRange.start?.getTime() &&
+        prevProps.dateRange.end?.getTime() === nextProps.dateRange.end?.getTime();
+
+    return (
+        prevProps.searchTerm === nextProps.searchTerm &&
+        prevProps.location === nextProps.location &&
+        dateRangeEqual
+    );
+});
+
+DiscoveryHeader.displayName = 'DiscoveryHeader';
 
 export default DiscoveryHeader;

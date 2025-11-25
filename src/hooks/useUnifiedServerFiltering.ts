@@ -67,6 +67,7 @@ interface UseUnifiedServerFilteringResult {
   // Data
   filteredEvents: TrackedEvent[];
   isLoading: boolean;
+  isBackgroundRefetch: boolean;
   error: string | null;
   isColdStart: boolean;
   hasNextPage: boolean;
@@ -205,6 +206,7 @@ export function useUnifiedServerFiltering(
   } = useQuery({
     queryKey: ['filtered-events', queryKeyVersion, 'paged', fetchFilters],
     enabled: isPagedMode,
+    placeholderData: (previousData) => previousData,
     staleTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
     gcTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
     refetchOnMount: isDevelopment ? true : false, // Always refetch in dev
@@ -252,6 +254,7 @@ export function useUnifiedServerFiltering(
     queryKey: ['filtered-events', queryKeyVersion, 'infinite', fetchFilters],
     enabled: autoLoadAllPages,
     initialPageParam: 1,
+    placeholderData: (previousData) => previousData,
     staleTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
     gcTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS * 2,
     refetchOnMount: isDevelopment ? true : false,
@@ -279,7 +282,7 @@ export function useUnifiedServerFiltering(
       }
       return result as { success: true; data: FilteredEventsData };
     },
-    getNextPageParam: (lastPage) => {
+    getNextPageParam: (lastPage: { success: true; data: FilteredEventsData }) => {
       const { page, hasMore } = lastPage.data.pagination;
       return hasMore ? page + 1 : undefined;
     },
@@ -291,7 +294,17 @@ export function useUnifiedServerFiltering(
 
   const activeQueryError = isPagedMode ? pagedError : infiniteError;
   const queryError = activeQueryError instanceof Error ? activeQueryError.message : null;
-  const isLoading = isPagedMode ? (pagedLoading || pagedFetching) : (infiniteLoading || infiniteFetching);
+
+  // Separate initial loading from background refetching
+  // isLoading = true only when NO data exists (initial load)
+  // isBackgroundRefetch = true when refetching with existing data
+  const isInitialLoading = isPagedMode
+    ? (pagedLoading && !pagedData)
+    : (infiniteLoading && !infiniteData);
+
+  const isBackgroundRefetch = isPagedMode
+    ? (pagedFetching && !!pagedData)
+    : (infiniteFetching && !!infiniteData);
 
   const updateFilter: UpdateFilterHandler = useCallback((key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -382,7 +395,7 @@ export function useUnifiedServerFiltering(
   }, [pagedData?.data.events, trackedEventIds]);
 
   const infiniteEvents = useMemo(() => {
-    const pages = infiniteData?.pages ?? [];
+    const pages = (infiniteData?.pages ?? []) as Array<{ success: true; data: FilteredEventsData }>;
     const events = pages.flatMap(p => p.data.events || []);
     return events.map((event: Event) => enrichWithTracking(event, trackedEventIds?.has(event.id) || false));
   }, [infiniteData?.pages, trackedEventIds]);
@@ -405,8 +418,9 @@ export function useUnifiedServerFiltering(
       };
     }
 
-    const firstPage = infiniteData?.pages?.[0]?.data;
-    const lastPage = infiniteData?.pages?.[infiniteData.pages.length - 1]?.data;
+    const pages = (infiniteData?.pages ?? []) as Array<{ success: true; data: FilteredEventsData }>;
+    const firstPage = pages[0]?.data;
+    const lastPage = pages[pages.length - 1]?.data;
     const total = firstPage?.pagination.total ?? firstPage?.stats.totalCount ?? 0;
     const pageSize = filters.pageSize;
     const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
@@ -428,7 +442,7 @@ export function useUnifiedServerFiltering(
     if (isPagedMode) {
       return pagedData?.data.isColdStart ?? false;
     }
-    const pages = infiniteData?.pages ?? [];
+    const pages = (infiniteData?.pages ?? []) as Array<{ success: true; data: FilteredEventsData }>;
     if (pages.length === 0) return false;
     return pages[0].data.isColdStart || false;
   }, [isPagedMode, pagedData?.data, infiniteData?.pages]);
@@ -446,7 +460,8 @@ export function useUnifiedServerFiltering(
   return {
     // Data
     filteredEvents,
-    isLoading,
+    isLoading: isInitialLoading,
+    isBackgroundRefetch,
     error: queryError,
     isColdStart: combinedIsColdStart,
     totalCount,

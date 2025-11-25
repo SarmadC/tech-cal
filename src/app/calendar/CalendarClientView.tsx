@@ -109,6 +109,7 @@ function useEventData(profile: AppProfile | null) {
     const {
         filteredEvents: enrichedEvents,
         isLoading,
+        isBackgroundRefetch,
         error,
         filters,
         updateFilter,
@@ -127,6 +128,7 @@ function useEventData(profile: AppProfile | null) {
     return {
         enrichedEvents,
         isLoading,
+        isBackgroundRefetch,
         error,
         filters,
         updateFilter,
@@ -298,7 +300,7 @@ export default function CalendarClientView({
 
     
     const renderCalendarContent = (context: CalendarLayoutContext) => {
-        // Show loading state
+        // Show loading state (only on initial load)
         if (eventData.isLoading) {
             return (
                 <div className="flex items-center justify-center min-h-[400px]">
@@ -316,7 +318,7 @@ export default function CalendarClientView({
                 <div className="flex items-center justify-center min-h-[400px]">
                     <div className="text-center">
                         <p className="text-red-600 mb-4">Error loading events: {eventData.error}</p>
-                        <button 
+                        <button
                             onClick={eventData.refetch}
                             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                         >
@@ -328,19 +330,27 @@ export default function CalendarClientView({
         }
 
         return (
-            <AdaptiveCalendarRenderer
-                view={context.view}
-                events={eventData.enrichedEvents}
-                weekEvents={weekEvents}
-                dayEvents={dayEvents}
-                initialDate={context.date}
-                categories={initialCategories}
-                profile={profile}
-                trackedEvents={eventData.enrichedEvents.filter(e => e.isTracked)}
-                onEventSelect={handleSelectEvent}
-                onEventClick={handleEventClick}
-                calendarRef={context.calendarRef}
-            />
+            <div className="relative">
+                <AdaptiveCalendarRenderer
+                    view={context.view}
+                    events={eventData.enrichedEvents}
+                    weekEvents={weekEvents}
+                    dayEvents={dayEvents}
+                    initialDate={context.date}
+                    categories={initialCategories}
+                    profile={profile}
+                    trackedEvents={eventData.enrichedEvents.filter(e => e.isTracked)}
+                    onEventSelect={handleSelectEvent}
+                    onEventClick={handleEventClick}
+                    calendarRef={context.calendarRef}
+                />
+                {/* Background refetch indicator */}
+                {eventData.isBackgroundRefetch && (
+                    <div className="fixed bottom-4 right-4 z-50 px-3 py-2 bg-card/95 dark:bg-card/40 backdrop-blur-sm border border-border rounded-lg shadow-lg text-sm text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        Updating results...
+                    </div>
+                )}
+            </div>
         );
     };
 

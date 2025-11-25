@@ -183,6 +183,7 @@ export default function DiscoverClientView({
                                     <div className="flex-1 flex flex-col" data-view="discovery">
                                         <SmartLoader
                                             loading={eventData.isLoading}
+                                            isBackgroundRefetch={eventData.isBackgroundRefetch}
                                             error={eventData.error}
                                             onRetry={eventData.refetch}
                                             skeleton={loadingSkeleton}
