@@ -26,12 +26,12 @@ describe('Atomic Event Tracking', () => {
 
       mockSupabase.rpc = vi.fn().mockResolvedValue(mockRpcResponse);
 
-      await UserEventService.trackEvent('user1', 'event1', 'bookmarked', 'test notes', mockSupabase);
+      await UserEventService.trackEvent('user1', 'event1', 'attending', 'test notes', mockSupabase);
 
       expect(mockSupabase.rpc).toHaveBeenCalledWith('track_event_and_update_profile', {
         p_user_id: 'user1',
         p_event_id: 'event1',
-        p_status: 'bookmarked',
+        p_status: 'attending',
         p_notes: 'test notes'
       });
     });
@@ -48,12 +48,12 @@ describe('Atomic Event Tracking', () => {
 
       mockSupabase.rpc = vi.fn().mockResolvedValue(mockRpcResponse);
 
-      await UserEventService.trackEvent('user1', 'event1', 'bookmarked', undefined, mockSupabase);
+      await UserEventService.trackEvent('user1', 'event1', 'attending', undefined, mockSupabase);
 
       expect(mockSupabase.rpc).toHaveBeenCalledWith('track_event_and_update_profile', {
         p_user_id: 'user1',
         p_event_id: 'event1',
-        p_status: 'bookmarked',
+        p_status: 'attending',
         p_notes: undefined
       });
     });
@@ -70,7 +70,7 @@ describe('Atomic Event Tracking', () => {
       mockSupabase.rpc = vi.fn().mockResolvedValue(mockRpcResponse);
 
       await expect(
-        UserEventService.trackEvent('user1', 'event1', 'bookmarked', undefined, mockSupabase)
+        UserEventService.trackEvent('user1', 'event1', 'attending', undefined, mockSupabase)
       ).rejects.toThrow('Failed to track event.');
     });
 
@@ -83,7 +83,7 @@ describe('Atomic Event Tracking', () => {
       mockSupabase.rpc = vi.fn().mockResolvedValue(mockRpcResponse);
 
       await expect(
-        UserEventService.trackEvent('user1', 'event1', 'bookmarked', undefined, mockSupabase)
+        UserEventService.trackEvent('user1', 'event1', 'attending', undefined, mockSupabase)
       ).rejects.toThrow('Failed to track event.');
     });
   });

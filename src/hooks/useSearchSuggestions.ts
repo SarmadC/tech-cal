@@ -2,20 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useDebounce } from './useDebounce';
-
-export interface SearchSuggestion {
-    id: string;
-    title: string;
-    type: 'event' | 'organizer' | 'category';
-    subtitle?: string;
-    icon?: string;
-    careerScore?: number;
-}
+import type { SearchSuggestion } from '@/types';
 
 export interface UseSearchSuggestionsProps {
     searchTerm: string;
-    events: Array<{ id: string; title: string; organizer: string; eventTypeId: string }>;
+    events: Array<{ id: string; title: string; organizer: string; eventTypeId: string; tags?: Array<{ id: string; name: string; category?: string }> }>;
     categories: Array<{ id: string; name: string }>;
+    tags?: Array<{ id: string; name: string; category?: string }>;
     maxSuggestions?: number;
     debounceMs?: number;
 }
@@ -24,12 +17,13 @@ export function useSearchSuggestions({
     searchTerm,
     events,
     categories,
+    tags = [],
     maxSuggestions = 5,
     debounceMs = 300
 }: UseSearchSuggestionsProps) {
     const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    
+
     const debouncedSearchTerm = useDebounce(searchTerm, debounceMs);
 
     useEffect(() => {
@@ -112,9 +106,28 @@ export function useSearchSuggestions({
 
                 suggestions.push(...categoryMatches);
 
+                // Tag suggestions - check both provided tags and event tags
+                const allTags = tags.length > 0 ? tags : events.flatMap(e => e.tags || []);
+                const uniqueTags = Array.from(
+                    new Map(allTags.map(t => [t.name.toLowerCase(), t])).values()
+                );
+
+                const tagMatches = uniqueTags
+                    .filter(tag => tag.name.toLowerCase().includes(term))
+                    .slice(0, Math.ceil(maxSuggestions / 4))
+                    .map(tag => ({
+                        id: `tag-${tag.id}`,
+                        title: tag.name,
+                        type: 'tag' as const,
+                        subtitle: tag.category ? `${tag.category} • Tag` : 'Tag',
+                        icon: 'tag'
+                    }));
+
+                suggestions.push(...tagMatches);
+
                 // Remove duplicates and limit results
                 const uniqueSuggestions = suggestions
-                    .filter((suggestion, index, self) => 
+                    .filter((suggestion, index, self) =>
                         self.findIndex(s => s.title === suggestion.title) === index
                     )
                     .slice(0, maxSuggestions);
@@ -128,7 +141,7 @@ export function useSearchSuggestions({
             setSuggestions([]);
             setIsLoading(false);
         }
-    }, [debouncedSearchTerm, events, categories, maxSuggestions]);
+    }, [debouncedSearchTerm, events, categories, tags, maxSuggestions]);
 
     return {
         suggestions,

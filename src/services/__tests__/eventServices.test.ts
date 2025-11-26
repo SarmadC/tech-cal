@@ -7,8 +7,8 @@ import type { EventFilters } from '@/types';
 
 // Mock Supabase client
 const createMockSupabaseClient = () => {
-  // Store the promise that will be returned by then()
-  let thenPromise = Promise.resolve({ data: [], error: null });
+  type QueryResult = { data: unknown; error: unknown };
+  let thenPromise: Promise<QueryResult> = Promise.resolve({ data: [], error: null });
 
   const mockQuery = {
     select: vi.fn().mockReturnThis(),
@@ -30,7 +30,7 @@ const createMockSupabaseClient = () => {
       return thenPromise.then(onFulfilled, onRejected);
     }),
     // Helper to set what the then() promise resolves to
-    __setThenValue: (value: { data: unknown; error: unknown }) => {
+    __setThenValue: (value: QueryResult) => {
       thenPromise = Promise.resolve(value);
     },
     // Helper to set what the then() promise rejects with

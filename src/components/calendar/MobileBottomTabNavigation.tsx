@@ -22,8 +22,8 @@ export interface MobileBottomTabNavigationProps {
     onUpdateFilter: <K extends keyof SmartFilterOptions>(key: K, value: SmartFilterOptions[K]) => void;
     onResetFilters: () => void;
     onApplyQuickFilter: (filterType: string) => void;
-    searchSuggestions?: Array<{ id: string; title: string; type: 'event' | 'organizer' | 'category' }>;
-    onSearchSuggestionSelect?: (suggestion: { id: string; title: string; type: 'event' | 'organizer' | 'category' }) => void;
+    searchSuggestions?: Array<{ id: string; title: string; type: 'event' | 'organizer' | 'category' | 'tag' }>;
+    onSearchSuggestionSelect?: (suggestion: { id: string; title: string; type: 'event' | 'organizer' | 'category' | 'tag' }) => void;
 }
 
 const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({

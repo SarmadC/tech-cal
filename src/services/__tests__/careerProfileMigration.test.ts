@@ -2,22 +2,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CareerProfileService } from '../careerProfileService';
 import { CareerImpactService } from '../careerImpactService';
 import { CareerProfile } from '@/types/career';
+import type { SupabaseClientType } from '@/types';
 
-// Mock Supabase client
+const fromMock = vi.fn();
+const rpcMock = vi.fn();
+
 const mockSupabaseClient = {
-  from: vi.fn(() => ({
-    select: vi.fn(() => ({
-      eq: vi.fn(() => ({
-        single: vi.fn()
-      }))
-    })),
-    upsert: vi.fn(),
-    update: vi.fn(() => ({
-      eq: vi.fn()
-    }))
-  })),
-  rpc: vi.fn()
-} as unknown as ReturnType<typeof import('@supabase/supabase-js').createClient>;
+  from: fromMock,
+  rpc: rpcMock,
+} as unknown as SupabaseClientType;
 
 const createSelectEqSingleMock = <T>(response: { data: T; error: unknown }) => {
   const single = vi.fn().mockResolvedValue(response);
@@ -66,6 +59,19 @@ describe('CareerProfileService Migration', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+    fromMock.mockReset();
+    fromMock.mockImplementation(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(),
+        })),
+      })),
+      upsert: vi.fn(),
+      update: vi.fn(() => ({
+        eq: vi.fn(),
+      })),
+    }));
+    rpcMock.mockReset();
     vi.spyOn(CareerImpactService, 'invalidateProfileCache').mockResolvedValue(0);
     vi.spyOn(CareerProfileService, 'saveCareerProfileToPreferences').mockResolvedValue();
   });
@@ -184,14 +190,14 @@ describe('CareerProfileService Migration', () => {
         }))
       }));
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
 
       const result = await CareerProfileService.getCareerProfile(userId, mockSupabaseClient);
 
       expect(result).toBeDefined();
       expect(result?.userId).toBe(userId);
       expect(result?.currentRole).toBe('Frontend Engineer');
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('career_profiles');
+      expect(fromMock).toHaveBeenCalledWith('career_profiles');
     });
 
     it('should return null when no career profile exists', async () => {
@@ -206,7 +212,7 @@ describe('CareerProfileService Migration', () => {
         }))
       }));
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
 
       const result = await CareerProfileService.getCareerProfile(userId, mockSupabaseClient);
 
@@ -225,7 +231,7 @@ describe('CareerProfileService Migration', () => {
         }))
       }));
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
 
       const result = await CareerProfileService.getCareerProfile(userId, mockSupabaseClient);
 
@@ -262,11 +268,11 @@ describe('CareerProfileService Migration', () => {
         return {} as never;
       });
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
 
       await CareerProfileService.saveCareerProfile(userId, mockCareerProfile, mockSupabaseClient);
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('career_profiles');
+      expect(fromMock).toHaveBeenCalledWith('career_profiles');
       expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
         user_id: userId,
         current_role: mockCareerProfile.currentRole,
@@ -300,7 +306,7 @@ describe('CareerProfileService Migration', () => {
         return {} as never;
       });
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
       vi.spyOn(CareerProfileService, 'saveCareerProfileToPreferences').mockRejectedValueOnce(
         new Error('Fallback failed')
       );
@@ -324,7 +330,7 @@ describe('CareerProfileService Migration', () => {
         }))
       }));
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
 
       const result = await CareerProfileService.hasCompletedOnboarding(userId, mockSupabaseClient);
 
@@ -343,7 +349,7 @@ describe('CareerProfileService Migration', () => {
         }))
       }));
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
 
       const result = await CareerProfileService.hasCompletedOnboarding(userId, mockSupabaseClient);
 
@@ -372,7 +378,7 @@ describe('CareerProfileService Migration', () => {
       });
       const saveSpy = vi.spyOn(CareerProfileService, 'saveCareerProfile').mockResolvedValue();
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
 
       const result = await CareerProfileService.migrateCareerProfileData(userId, mockSupabaseClient);
 
@@ -392,7 +398,7 @@ describe('CareerProfileService Migration', () => {
         }))
       }));
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
 
       const result = await CareerProfileService.migrateCareerProfileData(userId, mockSupabaseClient);
 
@@ -422,7 +428,7 @@ describe('CareerProfileService Migration', () => {
           }))
         });
 
-      mockSupabaseClient.from = mockFrom;
+      fromMock.mockImplementation(mockFrom);
 
       const result = await CareerProfileService.migrateCareerProfileData(userId, mockSupabaseClient);
 

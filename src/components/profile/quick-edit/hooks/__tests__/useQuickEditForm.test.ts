@@ -5,6 +5,9 @@ import { CareerProfile } from '@/types/career';
 
 // Mock CareerProfile for testing
 const mockProfile: CareerProfile = {
+  userId: 'user-123',
+  profileId: 'profile-user-123',
+  lastUpdated: '2024-01-01T00:00:00.000Z',
   currentRole: 'Software Engineer',
   seniority: 'mid-level',
   industry: 'Technology/Software',

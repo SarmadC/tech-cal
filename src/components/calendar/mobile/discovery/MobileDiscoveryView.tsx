@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { AppProfile, Event, EventType, TrackedEvent } from '@/types';
 import { ForYouSection, ExploreMoreSection } from './';
 import MobileDiscoveryNavbar from './MobileDiscoveryNavbar';
+import MobileDiscoverySearchBar from './MobileDiscoverySearchBar';
 import './mobile-discovery.css';
 
 export interface MobileDiscoveryViewProps {
@@ -13,6 +14,15 @@ export interface MobileDiscoveryViewProps {
   trackedEvents: TrackedEvent[];
   onEventSelect: (event: Event) => void;
   className?: string;
+  // Search & Filter props (optional - for integration)
+  filters?: {
+    searchTerm: string;
+    locations: string[];
+    dateRange: { start: Date | null; end: Date | null };
+  };
+  onUpdateFilter?: <K extends string>(key: K, value: unknown) => void;
+  activeFilterCount?: number;
+  onOpenFilters?: () => void;
 }
 
 const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
@@ -21,8 +31,13 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
   profile,
   trackedEvents,
   onEventSelect,
-  className = ''
+  className = '',
+  filters,
+  onUpdateFilter,
+  activeFilterCount = 0,
+  onOpenFilters
 }) => {
+  const [showSearchBar, setShowSearchBar] = useState(false);
   // Filter to upcoming events, handling incomplete fields gracefully
   const upcomingEvents = React.useMemo(() => {
     const now = new Date();
@@ -88,6 +103,22 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     <div className={`mobile-discovery-view ${className} bg-background text-foreground`} role="main" aria-label="Discover tech events">
       <MobileDiscoveryNavbar />
       <div className="mobile-discovery-stack">
+        {/* Search Bar - Optional integration */}
+        {filters && onUpdateFilter && (
+          <div className="px-4 pt-4">
+            <MobileDiscoverySearchBar
+              searchTerm={filters.searchTerm}
+              onSearchChange={(val) => onUpdateFilter('searchTerm', val)}
+              location={filters.locations[0] || ''}
+              onLocationChange={(val) => onUpdateFilter('locations', val ? [val] : [])}
+              dateRange={filters.dateRange}
+              onDateRangeChange={(range) => onUpdateFilter('dateRange', range)}
+              activeFilterCount={activeFilterCount}
+              onFilterClick={() => onOpenFilters?.()}
+            />
+          </div>
+        )}
+
         <div className="mobile-discovery-section-wrapper">
           <ForYouSection
             events={forYouEvents}

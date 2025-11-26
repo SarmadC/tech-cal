@@ -4,6 +4,7 @@ import React from 'react';
 import { CaretDown, CaretUp } from '@phosphor-icons/react';
 import { EventType } from '@/types';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
+import TagCloud from './TagCloud';
 
 interface FilterSectionProps {
     title: string;
@@ -78,6 +79,15 @@ export interface DiscoverySidebarProps {
     filters: Pick<UnifiedFilterOptions, 'format' | 'cost' | 'categories'>;
     onUpdateFilter: UpdateFilterHandler;
     categories: EventType[];
+    events?: Array<{
+        id: string;
+        tags?: Array<{
+            id: string;
+            name: string;
+            color?: string;
+            category?: string;
+        }>;
+    }>;
     counts?: {
         format?: Record<string, number>;
         cost?: Record<string, number>;
@@ -90,6 +100,7 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
     filters,
     onUpdateFilter,
     categories,
+    events = [],
     counts = {}
 }) => {
 
@@ -99,6 +110,11 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
             ? current.filter(id => id !== catId)
             : [...current, catId];
         onUpdateFilter('categories', updated);
+    };
+
+    const handleTagClick = (tagName: string) => {
+        // When tag is clicked, update search term to include the tag
+        onUpdateFilter('searchTerm', tagName);
     };
 
     return (
@@ -172,6 +188,17 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
                         );
                     })}
                 </FilterSection>
+
+                {/* Tag Cloud Section */}
+                {events.length > 0 && (
+                    <FilterSection title="Popular Tags" defaultOpen={true}>
+                        <TagCloud
+                            events={events}
+                            onTagClick={handleTagClick}
+                            maxTags={15}
+                        />
+                    </FilterSection>
+                )}
             </div>
         </div>
     );
@@ -183,11 +210,14 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
     const categoriesListEqual = prevProps.categories.length === nextProps.categories.length &&
         prevProps.categories.every((cat, idx) => cat.id === nextProps.categories[idx].id);
 
+    const eventsEqual = prevProps.events?.length === nextProps.events?.length;
+
     return (
         prevProps.filters.format === nextProps.filters.format &&
         prevProps.filters.cost === nextProps.filters.cost &&
         categoriesEqual &&
         categoriesListEqual &&
+        eventsEqual &&
         prevProps.counts?.format === nextProps.counts?.format &&
         prevProps.counts?.cost === nextProps.counts?.cost &&
         prevProps.counts?.categories === nextProps.counts?.categories

@@ -75,7 +75,7 @@ describe('EventService.applyEnhancedFilters - USD gating', () => {
 });
 
 describe('EventService.applyEnhancedFilters - Budget tier price filters', () => {
-  let mockQuery: { method: string; args: unknown[] };
+  let mockQuery: MockQueryBuilder;
 
   beforeEach(() => {
     mockQuery = buildMockQuery();

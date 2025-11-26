@@ -277,6 +277,83 @@ export async function POST(request: NextRequest) {
     const fetchPageSize = pageSize * fetchWindowMultiplier;
     const fetchPage = isCareerImpactSort ? 1 : page; // Always fetch from page 1 when using window
     
+    // Enhanced search: Combine FTS with tag and organizer search
+    // PERSONALIZED RANKING: Events are later enriched with career-impact scores
+    // and sorted by career-impact if sortBy='career-impact', which combines:
+    // - FTS relevance (implicit from tag/organizer matches getting higher scores)
+    // - Career profile matching (skills, goals, interests)
+    // - Tag similarity scores
+    // TODO: Future enhancement - capture PostgreSQL ts_rank() for explicit FTS weighting
+    let tagMatchedEventIds: string[] = [];
+    let organizerMatchedEventIds: string[] = [];
+    let expandedSearchTerms: string[] = [];
+
+    if (searchTerm && searchTerm.trim()) {
+      try {
+        // Import TagBasedMatchingService dynamically to use expandSearchTerm
+        const { TagBasedMatchingService } = await import('@/services/tagBasedMatchingService');
+
+        // Expand search term using TAG_SIMILARITIES
+        expandedSearchTerms = TagBasedMatchingService.expandSearchTerm(searchTerm);
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[API] Query expansion:', {
+            original: searchTerm,
+            expanded: expandedSearchTerms
+          });
+        }
+
+        // Search with all expanded terms in parallel
+        const searchPromises = expandedSearchTerms.flatMap(term => [
+          EventService.getEventIdsByTagSearch(term, supabase, eventFilters),
+          EventService.getEventIdsByOrganizerSearch(term, supabase)
+        ]);
+
+        const results = await Promise.all(searchPromises);
+
+        // Separate tag and organizer results
+        const tagResults: string[][] = [];
+        const orgResults: string[][] = [];
+
+        results.forEach((ids, index) => {
+          if (index % 2 === 0) {
+            tagResults.push(ids);
+          } else {
+            orgResults.push(ids);
+          }
+        });
+
+        // Flatten and deduplicate
+        tagMatchedEventIds = [...new Set(tagResults.flat())];
+        organizerMatchedEventIds = [...new Set(orgResults.flat())];
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[API] Multi-field search results:', {
+            searchTerm,
+            expandedTerms: expandedSearchTerms,
+            tagMatches: tagMatchedEventIds.length,
+            organizerMatches: organizerMatchedEventIds.length
+          });
+        }
+      } catch (error) {
+        console.error('[API] Multi-field search error:', error);
+        // Continue with FTS-only search if tag/org search fails
+      }
+    }
+
+    // Combine all matched event IDs (FTS will be handled by main query)
+    const additionalEventIds = [
+      ...tagMatchedEventIds,
+      ...organizerMatchedEventIds
+    ];
+
+    // Add matched event IDs to filters to include them in results
+    if (additionalEventIds.length > 0) {
+      // Merge with existing eventIds filter if present
+      const existingIds = eventFilters.eventIds || [];
+      eventFilters.eventIds = [...new Set([...existingIds, ...additionalEventIds])];
+    }
+
     // Get events using EventService (includes cold start & telemetry)
     let filteredEvents, totalEvents, isColdStart;
     try {

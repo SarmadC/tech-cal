@@ -338,6 +338,112 @@ export class EventService {
         }
     }
 
+    /**
+     * Search events by tags
+     * Supports both exact and partial matching
+     * Returns event IDs that match the search term in their tags
+     */
+    static async getEventIdsByTagSearch(
+        searchTerm: string,
+        supabaseClient: SupabaseClientType,
+        filters: EventFilters = {}
+    ): Promise<string[]> {
+        try {
+            if (!searchTerm || !searchTerm.trim()) return [];
+
+            const term = searchTerm.trim();
+
+            // Query event_tag_relations joined with event_tags to find matching events
+            let query = supabaseClient
+                .from('event_tag_relations')
+                .select(`
+                    event_id,
+                    event_tags!inner (
+                        event_tag
+                    )
+                `);
+
+            // Add tag matching - use ILIKE for case-insensitive partial match
+            query = query.ilike('event_tags.event_tag', `%${term}%`);
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('Tag search error:', error);
+                return [];
+            }
+
+            // Extract unique event IDs
+            const eventIds = [...new Set((data || []).map(rel => rel.event_id))];
+
+            // If we have date filters, verify events match them
+            if (eventIds.length > 0 && (filters.startDate || filters.endDate)) {
+                let eventQuery = supabaseClient
+                    .from('events')
+                    .select('id')
+                    .in('id', eventIds);
+
+                if (filters.startDate) {
+                    eventQuery = eventQuery.gte('start_time', filters.startDate.toISOString());
+                }
+                if (filters.endDate) {
+                    eventQuery = eventQuery.lte('start_time', filters.endDate.toISOString());
+                }
+
+                const { data: validEvents, error: validError } = await eventQuery;
+
+                if (validError) {
+                    console.error('Tag search date filter error:', validError);
+                    return eventIds; // Return all if filter fails
+                }
+
+                return (validEvents || []).map(e => e.id);
+            }
+
+            return eventIds;
+        } catch (error) {
+            console.error('Error searching events by tags:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventIdsByTagSearch', searchTerm }
+            });
+            return [];
+        }
+    }
+
+    /**
+     * Search events by organizer name
+     * Returns event IDs that match the search term in organizer name
+     */
+    static async getEventIdsByOrganizerSearch(
+        searchTerm: string,
+        supabaseClient: SupabaseClientType
+    ): Promise<string[]> {
+        try {
+            if (!searchTerm || !searchTerm.trim()) return [];
+
+            const term = searchTerm.trim();
+
+            // Search in the organizer field (string)
+            const { data, error } = await supabaseClient
+                .from('events')
+                .select('id')
+                .ilike('organizer', `%${term}%`);
+
+            if (error) {
+                console.error('Organizer search error:', error);
+                return [];
+            }
+
+            return (data || []).map(e => e.id);
+        } catch (error) {
+            console.error('Error searching events by organizer:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventIdsByOrganizerSearch', searchTerm }
+            });
+            return [];
+        }
+    }
+
     // Refactored: Use events_detailed view (70% less code, no manual joins)
     static async getEventById(
         id: string,

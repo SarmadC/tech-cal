@@ -38,8 +38,8 @@ const mockGetEventsWithColdStartHandling = vi.fn();
 const mockEnrichEventsWithCareerImpact = vi.fn(async (events: unknown[]) => events);
 vi.mock('@/services/eventServices', () => ({
   EventService: {
-    getEventsWithColdStartHandling: (...args: any[]) => mockGetEventsWithColdStartHandling(...args), // eslint-disable-line @typescript-eslint/no-explicit-any
-    enrichEventsWithCareerImpact: (...args: any[]) => mockEnrichEventsWithCareerImpact(...args) // eslint-disable-line @typescript-eslint/no-explicit-any
+    getEventsWithColdStartHandling: mockGetEventsWithColdStartHandling,
+    enrichEventsWithCareerImpact: mockEnrichEventsWithCareerImpact
   }
 }));
 

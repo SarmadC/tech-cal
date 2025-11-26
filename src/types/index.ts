@@ -129,7 +129,16 @@ export type EventFilters = {
   sortBy?: 'date' | 'popularity' | 'career-impact' | 'title' | 'location';
   sortDirection?: 'asc' | 'desc';
 };
-export type SearchSuggestion = { id: string; title: string; organizer: string; startTime: string; type: 'event' | 'organizer' | 'category'; };
+export type SearchSuggestion = {
+  id: string;
+  title: string;
+  type: 'event' | 'organizer' | 'category' | 'tag';
+  subtitle?: string;
+  icon?: string;
+  careerScore?: number;
+  organizer?: string;
+  startTime?: string;
+};
 export type LoginForm = { email: string; password: string; rememberMe?: boolean; };
 export type SignupForm = { name: string; email: string; password: string; confirmPassword: string; acceptTerms: boolean; };
 export type ProfileUpdateForm = { fullName?: string | null; avatarUrl?: string | null; timezone?: string | null; preferences?: Json | null; };

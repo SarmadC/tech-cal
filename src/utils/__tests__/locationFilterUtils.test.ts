@@ -4,7 +4,7 @@
  * Verifies that location filtering works correctly with normalized fields
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Note: These are unit tests for the filter logic
 // Integration tests would require a Supabase client
@@ -13,7 +13,7 @@ describe('locationFilterUtils', () => {
   describe('applyLocationFilter', () => {
     it('should handle empty locations array', () => {
       const mockQuery = {
-        or: jest.fn().mockReturnThis()
+        or: vi.fn().mockReturnThis()
       };
       
       // Import the function (would need to be exported for testing)

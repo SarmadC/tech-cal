@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TagBasedMatchingService } from '../tagBasedMatchingService';
-import type { Event, EventTag, SupabaseClientType } from '@/types';
+import type { AgendaItem, Event, EventTag, SupabaseClientType } from '@/types';
 import type { CareerProfile } from '@/types/career';
+import { buildAgendaItem, buildEvent, buildEventTag } from '@/tests/factories/eventFactories';
 
 // Type for accessing private methods in tests
 type TagBasedMatchingServicePrivate = {
@@ -11,26 +12,12 @@ type TagBasedMatchingServicePrivate = {
 };
 
 describe('TagBasedMatchingService', () => {
-  const createTestEvent = (title: string, tags: EventTag[] = [], agenda: Array<{ title: string; description?: string }> = []): Event => ({
-    id: `test-event-${Math.random()}`,
-    title,
-    description: 'Test Description',
-    startTime: new Date(Date.now() + 86400000).toISOString(),
-    endTime: new Date(Date.now() + 90000000).toISOString(),
-    location: 'Test Location',
-    organizer: 'Test Organizer',
-    status: 'confirmed',
-    sourceUrl: 'https://example.com',
-    eventTypeId: 'test-type',
-    priceRange: 'Free',
-    registrationUrl: '',
-    livestreamUrl: null,
-    attendeeCount: 100,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    tags,
-    agenda
-  });
+  const createTestEvent = (title: string, tags: EventTag[] = [], agenda: AgendaItem[] = []): Event =>
+    buildEvent({
+      title,
+      tags,
+      agenda,
+    });
 
   const createTestProfile = (overrides: Partial<CareerProfile> = {}): CareerProfile => ({
     userId: 'test-user-id',
@@ -57,7 +44,7 @@ describe('TagBasedMatchingService', () => {
     it('matches A -> B -> C paths', () => {
       const profile = createTestProfile({ interests: ['AI'] });
       const event = createTestEvent('Data Science Summit', [
-        { id: '1', name: 'Data Science', color: '#0f0', category: 'Tech' }
+        buildEventTag({ id: '1', name: 'Data Science', color: '#0f0', category: 'Tech' })
       ]);
       const result = TagBasedMatchingService.calculateTagSimilarity(event, profile);
       expect(result.score).toBeGreaterThan(0);
@@ -161,10 +148,10 @@ describe('TagBasedMatchingService', () => {
         learningStyle: ['hands-on']
       });
       const primaryEvent = createTestEvent('HTML Workshop', [
-        { id: '1', name: 'HTML', color: 'blue', category: 'Programming' }
+        buildEventTag({ id: '1', name: 'HTML', color: 'blue', category: 'Programming' })
       ]);
       const learningEvent = createTestEvent('React Workshop', [
-        { id: '2', name: 'React', color: 'blue', category: 'Programming' }
+        buildEventTag({ id: '2', name: 'React', color: 'blue', category: 'Programming' })
       ]);
       const primaryScore = TagBasedMatchingService.calculateTagSimilarity(primaryEvent, profile).score;
       const learningScore = TagBasedMatchingService.calculateTagSimilarity(learningEvent, profile).score;
@@ -176,7 +163,7 @@ describe('TagBasedMatchingService', () => {
     it('matches interests found only in agenda sessions', () => {
       const profile = createTestProfile({ interests: ['Kubernetes'] });
       const event = createTestEvent('Cloud Summit', [], [
-        { title: 'Intro to Kubernetes', description: 'Container orchestration' }
+        buildAgendaItem({ id: 'agenda-k8s', title: 'Intro to Kubernetes', description: 'Container orchestration' })
       ]);
       const result = TagBasedMatchingService.calculateTagSimilarity(event, profile);
       expect(result.matchedTags).toContain('Kubernetes');
@@ -185,7 +172,7 @@ describe('TagBasedMatchingService', () => {
     it('honors word boundaries to avoid false positives', () => {
       const profile = createTestProfile({ interests: ['AI'] });
       const event = createTestEvent('Tailwind CSS Workshop', [], [
-        { title: 'Styling with Tailwind', description: 'CSS framework' }
+        buildAgendaItem({ id: 'agenda-tailwind', title: 'Styling with Tailwind', description: 'CSS framework' })
       ]);
       const result = TagBasedMatchingService.calculateTagSimilarity(event, profile);
       expect(result.score).toBe(0);
@@ -196,7 +183,7 @@ describe('TagBasedMatchingService', () => {
     it('matches python interests with django tags', () => {
       const profile = createTestProfile({ interests: ['Python'] });
       const event = createTestEvent('Django Con', [
-        { id: '1', name: 'Django', color: '#0ff', category: 'Framework' }
+        buildEventTag({ id: '1', name: 'Django', color: '#0ff', category: 'Framework' })
       ]);
       expect(TagBasedMatchingService.calculateTagSimilarity(event, profile).score).toBeGreaterThan(0);
     });
@@ -204,7 +191,7 @@ describe('TagBasedMatchingService', () => {
     it('matches django interests with python tags', () => {
       const profile = createTestProfile({ interests: ['Django'] });
       const event = createTestEvent('Python Summit', [
-        { id: '1', name: 'Python', color: '#0ff', category: 'Programming' }
+        buildEventTag({ id: '1', name: 'Python', color: '#0ff', category: 'Programming' })
       ]);
       expect(TagBasedMatchingService.calculateTagSimilarity(event, profile).score).toBeGreaterThan(0);
     });
@@ -432,14 +419,11 @@ describe('TagBasedMatchingService', () => {
         });
 
         const untaggedEvent = createTestEvent('Data Science Summit', [], [
-          { 
-            id: '1',
-            title: 'Python Workshop', 
+          buildAgendaItem({
+            id: 'agenda-python',
+            title: 'Python Workshop',
             description: 'Learn Python for data science',
-            startTime: '10:00',
-            endTime: '12:00',
-            type: 'workshop'
-          }
+          })
         ]);
 
         const result = TagBasedMatchingService.calculateTagSimilarity(untaggedEvent, profile);

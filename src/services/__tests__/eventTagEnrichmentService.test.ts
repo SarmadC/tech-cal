@@ -9,6 +9,7 @@ type EventTagEnrichmentServicePrivate = {
   mapToCanonicalTags: (candidates: string[], supabaseClient: SupabaseClientType) => Promise<Array<{
     tagId: string;
     tagName: string;
+    category: string;
     confidence: number;
     matchType: 'exact' | 'synonym' | 'category' | 'partial';
   }>>;
@@ -320,7 +321,9 @@ describe('EventTagEnrichmentService', () => {
 
       expect(matches.length).toBeGreaterThan(0);
       const reactMatch = matches.find((m) => m.tagName === 'React');
-      expect(reactMatch).toBeDefined();
+      if (!reactMatch) {
+        throw new Error('Expected React match to be present');
+      }
       expect(reactMatch.confidence).toBe(1.0);
       expect(reactMatch.matchType).toBe('exact');
     });

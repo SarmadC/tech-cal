@@ -86,6 +86,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
             }}
             onUpdateFilter={onUpdateFilter}
             categories={categories}
+            events={events}
             counts={counts}
           />
         }

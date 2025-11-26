@@ -6,8 +6,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Mock Supabase client
 const createMockSupabaseClient = () => {
-  // Store the promise that will be returned by then()
-  let thenPromise = Promise.resolve({ data: [], error: null });
+  type QueryResult = { data: unknown; error: unknown };
+  let thenPromise: Promise<QueryResult> = Promise.resolve({ data: [], error: null });
 
   return {
     from: vi.fn().mockReturnThis(),
@@ -28,7 +28,7 @@ const createMockSupabaseClient = () => {
       return thenPromise.then(onFulfilled, onRejected);
     }),
     // Helper to set what the then() promise resolves to
-    __setThenValue: (value: { data: unknown; error: unknown }) => {
+    __setThenValue: (value: QueryResult) => {
       thenPromise = Promise.resolve(value);
     },
     // Helper to set what the then() promise rejects with
@@ -98,7 +98,7 @@ describe('UserEventService', () => {
       await expect(UserEventService.trackEvent(
         'user1',
         'event1',
-        'bookmarked',
+        'attending',
         '',
         mockSupabase as unknown as SupabaseClient
       )).resolves.toBeUndefined();
@@ -106,7 +106,7 @@ describe('UserEventService', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith('track_event_and_update_profile', {
         p_user_id: 'user1',
         p_event_id: 'event1',
-        p_status: 'bookmarked',
+        p_status: 'attending',
         p_notes: '',
       });
     });
@@ -143,7 +143,7 @@ describe('UserEventService', () => {
       await expect(UserEventService.trackEvent(
         'user1',
         'event1',
-        'bookmarked',
+        'attending',
         '',
         mockSupabase as unknown as SupabaseClient
       )).rejects.toThrow('Failed to track event.');
@@ -159,7 +159,7 @@ describe('UserEventService', () => {
       await expect(UserEventService.trackEvent(
         'user1',
         'event1',
-        'bookmarked',
+        'attending',
         '',
         mockSupabase as unknown as SupabaseClient
       )).rejects.toThrow('Failed to track event.');
@@ -214,7 +214,7 @@ describe('UserEventService', () => {
           id: 'tracking1',
           user_id: 'user1',
           event_id: 'event1',
-          status: 'bookmarked',
+          status: 'attending',
           notes: '',
           created_at: '2024-01-01T10:00:00Z',
           events: {
@@ -272,7 +272,7 @@ describe('UserEventService', () => {
           id: 'tracking1',
           user_id: 'user1',
           event_id: 'event1',
-          status: 'bookmarked',
+          status: 'attending',
           notes: '',
           created_at: '2024-01-01T10:00:00Z',
         },
@@ -336,7 +336,7 @@ describe('UserEventService', () => {
 
       const { captureException } = await import('@sentry/nextjs');
 
-      await expect(UserEventService.trackEvent('user1', 'event1', 'bookmarked', '', mockSupabase as unknown as SupabaseClient))
+      await expect(UserEventService.trackEvent('user1', 'event1', 'attending', '', mockSupabase as unknown as SupabaseClient))
         .rejects.toThrow('Failed to track event.');
 
       expect(captureException).toHaveBeenCalledWith(mockError, expect.anything());

@@ -5,6 +5,7 @@
 
 // Mock query builder type for testing
 export interface MockQueryBuilder {
+  _calls: Array<{ method: string; args: unknown[] }>;
   eq: (column: string, value: unknown) => MockQueryBuilder;
   neq: (column: string, value: unknown) => MockQueryBuilder;
   gt: (column: string, value: unknown) => MockQueryBuilder;
@@ -17,6 +18,7 @@ export interface MockQueryBuilder {
   is: (column: string, value: string) => MockQueryBuilder;
   or: (condition: string) => MockQueryBuilder;
   and: (condition: string) => MockQueryBuilder;
+  filter: (column: string, operator: string, value: unknown) => MockQueryBuilder;
   order: (column: string, options?: { ascending?: boolean }) => MockQueryBuilder;
   limit: (count: number) => MockQueryBuilder;
   range: (from: number, to: number) => MockQueryBuilder;
@@ -85,6 +87,7 @@ export interface MockScoringStrategy {
 // Utility function to create mock query builder
 export function createMockQueryBuilder(): MockQueryBuilder {
   const builder = {
+    _calls: [],
     eq: (_column: string, _value: unknown) => builder,
     neq: (_column: string, _value: unknown) => builder,
     gt: (_column: string, _value: unknown) => builder,
@@ -97,6 +100,7 @@ export function createMockQueryBuilder(): MockQueryBuilder {
     is: (_column: string, _value: string) => builder,
     or: (_condition: string) => builder,
     and: (_condition: string) => builder,
+    filter: (_column: string, _operator: string, _value: unknown) => builder,
     order: (_column: string, _options?: { ascending?: boolean }) => builder,
     limit: (_count: number) => builder,
     range: (_from: number, _to: number) => builder,

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SmartFilterOptions } from '@/hooks/useSmartFilters';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useSearchSuggestions, SearchSuggestion } from '@/hooks/useSearchSuggestions';
+import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
+import type { SearchSuggestion } from '@/types';
 
 export interface MobileSearchFilterProps {
     filters: SmartFilterOptions;

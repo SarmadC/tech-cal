@@ -92,18 +92,18 @@ export class TagBasedMatchingService {
     if (this.TAG_SIMILARITIES) return;
 
     this.TAG_SIMILARITIES = new Map<string, Set<string>>();
-    
+
     Object.entries(this.RAW_TAG_SIMILARITIES).forEach(([key, values]) => {
       const normalizedKey = key.toLowerCase();
       if (!this.TAG_SIMILARITIES!.has(normalizedKey)) {
         this.TAG_SIMILARITIES!.set(normalizedKey, new Set());
       }
-      
+
       values.forEach(val => {
         const normalizedVal = val.toLowerCase();
         // A -> B
         this.TAG_SIMILARITIES!.get(normalizedKey)!.add(normalizedVal);
-        
+
         // B -> A (ensure entry exists first)
         if (!this.TAG_SIMILARITIES!.has(normalizedVal)) {
           this.TAG_SIMILARITIES!.set(normalizedVal, new Set());
@@ -111,6 +111,32 @@ export class TagBasedMatchingService {
         this.TAG_SIMILARITIES!.get(normalizedVal)!.add(normalizedKey);
       });
     });
+  }
+
+  /**
+   * Expand a search term using TAG_SIMILARITIES mappings
+   * Returns the original term plus all similar terms for broader search coverage
+   *
+   * Example: "js" -> ["js", "javascript", "node.js", "nodejs", "typescript", "ts"]
+   */
+  static expandSearchTerm(searchTerm: string): string[] {
+    this.initializeSimilarities();
+
+    if (!searchTerm || !searchTerm.trim()) return [];
+
+    const normalized = searchTerm.toLowerCase().trim();
+    const expansions = new Set<string>();
+
+    // Always include the original term
+    expansions.add(normalized);
+
+    // Add similar terms from TAG_SIMILARITIES map
+    const similarities = this.TAG_SIMILARITIES?.get(normalized);
+    if (similarities) {
+      similarities.forEach(term => expansions.add(term));
+    }
+
+    return Array.from(expansions);
   }
 
   /**

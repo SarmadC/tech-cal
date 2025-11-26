@@ -13,6 +13,7 @@ const mockDetailedSupabaseEvent: SupabaseEventWithDetails = {
     description: 'A deep dive into the future of AI.',
     start_time: '2024-10-20T09:00:00.000Z',
     end_time: '2024-10-22T17:00:00.000Z',
+    timezone: 'UTC',
     organizer_id: 'org_abc', // Added to match schema
     location: 'San Francisco, CA',
     status: 'confirmed',

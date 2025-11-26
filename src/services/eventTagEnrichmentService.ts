@@ -11,6 +11,7 @@ import type { AgendaItem } from '@/types';
 interface TagMatch {
   tagId: string;
   tagName: string;
+  category: string;
   confidence: number;
   matchType: 'exact' | 'synonym' | 'category' | 'partial';
 }
@@ -159,6 +160,7 @@ export class EventTagEnrichmentService {
             matches.push({
               tagId: tag.id,
               tagName: tag.event_tag,
+              category: tag.category,
               confidence: 1.0,
               matchType: 'exact'
             });
@@ -205,6 +207,7 @@ export class EventTagEnrichmentService {
             return {
               tagId: tag.id,
               tagName: tag.event_tag,
+              category: tag.category,
               confidence: 0.8,
               matchType: 'synonym'
             };
@@ -224,6 +227,7 @@ export class EventTagEnrichmentService {
             return {
               tagId: tag.id,
               tagName: tag.event_tag,
+              category: tag.category,
               confidence: 0.8,
               matchType: 'synonym'
             };
