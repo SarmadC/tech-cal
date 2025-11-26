@@ -7,9 +7,15 @@ import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import DiscoveryHeader from '@/components/discovery/DiscoveryHeader';
 import EventCard from '@/components/discovery/EventCard';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
-import { CaretDown } from '@phosphor-icons/react';
 import { calculateFilterCounts } from '@/utils/filterCountUtils';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export interface DesktopDiscoveryViewProps {
   events: Event[];
@@ -22,6 +28,8 @@ export interface DesktopDiscoveryViewProps {
   onUpdateFilter: UpdateFilterHandler;
   onSearch: () => void;
   totalCount: number;
+  onResetFilters: () => void;
+  activeFilterCount: number;
 }
 
 const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
@@ -34,7 +42,9 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
   filters,
   onUpdateFilter,
   onSearch,
-  totalCount
+  totalCount,
+  onResetFilters,
+  activeFilterCount
 }) => {
   const { isBookmarked, toggleBookmark } = useEventEngagement();
   const [pendingBookmarkIds, setPendingBookmarkIds] = useState<Set<string>>(new Set());
@@ -88,17 +98,28 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
             dateRange={filters.dateRange}
             onDateRangeChange={(range) => onUpdateFilter('dateRange', range)}
             onSearch={onSearch}
+            onResetFilters={onResetFilters}
+            activeFilterCount={activeFilterCount}
           />
         }
         resultCount={totalCount}
         sortOption={
-          <div className="relative group">
-            <button className="flex items-center gap-2 text-sm font-medium text-foreground bg-muted/70 dark:bg-muted/20 px-3 py-1.5 rounded-lg border border-border/60 hover:border-foreground/40 transition-colors">
-              <span>{filters.sortBy === 'date' ? 'Date' : filters.sortBy === 'popularity' ? 'Popular' : 'Recommended'}</span>
-              <CaretDown size={14} />
-            </button>
-            {/* Dropdown could go here */}
-          </div>
+          <Select
+            value={filters.sortBy}
+            onValueChange={(value) => onUpdateFilter('sortBy', value as UnifiedFilterOptions['sortBy'])}
+          >
+            <SelectTrigger className="text-sm font-medium text-foreground bg-muted/70 dark:bg-muted/20 px-3 py-1.5 rounded-lg border border-border/60 hover:border-foreground/40 transition-colors w-auto min-w-[140px] h-auto">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Default</SelectItem>
+              <SelectItem value="date">Date</SelectItem>
+              <SelectItem value="popularity">Popular</SelectItem>
+              <SelectItem value="career-impact">Recommended</SelectItem>
+              <SelectItem value="title">Title</SelectItem>
+              <SelectItem value="location">Location</SelectItem>
+            </SelectContent>
+          </Select>
         }
       >
         {events.map((event) => (

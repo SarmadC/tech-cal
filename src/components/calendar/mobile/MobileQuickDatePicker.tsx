@@ -1,6 +1,7 @@
 'use client';
 
 import { FC, useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 
@@ -154,7 +155,7 @@ const MobileQuickDatePicker: FC<MobileQuickDatePickerProps> = ({
 
     if (!isOpen) return null;
 
-    return (
+    const overlayContent = (
         <div className="mobile-quick-date-picker-overlay">
             <div 
                 ref={pickerRef}
@@ -261,6 +262,13 @@ const MobileQuickDatePicker: FC<MobileQuickDatePickerProps> = ({
             </div>
         </div>
     );
+
+    // Use portal to render at document.body level to avoid stacking context issues
+    if (typeof document !== 'undefined') {
+        return createPortal(overlayContent, document.body);
+    }
+
+    return overlayContent;
 };
 
 export default MobileQuickDatePicker;

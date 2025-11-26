@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MagnifyingGlass, MapPin, Calendar, SlidersHorizontal } from '@phosphor-icons/react';
+import { MagnifyingGlass, MapPin, Calendar, SlidersHorizontal, ArrowCounterClockwise } from '@phosphor-icons/react';
 import QuickDatePicker from '@/components/calendar/QuickDatePicker';
 
 interface DiscoveryHeaderProps {
@@ -12,6 +12,8 @@ interface DiscoveryHeaderProps {
     dateRange: { start: Date | null; end: Date | null };
     onDateRangeChange: (range: { start: Date | null; end: Date | null }) => void;
     onSearch: () => void;
+    onResetFilters: () => void;
+    activeFilterCount: number;
 }
 
 // Helper function to format date range for display
@@ -61,7 +63,9 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     onLocationChange,
     dateRange,
     onDateRangeChange,
-    onSearch
+    onSearch,
+    onResetFilters,
+    activeFilterCount
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     return (
@@ -134,6 +138,18 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     }}
                 />
 
+                {/* Clear All Filters Button */}
+                {activeFilterCount > 0 && (
+                    <button
+                        className="w-full lg:w-auto px-6 py-3 border border-border/60 bg-transparent text-foreground font-semibold rounded-xl hover:bg-muted/60 hover:border-foreground/40 transition-colors active:scale-95 transform duration-100 flex items-center gap-2"
+                        onClick={onResetFilters}
+                        aria-label="Clear all filters"
+                    >
+                        <ArrowCounterClockwise size={18} />
+                        <span>Clear All</span>
+                    </button>
+                )}
+
                 {/* Search Button */}
                 <button
                     className="w-full lg:w-auto px-8 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 active:scale-95 transform duration-100"
@@ -153,6 +169,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     return (
         prevProps.searchTerm === nextProps.searchTerm &&
         prevProps.location === nextProps.location &&
+        prevProps.activeFilterCount === nextProps.activeFilterCount &&
         dateRangeEqual
     );
 });

@@ -143,6 +143,8 @@ export default function DiscoverClientView({
             onUpdateFilter={eventData.updateFilter}
             onSearch={eventData.refetch}
             totalCount={eventData.totalCount}
+            onResetFilters={eventData.resetFilters}
+            activeFilterCount={eventData.activeFilterCount}
         />
     );
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { FC, useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { formatDate } from '@/utils/dateUtils';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { CalendarHeatmap } from '@/components/ui/calendar-heatmap';
@@ -321,7 +322,7 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
 
     if (!isOpen) return null;
 
-    return (
+    const overlayContent = (
         <div className="quick-date-picker-overlay">
             <div 
                 ref={pickerRef}
@@ -592,6 +593,13 @@ const QuickDatePicker: FC<QuickDatePickerProps> = ({
             </div>
         </div>
     );
+
+    // Use portal to render at document.body level to avoid stacking context issues
+    if (typeof document !== 'undefined') {
+        return createPortal(overlayContent, document.body);
+    }
+
+    return overlayContent;
 };
 
 export default QuickDatePicker;
