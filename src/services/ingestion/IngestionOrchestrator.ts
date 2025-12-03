@@ -11,6 +11,7 @@ import { IngestionSourceService } from './IngestionSourceService';
 import { RssCollector } from './collectors/RssCollector';
 import { IcsCollector } from './collectors/IcsCollector';
 import { ConfsTechCollector } from './collectors/ConfsTechCollector';
+import { DevelopersEventsCollector } from './collectors/DevelopersEventsCollector';
 import { HtmlCollector } from './collectors/HtmlCollector';
 import type { BaseCollector } from './collectors/BaseCollector';
 import { FILTERING_CONFIG } from '@/config/ingestionConstants';
@@ -318,6 +319,13 @@ export class IngestionOrchestrator {
                 const metadata = (source.metadata ?? {}) as Record<string, unknown>;
                 if ((metadata.provider as string | undefined) === 'confs.tech') {
                     return new ConfsTechCollector({
+                        sourceId: source.id,
+                        sourceUrl: source.source_url,
+                        metadata,
+                    });
+                }
+                if ((metadata.provider as string | undefined) === 'developers.events') {
+                    return new DevelopersEventsCollector({
                         sourceId: source.id,
                         sourceUrl: source.source_url,
                         metadata,

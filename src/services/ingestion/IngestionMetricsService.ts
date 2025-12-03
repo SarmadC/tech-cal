@@ -54,17 +54,12 @@ export interface EnrichmentMetricsSummary {
         totalJobs: number;
         rulesFirstSuccess: number;
         rulesFirstFallback: number;
-        firecrawlRuns: number;
-        firecrawlFailures: number;
-        budgetSkips: number;
-        firecrawlCredits: number;
         averageConfidence: number;
     };
     byDomain: Array<{
         domain: string | null;
         jobs: number;
         rulesFirstSuccess: number;
-        firecrawlCredits: number;
         averageConfidence: number;
     }>;
 }
@@ -286,7 +281,7 @@ export class IngestionMetricsService {
 
             const { data, error } = await supabaseClient
                 .from('extraction_job_log')
-                .select('decision, status, confidence, firecrawl_credits_spent, source_domain, metadata, firecrawl_used')
+                .select('decision, status, confidence, source_domain, metadata')
                 .gte('started_at', from.toISOString())
                 .lte('started_at', to.toISOString());
 
@@ -297,10 +292,6 @@ export class IngestionMetricsService {
             let totalJobs = 0;
             let rulesFirstSuccess = 0;
             let rulesFirstFallback = 0;
-            let firecrawlRuns = 0;
-            let firecrawlFailures = 0;
-            let budgetSkips = 0;
-            let totalCredits = 0;
             let totalConfidence = 0;
             let confidenceCount = 0;
 
@@ -309,7 +300,6 @@ export class IngestionMetricsService {
                 {
                     jobs: number;
                     rulesFirstSuccess: number;
-                    firecrawlCredits: number;
                     confidenceSum: number;
                     confidenceCount: number;
                 }
@@ -322,7 +312,6 @@ export class IngestionMetricsService {
                     domainMap.set(domainKey, {
                         jobs: 0,
                         rulesFirstSuccess: 0,
-                        firecrawlCredits: 0,
                         confidenceSum: 0,
                         confidenceCount: 0,
                     });
@@ -337,11 +326,6 @@ export class IngestionMetricsService {
                     domainStats.confidenceCount += 1;
                 }
 
-                if (entry.firecrawl_used) {
-                    totalCredits += entry.firecrawl_credits_spent ?? 0;
-                    domainStats.firecrawlCredits += entry.firecrawl_credits_spent ?? 0;
-                }
-
                 switch (entry.decision) {
                     case 'rules_first_success':
                         rulesFirstSuccess += 1;
@@ -350,19 +334,6 @@ export class IngestionMetricsService {
                     case 'rules_first_fallback':
                         rulesFirstFallback += 1;
                         break;
-                    case 'firecrawl_extract':
-                        if (entry.status === 'completed') {
-                            firecrawlRuns += 1;
-                        }
-                        break;
-                    case 'firecrawl_failed':
-                        firecrawlFailures += 1;
-                        break;
-                    default:
-                        if (entry.decision?.includes('cap')) {
-                            budgetSkips += 1;
-                        }
-                        break;
                 }
             });
 
@@ -370,7 +341,6 @@ export class IngestionMetricsService {
                 domain,
                 jobs: stats.jobs,
                 rulesFirstSuccess: stats.rulesFirstSuccess,
-                firecrawlCredits: stats.firecrawlCredits,
                 averageConfidence:
                     stats.confidenceCount > 0 ? stats.confidenceSum / stats.confidenceCount : 0,
             }));
@@ -384,10 +354,6 @@ export class IngestionMetricsService {
                     totalJobs,
                     rulesFirstSuccess,
                     rulesFirstFallback,
-                    firecrawlRuns,
-                    firecrawlFailures,
-                    budgetSkips,
-                    firecrawlCredits: totalCredits,
                     averageConfidence: confidenceCount > 0 ? totalConfidence / confidenceCount : 0,
                 },
                 byDomain,

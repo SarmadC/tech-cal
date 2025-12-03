@@ -86,3 +86,102 @@ export interface CollectorError {
     details?: Record<string, unknown>;
 }
 
+/**
+ * Event agenda item schema for scraped data
+ */
+export interface EventAgendaSchema {
+    title?: string;
+    name?: string;
+    sessionName?: string;
+    startTime?: string;
+    endTime?: string;
+    description?: string;
+    speakers?: string[];
+    location?: string;
+    track?: string;
+    dayNumber?: number;
+}
+
+/**
+ * Event daily schedule entry for scraped data
+ */
+export interface EventDailyScheduleEntry {
+    dayNumber?: number;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    dayLabel?: string;
+    notes?: string;
+}
+
+/**
+ * Event speaker schema for scraped data
+ */
+export interface EventSpeakersSchema {
+    name?: string;
+    title?: string;
+    company?: string;
+    bio?: string;
+    linkedinUrl?: string;
+    twitterUrl?: string;
+    photoUrl?: string;
+    websiteUrl?: string;
+}
+
+/**
+ * Event pricing schema for scraped data
+ */
+export interface EventPricingSchema {
+    priceMin?: number;
+    priceMax?: number;
+    currency?: string;
+    pricingType?: 'Free' | 'Paid' | 'Varies';
+}
+
+/**
+ * Combined extracted data from scraping
+ */
+export interface ScrapedEventData {
+    title?: string;
+    description?: string;
+    startTime?: string;
+    endTime?: string;
+    agenda?: EventAgendaSchema[];
+    speakers?: EventSpeakersSchema[];
+    pricing?: EventPricingSchema;
+    imageUrl?: string;
+    agendaUrl?: string;
+    timezone?: string;
+    registrationUrl?: string;
+    livestreamUrl?: string;
+    format?: string;
+    difficulty?: string;
+    tags?: Array<string | null | undefined>;
+    venue?: {
+        name?: string;
+        address?: string;
+        city?: string;
+        state_province?: string;
+        country?: string;
+        latitude?: number;
+        longitude?: number;
+    };
+    location?: {
+        venue?: string;
+        address?: string;
+        city?: string;
+        country?: string;
+        state?: string;
+        state_province?: string;
+        virtualPlatform?: string;
+        [key: string]: unknown;
+    };
+    sourceUrls?: {
+        finalUrl?: string;
+        sourceUrl?: string;
+        [key: string]: unknown;
+    };
+    dailySchedule?: EventDailyScheduleEntry[];
+}
+
+

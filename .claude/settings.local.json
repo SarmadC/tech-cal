@@ -57,7 +57,8 @@
       "WebFetch(domain:docs.firecrawl.dev)",
       "Bash(tsx:*)",
       "mcp__playwright__browser_network_requests",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(1)"
     ],
     "deny": [],
     "ask": []

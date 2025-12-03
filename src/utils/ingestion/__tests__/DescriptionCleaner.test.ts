@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
-import { normalizeDescription } from '@/services/ingestion/FirecrawlDataNormalizer';
+
 
 describe('cleanEventDescription', () => {
     it('removes TechMeme boilerplate and URLs', () => {
@@ -38,26 +38,5 @@ describe('cleanEventDescription', () => {
     });
 });
 
-describe('normalizeDescription', () => {
-    it('prefers cleaned Firecrawl description over noisy existing content', () => {
-        const raw =
-            'FTT FINTECH FESTIVAL https://www.techmeme.com/r2/www.fintechtalents.com_events\nFrom Techmeme\'s event calendar http://www.techmeme.com/events';
 
-        const existing =
-            'FTT Fintech Festival https://www.techmeme.com/r2/www.fintechtalents.com_events\n\nFrom Techmeme\'s event calendar http://www.techmeme.com/events';
-
-        const result = normalizeDescription(raw, existing);
-
-        expect(result).toBe('FTT Fintech Festival');
-    });
-
-    it('falls back to existing cleaned description when new content missing', () => {
-        const existing =
-            'Join us in Barcelona for a two-day deep dive into serverless infrastructure and AI-assisted DevOps workflows.';
-
-        const result = normalizeDescription(undefined, existing);
-
-        expect(result).toBe(existing);
-    });
-});
 

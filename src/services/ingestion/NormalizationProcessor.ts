@@ -15,7 +15,6 @@ import { QualityScoringService } from './QualityScoringService';
 import { EventFilterService } from './EventFilterService';
 import { IngestionSourceService } from './IngestionSourceService';
 import { EventUpdateService } from './EventUpdateService';
-import { FirecrawlEnrichmentService } from './FirecrawlEnrichmentService';
 import type { EventSourceRecord } from '@/types/ingestion';
 import { RETRY_CONFIG } from '@/config/ingestionConstants';
 import { applyUrlCanonicalization } from './utils/urlCanonicalizer';
@@ -373,27 +372,7 @@ export class NormalizationProcessor {
                     }
 
                     if (isDescriptionThin(record.description, record.title) && record.sourceUrl) {
-                        try {
-                            const preview = await FirecrawlEnrichmentService.fetchDescriptionPreview(
-                                record.sourceUrl,
-                                record.registrationUrl,
-                                record.description
-                            );
-
-                            if (
-                                preview?.description &&
-                                !isDescriptionThin(preview.description, record.title)
-                            ) {
-                                record.description =
-                                    cleanEventDescription(preview.description) ??
-                                    preview.description.trim();
-                            }
-                        } catch (previewError) {
-                            console.warn(
-                                `[NormalizationProcessor] Inline description enrichment failed for ${record.sourceUrl}:`,
-                                previewError
-                            );
-                        }
+                        // TODO: Implement alternative description enrichment or remove this block
                     }
 
                     // Check for duplicates before normalizing
@@ -536,17 +515,6 @@ export class NormalizationProcessor {
                                 supabaseClient
                             );
                         }
-
-                        // Enqueue Firecrawl enrichment (non-blocking)
-                        FirecrawlEnrichmentService.enqueueEnrichment(
-                            result.eventId,
-                            record.sourceUrl,
-                            record.registrationUrl,
-                            supabaseClient
-                        ).catch(error => {
-                            console.error(`[NormalizationProcessor] Failed to enqueue enrichment for event ${result.eventId}:`, error);
-                            // Continue - enrichment is non-critical
-                        });
 
                         succeeded++;
                     } else {

@@ -1,7 +1,7 @@
 import { extractCoreFieldsFromHtml, type HtmlCoreExtractionResult } from './html';
 import { applyUrlCanonicalization, createHash, normalizeUrlForCaching } from './utils/urlCanonicalizer';
 import { PageCacheService, type CachedExtractionPayload } from './PageCacheService';
-import type { ExtractedEventData } from '@/types/firecrawl';
+import type { ScrapedEventData } from '@/types/ingestion';
 import type { EventSourceRecord } from '@/types/ingestion';
 import type { SupabaseClientType } from '@/types';
 
@@ -21,7 +21,7 @@ export interface RulesFirstExtractionOptions {
 
 export interface RulesFirstExtractionResult {
     success: boolean;
-    data?: ExtractedEventData;
+    data?: ScrapedEventData;
     fieldConfidence?: Record<string, number>;
     confidence?: number;
     contentHash?: string;
@@ -89,7 +89,7 @@ async function fetchHtml(url: string, options?: RequestInit): Promise<FetchHtmlR
 function toExtractedEventData(
     extraction: HtmlCoreExtractionResult,
     baseUrl?: string
-): { data: ExtractedEventData; fieldConfidence: Record<string, number> } {
+): { data: ScrapedEventData; fieldConfidence: Record<string, number> } {
     const fieldConfidence: Record<string, number> = { ...extraction.confidence };
 
     const agenda = extraction.schedule?.map((item) => ({
@@ -109,7 +109,7 @@ function toExtractedEventData(
         endTime: item.endTime,
     }));
 
-    const data: ExtractedEventData = {
+    const data: ScrapedEventData = {
         title: extraction.title,
         description: extraction.description,
         startTime: extraction.startTime,

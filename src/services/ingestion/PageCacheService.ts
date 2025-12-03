@@ -1,14 +1,14 @@
 import type { SupabaseClientType } from '@/types';
 import type { Database } from '@/types/supabase';
 import type { HtmlCoreExtractionResult } from './html';
-import type { ExtractedEventData } from '@/types/firecrawl';
+import type { ScrapedEventData } from '@/types/ingestion';
 
 type PageCacheRow = Database['public']['Tables']['page_cache']['Row'];
 type PageCacheInsert = Database['public']['Tables']['page_cache']['Insert'];
 
 export interface CachedExtractionPayload {
     htmlResult: HtmlCoreExtractionResult;
-    extractedEvent: ExtractedEventData;
+    extractedEvent: ScrapedEventData;
     fieldConfidence: Record<string, number>;
     confidence: number;
     provenance: HtmlCoreExtractionResult['provenance'];

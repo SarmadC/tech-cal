@@ -11,8 +11,6 @@ type ExtractionJobLogRow = {
     normalized_url: string;
     source_domain: string | null;
     adapter: string | null;
-    firecrawl_used: boolean;
-    firecrawl_credits_spent: number | null;
     decision: string;
     status: string;
     duration_ms: number | null;
@@ -87,8 +85,6 @@ export default async function AdminApiActivityPage() {
             normalized_url,
             source_domain,
             adapter,
-            firecrawl_used,
-            firecrawl_credits_spent,
             decision,
             status,
             duration_ms,
@@ -131,9 +127,7 @@ export default async function AdminApiActivityPage() {
                         activity.map((item) => {
                             const badgeVariant = STATUS_VARIANT[item.status?.toLowerCase()] ?? 'secondary';
                             const duration = formatDuration(item.duration_ms, item.started_at, item.completed_at);
-                            const actorLabel = item.firecrawl_used
-                                ? `Firecrawl (${item.adapter ?? 'rules'})`
-                                : item.adapter ?? 'Rules-first';
+                            const actorLabel = item.adapter ?? 'Rules-first';
 
                             return (
                                 <div
@@ -158,7 +152,7 @@ export default async function AdminApiActivityPage() {
                                         <Badge variant={badgeVariant}>{formatStatus(item.status)}</Badge>
                                     </div>
 
-                                    <div className="mt-3 grid gap-3 text-xs text-slate-400 md:grid-cols-4">
+                                    <div className="mt-3 grid gap-3 text-xs text-slate-400 md:grid-cols-3">
                                         <div>
                                             <span className="block text-slate-500">Started</span>
                                             <span>{new Date(item.started_at).toLocaleString()}</span>
@@ -170,10 +164,6 @@ export default async function AdminApiActivityPage() {
                                         <div>
                                             <span className="block text-slate-500">Adapter</span>
                                             <span>{actorLabel}</span>
-                                        </div>
-                                        <div>
-                                            <span className="block text-slate-500">Firecrawl Credits</span>
-                                            <span>{item.firecrawl_credits_spent ?? 0}</span>
                                         </div>
                                     </div>
 

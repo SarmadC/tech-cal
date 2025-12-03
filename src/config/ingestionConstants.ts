@@ -8,21 +8,8 @@
 // Retry Configuration
 export const RETRY_CONFIG = {
     MAX_ATTEMPTS_NORMALIZATION: 5,
-    MAX_ATTEMPTS_FIRECRAWL: 3,
     BASE_DELAY_MS: 60 * 60 * 1000, // 1 hour
     MAX_DELAY_MS: 24 * 60 * 60 * 1000, // 24 hours
-} as const;
-
-// FireCrawl Configuration
-export const FIRECRAWL_CONFIG = {
-    DEFAULT_TIMEOUT_MS: 30000,
-    DEFAULT_CONCURRENCY: 2,
-    DEFAULT_BATCH_SIZE: 10,
-    DEFAULT_WORKER_INTERVAL_MS: 60000, // 1 minute
-    BLOCKED_DOMAINS: ['techmeme.com', 'www.techmeme.com'] as readonly string[],
-    DAILY_CREDIT_CAP: 0,
-    MONTHLY_CREDIT_CAP: 0,
-    PER_DOMAIN_DAILY_CAP: 0,
 } as const;
 
 // Deduplication Thresholds
@@ -81,35 +68,6 @@ export const ICS_DEFAULTS = {
 export const RSS_DEFAULTS = {
     DEFAULT_CURRENCY: 'USD',
     COLLECTOR_VERSION: '1.0.0',
-} as const;
-
-// FireCrawl Timeout Multipliers
-export const FIRECRAWL_TIMEOUT_MULTIPLIERS = {
-    CRAWL: 2, // Crawl operations take 2x longer
-    CRAWL_WITH_EXTRACTION: 3, // Crawl with extraction takes 3x longer
-    EXTRACT: 2, // Extract operations take 2x longer
-} as const;
-
-// FireCrawl Crawl Limits
-export const FIRECRAWL_CRAWL_LIMITS = {
-    DEFAULT: 5, // Default pages to crawl
-    COMPLEX: 10, // Pages to crawl for complex sites
-} as const;
-
-// FireCrawl Exclude Paths
-export const FIRECRAWL_EXCLUDE_PATHS = [
-    '/*blog*',
-    '/*news*',
-    '/*press*',
-    '/*media*',
-    '/*archive*',
-] as const;
-
-// FireCrawl Extract Configuration
-export const FIRECRAWL_EXTRACT_CONFIG = {
-    MAX_URLS: 5, // Maximum number of URLs to extract from in a single call
-    POLL_MAX_ATTEMPTS: 30, // Maximum polling attempts for async extract jobs
-    POLL_INTERVAL_MS: 5000, // Polling interval in milliseconds
 } as const;
 
 // Data Validation Limits

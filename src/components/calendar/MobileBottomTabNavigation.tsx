@@ -5,6 +5,7 @@ import { MaterialIcon, IconName } from '@/components/ui/Icon';
 import QuickDatePicker from './QuickDatePicker';
 import MobileSearchFilter from './MobileSearchFilter';
 import { SmartFilterOptions } from '@/hooks/useSmartFilters';
+import type { SearchSuggestion } from '@/types';
 
 type CalendarViewType = 'month' | 'week' | 'day';
 
@@ -22,8 +23,8 @@ export interface MobileBottomTabNavigationProps {
     onUpdateFilter: <K extends keyof SmartFilterOptions>(key: K, value: SmartFilterOptions[K]) => void;
     onResetFilters: () => void;
     onApplyQuickFilter: (filterType: string) => void;
-    searchSuggestions?: Array<{ id: string; title: string; type: 'event' | 'organizer' | 'category' | 'tag' }>;
-    onSearchSuggestionSelect?: (suggestion: { id: string; title: string; type: 'event' | 'organizer' | 'category' | 'tag' }) => void;
+    searchSuggestions?: SearchSuggestion[];
+    onSearchSuggestionSelect?: (suggestion: SearchSuggestion) => void;
 }
 
 const MobileBottomTabNavigation: FC<MobileBottomTabNavigationProps> = ({

@@ -34,8 +34,11 @@ vi.mock('@/utils/supabase/server', () => ({
   createClient: vi.fn(async () => mockSupabase)
 }));
 
-const mockGetEventsWithColdStartHandling = vi.fn();
-const mockEnrichEventsWithCareerImpact = vi.fn(async (events: unknown[]) => events);
+const { mockGetEventsWithColdStartHandling, mockEnrichEventsWithCareerImpact } = vi.hoisted(() => ({
+  mockGetEventsWithColdStartHandling: vi.fn(),
+  mockEnrichEventsWithCareerImpact: vi.fn(async (events: unknown[]) => events)
+}));
+
 vi.mock('@/services/eventServices', () => ({
   EventService: {
     getEventsWithColdStartHandling: mockGetEventsWithColdStartHandling,

@@ -121,6 +121,18 @@ export const INITIAL_SOURCES: InitialSourceConfig[] = [
         },
         is_active: true,
     },
+    {
+        name: 'Developers.events',
+        source_url: 'https://developers.events/all-events.json',
+        source_type: 'API',
+        access_type: 'public_api',
+        trust_score: 80.0,
+        fetch_interval_minutes: 360,
+        metadata: {
+            provider: 'developers.events',
+        },
+        is_active: true,
+    },
 ];
 
 /**

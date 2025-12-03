@@ -1,7 +1,7 @@
 import { BaseCollector } from './BaseCollector';
 import type { CollectorError, CollectorResult, EventSourceRecord } from '@/types/ingestion';
 import { RulesFirstExtractionService } from '../RulesFirstExtractionService';
-import type { ExtractedEventData } from '@/types/firecrawl';
+import type { ScrapedEventData } from '@/types/ingestion';
 
 const HTML_COLLECTOR_VERSION = '1.0.0';
 
@@ -10,7 +10,7 @@ type HtmlCollectorMetadata = {
     fetchOptions?: RequestInit;
 };
 
-function buildLocation(data: ExtractedEventData): string | undefined {
+function buildLocation(data: ScrapedEventData): string | undefined {
     const venue = data.location?.venue || data.venue?.name;
     if (venue) {
         return venue.trim();
@@ -43,7 +43,7 @@ function buildLocation(data: ExtractedEventData): string | undefined {
     return undefined;
 }
 
-function mapSpeakers(data: ExtractedEventData): EventSourceRecord['speakerLineup'] {
+function mapSpeakers(data: ScrapedEventData): EventSourceRecord['speakerLineup'] {
     if (!data.speakers || data.speakers.length === 0) {
         return undefined;
     }
@@ -62,7 +62,7 @@ function mapSpeakers(data: ExtractedEventData): EventSourceRecord['speakerLineup
         .filter((speaker) => speaker.name.length > 0);
 }
 
-function mapTags(data: ExtractedEventData): string[] | undefined {
+function mapTags(data: ScrapedEventData): string[] | undefined {
     if (!data.tags || data.tags.length === 0) {
         return undefined;
     }
@@ -72,7 +72,7 @@ function mapTags(data: ExtractedEventData): string[] | undefined {
     return cleaned.length > 0 ? cleaned : undefined;
 }
 
-function mapPriceRange(data: ExtractedEventData): EventSourceRecord['priceRange'] {
+function mapPriceRange(data: ScrapedEventData): EventSourceRecord['priceRange'] {
     if (!data.pricing) return undefined;
     const { priceMin, priceMax, currency, pricingType } = data.pricing;
     if (priceMin == null && priceMax == null && !currency && !pricingType) {
@@ -86,7 +86,7 @@ function mapPriceRange(data: ExtractedEventData): EventSourceRecord['priceRange'
 }
 
 function mapDifficultyLevel(
-    difficulty: ExtractedEventData['difficulty']
+    difficulty: ScrapedEventData['difficulty']
 ): EventSourceRecord['difficultyLevel'] {
     if (!difficulty) {
         return undefined;

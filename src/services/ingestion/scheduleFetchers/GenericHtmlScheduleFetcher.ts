@@ -1,7 +1,6 @@
-import type { ScheduleLinkDetail, ScheduleHint } from '@/services/ingestion/FirecrawlSiteAnalyzer';
-import type { EventAgendaSchema } from '@/types/firecrawl';
+import type { EventAgendaSchema } from '@/types/ingestion';
 import { parseLocalTime } from '@/utils/ingestion/ExtractNormalization';
-import type { ScheduleFallbackRequest, SiteScheduleFetcher } from './types';
+import type { ScheduleFallbackRequest, SiteScheduleFetcher, ScheduleLinkDetail, ScheduleHint } from './types';
 
 const USER_AGENT = 'tech-cal-bot/1.0 (+https://tech-cal.com)';
 const TRACK_PARAM_KEYS = ['track', 'stage', 'stream', 'topic', 'pillar', 'channel'];

@@ -349,9 +349,13 @@ export class EventService {
         filters: EventFilters = {}
     ): Promise<string[]> {
         try {
-            if (!searchTerm || !searchTerm.trim()) return [];
+            if (!searchTerm || !searchTerm.trim()) {
+                console.log('[DEBUG TagSearch] Empty search term, returning empty array');
+                return [];
+            }
 
             const term = searchTerm.trim();
+            console.log('[DEBUG TagSearch] Searching for tag:', term);
 
             // Query event_tag_relations joined with event_tags to find matching events
             let query = supabaseClient
@@ -369,15 +373,26 @@ export class EventService {
             const { data, error } = await query;
 
             if (error) {
-                console.error('Tag search error:', error);
+                console.error('[DEBUG TagSearch] Query error:', error);
                 return [];
+            }
+
+            console.log('[DEBUG TagSearch] Found relations:', data?.length || 0);
+            if (data && data.length > 0) {
+                console.log('[DEBUG TagSearch] Sample data:', data.slice(0, 2));
             }
 
             // Extract unique event IDs
             const eventIds = [...new Set((data || []).map(rel => rel.event_id))];
+            console.log('[DEBUG TagSearch] Unique event IDs before date filter:', eventIds.length);
 
             // If we have date filters, verify events match them
             if (eventIds.length > 0 && (filters.startDate || filters.endDate)) {
+                console.log('[DEBUG TagSearch] Applying date filters:', {
+                    startDate: filters.startDate?.toISOString(),
+                    endDate: filters.endDate?.toISOString()
+                });
+
                 let eventQuery = supabaseClient
                     .from('events')
                     .select('id')
@@ -393,16 +408,19 @@ export class EventService {
                 const { data: validEvents, error: validError } = await eventQuery;
 
                 if (validError) {
-                    console.error('Tag search date filter error:', validError);
+                    console.error('[DEBUG TagSearch] Date filter error:', validError);
                     return eventIds; // Return all if filter fails
                 }
 
-                return (validEvents || []).map(e => e.id);
+                const filteredIds = (validEvents || []).map(e => e.id);
+                console.log('[DEBUG TagSearch] Event IDs after date filter:', filteredIds.length);
+                return filteredIds;
             }
 
+            console.log('[DEBUG TagSearch] Returning final event IDs:', eventIds.length);
             return eventIds;
         } catch (error) {
-            console.error('Error searching events by tags:', error);
+            console.error('[DEBUG TagSearch] Exception:', error);
             Sentry.captureException(error, {
                 extra: { function: 'getEventIdsByTagSearch', searchTerm }
             });

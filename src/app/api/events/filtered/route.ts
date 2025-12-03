@@ -296,14 +296,21 @@ export async function POST(request: NextRequest) {
         // Expand search term using TAG_SIMILARITIES
         expandedSearchTerms = TagBasedMatchingService.expandSearchTerm(searchTerm);
 
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('[API] Query expansion:', {
-            original: searchTerm,
-            expanded: expandedSearchTerms
-          });
-        }
+        // Debug logging (always enabled for tag search debugging)
+        console.log('[DEBUG] Query expansion:', {
+          original: searchTerm,
+          expanded: expandedSearchTerms
+        });
 
         // Search with all expanded terms in parallel
+        console.log('[DEBUG] About to search tags with filters:', {
+          expandedTerms: expandedSearchTerms,
+          hasStartDate: !!eventFilters.startDate,
+          hasEndDate: !!eventFilters.endDate,
+          startDate: eventFilters.startDate?.toISOString(),
+          endDate: eventFilters.endDate?.toISOString()
+        });
+
         const searchPromises = expandedSearchTerms.flatMap(term => [
           EventService.getEventIdsByTagSearch(term, supabase, eventFilters),
           EventService.getEventIdsByOrganizerSearch(term, supabase)
@@ -327,14 +334,15 @@ export async function POST(request: NextRequest) {
         tagMatchedEventIds = [...new Set(tagResults.flat())];
         organizerMatchedEventIds = [...new Set(orgResults.flat())];
 
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('[API] Multi-field search results:', {
-            searchTerm,
-            expandedTerms: expandedSearchTerms,
-            tagMatches: tagMatchedEventIds.length,
-            organizerMatches: organizerMatchedEventIds.length
-          });
-        }
+        // Debug logging (always enabled for tag search debugging)
+        console.log('[DEBUG] Multi-field search results:', {
+          searchTerm,
+          expandedTerms: expandedSearchTerms,
+          tagMatches: tagMatchedEventIds.length,
+          organizerMatches: organizerMatchedEventIds.length,
+          tagMatchedIds: tagMatchedEventIds.slice(0, 5), // Show first 5 IDs
+          organizerMatchedIds: organizerMatchedEventIds.slice(0, 5)
+        });
       } catch (error) {
         console.error('[API] Multi-field search error:', error);
         // Continue with FTS-only search if tag/org search fails
@@ -347,11 +355,15 @@ export async function POST(request: NextRequest) {
       ...organizerMatchedEventIds
     ];
 
+    // Debug logging for event ID merging
+    console.log('[DEBUG Merge] Additional event IDs:', additionalEventIds.length);
+
     // Add matched event IDs to filters to include them in results
     if (additionalEventIds.length > 0) {
       // Merge with existing eventIds filter if present
       const existingIds = eventFilters.eventIds || [];
       eventFilters.eventIds = [...new Set([...existingIds, ...additionalEventIds])];
+      console.log('[DEBUG Merge] Final eventIds filter:', eventFilters.eventIds.length, 'IDs:', eventFilters.eventIds.slice(0, 5));
     }
 
     // Get events using EventService (includes cold start & telemetry)
