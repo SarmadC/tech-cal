@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { Target, MapPin, Lightning } from '@phosphor-icons/react';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { useAuth } from '@/contexts';
 import { useSupabaseSafe } from '@/components/providers/SupabaseProvider';
@@ -184,12 +185,12 @@ export default function CareerOnboardingPage() {
   // Show loading state while creating profile or loading career profile
   if (isCreatingProfile || (isLoading && !profile)) {
     return (
-      <div className="min-h-screen glass-bg-gradient py-8 px-4">
+      <div className="min-h-screen bg-background py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="opacity-80">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">
                 {isCreatingProfile ? 'Setting up your profile...' : 'Loading...'}
               </p>
             </div>
@@ -200,23 +201,23 @@ export default function CareerOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen glass-bg-gradient py-8 px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Welcome Banner (shown when redirected from middleware) */}
         {showWelcomeMessage && (
-          <div className="mb-6 glass-card p-4">
+          <div className="mb-6 rounded-lg border border-border bg-card p-4">
             <div className="flex items-start">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 opacity-80 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-muted-foreground mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium">
+                <h3 className="text-sm font-medium text-foreground">
                   One Quick Step to Get Started
                 </h3>
-                <p className="mt-1 text-sm opacity-80">
-                  Complete your career profile to unlock personalized event recommendations tailored to your goals and interests. 
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Complete your career profile to unlock personalized event recommendations tailored to your goals and interests.
                   This only takes 2-3 minutes and will dramatically improve your experience.
                 </p>
               </div>
@@ -226,11 +227,11 @@ export default function CareerOnboardingPage() {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome to KureCal! 🎉
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Welcome to KureCal
           </h1>
-          <p className="text-lg opacity-80 max-w-2xl mx-auto">
-            Let&apos;s personalize your experience by learning about your career goals and interests. 
+          <p className="text-base text-muted-foreground max-w-2xl mx-auto">
+            Let&apos;s personalize your experience by learning about your career goals and interests.
             This helps us recommend the most relevant events for your professional development.
           </p>
         </div>
@@ -239,10 +240,10 @@ export default function CareerOnboardingPage() {
         <OnboardingErrorBoundary>
           <div className="relative">
             {isSubmitting && (
-              <div className="absolute inset-0 backdrop-blur-sm bg-black/20 dark:bg-black/40 flex items-center justify-center z-10 rounded-xl">
+              <div className="absolute inset-0 backdrop-blur-sm bg-background/60 flex items-center justify-center z-10 rounded-xl">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-sm opacity-80">Saving your career profile...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Saving your career profile...</p>
                 </div>
               </div>
             )}
@@ -257,28 +258,34 @@ export default function CareerOnboardingPage() {
 
         {/* Benefits Section */}
         <div className="mt-12 text-center">
-          <h3 className="text-xl font-semibold mb-4">
+          <h3 className="text-lg font-semibold text-foreground mb-6">
             Why complete your career profile?
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="glass-card p-6">
-              <div className="text-3xl mb-3">🎯</div>
-              <h4 className="font-semibold mb-2">Personalized Recommendations</h4>
-              <p className="text-sm opacity-80">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                <Target size={20} className="text-foreground" weight="regular" />
+              </div>
+              <h4 className="font-medium text-foreground mb-2">Personalized Recommendations</h4>
+              <p className="text-sm text-muted-foreground">
                 Get event suggestions tailored to your experience level and career goals
               </p>
             </div>
-            <div className="glass-card p-6">
-              <div className="text-3xl mb-3">📍</div>
-              <h4 className="font-semibold mb-2">Location-Aware</h4>
-              <p className="text-sm opacity-80">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                <MapPin size={20} className="text-foreground" weight="regular" />
+              </div>
+              <h4 className="font-medium text-foreground mb-2">Location-Aware</h4>
+              <p className="text-sm text-muted-foreground">
                 See events near you and virtual options that fit your schedule
               </p>
             </div>
-            <div className="glass-card p-6">
-              <div className="text-3xl mb-3">⚡</div>
-              <h4 className="font-semibold mb-2">Smart Discovery</h4>
-              <p className="text-sm opacity-80">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                <Lightning size={20} className="text-foreground" weight="regular" />
+              </div>
+              <h4 className="font-medium text-foreground mb-2">Smart Discovery</h4>
+              <p className="text-sm text-muted-foreground">
                 Discover trending events and opportunities you might have missed
               </p>
             </div>

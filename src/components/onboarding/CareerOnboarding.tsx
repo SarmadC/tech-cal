@@ -344,9 +344,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       />
 
       {step2Duplicates.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm" role="alert">
-          <p className="font-medium text-yellow-900 mb-1">Note:</p>
-          <p className="text-yellow-800 mb-2">
+        <div className="bg-muted border border-border rounded-lg p-3 text-sm" role="alert">
+          <p className="font-medium text-foreground mb-1">Note:</p>
+          <p className="text-muted-foreground mb-2">
             {step2Duplicates[0]} appears in multiple fields. Consider keeping skills in only one category.
           </p>
           <button
@@ -358,14 +358,14 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                 // Remove from current skills and add to skills to learn
                 const updatedCurrent = currentSkills.filter(s => s !== skillToMove);
                 const updatedToLearn = [...(data.step2_skills?.skillsToLearn || []), skillToMove];
-                updateData('step2_skills', { 
+                updateData('step2_skills', {
                   primarySkills: updatedCurrent,
                   skillsToLearn: updatedToLearn
                 });
               }
               setStep2Duplicates([]);
             }}
-            className="text-xs text-blue-600 hover:text-blue-700 font-medium underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+            className="text-xs text-foreground hover:text-foreground/80 font-medium underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
           >
             Move {step2Duplicates[0]} to Skills to Learn
           </button>
@@ -403,7 +403,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-3">Career Goals (select all that apply)</label>
+          <label className="block text-sm font-medium text-foreground mb-3">Career Goals (select all that apply)</label>
           <div className="grid grid-cols-2 gap-3">
             {[
               { value: 'skill-development', label: 'Learn New Skills' },
@@ -435,9 +435,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Timeline</label>
+          <label className="block text-sm font-medium text-foreground mb-2">Timeline</label>
           <select
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
             value={data.step3_goals?.timeframe || ''}
             onChange={(e) => updateData('step3_goals', {
               ...data.step3_goals,
@@ -453,9 +453,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         </div>
 
         {!includeOptionalSteps && (
-          <div className="mt-10 rounded-xl border border-blue-100 bg-blue-50 p-6">
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">Make recommendations even smarter</h3>
-            <p className="text-sm text-blue-800">
+          <div className="mt-10 rounded-lg border border-border bg-muted/50 p-6">
+            <h3 className="text-base font-semibold text-foreground mb-2">Make recommendations even smarter</h3>
+            <p className="text-sm text-muted-foreground">
               Share your learning preferences, availability, and networking goals when you&apos;re ready. These details are optional and can be added later.
             </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -468,15 +468,15 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                   setCurrentStep(4);
                   setValidationErrors([]);
                 }}
-                className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                   canContinueToOptional
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-blue-200 text-blue-100 cursor-not-allowed'
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
                 }`}
               >
                 Continue to preferences
               </button>
-              <p className="text-xs text-blue-700 sm:ml-4">
+              <p className="text-xs text-muted-foreground sm:ml-4">
                 Prefer to do this later? You can update these details anytime from your profile.
               </p>
             </div>
@@ -494,7 +494,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium  mb-3">Learning Styles (select all that apply)</label>
+        <label className="block text-sm font-medium text-foreground mb-3">Learning Styles (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'hands-on', label: 'Hands-on Workshops' },
@@ -527,13 +527,13 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium  mb-2">Available Time</label>
+        <label className="block text-sm font-medium text-foreground mb-2">Available Time</label>
         <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
           value={data.step4_preferences?.availableTime || ''}
-          onChange={(e) => updateData('step4_preferences', { 
-            ...data.step4_preferences, 
-            availableTime: e.target.value as AvailableTime 
+          onChange={(e) => updateData('step4_preferences', {
+            ...data.step4_preferences,
+            availableTime: e.target.value as AvailableTime
           })}
         >
           <option value="">How much time can you dedicate to learning?</option>
@@ -546,13 +546,13 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium  mb-2">Budget Range</label>
+        <label className="block text-sm font-medium text-foreground mb-2">Budget Range</label>
         <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
           value={data.step4_preferences?.budget || ''}
-          onChange={(e) => updateData('step4_preferences', { 
-            ...data.step4_preferences, 
-            budget: e.target.value as BudgetRange 
+          onChange={(e) => updateData('step4_preferences', {
+            ...data.step4_preferences,
+            budget: e.target.value as BudgetRange
           })}
         >
           <option value="">What&apos;s your learning budget?</option>
@@ -574,7 +574,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium  mb-3">Networking Goals (select all that apply)</label>
+        <label className="block text-sm font-medium text-foreground mb-3">Networking Goals (select all that apply)</label>
         <div className="grid grid-cols-1 gap-3">
           {[
             { value: 'find-mentors', label: 'Connect with Senior Professionals & Mentors' },
@@ -607,7 +607,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium  mb-3">Preferred Event Types</label>
+        <label className="block text-sm font-medium text-foreground mb-3">Preferred Event Types</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'conference', label: 'Conferences' },
@@ -663,7 +663,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Collaboration Style */}
       <div>
-        <label className="block text-sm font-medium  mb-3">Collaboration Style (select all that apply)</label>
+        <label className="block text-sm font-medium text-foreground mb-3">Collaboration Style (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'hands-on', label: 'Hands-on Coding' },
@@ -699,9 +699,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Team Size Preference */}
       <div>
-        <label className="block text-sm font-medium  mb-2">Preferred Team Size</label>
+        <label className="block text-sm font-medium text-foreground mb-2">Preferred Team Size</label>
         <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
           value={data.step6_teamBuilding?.teamSizePreference || ''}
           onChange={(e) => updateData('step6_teamBuilding', {
             ...data.step6_teamBuilding,
@@ -718,7 +718,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Communication Preferences */}
       <div>
-        <label className="block text-sm font-medium  mb-3">Communication Preferences (select all that apply)</label>
+        <label className="block text-sm font-medium text-foreground mb-3">Communication Preferences (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'slack', label: 'Slack' },
@@ -754,9 +754,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Team Availability */}
       <div>
-        <label className="block text-sm font-medium  mb-2">Availability for Team Work</label>
+        <label className="block text-sm font-medium text-foreground mb-2">Availability for Team Work</label>
         <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
           value={data.step6_teamBuilding?.availabilityPattern?.timezone || ''}
           onChange={(e) => updateData('step6_teamBuilding', {
             ...data.step6_teamBuilding,
@@ -778,7 +778,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Project Types */}
       <div>
-        <label className="block text-sm font-medium  mb-3">Project Types You&apos;re Interested In (select all that apply)</label>
+        <label className="block text-sm font-medium text-foreground mb-3">Project Types You&apos;re Interested In (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'web-application', label: 'Web Applications' },
@@ -818,9 +818,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Mentorship Preference */}
       <div>
-        <label className="block text-sm font-medium  mb-2">Mentorship Preference</label>
+        <label className="block text-sm font-medium text-foreground mb-2">Mentorship Preference</label>
         <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
           value={data.step6_teamBuilding?.mentorshipPreference || ''}
           onChange={(e) => updateData('step6_teamBuilding', {
             ...data.step6_teamBuilding,
@@ -837,7 +837,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Team Building Goals */}
       <div>
-        <label className="block text-sm font-medium  mb-3">Team Building Goals (select all that apply)</label>
+        <label className="block text-sm font-medium text-foreground mb-3">Team Building Goals (select all that apply)</label>
         <div className="grid grid-cols-2 gap-3">
           {[
             { value: 'learn-new-skills', label: 'Learn New Skills' },
@@ -874,7 +874,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   );
 
   return (
-    <div className={`max-w-2xl mx-auto p-6 glass-card ${className}`}>
+    <div className={`max-w-2xl mx-auto p-6 rounded-lg border border-border bg-card ${className}`}>
       {renderStepIndicator()}
 
       <div className="min-h-96">
@@ -888,9 +888,9 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className="mb-4 p-4 rounded-lg" style={{ background: 'var(--error-light)', border: '1px solid var(--error)' }}>
-          <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--error)' }}>Please fix the following issues:</h4>
-          <ul className="text-sm space-y-1" style={{ color: 'var(--error)' }}>
+        <div className="mb-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+          <h4 className="text-sm font-medium mb-2 text-destructive">Please fix the following issues:</h4>
+          <ul className="text-sm space-y-1 text-destructive">
             {validationErrors.map((error, index) => (
               <li key={index} className="flex items-start">
                 <span className="mr-2">•</span>
@@ -901,17 +901,17 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200 gap-3">
+      <div className="flex items-center justify-between mt-8 pt-6 border-t border-border gap-3">
         <div className="flex items-center gap-3">
           {/* Persistent Back button */}
           <button
             onClick={handlePrevious}
             disabled={currentStep === 1}
             className={`
-              flex items-center px-4 py-2 rounded-lg font-medium transition-colors
+              flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors border border-border
               ${currentStep === 1
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-white/10 border'
+                ? 'opacity-50 cursor-not-allowed text-muted-foreground'
+                : 'hover:bg-accent text-foreground'
               }
             `}
           >
@@ -926,7 +926,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
                 clearPersistedState();
                 onSkip();
               }}
-              className="opacity-80 hover:opacity-100 text-sm font-medium transition-colors"
+              className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
             >
               Skip for now
             </button>
@@ -938,10 +938,10 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
           onClick={handleNext}
           disabled={!isStepComplete(currentStep)}
           className={`
-            flex items-center px-6 py-2 rounded-lg font-medium transition-all
+            flex items-center px-6 py-2 rounded-md text-sm font-medium transition-colors
             ${isStepComplete(currentStep)
-              ? 'bg-white text-black hover:bg-gray-100 shadow-sm'
-              : 'opacity-50 cursor-not-allowed'
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+              : 'bg-muted text-muted-foreground cursor-not-allowed'
             }
           `}
         >
