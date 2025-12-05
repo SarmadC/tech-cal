@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 // Career impact components removed - using inline implementation
 import { Event } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
-import { TargetIcon, TrendUpIcon, SparkleIcon } from '@phosphor-icons/react';
+import { TargetIcon, TrendUpIcon, SparkleIcon, TrendUp, TrendDown, ArrowRight } from '@phosphor-icons/react';
 
 interface CareerInsightsCardProps {
   topOpportunities: (Event & { careerImpactLite?: CareerImpactScoreLite })[];
@@ -201,9 +201,23 @@ export function CareerProgressCard({ recentScores, className }: CareerProgressCa
           </div>
           <div className="text-sm text-gray-500 mb-3">Average Impact Score</div>
           
-          <div className={`text-sm font-medium capitalize ${trendColor}`}>
-            {trend === 'improving' ? '📈 Improving' : 
-             trend === 'declining' ? '📉 Needs Focus' : '➡️ Stable'}
+          <div className={`text-sm font-medium capitalize ${trendColor} flex items-center justify-center gap-1.5`}>
+            {trend === 'improving' ? (
+              <>
+                <TrendUp size={16} weight="bold" />
+                <span>Improving</span>
+              </>
+            ) : trend === 'declining' ? (
+              <>
+                <TrendDown size={16} weight="bold" />
+                <span>Needs Focus</span>
+              </>
+            ) : (
+              <>
+                <ArrowRight size={16} weight="bold" />
+                <span>Stable</span>
+              </>
+            )}
           </div>
           
           {recentScores.length > 0 && (

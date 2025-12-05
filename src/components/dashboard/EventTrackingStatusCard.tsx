@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
-import { CheckCircle, Calendar, Bookmark, XCircle } from '@phosphor-icons/react';
+import { CheckCircle, Calendar, Bookmark, XCircle, Lightbulb } from '@phosphor-icons/react';
 import type { TrackedEventRecord } from '@/types';
 import { EVENT_STATUS } from '@/types/events';
 
@@ -140,8 +140,9 @@ export function EventTrackingStatusCard({
         {/* Helpful Tip */}
         {statusBreakdown.attending > 0 && (
           <div className={`p-3 rounded-lg border ${theme.borderCard} bg-blue-50/50 dark:bg-blue-900/10`}>
-            <p className={`text-xs ${theme.textPrimary}`}>
-              💡 <strong>Tip:</strong> Mark events as &quot;Attended&quot; after you complete them to track your career progress accurately.
+            <p className={`text-xs ${theme.textPrimary} flex items-start gap-2`}>
+              <Lightbulb size={16} weight="regular" className="text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <span><strong>Tip:</strong> Mark events as &quot;Attended&quot; after you complete them to track your career progress accurately.</span>
             </p>
           </div>
         )}

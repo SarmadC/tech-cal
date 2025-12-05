@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { SkillTag, SkillProficiency, PROFICIENCY_LEVELS } from '@/types/career';
-import { Star, X } from '@phosphor-icons/react';
+import { Star, X, Lightbulb } from '@phosphor-icons/react';
 import { ErrorAlert, EmptyState } from './shared/OnboardingUI';
 import {
   getCanonicalSkillMeta,
@@ -264,8 +264,9 @@ export const SkillProficiencySelector: React.FC<SkillProficiencySelectorProps> =
         })}
       </div>
 
-      <div className="text-center text-xs text-gray-500">
-        💡 Drag skills to reorder them by priority
+      <div className="text-center text-xs text-gray-500 flex items-center justify-center gap-1">
+        <Lightbulb size={14} weight="regular" className="text-gray-400" />
+        <span>Drag skills to reorder them by priority</span>
       </div>
     </div>
   );
