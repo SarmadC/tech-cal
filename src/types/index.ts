@@ -15,6 +15,7 @@ export * from './database';
 export * from './eventImport';
 export * from './componentProps';
 export * from './telemetry';
+export * from './enrichment';
 
 // ============================================
 // NON-EVENT-RELATED TYPES

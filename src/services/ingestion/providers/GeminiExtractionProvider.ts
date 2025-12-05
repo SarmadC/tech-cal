@@ -1,0 +1,151 @@
+import {
+    GoogleGenerativeAI,
+    SchemaType,
+    type GenerateContentResult,
+} from '@google/generative-ai';
+import { ExtractedEventDataSchema, type ExtractionProviderResult } from '@/types/enrichment';
+import type { ExtractionProvider, ExtractionProviderRequest } from './ExtractionProvider';
+
+interface GeminiProviderOptions {
+    apiKey: string;
+    model?: string;
+}
+
+const DEFAULT_MODEL = 'gemini-1.5-flash';
+
+const RESPONSE_SCHEMA = {
+    type: SchemaType.OBJECT,
+    properties: {
+        speakers: {
+            type: SchemaType.ARRAY,
+            nullable: true,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    name: { type: SchemaType.STRING },
+                    title: { type: SchemaType.STRING, nullable: true },
+                    company: { type: SchemaType.STRING, nullable: true },
+                    bio: { type: SchemaType.STRING, nullable: true },
+                    linkedinUrl: { type: SchemaType.STRING, nullable: true },
+                    photoUrl: { type: SchemaType.STRING, nullable: true },
+                },
+            },
+        },
+        agenda: {
+            type: SchemaType.ARRAY,
+            nullable: true,
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    title: { type: SchemaType.STRING },
+                    startTime: { type: SchemaType.STRING, nullable: true },
+                    endTime: { type: SchemaType.STRING, nullable: true },
+                    description: { type: SchemaType.STRING, nullable: true },
+                    speakers: {
+                        type: SchemaType.ARRAY,
+                        nullable: true,
+                        items: { type: SchemaType.STRING },
+                    },
+                },
+            },
+        },
+        pricing: {
+            type: SchemaType.OBJECT,
+            nullable: true,
+            properties: {
+                priceMin: { type: SchemaType.NUMBER, nullable: true },
+                priceMax: { type: SchemaType.NUMBER, nullable: true },
+                currency: { type: SchemaType.STRING, nullable: true },
+                pricingType: { type: SchemaType.STRING, nullable: true },
+            },
+        },
+        description: { type: SchemaType.STRING, nullable: true },
+        location: { type: SchemaType.STRING, nullable: true },
+        registrationUrl: { type: SchemaType.STRING, nullable: true },
+        eventFormat: { type: SchemaType.STRING, nullable: true },
+    },
+};
+
+const SYSTEM_PROMPT = `
+Extract structured event information from the provided webpage content.
+Return ONLY valid JSON matching the schema. Do not include explanations or prose.
+If a field cannot be determined confidently, omit it rather than guessing.
+Focus on speakers (include LinkedIn URLs when available), agenda/schedule, pricing, registration URL, and event format (Online, In-person, Hybrid).
+`.trim();
+
+export class GeminiExtractionProvider implements ExtractionProvider {
+    public readonly name = 'gemini';
+    private readonly model: string;
+    private readonly client: GoogleGenerativeAI;
+
+    constructor(options: GeminiProviderOptions) {
+        if (!options.apiKey) {
+            throw new Error('GOOGLE_GENERATIVE_AI_API_KEY is required for Gemini provider');
+        }
+        this.model = options.model || DEFAULT_MODEL;
+        this.client = new GoogleGenerativeAI(options.apiKey);
+    }
+
+    async extract(request: ExtractionProviderRequest): Promise<ExtractionProviderResult> {
+        const modelInstance = this.client.getGenerativeModel({
+            model: request.model || this.model,
+            generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: RESPONSE_SCHEMA,
+            },
+        });
+
+        const prompt = this.buildPrompt(request.content, request.context.sourceUrl);
+        const response = await modelInstance.generateContent(
+            {
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [{ text: prompt }],
+                    },
+                ],
+            },
+            { signal: request.abortSignal }
+        );
+
+        const parsed = this.parseResponse(response);
+        const validated = ExtractedEventDataSchema.safeParse(parsed);
+        if (!validated.success) {
+            const issues = validated.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ');
+            throw new Error(`Gemini response failed validation: ${issues}`);
+        }
+
+        const tokensUsed = response.response.usageMetadata?.totalTokenCount;
+
+        return {
+            data: validated.data,
+            model: request.model || this.model,
+            tokensUsed: tokensUsed ?? undefined,
+            raw: response.response,
+        };
+    }
+
+    private buildPrompt(content: string, sourceUrl: string): string {
+        return `${SYSTEM_PROMPT}
+
+Source URL: ${sourceUrl}
+
+Webpage content:
+${content}
+`;
+    }
+
+    private parseResponse(response: GenerateContentResult): unknown {
+        const text = response.response.text();
+        if (!text) {
+            throw new Error('Gemini returned an empty response');
+        }
+
+        try {
+            return JSON.parse(text);
+        } catch {
+            throw new Error('Gemini response was not valid JSON');
+        }
+    }
+}
+

@@ -10,6 +10,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { isAdminUser } from '@/lib/adminAuth';
+import type { AgendaItemInput } from '@/services/ingestion/EventEnrichmentService';
+
+const coerceAgendaItems = (value: unknown): AgendaItemInput[] => {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) => {
+            const typed = item as Record<string, unknown>;
+            const title = typeof typed.title === 'string' ? typed.title : '';
+            if (!title) return null;
+
+            const speakerIds =
+                Array.isArray(typed.speakers) && typed.speakers.every((s) => typeof s === 'string')
+                    ? (typed.speakers as string[])
+                    : Array.isArray(typed.speakerIds) && typed.speakerIds.every((s) => typeof s === 'string')
+                        ? (typed.speakerIds as string[])
+                        : undefined;
+
+            return {
+                title,
+                startTime: typeof typed.start_time === 'string' ? typed.start_time : typeof typed.startTime === 'string' ? typed.startTime : '',
+                endTime: typeof typed.end_time === 'string' ? typed.end_time : typeof typed.endTime === 'string' ? typed.endTime : '',
+                description: typeof typed.description === 'string' ? typed.description : undefined,
+                location: typeof typed.location === 'string' ? typed.location : undefined,
+                speakerIds,
+            };
+        })
+        .filter(Boolean) as AgendaItemInput[];
+};
 
 export async function GET(
     request: NextRequest,
@@ -153,8 +181,17 @@ export async function POST(
             const relationshipFields = ['tags', 'audiences', 'prerequisites'];
             const scalarUpdateData: Record<string, unknown> = {};
             const relationshipUpdates: { tagIds?: string[]; audienceIds?: string[]; prerequisiteIds?: string[] } = {};
+            const agendaUpdates: ReturnType<typeof coerceAgendaItems> = [];
 
             for (const field of fieldsToApprove || []) {
+                if (field.field_name === 'agenda') {
+                    const agendaItems = coerceAgendaItems(field.new_value);
+                    if (agendaItems.length > 0) {
+                        agendaUpdates.push(...agendaItems);
+                    }
+                    continue;
+                }
+
                 if (relationshipFields.includes(field.field_name)) {
                     // Handle relationship fields
                     const newValue = field.new_value;
@@ -196,6 +233,20 @@ export async function POST(
 
                 if (!relResult.success) {
                     throw new Error(`Failed to update relationships: ${relResult.error}`);
+                }
+            }
+
+            // Update agenda items
+            if (agendaUpdates.length > 0) {
+                const agendaResult = await EventEnrichmentService.createOrUpdateAgendaItems(
+                    queueItem.event_id,
+                    agendaUpdates,
+                    supabase,
+                    user.id
+                );
+
+                if (!agendaResult.success) {
+                    throw new Error(`Failed to update agenda items: ${agendaResult.error}`);
                 }
             }
 
@@ -269,8 +320,17 @@ export async function POST(
             const relationshipFields = ['tags', 'audiences', 'prerequisites'];
             const scalarUpdateData: Record<string, unknown> = {};
             const relationshipUpdates: { tagIds?: string[]; audienceIds?: string[]; prerequisiteIds?: string[] } = {};
+            const agendaUpdates: ReturnType<typeof coerceAgendaItems> = [];
 
             for (const field of pendingFields || []) {
+                if (field.field_name === 'agenda') {
+                    const agendaItems = coerceAgendaItems(field.new_value);
+                    if (agendaItems.length > 0) {
+                        agendaUpdates.push(...agendaItems);
+                    }
+                    continue;
+                }
+
                 if (relationshipFields.includes(field.field_name)) {
                     // Handle relationship fields
                     const newValue = field.new_value;
@@ -312,6 +372,20 @@ export async function POST(
 
                 if (!relResult.success) {
                     throw new Error(`Failed to update relationships: ${relResult.error}`);
+                }
+            }
+
+            // Update agenda items
+            if (agendaUpdates.length > 0) {
+                const agendaResult = await EventEnrichmentService.createOrUpdateAgendaItems(
+                    queueItem.event_id,
+                    agendaUpdates,
+                    supabase,
+                    user.id
+                );
+
+                if (!agendaResult.success) {
+                    throw new Error(`Failed to update agenda items: ${agendaResult.error}`);
                 }
             }
 

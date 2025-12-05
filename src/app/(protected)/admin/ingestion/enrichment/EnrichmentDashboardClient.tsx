@@ -1,507 +1,273 @@
-/**
- * Enrichment Dashboard Client Component
- * 
- * Interactive UI for browsing events that need enrichment.
- */
-
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { format, formatDistanceToNow } from 'date-fns';
-
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { formatDistanceToNow } from 'date-fns';
 import { AdminDataTable, type AdminDataTableColumn } from '@/components/admin/AdminDataTable';
-import { useAdminToolbar } from '@/contexts/AdminToolbarContext';
-import useAdminHotkeys from '@/components/admin/useAdminHotkeys';
-import { useDebounce } from '@/hooks/useDebounce';
 import { MaterialIcon } from '@/components/ui/Icon';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useAdminToolbar } from '@/contexts/AdminToolbarContext';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import type { EnrichmentMetadata } from '@/types/enrichment';
 
 interface EnrichmentEvent {
     id: string;
     title: string;
     start_time: string;
     source_url: string;
-    organizer: { id: string; name: string; logo_url: string | null } | null;
-    has_agenda: boolean;
-    has_speakers: boolean;
     ingestion_source_id: string | null;
+    enrichment_status: string;
+    enrichment_metadata: EnrichmentMetadata | null;
+    updated_at: string | null;
 }
 
 interface EnrichmentDashboardClientProps {
     initialEvents: EnrichmentEvent[];
 }
 
+const statusBadgeStyles: Record<string, string> = {
+    pending: 'bg-amber-500/20 text-amber-100',
+    processing: 'bg-blue-500/20 text-blue-100',
+    enriched: 'bg-emerald-500/20 text-emerald-100',
+    failed: 'bg-rose-500/20 text-rose-100',
+    approved: 'bg-emerald-600/20 text-emerald-50',
+    rejected: 'bg-rose-600/20 text-rose-50',
+    skipped: 'bg-slate-700 text-slate-100',
+};
+
 export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentDashboardClientProps) {
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const pathname = usePathname();
-
-    const statusParam = searchParams.get('status') ?? 'all';
-    const queryParam = searchParams.get('q') ?? '';
-    const viewParam = searchParams.get('view') ?? 'table';
-    const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10) || 1;
-    const pageSizeParam = Number.parseInt(searchParams.get('pageSize') ?? '20', 10) || 20;
-
+    const [events, setEvents] = useState<EnrichmentEvent[]>(initialEvents);
     const [selectedRows, setSelectedRows] = useState<string[]>([]);
-    const [shortcutsOpen, setShortcutsOpen] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'enriched' | 'failed'>('all');
+    const [searchValue, setSearchValue] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const debouncedSearch = useDebounce(queryParam, 200);
-
-    const { setTitle, setSubtitle, setSearch, setQuickFilters, setToolbarContent, focusSearch } = useAdminToolbar();
-    const { showInfo } = useSnackbar();
-
-    const updateQuery = useCallback(
-        (updates: Record<string, string | number | undefined>) => {
-            const next = new URLSearchParams(searchParams.toString());
-            Object.entries(updates).forEach(([key, value]) => {
-                if (value === undefined || value === null || value === '') {
-                    next.delete(key);
-                } else {
-                    next.set(key, String(value));
-                }
-            });
-            const searchString = next.toString();
-            router.replace(searchString ? `${pathname}?${searchString}` : pathname, { scroll: false });
-        },
-        [pathname, router, searchParams]
-    );
+    const { setTitle, setSubtitle, setSearch, setQuickFilters, setToolbarContent } = useAdminToolbar();
+    const { showInfo, showSuccess, showError } = useSnackbar();
 
     useEffect(() => {
-        setTitle('Content Enrichment');
-        setSubtitle('Fill in missing agendas, speakers, and supplemental content for live events.');
-    }, [setTitle, setSubtitle]);
+        setTitle('LLM Enrichment');
+        setSubtitle('Trigger LLM extraction, monitor status, and push to review.');
+    }, [setSubtitle, setTitle]);
 
     useEffect(() => {
         setSearch({
-            placeholder: 'Search titles, organizers, source IDs',
-            value: queryParam,
-            onChange: (value) => updateQuery({ q: value || undefined, page: 1 }),
+            placeholder: 'Filter by title or source',
+            value: searchValue,
+            onChange: (value) => setSearchValue(value ?? ''),
         });
         return () => setSearch(undefined);
-    }, [queryParam, setSearch, updateQuery]);
+    }, [searchValue, setSearch]);
 
     useEffect(() => {
         setToolbarContent(undefined);
         return () => setToolbarContent(undefined);
     }, [setToolbarContent]);
 
-    const events = useMemo(() => initialEvents, [initialEvents]);
-
-    const statusCounts = useMemo(() => {
-        const counts: Record<string, number> = {
-            all: events.length,
-            needs_both: events.filter((event) => !event.has_agenda && !event.has_speakers).length,
-            needs_agenda: events.filter((event) => !event.has_agenda).length,
-            needs_speakers: events.filter((event) => !event.has_speakers).length,
-            complete: events.filter((event) => event.has_agenda && event.has_speakers).length,
-        };
-        return counts;
-    }, [events]);
-
     useEffect(() => {
         setQuickFilters([
-            { id: 'all', label: 'All', active: statusParam === 'all', badge: statusCounts.all, onToggle: () => updateQuery({ status: undefined, page: 1 }) },
-            { id: 'needs_both', label: 'Needs both', active: statusParam === 'needs_both', badge: statusCounts.needs_both, onToggle: () => updateQuery({ status: 'needs_both', page: 1 }) },
-            { id: 'needs_agenda', label: 'Needs agenda', active: statusParam === 'needs_agenda', badge: statusCounts.needs_agenda, onToggle: () => updateQuery({ status: 'needs_agenda', page: 1 }) },
-            { id: 'needs_speakers', label: 'Needs speakers', active: statusParam === 'needs_speakers', badge: statusCounts.needs_speakers, onToggle: () => updateQuery({ status: 'needs_speakers', page: 1 }) },
-            { id: 'complete', label: 'Complete', active: statusParam === 'complete', badge: statusCounts.complete, onToggle: () => updateQuery({ status: 'complete', page: 1 }) },
+            { id: 'all', label: 'All', active: statusFilter === 'all', onToggle: () => setStatusFilter('all') },
+            { id: 'pending', label: 'Pending', active: statusFilter === 'pending', onToggle: () => setStatusFilter('pending') },
+            { id: 'processing', label: 'Processing', active: statusFilter === 'processing', onToggle: () => setStatusFilter('processing') },
+            { id: 'enriched', label: 'Enriched', active: statusFilter === 'enriched', onToggle: () => setStatusFilter('enriched') },
+            { id: 'failed', label: 'Failed', active: statusFilter === 'failed', onToggle: () => setStatusFilter('failed') },
         ]);
-    }, [setQuickFilters, statusCounts, statusParam, updateQuery]);
+    }, [setQuickFilters, statusFilter]);
 
     const filteredEvents = useMemo(() => {
-        const matchesStatus = (event: EnrichmentEvent) => {
-            switch (statusParam) {
-                case 'needs_both':
-                    return !event.has_agenda && !event.has_speakers;
-                case 'needs_agenda':
-                    return !event.has_agenda;
-                case 'needs_speakers':
-                    return !event.has_speakers;
-                case 'complete':
-                    return event.has_agenda && event.has_speakers;
-                default:
-                    return true;
-            }
-        };
-        const needle = debouncedSearch.trim().toLowerCase();
+        const needle = searchValue.trim().toLowerCase();
         return events.filter((event) => {
-            if (!matchesStatus(event)) return false;
-            if (!needle) return true;
-            const haystack = [
-                event.title,
-                event.organizer?.name,
-                event.ingestion_source_id ?? '',
-            ]
-                .filter(Boolean)
-                .join(' ')
-                .toLowerCase();
-            return haystack.includes(needle);
+            const statusMatch = statusFilter === 'all' ? true : event.enrichment_status === statusFilter;
+            const text = [event.title, event.ingestion_source_id ?? '', event.source_url].join(' ').toLowerCase();
+            const searchMatch = needle ? text.includes(needle) : true;
+            return statusMatch && searchMatch;
         });
-    }, [events, statusParam, debouncedSearch]);
+    }, [events, searchValue, statusFilter]);
 
-    const totalItems = filteredEvents.length;
-    const totalPages = Math.max(1, Math.ceil(totalItems / pageSizeParam));
-    const currentPage = Math.min(pageParam, totalPages);
-    const startIndex = (currentPage - 1) * pageSizeParam;
-    const paginatedEvents = filteredEvents.slice(startIndex, startIndex + pageSizeParam);
-
-    useEffect(() => {
-        if (pageParam !== currentPage) {
-            updateQuery({ page: currentPage });
-        }
-    }, [currentPage, pageParam, updateQuery]);
-
-    useEffect(() => {
-        setSelectedRows((prev) =>
-            prev.filter((id) => filteredEvents.some((event) => event.id === id))
-        );
-    }, [filteredEvents]);
-
-    const handleStartEnrichment = useCallback(() => {
-        if (selectedRows.length === 0) {
-            showInfo('Select an event first.');
-            return;
-        }
-        const targetId = selectedRows[selectedRows.length - 1];
-        router.push(`/admin/ingestion/enrichment/${targetId}`);
-    }, [router, selectedRows, showInfo]);
-
-    const selectedEvent = useMemo(
-        () => paginatedEvents.find((event) => event.id === selectedRows[selectedRows.length - 1]),
-        [paginatedEvents, selectedRows]
-    );
-
-    const handleOpenSelectedSource = useCallback(() => {
-        if (!selectedEvent?.source_url) {
-            showInfo('Selected event has no source URL to open.');
-            return;
-        }
-        window.open(selectedEvent.source_url, '_blank', 'noopener,noreferrer');
-    }, [selectedEvent, showInfo]);
-
-    const moveSelection = useCallback(
-        (direction: 'next' | 'prev') => {
-            if (paginatedEvents.length === 0) return;
-            const ids = paginatedEvents.map((event) => event.id);
-            setSelectedRows((prev) => {
-                if (prev.length === 0) {
-                    return [direction === 'next' ? ids[0] : ids[ids.length - 1]];
+    const refresh = useCallback(
+        async (overrideStatus?: string) => {
+            setLoading(true);
+            try {
+                const status = overrideStatus ?? statusFilter;
+                const response = await fetch(`/api/admin/ingestion/enrichment-status?status=${status}&limit=100`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch enrichment status');
                 }
-                const currentId = prev[prev.length - 1];
-                const index = ids.indexOf(currentId);
-                if (index === -1) {
-                    return [direction === 'next' ? ids[0] : ids[ids.length - 1]];
-                }
-                const nextIndex =
-                    direction === 'next' ? Math.min(ids.length - 1, index + 1) : Math.max(0, index - 1);
-                return [ids[nextIndex]];
-            });
-        },
-        [paginatedEvents]
-    );
-
-    useAdminHotkeys({
-        focusSearch,
-        openHelp: () => setShortcutsOpen(true),
-        onApproveSelected: handleStartEnrichment,
-        onRejectSelected: handleOpenSelectedSource,
-        onNavigateNext: () => moveSelection('next'),
-        onNavigatePrevious: () => moveSelection('prev'),
-    });
-
-    useEffect(() => {
-        if (!shortcutsOpen) return;
-        const handler = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                setShortcutsOpen(false);
+                const data = await response.json();
+                setEvents(data.events || []);
+            } catch (error) {
+                console.error(error);
+                showError('Failed to refresh enrichment status');
+            } finally {
+                setLoading(false);
             }
-        };
-        document.addEventListener('keydown', handler);
-        return () => document.removeEventListener('keydown', handler);
-    }, [shortcutsOpen]);
+        },
+        [showError, statusFilter]
+    );
 
-    const columns: AdminDataTableColumn<EnrichmentEvent>[] = useMemo(() => [
-        {
-            key: 'event',
-            header: 'Event',
-            render: (event) => (
-                <div className="flex flex-col gap-2">
-                    <div className="font-medium text-slate-100">{event.title}</div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                        <span>{event.organizer?.name ?? 'Unknown organizer'}</span>
-                        {event.ingestion_source_id && (
-                            <span className="inline-flex items-center gap-1 rounded border border-slate-800/50 bg-slate-900/60 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                                <MaterialIcon name="label" size={12} />
-                                {event.ingestion_source_id}
+    const triggerEnrichment = useCallback(
+        async (eventIds: string[]) => {
+            if (eventIds.length === 0) {
+                showInfo('Select at least one event.');
+                return;
+            }
+            setLoading(true);
+            try {
+                const response = await fetch('/api/admin/ingestion/enrich', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ eventIds }),
+                });
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    throw new Error(payload.error || 'Failed to trigger enrichment');
+                }
+                const payload = await response.json();
+                showSuccess(`Triggered enrichment for ${payload.summary?.succeeded ?? eventIds.length} event(s).`);
+                await refresh();
+            } catch (error) {
+                console.error(error);
+                showError(error instanceof Error ? error.message : 'Failed to trigger enrichment');
+            } finally {
+                setLoading(false);
+            }
+        },
+        [refresh, showError, showInfo, showSuccess]
+    );
+
+    const columns: AdminDataTableColumn<EnrichmentEvent>[] = useMemo(
+        () => [
+            {
+                key: 'event',
+                header: 'Event',
+                render: (event) => (
+                    <div className="flex flex-col gap-1">
+                        <div className="font-medium text-slate-100">{event.title}</div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                            {event.ingestion_source_id && (
+                                <span className="inline-flex items-center gap-1 rounded border border-slate-800/50 bg-slate-900/60 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                                    <MaterialIcon name="label" size={12} />
+                                    {event.ingestion_source_id}
+                                </span>
+                            )}
+                            <span className="text-slate-500">{formatDistanceToNow(new Date(event.start_time), { addSuffix: true })}</span>
+                        </div>
+                    </div>
+                ),
+            },
+            {
+                key: 'status',
+                header: 'Status',
+                render: (event) => (
+                    <div className="flex flex-col gap-1 text-xs text-slate-300">
+                        <Badge className={statusBadgeStyles[event.enrichment_status] ?? 'bg-slate-800 text-slate-100'}>
+                            {event.enrichment_status}
+                        </Badge>
+                        {event.enrichment_metadata?.last_error && (
+                            <span className="text-amber-200">
+                                {event.enrichment_metadata.last_error.slice(0, 80)}
+                                {event.enrichment_metadata.last_error.length > 80 ? '…' : ''}
                             </span>
                         )}
                     </div>
-                </div>
-            ),
-        },
-        {
-            key: 'needs',
-            header: 'Needs',
-            render: (event) => (
-                <div className="flex flex-wrap gap-2 text-xs text-slate-300">
-                    {!event.has_agenda && (
-                        <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-200">
-                            Agenda
-                        </Badge>
-                    )}
-                    {!event.has_speakers && (
-                        <Badge variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-200">
-                            Speakers
-                        </Badge>
-                    )}
-                    {event.has_agenda && event.has_speakers && (
-                        <Badge className="bg-emerald-500/20 text-emerald-100">Complete</Badge>
-                    )}
-                </div>
-            ),
-            width: 160,
-        },
-        {
-            key: 'start_time',
-            header: 'Starts',
-            sortable: true,
-            render: (event) => (
-                <div className="text-xs text-slate-300">
-                    <div>{format(new Date(event.start_time), 'MMM d, yyyy HH:mm')}</div>
-                    <div className="text-slate-500">
-                        {formatDistanceToNow(new Date(event.start_time), { addSuffix: true })}
+                ),
+                width: 180,
+            },
+            {
+                key: 'updated_at',
+                header: 'Updated',
+                render: (event) => (
+                    <div className="text-xs text-slate-400">
+                        {event.updated_at ? formatDistanceToNow(new Date(event.updated_at), { addSuffix: true }) : '—'}
                     </div>
-                </div>
-            ),
-            width: 160,
-        },
-        {
-            key: 'source',
-            header: 'Source',
-            align: 'center',
-            render: (event) => (
-                <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs"
-                    disabled={!event.source_url}
-                    onClick={() => window.open(event.source_url, '_blank', 'noopener,noreferrer')}
-                >
-                    Source
-                </Button>
-            ),
-            width: 100,
-        },
-        {
-            key: 'actions',
-            header: 'Enrich',
-            align: 'center',
-            render: (event) => (
-                <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => router.push(`/admin/ingestion/enrichment/${event.id}`)}
-                >
-                    Open editor
-                </Button>
-            ),
-            width: 130,
-        },
-    ], [router]);
+                ),
+                width: 140,
+            },
+            {
+                key: 'actions',
+                header: 'Actions',
+                align: 'center',
+                render: (event) => (
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => triggerEnrichment([event.id])} disabled={loading}>
+                            Trigger
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!event.source_url}
+                            onClick={() => window.open(event.source_url, '_blank', 'noopener,noreferrer')}
+                        >
+                            Source
+                        </Button>
+                    </div>
+                ),
+                width: 180,
+            },
+        ],
+        [loading, triggerEnrichment]
+    );
 
     const bulkActions = useMemo(
         () => [
             {
-                id: 'enrich',
-                label: 'Open enrichment',
+                id: 'trigger',
+                label: 'Trigger LLM Enrichment',
                 icon: <MaterialIcon name="arrow-forward" size={14} />,
-                shortcut: 'a',
-                disabled: selectedRows.length === 0,
-                onSelect: handleStartEnrichment,
+                disabled: selectedRows.length === 0 || loading,
+                onSelect: () => triggerEnrichment(selectedRows),
             },
             {
-                id: 'source',
-                label: 'Open source page',
-                icon: <MaterialIcon name="arrow-up-right" size={14} />,
-                shortcut: 'r',
-                disabled: !selectedEvent?.source_url,
-                onSelect: handleOpenSelectedSource,
+                id: 'refresh',
+                label: 'Refresh',
+                icon: <MaterialIcon name="refresh" size={14} />,
+                disabled: loading,
+                onSelect: () => refresh(),
             },
         ],
-        [handleOpenSelectedSource, handleStartEnrichment, selectedEvent?.source_url, selectedRows.length]
-    );
-
-    const viewControls = (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800/60 bg-slate-950/60 px-4 py-3">
-            <div className="flex items-center gap-2">
-                <span className="text-xs uppercase tracking-wide text-slate-500">View</span>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant={viewParam === 'table' ? 'secondary' : 'ghost'}
-                    onClick={() => updateQuery({ view: 'table' })}
-                    aria-pressed={viewParam === 'table'}
-                >
-                    Table
-                </Button>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant={viewParam === 'cards' ? 'secondary' : 'ghost'}
-                    onClick={() => updateQuery({ view: 'cards' })}
-                    aria-pressed={viewParam === 'cards'}
-                >
-                    Cards
-                </Button>
-            </div>
-            <div className="text-xs text-slate-400">
-                {selectedRows.length > 0 ? `${selectedRows.length} selected • ` : ''}
-                {statusCounts.needs_both} need agenda + speakers
-            </div>
-        </div>
-    );
-
-    const tableToolbar = (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400">
-                {totalItems === 0 ? 'No events match the current filters.' : `Showing ${paginatedEvents.length} of ${totalItems} events needing review`}
-            </div>
-            <LinkBackToQueue />
-        </div>
+        [loading, refresh, selectedRows, triggerEnrichment]
     );
 
     return (
-        <div className="space-y-5">
-            {viewControls}
-
-            {viewParam === 'table' ? (
-                <AdminDataTable
-                    columns={columns}
-                    rows={paginatedEvents}
-                    getRowId={(event) => event.id}
-                    sortKey="start_time"
-                    sortDirection="asc"
-                    selectable
-                    selectedRowIds={selectedRows}
-                    onSelectionChange={setSelectedRows}
-                    bulkActions={bulkActions}
-                    page={currentPage}
-                    pageSize={pageSizeParam}
-                    total={totalItems}
-                    onPageChange={(nextPage) => updateQuery({ page: nextPage })}
-                    onPageSizeChange={(size) => updateQuery({ pageSize: size, page: 1 })}
-                    toolbar={tableToolbar}
-                />
-            ) : (
-                <div className="space-y-4">
-                    {paginatedEvents.length === 0 ? (
-                        <Card className="border border-slate-800/60 bg-slate-950/60">
-                            <CardContent className="p-6 text-center text-sm text-slate-400">
-                                No events match the current filters.
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        paginatedEvents.map((event) => (
-                            <Card key={event.id} className="border border-slate-800/60 bg-slate-950/70 text-slate-200">
-                                <CardHeader className="flex flex-wrap items-start justify-between gap-3">
-                                    <div className="space-y-2">
-                                        <CardTitle className="text-lg font-semibold">{event.title}</CardTitle>
-                                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                                            <span>{event.organizer?.name ?? 'Unknown organizer'}</span>
-                                            <span>{format(new Date(event.start_time), 'PPP p')}</span>
-                                            {event.ingestion_source_id && (
-                                                <span className="inline-flex items-center gap-1 rounded border border-slate-800/60 bg-slate-900/60 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                                                    <MaterialIcon name="label" size={12} />
-                                                    {event.ingestion_source_id}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button size="sm" variant="secondary" onClick={() => router.push(`/admin/ingestion/enrichment/${event.id}`)}>
-                                            Enrich now
-                                        </Button>
-                                        <Button size="sm" variant="outline" disabled={!event.source_url} onClick={() => event.source_url && window.open(event.source_url, '_blank', 'noopener,noreferrer')}>
-                                            Source
-                                        </Button>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                                    {!event.has_agenda && (
-                                        <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-200">
-                                            Agenda missing
-                                        </Badge>
-                                    )}
-                                    {!event.has_speakers && (
-                                        <Badge variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-200">
-                                            Speakers missing
-                                        </Badge>
-                                    )}
-                                    {event.has_agenda && event.has_speakers && (
-                                        <Badge className="bg-emerald-500/20 text-emerald-100">Complete</Badge>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        ))
-                    )}
+        <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-xs uppercase tracking-wide text-slate-400">
+                    {filteredEvents.length} events (status filter: {statusFilter})
                 </div>
-            )}
+                <Button size="sm" variant="ghost" onClick={() => refresh()} disabled={loading}>
+                    <MaterialIcon name="refresh" size={14} />
+                    Refresh
+                </Button>
+            </div>
 
-            {shortcutsOpen && <EnrichmentShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
-        </div>
-    );
-}
-
-function LinkBackToQueue() {
-    return (
-        <Link
-            href="/admin/ingestion/update-queue"
-            className="inline-flex items-center gap-1 text-xs text-slate-400 transition hover:text-slate-200"
-        >
-            <MaterialIcon name="arrow_back" size={12} />
-            Back to update queue
-        </Link>
-    );
-}
-
-function EnrichmentShortcutsOverlay({ onClose }: { onClose: () => void }) {
-    const shortcuts = [
-        { keys: '/', label: 'Focus search' },
-        { keys: 'a', label: 'Open selected in editor' },
-        { keys: 'r', label: 'Open selected source page' },
-        { keys: 'j / k', label: 'Move selection down / up' },
-        { keys: '?', label: 'Show this help' },
-    ];
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-            <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-950 p-6 shadow-2xl">
-                <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                        <h2 className="text-lg font-semibold text-slate-100">Enrichment shortcuts</h2>
-                        <p className="text-sm text-slate-400">
-                            Jump through the backlog without leaving the keyboard.
-                        </p>
+            <AdminDataTable
+                columns={columns}
+                rows={filteredEvents}
+                getRowId={(event) => event.id}
+                sortKey="start_time"
+                sortDirection="asc"
+                selectable
+                selectedRowIds={selectedRows}
+                onSelectionChange={setSelectedRows}
+                bulkActions={bulkActions}
+                page={1}
+                pageSize={filteredEvents.length || 10}
+                total={filteredEvents.length}
+                onPageChange={() => undefined}
+                onPageSizeChange={() => undefined}
+                toolbar={
+                    <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs text-slate-400">Trigger enrichment and monitor status</span>
+                        <a
+                            href="/admin/ingestion/update-queue"
+                            className="inline-flex items-center gap-1 text-xs text-slate-400 transition hover:text-slate-200"
+                        >
+                            <MaterialIcon name="arrow_back" size={12} />
+                            Back to review queue
+                        </a>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-300 hover:bg-slate-800">
-                        <MaterialIcon name="close" size={16} />
-                    </Button>
-                </div>
-                <div className="space-y-2">
-                    {shortcuts.map((shortcut) => (
-                        <div key={shortcut.keys} className="flex items-center justify-between gap-3 rounded-md border border-slate-800/60 bg-slate-900/60 px-3 py-2">
-                            <span className="font-mono text-xs uppercase tracking-wide text-slate-200">{shortcut.keys}</span>
-                            <span className="text-sm text-slate-300">{shortcut.label}</span>
-                        </div>
-                    ))}
-                </div>
-                <p className="mt-4 text-center text-xs text-slate-500">Press Esc to close.</p>
-            </div>
+                }
+            />
         </div>
     );
 }
-
