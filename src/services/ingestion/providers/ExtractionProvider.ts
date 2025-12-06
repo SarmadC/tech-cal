@@ -8,6 +8,8 @@ export interface ExtractionProviderRequest {
     context: ExtractionContext;
     abortSignal?: AbortSignal;
     model?: string;
+    // Optional controlled vocabulary of tag names (already canonicalized)
+    allowedTags?: string[];
 }
 
 export interface ExtractionProvider {

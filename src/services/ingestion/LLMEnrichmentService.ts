@@ -33,6 +33,24 @@ type EventRow = {
     speaker_lineup?: unknown;
 };
 
+type AllowedTag = {
+    id: string;
+    name: string;
+    category?: string | null;
+};
+
+type TagChange = {
+    oldTagIds: string[];
+    newTagIds: string[];
+    oldTagNames: string[];
+    newTagNames: string[];
+    added: string[];
+    removed: string[];
+};
+
+const ALLOWED_TAGS_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let allowedTagsCache: { tags: AllowedTag[]; fetchedAt: number } | null = null;
+
 export interface EnrichmentJobResult {
     eventId: string;
     status: 'enriched' | 'failed';
@@ -100,13 +118,15 @@ export class LLMEnrichmentService {
             }
 
             const contentHash = this.hashContent(content);
+            const allowedTags = await this.loadAllowedTags();
             const provider = getExtractionProvider();
             const providerResult = await provider.extract({
                 content,
                 context: { sourceUrl, eventId, contentHash },
+                allowedTags: allowedTags.map(t => t.name),
             });
 
-            await this.persistSuccess(eventId, event, providerResult, metadata, contentHash);
+            await this.persistSuccess(eventId, event, providerResult, metadata, contentHash, allowedTags);
 
             return { eventId, status: 'enriched' };
         } catch (error) {
@@ -227,6 +247,7 @@ export class LLMEnrichmentService {
         providerResult: ExtractionProviderResult,
         previousMetadata: EnrichmentMetadata,
         contentHash: string,
+        allowedTags: AllowedTag[] = [],
     ): Promise<void> {
         const now = new Date().toISOString();
         const metadata: EnrichmentMetadata = {
@@ -249,7 +270,18 @@ export class LLMEnrichmentService {
             })
             .eq('id', eventId);
 
-        await this.queueForReview(eventId, event, providerResult.data);
+        const tagChange = await this.persistTags(eventId, providerResult.data.tags, allowedTags);
+        if (tagChange) {
+            metadata.applied_tags = tagChange.newTagNames;
+            await this.supabaseClient
+                .from('events')
+                .update({
+                    [this.metadataColumn()]: metadata as unknown as Json,
+                })
+                .eq('id', eventId);
+        }
+
+        await this.queueForReview(eventId, event, providerResult.data, tagChange);
     }
 
     private async markFailed(eventId: string, event: EventRow, reason: string): Promise<void> {
@@ -336,8 +368,136 @@ export class LLMEnrichmentService {
         return createHash('sha256').update(content).digest('hex');
     }
 
-    private async queueForReview(eventId: string, event: EventRow, data: ExtractedEventData): Promise<void> {
+    private async loadAllowedTags(): Promise<AllowedTag[]> {
+        const now = Date.now();
+        if (allowedTagsCache && now - allowedTagsCache.fetchedAt < ALLOWED_TAGS_TTL_MS) {
+            return allowedTagsCache.tags;
+        }
+
+        const { data, error } = await this.supabaseClient
+            .from('event_tags')
+            .select('id, event_tag, category');
+
+        if (error || !data) {
+            Sentry.captureException(error, { extra: { function: 'loadAllowedTags' } });
+            return allowedTagsCache?.tags ?? [];
+        }
+
+        const tags = data
+            .map(tag => ({
+                id: tag.id as string,
+                name: (tag.event_tag as string).trim(),
+                category: (tag.category as string | null) ?? null,
+            }))
+            .filter(tag => this.isAllowedTagName(tag.name));
+
+        allowedTagsCache = { tags, fetchedAt: now };
+        return tags;
+    }
+
+    private isAllowedTagName(name: string): boolean {
+        const trimmed = name.trim();
+        if (!trimmed) return false;
+
+        const lower = trimmed.toLowerCase();
+
+        // Skip noisy placeholders or malformed entries
+        if (lower === 'general' || lower === 'online') return false;
+        if (lower === 'language' || lower === 'topic') return false;
+        if (/^{/.test(trimmed)) return false; // JSON-ish stored as string
+
+        // Filter ultra-short unless explicitly meaningful (keep AI, ML)
+        if (trimmed.length < 2) return false;
+        if (trimmed.length === 2 && !['ai', 'ml', 'vr', 'ar', 'ui'].includes(lower)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private async persistTags(
+        eventId: string,
+        tags: string[] | undefined,
+        allowedTags: AllowedTag[],
+    ): Promise<TagChange | null> {
+        if (!tags || tags.length === 0 || allowedTags.length === 0) return null;
+
+        const lookup = new Map<string, string>();
+        allowedTags.forEach(tag => {
+            lookup.set(tag.name.toLowerCase(), tag.id);
+        });
+
+        const newTagIds = new Set<string>();
+        tags.forEach(tag => {
+            if (typeof tag !== 'string') return;
+            const normalized = tag.trim().toLowerCase();
+            const tagId = lookup.get(normalized);
+            if (tagId) {
+                newTagIds.add(tagId);
+            }
+        });
+
+        if (newTagIds.size === 0) return null;
+
+        // Fetch current tags for diffing
+        const { data: existing, error: existingError } = await this.supabaseClient
+            .from('event_tag_relations')
+            .select('tag_id')
+            .eq('event_id', eventId);
+
+        if (existingError) {
+            Sentry.captureException(existingError, { extra: { function: 'persistTags_existing', eventId } });
+        }
+
+        const oldTagIds = new Set<string>((existing || []).map(r => r.tag_id as string));
+
+        const rows = Array.from(newTagIds).map(tagId => ({
+            event_id: eventId,
+            tag_id: tagId,
+        }));
+
+        const { error } = await this.supabaseClient
+            .from('event_tag_relations')
+            .upsert(rows, { onConflict: 'event_id,tag_id' });
+
+        if (error) {
+            Sentry.captureException(error, { extra: { function: 'persistTags', eventId, tagCount: rows.length } });
+            return null;
+        }
+
+        const idToName = new Map<string, string>();
+        allowedTags.forEach(tag => idToName.set(tag.id, tag.name));
+
+        const oldIdsArr = Array.from(oldTagIds);
+        const newIdsArr = Array.from(newTagIds);
+        const addedIds = newIdsArr.filter(id => !oldTagIds.has(id));
+        const removedIds = oldIdsArr.filter(id => !newTagIds.has(id));
+
+        return {
+            oldTagIds: oldIdsArr,
+            newTagIds: newIdsArr,
+            oldTagNames: oldIdsArr.map(id => idToName.get(id) || id),
+            newTagNames: newIdsArr.map(id => idToName.get(id) || id),
+            added: addedIds.map(id => idToName.get(id) || id),
+            removed: removedIds.map(id => idToName.get(id) || id),
+        };
+    }
+
+    private async queueForReview(
+        eventId: string,
+        event: EventRow,
+        data: ExtractedEventData,
+        tagChange?: TagChange | null
+    ): Promise<void> {
         const diffs = this.buildFieldDiffs(event, data);
+        if (tagChange && (tagChange.added?.length || tagChange.removed?.length)) {
+            diffs.push({
+                fieldName: 'tags',
+                oldValue: tagChange.oldTagNames,
+                newValue: tagChange.newTagNames,
+                hasChanged: true,
+            });
+        }
         if (diffs.length === 0) {
             return;
         }

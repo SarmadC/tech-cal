@@ -16,6 +16,11 @@ const DEFAULT_MODEL = 'gemini-1.5-flash';
 const RESPONSE_SCHEMA = {
     type: SchemaType.OBJECT,
     properties: {
+        tags: {
+            type: SchemaType.ARRAY,
+            nullable: true,
+            items: { type: SchemaType.STRING },
+        },
         speakers: {
             type: SchemaType.ARRAY,
             nullable: true,
@@ -71,6 +76,7 @@ Extract structured event information from the provided webpage content.
 Return ONLY valid JSON matching the schema. Do not include explanations or prose.
 If a field cannot be determined confidently, omit it rather than guessing.
 Focus on speakers (include LinkedIn URLs when available), agenda/schedule, pricing, registration URL, and event format (Online, In-person, Hybrid).
+When choosing tags, only use items from the provided Allowed Tags list. If none apply, return an empty array.
 `.trim();
 
 export class GeminiExtractionProvider implements ExtractionProvider {
@@ -95,7 +101,11 @@ export class GeminiExtractionProvider implements ExtractionProvider {
             },
         });
 
-        const prompt = this.buildPrompt(request.content, request.context.sourceUrl);
+        const prompt = this.buildPrompt(
+            request.content,
+            request.context.sourceUrl,
+            request.allowedTags
+        );
         const response = await modelInstance.generateContent(
             {
                 contents: [
@@ -110,7 +120,8 @@ export class GeminiExtractionProvider implements ExtractionProvider {
 
         const parsed = this.parseResponse(response);
         const sanitized = this.pruneNulls(parsed);
-        const validated = ExtractedEventDataSchema.safeParse(sanitized);
+        const withAllowedTags = this.restrictTagsToAllowlist(sanitized, request.allowedTags);
+        const validated = ExtractedEventDataSchema.safeParse(withAllowedTags);
         if (!validated.success) {
             const issues = validated.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ');
             throw new Error(`Gemini response failed validation: ${issues}`);
@@ -126,10 +137,17 @@ export class GeminiExtractionProvider implements ExtractionProvider {
         };
     }
 
-    private buildPrompt(content: string, sourceUrl: string): string {
+    private buildPrompt(content: string, sourceUrl: string, allowedTags?: string[]): string {
+        const topAllowed = (allowedTags || []).slice(0, 200);
+        const allowedSection = topAllowed.length
+            ? `Allowed Tags (choose only from this list, case-insensitive): ${topAllowed.join(', ')}`
+            : 'No allowed tags provided; return an empty array for tags.';
+
         return `${SYSTEM_PROMPT}
 
 Source URL: ${sourceUrl}
+
+${allowedSection}
 
 Webpage content:
 ${content}
@@ -168,6 +186,31 @@ ${content}
             }
             return result;
         }
+        return value;
+    }
+
+    private restrictTagsToAllowlist(value: unknown, allowedTags?: string[]): unknown {
+        if (!allowedTags || allowedTags.length === 0) return value;
+        const allowed = new Map<string, string>();
+        allowedTags.forEach(tag => {
+            const key = tag.trim().toLowerCase();
+            if (key) allowed.set(key, tag);
+        });
+
+        if (!allowed.size) return value;
+
+        if (value && typeof value === 'object' && 'tags' in (value as Record<string, unknown>)) {
+            const obj = { ...(value as Record<string, unknown>) };
+            const incoming = Array.isArray(obj.tags) ? obj.tags : [];
+            const filtered = incoming
+                .map(t => (typeof t === 'string' ? t.trim() : ''))
+                .filter(Boolean)
+                .map(t => allowed.get(t.toLowerCase()))
+                .filter((t): t is string => !!t);
+            obj.tags = Array.from(new Set(filtered));
+            return obj;
+        }
+
         return value;
     }
 }

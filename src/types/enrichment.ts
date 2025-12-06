@@ -50,6 +50,8 @@ export const ExtractedEventDataSchema = z.object({
     location: z.string().max(500).optional(),
     registrationUrl: z.string().url().optional(),
     eventFormat: z.enum(['Online', 'In-person', 'Hybrid']).optional(),
+    // Canonical tag names chosen from an allowed list; enforced upstream
+    tags: z.array(z.string().min(2).max(64)).max(25).optional(),
 });
 
 export type ExtractedEventData = z.infer<typeof ExtractedEventDataSchema>;
@@ -65,6 +67,7 @@ export interface EnrichmentMetadata {
     last_error?: string;
     content_hash?: string;
     tokens_used?: number;
+    applied_tags?: string[];
 }
 
 export interface ExtractionContext {

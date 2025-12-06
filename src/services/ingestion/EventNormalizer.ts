@@ -10,6 +10,7 @@ import type { SupabaseClientType } from '@/types';
 import type { EventSourceRecord } from '@/types/ingestion';
 import type { Database } from '@/types/supabase';
 import * as Sentry from '@sentry/nextjs';
+import { env } from '@/utils/env';
 import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 import { EventRepository } from './repositories/EventRepository';
 import { EventTagEnrichmentService } from '@/services/eventTagEnrichmentService';
@@ -113,7 +114,8 @@ export class EventNormalizer {
             // Auto-enrich with tags from content (if no tags were provided)
             // Note: Agenda items may not exist yet at normalization time, so we enrich with title/description first
             // Agenda-based enrichment can happen later via backfill if needed
-            if (!record.tags || record.tags.length === 0) {
+            const tagMode = env('TAG_ENRICHMENT_MODE', 'heuristic'); // heuristic | none
+            if ((!record.tags || record.tags.length === 0) && tagMode === 'heuristic') {
                 try {
                     await EventTagEnrichmentService.enrichEventTags(
                         eventId,
