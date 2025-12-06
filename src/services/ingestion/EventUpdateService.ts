@@ -48,6 +48,54 @@ export interface ExistingEventWithRelationships {
 
 export class EventUpdateService {
     /**
+     * Ensure end_time is after start_time for updates.
+     * If end_time is missing or invalid, leaves untouched.
+     * If end_time <= start_time, bump end_time by 1 hour.
+     */
+    private static async ensureValidTimesForUpdate(
+        eventId: string,
+        updateData: Record<string, unknown>,
+        supabaseClient: SupabaseClientType
+    ): Promise<Record<string, unknown>> {
+        // Only care if end_time might be updated or used in comparison
+        const hasEndUpdate = 'end_time' in updateData;
+        const hasStartUpdate = 'start_time' in updateData;
+        if (!hasEndUpdate && !hasStartUpdate) {
+            return updateData;
+        }
+
+        // Fetch existing times to compare when only one side is being updated
+        const { data: existingEvent } = await supabaseClient
+            .from('events')
+            .select('start_time, end_time')
+            .eq('id', eventId)
+            .single();
+
+        const startCandidate = (updateData.start_time as string | undefined) ?? existingEvent?.start_time ?? null;
+        const endCandidate = (updateData.end_time as string | undefined) ?? existingEvent?.end_time ?? null;
+
+        if (!startCandidate || !endCandidate) {
+            return updateData;
+        }
+
+        const start = new Date(startCandidate);
+        const end = new Date(endCandidate);
+
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+            return updateData;
+        }
+
+        if (end <= start) {
+            const correctedEnd = new Date(start.getTime() + 60 * 60 * 1000).toISOString();
+            updateData.end_time = correctedEnd;
+            console.warn(
+                `[EventUpdateService] Adjusted end_time after start_time for event ${eventId}`
+            );
+        }
+
+        return updateData;
+    }
+    /**
      * Fetch event with all relationships for comparison
      */
     static async fetchEventWithRelationships(
@@ -298,10 +346,12 @@ export class EventUpdateService {
             );
 
             if (Object.keys(scalarUpdateData).length > 0) {
+                const sanitized = await this.ensureValidTimesForUpdate(eventId, { ...scalarUpdateData }, supabaseClient);
+
                 const { error } = await supabaseClient
                     .from('events')
                     .update({
-                        ...scalarUpdateData,
+                        ...sanitized,
                         last_synced_at: new Date().toISOString(),
                     })
                     .eq('id', eventId);

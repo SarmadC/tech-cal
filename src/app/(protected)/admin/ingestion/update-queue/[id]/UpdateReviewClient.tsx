@@ -55,18 +55,48 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
     const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
     const [actionLoading, setActionLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [editingField, setEditingField] = useState<string | null>(null);
+    const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+    const [savingField, setSavingField] = useState<string | null>(null);
 
     const fetchQueueDetail = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await fetch(`/api/admin/ingestion/update-queue/${queueId}`);
-            if (!response.ok) throw new Error('Failed to fetch queue item');
+            const response = await fetch(`/api/admin/ingestion/update-queue/${queueId}`, {
+                cache: 'no-store',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.json().catch(() => ({}));
+                const detail =
+                    (errorBody && typeof errorBody.error === 'string' && errorBody.error) ||
+                    response.statusText ||
+                    'Failed to fetch queue item';
+
+                if (response.status === 404) {
+                    setQueue(null);
+                    setFields([]);
+                    setMessage({
+                        type: 'error',
+                        text: 'Queue item not found (it may have been resolved or deleted).',
+                    });
+                    setLoading(false);
+                    return;
+                }
+
+                throw new Error(detail);
+            }
+
             const data = await response.json();
             setQueue(data.queue);
             setFields(data.fields || []);
         } catch (error) {
-            console.error('Error fetching queue detail:', error);
-            setMessage({ type: 'error', text: 'Failed to load queue item details' });
+            console.warn('Error fetching queue detail:', error);
+            setMessage({
+                type: 'error',
+                text: error instanceof Error ? error.message : 'Failed to load queue item details',
+            });
         } finally {
             setLoading(false);
         }
@@ -181,13 +211,99 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
 
     const formatValue = (value: unknown): string => {
         if (value === null || value === undefined) return '(empty)';
-        if (typeof value === 'object') {
-            if (Array.isArray(value)) {
-                return value.length > 0 ? value.join(', ') : '(empty array)';
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+        if (Array.isArray(value)) {
+            const hasObjects = value.some((item) => typeof item === 'object');
+            if (hasObjects) {
+                try {
+                    return JSON.stringify(value, null, 2);
+                } catch {
+                    return String(value);
+                }
             }
-            return JSON.stringify(value, null, 2);
+            return value.length > 0 ? value.join(', ') : '(empty array)';
+        }
+        if (typeof value === 'object') {
+            try {
+                return JSON.stringify(value, null, 2);
+            } catch {
+                return String(value);
+            }
         }
         return String(value);
+    };
+
+    const serializeForEditing = (value: unknown): string => {
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'string') return value;
+        try {
+            return JSON.stringify(value, null, 2);
+        } catch {
+            return String(value);
+        }
+    };
+
+    const parseEditedValue = (raw: string): unknown => {
+        const trimmed = raw.trim();
+        if (!trimmed) return '';
+        try {
+            return JSON.parse(trimmed);
+        } catch {
+            return raw;
+        }
+    };
+
+    const startEditingField = (field: QueueField) => {
+        setEditingField(field.field_name);
+        setEditedValues((prev) => ({
+            ...prev,
+            [field.field_name]: serializeForEditing(field.new_value),
+        }));
+    };
+
+    const cancelEditingField = () => {
+        setEditingField(null);
+    };
+
+    const handleSaveEditedField = async (fieldName: string) => {
+        const rawValue = editedValues[fieldName] ?? '';
+        const parsedValue = parseEditedValue(rawValue);
+
+        setSavingField(fieldName);
+        setMessage(null);
+
+        try {
+            const response = await fetch(
+                `/api/admin/ingestion/update-queue/${queueId}?action=update-field`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fieldName, newValue: parsedValue }),
+                }
+            );
+
+            if (!response.ok) {
+                const errorBody = await response.json().catch(() => ({}));
+                throw new Error(errorBody.error || 'Failed to update field value');
+            }
+
+            setFields((prev) =>
+                prev.map((field) =>
+                    field.field_name === fieldName ? { ...field, new_value: parsedValue } : field
+                )
+            );
+
+            setMessage({ type: 'success', text: `Updated ${fieldName}` });
+            setEditingField(null);
+        } catch (error) {
+            setMessage({
+                type: 'error',
+                text: error instanceof Error ? error.message : 'Failed to update field value',
+            });
+        } finally {
+            setSavingField(null);
+        }
     };
 
     const getStatusBadge = (status: string) => {
@@ -396,16 +512,17 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                             {fields.map((field) => {
                                 const isPending = field.field_status === 'pending';
                                 const isSelected = selectedFields.has(field.field_name);
+                                const isEditing = editingField === field.field_name;
 
                                 return (
                                     <div
                                         key={field.id}
                                         className={`border rounded-lg p-4 ${
                                             isPending
-                                                ? 'border-yellow-200 bg-yellow-50'
+                                                ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/40'
                                                 : field.field_status === 'approved'
-                                                ? 'border-green-200 bg-green-50'
-                                                : 'border-red-200 bg-red-50'
+                                                ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30'
+                                                : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30'
                                         }`}
                                     >
                                         <div className="flex items-start justify-between mb-3">
@@ -429,16 +546,69 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                                         </div>
                                         <div className="grid grid-cols-2 gap-4 text-sm">
                                             <div>
-                                                <div className="font-medium text-gray-700 mb-2">Old Value</div>
-                                                <div className="bg-white p-3 rounded border font-mono text-xs whitespace-pre-wrap break-words">
+                                                <div className="font-medium text-gray-700 dark:text-gray-200 mb-2">
+                                                    Old Value
+                                                </div>
+                                                <div className="bg-white dark:bg-zinc-900 p-3 rounded border border-gray-200 dark:border-gray-700 font-mono text-xs whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100">
                                                     {formatValue(field.old_value)}
                                                 </div>
                                             </div>
                                             <div>
-                                                <div className="font-medium text-gray-700 mb-2">New Value</div>
-                                                <div className="bg-white p-3 rounded border font-mono text-xs whitespace-pre-wrap break-words">
-                                                    {formatValue(field.new_value)}
+                                                <div className="font-medium text-gray-700 dark:text-gray-200 mb-2">
+                                                    New Value
                                                 </div>
+                                                {isPending && isEditing ? (
+                                                    <div className="space-y-2">
+                                                        <textarea
+                                                            className="w-full min-h-[140px] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-900 p-3 font-mono text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            value={editedValues[field.field_name] ?? ''}
+                                                            onChange={(e) =>
+                                                                setEditedValues((prev) => ({
+                                                                    ...prev,
+                                                                    [field.field_name]: e.target.value,
+                                                                }))
+                                                            }
+                                                        />
+                                                        <div className="flex items-center gap-2">
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => handleSaveEditedField(field.field_name)}
+                                                                disabled={savingField === field.field_name}
+                                                            >
+                                                                {savingField === field.field_name ? 'Saving...' : 'Save'}
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={cancelEditingField}
+                                                                disabled={savingField === field.field_name}
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            Tip: enter JSON for objects/arrays. Plain strings are saved as-is.
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <div className="bg-white dark:bg-zinc-900 p-3 rounded border border-gray-200 dark:border-gray-700 font-mono text-xs whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100">
+                                                            {formatValue(field.new_value)}
+                                                        </div>
+                                                        {isPending && (
+                                                            <div className="mt-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => startEditingField(field)}
+                                                                    disabled={savingField === field.field_name || actionLoading}
+                                                                >
+                                                                    Edit
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

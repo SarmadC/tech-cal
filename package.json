@@ -1,16 +1,16 @@
 {
   "name": "tech-cal",
-"version": "0.1.0",
-"private": true,
-"engines": {
-  "node": ">=20.9.0"
-},
-"scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "start": "next start",
-  "lint": "eslint . --max-warnings=0",
-  "lint:fix": "eslint . --fix",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:scoring": "vitest run src/lib/__tests__/alignmentCore.parity.test.ts src/app/api/__tests__/filtered.contract.test.ts src/services/recommendations/__tests__/rerankAdvanced.test.ts",
     "bench:scoring": "tsx scripts/benchmark-scoring.ts",
@@ -48,6 +48,7 @@
     "@fullcalendar/list": "^6.1.18",
     "@fullcalendar/react": "^6.1.19",
     "@fullcalendar/timegrid": "^6.1.19",
+    "@google/generative-ai": "^0.21.0",
     "@hookform/resolvers": "^5.2.1",
     "@mozilla/readability": "^0.6.0",
     "@mui/material": "^7.3.2",
@@ -58,7 +59,6 @@
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
     "@sentry/nextjs": "^10.0.0",
-    "@google/generative-ai": "^0.21.0",
     "@studio-freight/lenis": "^1.0.42",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.2",
@@ -74,10 +74,11 @@
     "googleapis": "^164.1.0",
     "gsap": "^3.13.0",
     "motion": "^12.23.12",
-    "next": "16.0.3",
+    "next": "^16.0.7",
     "next-themes": "^0.4.6",
     "node-ical": "^0.22.1",
     "ogl": "^1.0.11",
+    "playwright": "^1.54.2",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.62.0",
@@ -86,7 +87,6 @@
     "rss-parser": "^3.13.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
-    "playwright": "^1.54.2",
     "three": "^0.178.0",
     "zod": "^3.25.76"
   },

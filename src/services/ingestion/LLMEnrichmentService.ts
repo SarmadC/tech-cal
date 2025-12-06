@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
 import * as Sentry from '@sentry/nextjs';
-import type { SupabaseClientType } from '@/types';
+import type { SupabaseClientType, Json } from '@/types';
 import {
     type EnrichmentMetadata,
     type ExtractionProviderResult,
@@ -22,8 +22,6 @@ type EventRow = {
     source_url: string | null;
     enrichment_status?: string | null;
     enrichment_metadata?: EnrichmentMetadata | null;
-    firecrawl_enrichment_status?: string | null;
-    firecrawl_enrichment_metadata?: EnrichmentMetadata | null;
     description?: string | null;
     location?: string | null;
     registration_url?: string | null;
@@ -128,8 +126,6 @@ export class LLMEnrichmentService {
                     'source_url',
                     'enrichment_status',
                     'enrichment_metadata',
-                    'firecrawl_enrichment_status',
-                    'firecrawl_enrichment_metadata',
                     'description',
                     'location',
                     'registration_url',
@@ -162,8 +158,6 @@ export class LLMEnrichmentService {
                     'source_url',
                     'enrichment_status',
                     'enrichment_metadata',
-                    'firecrawl_enrichment_status',
-                    'firecrawl_enrichment_metadata',
                     'description',
                     'location',
                     'registration_url',
@@ -187,9 +181,7 @@ export class LLMEnrichmentService {
     }
 
     private normalizeMetadata(event: EventRow): EnrichmentMetadata {
-        const metadata = (event.enrichment_metadata ||
-            event.firecrawl_enrichment_metadata ||
-            {}) as EnrichmentMetadata;
+        const metadata = (event.enrichment_metadata || {}) as EnrichmentMetadata;
         return {
             enrichment_source: 'llm',
             retry_count: metadata.retry_count ?? 0,
@@ -204,11 +196,11 @@ export class LLMEnrichmentService {
         };
     }
 
-    private statusColumn(): 'enrichment_status' | 'firecrawl_enrichment_status' {
+    private statusColumn(): 'enrichment_status' {
         return 'enrichment_status';
     }
 
-    private metadataColumn(): 'enrichment_metadata' | 'firecrawl_enrichment_metadata' {
+    private metadataColumn(): 'enrichment_metadata' {
         return 'enrichment_metadata';
     }
 
@@ -224,7 +216,7 @@ export class LLMEnrichmentService {
             .from('events')
             .update({
                 [this.statusColumn()]: 'processing',
-                [this.metadataColumn()]: updatedMeta,
+                [this.metadataColumn()]: updatedMeta as unknown as Json,
             })
             .eq('id', eventId);
     }
@@ -253,7 +245,7 @@ export class LLMEnrichmentService {
             .from('events')
             .update({
                 [this.statusColumn()]: 'enriched',
-                [this.metadataColumn()]: metadata,
+                [this.metadataColumn()]: metadata as unknown as Json,
             })
             .eq('id', eventId);
 
@@ -272,7 +264,7 @@ export class LLMEnrichmentService {
             .from('events')
             .update({
                 [this.statusColumn()]: 'failed',
-                [this.metadataColumn()]: updated,
+                [this.metadataColumn()]: updated as unknown as Json,
             })
             .eq('id', eventId);
     }
@@ -297,7 +289,7 @@ export class LLMEnrichmentService {
             .from('events')
             .update({
                 [this.statusColumn()]: nextStatus,
-                [this.metadataColumn()]: updated,
+                [this.metadataColumn()]: updated as unknown as Json,
             })
             .eq('id', eventId);
     }
@@ -359,7 +351,8 @@ export class LLMEnrichmentService {
                 event_id: eventId,
                 status: 'pending',
                 requires_review_reason: 'llm_enrichment',
-                source_event_id: null,
+                // Use event_id as source_event_id to satisfy NOT NULL constraints in some deployments
+                source_event_id: eventId,
             })
             .select('id')
             .single();

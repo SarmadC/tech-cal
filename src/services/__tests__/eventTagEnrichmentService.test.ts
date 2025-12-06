@@ -232,12 +232,15 @@ describe('EventTagEnrichmentService', () => {
       
       (mockSupabase.from as unknown as MockSupabaseFrom).mockImplementation((table: string) => {
         if (table === 'event_tag_relations') {
+          const eqMock = vi.fn().mockReturnValue({
+            data: existingTags, 
+            error: null,
+            limit: vi.fn().mockResolvedValue({ data: existingTags, error: null })
+          });
+
           return {
             select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ 
-                data: existingTags, 
-                error: null 
-              })
+              eq: eqMock
             }),
             insert: vi.fn().mockResolvedValue({ error: null })
           };

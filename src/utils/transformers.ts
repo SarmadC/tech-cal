@@ -261,7 +261,8 @@ export const eventTypeTransformer = {
         id: supabaseEventType.id,
         name: supabaseEventType.name || 'Unnamed Category',
         color: supabaseEventType.color || '#808080',
-        description: supabaseEventType.description,
+        // Supabase returns null when description is absent; keep null to satisfy EventType
+        description: supabaseEventType.description ?? null,
     }),
     toSupabase: (appEventType: Partial<EventType>): Partial<SupabaseEventType> => ({
         ...(appEventType.id && { id: appEventType.id }),

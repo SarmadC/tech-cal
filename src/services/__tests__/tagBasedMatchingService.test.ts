@@ -11,6 +11,34 @@ type TagBasedMatchingServicePrivate = {
   getTextSearchCandidates: (p: CareerProfile, c: SupabaseClientType, t: string[], l: number) => Promise<Record<string, unknown>[]>;
 };
 
+const createEventQueryBuilder = (data: Record<string, unknown>[] = []) => {
+  const builder: any = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    gte: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn(),
+    in: vi.fn()
+  };
+
+  builder.limit.mockReturnValue(builder);
+  builder.in.mockReturnValue(Promise.resolve({ data, error: null }));
+  builder.then = (resolve: (value: unknown) => unknown) => resolve({ data, error: null });
+  return builder;
+};
+
+const createAgendaQueryBuilder = (data: Record<string, unknown>[] = []) => {
+  const builder: any = {
+    select: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
+    limit: vi.fn()
+  };
+
+  builder.limit.mockResolvedValue({ data, error: null });
+  builder.then = (resolve: (value: unknown) => unknown) => resolve({ data, error: null });
+  return builder;
+};
+
 describe('TagBasedMatchingService', () => {
   const createTestEvent = (title: string, tags: EventTag[] = [], agenda: AgendaItem[] = []): Event =>
     buildEvent({
@@ -80,6 +108,7 @@ describe('TagBasedMatchingService', () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
+    (mockSupabase.from as vi.Mock).mockReset();
     });
 
     afterEach(() => {
@@ -204,6 +233,7 @@ describe('TagBasedMatchingService', () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
+    (mockSupabase.from as vi.Mock).mockReset();
     });
 
     afterEach(() => {
@@ -216,67 +246,33 @@ describe('TagBasedMatchingService', () => {
           primarySkills: ['React']
         });
 
-        // Mock agenda search
-        const agendaBuilder = {
-          select: vi.fn().mockReturnThis(),
-          or: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockResolvedValue({
-            data: [{ event_id: 'event-1' }],
-            error: null
-          })
-        };
+        const agendaData = [{ event_id: 'event-1' }];
+        const eventsData = [{
+          id: 'event-1',
+          title: 'Tech Conference',
+          description: 'General tech conference',
+          start_time: new Date(Date.now() + 86400000).toISOString(),
+          event_agenda: [
+            { id: '1', title: 'React Workshop', description: 'Learn React' }
+          ],
+          tags: [],
+          event_type: { id: '1', name: 'Conference' },
+          organizer: { name: 'Test Org' }
+        }];
 
-        // Mock event fetch
-        const eventBuilder = {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          gte: vi.fn().mockReturnThis(),
-          in: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockResolvedValue({
-            data: [{
-              id: 'event-1',
-              title: 'Tech Conference',
-              description: 'General tech conference',
-              start_time: new Date(Date.now() + 86400000).toISOString(),
-              event_agenda: [
-                { id: '1', title: 'React Workshop', description: 'Learn React' }
-              ],
-              tags: [],
-              event_type: { id: '1', name: 'Conference' },
-              organizer: { name: 'Test Org' }
-            }],
-            error: null
-          })
-        };
-
-        const mockFrom = mockSupabase.from as unknown as {
-          mockReturnValueOnce: (value: unknown) => { mockReturnValueOnce: (value: unknown) => unknown };
-        };
-        mockFrom.mockReturnValueOnce(agendaBuilder) // event_agenda query
-          .mockReturnValueOnce(eventBuilder); // events query
+        (mockSupabase.from as vi.Mock).mockImplementation((table: string) => {
+          if (table === 'event_agenda') {
+            return createAgendaQueryBuilder(agendaData);
+          }
+          if (table === 'events') {
+            return createEventQueryBuilder(eventsData);
+          }
+          return createEventQueryBuilder();
+        });
 
         const textSpy = vi
           .spyOn(TagBasedMatchingService as unknown as TagBasedMatchingServicePrivate, 'getTextSearchCandidates')
-          .mockImplementation(async (profile, client, terms, limit) => {
-            // Simulate agenda search
-            const { data: agendaMatches } = await client
-              .from('event_agenda')
-              .select('event_id')
-              .or('title.ilike.%react%,description.ilike.%react%')
-              .limit(limit * 2);
-            
-            if (!agendaMatches || agendaMatches.length === 0) return [];
-            
-            const eventIds = [...new Set(agendaMatches.map((item: { event_id: string }) => item.event_id))];
-            const { data: events } = await client
-              .from('events')
-              .select('*,event_agenda(*)')
-              .in('id', eventIds)
-              .limit(limit);
-            
-            return events || [];
-          });
+          .mockResolvedValue(eventsData);
 
         const results = await TagBasedMatchingService.getRecommendedEventsByTags(
           'user',
@@ -299,51 +295,33 @@ describe('TagBasedMatchingService', () => {
           primarySkills: ['JavaScript']
         });
 
-        const agendaBuilder = {
-          select: vi.fn().mockReturnThis(),
-          or: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockResolvedValue({
-            data: [{ event_id: 'event-1' }],
-            error: null
-          })
-        };
+        const agendaData = [{ event_id: 'event-1' }];
+        const eventsData = [{
+          id: 'event-1',
+          title: 'JS Conference',
+          description: 'JavaScript conference',
+          start_time: new Date(Date.now() + 86400000).toISOString(),
+          event_agenda: [
+            { id: '1', title: 'Node.js Workshop', description: 'Learn Node.js' }
+          ],
+          tags: [],
+          event_type: { id: '1', name: 'Conference' },
+          organizer: { name: 'Test Org' }
+        }];
 
-        const eventBuilder = {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          gte: vi.fn().mockReturnThis(),
-          in: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockResolvedValue({
-            data: [{
-              id: 'event-1',
-              title: 'JS Conference',
-              description: 'JavaScript conference',
-              start_time: new Date(Date.now() + 86400000).toISOString(),
-              event_agenda: [
-                { id: '1', title: 'Node.js Workshop', description: 'Learn Node.js' }
-              ],
-              tags: [],
-              event_type: { id: '1', name: 'Conference' },
-              organizer: { name: 'Test Org' }
-            }],
-            error: null
-          })
-        };
-
-        const mockFrom = mockSupabase.from as unknown as {
-          mockReturnValueOnce: (value: unknown) => { mockReturnValueOnce: (value: unknown) => unknown };
-        };
-        mockFrom.mockReturnValueOnce(agendaBuilder)
-          .mockReturnValueOnce(eventBuilder);
+        (mockSupabase.from as vi.Mock).mockImplementation((table: string) => {
+          if (table === 'event_agenda') {
+            return createAgendaQueryBuilder(agendaData);
+          }
+          if (table === 'events') {
+            return createEventQueryBuilder(eventsData);
+          }
+          return createEventQueryBuilder();
+        });
 
         const textSpy = vi
           .spyOn(TagBasedMatchingService as unknown as TagBasedMatchingServicePrivate, 'getTextSearchCandidates')
-          .mockResolvedValue([{
-            id: 'event-1',
-            title: 'JS Conference',
-            event_agenda: [{ title: 'Node.js Workshop' }]
-          }]);
+          .mockResolvedValue(eventsData);
 
         const results = await TagBasedMatchingService.getRecommendedEventsByTags(
           'user',
@@ -387,6 +365,16 @@ describe('TagBasedMatchingService', () => {
           tags: [],
           _matchLocation: 'description'
         };
+
+        (mockSupabase.from as vi.Mock).mockImplementation((table: string) => {
+          if (table === 'event_agenda') {
+            return createAgendaQueryBuilder();
+          }
+          if (table === 'events') {
+            return createEventQueryBuilder();
+          }
+          return createEventQueryBuilder();
+        });
 
         const textSpy = vi
           .spyOn(TagBasedMatchingService as unknown as TagBasedMatchingServicePrivate, 'getTextSearchCandidates')

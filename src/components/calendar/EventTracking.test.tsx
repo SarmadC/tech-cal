@@ -10,6 +10,16 @@ import { createMockUser, render } from '@/utils/test-utils';
 
 // --- MOCKING THE SERVICE LAYER ---
 vi.mock('@/services/userEventService');
+vi.mock('@/contexts/SnackbarContext', () => ({
+    SnackbarProvider: ({ children }: { children: unknown }) => children,
+    useSnackbar: () => ({
+        showSuccess: vi.fn(),
+        showError: vi.fn(),
+        showWarning: vi.fn(),
+        showInfo: vi.fn(),
+        showConfirmation: vi.fn()
+    })
+}));
 
 // Create a mock AppEvent object for our tests to use
 const mockEvent: Event = {

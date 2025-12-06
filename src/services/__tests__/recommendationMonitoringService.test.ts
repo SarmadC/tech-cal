@@ -12,6 +12,7 @@ const mockSupabaseClient = {
   in: vi.fn().mockReturnThis(),
   not: vi.fn().mockReturnThis(),
   order: vi.fn().mockReturnThis(),
+  limit: vi.fn().mockReturnThis(),
 };
 
 describe('RecommendationMonitoringService', () => {
@@ -19,6 +20,8 @@ describe('RecommendationMonitoringService', () => {
     vi.clearAllMocks();
     mockSupabaseClient.from.mockReset();
     mockSupabaseClient.from.mockReturnThis();
+    mockSupabaseClient.limit.mockReset();
+    mockSupabaseClient.limit.mockReturnThis();
   });
 
   describe('getMonitoringSummary', () => {
@@ -28,7 +31,8 @@ describe('RecommendationMonitoringService', () => {
           select: vi.fn().mockReturnThis(),
           gte: vi.fn().mockReturnThis(),
           lte: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({ data: [], error: null })
+          order: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue({ data: [], error: null })
         };
         return chain;
       });
@@ -128,7 +132,8 @@ describe('RecommendationMonitoringService', () => {
         select: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lte: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null })
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null })
       }));
 
       const result = await RecommendationMonitoringService.getQuickMetrics(

@@ -109,7 +109,8 @@ export class GeminiExtractionProvider implements ExtractionProvider {
         );
 
         const parsed = this.parseResponse(response);
-        const validated = ExtractedEventDataSchema.safeParse(parsed);
+        const sanitized = this.pruneNulls(parsed);
+        const validated = ExtractedEventDataSchema.safeParse(sanitized);
         if (!validated.success) {
             const issues = validated.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ');
             throw new Error(`Gemini response failed validation: ${issues}`);
@@ -146,6 +147,28 @@ ${content}
         } catch {
             throw new Error('Gemini response was not valid JSON');
         }
+    }
+
+    // Remove nulls so optional fields validate as undefined rather than null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private pruneNulls(value: any): any {
+        if (value === null) return undefined;
+        if (Array.isArray(value)) {
+            return value
+                .map((item) => this.pruneNulls(item))
+                .filter((item) => item !== undefined);
+        }
+        if (typeof value === 'object' && value !== null) {
+            const result: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(value)) {
+                const pruned = this.pruneNulls(v);
+                if (pruned !== undefined) {
+                    result[k] = pruned;
+                }
+            }
+            return result;
+        }
+        return value;
     }
 }
 

@@ -4,20 +4,20 @@
 
 import * as Sentry from "@sentry/nextjs";
 
+const sentryEnabled = process.env.SENTRY_ENABLED === 'true';
+const sentryDebug = process.env.SENTRY_DEBUG === 'true';
+
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Disable Sentry to see console logs
-  enabled: false,
+  enabled: sentryEnabled,
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1,
 
-  // Enable logs to be sent to Sentry
-  enableLogs: process.env.NODE_ENV !== 'production',
-
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: process.env.NODE_ENV === 'development',
+  debug: sentryDebug,
 
   // Only enable replay in development/staging
   replaysSessionSampleRate: process.env.NODE_ENV === 'production' ? 0 : 0.1,

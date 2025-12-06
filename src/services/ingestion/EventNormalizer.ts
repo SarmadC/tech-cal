@@ -36,7 +36,9 @@ export class EventNormalizer {
         supabaseClient: SupabaseClientType
     ): Promise<NormalizedEventOutput> {
         try {
-            const { record, organizerId, eventTypeId } = input;
+            const { record: originalRecord, organizerId, eventTypeId } = input;
+            // Guard against invalid time ordering that triggers DB checks
+            const record = this.ensureValidTimes({ ...originalRecord });
 
             // Parse and normalize currency/price
             const priceInfo = this.parsePriceRange(record.priceRange);
@@ -261,6 +263,32 @@ export class EventNormalizer {
     }
 
     /**
+     * Ensure end time is after start time; if not, bump end by 1 hour to satisfy DB constraints.
+     * Avoids P0001 errors ("End time must be after start time") during normalization.
+     */
+    private static ensureValidTimes(record: EventSourceRecord): EventSourceRecord {
+        if (!record.startTime) return record;
+
+        const start = new Date(record.startTime);
+        if (Number.isNaN(start.getTime())) {
+            return record;
+        }
+
+        if (record.endTime) {
+            const end = new Date(record.endTime);
+            if (!Number.isNaN(end.getTime()) && end <= start) {
+                const correctedEnd = new Date(start.getTime() + 60 * 60 * 1000);
+                record.endTime = correctedEnd.toISOString();
+                console.warn(
+                    `[EventNormalizer] Adjusted end time after start for "${record.title ?? 'Untitled'}"`
+                );
+            }
+        }
+
+        return record;
+    }
+
+    /**
      * Normalize location string
      */
     private static normalizeLocation(location: string): string {
@@ -309,10 +337,15 @@ export class EventNormalizer {
         supabaseClient: SupabaseClientType
     ): Promise<void> {
         try {
+            const normalizedTags = this.sanitizeTags(tags);
+            if (normalizedTags.length === 0) {
+                return;
+            }
+
             // First, ensure all tags exist in event_tags table
             const tagIds: string[] = [];
 
-            for (const tagName of tags) {
+            for (const tagName of normalizedTags) {
                 if (!tagName || tagName.trim().length === 0) continue;
 
                 // Check if tag exists
@@ -369,6 +402,39 @@ export class EventNormalizer {
             console.warn('Error linking event tags:', error);
             // Don't throw - tag linking is non-critical
         }
+    }
+
+    /**
+     * Normalize incoming tags to a unique string list.
+     * Handles numbers, objects (uses name if present, otherwise JSON), and nested arrays.
+     */
+    private static sanitizeTags(rawTags: unknown): string[] {
+        if (!rawTags) return [];
+
+        const flatten = (value: unknown): string[] => {
+            if (Array.isArray(value)) {
+                return value.flatMap(v => flatten(v));
+            }
+            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                return [String(value)];
+            }
+            if (value && typeof value === 'object') {
+                // If object has a name property, prefer that
+                if ('name' in (value as Record<string, unknown>) && typeof (value as Record<string, unknown>).name === 'string') {
+                    return [String((value as Record<string, unknown>).name)];
+                }
+                try {
+                    return [JSON.stringify(value)];
+                } catch {
+                    return [];
+                }
+            }
+            return [];
+        };
+
+        const candidates = flatten(rawTags);
+        const trimmed = candidates.map(t => t.trim()).filter(t => t.length > 0);
+        return Array.from(new Set(trimmed));
     }
 }
 

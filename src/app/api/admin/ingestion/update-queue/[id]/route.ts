@@ -5,6 +5,7 @@
  * POST /approve: Approve all pending fields
  * POST /reject: Reject all pending fields
  * POST /approve-selective: Approve only specific fields
+ * POST /update-field: Update a pending field's proposed value
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -127,11 +128,11 @@ export async function POST(
 
         const { id: queueId } = await context.params;
         const url = new URL(request.url);
-        const action = url.searchParams.get('action'); // approve, reject, approve-selective, delete-event
+        const action = url.searchParams.get('action'); // approve, reject, approve-selective, delete-event, update-field
 
-        if (!action || !['approve', 'reject', 'approve-selective', 'delete-event'].includes(action)) {
+        if (!action || !['approve', 'reject', 'approve-selective', 'delete-event', 'update-field'].includes(action)) {
             return NextResponse.json(
-                { error: 'Invalid action. Must be approve, reject, approve-selective, or delete-event' },
+                { error: 'Invalid action. Must be approve, reject, approve-selective, delete-event, or update-field' },
                 { status: 400 }
             );
         }
@@ -150,7 +151,49 @@ export async function POST(
             );
         }
 
-        if (action === 'approve-selective') {
+        if (action === 'update-field') {
+            const body = await request.json();
+            const { fieldName, newValue } = body as { fieldName?: string; newValue?: unknown };
+
+            if (!fieldName) {
+                return NextResponse.json(
+                    { error: 'Missing fieldName' },
+                    { status: 400 }
+                );
+            }
+
+            const { data: fieldRecord, error: fieldError } = await tableClient
+                .from('event_update_queue_fields')
+                .select('id, field_status')
+                .eq('queue_id', queueId)
+                .eq('field_name', fieldName)
+                .single();
+
+            if (fieldError || !fieldRecord) {
+                return NextResponse.json(
+                    { error: 'Field not found' },
+                    { status: 404 }
+                );
+            }
+
+            if (fieldRecord.field_status !== 'pending') {
+                return NextResponse.json(
+                    { error: 'Only pending fields can be edited' },
+                    { status: 400 }
+                );
+            }
+
+            const { error: updateError } = await tableClient
+                .from('event_update_queue_fields')
+                .update({ new_value: newValue })
+                .eq('id', fieldRecord.id);
+
+            if (updateError) {
+                throw new Error(`Failed to update field value: ${updateError.message}`);
+            }
+
+            return NextResponse.json({ success: true, fieldName, newValue });
+        } else if (action === 'approve-selective') {
             // Approve only specific fields
             const body = await request.json();
             const { fieldNames } = body as { fieldNames: string[] };
