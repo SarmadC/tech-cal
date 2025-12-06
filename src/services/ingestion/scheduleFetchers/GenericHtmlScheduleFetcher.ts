@@ -71,7 +71,7 @@ export const GenericHtmlScheduleFetcher: SiteScheduleFetcher = {
                 }
                 processed.push(link.url);
             } catch (error) {
-                console.warn(`[GenericHtmlScheduleFetcher] Failed to parse schedule for ${link.url}:`, error);
+                console.warn('[GenericHtmlScheduleFetcher] Failed to parse schedule for', link.url + ':', error);
             }
         }
 

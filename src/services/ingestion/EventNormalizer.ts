@@ -280,7 +280,8 @@ export class EventNormalizer {
                 const correctedEnd = new Date(start.getTime() + 60 * 60 * 1000);
                 record.endTime = correctedEnd.toISOString();
                 console.warn(
-                    `[EventNormalizer] Adjusted end time after start for "${record.title ?? 'Untitled'}"`
+                    '[EventNormalizer] Adjusted end time after start for',
+                    '"' + (record.title ?? 'Untitled') + '"'
                 );
             }
         }
@@ -372,7 +373,7 @@ export class EventNormalizer {
                         .single();
 
                     if (createError || !newTag) {
-                        console.warn(`Failed to create tag ${tagName}:`, createError);
+                        console.warn('Failed to create tag', tagName + ':', createError);
                         continue;
                     }
 

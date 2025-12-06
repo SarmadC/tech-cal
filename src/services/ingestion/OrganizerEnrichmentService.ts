@@ -150,7 +150,7 @@ export class OrganizerEnrichmentService {
             return null;
         } catch (error) {
             // Graceful degradation - continue without logo
-            console.debug(`Failed to fetch logo for ${domain}:`, error);
+            console.debug('Failed to fetch logo for', domain + ':', error);
             return null;
         }
     }

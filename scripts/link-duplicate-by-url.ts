@@ -92,7 +92,7 @@ async function linkDuplicateByUrl() {
         process.exit(1);
     }
 
-    console.log(`   Found ${events?.length || 0} events with source_url\n`);
+    console.log('   Found', events?.length || 0, 'events with source_url\n');
 
     if (!events || events.length === 0) {
         console.log('✅ No events to process.');
@@ -146,7 +146,7 @@ async function linkDuplicateByUrl() {
         }
     }
 
-    console.log(`📊 Found ${duplicateGroups.length} groups of duplicate events\n`);
+    console.log('📊 Found', duplicateGroups.length, 'groups of duplicate events\n');
 
     if (duplicateGroups.length === 0) {
         console.log('✅ No duplicate groups found.');
@@ -233,9 +233,9 @@ async function linkDuplicateByUrl() {
         const bestEvent = group.events[0];
         const duplicates = group.events.slice(1);
 
-        console.log(`\n🔗 Group: ${group.normalizedUrl.substring(0, 60)}...`);
-        console.log(`   Best event: ${bestEvent.id} (${isManualEvent(bestEvent.id) ? 'manual' : 'ingested'})`);
-        console.log(`   Duplicates: ${duplicates.length}`);
+        console.log('\n🔗 Group:', group.normalizedUrl.substring(0, 60) + '...');
+        console.log('   Best event:', bestEvent.id, '(' + (isManualEvent(bestEvent.id) ? 'manual' : 'ingested') + ')');
+        console.log('   Duplicates:', duplicates.length);
 
         // Link duplicates to best event
         for (const duplicate of duplicates) {
@@ -246,14 +246,14 @@ async function linkDuplicateByUrl() {
                 .eq('normalized_event_id', duplicate.id);
 
             if (findError) {
-                console.error(`   ❌ Error finding source_events for ${duplicate.id}:`, findError.message);
+                console.error('   ❌ Error finding source_events for', duplicate.id + ':', findError.message);
                 skippedCount++;
                 continue;
             }
 
             if (!duplicateSourceEvents || duplicateSourceEvents.length === 0) {
                 // No source_events to link - this is fine for manual entries
-                console.log(`   ⚠️  No source_events found for duplicate ${duplicate.id} (may be manual entry)`);
+                console.log('   ⚠️  No source_events found for duplicate', duplicate.id, '(may be manual entry)');
                 skippedCount++;
                 continue;
             }
@@ -269,19 +269,19 @@ async function linkDuplicateByUrl() {
                 .eq('normalized_event_id', duplicate.id);
 
             if (updateError) {
-                console.error(`   ❌ Error linking source_events for ${duplicate.id}:`, updateError.message);
+                console.error('   ❌ Error linking source_events for', duplicate.id + ':', updateError.message);
                 skippedCount++;
             } else {
-                console.log(`   ✅ Linked ${duplicateSourceEvents.length} source_events from ${duplicate.id} -> ${bestEvent.id}`);
+                console.log('   ✅ Linked', duplicateSourceEvents.length, 'source_events from', duplicate.id, '->', bestEvent.id);
                 linkedCount += duplicateSourceEvents.length;
             }
         }
     }
 
     console.log('\n📊 Summary:');
-    console.log(`   - Duplicate groups found: ${duplicateGroups.length}`);
-    console.log(`   - Source events linked: ${linkedCount}`);
-    console.log(`   - Source events skipped: ${skippedCount}`);
+    console.log('   - Duplicate groups found:', duplicateGroups.length);
+    console.log('   - Source events linked:', linkedCount);
+    console.log('   - Source events skipped:', skippedCount);
     console.log('\n✅ Duplicate linking complete!');
     console.log('   Future duplicates will be caught by the canonical URL check.\n');
 }
