@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle } from '@phosphor-icons/react';
+import { Check } from '@phosphor-icons/react';
 
 interface Step {
   number: number;
@@ -35,35 +35,34 @@ export const ProgressStepper: React.FC<ProgressStepperProps> = ({
                 <div className="flex flex-col items-center">
                   <div
                     className={`
-                      w-10 h-10 rounded-full flex items-center justify-center
-                      text-sm font-semibold transition-all duration-300
+                      w-8 h-8 rounded-full flex items-center justify-center
+                      text-sm font-medium transition-all duration-200 border
                       ${
                         isActive
-                          ? 'bg-blue-600 text-white ring-4 ring-blue-100 scale-110'
+                          ? 'bg-primary text-primary-foreground border-primary'
                           : isCompleted
-                          ? 'bg-green-500 text-white'
-                          : 'bg-gray-200 text-gray-600'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background text-muted-foreground border-border'
                       }
                     `}
                     aria-current={isActive ? 'step' : undefined}
                   >
                     {isCompleted ? (
-                      <CheckCircle size={20} weight="fill" />
+                      <Check size={16} weight="bold" />
                     ) : (
                       step.number
                     )}
                   </div>
-                  
+
                   {/* Step Name */}
                   <div
-                    className={`mt-2 text-xs font-medium text-center max-w-32 ${
+                    className={`mt-2 text-xs font-medium text-center max-w-24 ${
                       isActive
-                        ? ''
+                        ? 'text-foreground'
                         : isCompleted
-                        ? 'opacity-80'
-                        : 'opacity-60'
+                        ? 'text-foreground'
+                        : 'text-muted-foreground'
                     }`}
-                    style={isActive ? { color: 'var(--accent-primary)' } : {}}
                   >
                     {step.name}
                   </div>
@@ -72,14 +71,9 @@ export const ProgressStepper: React.FC<ProgressStepperProps> = ({
                 {/* Connector Line */}
                 {!isLast && (
                   <div
-                    className="w-16 md:w-24 h-0.5 mx-2 transition-colors duration-300 self-center"
-                    style={{
-                      backgroundColor: isCompleted
-                        ? 'var(--success)'
-                        : isActive && index === currentStep - 1
-                        ? 'rgba(255, 255, 255, 0.3)'
-                        : 'var(--border-default)'
-                    }}
+                    className={`w-12 md:w-20 h-px mx-3 transition-colors duration-200 self-center -mt-6 ${
+                      isCompleted ? 'bg-primary' : 'bg-border'
+                    }`}
                   />
                 )}
               </div>
