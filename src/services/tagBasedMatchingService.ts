@@ -266,6 +266,11 @@ export class TagBasedMatchingService {
     candidateTerms.forEach(term => {
       if (!term) return;
       
+      // Validate term to prevent ReDoS
+      if (term.length > 100 || /(.)\1{10,}/.test(term)) {
+        return; // Skip terms that could cause ReDoS
+      }
+
       // Escape special characters for regex (e.g., C++, Node.js)
       const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       

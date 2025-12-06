@@ -153,7 +153,7 @@ export class ScoringStrategyFactory {
         .maybeSingle();
 
       if (error) {
-        console.warn(`Failed to fetch experiment for user ${userId}:`, error);
+        console.warn('Failed to fetch experiment for user', userId + ':', error);
         return this.getDefaultStrategy();
       }
 

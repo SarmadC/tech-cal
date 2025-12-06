@@ -119,14 +119,14 @@ async function fixTechmemeUrls() {
                     .eq('id', sourceEvent.id);
 
                 if (updateError) {
-                    console.error(`❌ Error updating source_event ${sourceEvent.id}:`, updateError.message);
+                    console.error('❌ Error updating source_event', sourceEvent.id + ':', updateError.message);
                     failedCount++;
                 } else {
                     console.log(`✅ Fixed: ${currentUrl.substring(0, 60)}... -> ${resolvedUrl}`);
                     fixedCount++;
                 }
             } catch (error) {
-                console.error(`❌ Error processing source_event ${sourceEvent.id}:`, error);
+                console.error('❌ Error processing source_event', sourceEvent.id + ':', error);
                 failedCount++;
             }
         }
@@ -171,14 +171,14 @@ async function fixTechmemeUrls() {
                         .eq('id', event.id);
 
                     if (updateError) {
-                        console.error(`❌ Error updating event ${event.id}:`, updateError.message);
+                        console.error('❌ Error updating event', event.id + ':', updateError.message);
                         eventsFailedCount++;
                     } else {
                         console.log(`✅ Fixed event: ${currentUrl.substring(0, 60)}... -> ${resolvedUrl}`);
                         eventsFixedCount++;
                     }
                 } catch (error) {
-                    console.error(`❌ Error processing event ${event.id}:`, error);
+                    console.error('❌ Error processing event', event.id + ':', error);
                     eventsFailedCount++;
                 }
             }

@@ -100,7 +100,8 @@ export class CareerImpactCache {
       this.updateHitRate();
       return cached.data;
     } catch (error) {
-      console.warn(`Cache get error for key ${this.generateCacheKey(eventId, profileHash)}:`, error);
+      const cacheKey = this.generateCacheKey(eventId, profileHash);
+      console.warn('Cache get error for key', cacheKey + ':', error);
       this.stats.misses++;
       this.updateHitRate();
       return null;
@@ -129,7 +130,7 @@ export class CareerImpactCache {
       this.stats.misses += eventIds.length - results.size;
       this.updateHitRate();
     } catch (error) {
-      console.warn(`Cache mget error for ${eventIds.length} events with profile ${profileHash}:`, error);
+      console.warn('Cache mget error for', eventIds.length, 'events with profile', profileHash + ':', error);
       // Fallback to individual gets
       for (const eventId of eventIds) {
         const score = await this.get(eventId, profileHash);
@@ -222,7 +223,7 @@ export class CareerImpactCache {
       
       return keys.length;
     } catch (error) {
-      console.warn(`Cache invalidateProfile error for profile ${profileHash}:`, error);
+      console.warn('Cache invalidateProfile error for profile', profileHash + ':', error);
       return 0;
     }
   }
@@ -256,7 +257,7 @@ export class CareerImpactCache {
       
       return keys.length;
     } catch (error) {
-      console.warn(`Cache invalidateEvent error for event ${eventId}:`, error);
+      console.warn('Cache invalidateEvent error for event', eventId + ':', error);
       return 0;
     }
   }

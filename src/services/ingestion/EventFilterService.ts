@@ -373,12 +373,18 @@ export class EventFilterService {
 
         if (pattern.isRegex) {
             try {
+                // Validate pattern to prevent ReDoS
+                if (pattern.pattern.length > 1000 || /(.)\1{50,}/.test(pattern.pattern)) {
+                    // Pattern too long or has excessive repetition - treat as keyword
+                    return normalizedSearch.includes(pattern.pattern.toLowerCase());
+                }
+
                 const regexFlags = DEFAULT_FILTER_CONFIG.caseInsensitive ? 'i' : '';
                 const regex = new RegExp(pattern.pattern, regexFlags);
                 return regex.test(normalizedSearch);
             } catch (error) {
                 // Invalid regex - log and treat as keyword
-                console.warn(`Invalid regex pattern: ${pattern.pattern}`, error);
+                console.warn('Invalid regex pattern:', pattern.pattern, error);
                 return normalizedSearch.includes(pattern.pattern.toLowerCase());
             }
         } else {

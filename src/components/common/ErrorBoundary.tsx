@@ -128,14 +128,16 @@ export class ErrorBoundary extends Component<Props, State> {
         
         // Ignore scrollTop errors - these are often harmless and related to DOM timing
         if (error.message?.includes('scrollTop') || error.message?.includes('scroll')) {
-            console.warn(`[ErrorBoundary${name ? `:${name}` : ''}] Ignoring scroll-related error:`, error.message);
+            const boundaryName = name ? ':' + name : '';
+            console.warn('[ErrorBoundary' + boundaryName + '] Ignoring scroll-related error:', error.message);
             // Reset error state silently for scroll errors
             this.setState({ hasError: false, error: null, retryCount: 0 });
             return;
         }
         
         // Log error
-        console.error(`[ErrorBoundary${name ? `:${name}` : ''}]`, error, errorInfo);
+        const boundaryName = name ? ':' + name : '';
+        console.error('[ErrorBoundary' + boundaryName + ']', error, errorInfo);
         
         // Report to Sentry
         Sentry.withScope((scope) => {

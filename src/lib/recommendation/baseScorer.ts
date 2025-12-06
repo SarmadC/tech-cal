@@ -22,7 +22,28 @@ import { getRoleKeywords } from '@/utils/roleTaxonomy';
  * @param keyword - The keyword to search for (should be lowercase)
  * @returns true if keyword is found as a complete word
  */
+/**
+ * Validate keyword to prevent ReDoS attacks
+ * Limits keyword length and complexity
+ */
+function validateKeyword(keyword: string): boolean {
+  // Limit keyword length to prevent ReDoS
+  if (keyword.length > 100) {
+    return false;
+  }
+  // Reject keywords with excessive repetition patterns
+  if (/(.)\1{10,}/.test(keyword)) {
+    return false;
+  }
+  return true;
+}
+
 function matchesWholeWord(text: string, keyword: string): boolean {
+  // Validate keyword to prevent ReDoS
+  if (!validateKeyword(keyword)) {
+    return false;
+  }
+
   // Escape special regex characters in the keyword
   const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   

@@ -84,7 +84,7 @@ export class HackathonActions {
    * Handle errors consistently across all actions
    */
   private handleError(error: unknown, action: string, fallbackMessage: string): void {
-    console.error(`Error ${action}:`, error);
+    console.error('Error', action + ':', error);
     const errorMessage = error instanceof Error ? error.message : fallbackMessage;
     this.snackbar.showError(errorMessage);
   }

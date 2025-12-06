@@ -45,7 +45,7 @@ export class AnalyticsService {
 
         try {
             if (process.env.NODE_ENV !== 'production') {
-                console.info(`[ProfilePrompt] ${event}`, payload);
+                console.info('[ProfilePrompt]', event, payload);
             }
         } catch {
             // no-op

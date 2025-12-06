@@ -42,7 +42,7 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
         
         // Log detailed original events data
         events.forEach((e, index) => {
-            console.log(`Original event ${index} (${e.title}):`, {
+            console.log('Original event', index, '(' + e.title + '):', {
                 title: e.title,
                 startTime: e.startTime,
                 endTime: e.endTime,

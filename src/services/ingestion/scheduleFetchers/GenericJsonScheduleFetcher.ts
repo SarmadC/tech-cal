@@ -48,7 +48,7 @@ export const GenericJsonScheduleFetcher: SiteScheduleFetcher = {
                 }
                 processed.push(link.url);
             } catch (error) {
-                console.warn(`[GenericJsonScheduleFetcher] Failed to parse schedule for ${link.url}:`, error);
+                console.warn('[GenericJsonScheduleFetcher] Failed to parse schedule for', link.url + ':', error);
             }
         }
 

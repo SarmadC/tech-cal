@@ -162,7 +162,8 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             setMessage({ type: 'success', text: 'Event deleted successfully' });
             // Redirect to queue list after a short delay
             setTimeout(() => {
-                window.location.href = '/admin/ingestion/update-queue';
+                const queueUrl = '/admin/ingestion/update-queue';
+                window.location.href = queueUrl;
             }, 1500);
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to delete event' });

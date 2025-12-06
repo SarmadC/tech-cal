@@ -145,7 +145,8 @@ export function withApiMiddleware(
       return await handler(request, { user });
 
     } catch (_error) {
-      console.error(`API error in ${options.rateLimitPrefix || 'api'}:`, _error);
+      const prefix = options.rateLimitPrefix || 'api';
+      console.error('API error in', prefix + ':', _error);
       return createErrorResponse(
         'Internal server error',
         500

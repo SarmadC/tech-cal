@@ -18,7 +18,7 @@ export function getErrorMessage(error: unknown, fallback = 'Unknown error occurr
  */
 export function logAndCaptureError(error: unknown, context: string, metadata?: Record<string, unknown>): string {
   const errorMessage = getErrorMessage(error);
-  console.error(`[${context}] ${errorMessage}`, error);
+  console.error('[' + context + ']', errorMessage, error);
 
   Sentry.captureException(error, {
     tags: { context },
@@ -84,7 +84,7 @@ export function handleServiceError(
 ): unknown {
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
   
-  console.error(`Error in ${context.function}:`, errorMessage);
+  console.error('Error in', context.function + ':', errorMessage);
   
   Sentry.captureException(error, {
     tags: {
@@ -134,7 +134,7 @@ export function safeExtractProfileData<T>(
     
     return validator(data) ? data : fallback;
   } catch (error) {
-    console.warn(`Error extracting profile data at path '${path}':`, error);
+    console.warn('Error extracting profile data at path', '\'' + path + '\':', error);
     return fallback;
   }
 }

@@ -592,7 +592,7 @@ export class HackathonService {
    * Handle database operation errors consistently
    */
   private static handleDbError(error: unknown, operation: string): never {
-    console.error(`Database Error ${operation}:`, {
+    console.error('Database Error', operation + ':', {
       error,
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
@@ -604,7 +604,7 @@ export class HackathonService {
    * Handle method-level errors consistently
    */
   private static handleMethodError(error: unknown, methodName: string): never {
-    console.error(`Method Error in ${methodName}:`, {
+    console.error('Method Error in', methodName + ':', {
       error,
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined

@@ -240,7 +240,7 @@ describe('eventTypeTransformer', () => {
         id: '1',
         name: 'Conference',
         color: '#3B82F6',
-        description: undefined,
+        description: null,
       });
     });
   });
