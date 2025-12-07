@@ -14,6 +14,7 @@ interface DiscoveryHeaderProps {
     onSearch: () => void;
     onResetFilters: () => void;
     activeFilterCount: number;
+    onFilterClick?: () => void;
 }
 
 // Helper function to format date range for display
@@ -21,21 +22,21 @@ const formatDateRange = (range: { start: Date | null; end: Date | null }): strin
     if (!range.start && !range.end) {
         return 'Any Date';
     }
-    
+
     const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
             day: 'numeric',
             year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
         });
     };
-    
+
     if (range.start && range.end) {
         const startYear = range.start.getFullYear();
         const endYear = range.end.getFullYear();
         const startMonth = range.start.getMonth();
         const endMonth = range.end.getMonth();
-        
+
         if (startYear === endYear && startMonth === endMonth) {
             // Same month: "Jan 1-15, 2025"
             return `${range.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${range.end.getDate()}, ${startYear}`;
@@ -51,7 +52,7 @@ const formatDateRange = (range: { start: Date | null; end: Date | null }): strin
     } else if (range.end) {
         return `Until ${formatDate(range.end)}`;
     }
-    
+
     return 'Any Date';
 };
 
@@ -65,7 +66,8 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     onDateRangeChange,
     onSearch,
     onResetFilters,
-    activeFilterCount
+    activeFilterCount,
+    onFilterClick
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     return (
@@ -123,11 +125,11 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         <SlidersHorizontal size={16} />
                     </div>
                 </div>
-                
+
                 {/* Date Range Picker */}
                 <QuickDatePicker
                     currentDate={dateRange.start || new Date()}
-                    onDateChange={() => {}} // Not used in range mode
+                    onDateChange={() => { }} // Not used in range mode
                     view="month"
                     isOpen={isDatePickerOpen}
                     onClose={() => setIsDatePickerOpen(false)}
@@ -157,6 +159,15 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 >
                     Search
                 </button>
+
+                {/* Mobile Filters Button */}
+                <button
+                    className="lg:hidden w-full px-6 py-3 border border-border/60 bg-card text-foreground font-semibold rounded-xl hover:bg-muted/60 transition-colors flex items-center justify-center gap-2"
+                    onClick={onFilterClick}
+                >
+                    <SlidersHorizontal size={18} />
+                    <span>Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}</span>
+                </button>
             </div>
         </div>
     );
@@ -170,6 +181,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
         prevProps.searchTerm === nextProps.searchTerm &&
         prevProps.location === nextProps.location &&
         prevProps.activeFilterCount === nextProps.activeFilterCount &&
+        prevProps.onFilterClick === nextProps.onFilterClick &&
         dateRangeEqual
     );
 });

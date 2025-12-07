@@ -7,7 +7,7 @@ import { Event, EventType, AppProfile } from '@/types';
 import { isProfileEmpty } from '@/utils/profileTypeGuards';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import DesktopDiscoveryView from '@/components/calendar/desktop/discovery/DesktopDiscoveryView';
-import MobileDiscoveryView from '@/components/calendar/mobile/discovery/MobileDiscoveryView';
+
 import { CalendarProvider } from '@/contexts/CalendarContext';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
@@ -123,16 +123,8 @@ export default function DiscoverClientView({
     // Loading skeleton
     const loadingSkeleton = <EventsLoadingSkeleton />;
 
-    // Main content - Adaptive rendering based on viewport
-    const mainContent = isMobile ? (
-        <MobileDiscoveryView
-            events={eventData.filteredEvents}
-            categories={initialCategories}
-            profile={profile}
-            trackedEvents={eventData.filteredEvents.filter(e => e.isTracked)}
-            onEventSelect={handleEventSelect}
-        />
-    ) : (
+    // Main content - Unified responsive view
+    const mainContent = (
         <DesktopDiscoveryView
             events={eventData.filteredEvents}
             categories={initialCategories}
@@ -262,8 +254,8 @@ export default function DiscoverClientView({
                                 >
                                     <div
                                         className={`fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform duration-300 ease-out ${isClosing
-                                                ? 'animate-out slide-out-to-right'
-                                                : 'animate-in slide-in-from-right'
+                                            ? 'animate-out slide-out-to-right'
+                                            : 'animate-in slide-in-from-right'
                                             }`}
                                         onClick={(e) => e.stopPropagation()}
                                     >

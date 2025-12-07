@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { SectionErrorBoundary, PageErrorBoundary } from '@/components/common/ErrorBoundary';
-import CareerProfilePrompt from '@/components/calendar/mobile/discovery/CareerProfilePrompt';
+import CareerProfilePrompt from '@/components/calendar/mobile/CareerProfilePrompt';
 import { useCareerProfile } from '@/hooks/useCareerProfile';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardErrorState } from '@/components/dashboard/DashboardErrorState';
@@ -105,7 +105,7 @@ export default function DashboardClientView({
                             <div className="min-h-screen glass-bg-gradient relative">
                                 {/* Subtle atmospheric overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
-                                
+
                                 <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
                                     {/* Breadcrumbs */}
                                     <Breadcrumbs

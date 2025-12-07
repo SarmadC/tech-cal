@@ -10,132 +10,136 @@ import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedSer
 import { calculateFilterCounts } from '@/utils/filterCountUtils';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select';
 
 export interface DesktopDiscoveryViewProps {
-  events: Event[];
-  categories: EventType[];
-  profile: AppProfile | null;
-  trackedEvents?: TrackedEvent[];
-  onEventSelect?: (event: Event) => void;
-  className?: string;
-  filters: UnifiedFilterOptions;
-  onUpdateFilter: UpdateFilterHandler;
-  onSearch: () => void;
-  totalCount: number;
-  onResetFilters: () => void;
-  activeFilterCount: number;
+    events: Event[];
+    categories: EventType[];
+    profile: AppProfile | null;
+    trackedEvents?: TrackedEvent[];
+    onEventSelect?: (event: Event) => void;
+    className?: string;
+    filters: UnifiedFilterOptions;
+    onUpdateFilter: UpdateFilterHandler;
+    onSearch: () => void;
+    totalCount: number;
+    onResetFilters: () => void;
+    activeFilterCount: number;
 }
 
 const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
-  events,
-  categories,
-  profile,
-  trackedEvents = [],
-  onEventSelect,
-  className = '',
-  filters,
-  onUpdateFilter,
-  onSearch,
-  totalCount,
-  onResetFilters,
-  activeFilterCount
+    events,
+    categories,
+    profile,
+    trackedEvents = [],
+    onEventSelect,
+    className = '',
+    filters,
+    onUpdateFilter,
+    onSearch,
+    totalCount,
+    onResetFilters,
+    activeFilterCount
 }) => {
-  const { isBookmarked, toggleBookmark } = useEventEngagement();
-  const [pendingBookmarkIds, setPendingBookmarkIds] = useState<Set<string>>(new Set());
+    const { isBookmarked, toggleBookmark } = useEventEngagement();
+    const [pendingBookmarkIds, setPendingBookmarkIds] = useState<Set<string>>(new Set());
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const handleBookmarkToggle = useCallback(async (event: Event) => {
-    if (!event?.id || pendingBookmarkIds.has(event.id)) {
-      return;
-    }
-
-    setPendingBookmarkIds((prev) => new Set(prev).add(event.id));
-
-    try {
-      await toggleBookmark(event.id, event as unknown as Record<string, unknown>);
-    } catch (error) {
-      console.error('Failed to toggle bookmark from discovery card:', error);
-    } finally {
-      setPendingBookmarkIds((prev) => {
-        const next = new Set(prev);
-        next.delete(event.id);
-        return next;
-      });
-    }
-  }, [pendingBookmarkIds, toggleBookmark]);
-
-  // Calculate filter counts from current events
-  const counts = useMemo(() => {
-    return calculateFilterCounts(events, categories);
-  }, [events, categories]);
-
-  return (
-    <div className={`desktop-discovery-view ${className} min-h-full text-foreground`} role="main" aria-label="Discover tech events">
-      <DiscoveryLayout
-        sidebar={
-          <DiscoverySidebar
-            filters={{
-              format: filters.format,
-              cost: filters.cost,
-              categories: filters.categories
-            }}
-            onUpdateFilter={onUpdateFilter}
-            categories={categories}
-            events={events}
-            counts={counts}
-          />
+    const handleBookmarkToggle = useCallback(async (event: Event) => {
+        if (!event?.id || pendingBookmarkIds.has(event.id)) {
+            return;
         }
-        header={
-          <DiscoveryHeader
-            searchTerm={filters.searchTerm}
-            onSearchChange={(val) => onUpdateFilter('searchTerm', val)}
-            location={filters.locations[0] || ''}
-            onLocationChange={(val) => onUpdateFilter('locations', val ? [val] : [])}
-            dateRange={filters.dateRange}
-            onDateRangeChange={(range) => onUpdateFilter('dateRange', range)}
-            onSearch={onSearch}
-            onResetFilters={onResetFilters}
-            activeFilterCount={activeFilterCount}
-          />
+
+        setPendingBookmarkIds((prev) => new Set(prev).add(event.id));
+
+        try {
+            await toggleBookmark(event.id, event as unknown as Record<string, unknown>);
+        } catch (error) {
+            console.error('Failed to toggle bookmark from discovery card:', error);
+        } finally {
+            setPendingBookmarkIds((prev) => {
+                const next = new Set(prev);
+                next.delete(event.id);
+                return next;
+            });
         }
-        resultCount={totalCount}
-        sortOption={
-          <Select
-            value={filters.sortBy}
-            onValueChange={(value) => onUpdateFilter('sortBy', value as UnifiedFilterOptions['sortBy'])}
-          >
-            <SelectTrigger className="text-sm font-medium text-foreground bg-muted/70 dark:bg-muted/20 px-3 py-1.5 rounded-lg border border-border/60 hover:border-foreground/40 transition-colors w-auto min-w-[140px] h-auto">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Default</SelectItem>
-              <SelectItem value="date">Date</SelectItem>
-              <SelectItem value="popularity">Popular</SelectItem>
-              <SelectItem value="career-impact">Recommended</SelectItem>
-              <SelectItem value="title">Title</SelectItem>
-              <SelectItem value="location">Location</SelectItem>
-            </SelectContent>
-          </Select>
-        }
-      >
-        {events.map((event) => (
-          <EventCard
-            key={event.id}
-            event={event}
-            onClick={() => onEventSelect?.(event)}
-            onBookmark={handleBookmarkToggle}
-            isBookmarked={isBookmarked(event.id)}
-            isBookmarking={pendingBookmarkIds.has(event.id)}
-          />
-        ))}
-      </DiscoveryLayout>
-    </div>
-  );
+    }, [pendingBookmarkIds, toggleBookmark]);
+
+    // Calculate filter counts from current events
+    const counts = useMemo(() => {
+        return calculateFilterCounts(events, categories);
+    }, [events, categories]);
+
+    return (
+        <div className={`desktop-discovery-view ${className} min-h-full text-foreground`} role="main" aria-label="Discover tech events">
+            <DiscoveryLayout
+                isSidebarOpen={isSidebarOpen}
+                onSidebarClose={() => setIsSidebarOpen(false)}
+                sidebar={
+                    <DiscoverySidebar
+                        filters={{
+                            format: filters.format,
+                            cost: filters.cost,
+                            categories: filters.categories
+                        }}
+                        onUpdateFilter={onUpdateFilter}
+                        categories={categories}
+                        events={events}
+                        counts={counts}
+                    />
+                }
+                header={
+                    <DiscoveryHeader
+                        searchTerm={filters.searchTerm}
+                        onSearchChange={(val) => onUpdateFilter('searchTerm', val)}
+                        location={filters.locations[0] || ''}
+                        onLocationChange={(val) => onUpdateFilter('locations', val ? [val] : [])}
+                        dateRange={filters.dateRange}
+                        onDateRangeChange={(range) => onUpdateFilter('dateRange', range)}
+                        onSearch={onSearch}
+                        onResetFilters={onResetFilters}
+                        activeFilterCount={activeFilterCount}
+                        onFilterClick={() => setIsSidebarOpen(true)}
+                    />
+                }
+                resultCount={totalCount}
+                sortOption={
+                    <Select
+                        value={filters.sortBy}
+                        onValueChange={(value) => onUpdateFilter('sortBy', value as UnifiedFilterOptions['sortBy'])}
+                    >
+                        <SelectTrigger className="text-sm font-medium text-foreground bg-muted/70 dark:bg-muted/20 px-3 py-1.5 rounded-lg border border-border/60 hover:border-foreground/40 transition-colors w-auto min-w-[140px] h-auto">
+                            <SelectValue placeholder="Sort by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="default">Default</SelectItem>
+                            <SelectItem value="date">Date</SelectItem>
+                            <SelectItem value="popularity">Popular</SelectItem>
+                            <SelectItem value="career-impact">Recommended</SelectItem>
+                            <SelectItem value="title">Title</SelectItem>
+                            <SelectItem value="location">Location</SelectItem>
+                        </SelectContent>
+                    </Select>
+                }
+            >
+                {events.map((event) => (
+                    <EventCard
+                        key={event.id}
+                        event={event}
+                        onClick={() => onEventSelect?.(event)}
+                        onBookmark={handleBookmarkToggle}
+                        isBookmarked={isBookmarked(event.id)}
+                        isBookmarking={pendingBookmarkIds.has(event.id)}
+                    />
+                ))}
+            </DiscoveryLayout>
+        </div>
+    );
 };
 
 export default DesktopDiscoveryView;

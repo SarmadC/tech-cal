@@ -8,6 +8,8 @@ interface DiscoveryLayoutProps {
     children: React.ReactNode;
     resultCount?: number;
     sortOption?: React.ReactNode;
+    isSidebarOpen?: boolean;
+    onSidebarClose?: () => void;
 }
 
 const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
@@ -15,14 +17,16 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
     header,
     children,
     resultCount,
-    sortOption
+    sortOption,
+    isSidebarOpen,
+    onSidebarClose
 }) => {
     return (
-        <div className="min-h-screen bg-background/60 dark:bg-background/40 p-6 lg:p-8 backdrop-blur transition-colors">
+        <div className="min-h-screen bg-background/60 dark:bg-background/40 p-4 lg:p-8 backdrop-blur transition-colors">
             <div className="max-w-[1600px] mx-auto">
 
                 {/* Header Section */}
-                <div className="mb-8">
+                <div className="mb-6 lg:mb-8">
                     {/* Top Bar - Simplified/Removed "Jobseeker" header to fit app context better, 
               or we can keep a minimal version if desired. 
               For now, just the search/filter header. */}
@@ -30,18 +34,46 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-8 lg:flex-row">
-                    {/* Sidebar */}
-                    {sidebar}
+                    {/* Sidebar - Desktop */}
+                    <div className="hidden lg:block">
+                        {sidebar}
+                    </div>
+
+                    {/* Sidebar - Mobile Overlay */}
+                    {isSidebarOpen && (
+                        <div className="fixed inset-0 z-50 lg:hidden">
+                            {/* Backdrop */}
+                            <div
+                                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                                onClick={onSidebarClose}
+                            />
+                            {/* Drawer */}
+                            <div className="absolute inset-y-0 left-0 w-[85vw] max-w-[320px] bg-background shadow-2xl transform transition-transform duration-300 ease-out overflow-y-auto">
+                                <div className="p-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h2 className="text-xl font-semibold">Filters</h2>
+                                        <button
+                                            onClick={onSidebarClose}
+                                            className="p-2 rounded-full hover:bg-muted transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </div>
+                                    {sidebar}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Main Content */}
-                    <div className="flex-1 rounded-3xl border border-border/60 bg-card/80 dark:bg-card/20 p-6 shadow-lg backdrop-blur transition-colors">
-                        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                    <div className="flex-1 rounded-3xl border border-border/60 bg-card/80 dark:bg-card/20 p-4 lg:p-6 shadow-lg backdrop-blur transition-colors">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                             <h2 className="text-xl font-semibold text-foreground">
                                 Events Found <span className="text-muted-foreground font-normal">({resultCount || 0})</span>
                             </h2>
 
                             {sortOption && (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
                                     {sortOption}
                                 </div>
                             )}

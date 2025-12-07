@@ -34,6 +34,7 @@
     "identify-earnings": "tsx scripts/identify-earnings-events.ts",
     "fix-techmeme-urls": "tsx scripts/fix-techmeme-urls.ts",
     "link-duplicates": "tsx scripts/link-duplicate-by-url.ts",
+    "normalize": "tsx scripts/run-normalization.ts",
     "verify:production": "tsx scripts/verify-production.ts",
     "test:budget": "tsx scripts/test-budget-filtering.ts",
     "validate:analytics": "tsx scripts/validate-analytics.ts",
