@@ -39,6 +39,32 @@ type ColumnVisibility = {
     actions: boolean;
 };
 
+type BulkActionType = 'approve' | 'reject' | 'pending';
+
+const BULK_ACTION_COPY: Record<
+    BulkActionType,
+    { title: string; description: string; confirmLabel: string; tone: 'neutral' | 'danger' }
+> = {
+    approve: {
+        title: 'Approve selected updates',
+        description: 'Approve all pending fields for each selected update and apply them to their events.',
+        confirmLabel: 'Approve all',
+        tone: 'neutral',
+    },
+    reject: {
+        title: 'Reject selected updates',
+        description: 'Reject all pending fields for the selected updates and mark them as reviewed.',
+        confirmLabel: 'Reject all',
+        tone: 'danger',
+    },
+    pending: {
+        title: 'Mark selected as pending',
+        description: 'Move the selected updates back to pending for re-review.',
+        confirmLabel: 'Mark pending',
+        tone: 'neutral',
+    },
+};
+
 interface QueueItem {
     id: string;
     event_id: string;
@@ -90,6 +116,11 @@ export default function UpdateQueueClient() {
     const [clearing, setClearing] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [selectedRows, setSelectedRows] = useState<string[]>([]);
+    const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+    const [bulkAction, setBulkAction] = useState<BulkActionType | null>(null);
+    const [bulkActionLoading, setBulkActionLoading] = useState(false);
+    const [bulkActionError, setBulkActionError] = useState<string | null>(null);
+    const [bulkTargetIds, setBulkTargetIds] = useState<string[]>([]);
     const [pagination, setPagination] = useState({
         page: pageParam,
         pageSize: pageSizeParam,
@@ -338,6 +369,12 @@ export default function UpdateQueueClient() {
         );
     }, [items]);
 
+    const selectedItemsForBulk = useMemo(() => {
+        if (bulkTargetIds.length === 0) return [];
+        const targetSet = new Set(bulkTargetIds);
+        return items.filter((item) => targetSet.has(item.id));
+    }, [bulkTargetIds, items]);
+
     const handleClearPending = useCallback(async () => {
         setClearing(true);
         setError(null);
@@ -406,23 +443,89 @@ export default function UpdateQueueClient() {
         [items, viewMode]
     );
 
-    const handleUnavailableBulkAction = useCallback(
-        (label: string) => {
+    const triggerBulkAction = useCallback(
+        (action: BulkActionType) => {
+            if (viewMode !== 'table') {
+                showInfo('Switch to table view to use bulk review actions.');
+                return;
+            }
+
             if (selectedRows.length === 0) {
                 showInfo('Select rows in table view before triggering bulk actions.');
                 return;
             }
-            showInfo(`Bulk ${label} is coming soon. Review items individually in the meantime.`);
+
+            setBulkAction(action);
+            setBulkTargetIds(selectedRows);
+            setBulkActionError(null);
+            setBulkDialogOpen(true);
         },
-        [selectedRows.length, showInfo]
+        [selectedRows, showInfo, viewMode]
     );
+
+    const performBulkAction = useCallback(async () => {
+        if (!bulkAction) return;
+
+        const targetIds = (bulkTargetIds.length > 0 ? bulkTargetIds : selectedRows).filter(Boolean);
+        if (targetIds.length === 0) {
+            setBulkDialogOpen(false);
+            showInfo('Select rows in table view before triggering bulk actions.');
+            return;
+        }
+
+        setBulkActionLoading(true);
+        setBulkActionError(null);
+
+        const actionParam = bulkAction === 'pending' ? 'reset' : bulkAction;
+        const actionLabel = bulkAction === 'pending' ? 'mark pending' : bulkAction;
+
+        let successCount = 0;
+        const failures: string[] = [];
+
+        for (const id of targetIds) {
+            try {
+                const response = await fetch(
+                    `/api/admin/ingestion/update-queue/${id}?action=${actionParam}`,
+                    { method: 'POST' }
+                );
+
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    failures.push(payload.error || `Failed to ${actionLabel} ${id}`);
+                    continue;
+                }
+
+                successCount += 1;
+            } catch (error) {
+                failures.push(error instanceof Error ? error.message : `Failed to ${actionLabel} ${id}`);
+            }
+        }
+
+        if (successCount > 0) {
+            const noun = successCount === 1 ? 'update' : 'updates';
+            showSuccess(`Bulk ${actionLabel} succeeded for ${successCount} ${noun}.`);
+        }
+
+        if (failures.length > 0) {
+            setBulkActionError(failures.join(' • '));
+            showError(`Some items failed to ${actionLabel}.`);
+        } else {
+            setBulkDialogOpen(false);
+            setBulkTargetIds([]);
+            setBulkAction(null);
+        }
+
+        setBulkActionLoading(false);
+        await fetchQueueItems();
+        setSelectedRows([]);
+    }, [bulkAction, bulkTargetIds, fetchQueueItems, selectedRows, showError, showInfo, showSuccess]);
 
     useAdminHotkeys({
         focusSearch,
         openHelp: () => setShortcutsOpen(true),
-        onApproveSelected: () => handleUnavailableBulkAction('approve'),
-        onRejectSelected: () => handleUnavailableBulkAction('reject'),
-        onMarkPending: () => handleUnavailableBulkAction('reset'),
+        onApproveSelected: () => triggerBulkAction('approve'),
+        onRejectSelected: () => triggerBulkAction('reject'),
+        onMarkPending: () => triggerBulkAction('pending'),
         onNavigateNext: () => moveSelection('next'),
         onNavigatePrevious: () => moveSelection('prev'),
     });
@@ -558,30 +661,30 @@ export default function UpdateQueueClient() {
                 label: 'Approve',
                 icon: <MaterialIcon name="check" size={14} />,
                 shortcut: 'a',
-                tooltip: 'Bulk approve is coming soon.',
-                disabled: true,
-                onSelect: () => handleUnavailableBulkAction('approve'),
+                tooltip: 'Approve all pending fields for the selected updates.',
+                disabled: loading || selectedRows.length === 0,
+                onSelect: () => triggerBulkAction('approve'),
             },
             {
                 id: 'bulk-reject',
                 label: 'Reject',
                 icon: <MaterialIcon name="clear" size={14} />,
                 shortcut: 'r',
-                tooltip: 'Bulk reject is coming soon.',
-                disabled: true,
-                onSelect: () => handleUnavailableBulkAction('reject'),
+                tooltip: 'Reject all pending fields for the selected updates.',
+                disabled: loading || selectedRows.length === 0,
+                onSelect: () => triggerBulkAction('reject'),
             },
             {
                 id: 'bulk-reset',
                 label: 'Mark pending',
                 icon: <MaterialIcon name="refresh" size={14} />,
                 shortcut: 'p',
-                tooltip: 'Bulk status changes are coming soon.',
-                disabled: true,
-                onSelect: () => handleUnavailableBulkAction('reset'),
+                tooltip: 'Move selected updates back to pending for re-review.',
+                disabled: loading || selectedRows.length === 0,
+                onSelect: () => triggerBulkAction('pending'),
             },
         ],
-        [handleUnavailableBulkAction]
+        [loading, selectedRows.length, triggerBulkAction]
     );
 
     const tableToolbar = (
@@ -687,8 +790,94 @@ export default function UpdateQueueClient() {
         </div>
     );
 
+    const activeBulkMeta = bulkAction ? BULK_ACTION_COPY[bulkAction] : null;
+    const bulkSelectionCount = bulkTargetIds.length || selectedRows.length;
+
     return (
         <div className="space-y-5">
+            {bulkDialogOpen && activeBulkMeta && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="w-full max-w-xl rounded-lg border border-slate-800 bg-slate-950 p-6 shadow-2xl">
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <p className="text-[11px] uppercase tracking-wide text-slate-400">Bulk review</p>
+                                <h3 className="text-lg font-semibold text-slate-50">{activeBulkMeta.title}</h3>
+                                <p className="mt-2 text-sm text-slate-300">
+                                    {activeBulkMeta.description}{' '}
+                                    This will affect {bulkSelectionCount} {bulkSelectionCount === 1 ? 'update' : 'updates'}.
+                                </p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => !bulkActionLoading && setBulkDialogOpen(false)}
+                                disabled={bulkActionLoading}
+                                className="text-slate-300 hover:text-slate-50"
+                                aria-label="Close bulk review dialog"
+                            >
+                                <MaterialIcon name="close" size={16} />
+                            </Button>
+                        </div>
+
+                        <div className="mt-4 max-h-52 space-y-2 overflow-y-auto rounded-md border border-slate-800/60 bg-slate-900/40 p-3">
+                            {selectedItemsForBulk.length === 0 && (
+                                <p className="text-sm text-slate-400">No rows selected.</p>
+                            )}
+                            {selectedItemsForBulk.slice(0, 8).map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex items-center justify-between gap-3 rounded border border-transparent px-2 py-1 hover:border-slate-800"
+                                >
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-medium text-slate-100">
+                                            {item.event?.title ?? 'Untitled Event'}
+                                        </span>
+                                        <span className="text-xs text-slate-500">Update ID: {item.id}</span>
+                                    </div>
+                                    <Badge
+                                        className={cn(
+                                            'px-2 py-1 text-[11px] uppercase tracking-wide',
+                                            statusBadgeStyles[item.status]
+                                        )}
+                                    >
+                                        {item.status.replace('_', ' ')}
+                                    </Badge>
+                                </div>
+                            ))}
+                            {selectedItemsForBulk.length > 8 && (
+                                <p className="pt-1 text-xs text-slate-400">
+                                    +{selectedItemsForBulk.length - 8} more selected
+                                </p>
+                            )}
+                        </div>
+
+                        {bulkActionError && (
+                            <div className="mt-3 rounded border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+                                {bulkActionError}
+                            </div>
+                        )}
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={() => setBulkDialogOpen(false)}
+                                disabled={bulkActionLoading}
+                                className="border-slate-700 text-slate-200"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant={activeBulkMeta.tone === 'danger' ? 'destructive' : 'secondary'}
+                                onClick={performBulkAction}
+                                disabled={bulkActionLoading || selectedItemsForBulk.length === 0}
+                            >
+                                {bulkActionLoading ? 'Processing…' : activeBulkMeta.confirmLabel}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {error && (
                 <Card className="border border-rose-500/30 bg-rose-500/10 text-rose-100">
                     <CardContent className="flex items-start justify-between gap-4 pt-4">

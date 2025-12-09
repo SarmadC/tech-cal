@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { MagnifyingGlass, MapPin, Calendar, SlidersHorizontal, ArrowCounterClockwise } from '@phosphor-icons/react';
+import React, { useState, useCallback } from 'react';
+import { MagnifyingGlass, MapPin, Calendar, SlidersHorizontal, ArrowCounterClockwise, NavigationArrow, SpinnerGap } from '@phosphor-icons/react';
 import QuickDatePicker from '@/components/calendar/QuickDatePicker';
 
 interface DiscoveryHeaderProps {
@@ -15,7 +15,94 @@ interface DiscoveryHeaderProps {
     onResetFilters: () => void;
     activeFilterCount: number;
     onFilterClick?: () => void;
+    onNearMeClick?: () => void;
+    isDetectingLocation?: boolean;
 }
+
+// Timezone to location mapping for fallback location detection
+const timezoneToLocation: Record<string, { city: string; country: string }> = {
+    'America/New_York': { city: 'New York', country: 'USA' },
+    'America/Los_Angeles': { city: 'Los Angeles', country: 'USA' },
+    'America/Chicago': { city: 'Chicago', country: 'USA' },
+    'America/Denver': { city: 'Denver', country: 'USA' },
+    'America/Toronto': { city: 'Toronto', country: 'Canada' },
+    'America/Vancouver': { city: 'Vancouver', country: 'Canada' },
+    'Europe/London': { city: 'London', country: 'UK' },
+    'Europe/Berlin': { city: 'Berlin', country: 'Germany' },
+    'Europe/Paris': { city: 'Paris', country: 'France' },
+    'Europe/Amsterdam': { city: 'Amsterdam', country: 'Netherlands' },
+    'Asia/Tokyo': { city: 'Tokyo', country: 'Japan' },
+    'Asia/Singapore': { city: 'Singapore', country: 'Singapore' },
+    'Asia/Hong_Kong': { city: 'Hong Kong', country: 'Hong Kong' },
+    'Asia/Shanghai': { city: 'Shanghai', country: 'China' },
+    'Australia/Sydney': { city: 'Sydney', country: 'Australia' },
+    'Australia/Melbourne': { city: 'Melbourne', country: 'Australia' },
+};
+
+/**
+ * Reverse geocode coordinates to get city name using free BigDataCloud API
+ */
+const reverseGeocode = async (latitude: number, longitude: number): Promise<string | null> => {
+    try {
+        const response = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+        );
+        
+        if (!response.ok) {
+            console.warn('[NearMe] Reverse geocoding API error:', response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        
+        // Try to get the city name from various fields
+        const city = data.city || data.locality || data.principalSubdivision || null;
+        
+        if (city) {
+            console.log('[NearMe] Detected location:', city, data.countryName);
+            return city;
+        }
+        
+        return null;
+    } catch (error) {
+        console.warn('[NearMe] Reverse geocoding failed:', error);
+        return null;
+    }
+};
+
+/**
+ * Get location from IP address using BigDataCloud's free IP geolocation API
+ * This is useful when browser geolocation is denied but user is traveling
+ */
+const getLocationFromIP = async (): Promise<string | null> => {
+    try {
+        console.log('[NearMe] Trying IP-based geolocation...');
+        // Using BigDataCloud client-info - free, no API key required, HTTPS, returns city from IP
+        const response = await fetch('https://api.bigdatacloud.net/data/client-info');
+        
+        if (!response.ok) {
+            console.warn('[NearMe] IP geolocation API error:', response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        console.log('[NearMe] IP geolocation response:', data);
+        
+        // BigDataCloud client-info returns location info based on IP
+        const city = data.city || data.locality || data.location?.city || data.location?.locality || data.principalSubdivision || null;
+        
+        if (city) {
+            console.log('[NearMe] IP-based location detected:', city, data.countryName || data.country);
+            return city;
+        }
+        
+        console.log('[NearMe] IP geolocation returned no city data');
+        return null;
+    } catch (error) {
+        console.warn('[NearMe] IP geolocation failed:', error);
+        return null;
+    }
+};
 
 // Helper function to format date range for display
 const formatDateRange = (range: { start: Date | null; end: Date | null }): string => {
@@ -67,9 +154,86 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     onSearch,
     onResetFilters,
     activeFilterCount,
-    onFilterClick
+    onFilterClick,
+    onNearMeClick,
+    isDetectingLocation = false
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+    const [isLocalDetecting, setIsLocalDetecting] = useState(false);
+    
+    // Handle "Near Me" button click - detect user location
+    const handleNearMeClick = useCallback(async () => {
+        // If parent provides handler, use it
+        if (onNearMeClick) {
+            onNearMeClick();
+            return;
+        }
+        
+        // Otherwise, detect location locally
+        setIsLocalDetecting(true);
+        
+        try {
+            // 1. Try browser geolocation with reverse geocoding (most accurate)
+            if ('geolocation' in navigator) {
+                try {
+                    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(
+                            resolve,
+                            reject,
+                            { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
+                        );
+                    });
+                    
+                    const { latitude, longitude } = position.coords;
+                    console.log('[NearMe] Got coordinates:', latitude, longitude);
+                    
+                    // Try reverse geocoding to get actual city name
+                    const city = await reverseGeocode(latitude, longitude);
+                    
+                    if (city) {
+                        onLocationChange(city);
+                        return;
+                    }
+                    
+                    console.log('[NearMe] Reverse geocoding returned no city, trying IP geolocation');
+                } catch (error) {
+                    console.warn('[NearMe] Geolocation failed:', error);
+                    // Fall through to IP-based detection
+                }
+            }
+            
+            // 2. Try IP-based geolocation (works when traveling, more accurate than timezone)
+            try {
+                const ipCity = await getLocationFromIP();
+                if (ipCity) {
+                    onLocationChange(ipCity);
+                    return;
+                }
+            } catch (error) {
+                console.warn('[NearMe] IP geolocation failed:', error);
+            }
+            
+            // 3. Final fallback: use timezone to guess location
+            console.log('[NearMe] Falling back to timezone detection');
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const locationData = timezoneToLocation[timezone];
+            
+            if (locationData) {
+                onLocationChange(locationData.city);
+            } else {
+                // Extract city from timezone
+                const parts = timezone.split('/');
+                if (parts.length > 1) {
+                    const city = parts[parts.length - 1].replace(/_/g, ' ');
+                    onLocationChange(city);
+                }
+            }
+        } finally {
+            setIsLocalDetecting(false);
+        }
+    }, [onNearMeClick, onLocationChange]);
+    
+    const isLoading = isDetectingLocation || isLocalDetecting;
     return (
         <div className="bg-card/80 dark:bg-card/20 rounded-2xl p-4 shadow-lg border border-border/60 backdrop-blur mb-8 transition-colors">
             <div className="flex flex-col lg:flex-row items-center gap-4">
@@ -92,7 +256,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 {/* Divider */}
                 <div className="hidden lg:block w-px h-10 bg-border/60"></div>
 
-                {/* Location Input */}
+                {/* Location Input with Near Me Button */}
                 <div className="flex-1 w-full relative group">
                     <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors">
                         <MapPin size={20} />
@@ -100,10 +264,24 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     <input
                         type="text"
                         placeholder="Location (e.g. San Francisco)"
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-transparent bg-muted/60 dark:bg-muted/20 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-background/40 transition-all outline-none text-foreground placeholder:text-muted-foreground"
+                        className="w-full pl-12 pr-14 py-3 rounded-xl border border-transparent bg-muted/60 dark:bg-muted/20 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-background/40 transition-all outline-none text-foreground placeholder:text-muted-foreground"
                         value={location}
                         onChange={(e) => onLocationChange(e.target.value)}
                     />
+                    <button
+                        type="button"
+                        onClick={handleNearMeClick}
+                        disabled={isLoading}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-lg bg-muted/60 dark:bg-muted/20 hover:bg-primary/10 focus:ring-2 focus:ring-primary/20 transition-all text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        title="Find events near me"
+                        aria-label="Detect my location"
+                    >
+                        {isLoading ? (
+                            <SpinnerGap size={18} className="animate-spin" />
+                        ) : (
+                            <NavigationArrow size={18} />
+                        )}
+                    </button>
                 </div>
 
                 {/* Divider */}
@@ -182,6 +360,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
         prevProps.location === nextProps.location &&
         prevProps.activeFilterCount === nextProps.activeFilterCount &&
         prevProps.onFilterClick === nextProps.onFilterClick &&
+        prevProps.isDetectingLocation === nextProps.isDetectingLocation &&
         dateRangeEqual
     );
 });

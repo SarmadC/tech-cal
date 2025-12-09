@@ -135,6 +135,36 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
         [refresh, showError, showInfo, showSuccess]
     );
 
+    const triggerInference = useCallback(
+        async (eventIds: string[]) => {
+            if (eventIds.length === 0) {
+                showInfo('Select at least one event.');
+                return;
+            }
+            setLoading(true);
+            try {
+                const response = await fetch('/api/admin/ingestion/infer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ eventIds }),
+                });
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    throw new Error(payload.error || 'Failed to trigger inference');
+                }
+                const payload = await response.json();
+                showSuccess(`Inferred metadata for ${payload.summary?.succeeded ?? eventIds.length} event(s).`);
+                await refresh();
+            } catch (error) {
+                console.error(error);
+                showError(error instanceof Error ? error.message : 'Failed to trigger inference');
+            } finally {
+                setLoading(false);
+            }
+        },
+        [refresh, showError, showInfo, showSuccess]
+    );
+
     const columns: AdminDataTableColumn<EnrichmentEvent>[] = useMemo(
         () => [
             {
@@ -158,20 +188,20 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
             {
                 key: 'status',
                 header: 'Status',
+                cellClassName: 'max-w-xl',
                 render: (event) => (
                     <div className="flex flex-col gap-1 text-xs text-slate-300">
                         <Badge className={statusBadgeStyles[event.enrichment_status] ?? 'bg-slate-800 text-slate-100'}>
                             {event.enrichment_status}
                         </Badge>
                         {event.enrichment_metadata?.last_error && (
-                            <span className="text-amber-200">
-                                {event.enrichment_metadata.last_error.slice(0, 80)}
-                                {event.enrichment_metadata.last_error.length > 80 ? '…' : ''}
+                            <span className="text-amber-200 text-[11px] leading-snug whitespace-pre-wrap break-words">
+                                {event.enrichment_metadata.last_error}
                             </span>
                         )}
                     </div>
                 ),
-                width: 180,
+                width: 320,
             },
             {
                 key: 'updated_at',
@@ -189,33 +219,56 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 align: 'center',
                 render: (event) => (
                     <div className="flex items-center gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => triggerEnrichment([event.id])} disabled={loading}>
-                            Trigger
+                        <Button 
+                            size="sm" 
+                            variant="secondary" 
+                            onClick={() => triggerEnrichment([event.id])} 
+                            disabled={loading || !event.source_url}
+                            title={!event.source_url ? 'No source URL - use Infer instead' : 'Scrape source URL and extract data'}
+                        >
+                            Scrape
+                        </Button>
+                        <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => triggerInference([event.id])} 
+                            disabled={loading}
+                            title="Generate description and tags from title (no scraping)"
+                        >
+                            Infer
                         </Button>
                         <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             disabled={!event.source_url}
                             onClick={() => window.open(event.source_url, '_blank', 'noopener,noreferrer')}
+                            title="Open source URL"
                         >
-                            Source
+                            <MaterialIcon name="arrow-up-right" size={14} />
                         </Button>
                     </div>
                 ),
-                width: 180,
+                width: 220,
             },
         ],
-        [loading, triggerEnrichment]
+        [loading, triggerEnrichment, triggerInference]
     );
 
     const bulkActions = useMemo(
         () => [
             {
                 id: 'trigger',
-                label: 'Trigger LLM Enrichment',
+                label: 'Scrape & Enrich',
                 icon: <MaterialIcon name="arrow-forward" size={14} />,
                 disabled: selectedRows.length === 0 || loading,
                 onSelect: () => triggerEnrichment(selectedRows),
+            },
+            {
+                id: 'infer',
+                label: 'Infer Metadata (No Scrape)',
+                icon: <MaterialIcon name="code" size={14} />,
+                disabled: selectedRows.length === 0 || loading,
+                onSelect: () => triggerInference(selectedRows),
             },
             {
                 id: 'refresh',
@@ -225,7 +278,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 onSelect: () => refresh(),
             },
         ],
-        [loading, refresh, selectedRows, triggerEnrichment]
+        [loading, refresh, selectedRows, triggerEnrichment, triggerInference]
     );
 
     return (

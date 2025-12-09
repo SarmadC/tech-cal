@@ -137,6 +137,9 @@ export default function DiscoverClientView({
             totalCount={eventData.totalCount}
             onResetFilters={eventData.resetFilters}
             activeFilterCount={eventData.activeFilterCount}
+            onNearMeClick={eventData.applyNearMe}
+            isDetectingLocation={eventData.isDetectingLocation}
+            countsFromServer={eventData.counts}
         />
     );
 

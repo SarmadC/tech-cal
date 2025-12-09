@@ -2,6 +2,7 @@ import { Event, EventTag, SupabaseEventWithDetails, CareerGoal, LearningStyle, N
 import { CareerProfile } from '@/types/career';
 import { eventTransformer } from '@/utils/transformers';
 import { getRoleKeywords } from '@/utils/roleTaxonomy';
+import { LocationScoringService, UserLocation } from './locationScoringService';
 
 export interface TagMatchResult {
   score: number;
@@ -21,6 +22,7 @@ export interface TagRecommendationResult {
   profileBoost: number;
   recencyBoost: number;
   popularityBoost: number;
+  locationScore: number;
   totalScore: number;
   reasons: string[];
 }
@@ -412,12 +414,18 @@ export class TagBasedMatchingService {
 
   /**
    * Get recommended events based on tag matching
+   * @param _userId - User ID (currently unused)
+   * @param careerProfile - User's career profile for matching
+   * @param supabaseClient - Supabase client instance
+   * @param limit - Maximum number of results to return
+   * @param userLocation - Optional user location for proximity scoring
    */
   static async getRecommendedEventsByTags(
     _userId: string,
     careerProfile: CareerProfile,
     supabaseClient: SupabaseClientType,
-    limit: number = 10
+    limit: number = 10,
+    userLocation?: UserLocation | null
   ): Promise<TagRecommendationResult[]> {
     this.initializeSimilarities();
     const candidateTerms = this.buildCandidateTerms(careerProfile);
@@ -450,7 +458,7 @@ export class TagBasedMatchingService {
         hasSkillsToLearn,
         hasInterests
       });
-      return this.getDiscoveryEventsOnly(careerProfile, supabaseClient, limit);
+      return this.getDiscoveryEventsOnly(careerProfile, supabaseClient, limit, userLocation);
     }
     
     // 1. Primary Query: Tag-based matches
@@ -603,18 +611,40 @@ export class TagBasedMatchingService {
       const { boost: profileBoost, reasons: profileReasons } = this.calculateProfileBoost(appEvent, careerProfile, match);
       const recencyBoost = this.calculateRecencyBoost(appEvent);
       const popularityBoost = this.calculatePopularityBoost(appEvent);
+      
+      // Calculate location score (0-1 scale)
+      const locationResult = LocationScoringService.calculateLocationScore(appEvent, userLocation);
+      const locationScore = locationResult.score;
+      
+      // Calculate text match location boost
+      // Title matches get highest boost (indicates core event focus)
+      // Agenda matches get medium boost (indicates covered topics)
+      // Description matches get no boost (may be tangential)
+      const matchLocation = (eventRecord as { _matchLocation?: string })._matchLocation;
+      let textMatchBoost = 0;
+      if (matchLocation === 'title') {
+        textMatchBoost = 5; // Strong boost for title matches
+      } else if (matchLocation === 'agenda') {
+        textMatchBoost = 3; // Medium boost for agenda matches
+      }
+      // description matches get no boost (they're still in results, just not boosted)
 
+      // Score weights: match (55%) + impact (22%) + location (8%) + text boost (5%) + boosts (10%)
       const totalScore =
-        match.score * 0.6 +
-        impactScore * 0.25 +
+        match.score * 0.55 +
+        impactScore * 0.22 +
+        locationScore * 8 + // Scale location score (0-8)
+        textMatchBoost +    // Text match location boost (0-5)
         profileBoost +
         recencyBoost +
         popularityBoost;
 
       const reasons = [
         match.explanation,
-        ...profileReasons.filter(Boolean)
-      ].filter(Boolean);
+        ...profileReasons.filter(Boolean),
+        // Add location reason for in-person events that aren't in user's city
+        (!locationResult.isVirtual && locationScore < 1.0) ? locationResult.reason : null
+      ].filter(Boolean) as string[];
 
       return {
         event: eventRecord,
@@ -623,6 +653,7 @@ export class TagBasedMatchingService {
         profileBoost,
         recencyBoost,
         popularityBoost,
+        locationScore,
         totalScore,
         reasons
       } as TagRecommendationResult;
@@ -668,7 +699,8 @@ export class TagBasedMatchingService {
   private static async getDiscoveryEventsOnly(
     careerProfile: CareerProfile,
     supabaseClient: SupabaseClientType,
-    limit: number
+    limit: number,
+    userLocation?: UserLocation | null
   ): Promise<TagRecommendationResult[]> {
     const fetchLimit = Math.min(limit * 3, 100);
     const textTerms = this.extractHighValueTerms(careerProfile);
@@ -755,12 +787,20 @@ export class TagBasedMatchingService {
         const { boost: profileBoost, reasons: profileReasons } = this.calculateProfileBoost(appEvent, careerProfile, match);
         const recencyBoost = this.calculateRecencyBoost(appEvent);
         const popularityBoost = this.calculatePopularityBoost(appEvent);
+        
+        // Calculate location score
+        const locationResult = LocationScoringService.calculateLocationScore(appEvent, userLocation);
+        const locationScore = locationResult.score;
   
-        const totalScore = match.score * 0.6 + impactScore * 0.25 + profileBoost + recencyBoost + popularityBoost;
-        const reasons = [match.explanation, ...profileReasons.filter(Boolean)].filter(Boolean);
+        const totalScore = match.score * 0.55 + impactScore * 0.22 + locationScore * 10 + profileBoost + recencyBoost + popularityBoost;
+        const reasons = [
+          match.explanation, 
+          ...profileReasons.filter(Boolean),
+          (!locationResult.isVirtual && locationScore < 1.0) ? locationResult.reason : null
+        ].filter(Boolean) as string[];
   
         return {
-          event: eventRecord, match, impactScore, profileBoost, recencyBoost, popularityBoost, totalScore, reasons
+          event: eventRecord, match, impactScore, profileBoost, recencyBoost, popularityBoost, locationScore, totalScore, reasons
         } as TagRecommendationResult;
       });
 
@@ -984,11 +1024,12 @@ export class TagBasedMatchingService {
       }
     });
 
-    // Sort: agenda matches first, then description, then title-only
+    // Sort by match quality: title matches > agenda matches > description matches
+    // Title matches indicate the event's core focus aligns with user interests
     const sorted = Array.from(eventMap.values()).sort((a, b) => {
-      const priority = { agenda: 3, description: 2, title: 1 };
-      const aPriority = priority[a._matchLocation || 'title'] || 0;
-      const bPriority = priority[b._matchLocation || 'title'] || 0;
+      const priority = { title: 3, agenda: 2, description: 1 };
+      const aPriority = priority[a._matchLocation || 'description'] || 0;
+      const bPriority = priority[b._matchLocation || 'description'] || 0;
       return bPriority - aPriority;
     });
 

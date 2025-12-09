@@ -35,6 +35,11 @@ export class CareerImpactCache {
   private static readonly DEFAULT_TTL = 12 * 60 * 60; // 12 hours in seconds (Redis TTL)
   private static readonly CACHE_PREFIX = 'career_impact:';
   private static readonly STATS_KEY = 'career_impact:stats';
+  
+  // Sliding window configuration
+  // Refresh TTL when entry is accessed and is within the refresh threshold of expiring
+  private static readonly REFRESH_THRESHOLD = 0.25; // Refresh when 25% TTL remaining
+  private static refreshesPerformed = 0;
 
   /**
    * Generate cache key from event ID and profile hash
@@ -73,7 +78,7 @@ export class CareerImpactCache {
   }
 
   /**
-   * Get cached career impact score
+   * Get cached career impact score with sliding window TTL refresh
    */
   static async get(eventId: string, profileHash: string): Promise<CareerImpactScoreLite | null> {
     this.stats.totalRequests++;
@@ -88,12 +93,33 @@ export class CareerImpactCache {
         return null;
       }
 
+      const now = Date.now();
+      const expiresAt = cached.timestamp + (cached.ttl * 1000);
+      
       // Check if expired (Redis TTL handles this, but we check for safety)
-      if (Date.now() > cached.timestamp + (cached.ttl * 1000)) {
+      if (now > expiresAt) {
         await kv.del(key);
         this.stats.misses++;
         this.updateHitRate();
         return null;
+      }
+
+      // Sliding window refresh: if entry is nearing expiration, refresh its TTL
+      // This keeps frequently-accessed entries alive longer
+      const remainingTTL = expiresAt - now;
+      const refreshThresholdMs = cached.ttl * 1000 * this.REFRESH_THRESHOLD;
+      
+      if (remainingTTL < refreshThresholdMs) {
+        // Refresh the entry with a new TTL (fire-and-forget, don't await)
+        const refreshedEntry: CacheEntry = {
+          data: cached.data,
+          timestamp: now,
+          ttl: cached.ttl
+        };
+        void kv.setex(key, cached.ttl, refreshedEntry).catch(err => {
+          console.warn('Sliding window refresh failed:', err);
+        });
+        this.refreshesPerformed++;
       }
 
       this.stats.hits++;
@@ -109,7 +135,7 @@ export class CareerImpactCache {
   }
 
   /**
-   * Get multiple cached career impact scores
+   * Get multiple cached career impact scores with sliding window TTL refresh
    */
   static async mget(eventIds: string[], profileHash: string): Promise<Map<string, CareerImpactScoreLite>> {
     const results = new Map<string, CareerImpactScoreLite>();
@@ -118,11 +144,45 @@ export class CareerImpactCache {
       const keys = eventIds.map(eventId => this.generateCacheKey(eventId, profileHash));
       const cachedEntries = await kv.mget(...keys) as (CacheEntry | null)[];
       
+      const now = Date.now();
+      const entriesToRefresh: { key: string; entry: CacheEntry }[] = [];
+      
       cachedEntries.forEach((cached, index) => {
-        if (cached && Date.now() <= cached.timestamp + (cached.ttl * 1000)) {
-          results.set(eventIds[index], cached.data);
+        if (cached) {
+          const expiresAt = cached.timestamp + (cached.ttl * 1000);
+          
+          if (now <= expiresAt) {
+            results.set(eventIds[index], cached.data);
+            
+            // Check if entry needs sliding window refresh
+            const remainingTTL = expiresAt - now;
+            const refreshThresholdMs = cached.ttl * 1000 * this.REFRESH_THRESHOLD;
+            
+            if (remainingTTL < refreshThresholdMs) {
+              entriesToRefresh.push({
+                key: keys[index],
+                entry: {
+                  data: cached.data,
+                  timestamp: now,
+                  ttl: cached.ttl
+                }
+              });
+            }
+          }
         }
       });
+      
+      // Batch refresh entries nearing expiration (fire-and-forget)
+      if (entriesToRefresh.length > 0) {
+        const refreshPipeline = kv.pipeline();
+        for (const { key, entry } of entriesToRefresh) {
+          refreshPipeline.setex(key, entry.ttl, entry);
+        }
+        void refreshPipeline.exec().catch(err => {
+          console.warn('Batch sliding window refresh failed:', err);
+        });
+        this.refreshesPerformed += entriesToRefresh.length;
+      }
       
       // Update stats
       this.stats.totalRequests += eventIds.length;
@@ -131,7 +191,7 @@ export class CareerImpactCache {
       this.updateHitRate();
     } catch (error) {
       console.warn('Cache mget error for', eventIds.length, 'events with profile', profileHash + ':', error);
-      // Fallback to individual gets
+      // Fallback to individual gets (which includes sliding window refresh)
       for (const eventId of eventIds) {
         const score = await this.get(eventId, profileHash);
         if (score) {
@@ -288,9 +348,9 @@ export class CareerImpactCache {
   }
 
   /**
-   * Get cache statistics
+   * Get cache statistics including sliding window refresh counts
    */
-  static async getStats(): Promise<CacheStats> {
+  static async getStats(): Promise<CacheStats & { refreshes: number }> {
     try {
       // Try to get persisted stats from Redis
       const persistedStats = await kv.get<CacheStats>(this.STATS_KEY);
@@ -309,10 +369,10 @@ export class CareerImpactCache {
       // Persist merged stats
       await kv.setex(this.STATS_KEY, 24 * 60 * 60, this.stats);
       
-      return { ...this.stats };
+      return { ...this.stats, refreshes: this.refreshesPerformed };
     } catch (error) {
       console.warn('Cache getStats error:', error);
-      return { ...this.stats };
+      return { ...this.stats, refreshes: this.refreshesPerformed };
     }
   }
 

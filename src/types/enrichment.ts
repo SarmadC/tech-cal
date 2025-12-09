@@ -83,4 +83,53 @@ export interface ExtractionProviderResult {
     raw?: unknown;
 }
 
+// =============================================
+// INFERENCE MODE TYPES
+// =============================================
+
+/**
+ * Request for LLM inference mode (no scraping required)
+ * Uses event title and available metadata to generate/infer content
+ */
+export interface InferenceRequest {
+    title: string;
+    eventType?: string;
+    organizer?: string;
+    location?: string;
+    existingDescription?: string;
+    startTime?: string;
+    endTime?: string;
+    allowedTags: string[];
+}
+
+/**
+ * Schema for inferred event data (subset of ExtractedEventData)
+ * Focused on what can be reasonably inferred from title/metadata
+ * Uses permissive validation to handle various Gemini response formats
+ */
+export const InferredEventDataSchema = z.object({
+    // Generated description based on event title and context
+    description: z.string().max(2000).nullish().optional(),
+    // Inferred tags from title and context
+    tags: z.array(z.string()).nullish().optional(),
+    // Inferred difficulty level
+    difficultyLevel: z.string().nullish().optional(),
+    // Inferred target audience
+    targetAudience: z.array(z.string()).nullish().optional(),
+    // Key topics extracted from title
+    keyTopics: z.array(z.string()).nullish().optional(),
+}).passthrough(); // Allow extra fields from Gemini
+
+export type InferredEventData = z.infer<typeof InferredEventDataSchema>;
+
+/**
+ * Result from inference provider
+ */
+export interface InferenceProviderResult {
+    data: InferredEventData;
+    model?: string;
+    tokensUsed?: number;
+    raw?: unknown;
+}
+
 

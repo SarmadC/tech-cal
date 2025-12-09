@@ -7,6 +7,27 @@ import { kv } from '@vercel/kv';
 import { EventFilters, RecommendationTelemetryContext } from '@/types';
 import { createHash, randomUUID } from 'crypto';
 import { requireOnboardedApi } from '@/utils/onboarding';
+import { UserLocation } from '@/services/locationScoringService';
+import { FilterCounts } from '@/utils/filterCountUtils';
+
+/**
+ * Extract city from a location string (e.g., "San Francisco, CA, USA" -> "San Francisco")
+ */
+function extractCityFromLocation(location: string): string | undefined {
+  if (!location) return undefined;
+  const parts = location.split(',').map(p => p.trim());
+  return parts[0] || undefined;
+}
+
+/**
+ * Extract country from a location string (e.g., "San Francisco, CA, USA" -> "USA")
+ */
+function extractCountryFromLocation(location: string): string | undefined {
+  if (!location) return undefined;
+  const parts = location.split(',').map(p => p.trim());
+  // Country is typically the last part
+  return parts[parts.length - 1] || undefined;
+}
 
 // Rate limiter for filtered events API
 const ratelimit = new Ratelimit({
@@ -68,6 +89,7 @@ interface FilteredEventsResponse {
       totalCount: number;
     };
     isColdStart?: boolean;
+    counts?: FilterCounts;
   };
   error?: string;
 }
@@ -269,6 +291,30 @@ export async function POST(request: NextRequest) {
       // Profile might not exist for new users - this is fine
       console.log('No career profile found for user, skipping career impact scoring:', error);
     }
+    
+    // Extract user location for location-based scoring
+    // Priority: 1) Profile preferences, 2) Profile timezone, 3) Request timezone header
+    let userLocation: UserLocation | null = null;
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('preferences, timezone, location')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileData) {
+        const preferences = profileData.preferences as Record<string, unknown> | null;
+        const profileLocation = preferences?.location as Record<string, string> | null;
+        
+        userLocation = {
+          city: profileLocation?.city || (profileData.location ? extractCityFromLocation(profileData.location) : undefined),
+          country: profileLocation?.country || (profileData.location ? extractCountryFromLocation(profileData.location) : undefined),
+          timezone: profileData.timezone || request.headers.get('x-timezone') || undefined,
+        };
+      }
+    } catch (error) {
+      console.log('[API] Failed to extract user location for scoring:', error);
+    }
 
     // For career-impact sorting, we need to fetch a larger window to ensure pagination correctness
     // Events are sorted after enrichment, so we need all candidates before sorting
@@ -438,7 +484,8 @@ export async function POST(request: NextRequest) {
             careerProfile,
             supabase,
             user.id,
-            false // Disable diversity enhancement for calendar - we want all events, not curated top 20
+            false, // Disable diversity enhancement for calendar - we want all events, not curated top 20
+            userLocation // Pass user location for proximity scoring
           );
           
           // Debug: log enrichment results with detailed breakdown
@@ -538,17 +585,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate filter statistics (simplified since filtering is now at database level)
+    const counts = await EventService.getFilterCounts(eventFilters, supabase);
     const availableFilters = {
-      categories: await getAvailableCategories(supabase),
+      categories: (await getAvailableCategories(supabase)).map((cat) => ({
+        ...cat,
+        count: counts.categories[cat.id] || 0
+      })),
       difficulties: [
         { value: 'beginner', count: 0 }, // Would need separate queries for accurate counts
         { value: 'intermediate', count: 0 },
         { value: 'advanced', count: 0 },
       ],
       formats: [
-        { value: 'virtual', count: 0 }, // Would need separate queries for accurate counts
-        { value: 'in-person', count: 0 },
-        { value: 'hybrid', count: 0 },
+        { value: 'virtual', count: counts.format.virtual },
+        { value: 'in-person', count: counts.format['in-person'] },
+        { value: 'hybrid', count: counts.format.hybrid },
       ],
       locations: []
     };
@@ -574,7 +625,8 @@ export async function POST(request: NextRequest) {
           filteredCount: enrichedEvents.length,
           totalCount: totalEvents
         },
-        isColdStart
+        isColdStart,
+        counts
       }
     };
 

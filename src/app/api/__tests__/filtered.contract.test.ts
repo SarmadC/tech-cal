@@ -26,6 +26,47 @@ describe('/api/events/filtered contract', () => {
         }))
       };
     });
+
+    const mockEvents = [{
+      id: 'evt-1',
+      title: 'Sample Event',
+      event_format: 'In-person',
+      price_min: 0,
+      event_type_id: 'cat-1',
+      startTime: new Date().toISOString(),
+      careerImpact: {
+        overall: 75,
+        components: {
+          skillRelevance: 20,
+          careerStageMatch: 15,
+          networkingValue: 15,
+          industryRelevance: 15,
+          timingBonus: 10
+        },
+        explanation: {
+          alignmentReasons: [],
+          matchedSkills: []
+        }
+      }
+    }];
+
+    vi.mock('@/services/eventServices', () => {
+      return {
+        EventService: {
+          getEventsWithColdStartHandling: vi.fn(async () => ({
+            events: mockEvents,
+            totalCount: mockEvents.length,
+            isColdStart: false
+          })),
+          enrichEventsWithCareerImpact: vi.fn(async (events: unknown[]) => events),
+          getFilterCounts: vi.fn(async () => ({
+            format: { virtual: 0, 'in-person': 1, hybrid: 0 },
+            cost: { free: 1, paid: 0 },
+            categories: { 'cat-1': 1 }
+          }))
+        }
+      };
+    });
   });
 
   afterAll(() => {

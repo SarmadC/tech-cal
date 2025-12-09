@@ -1,26 +1,41 @@
 // src/utils/filterCountUtils.ts
 import { Event, EventType } from '@/types';
 
+export interface FilterCounts {
+    format: Record<string, number>;
+    cost: Record<string, number>;
+    categories: Record<string, number>;
+}
+
 /**
  * Get event format from event_format column
  * Maps database enum values to filter values
  * Defaults to "in-person" if null (per user requirement)
  */
 export function getEventFormat(event: Event): 'virtual' | 'in-person' | 'hybrid' {
-    if (!event.eventFormat) {
-        return 'in-person'; // Default to in-person if null
-    }
+    return normalizeEventFormat(event.eventFormat);
+}
 
-    // Map database enum values to filter values
-    switch (event.eventFormat) {
+/**
+ * Normalize event_format values (DB or app) into filter keys
+ */
+export function normalizeEventFormat(
+    format?: string | null
+): 'virtual' | 'in-person' | 'hybrid' {
+    if (!format) return 'in-person';
+
+    switch (format) {
         case 'Online':
+        case 'virtual':
             return 'virtual';
         case 'In-person':
+        case 'in-person':
             return 'in-person';
         case 'Hybrid':
+        case 'hybrid':
             return 'hybrid';
         default:
-            return 'in-person'; // Fallback to in-person for unknown values
+            return 'in-person';
     }
 }
 
@@ -69,11 +84,7 @@ export function normalizeDifficulty(event: Event): 'beginner' | 'intermediate' |
 export function calculateFilterCounts(
     events: Event[],
     categories: EventType[]
-): {
-    format: Record<string, number>;
-    cost: Record<string, number>;
-    categories: Record<string, number>;
-} {
+): FilterCounts {
     // Initialize counts with all required keys
     const counts = {
         format: {

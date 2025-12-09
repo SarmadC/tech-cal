@@ -34,15 +34,21 @@ vi.mock('@/utils/supabase/server', () => ({
   createClient: vi.fn(async () => mockSupabase)
 }));
 
-const { mockGetEventsWithColdStartHandling, mockEnrichEventsWithCareerImpact } = vi.hoisted(() => ({
+const { mockGetEventsWithColdStartHandling, mockEnrichEventsWithCareerImpact, mockGetFilterCounts } = vi.hoisted(() => ({
   mockGetEventsWithColdStartHandling: vi.fn(),
-  mockEnrichEventsWithCareerImpact: vi.fn(async (events: unknown[]) => events)
+  mockEnrichEventsWithCareerImpact: vi.fn(async (events: unknown[]) => events),
+  mockGetFilterCounts: vi.fn(async () => ({
+    format: { virtual: 0, 'in-person': 0, hybrid: 0 },
+    cost: { free: 0, paid: 0 },
+    categories: {}
+  }))
 }));
 
 vi.mock('@/services/eventServices', () => ({
   EventService: {
     getEventsWithColdStartHandling: mockGetEventsWithColdStartHandling,
-    enrichEventsWithCareerImpact: mockEnrichEventsWithCareerImpact
+    enrichEventsWithCareerImpact: mockEnrichEventsWithCareerImpact,
+    getFilterCounts: mockGetFilterCounts
   }
 }));
 
@@ -106,6 +112,7 @@ describe('POST /api/events/filtered - budget and USD gating', () => {
 
     expect(res.ok).toBe(true);
     expect(data.success).toBe(true);
+    expect(data.data.counts).toBeDefined();
     // Ensure we called RPC with filters containing budget
     expect(mockGetEventsWithColdStartHandling).toHaveBeenCalled();
     const [filters] = mockGetEventsWithColdStartHandling.mock.calls[0];

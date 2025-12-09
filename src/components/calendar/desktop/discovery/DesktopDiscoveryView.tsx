@@ -7,7 +7,7 @@ import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import DiscoveryHeader from '@/components/discovery/DiscoveryHeader';
 import EventCard from '@/components/discovery/EventCard';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
-import { calculateFilterCounts } from '@/utils/filterCountUtils';
+import { calculateFilterCounts, FilterCounts } from '@/utils/filterCountUtils';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import {
     Select,
@@ -30,6 +30,9 @@ export interface DesktopDiscoveryViewProps {
     totalCount: number;
     onResetFilters: () => void;
     activeFilterCount: number;
+    onNearMeClick?: () => void;
+    isDetectingLocation?: boolean;
+    countsFromServer?: FilterCounts | null;
 }
 
 const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
@@ -44,7 +47,10 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
     onSearch,
     totalCount,
     onResetFilters,
-    activeFilterCount
+    activeFilterCount,
+    onNearMeClick,
+    isDetectingLocation,
+    countsFromServer
 }) => {
     const { isBookmarked, toggleBookmark } = useEventEngagement();
     const [pendingBookmarkIds, setPendingBookmarkIds] = useState<Set<string>>(new Set());
@@ -72,8 +78,8 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
 
     // Calculate filter counts from current events
     const counts = useMemo(() => {
-        return calculateFilterCounts(events, categories);
-    }, [events, categories]);
+        return countsFromServer ?? calculateFilterCounts(events, categories);
+    }, [countsFromServer, events, categories]);
 
     return (
         <div className={`desktop-discovery-view ${className} min-h-full text-foreground`} role="main" aria-label="Discover tech events">
@@ -105,6 +111,8 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                         onResetFilters={onResetFilters}
                         activeFilterCount={activeFilterCount}
                         onFilterClick={() => setIsSidebarOpen(true)}
+                        onNearMeClick={onNearMeClick}
+                        isDetectingLocation={isDetectingLocation}
                     />
                 }
                 resultCount={totalCount}
@@ -113,7 +121,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                         value={filters.sortBy}
                         onValueChange={(value) => onUpdateFilter('sortBy', value as UnifiedFilterOptions['sortBy'])}
                     >
-                        <SelectTrigger className="text-sm font-medium text-foreground bg-muted/70 dark:bg-muted/20 px-3 py-1.5 rounded-lg border border-border/60 hover:border-foreground/40 transition-colors w-auto min-w-[140px] h-auto">
+                        <SelectTrigger className="text-sm font-medium text-foreground bg-muted/70 dark:bg-muted/20 px-3 py-1.5 rounded-lg border border-border/60 hover:border-foreground/40 transition-colors w-auto min-w-[160px] h-auto">
                             <SelectValue placeholder="Sort by" />
                         </SelectTrigger>
                         <SelectContent>

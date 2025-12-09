@@ -16,6 +16,7 @@ import { CareerProfile } from '@/types/career';
 import { calculateBaseScore, getAlignmentCategory } from '@/lib/recommendation/baseScorer';
 import { EnhancedScoringService } from './enhancedScoringService';
 import { rerankWithBehavioral } from '@/services/recommendations/behavioralReranker';
+import { LocationScoringService, UserLocation } from './locationScoringService';
 import * as Sentry from '@sentry/nextjs';
 
 /**
@@ -69,13 +70,15 @@ interface ScoringTelemetry {
  * @param careerProfile - User's career profile (null for cold start users)
  * @param supabaseClient - Supabase client (unused currently, reserved for future features)
  * @param userId - User ID for telemetry
+ * @param userLocation - Optional user location for proximity scoring
  * @returns Events enriched with careerImpact data
  */
 export async function enrichEventsWithCareerImpact(
   events: Event[],
   careerProfile: CareerProfile | null,
   _supabaseClient: SupabaseClientType,
-  userId?: string
+  userId?: string,
+  userLocation?: UserLocation | null
 ): Promise<EventWithCareerImpact[]> {
   // Early return only if no events
   if (events.length === 0) {
@@ -94,20 +97,35 @@ export async function enrichEventsWithCareerImpact(
       try {
         const alignment = calculateBaseScore(event, careerProfile);
         
+        // Calculate location score (0-1 scale, affects final score by ~10%)
+        const locationResult = LocationScoringService.calculateLocationScore(event, userLocation);
+        const locationAdjustment = (locationResult.score - 0.8) * 10; // Neutral at 0.8, bonus/penalty around it
+        
+        // Adjust overall score with location (cap at 0-100 range)
+        const adjustedOverall = Math.max(0, Math.min(100, alignment.overall + locationAdjustment));
+        
+        // Add location reason if applicable (in-person events not in user's city)
+        const reasons = [...alignment.alignmentReasons.map(r => r.reason)];
+        if (!locationResult.isVirtual && locationResult.score < 1.0) {
+          reasons.push(locationResult.reason);
+        }
         
         return {
           ...event,
           careerImpact: {
-            overall: alignment.overall,
+            overall: adjustedOverall,
             confidence: isColdStart ? 0.6 : 1.0, // Lower confidence for cold start scores
-            components: alignment.components,
+            components: {
+              ...alignment.components,
+              locationRelevance: locationResult.score * 100, // Store location score as 0-100
+            },
             explanation: {
               // Maintain legacy shape while preserving detailed reasons
-              reasons: alignment.alignmentReasons.map(r => r.reason),
+              reasons,
               alignmentReasons: alignment.alignmentReasons, // Preserve detailed reasons with contributions
               matchedSkills: alignment.matchedSkills,
               speakerHighlights: [],
-              careerImpactCategory: getAlignmentCategory(alignment.overall),
+              careerImpactCategory: getAlignmentCategory(adjustedOverall),
               confidenceFactors: isColdStart 
                 ? ['Cold start scoring - complete your profile for better recommendations']
                 : ['Alignment core v1.0'],

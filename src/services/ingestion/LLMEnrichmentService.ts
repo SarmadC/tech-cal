@@ -9,9 +9,13 @@ import {
     type ExtractedAgendaItem,
     type ExtractedEventData,
     type ExtractedSpeaker,
+    type InferenceRequest,
+    type InferenceProviderResult,
 } from '@/types/enrichment';
 import { PlaywrightScraper } from './PlaywrightScraper';
 import { getExtractionProvider } from './providers/ProviderFactory';
+import { GeminiExtractionProvider } from './providers/GeminiExtractionProvider';
+import { env } from '@/utils/env';
 import type { FieldDiff } from './EventUpdateService';
 
 const CONTENT_LIMIT = 100_000; // ~100KB
@@ -19,6 +23,7 @@ const MAX_RETRIES = 3;
 
 type EventRow = {
     id: string;
+    title?: string | null;
     source_url: string | null;
     enrichment_status?: string | null;
     enrichment_metadata?: EnrichmentMetadata | null;
@@ -31,6 +36,14 @@ type EventRow = {
     currency?: string | null;
     pricing_type?: string | null;
     speaker_lineup?: unknown;
+    start_time?: string | null;
+    end_time?: string | null;
+    difficulty_level?: string | null;
+};
+
+type EventRowWithRelations = EventRow & {
+    event_type?: { name: string } | null;
+    organizer?: { name: string } | null;
 };
 
 type AllowedTag = {
@@ -616,6 +629,249 @@ export class LLMEnrichmentService {
             description: item.description ?? null,
             speakers: item.speakers ?? [],
         }));
+    }
+
+    // =============================================
+    // INFERENCE MODE (no scraping required)
+    // =============================================
+
+    /**
+     * Process batch of events using inference mode (no scraping)
+     * Targets events missing description or tags
+     */
+    async processInferenceBatch(limit = 20): Promise<EnrichmentBatchResult> {
+        const events = await this.fetchEventsForInference(limit);
+        const results: EnrichmentJobResult[] = [];
+
+        for (const event of events) {
+            // eslint-disable-next-line no-await-in-loop
+            const result = await this.processEventInference(event.id);
+            results.push(result);
+        }
+
+        const succeeded = results.filter(r => r.status === 'enriched').length;
+        const failed = results.length - succeeded;
+
+        return {
+            processed: results.length,
+            succeeded,
+            failed,
+            results,
+        };
+    }
+
+    /**
+     * Process a single event using inference mode (no scraping)
+     * Generates description and tags from title + available metadata
+     */
+    async processEventInference(eventId: string): Promise<EnrichmentJobResult> {
+        try {
+            const event = await this.fetchEventForInference(eventId);
+            if (!event) {
+                return { eventId, status: 'failed', error: 'Event not found' };
+            }
+
+            if (!event.title) {
+                return { eventId, status: 'failed', error: 'Event is missing title' };
+            }
+
+            const metadata = this.normalizeMetadata(event);
+            await this.markProcessing(eventId, metadata);
+
+            // Get allowed tags
+            const allowedTags = await this.loadAllowedTags();
+
+            // Build inference request
+            const inferenceRequest: InferenceRequest = {
+                title: event.title,
+                eventType: event.event_type?.name,
+                organizer: event.organizer?.name,
+                location: event.location ?? undefined,
+                existingDescription: event.description ?? undefined,
+                startTime: event.start_time ?? undefined,
+                allowedTags: allowedTags.map(t => t.name),
+            };
+
+            // Get inference provider
+            const provider = this.getInferenceProvider();
+            const inferenceResult = await provider.infer(inferenceRequest);
+
+            // Persist the inferred data
+            await this.persistInferenceSuccess(eventId, event, inferenceResult, metadata, allowedTags);
+
+            return { eventId, status: 'enriched' };
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            await this.markRetryOrFail(eventId, message);
+            Sentry.captureException(error, { extra: { eventId, mode: 'inference' } });
+            return { eventId, status: 'failed', error: message };
+        }
+    }
+
+    /**
+     * Fetch events that need inference (missing description or tags)
+     */
+    private async fetchEventsForInference(limit: number): Promise<EventRowWithRelations[]> {
+        // First, get events with basic info
+        const { data, error } = await this.supabaseClient
+            .from('events')
+            .select(`
+                id,
+                title,
+                source_url,
+                enrichment_status,
+                enrichment_metadata,
+                description,
+                location,
+                start_time,
+                end_time,
+                difficulty_level,
+                event_type:event_type_id (name),
+                organizer:organizer_id (name)
+            `)
+            .eq('status', 'confirmed')
+            .or('description.is.null,description.eq.')
+            .not('title', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            Sentry.captureException(error, { extra: { function: 'fetchEventsForInference', limit } });
+            return [];
+        }
+
+        // Filter to events that don't have enough tags
+        const eventIds = (data ?? []).map(e => e.id);
+        if (eventIds.length === 0) return data as unknown as EventRowWithRelations[];
+
+        // Check which events have tags
+        const { data: tagRelations } = await this.supabaseClient
+            .from('event_tag_relations')
+            .select('event_id')
+            .in('event_id', eventIds);
+
+        const eventsWithTags = new Set((tagRelations ?? []).map(r => r.event_id));
+
+        // Return events missing description OR missing tags
+        return ((data ?? []) as unknown as EventRowWithRelations[]).filter(event => {
+            const hasDescription = event.description && event.description.trim().length > 0;
+            const hasTags = eventsWithTags.has(event.id);
+            return !hasDescription || !hasTags;
+        });
+    }
+
+    /**
+     * Fetch a single event with relations for inference
+     */
+    private async fetchEventForInference(eventId: string): Promise<EventRowWithRelations | null> {
+        const { data, error } = await this.supabaseClient
+            .from('events')
+            .select(`
+                id,
+                title,
+                source_url,
+                enrichment_status,
+                enrichment_metadata,
+                description,
+                location,
+                start_time,
+                end_time,
+                difficulty_level,
+                event_type:event_type_id (name),
+                organizer:organizer_id (name)
+            `)
+            .eq('id', eventId)
+            .maybeSingle();
+
+        if (error) {
+            Sentry.captureException(error, { extra: { function: 'fetchEventForInference', eventId } });
+            return null;
+        }
+
+        return (data as unknown as EventRowWithRelations | null) || null;
+    }
+
+    /**
+     * Get inference provider (reuses Gemini provider)
+     */
+    private getInferenceProvider(): GeminiExtractionProvider {
+        const apiKey = env('GOOGLE_GENERATIVE_AI_API_KEY');
+        const model = env('LLM_ENRICHMENT_MODEL', 'gemini-1.5-flash');
+        return new GeminiExtractionProvider({ apiKey, model });
+    }
+
+    /**
+     * Persist inference results
+     */
+    private async persistInferenceSuccess(
+        eventId: string,
+        event: EventRowWithRelations,
+        inferenceResult: InferenceProviderResult,
+        previousMetadata: EnrichmentMetadata,
+        allowedTags: AllowedTag[] = [],
+    ): Promise<void> {
+        const now = new Date().toISOString();
+        const inferredDescription = inferenceResult.data.description ?? undefined;
+        const inferredTags = Array.isArray(inferenceResult.data.tags)
+            ? inferenceResult.data.tags
+                .filter(tag => typeof tag === 'string')
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0)
+            : undefined;
+        const metadata: EnrichmentMetadata = {
+            ...previousMetadata,
+            enrichment_source: 'llm',
+            llm_model: inferenceResult.model,
+            enriched_data: {
+                description: inferredDescription,
+                tags: inferredTags,
+            },
+            completed_at: now,
+            retry_count: previousMetadata.retry_count,
+            tokens_used: inferenceResult.tokensUsed,
+            last_error: undefined,
+        };
+
+        // Build update payload
+        const updatePayload: Record<string, unknown> = {
+            [this.statusColumn()]: 'enriched',
+            [this.metadataColumn()]: metadata as unknown as Json,
+        };
+
+        // Update description if generated and event doesn't have one
+        if (inferredDescription && (!event.description || event.description.trim().length === 0)) {
+            updatePayload.description = inferredDescription;
+        }
+
+        // Update difficulty level if inferred and event doesn't have one
+        if (inferenceResult.data.difficultyLevel && !event.difficulty_level) {
+            updatePayload.difficulty_level = inferenceResult.data.difficultyLevel;
+        }
+
+        await this.supabaseClient
+            .from('events')
+            .update(updatePayload)
+            .eq('id', eventId);
+
+        // Persist tags
+        const tagChange = await this.persistTags(eventId, inferredTags, allowedTags);
+        if (tagChange) {
+            metadata.applied_tags = tagChange.newTagNames;
+            await this.supabaseClient
+                .from('events')
+                .update({
+                    [this.metadataColumn()]: metadata as unknown as Json,
+                })
+                .eq('id', eventId);
+        }
+
+        // Queue for review (optional - inference results may not need review)
+        // Convert inference data to ExtractedEventData format for review queue
+        const extractedData: ExtractedEventData = {
+            description: inferredDescription,
+            tags: inferredTags,
+        };
+        await this.queueForReview(eventId, event, extractedData, tagChange);
     }
 }
 

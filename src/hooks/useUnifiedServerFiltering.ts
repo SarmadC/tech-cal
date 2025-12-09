@@ -7,6 +7,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Event, AppProfile, TrackedEvent, enrichWithTracking } from '@/types';
 import { useTrackedEventIds } from './useTrackedEventsUnified';
 import { FILTERING_CONSTANTS } from '@/config/filteringConstants';
+import { FilterCounts } from '@/utils/filterCountUtils';
 
 export interface UnifiedFilterOptions {
   // Basic filters
@@ -52,6 +53,7 @@ interface FilteredEventsData {
     totalCount: number;
   };
   isColdStart?: boolean;
+  counts?: FilterCounts;
 }
 
 type FilterSurface = 'calendar' | 'discover' | 'default';
@@ -73,6 +75,7 @@ interface UseUnifiedServerFilteringResult {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   totalCount: number;
+  counts: FilterCounts | null;
   pagination: {
     page: number;
     pageSize: number;
@@ -91,11 +94,13 @@ interface UseUnifiedServerFilteringResult {
   loadMore: () => void;
   refetch: () => void;
   applyQuickFilter: (filterType: string) => void;
+  applyNearMe: () => Promise<void>;
 
   // UI state
   isFilterPanelOpen: boolean;
   setIsFilterPanelOpen: (open: boolean) => void;
   rateLimitWaitMs: number;
+  isDetectingLocation: boolean;
 }
 
 const DEFAULT_FILTERS: UnifiedFilterOptions = {
@@ -387,6 +392,156 @@ export function useUnifiedServerFiltering(
         break;
     }
   }, []);
+  
+  // Location detection state and action
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  
+  // Timezone to location mapping for fallback location detection
+  const timezoneToLocationMap: Record<string, { city: string; country: string }> = {
+    'America/New_York': { city: 'New York', country: 'USA' },
+    'America/Los_Angeles': { city: 'Los Angeles', country: 'USA' },
+    'America/Chicago': { city: 'Chicago', country: 'USA' },
+    'America/Denver': { city: 'Denver', country: 'USA' },
+    'America/Toronto': { city: 'Toronto', country: 'Canada' },
+    'America/Vancouver': { city: 'Vancouver', country: 'Canada' },
+    'Europe/London': { city: 'London', country: 'UK' },
+    'Europe/Berlin': { city: 'Berlin', country: 'Germany' },
+    'Europe/Paris': { city: 'Paris', country: 'France' },
+    'Europe/Amsterdam': { city: 'Amsterdam', country: 'Netherlands' },
+    'Asia/Tokyo': { city: 'Tokyo', country: 'Japan' },
+    'Asia/Singapore': { city: 'Singapore', country: 'Singapore' },
+    'Asia/Hong_Kong': { city: 'Hong Kong', country: 'Hong Kong' },
+    'Australia/Sydney': { city: 'Sydney', country: 'Australia' },
+  };
+  
+  /**
+   * Reverse geocode coordinates to get city name using free BigDataCloud API
+   */
+  const reverseGeocode = async (latitude: number, longitude: number): Promise<string | null> => {
+    try {
+      const response = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+      );
+      
+      if (!response.ok) {
+        console.warn('[NearMe] Reverse geocoding API error:', response.status);
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      // Try to get the city name from various fields
+      const city = data.city || data.locality || data.principalSubdivision || null;
+      
+      if (city) {
+        console.log('[NearMe] Detected location:', city, data.countryName);
+        return city;
+      }
+      
+      return null;
+    } catch (error) {
+      console.warn('[NearMe] Reverse geocoding failed:', error);
+      return null;
+    }
+  };
+  
+  /**
+   * Get location from IP address using BigDataCloud's free IP geolocation API
+   * This is useful when browser geolocation is denied but user is traveling
+   */
+  const getLocationFromIP = async (): Promise<string | null> => {
+    try {
+      console.log('[NearMe] Trying IP-based geolocation...');
+      // Using BigDataCloud client-info - free, no API key required, HTTPS, returns city from IP
+      const response = await fetch('https://api.bigdatacloud.net/data/client-info');
+      
+      if (!response.ok) {
+        console.warn('[NearMe] IP geolocation API error:', response.status);
+        return null;
+      }
+      
+      const data = await response.json();
+      console.log('[NearMe] IP geolocation response:', data);
+      
+      // BigDataCloud client-info returns location info based on IP
+      const city = data.city || data.locality || data.location?.city || data.location?.locality || data.principalSubdivision || null;
+      
+      if (city) {
+        console.log('[NearMe] IP-based location detected:', city, data.countryName || data.country);
+        return city;
+      }
+      
+      console.log('[NearMe] IP geolocation returned no city data');
+      return null;
+    } catch (error) {
+      console.warn('[NearMe] IP geolocation failed:', error);
+      return null;
+    }
+  };
+  
+  const applyNearMe = useCallback(async () => {
+    setIsDetectingLocation(true);
+    
+    try {
+      // 1. Try browser geolocation with reverse geocoding (most accurate)
+      if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              resolve,
+              reject,
+              { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
+            );
+          });
+          
+          const { latitude, longitude } = position.coords;
+          console.log('[NearMe] Got coordinates:', latitude, longitude);
+          
+          // Try reverse geocoding to get actual city name
+          const city = await reverseGeocode(latitude, longitude);
+          
+          if (city) {
+            setFilters(prev => ({ ...prev, locations: [city] }));
+            return;
+          }
+          
+          console.log('[NearMe] Reverse geocoding returned no city, trying IP geolocation');
+        } catch (error) {
+          console.warn('[NearMe] Geolocation failed:', error);
+          // Fall through to IP-based detection
+        }
+      }
+      
+      // 2. Try IP-based geolocation (works when traveling, more accurate than timezone)
+      try {
+        const ipCity = await getLocationFromIP();
+        if (ipCity) {
+          setFilters(prev => ({ ...prev, locations: [ipCity] }));
+          return;
+        }
+      } catch (error) {
+        console.warn('[NearMe] IP geolocation failed:', error);
+      }
+      
+      // 3. Final fallback: use timezone to guess location
+      console.log('[NearMe] Falling back to timezone detection');
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const locationData = timezoneToLocationMap[timezone];
+      
+      if (locationData) {
+        setFilters(prev => ({ ...prev, locations: [locationData.city] }));
+      } else {
+        // Extract city from timezone
+        const parts = timezone.split('/');
+        if (parts.length > 1) {
+          const city = parts[parts.length - 1].replace(/_/g, ' ');
+          setFilters(prev => ({ ...prev, locations: [city] }));
+        }
+      }
+    } finally {
+      setIsDetectingLocation(false);
+    }
+  }, []);
 
   // Flatten pages and enrich tracking info
   const pagedEvents = useMemo(() => {
@@ -401,6 +556,13 @@ export function useUnifiedServerFiltering(
   }, [infiniteData?.pages, trackedEventIds]);
 
   const filteredEvents = isPagedMode ? pagedEvents : infiniteEvents;
+  const counts = useMemo<FilterCounts | null>(() => {
+    if (isPagedMode) {
+      return pagedData?.data.counts ?? null;
+    }
+    const firstPage = (infiniteData?.pages ?? [])[0] as { success: true; data: FilteredEventsData } | undefined;
+    return firstPage?.data.counts ?? null;
+  }, [isPagedMode, pagedData?.data.counts, infiniteData?.pages]);
 
   const currentPagination = useMemo(() => {
     if (isPagedMode) {
@@ -465,6 +627,7 @@ export function useUnifiedServerFiltering(
     error: queryError,
     isColdStart: combinedIsColdStart,
     totalCount,
+    counts,
     pagination: currentPagination,
 
     // Filter state
@@ -477,6 +640,7 @@ export function useUnifiedServerFiltering(
     loadMore,
     refetch,
     applyQuickFilter,
+    applyNearMe,
 
     // UI state
     isFilterPanelOpen,
@@ -484,5 +648,6 @@ export function useUnifiedServerFiltering(
     rateLimitWaitMs: 0,
     hasNextPage: effectiveHasNextPage,
     isFetchingNextPage: effectiveIsFetchingNextPage,
+    isDetectingLocation,
   };
 }

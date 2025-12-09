@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Tag } from '@phosphor-icons/react';
 
 interface TagCloudProps {
     events: Array<{
@@ -19,11 +18,12 @@ interface TagCloudProps {
 }
 
 interface TagWithCount {
-    name: string;
+    value: string;
+    displayName: string;
     count: number;
-    color?: string;
-    category?: string;
 }
+
+const BLOCKED_TAGS = new Set(['online', 'en']);
 
 const TagCloud: React.FC<TagCloudProps> = ({
     events,
@@ -31,29 +31,61 @@ const TagCloud: React.FC<TagCloudProps> = ({
     maxTags = 20,
     className = ''
 }) => {
+    const formatTagName = (name: string): string => {
+        const trimmed = name.trim();
+        if (trimmed.length <= 3 && /^[A-Z0-9]+$/.test(trimmed)) {
+            return trimmed; // keep short acronyms like AI, ML
+        }
+        const normalized = trimmed.toLowerCase();
+        const words = normalized.split(/[\s_-]+/).filter(Boolean);
+        const titleCased = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        return titleCased || trimmed;
+    };
+
+    const isDisplayableTag = (tag: { name: string | undefined } | undefined) => {
+        if (!tag?.name) return false;
+        const normalized = tag.name.trim().toLowerCase();
+        if (!normalized) return false;
+        if (BLOCKED_TAGS.has(normalized)) return false;
+        const isJsonLike =
+            normalized.startsWith('{') ||
+            normalized.endsWith('}') ||
+            normalized.includes('"key"') ||
+            normalized.includes('"value"') ||
+            normalized.includes('":');
+        const hasKeyValueDelimiter = normalized.includes(':');
+        return !isJsonLike && !hasKeyValueDelimiter;
+    };
+
     // Calculate tag frequencies from current events
     const tagCounts = useMemo(() => {
         const counts = new Map<string, TagWithCount>();
 
         events.forEach(event => {
-            (event.tags || []).forEach(tag => {
-                const existing = counts.get(tag.name);
-                if (existing) {
-                    existing.count++;
-                } else {
-                    counts.set(tag.name, {
-                        name: tag.name,
-                        count: 1,
-                        color: tag.color,
-                        category: tag.category
-                    });
-                }
-            });
+            (event.tags || [])
+                .filter(isDisplayableTag)
+                .forEach(tag => {
+                    const normalizedName = tag.name.trim().toLowerCase();
+                    const displayName = formatTagName(tag.name);
+                    const existing = counts.get(normalizedName);
+                    if (existing) {
+                        existing.count++;
+                    } else {
+                        counts.set(normalizedName, {
+                            value: normalizedName,
+                            displayName,
+                            count: 1
+                        });
+                    }
+                });
         });
 
         // Sort by count (descending) and take top N
         return Array.from(counts.values())
-            .sort((a, b) => b.count - a.count)
+            .sort((a, b) => {
+                if (b.count !== a.count) return b.count - a.count;
+                return a.displayName.localeCompare(b.displayName);
+            })
             .slice(0, maxTags);
     }, [events, maxTags]);
 
@@ -61,74 +93,35 @@ const TagCloud: React.FC<TagCloudProps> = ({
         return null;
     }
 
-    // Get category color based on category name
-    const getCategoryColor = (category?: string): string => {
-        const categoryColors: Record<string, string> = {
-            'Programming': 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30',
-            'Framework': 'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30',
-            'Tech': 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30',
-            'Development': 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
-            'Methodology': 'bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30',
-            'Platform': 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-cyan-500/30',
-            'Business': 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30',
-            'Industry': 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30',
-            'Event-Type': 'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30',
-            'Difficulty': 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30',
-            'Soft-Skills': 'bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-500/30',
-            'Career-Stage': 'bg-teal-500/20 text-teal-700 dark:text-teal-300 border-teal-500/30',
-            'Community': 'bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-500/30',
-        };
-
-        return category && categoryColors[category]
-            ? categoryColors[category]
-            : 'bg-muted/60 text-foreground border-border/40';
-    };
-
-    // Calculate relative font size based on count
-    const getFontSize = (count: number, maxCount: number): string => {
-        const ratio = count / maxCount;
-        if (ratio >= 0.8) return 'text-sm font-semibold';
-        if (ratio >= 0.5) return 'text-sm font-medium';
-        return 'text-xs font-normal';
-    };
-
-    const maxCount = tagCounts[0]?.count || 1;
-
     return (
         <div className={`space-y-3 ${className}`}>
-            <div className="flex items-center gap-2 mb-3">
-                <Tag size={18} className="text-muted-foreground" />
-                <h3 className="text-sm font-semibold text-foreground">
-                    Popular Tags
-                </h3>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
+            <ul className="space-y-1.5">
                 {tagCounts.map(tag => (
-                    <button
-                        key={tag.name}
-                        onClick={() => onTagClick(tag.name)}
-                        className={`
-                            px-3 py-1.5 rounded-lg border
-                            transition-all duration-200
-                            hover:scale-105 hover:shadow-md
-                            active:scale-95
-                            ${getFontSize(tag.count, maxCount)}
-                            ${getCategoryColor(tag.category)}
-                        `}
-                        title={`${tag.name} (${tag.count} event${tag.count === 1 ? '' : 's'})`}
-                    >
-                        <span className="flex items-center gap-1.5">
-                            {tag.name}
-                            <span className="text-xs opacity-70 font-normal">
-                                {tag.count}
+                    <li key={tag.value}>
+                        <button
+                            onClick={() => onTagClick(tag.value)}
+                            className={`
+                                w-full px-1 py-1 flex items-center gap-3 text-left
+                                text-muted-foreground hover:text-foreground
+                                hover:bg-muted/30 rounded-md
+                                transition-colors duration-150
+                                focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+                            `}
+                            title={`${tag.displayName} (${tag.count} event${tag.count === 1 ? '' : 's'})`}
+                        >
+                            <span className="w-5 h-5 rounded-full border border-border flex-shrink-0" />
+                            <span className="text-sm font-medium">
+                                {tag.displayName}
                             </span>
-                        </span>
-                    </button>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                                ({tag.count})
+                            </span>
+                        </button>
+                    </li>
                 ))}
-            </div>
+            </ul>
 
-            <p className="text-xs text-muted-foreground mt-3">
+            <p className="text-xs text-muted-foreground">
                 Click a tag to filter events
             </p>
         </div>

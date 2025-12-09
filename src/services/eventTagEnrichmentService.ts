@@ -30,9 +30,10 @@ const BLACKLIST_TERMS = new Set([
   'introduction', 'welcome', 'closing', 'wrap-up', 'wrap up'
 ]);
 
-// Technical categories that should be included
+// Technical categories that should be included - expanded to include more relevant categories
 const TECHNICAL_CATEGORIES = new Set([
-  'Programming', 'Framework', 'Tech', 'Development', 'Methodology', 'Platform'
+  'Programming', 'Framework', 'Tech', 'Development', 'Methodology', 'Platform',
+  'Industry', 'Business', 'Soft-Skills', 'Career-Stage', 'Community', 'Agenda', 'general'
 ]);
 
 // Minimum term length
@@ -129,16 +130,39 @@ export class EventTagEnrichmentService {
       return [];
     }
     
+    // Filter out malformed tags (JSON-like, key/value, or missing names)
+    const isValidTagName = (name: string | null): name is string => {
+      if (!name) return false;
+      const trimmed = name.trim();
+      if (!trimmed) return false;
+      const lower = trimmed.toLowerCase();
+      const isJsonLike = trimmed.startsWith('{') || trimmed.endsWith('}') || lower.includes('\"key\"') || lower.includes('\"value\"') || lower.includes('\":');
+      const hasKeyValueDelimiter = trimmed.includes(':');
+      if (isJsonLike || hasKeyValueDelimiter) return false;
+
+      const blocked = new Set(['online', 'en']);
+      if (blocked.has(lower)) return false;
+
+      // Reuse the short-token rule from LLM enrichment: keep only known 2-char tech shorthands
+      if (trimmed.length === 2 && !['ai', 'ml', 'vr', 'ar', 'ui'].includes(lower)) {
+        return false;
+      }
+
+      return true;
+    };
+
     // Create lookup maps - store full tag info including event_tag name
     const tagMap = new Map<string, { id: string; event_tag: string; category: string }>();
-    allTags.forEach(tag => {
-      const normalized = tag.event_tag.toLowerCase();
-      tagMap.set(normalized, { 
-        id: tag.id, 
-        event_tag: tag.event_tag,
-        category: tag.category || 'general' 
+    allTags
+      .filter(tag => isValidTagName(tag.event_tag))
+      .forEach(tag => {
+        const normalized = tag.event_tag.trim().toLowerCase();
+        tagMap.set(normalized, { 
+          id: tag.id, 
+          event_tag: tag.event_tag,
+          category: tag.category || 'general' 
+        });
       });
-    });
     
     // Initialize similarity map from TagBasedMatchingService
     // We'll use a static method to get similarities if available
@@ -244,28 +268,68 @@ export class EventTagEnrichmentService {
    * We'll use the same RAW_TAG_SIMILARITIES data and initialize it the same way
    */
   private static getSimilarityMap(): Map<string, Set<string>> {
-    // Use the same similarity data as TagBasedMatchingService
+    // Extended similarity data for better tag matching
     const RAW_SIMILARITIES: Record<string, string[]> = {
-      'javascript': ['js', 'node.js', 'nodejs', 'typescript', 'ts'],
-      'python': ['django', 'flask', 'fastapi', 'pandas', 'numpy'],
-      'react': ['jsx', 'next.js', 'nextjs', 'frontend', 'javascript'],
-      'ai': ['artificial intelligence', 'machine learning', 'ml', 'deep learning'],
-      'machine learning': ['ai', 'artificial intelligence', 'data science', 'ml'],
-      'data science': ['machine learning', 'ai', 'analytics', 'data analysis'],
-      'workshop': ['training', 'bootcamp', 'masterclass', 'hands-on'],
-      'conference': ['summit', 'convention', 'symposium'],
-      'meetup': ['networking', 'social', 'community'],
-      'webinar': ['online', 'virtual', 'livestream'],
-      'beginner': ['intro', '101', 'fundamentals', 'basics'],
-      'intermediate': ['advanced', 'experienced', 'professional'],
-      'advanced': ['expert', 'senior', 'master', 'specialist'],
-      'fintech': ['financial technology', 'banking', 'payments'],
-      'healthcare': ['health tech', 'medical', 'biotech'],
-      'ecommerce': ['online retail', 'marketplace', 'shopping'],
-      'startup': ['entrepreneurship', 'founder', 'venture'],
-      'leadership': ['management', 'team lead', 'director'],
-      'communication': ['presentation', 'public speaking', 'writing'],
-      'project management': ['agile', 'scrum', 'planning']
+      // Programming Languages
+      'javascript': ['js', 'node.js', 'nodejs', 'typescript', 'ts', 'ecmascript'],
+      'python': ['django', 'flask', 'fastapi', 'pandas', 'numpy', 'py'],
+      'java': ['jvm', 'spring', 'kotlin', 'gradle', 'maven'],
+      'go': ['golang', 'goroutines'],
+      'rust': ['rustlang', 'cargo'],
+      'php': ['laravel', 'symfony', 'wordpress'],
+      'ruby': ['rails', 'ruby on rails', 'ror'],
+      'c++': ['cpp', 'c plus plus'],
+      'c#': ['csharp', 'dotnet', '.net', 'asp.net'],
+      
+      // Frontend
+      'react': ['jsx', 'next.js', 'nextjs', 'frontend', 'reactjs'],
+      'vue': ['vuejs', 'nuxt', 'vue.js'],
+      'angular': ['angularjs', 'ng'],
+      'svelte': ['sveltekit'],
+      
+      // Cloud & DevOps
+      'cloud computing': ['aws', 'azure', 'gcp', 'cloud native', 'cloud'],
+      'kubernetes': ['k8s', 'container orchestration', 'helm'],
+      'docker': ['containers', 'containerization'],
+      'devops': ['ci/cd', 'cicd', 'continuous integration', 'continuous delivery', 'devsecops'],
+      
+      // AI/ML
+      'ai': ['artificial intelligence', 'machine learning', 'ml', 'deep learning', 'generative ai', 'gen ai'],
+      'machine learning': ['ai', 'artificial intelligence', 'data science', 'ml', 'neural networks'],
+      'data science': ['machine learning', 'ai', 'analytics', 'data analysis', 'data engineering'],
+      'llm': ['large language model', 'gpt', 'chatgpt', 'claude', 'gemini', 'language model'],
+      
+      // Security
+      'security': ['cybersecurity', 'infosec', 'appsec', 'devsecops', 'cyber security'],
+      'blockchain': ['web3', 'crypto', 'ethereum', 'solidity', 'defi'],
+      
+      // Event Types
+      'workshop': ['training', 'bootcamp', 'masterclass', 'hands-on', 'lab'],
+      'conference': ['summit', 'convention', 'symposium', 'con', 'conf'],
+      'meetup': ['networking', 'social', 'community', 'user group'],
+      'webinar': ['online', 'virtual', 'livestream', 'live stream'],
+      'hackathon': ['hack', 'coding challenge', 'code jam'],
+      
+      // Skill Levels
+      'beginner': ['intro', '101', 'fundamentals', 'basics', 'getting started', 'introduction'],
+      'intermediate': ['mid-level', 'practical'],
+      'advanced': ['expert', 'senior', 'master', 'specialist', 'deep dive'],
+      
+      // Industries
+      'fintech': ['financial technology', 'banking', 'payments', 'finance tech'],
+      'healthcare': ['health tech', 'medical', 'biotech', 'healthtech'],
+      'ecommerce': ['online retail', 'marketplace', 'shopping', 'e-commerce'],
+      'startup': ['entrepreneurship', 'founder', 'venture', 'founder'],
+      
+      // Soft Skills & Career
+      'leadership': ['management', 'team lead', 'director', 'engineering manager'],
+      'communication': ['presentation', 'public speaking', 'writing', 'presenting'],
+      'project management': ['agile', 'scrum', 'planning', 'kanban', 'pm'],
+      
+      // Platforms
+      'linux': ['open source', 'oss', 'ubuntu', 'fedora', 'debian'],
+      'database': ['sql', 'nosql', 'postgresql', 'mysql', 'mongodb', 'redis'],
+      'api': ['rest', 'graphql', 'grpc', 'api design']
     };
     
     const similarityMap = new Map<string, Set<string>>();

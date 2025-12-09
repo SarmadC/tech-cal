@@ -128,11 +128,11 @@ export async function POST(
 
         const { id: queueId } = await context.params;
         const url = new URL(request.url);
-        const action = url.searchParams.get('action'); // approve, reject, approve-selective, delete-event, update-field
+        const action = url.searchParams.get('action'); // approve, reject, approve-selective, delete-event, update-field, reset
 
-        if (!action || !['approve', 'reject', 'approve-selective', 'delete-event', 'update-field'].includes(action)) {
+        if (!action || !['approve', 'reject', 'approve-selective', 'delete-event', 'update-field', 'reset'].includes(action)) {
             return NextResponse.json(
-                { error: 'Invalid action. Must be approve, reject, approve-selective, delete-event, or update-field' },
+                { error: 'Invalid action. Must be approve, reject, approve-selective, delete-event, update-field, or reset' },
                 { status: 400 }
             );
         }
@@ -344,6 +344,35 @@ export async function POST(
                 .eq('id', queueId);
 
             return NextResponse.json({ success: true, approvedFields: fieldNames });
+        } else if (action === 'reset') {
+            // Reset queue item and fields back to pending for re-review
+            const { error: resetFieldsError } = await tableClient
+                .from('event_update_queue_fields')
+                .update({
+                    field_status: 'pending',
+                    reviewed_by: null,
+                    reviewed_at: null,
+                })
+                .eq('queue_id', queueId);
+
+            if (resetFieldsError) {
+                throw new Error(`Failed to reset fields: ${resetFieldsError.message}`);
+            }
+
+            const { error: resetQueueError } = await tableClient
+                .from('event_update_queue')
+                .update({
+                    status: 'pending',
+                    reviewed_by: null,
+                    reviewed_at: null,
+                })
+                .eq('id', queueId);
+
+            if (resetQueueError) {
+                throw new Error(`Failed to reset queue item: ${resetQueueError.message}`);
+            }
+
+            return NextResponse.json({ success: true, status: 'pending' });
         } else if (action === 'approve') {
             // Approve all pending fields
             const { data: pendingFields, error: fieldsError } = await tableClient

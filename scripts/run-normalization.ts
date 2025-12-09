@@ -28,7 +28,27 @@ async function run() {
 
     const supabase = createServiceClient(supabaseUrl, supabaseServiceKey);
 
+    const fetchStatuses = ['processing', 'pending', 'normalized', 'updated', 'filtered', 'duplicate'] as const;
+
+    const getCounts = async () => {
+        const counts: Record<string, number> = {};
+        for (const status of fetchStatuses) {
+            const { count, error } = await supabase
+                .from('source_events')
+                .select('id', { count: 'exact', head: true })
+                .eq('fetch_status', status);
+            if (error) {
+                counts[status] = -1;
+            } else {
+                counts[status] = count ?? 0;
+            }
+        }
+        return counts;
+    };
+
+    const before = await getCounts();
     console.log(`🔄 Running normalization-only (limit=${limit})...`);
+    console.log('   Status counts before:', before);
     try {
         const result = await NormalizationProcessor.processPendingEvents(supabase, limit);
         console.log('📊 Normalization Results:');
@@ -41,6 +61,8 @@ async function run() {
                 console.log(`     ${idx + 1}. ${err.sourceEventId}: ${err.error}`)
             );
         }
+        const after = await getCounts();
+        console.log('   Status counts after:', after);
         console.log('✅ Done.');
     } catch (err) {
         console.error('❌ Normalization run failed:', err);

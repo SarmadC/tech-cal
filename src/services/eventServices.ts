@@ -26,11 +26,13 @@ import { applyLocationFilter } from '@/utils/locationFilterUtils';
 import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { CareerProfile } from '@/types/career';
 import { enrichEventsWithCareerImpact as enrichEventsWithNewScoring } from './careerImpactEnrichmentService';
+import { UserLocation } from './locationScoringService';
 import { LookalikeUserService } from './lookalikeUserService';
 import { DiversityEnhancementService } from './diversityEnhancementService';
 import { DIVERSITY_CONFIG } from '@/utils/diversityUtils';
 import * as Sentry from "@sentry/nextjs";
 import { logTelemetryEvent } from '@/utils/supabase/telemetry';
+import { FilterCounts, normalizeEventFormat } from '@/utils/filterCountUtils';
 
 export class EventService {
     /**
@@ -68,6 +70,84 @@ export class EventService {
             console.error('Error counting events:', error);
             return 0;
         }
+    }
+
+    /**
+     * Compute aggregate counts for formats, cost, and categories
+     * using the full filtered dataset (no pagination).
+     */
+    static async getFilterCounts(
+        filters: EventFilters = {},
+        supabaseClient: SupabaseClientType
+    ): Promise<FilterCounts> {
+        const counts: FilterCounts = {
+            format: {
+                virtual: 0,
+                'in-person': 0,
+                hybrid: 0
+            },
+            cost: {
+                free: 0,
+                paid: 0
+            },
+            categories: {}
+        };
+
+        try {
+            let query = supabaseClient
+                .from('events')
+                .select('event_format, price_min, event_type_id');
+
+            if (filters.categories?.length) {
+                query = query.in('event_type_id', filters.categories);
+            }
+            query = applyLocationFilter(query, filters.locations);
+            if (filters.startDate) {
+                query = query.gte('start_time', filters.startDate.toISOString());
+            }
+            if (filters.endDate) {
+                query = query.lte('start_time', filters.endDate.toISOString());
+            }
+            if (filters.searchTerm?.trim()) {
+                query = query.textSearch('fts', filters.searchTerm.trim(), {
+                    type: 'websearch',
+                    config: 'english'
+                });
+            }
+            if (filters.status?.length) {
+                query = query.in('status', filters.status);
+            }
+            if (filters.eventIds?.length) {
+                query = query.in('id', filters.eventIds);
+            }
+
+            query = this.applyEnhancedFilters(query, filters);
+
+            // Limit to a generous cap to avoid pulling unbounded data
+            const { data, error } = await query.limit(10000);
+            if (error) {
+                throw error;
+            }
+
+            (data || []).forEach((row: Record<string, unknown>) => {
+                const formatKey = normalizeEventFormat(row.event_format as string | null);
+                counts.format[formatKey] += 1;
+
+                const priceMin = row.price_min as number | null | undefined;
+                const isFree = priceMin === null || priceMin === undefined || priceMin === 0;
+                counts.cost[isFree ? 'free' : 'paid'] += 1;
+
+                const categoryId = row.event_type_id as string | null | undefined;
+                if (categoryId) {
+                    counts.categories[categoryId] = (counts.categories[categoryId] || 0) + 1;
+                }
+            });
+        } catch (error) {
+            console.error('Error computing filter counts:', error);
+            throw error instanceof Error ? error : new Error('Failed to compute filter counts');
+        }
+
+        return counts;
     }
     // Helper function to fetch and attach event types to events
     private static async attachEventTypesToEvents(
@@ -1896,7 +1976,8 @@ export class EventService {
         careerProfile: CareerProfile | null,
         supabaseClient: SupabaseClientType,
         userId?: string,
-        applyDiversityEnhancement: boolean = true
+        applyDiversityEnhancement: boolean = true,
+        userLocation?: UserLocation | null
     ): Promise<Event[]> {
         if (!careerProfile || events.length === 0) {
             return events;
@@ -1908,7 +1989,8 @@ export class EventService {
                 events,
                 careerProfile,
                 supabaseClient,
-                userId
+                userId,
+                userLocation
             );
 
             // Apply diversity enhancement if requested and we have enough events

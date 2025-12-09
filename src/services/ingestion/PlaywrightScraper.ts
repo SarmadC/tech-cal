@@ -34,11 +34,12 @@ export class PlaywrightScraper {
 
     async scrapeUrl(url: string, options: ScrapeOptions = {}): Promise<ScrapeResult> {
         const release = await this.acquireSlot();
-        const timeoutMs = options.timeoutMs ?? 15000;
-        const waitUntil = options.waitUntil ?? 'networkidle';
+        const timeoutMs = options.timeoutMs ?? 30000; // Increased from 15s to 30s
+        const waitUntil = options.waitUntil ?? 'domcontentloaded'; // Changed from networkidle - more reliable
         const blockResources = options.blockResources ?? ['image', 'font', 'media'];
-        const postNavigationDelayMs = options.postNavigationDelayMs ?? 500;
+        const postNavigationDelayMs = options.postNavigationDelayMs ?? 1000; // Increased for dynamic content
         const userAgent = options.userAgent ?? this.pickUserAgent();
+        const useFetchFallback = options.useFetchFallback ?? true; // Enable fallback by default
 
         let browser: Browser | null = null;
         let context: BrowserContext | null = null;
@@ -74,9 +75,10 @@ export class PlaywrightScraper {
                 usedPlaywright: true,
             };
         } catch (error) {
-            if (!options.useFetchFallback) {
+            if (!useFetchFallback) {
                 throw error;
             }
+            console.warn(`Playwright scrape failed for ${url}, falling back to fetch:`, error instanceof Error ? error.message : 'Unknown error');
             const fallback = await this.fetchFallback(url, options.fetchTimeoutMs ?? timeoutMs, userAgent);
             return { ...fallback, usedPlaywright: false };
         } finally {

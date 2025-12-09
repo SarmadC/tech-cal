@@ -39,7 +39,7 @@ const securityHeaders = [
         style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
         img-src 'self' data: blob: https: https://cdn.jsdelivr.net https://mddgtexrnnlctttbcpsy.supabase.co https://upload.wikimedia.org https://logo.clearbit.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com;
         font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
-        connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co;
+        connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.bigdatacloud.net;
         frame-ancestors 'none';
         base-uri 'self';
         form-action 'self';

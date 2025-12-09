@@ -22,6 +22,8 @@ import * as Sentry from '@sentry/nextjs';
 import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 import { isDescriptionThin } from '@/utils/ingestion/DescriptionHeuristics';
 
+const PER_EVENT_TIMEOUT_MS = 90_000; // 90s safety guard per event
+
 export interface NormalizationResult {
     processed: number;
     succeeded: number;
@@ -129,6 +131,24 @@ const mapToClaimedEvents = (
         created_at: event.created_at,
         updated_at: (event as { updated_at?: string }).updated_at ?? event.created_at,
     }));
+
+/**
+ * Wrap a promise with a timeout to avoid long-running per-event work.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Timeout: per-event limit exceeded')), ms);
+        promise
+            .then((val) => {
+                clearTimeout(timer);
+                resolve(val);
+            })
+            .catch((err) => {
+                clearTimeout(timer);
+                reject(err);
+            });
+    });
+}
 
 type FilterAnalyticsInsert = {
     source_event_id: string;
@@ -307,237 +327,275 @@ export class NormalizationProcessor {
         try {
             const errors: Array<{ sourceEventId: string; error: string }> = [];
             let succeeded = 0;
+            let updatedCount = 0;
+            let filteredCount = 0;
+            let duplicateCount = 0;
 
-            // Process each source event
+            // Process each source event with a per-event timeout
+            let processedCount = 0;
+            const logEvery = 25;
+
             for (const sourceEvent of sourceEvents) {
                 try {
-                    // Extract record from raw_payload
-                    const rawPayload = sourceEvent.raw_payload as unknown as {
-                        record: EventSourceRecord;
-                        provenance?: unknown;
-                        rawItem?: unknown;
-                    };
+                    await withTimeout(
+                        (async () => {
+                            // Extract record from raw_payload
+                            const rawPayload = sourceEvent.raw_payload as unknown as {
+                                record: EventSourceRecord;
+                                provenance?: unknown;
+                                rawItem?: unknown;
+                            };
 
-                    if (!rawPayload?.record) {
-                        throw new Error('Invalid raw_payload structure');
-                    }
-
-                    const record = rawPayload.record as EventSourceRecord;
-
-                    applyUrlCanonicalization(record);
-
-                    if (record.description) {
-                        const sanitizedDescription = cleanEventDescription(record.description);
-                        if (sanitizedDescription !== undefined) {
-                            record.description = sanitizedDescription;
-                        } else {
-                            record.description = record.description.trim();
-                        }
-                    }
-
-                    // Secondary filter check (for sophisticated rules that may require source metadata)
-                    // Collector already does basic filtering, but this allows more complex rules
-                    const source = await IngestionSourceService.getSourceById(
-                        sourceEvent.source_id,
-                        supabaseClient
-                    );
-                    const filterResult = EventFilterService.shouldFilterEvent(
-                        record,
-                        source?.metadata as unknown as Record<string, unknown> | undefined
-                    );
-                    if (filterResult.filtered) {
-                        // Mark as filtered with reason for audit trail
-                        await supabaseClient
-                            .from('source_events')
-                            .update({
-                                fetch_status: 'filtered',
-                                error_message: `Filtered: ${filterResult.reason || 'Unknown reason'}`,
-                            })
-                            .eq('id', sourceEvent.id);
-
-                        // Log to analytics table for pattern detection
-                        try {
-                            await insertFilterAnalytics(supabaseClient, {
-                                source_event_id: sourceEvent.id,
-                                source_id: sourceEvent.source_id,
-                                filter_reason: filterResult.reason || 'Unknown reason',
-                                matched_pattern: filterResult.matchedPattern || null,
-                                filter_category: filterResult.category || null,
-                            });
-                        } catch (analyticsError) {
-                            console.warn('Failed to log filtered event to analytics:', analyticsError);
-                        }
-
-                        continue;
-                    }
-
-                    if (isDescriptionThin(record.description, record.title) && record.sourceUrl) {
-                        // TODO: Implement alternative description enrichment or remove this block
-                    }
-
-                    // Check for duplicates before normalizing
-                    const duplicateCheck = await EventDeduplicationService.checkDuplicate(
-                        record,
-                        sourceEvent.id,
-                        supabaseClient
-                    );
-
-                    if (duplicateCheck.isDuplicate && duplicateCheck.existingEventId) {
-                        // Get existing event data (including relationships)
-                        const existingEvent = await EventUpdateService.fetchEventWithRelationships(
-                            duplicateCheck.existingEventId,
-                            supabaseClient
-                        );
-
-                        if (!existingEvent) {
-                            // Event not found, treat as new
-                            console.warn(
-                                `[NormalizationProcessor] Duplicate event ${duplicateCheck.existingEventId} not found, treating as new event`
-                            );
-                            // Continue with normalization
-                        } else {
-                            // Compare fields and determine update strategy (includes relationship fields)
-                            const fieldDiffs = await EventUpdateService.compareEventFields(
-                                record,
-                                existingEvent
-                            );
-
-                            // If no changes detected, mark as duplicate and skip
-                            if (fieldDiffs.filter(d => d.hasChanged).length === 0) {
-                                await EventDeduplicationService.markAsDuplicate(
-                                    sourceEvent.id,
-                                    duplicateCheck.existingEventId,
-                                    supabaseClient
-                                );
-                                continue;
+                            if (!rawPayload?.record) {
+                                throw new Error('Invalid raw_payload structure');
                             }
 
-                            const protectionStatus = await EventUpdateService.partitionFieldsByProtection(
-                                fieldDiffs,
-                                duplicateCheck.existingEventId,
-                                supabaseClient
-                            );
+                            const record = rawPayload.record as EventSourceRecord;
 
-                            // Apply auto-updates immediately
-                            if (protectionStatus.autoUpdate.length > 0) {
-                                const autoUpdateResult = await EventUpdateService.applyAutoUpdates(
-                                    duplicateCheck.existingEventId,
-                                    protectionStatus.autoUpdate,
-                                    supabaseClient
-                                );
+                            applyUrlCanonicalization(record);
 
-                                if (autoUpdateResult.success) {
-                                    // Log auto-update (even if review queue is also created)
-                                    await EventUpdateService.logAutoUpdate(
-                                        duplicateCheck.existingEventId,
-                                        sourceEvent.id,
-                                        protectionStatus.autoUpdate.map(f => f.fieldName),
-                                        supabaseClient
-                                    );
+                            if (record.description) {
+                                const sanitizedDescription = cleanEventDescription(record.description);
+                                if (sanitizedDescription !== undefined) {
+                                    record.description = sanitizedDescription;
+                                } else {
+                                    record.description = record.description.trim();
                                 }
                             }
 
-                            // Queue fields requiring review (or create queue for tracking if all auto-applied)
-                            if (protectionStatus.reviewRequired.length > 0 || protectionStatus.protected.length > 0) {
-                                await EventUpdateService.queueForReview(
-                                    duplicateCheck.existingEventId,
-                                    sourceEvent.id,
-                                    [...protectionStatus.reviewRequired, ...protectionStatus.protected],
-                                    supabaseClient
-                                );
-                            } else if (protectionStatus.autoUpdate.length > 0) {
-                                // All fields auto-applied, no review needed - already logged above
-                            }
-
-                            // Mark source_event as 'updated'
-                            await supabaseClient
-                                .from('source_events')
-                                .update({
-                                    fetch_status: 'updated',
-                                    normalized_event_id: duplicateCheck.existingEventId,
-                                })
-                                .eq('id', sourceEvent.id);
-
-                            continue;
-                        }
-                    }
-
-                    // Find or create organizer
-                    const organizerId = await OrganizerEnrichmentService.findOrCreateOrganizer(
-                        {
-                            name: record.organizer || 'Unknown',
-                            domain: record.organizerDomain,
-                            websiteUrl: record.sourceUrl,
-                        },
-                        supabaseClient
-                    );
-
-                    // Calculate quality score before normalizing
-                    const qualityScore = await QualityScoringService.calculateQualityScore(
-                        record,
-                        record.provenance.source_id,
-                        supabaseClient
-                    );
-
-                    // Sanity check: warn if sourceUrl matches feed URL (indicates fallback was used)
-                    if (source && record.sourceUrl === source.source_url) {
-                        console.warn(
-                            `[NormalizationProcessor] Event "${record.title}" sourceUrl matches feed URL. ` +
-                            `This may indicate the collector fell back to feed URL. Feed: ${source.source_url}`
-                        );
-                    }
-
-                    // Normalize event
-                    const result = await EventNormalizer.normalizeEvent(
-                        {
-                            sourceEventId: sourceEvent.id,
-                            record,
-                            organizerId,
-                            eventTypeId: null, // TODO: Infer from tags/categories
-                        },
-                        supabaseClient
-                    );
-
-                    if (result.success) {
-                        // Store quality score in event
-                        await QualityScoringService.storeQualityScore(
-                            result.eventId,
-                            qualityScore,
-                            supabaseClient
-                        );
-
-                        // Queue for moderation if required
-                        if (qualityScore.requiresModeration || !qualityScore.shouldAutoPublish) {
-                            await QualityScoringService.queueForModeration(
-                                sourceEvent.id,
-                                result.eventId,
-                                qualityScore,
+                            // Secondary filter check (for sophisticated rules that may require source metadata)
+                            // Collector already does basic filtering, but this allows more complex rules
+                            const source = await IngestionSourceService.getSourceById(
+                                sourceEvent.source_id,
                                 supabaseClient
                             );
-                        }
+                            const filterResult = EventFilterService.shouldFilterEvent(
+                                record,
+                                source?.metadata as unknown as Record<string, unknown> | undefined
+                            );
+                            if (filterResult.filtered) {
+                                // Mark as filtered with reason for audit trail
+                                await supabaseClient
+                                    .from('source_events')
+                                    .update({
+                                        fetch_status: 'filtered',
+                                        error_message: `Filtered: ${filterResult.reason || 'Unknown reason'}`,
+                                    })
+                                    .eq('id', sourceEvent.id);
 
-                        succeeded++;
-                    } else {
-                        const errorMessage = result.error || 'Unknown error';
-                        errors.push({
-                            sourceEventId: sourceEvent.id,
-                            error: errorMessage,
-                        });
+                                // Log to analytics table for pattern detection
+                                try {
+                                    await insertFilterAnalytics(supabaseClient, {
+                                        source_event_id: sourceEvent.id,
+                                        source_id: sourceEvent.source_id,
+                                        filter_reason: filterResult.reason || 'Unknown reason',
+                                        matched_pattern: filterResult.matchedPattern || null,
+                                        filter_category: filterResult.category || null,
+                                    });
+                                } catch (analyticsError) {
+                                    console.warn('Failed to log filtered event to analytics:', analyticsError);
+                                }
 
-                        // Check existing retry metadata to determine retry count
-                        const existingMetadata = decodeRetryMetadata(sourceEvent.error_message);
-                        const retryCount = existingMetadata ? existingMetadata.retry_count : 0;
-                        const retryErrorMessage = encodeRetryMetadata(errorMessage, retryCount);
+                                filteredCount++;
+                                processedCount++;
+                                if (processedCount % logEvery === 0) {
+                                    console.log(
+                                        `[NormalizationProcessor] Processed ${processedCount}/${sourceEvents.length} in current batch`
+                                    );
+                                }
+                                return;
+                            }
 
-                        // Mark as error status with retry metadata
-                        await supabaseClient
-                            .from('source_events')
-                            .update({ 
-                                fetch_status: 'error', 
-                                error_message: retryErrorMessage 
-                            })
-                            .eq('id', sourceEvent.id);
-                    }
+                            if (isDescriptionThin(record.description, record.title) && record.sourceUrl) {
+                                // TODO: Implement alternative description enrichment or remove this block
+                            }
+
+                            // Check for duplicates before normalizing
+                            const duplicateCheck = await EventDeduplicationService.checkDuplicate(
+                                record,
+                                sourceEvent.id,
+                                supabaseClient
+                            );
+
+                            if (duplicateCheck.isDuplicate && duplicateCheck.existingEventId) {
+                                // Get existing event data (including relationships)
+                                const existingEvent = await EventUpdateService.fetchEventWithRelationships(
+                                    duplicateCheck.existingEventId,
+                                    supabaseClient
+                                );
+
+                                if (!existingEvent) {
+                                    // Event not found, treat as new
+                                    console.warn(
+                                        `[NormalizationProcessor] Duplicate event ${duplicateCheck.existingEventId} not found, treating as new event`
+                                    );
+                                    // Continue with normalization
+                                } else {
+                                    // Compare fields and determine update strategy (includes relationship fields)
+                                    const fieldDiffs = await EventUpdateService.compareEventFields(
+                                        record,
+                                        existingEvent
+                                    );
+
+                                    // If no changes detected, mark as duplicate and skip
+                                    if (fieldDiffs.filter(d => d.hasChanged).length === 0) {
+                                        await EventDeduplicationService.markAsDuplicate(
+                                            sourceEvent.id,
+                                            duplicateCheck.existingEventId,
+                                            supabaseClient
+                                        );
+                                        duplicateCount++;
+                                        processedCount++;
+                                        if (processedCount % logEvery === 0) {
+                                            console.log(
+                                                `[NormalizationProcessor] Processed ${processedCount}/${sourceEvents.length} in current batch`
+                                            );
+                                        }
+                                        return;
+                                    }
+
+                                    const protectionStatus = await EventUpdateService.partitionFieldsByProtection(
+                                        fieldDiffs,
+                                        duplicateCheck.existingEventId,
+                                        supabaseClient
+                                    );
+
+                                    // Apply auto-updates immediately
+                                    if (protectionStatus.autoUpdate.length > 0) {
+                                        const autoUpdateResult = await EventUpdateService.applyAutoUpdates(
+                                            duplicateCheck.existingEventId,
+                                            protectionStatus.autoUpdate,
+                                            supabaseClient
+                                        );
+
+                                        if (autoUpdateResult.success) {
+                                            // Log auto-update (even if review queue is also created)
+                                            await EventUpdateService.logAutoUpdate(
+                                                duplicateCheck.existingEventId,
+                                                sourceEvent.id,
+                                                protectionStatus.autoUpdate.map(f => f.fieldName),
+                                                supabaseClient
+                                            );
+                                        }
+                                    }
+
+                                    // Queue fields requiring review (or create queue for tracking if all auto-applied)
+                                    if (protectionStatus.reviewRequired.length > 0 || protectionStatus.protected.length > 0) {
+                                        await EventUpdateService.queueForReview(
+                                            duplicateCheck.existingEventId,
+                                            sourceEvent.id,
+                                            [...protectionStatus.reviewRequired, ...protectionStatus.protected],
+                                            supabaseClient
+                                        );
+                                    } else if (protectionStatus.autoUpdate.length > 0) {
+                                        // All fields auto-applied, no review needed - already logged above
+                                    }
+
+                                    // Mark source_event as 'updated'
+                                    await supabaseClient
+                                        .from('source_events')
+                                        .update({
+                                            fetch_status: 'updated',
+                                            normalized_event_id: duplicateCheck.existingEventId,
+                                        })
+                                        .eq('id', sourceEvent.id);
+
+                                    updatedCount++;
+                                    processedCount++;
+                                    if (processedCount % logEvery === 0) {
+                                        console.log(
+                                            `[NormalizationProcessor] Processed ${processedCount}/${sourceEvents.length} in current batch`
+                                        );
+                                    }
+                                    return;
+                                }
+                            }
+
+                            // Find or create organizer
+                            const organizerId = await OrganizerEnrichmentService.findOrCreateOrganizer(
+                                {
+                                    name: record.organizer || 'Unknown',
+                                    domain: record.organizerDomain,
+                                    websiteUrl: record.sourceUrl,
+                                },
+                                supabaseClient
+                            );
+
+                            // Calculate quality score before normalizing
+                            const qualityScore = await QualityScoringService.calculateQualityScore(
+                                record,
+                                record.provenance.source_id,
+                                supabaseClient
+                            );
+
+                            // Sanity check: warn if sourceUrl matches feed URL (indicates fallback was used)
+                            if (source && record.sourceUrl === source.source_url) {
+                                console.warn(
+                                    `[NormalizationProcessor] Event "${record.title}" sourceUrl matches feed URL. ` +
+                                    `This may indicate the collector fell back to feed URL. Feed: ${source.source_url}`
+                                );
+                            }
+
+                            // Normalize event
+                            const result = await EventNormalizer.normalizeEvent(
+                                {
+                                    sourceEventId: sourceEvent.id,
+                                    record,
+                                    organizerId,
+                                    eventTypeId: null, // TODO: Infer from tags/categories
+                                },
+                                supabaseClient
+                            );
+
+                            if (result.success) {
+                                // Store quality score in event
+                                await QualityScoringService.storeQualityScore(
+                                    result.eventId,
+                                    qualityScore,
+                                    supabaseClient
+                                );
+
+                                // Queue for moderation if required
+                                if (qualityScore.requiresModeration || !qualityScore.shouldAutoPublish) {
+                                    await QualityScoringService.queueForModeration(
+                                        sourceEvent.id,
+                                        result.eventId,
+                                        qualityScore,
+                                        supabaseClient
+                                    );
+                                }
+
+                                succeeded++;
+                                processedCount++;
+                                if (processedCount % logEvery === 0) {
+                                    console.log(
+                                        `[NormalizationProcessor] Processed ${processedCount}/${sourceEvents.length} in current batch`
+                                    );
+                                }
+                            } else {
+                                const errorMessage = result.error || 'Unknown error';
+                                errors.push({
+                                    sourceEventId: sourceEvent.id,
+                                    error: errorMessage,
+                                });
+
+                                // Check existing retry metadata to determine retry count
+                                const existingMetadata = decodeRetryMetadata(sourceEvent.error_message);
+                                const retryCount = existingMetadata ? existingMetadata.retry_count : 0;
+                                const retryErrorMessage = encodeRetryMetadata(errorMessage, retryCount);
+
+                                // Mark as error status with retry metadata
+                                await supabaseClient
+                                    .from('source_events')
+                                    .update({ 
+                                        fetch_status: 'error', 
+                                        error_message: retryErrorMessage 
+                                    })
+                                    .eq('id', sourceEvent.id);
+                            }
+                        })(),
+                        PER_EVENT_TIMEOUT_MS
+                    );
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     errors.push({
@@ -571,6 +629,10 @@ export class NormalizationProcessor {
                     });
                 }
             }
+
+            console.log(
+                `[NormalizationProcessor] Batch outcome: processed=${sourceEvents.length}, normalized=${succeeded}, updated=${updatedCount}, duplicates=${duplicateCount}, filtered=${filteredCount}, failed=${errors.length}`
+            );
 
             return {
                 processed: sourceEvents.length,

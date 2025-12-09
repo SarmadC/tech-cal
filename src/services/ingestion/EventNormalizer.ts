@@ -14,6 +14,41 @@ import { env } from '@/utils/env';
 import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
 import { EventRepository } from './repositories/EventRepository';
 import { EventTagEnrichmentService } from '@/services/eventTagEnrichmentService';
+import { TagNormalizationService } from '@/services/tagNormalizationService';
+
+/**
+ * Event type keyword mappings for auto-classification
+ * Order matters - first match wins, so more specific types come first
+ */
+const EVENT_TYPE_KEYWORDS: Record<string, string[]> = {
+  'Hackathon': [
+    'hackathon', 'hack', 'coding challenge', 'code jam', 'buildathon',
+    'codeathon', 'datathon', 'ideathon'
+  ],
+  'Training': [
+    'training', 'workshop', 'bootcamp', 'course', 'tutorial', 'masterclass',
+    'hands-on', 'lab', 'certification', 'learn to', 'upskill'
+  ],
+  'Summit': [
+    'summit', 'forum', 'symposium', 'congress', 'world', 'global'
+  ],
+  'Trade Show': [
+    'trade show', 'expo', 'exhibition', 'showcase', 'fair'
+  ],
+  'Networking': [
+    'networking', 'meetup', 'mixer', 'happy hour', 'social', 'community',
+    'user group', 'drinks', 'breakfast', 'lunch and learn'
+  ],
+  'Product': [
+    'product launch', 'release', 'announcement', 'unveil', 'demo day'
+  ],
+  'Conference': [
+    'conference', 'conf', 'convention', 'tech week', 'days', 'annual', 'keynote'
+  ]
+};
+
+// Cache for event type IDs
+let eventTypeCache: Map<string, string> | null = null;
 
 export interface NormalizedEventInput {
     sourceEventId: string;
@@ -65,6 +100,21 @@ export class EventNormalizer {
             const normalizedSourceUrl = record.normalizedSourceUrl ?? record.sourceUrl;
             const normalizedRegistrationUrl = record.normalizedRegistrationUrl ?? record.registrationUrl ?? null;
 
+            // Auto-classify event type if not provided
+            let resolvedEventTypeId = eventTypeId ?? null;
+            if (!resolvedEventTypeId) {
+                try {
+                    resolvedEventTypeId = await this.classifyEventType(
+                        record.title,
+                        normalizedDescription,
+                        supabaseClient
+                    );
+                } catch (classifyError) {
+                    // Don't fail normalization if classification fails
+                    console.warn('[EventNormalizer] Event type classification failed (non-critical):', classifyError);
+                }
+            }
+
             const eventData: EventInsert = {
                 title: record.title,
                 description: normalizedDescription,
@@ -77,7 +127,7 @@ export class EventNormalizer {
                 registration_url: normalizedRegistrationUrl,
                 livestream_url: record.livestreamUrl ?? null,
                 event_image_url: record.eventImageUrl ?? null,
-                event_type_id: eventTypeId ?? null,
+                event_type_id: resolvedEventTypeId,
                 difficulty_level: difficultyLevel ?? null,
                 event_format: eventFormat ?? null,
                 status: 'confirmed',
@@ -265,6 +315,54 @@ export class EventNormalizer {
     }
 
     /**
+     * Auto-classify event type based on title and description content
+     * Returns the event_type_id if a match is found, null otherwise
+     */
+    static async classifyEventType(
+        title: string,
+        description: string | null,
+        supabaseClient: SupabaseClientType
+    ): Promise<string | null> {
+        // Lazy load event type cache
+        if (!eventTypeCache) {
+            const { data: eventTypes, error } = await supabaseClient
+                .from('event_type')
+                .select('id, name');
+            
+            if (error || !eventTypes) {
+                console.warn('[EventNormalizer] Failed to fetch event types for classification:', error);
+                return null;
+            }
+            
+            eventTypeCache = new Map();
+            eventTypes.forEach(et => {
+                if (et.name) {
+                    eventTypeCache!.set(et.name, et.id);
+                }
+            });
+        }
+        
+        const text = `${title} ${description || ''}`.toLowerCase();
+        
+        // Check keywords in order of specificity
+        for (const [typeName, keywords] of Object.entries(EVENT_TYPE_KEYWORDS)) {
+            for (const keyword of keywords) {
+                // Word boundary match
+                const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                if (regex.test(text)) {
+                    const typeId = eventTypeCache.get(typeName);
+                    if (typeId) {
+                        return typeId;
+                    }
+                }
+            }
+        }
+        
+        // Default to Conference if no specific match (most common type for tech events)
+        return eventTypeCache.get('Conference') || null;
+    }
+
+    /**
      * Ensure end time is after start time; if not, bump end by 1 hour to satisfy DB constraints.
      * Avoids P0001 errors ("End time must be after start time") during normalization.
      */
@@ -340,54 +438,70 @@ export class EventNormalizer {
         supabaseClient: SupabaseClientType
     ): Promise<void> {
         try {
-            const normalizedTags = this.sanitizeTags(tags);
+            const sanitizedTags = this.sanitizeTags(tags);
+            if (sanitizedTags.length === 0) {
+                return;
+            }
+
+            // Normalize tags using TagNormalizationService (handles synonyms, case, etc.)
+            const { normalized: normalizedTags, excluded } = TagNormalizationService.normalizeTags(sanitizedTags);
+            
+            if (excluded.length > 0) {
+                console.log('[EventNormalizer] Filtered out tags:', excluded.map(e => `${e.tag} (${e.reason})`).join(', '));
+            }
+            
             if (normalizedTags.length === 0) {
                 return;
             }
 
-            // First, ensure all tags exist in event_tags table
-            const tagIds: string[] = [];
+            // Fetch allowlisted tags once and map by normalized name
+            const { data: allTags, error: fetchError } = await supabaseClient
+                .from('event_tags')
+                .select('id, event_tag');
 
-            for (const tagName of normalizedTags) {
-                if (!tagName || tagName.trim().length === 0) continue;
+            if (fetchError || !allTags) {
+                console.warn('Failed to fetch allowlisted tags:', fetchError);
+                return;
+            }
 
-                // Check if tag exists
-                const { data: existingTag } = await supabaseClient
-                    .from('event_tags')
-                    .select('id')
-                    .eq('event_tag', tagName.trim())
-                    .single();
+            // Build lookup maps - both exact match and lowercase
+            const tagLookupExact = new Map<string, string>();
+            const tagLookupLower = new Map<string, string>();
+            allTags.forEach(tag => {
+                if (!tag.event_tag) return;
+                const trimmed = tag.event_tag.trim();
+                if (trimmed.length === 0) return;
+                tagLookupExact.set(trimmed, tag.id);
+                tagLookupLower.set(trimmed.toLowerCase(), tag.id);
+            });
 
-                let tagId: string;
+            const uniqueTagIds = new Set<string>();
+            const droppedTags: string[] = [];
 
-                if (existingTag) {
-                    tagId = existingTag.id;
-                } else {
-                    // Create new tag
-                    const { data: newTag, error: createError } = await supabaseClient
-                        .from('event_tags')
-                        .insert({
-                            event_tag: tagName.trim(),
-                            category: 'general',
-                            color: null,
-                        })
-                        .select('id')
-                        .single();
-
-                    if (createError || !newTag) {
-                        console.warn('Failed to create tag', tagName + ':', createError);
-                        continue;
-                    }
-
-                    tagId = newTag.id;
+            normalizedTags.forEach(tagName => {
+                // Try exact match first, then lowercase
+                let tagId = tagLookupExact.get(tagName);
+                if (!tagId) {
+                    tagId = tagLookupLower.get(tagName.toLowerCase());
                 }
+                
+                if (tagId) {
+                    uniqueTagIds.add(tagId);
+                } else {
+                    droppedTags.push(tagName);
+                }
+            });
 
-                tagIds.push(tagId);
+            if (droppedTags.length > 0) {
+                console.warn('[EventNormalizer] Dropping unknown/non-allowlisted tags for event', {
+                    eventId,
+                    droppedTags,
+                });
             }
 
             // Link tags to event
-            if (tagIds.length > 0) {
-                const relations = tagIds.map(tagId => ({
+            if (uniqueTagIds.size > 0) {
+                const relations = Array.from(uniqueTagIds).map(tagId => ({
                     event_id: eventId,
                     tag_id: tagId,
                 }));
@@ -426,17 +540,26 @@ export class EventNormalizer {
                 if ('name' in (value as Record<string, unknown>) && typeof (value as Record<string, unknown>).name === 'string') {
                     return [String((value as Record<string, unknown>).name)];
                 }
-                try {
-                    return [JSON.stringify(value)];
-                } catch {
-                    return [];
-                }
+                return [];
             }
             return [];
         };
 
         const candidates = flatten(rawTags);
-        const trimmed = candidates.map(t => t.trim()).filter(t => t.length > 0);
+        const blockedTags = new Set(['online', 'en']);
+
+        const trimmed = candidates
+            .map(t => t.trim())
+            .filter(t => t.length > 0)
+            // Drop JSON-like or key/value formatted tags to avoid polluting allowlist
+            .filter(t => {
+                const lower = t.toLowerCase();
+                const isJsonLike = t.startsWith('{') || t.endsWith('}') || lower.includes('"key"') || lower.includes('"value"') || lower.includes('":');
+                const hasKeyValueDelimiter = t.includes(':');
+                const isBlocked = blockedTags.has(lower);
+                return !isJsonLike && !hasKeyValueDelimiter && !isBlocked;
+            });
+
         return Array.from(new Set(trimmed));
     }
 }
