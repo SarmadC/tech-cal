@@ -91,7 +91,8 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                         filters={{
                             format: filters.format,
                             cost: filters.cost,
-                            categories: filters.categories
+                            categories: filters.categories,
+                            tags: filters.tags
                         }}
                         onUpdateFilter={onUpdateFilter}
                         categories={categories}

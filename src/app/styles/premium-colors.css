@@ -1,334 +1,255 @@
 /* ============================================
-   PREMIUM COLOR SYSTEM FOR KURE-CAL
-   Add to: src/app/styles/premium-colors.css
+   KURE-CAL PREMIUM MONOCHROME SYSTEM
+   Linear-style aesthetic: Deep blacks, crisp whites, sharp accents
    ============================================ */
 
 :root {
-  /* Premium Gradient Accents */
-  --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --accent-gradient-hover: linear-gradient(135deg, #7c8ff0 0%, #8a5bb8 100%);
-  --accent-gradient-subtle: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  /* --- 1. CORE MONOCHROME PALETTE --- */
+  /* Backgrounds */
+  --mono-bg-main: #000000;       /* Absolute black for main backgrounds */
+  --mono-bg-surface: #0a0a0a;    /* Very deep grey for cards/surfaces */
+  --mono-bg-hover: #121212;      /* Interactive hover state */
+  --mono-bg-elevated: #1a1a1a;   /* Modals, dropdowns */
   
-  /* Live Event Colors */
-  --live-gradient: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
-  --live-glow: 0 0 40px rgba(244, 63, 94, 0.4);
-  --live-pulse-color: rgba(244, 63, 94, 0.6);
+  /* Borders - Ultra subtle to sharp */
+  --mono-border-subtle: rgba(255, 255, 255, 0.08);
+  --mono-border-default: rgba(255, 255, 255, 0.12);
+  --mono-border-strong: rgba(255, 255, 255, 0.2);
+  --mono-border-highlight: rgba(255, 255, 255, 0.4);
+
+  /* Text Colors */
+  --mono-text-primary: #ffffff;
+  --mono-text-secondary: #a1a1aa; /* Zinc-400 */
+  --mono-text-tertiary: #52525b;  /* Zinc-600 */
+  --mono-text-inverse: #000000;
+
+  /* --- 2. ACCENT SYSTEM (Electric Blue / Emerald) --- */
+  /* Primary Brand Accent */
+  --accent-blue: #3b82f6;        /* Bright standard blue */
+  --accent-electric: #2563eb;    /* Deep electric blue */
+  --accent-glow: rgba(59, 130, 246, 0.5);
   
-  /* Success Colors */
-  --success-gradient: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
-  --success-glow: 0 0 30px rgba(16, 185, 129, 0.3);
+  --accent-emerald: #10b981;
   
-  /* Premium Glow Effects */
-  --premium-glow: 0 0 40px rgba(102, 126, 234, 0.3);
-  --premium-glow-strong: 0 0 60px rgba(102, 126, 234, 0.5);
-  --card-glow: 0 10px 40px -10px rgba(102, 126, 234, 0.2);
+  /* Main Gradient - Subtle, deep, professional */
+  --premium-gradient: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%);
+  --premium-glass: rgba(255, 255, 255, 0.03);
+}
+
+/* Light Mode Overrides (Crisp, clean, technical) */
+.light {
+  --mono-bg-main: #ffffff;
+  --mono-bg-surface: #f9fafb;
+  --mono-bg-hover: #f3f4f6;
+  --mono-bg-elevated: #ffffff;
   
-  /* Metallic Accents */
-  --gold-gradient: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  --silver-gradient: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%);
-  --bronze-gradient: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  --mono-border-subtle: rgba(0, 0, 0, 0.06);
+  --mono-border-default: rgba(0, 0, 0, 0.1);
+  --mono-border-strong: rgba(0, 0, 0, 0.2);
   
-  /* Dark Mode Enhancements */
-  --dark-surface-gradient: linear-gradient(145deg, #1e1e1e 0%, #151515 100%);
-  --dark-card-gradient: linear-gradient(145deg, rgba(30, 30, 30, 0.8) 0%, rgba(20, 20, 20, 0.9) 100%);
-  
-  /* Aurora Effects */
-  --aurora-gradient-1: linear-gradient(45deg, #667eea, #764ba2, #f43f5e, #667eea);
-  --aurora-gradient-2: linear-gradient(-45deg, #14b8a6, #3b82f6, #8b5cf6, #14b8a6);
-  
-  /* Category Color Enhancement */
-  --category-enhanced-opacity: 0.15;
-  --category-hover-opacity: 0.25;
-}
-
-/* Dark mode specific colors */
-.dark {
-  --background-gradient: linear-gradient(180deg, #0a0a0a 0%, #111111 100%);
-  --card-surface: rgba(255, 255, 255, 0.03);
-  --card-surface-hover: rgba(255, 255, 255, 0.05);
-  --border-glow: rgba(102, 126, 234, 0.2);
+  --mono-text-primary: #09090b;
+  --mono-text-secondary: #71717a;
+  --mono-text-tertiary: #a1a1aa;
+  --mono-text-inverse: #ffffff;
 }
 
 /* ============================================
-   GRADIENT TEXT EFFECTS
+   UTILITY CLASSES
    ============================================ */
 
-.gradient-text {
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* 1. Glass/Surface Cards */
+.card-monochrome {
+    background: var(--mono-bg-surface);
+    border: 1px solid var(--mono-border-default);
+    border-radius: 12px;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.gradient-text-hover {
-  transition: all 0.3s ease;
+.card-monochrome:hover {
+    border-color: var(--mono-border-strong);
+    background: var(--mono-bg-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
-.gradient-text-hover:hover {
-  background: var(--accent-gradient-hover);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.light .card-monochrome:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+/* 2. Typography Utilities */
+.text-gradient-mono {
+    background: linear-gradient(to bottom right, #fff 30%, #a1a1aa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.light .text-gradient-mono {
+    background: linear-gradient(to bottom right, #000 30%, #52525b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+
+/* 3. Button Styles - Enhanced Depth */
+.btn-monochrome-primary {
+    background: linear-gradient(135deg, #ffffff 0%, #e4e4e7 100%);
+    color: #000000;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+    box-shadow: 
+        0 1px 2px rgba(0,0,0,0.1),
+        0 4px 6px -1px rgba(0,0,0,0.1),
+        inset 0 1px 0 rgba(255,255,255,1);
+    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+    text-shadow: 0 0 0 transparent;
+}
+
+.btn-monochrome-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 
+        0 4px 12px rgba(255,255,255,0.2),
+        0 10px 15px -3px rgba(0,0,0,0.1),
+        inset 0 1px 0 rgba(255,255,255,1);
+}
+
+.btn-monochrome-primary:active {
+    transform: translateY(1px);
+    box-shadow: 
+        0 1px 2px rgba(0,0,0,0.1),
+        inset 0 1px 0 rgba(255,255,255,1);
+}
+
+.light .btn-monochrome-primary {
+    background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+    color: #ffffff;
+    border: 1px solid rgba(0,0,0,0.1);
+    box-shadow: 
+        0 1px 2px rgba(0,0,0,0.1),
+        0 4px 6px -1px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.light .btn-monochrome-primary:hover {
+    background: linear-gradient(135deg, #27272a 0%, #3f3f46 100%);
+    box-shadow: 
+        0 4px 12px rgba(0,0,0,0.2),
+        0 10px 15px -3px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.btn-monochrome-secondary {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--mono-border-default);
+    color: var(--mono-text-secondary);
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    backdrop-filter: blur(4px);
+}
+
+.btn-monochrome-secondary:hover {
+    border-color: var(--mono-text-primary);
+    color: var(--mono-text-primary);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transform: translateY(-1px);
+}
+
+/* 4. Glow Logic */
+.glow-effect {
+    position: relative;
+    overflow: hidden;
+}
+
+.glow-effect::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 200%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    transform: skewX(-20deg);
+    transition: 0.5s;
+    pointer-events: none;
+}
+
+.glow-effect:hover::before {
+    left: 100%;
+    transition: 0.5s;
 }
 
 /* ============================================
-   PREMIUM BUTTONS
+   5. LINEAR-STYLE DEMO FRAME UTILITIES
    ============================================ */
 
-.btn-premium {
-  background: var(--accent-gradient);
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
+/* Layered shadow system for depth */
+.shadow-linear-elevated {
+    box-shadow: 
+        0 0 0 1px rgba(255,255,255,0.03),
+        0 1px 2px rgba(0,0,0,0.4),
+        0 4px 8px rgba(0,0,0,0.3),
+        0 12px 24px rgba(0,0,0,0.25),
+        0 24px 48px rgba(0,0,0,0.2);
 }
 
-.btn-premium::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
+.light .shadow-linear-elevated {
+    box-shadow: 
+        0 0 0 1px rgba(0,0,0,0.03),
+        0 1px 2px rgba(0,0,0,0.06),
+        0 4px 8px rgba(0,0,0,0.04),
+        0 12px 24px rgba(0,0,0,0.03),
+        0 24px 48px rgba(0,0,0,0.02);
 }
 
-.btn-premium:hover::before {
-  left: 100%;
+/* Linear-style focus ring */
+.focus-ring-linear:focus-visible {
+    outline: none;
+    box-shadow: 
+        0 0 0 2px var(--mono-bg-main),
+        0 0 0 4px rgba(255,255,255,0.2);
 }
 
-.btn-premium:hover {
-  box-shadow: var(--premium-glow);
-  transform: translateY(-2px);
+.light .focus-ring-linear:focus-visible {
+    box-shadow: 
+        0 0 0 2px var(--mono-bg-main),
+        0 0 0 4px rgba(0,0,0,0.1);
 }
 
-/* ============================================
-   LIVE EVENT STYLES
-   ============================================ */
-
-.live-badge {
-  background: var(--live-gradient);
-  color: white;
-  position: relative;
-  overflow: hidden;
+/* Refined tracking for headings */
+.tracking-tight-linear {
+    letter-spacing: -0.02em;
+    font-feature-settings: "ss01", "cv01";
 }
 
-.live-badge::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: var(--live-gradient);
-  border-radius: inherit;
-  opacity: 0.4;
-  animation: pulse-live 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  z-index: -1;
+/* Inner glow border effect */
+.border-glow-inner {
+    position: relative;
 }
 
-@keyframes pulse-live {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0;
-    transform: scale(1.2);
-  }
+.border-glow-inner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    pointer-events: none;
 }
 
-/* ============================================
-   CARD ENHANCEMENTS
-   ============================================ */
-
-.card-premium {
-  background: var(--dark-card-gradient);
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  position: relative;
-  overflow: hidden;
+/* Monochrome hover transition (no scale, just border) */
+.hover-border-linear {
+    transition: border-color 0.2s ease-out;
 }
 
-.card-premium::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--accent-gradient);
-  opacity: 0;
-  transition: opacity 0.3s ease;
+.hover-border-linear:hover {
+    border-color: var(--mono-border-strong);
 }
 
-.card-premium:hover::before {
-  opacity: 1;
-}
-
-.card-premium:hover {
-  border-color: rgba(102, 126, 234, 0.3);
-  box-shadow: var(--card-glow);
-}
-
-/* ============================================
-   GLOWING BORDERS
-   ============================================ */
-
-.border-glow {
-  position: relative;
-  border: 1px solid transparent;
-  background: linear-gradient(var(--dark-surface-gradient)) padding-box,
-              var(--accent-gradient) border-box;
-}
-
-.border-glow-hover {
-  transition: all 0.3s ease;
-}
-
-.border-glow-hover:hover {
-  box-shadow: var(--premium-glow);
-}
-
-/* ============================================
-   STATUS INDICATORS
-   ============================================ */
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  position: relative;
-}
-
-.status-dot.live {
-  background: var(--live-gradient);
-  box-shadow: var(--live-glow);
-}
-
-.status-dot.success {
-  background: var(--success-gradient);
-  box-shadow: var(--success-glow);
-}
-
-.status-dot.premium {
-  background: var(--accent-gradient);
-  box-shadow: var(--premium-glow);
-}
-
-/* ============================================
-   CATEGORY COLOR ENHANCEMENT
-   ============================================ */
-
-.category-tag {
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.category-tag::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(45deg, var(--color, #667eea), transparent);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.category-tag:hover::before {
-  opacity: 1;
-}
-
-/* ============================================
-   AURORA BACKGROUND EFFECT
-   ============================================ */
-
-.aurora-bg {
-  position: relative;
-  overflow: hidden;
-}
-
-.aurora-bg::before,
-.aurora-bg::after {
-  content: '';
-  position: absolute;
-  width: 200%;
-  height: 200%;
-  top: -50%;
-  left: -50%;
-  opacity: 0.03;
-  animation: aurora 15s ease-in-out infinite;
-}
-
-.aurora-bg::before {
-  background: var(--aurora-gradient-1);
-  animation-duration: 15s;
-}
-
-.aurora-bg::after {
-  background: var(--aurora-gradient-2);
-  animation-duration: 20s;
-  animation-delay: -5s;
-}
-
-@keyframes aurora {
-  0%, 100% {
-    transform: rotate(0deg) scale(1);
-  }
-  33% {
-    transform: rotate(120deg) scale(1.1);
-  }
-  66% {
-    transform: rotate(240deg) scale(0.9);
-  }
-}
-
-/* ============================================
-   PREMIUM FOCUS STATES
-   ============================================ */
-
-.input-premium:focus {
-  outline: none;
-  border-color: transparent;
-  background: linear-gradient(var(--dark-surface-gradient)) padding-box,
-              var(--accent-gradient) border-box;
-  box-shadow: var(--premium-glow);
-}
-
-/* ============================================
-   ACHIEVEMENT BADGES
-   ============================================ */
-
-.badge-gold {
-  background: var(--gold-gradient);
-  color: #78350f;
-  font-weight: 600;
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
-}
-
-.badge-silver {
-  background: var(--silver-gradient);
-  color: #374151;
-  font-weight: 600;
-  box-shadow: 0 0 20px rgba(229, 231, 235, 0.3);
-}
-
-.badge-bronze {
-  background: var(--bronze-gradient);
-  color: #fef3c7;
-  font-weight: 600;
-  box-shadow: 0 0 20px rgba(217, 119, 6, 0.3);
-}
-
-/* ============================================
-   SMOOTH COLOR TRANSITIONS
-   ============================================ */
-
-.color-transition {
-  transition: background-color 0.3s ease, 
-              color 0.3s ease,
-              border-color 0.3s ease,
-              box-shadow 0.3s ease;
+/* Noise texture mixin */
+.noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.015;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
 }

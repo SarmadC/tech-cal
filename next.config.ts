@@ -86,6 +86,18 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.jsdelivr.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'logo.svgcdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'openai.com',
+      },
     ],
   },
   experimental: {

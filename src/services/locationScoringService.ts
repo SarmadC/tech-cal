@@ -442,3 +442,7 @@ export class LocationScoringService {
 export default LocationScoringService;
 
 
+
+
+
+

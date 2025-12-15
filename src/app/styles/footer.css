@@ -10,8 +10,16 @@
     overflow: hidden;
 }
 
+/* Dark mode footer container */
+.dark .footer-container,
+html.dark .footer-container {
+    background: #08090a;
+}
+
 /* Light mode footer container */
-:root:not(.dark) .footer-container {
+:root:not(.dark) .footer-container,
+.light .footer-container,
+html.light .footer-container {
     background: transparent;
     color: #1a1a1a;
 }
@@ -24,7 +32,9 @@
 }
 
 /* Light mode footer main */
-:root:not(.dark) .footer-main {
+:root:not(.dark) .footer-main,
+.light .footer-main,
+html.light .footer-main {
     border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -81,18 +91,25 @@
 
 /* Prominent CTA Section - Left Aligned */
 .footer-cta-section {
-    background: var(--landing-surface);
+    background: transparent;
     border-radius: 12px;
     margin-bottom: 40px;
     text-align: left;
     position: relative;
     overflow: hidden;
-    backdrop-filter: blur(10px);
+}
+
+/* Dark mode CTA section */
+.dark .footer-cta-section,
+html.dark .footer-cta-section {
+    background: transparent;
 }
 
 /* Light mode CTA section */
-:root:not(.dark) .footer-cta-section {
-    background: rgba(255, 255, 255, 0.8);
+:root:not(.dark) .footer-cta-section,
+.light .footer-cta-section,
+html.light .footer-cta-section {
+    background: transparent;
 }
 
 

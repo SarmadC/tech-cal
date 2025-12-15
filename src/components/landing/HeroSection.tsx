@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { useTheme } from 'next-themes';
 import { OrbitingCircles } from './OrbitingCircles';
 import { CalendarIcon, ArrowClockwiseIcon, MicrophoneIcon, MegaphoneIcon, RocketIcon, TicketIcon } from '@phosphor-icons/react';
 
@@ -13,6 +14,17 @@ export function HeroSection() {
     const orbitLayerRef = useRef<HTMLDivElement>(null);
     const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
     const { isMobile, isTablet } = useDeviceDetection();
+    const { theme, resolvedTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    // Wait for hydration to avoid hydration mismatch on theme
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const isDarkMode = mounted && (theme === 'dark' || resolvedTheme === 'dark');
+    // Dark rays for light mode (visible on white), White rays for dark mode (visible on black)
+    const raysColor = isDarkMode ? "#ffffff" : "#000103";
 
     useEffect(() => {
         if (typeof window === 'undefined' || !('matchMedia' in window)) return;
@@ -72,7 +84,7 @@ export function HeroSection() {
             {/* Light Rays Effect */}
             <LightRays
                 raysOrigin="top-center"
-                raysColor="#ffffff"
+                raysColor={raysColor}
                 raysSpeed={1.5}
                 lightSpread={0.8}
                 rayLength={1.2}
@@ -89,10 +101,10 @@ export function HeroSection() {
             {/* Orbiting Icons (masked to avoid overlapping hero text) */}
             <div ref={orbitLayerRef} className="hero-orbit-layer" aria-hidden="true">
                 {/* Outer ring: KURE + Calendar + Sync */}
-                <OrbitingCircles 
-                    radius={isMobile ? 300 : isTablet ? 380 : 460} 
-                    duration={isMobile ? 40 : 32} 
-                    iconSize={isMobile ? 24 : isTablet ? 28 : 32} 
+                <OrbitingCircles
+                    radius={isMobile ? 300 : isTablet ? 380 : 460}
+                    duration={isMobile ? 40 : 32}
+                    iconSize={isMobile ? 24 : isTablet ? 28 : 32}
                     reverse
                 >
                     {/* K - Keynotes */}
@@ -114,12 +126,13 @@ export function HeroSection() {
             <div className="hero-content">
                 {/* Main Heading */}
                 <h1 className="hero-title">
-                    The All‑in‑One Tech Events Calendar
+                    The <span className="text-gradient-mono">Professional</span> Tech Calendar
                 </h1>
 
                 {/* Sub Heading */}
                 <p className="hero-subtitle">
-                    Conferences, meetups, launches, livestreams—everything in one place, without the overload.
+                    Curated conferences, effortless filtering, and zero noise. <br className="hidden md:block" />
+                    The only calendar designed for serious engineering careers.
                 </p>
 
                 {/* CTA Buttons */}
@@ -131,12 +144,12 @@ export function HeroSection() {
                     >
                         Discover Events
                     </Link>
-                    <Link 
+                    <Link
                         href="#features"
                         aria-label="Jump to Kure-Cal features"
                         className={`hero-secondary-btn inline-flex ${isMobile ? 'h-14' : 'h-12'} items-center justify-center rounded-md ${isMobile ? 'px-6 py-4' : 'px-8 py-4'} font-medium transition-colors focus:outline-none focus:ring-2 ${isMobile ? 'text-base' : 'text-sm'}`}
                     >
-                        Explore Features
+                        View Live Demo
                     </Link>
                 </div>
             </div>

@@ -215,6 +215,21 @@
   overflow: hidden;
 }
 
+/* Light mode overrides for solid background */
+:root:not(.dark) .mobile-hero {
+  background-color: #ffffff;
+  background: #ffffff;
+}
+
+/* Light mode mobile adjustments */
+:root:not(.dark) .mobile-landing-container {
+  background-color: #ffffff;
+}
+
+:root:not(.dark) .mobile-hero-background {
+  display: none;
+}
+
 /* Dark mode hero section */
 .dark .mobile-hero {
   color: white;

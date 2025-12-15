@@ -1,0 +1,226 @@
+/* Coverage Section - CSS Module */
+
+.section {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-24, 96px) 0;
+}
+
+/* Dark mode section background */
+:global(.dark) .section,
+:global(html.dark) .section {
+    background: #08090a;
+}
+
+.sectionContent {
+    padding: 0 var(--space-12);
+}
+
+@media (min-width: 1024px) {
+    .sectionContent {
+        padding: 0 var(--space-6);
+    }
+}
+
+@media (max-width: 640px) {
+    .sectionContent {
+        padding: 0 var(--space-5);
+    }
+}
+
+@media (max-width: 480px) {
+    .sectionContent {
+        padding: 0 var(--space-4);
+    }
+}
+
+@media (max-width: 360px) {
+    .sectionContent {
+        padding: 0 var(--space-3);
+    }
+}
+
+@media (max-width: 768px) {
+    .section {
+        padding: var(--space-12) 0;
+    }
+}
+
+.sectionHeader {
+    text-align: center;
+    margin-bottom: var(--space-12);
+}
+
+.sectionKicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    color: var(--foreground-tertiary);
+    margin-bottom: var(--space-2);
+    font-family: var(--font-sans);
+    font-weight: 500;
+}
+
+.sectionTitle {
+    font-family: var(--font-dm-sans);
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--foreground-primary);
+    margin-bottom: var(--space-3);
+    line-height: 1.2;
+}
+
+.sectionSubtitle {
+    color: var(--foreground-secondary);
+    max-width: 720px;
+    margin: 0 auto;
+    line-height: 1.6;
+    font-size: 1.05rem;
+    font-family: var(--font-sans);
+}
+
+.metricsGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    margin-bottom: var(--space-12);
+}
+
+@media (min-width: 768px) {
+    .metricsGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.metricCard {
+    padding: var(--space-8);
+    background: linear-gradient(135deg, #060606 0%, #0f0f12 50%, #080808 100%);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    text-align: center;
+    transition: all 0.25s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.metricCard:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+}
+
+.metricValue {
+    font-family: var(--font-dm-sans);
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
+    font-weight: 700;
+    color: var(--foreground-primary);
+    line-height: 1;
+    margin-bottom: var(--space-2);
+    letter-spacing: -0.03em;
+}
+
+.metricLabel {
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--foreground-tertiary);
+    margin-bottom: var(--space-3);
+    font-weight: 500;
+}
+
+.metricDetail {
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    color: var(--foreground-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.trustNotes {
+    display: grid;
+    gap: var(--space-4);
+    max-width: 800px;
+    margin: 0 auto;
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--border-default);
+}
+
+.trustNote {
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    color: var(--foreground-tertiary);
+    line-height: 1.6;
+    padding-left: var(--space-6);
+    position: relative;
+}
+
+.trustNote::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--foreground-tertiary);
+}
+
+/* Light mode adjustments */
+:global(:root:not(.dark)) .metricCard,
+:global(.light) .metricCard,
+:global(html.light) .metricCard {
+    background: linear-gradient(135deg, #ffffff 0%, #f7f7fb 50%, #ffffff 100%);
+    border-color: var(--border-default);
+    box-shadow: var(--shadow-xs);
+}
+
+:global(:root:not(.dark)) .metricCard:hover,
+:global(.light) .metricCard:hover,
+:global(html.light) .metricCard:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+:global(:root:not(.dark)) .trustNotes,
+:global(.light) .trustNotes,
+:global(html.light) .trustNotes {
+    border-top-color: var(--border-default);
+}
+
+/* Dark mode explicit rules for proper color inheritance */
+:global(.dark) .metricCard,
+:global(html.dark) .metricCard {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .metricValue,
+:global(html.dark) .metricValue {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .metricLabel,
+:global(html.dark) .metricLabel {
+    color: var(--foreground-tertiary);
+}
+
+:global(.dark) .metricDetail,
+:global(html.dark) .metricDetail {
+    color: var(--foreground-secondary);
+}
+
+:global(.dark) .trustNote,
+:global(html.dark) .trustNote {
+    color: var(--foreground-tertiary);
+}
+
+:global(.dark) .sectionKicker,
+:global(html.dark) .sectionKicker {
+    color: var(--foreground-tertiary);
+}
+
+:global(.dark) .sectionTitle,
+:global(html.dark) .sectionTitle {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .sectionSubtitle,
+:global(html.dark) .sectionSubtitle {
+    color: var(--foreground-secondary);
+}

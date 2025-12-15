@@ -23,7 +23,6 @@ export function Footer() {
 
                         {/* Prominent CTA Section */}
                         <div className="footer-cta-section">
-                            <h3 className="cta-title">Get personalized event recommendations</h3>
                             <Link 
                                 href="/signup" 
                                 className={`cta-button animate-shimmer motion-reduce:animate-none ${isMobile ? 'mobile-optimized' : ''}`}

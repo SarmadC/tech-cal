@@ -235,7 +235,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     
     const isLoading = isDetectingLocation || isLocalDetecting;
     return (
-        <div className="bg-card/80 dark:bg-card/20 rounded-2xl p-4 shadow-lg border border-border/60 backdrop-blur mb-8 transition-colors">
+        <div className="bg-card/80 dark:bg-card/20 rounded-2xl p-4 border border-border/60 backdrop-blur mb-8 transition-colors">
             <div className="flex flex-col lg:flex-row items-center gap-4">
 
                 {/* Search Input */}
@@ -246,7 +246,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     <input
                         type="text"
                         placeholder="Search events..."
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-transparent bg-muted/60 dark:bg-muted/20 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-background/40 transition-all outline-none text-foreground placeholder:text-muted-foreground"
+                        className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 focus:border-white/40 focus:bg-white/[0.08] transition-all outline-none text-foreground placeholder:text-muted-foreground"
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && onSearch()}
@@ -264,7 +264,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     <input
                         type="text"
                         placeholder="Location (e.g. San Francisco)"
-                        className="w-full pl-12 pr-14 py-3 rounded-xl border border-transparent bg-muted/60 dark:bg-muted/20 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-background/40 transition-all outline-none text-foreground placeholder:text-muted-foreground"
+                        className="w-full pl-12 pr-14 py-3.5 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 focus:border-white/40 focus:bg-white/[0.08] transition-all outline-none text-foreground placeholder:text-muted-foreground"
                         value={location}
                         onChange={(e) => onLocationChange(e.target.value)}
                     />
@@ -272,7 +272,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         type="button"
                         onClick={handleNearMeClick}
                         disabled={isLoading}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-lg bg-muted/60 dark:bg-muted/20 hover:bg-primary/10 focus:ring-2 focus:ring-primary/20 transition-all text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-lg transition-all text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title="Find events near me"
                         aria-label="Detect my location"
                     >
@@ -295,7 +295,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     <button
                         type="button"
                         onClick={() => setIsDatePickerOpen(true)}
-                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-transparent bg-muted/60 dark:bg-muted/20 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-background/40 transition-all outline-none text-foreground text-left cursor-pointer hover:bg-muted"
+                        className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 focus:border-white/40 focus:bg-white/[0.08] transition-all outline-none text-foreground text-left cursor-pointer hover:bg-white/8"
                     >
                         {formatDateRange(dateRange)}
                     </button>
@@ -332,7 +332,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
                 {/* Search Button */}
                 <button
-                    className="w-full lg:w-auto px-8 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 active:scale-95 transform duration-100"
+                    className="w-full lg:w-auto px-8 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors active:scale-95 transform duration-100"
                     onClick={onSearch}
                 >
                     Search

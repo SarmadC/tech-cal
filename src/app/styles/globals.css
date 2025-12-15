@@ -349,6 +349,13 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
   transition-duration: 200ms;
 }
 
+/* Exclude Radix Select from global transform transitions */
+[data-radix-select-content],
+[data-radix-select-content] *,
+[data-radix-popper-content-wrapper] {
+  transition-property: background-color, border-color, color, fill, stroke, opacity !important;
+}
+
 html {
   font-family: var(--font-sans);
 }
@@ -873,4 +880,47 @@ input::placeholder, textarea::placeholder {
 /* Theme-adaptive checkbox accent color */
 input.accent-primary[type="checkbox"] {
   accent-color: var(--accent-primary);
+}
+
+/* Select dropdown animations - Simple fade only, no transforms */
+/* Override global transform transition to prevent sliding */
+[data-radix-select-content] {
+  transition: opacity 150ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition-property: opacity !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+/* Prevent any transforms from being applied */
+[data-radix-select-content],
+[data-radix-select-content] * {
+  transform: none !important;
+  translate: none !important;
+}
+
+[data-radix-select-content][data-state="closed"] {
+  opacity: 0;
+  pointer-events: none;
+  transform: none !important;
+}
+
+[data-radix-select-content][data-state="open"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none !important;
+}
+
+/* Override any Radix positioning transforms */
+[data-radix-select-content][data-side],
+[data-radix-select-content][data-align] {
+  transform: none !important;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  [data-radix-select-content] {
+    transition: opacity 100ms ease !important;
+    transition-property: opacity !important;
+    animation: none !important;
+  }
 }

@@ -1,9 +1,9 @@
 // src/data/landing-page-data.tsx
 import {
-  LightningIcon,
-  CalendarCheckIcon,
-  UsersThreeIcon,
-  ChartBarIcon,
+  Database,
+  Funnel,
+  ArrowsClockwise,
+  Lightning,
 } from '@phosphor-icons/react';
 
 export const eventsData = [
@@ -26,23 +26,23 @@ export const heroStats = [
 
 export const features = [
     {
-        icon: <LightningIcon size={24} />,
-        title: 'Lightning Alerts',
-        description: 'Be notified when new events drop—no feeds to babysit.'
+        icon: <Database size={24} />,
+        title: 'Event Aggregation Engine',
+        description: 'Aggregates from 100+ event sources—RSS feeds, APIs, and ICS calendars—with real-time updates.'
     },
     {
-        icon: <ChartBarIcon size={24} />,
-        title: 'Smart Insights',
-        description: 'See the events that actually move your career forward.'
-    },   
-    {
-        icon: <UsersThreeIcon size={24} />,
-        title: 'Team Intelligence',
-        description: 'Share must‑attend events and keep schedules aligned.'
+        icon: <Funnel size={24} />,
+        title: 'Smart Filtering System',
+        description: 'Server-side filtering with 300+ filter options, full-text search, and multi-query optimization.'
     },
     {
-        icon: <CalendarCheckIcon size={24} />,
-        title: 'One‑tap Add',
-        description: 'Add to your calendar in one tap—works with everything.'
+        icon: <ArrowsClockwise size={24} />,
+        title: 'Calendar Integration API',
+        description: 'One-tap Google Calendar sync with automatic event detail enrichment and reminders.'
+    },
+    {
+        icon: <Lightning size={24} />,
+        title: 'Real-time Data Pipeline',
+        description: 'Continuous event ingestion with quality control, deduplication, and instant availability.'
     }
 ];

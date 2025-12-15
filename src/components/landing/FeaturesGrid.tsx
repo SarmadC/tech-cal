@@ -13,8 +13,8 @@ export function FeaturesGrid() {
                 <div className="features-left">
                     <h2 className="features-title">Stop Scrolling, Start Growing</h2>
                     <p className="features-subtitle">
-                        Transform chaos into clarity. Get the tech events that matter to your career,
-                        delivered intelligently to your calendar—no noise, just signal.
+                        Powered by advanced aggregation, smart filtering, and real-time processing
+                        to deliver curated tech events at scale—no noise, just signal.
                     </p>
                 </div>
                 <div className="features-right">

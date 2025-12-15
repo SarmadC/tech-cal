@@ -24,10 +24,9 @@
 }
 
 .landing-container * {
-    margin: 0;
-    padding: 0;
     box-sizing: border-box;
 }
+
 
 .landing-container {
     font-family: var(--font-sans);
@@ -36,10 +35,27 @@
     font-weight: 400;
 }
 
-/* Light mode landing page background */
+/* Dark mode landing page background - solid color override */
+.dark .landing-container,
+html.dark .landing-container {
+    background: #08090a;
+    background-image: none;
+}
+
+/* Light mode landing page background - solid color override */
 :root:not(.dark) .landing-container {
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
+    background: #ffffff;
+    background-image: none;
     color: #1a1a1a;
+}
+
+/* Override landing text colors for light mode */
+:root:not(.dark),
+.light,
+html.light {
+    --landing-text-primary: #1a1a1a;
+    --landing-text-secondary: rgba(0, 0, 0, 0.8);
+    --landing-text-tertiary: rgba(0, 0, 0, 0.6);
 }
 
 /* Navigation styles handled by Aceternity UI component */
@@ -52,8 +68,30 @@
     justify-content: center;
     position: relative;
     overflow: hidden;
-    background: transparent;
     padding: 0;
+    /* Ensure hero creates its own stacking context */
+    isolation: isolate;
+}
+
+/* Dark mode: solid background */
+.dark .landing-container .hero,
+html.dark .landing-container .hero {
+    background: #08090a;
+}
+
+/* Light mode hero section background - solid color to override parent gradient */
+/* Must come after base rule and use high specificity */
+:root:not(.dark) .landing-container section.hero,
+html:not(.dark) .landing-container section.hero,
+:root:not(.dark) .landing-container .hero,
+html:not(.dark) .landing-container .hero,
+.light .landing-container section.hero,
+.light .landing-container .hero,
+html.light .landing-container section.hero,
+html.light .landing-container .hero {
+    background-color: #ffffff;
+    background: #ffffff;
+    background-image: none;
 }
 
 /* Prefer stable small-viewport height on mobile */
@@ -71,8 +109,12 @@
     width: 100%;
     height: 100%;
     z-index: 1;
+    z-index: 1;
     pointer-events: none;
 }
+
+/* Light rays visibility now handled by component logic */
+
 
 /* Orbit layer: keep icons outside a central safe zone */
 .landing-container .hero .hero-orbit-layer {
@@ -162,7 +204,7 @@
 .landing-container .hero-subtitle {
     font-family: var(--font-sans);
     font-size: clamp(1rem, 2.5vw, 1.25rem);
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--foreground-secondary);
     margin: 0 0 var(--space-12) 0;
     font-weight: 400;
     letter-spacing: 0.02em;
@@ -171,8 +213,10 @@
 }
 
 /* Light mode hero subtitle */
-:root:not(.dark) .landing-container .hero-subtitle {
-    color: rgba(0, 0, 0, 0.7);
+:root:not(.dark) .landing-container .hero-subtitle,
+.light .landing-container .hero-subtitle,
+html.light .landing-container .hero-subtitle {
+    color: var(--foreground-secondary);
     text-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
 }
 
@@ -193,7 +237,9 @@
 }
 
 /* Light mode hero title */
-:root:not(.dark) .landing-container .hero .hero-title {
+:root:not(.dark) .landing-container .hero .hero-title,
+.light .landing-container .hero .hero-title,
+html.light .landing-container .hero .hero-title {
     color: #1a1a1a !important;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
 }
@@ -316,7 +362,13 @@
 /* Light mode primary button */
 :root:not(.dark) .landing-container .hero-primary-btn,
 :root:not(.dark) .landing-container .hero-primary-btn.font-medium,
-:root:not(.dark) .landing-container a.hero-primary-btn {
+:root:not(.dark) .landing-container a.hero-primary-btn,
+.light .landing-container .hero-primary-btn,
+.light .landing-container .hero-primary-btn.font-medium,
+.light .landing-container a.hero-primary-btn,
+html.light .landing-container .hero-primary-btn,
+html.light .landing-container .hero-primary-btn.font-medium,
+html.light .landing-container a.hero-primary-btn {
     background: linear-gradient(110deg, #1a1a1a 45%, #2d2d2d 50%, #1a1a1a 55%);
     background-size: 200% 100%;
     color: #ffffff !important;
@@ -325,7 +377,11 @@
 }
 
 :root:not(.dark) .landing-container .hero-primary-btn:hover,
-:root:not(.dark) .landing-container a.hero-primary-btn:hover {
+:root:not(.dark) .landing-container a.hero-primary-btn:hover,
+.light .landing-container .hero-primary-btn:hover,
+.light .landing-container a.hero-primary-btn:hover,
+html.light .landing-container .hero-primary-btn:hover,
+html.light .landing-container a.hero-primary-btn:hover {
     border-color: rgba(0, 0, 0, 0.25);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     color: #ffffff !important;
@@ -334,27 +390,31 @@
 /* Secondary CTA Button - Light/Dark Mode */
 .landing-container .hero-secondary-btn {
     background: transparent;
-    color: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--foreground-secondary);
+    border: 1px solid var(--border-default);
 }
 
 .landing-container .hero-secondary-btn:hover {
     background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #ffffff;
+    border-color: var(--border-strong);
+    color: var(--foreground-primary);
 }
 
 /* Light mode secondary button */
-:root:not(.dark) .landing-container .hero-secondary-btn {
+:root:not(.dark) .landing-container .hero-secondary-btn,
+.light .landing-container .hero-secondary-btn,
+html.light .landing-container .hero-secondary-btn {
     background: transparent;
-    color: rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(0, 0, 0, 0.2);
+    color: var(--foreground-secondary);
+    border: 1px solid var(--border-default);
 }
 
-:root:not(.dark) .landing-container .hero-secondary-btn:hover {
+:root:not(.dark) .landing-container .hero-secondary-btn:hover,
+.light .landing-container .hero-secondary-btn:hover,
+html.light .landing-container .hero-secondary-btn:hover {
     background: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.3);
-    color: rgba(0, 0, 0, 0.9);
+    border-color: var(--border-strong);
+    color: var(--foreground-primary);
 }
 
 /* Enhanced Responsive Design for Hero */
@@ -546,6 +606,12 @@
         padding: var(--space-4) 0;
     }
     
+    html:not(.dark) .landing-container .hero,
+    :root:not(.dark) .landing-container .hero {
+        background-color: #ffffff;
+        background: #ffffff;
+    }
+    
     .landing-container .hero-content {
         padding: 0 var(--space-4);
     }
@@ -730,7 +796,9 @@
 }
 
 .landing-container .calendar-events {
-    space-y: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
 }
 
 .landing-container .calendar-event {
@@ -1417,4 +1485,10 @@
 .landing-container .slide-in-right.visible {
     opacity: 1;
     transform: translateY(0) translateX(0);
+}
+
+/* Product Demo Section Dark Mode Background */
+.dark .product-demo-section,
+html.dark .product-demo-section {
+    background: #08090a !important;
 }

@@ -17,25 +17,28 @@ import {
     NavbarThemeToggle,
 } from "@/components/ui/resizable-navbar";
 
-const ChaosToOrderSection = dynamic(
-    () => import('./ChaosToOrderSection').then((mod) => ({ default: mod.ChaosToOrderSection })),
+const ProductDemoSection = dynamic(
+    () => import('./ProductDemoSection').then((mod) => ({ default: mod.default })),
     {
         ssr: false,
-        loading: () => <div style={{ height: '250vh', background: '#0f0f23' }}>Loading animation...</div>
+        loading: () => <div className="h-[800px] w-full bg-background/5 animate-pulse rounded-3xl" />
     }
 );
 
 import {
     HeroSection,
     FeaturesGrid,
-    Footer
+    Footer,
+    UseCasesSection,
+    FAQSection,
+    CoverageSection
 } from './';
 
 export default function LandingPage() {
     const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { isMobile } = useDeviceDetection();
-    
+
     const navItems = [
         {
             name: "Features",
@@ -52,9 +55,9 @@ export default function LandingPage() {
     ];
 
     useEffect(() => {
-        const observerOptions = { 
-            threshold: 0.1, 
-            rootMargin: '0px 0px -50px 0px' 
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
         };
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -82,13 +85,13 @@ export default function LandingPage() {
                             <NavItems items={navItems} />
                             <div className="flex items-center gap-4">
                                 <NavbarThemeToggle />
-                                <NavbarButton 
+                                <NavbarButton
                                     variant="secondary"
                                     onClick={() => router.push("/login")}
                                 >
                                     Login
                                 </NavbarButton>
-                                <NavbarButton 
+                                <NavbarButton
                                     variant="primary"
                                     onClick={() => router.push("/signup")}
                                 >
@@ -126,10 +129,10 @@ export default function LandingPage() {
                                             className="flex items-center justify-between text-zinc-900 dark:text-zinc-100 text-xl font-medium hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors group"
                                         >
                                             <span className="block">{item.name}</span>
-                                            <svg 
-                                                className="w-4 h-4 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors" 
-                                                fill="none" 
-                                                stroke="currentColor" 
+                                            <svg
+                                                className="w-4 h-4 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors"
+                                                fill="none"
+                                                stroke="currentColor"
                                                 viewBox="0 0 24 24"
                                             >
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -167,8 +170,11 @@ export default function LandingPage() {
             <main>
                 <HeroSection />
                 {/* This now renders the dynamically loaded component */}
-                <ChaosToOrderSection />
+                <ProductDemoSection />
                 <FeaturesGrid />
+                <UseCasesSection />
+                <CoverageSection />
+                <FAQSection />
             </main>
             <Footer />
         </div>

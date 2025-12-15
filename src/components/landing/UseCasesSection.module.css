@@ -1,0 +1,249 @@
+/* Use Cases Section - Linear-inspired CSS Module */
+
+.section {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-24, 96px) 0;
+}
+
+/* Dark mode section background */
+:global(.dark) .section,
+:global(html.dark) .section {
+    background-color: #08090a;
+}
+
+.sectionContent {
+    padding: 0 var(--space-12);
+}
+
+@media (min-width: 1024px) {
+    .sectionContent {
+        padding: 0 var(--space-6);
+    }
+}
+
+@media (max-width: 640px) {
+    .sectionContent {
+        padding: 0 var(--space-5);
+    }
+}
+
+@media (max-width: 480px) {
+    .sectionContent {
+        padding: 0 var(--space-4);
+    }
+}
+
+@media (max-width: 360px) {
+    .sectionContent {
+        padding: 0 var(--space-3);
+    }
+}
+
+@media (max-width: 768px) {
+    .section {
+        padding: var(--space-12) 0;
+    }
+}
+
+/* Split Header Layout */
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-16);
+    margin-bottom: var(--space-16);
+}
+
+@media (max-width: 900px) {
+    .sectionHeader {
+        flex-direction: column;
+        gap: var(--space-6);
+    }
+}
+
+.sectionTitle {
+    flex: 1;
+    font-family: var(--font-dm-sans);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    color: var(--foreground-primary);
+    line-height: 1.15;
+    margin: 0;
+}
+
+.sectionSubtitle {
+    flex: 1;
+    max-width: 500px;
+    color: var(--foreground-secondary);
+    line-height: 1.7;
+    font-size: 1.05rem;
+    font-family: var(--font-sans);
+    margin: 0;
+    padding-top: 0.75rem;
+}
+
+.headerLink {
+    color: var(--foreground-primary);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+}
+
+.headerLink:hover {
+    opacity: 0.7;
+}
+
+/* Cards Grid - 3 columns */
+.useCasesGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+}
+
+@media (max-width: 900px) {
+    .useCasesGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .useCasesGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Card Styling */
+.useCaseCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 15, 15, 0.4);
+    border: 1px solid transparent;
+    border-radius: 20px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    aspect-ratio: 1 / 1;
+}
+
+.useCaseCard:hover {
+    border-color: transparent;
+    transform: translateY(-4px);
+    background: rgba(15, 15, 15, 0.6);
+}
+
+/* Light mode card */
+:global(:root:not(.dark)) .useCaseCard,
+:global(.light) .useCaseCard,
+:global(html.light) .useCaseCard {
+    background: rgba(245, 245, 245, 0.8);
+    border-color: transparent;
+}
+
+:global(:root:not(.dark)) .useCaseCard:hover,
+:global(.light) .useCaseCard:hover,
+:global(html.light) .useCaseCard:hover {
+    border-color: transparent;
+}
+
+/* Graphic Container */
+.useCaseGraphic {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8) var(--space-6);
+    color: var(--foreground-primary);
+    opacity: 0.85;
+    background-color: #141516;
+}
+
+.useCaseGraphic svg {
+    width: 100%;
+    height: 100%;
+    max-width: 320px;
+    max-height: 240px;
+}
+
+/* Card Footer */
+.useCaseFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-6) var(--space-6);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:global(:root:not(.dark)) .useCaseFooter,
+:global(.light) .useCaseFooter,
+:global(html.light) .useCaseFooter {
+    border-top-color: rgba(0, 0, 0, 0.06);
+}
+
+.useCaseTitle {
+    font-family: var(--font-dm-sans);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--foreground-primary);
+    letter-spacing: -0.015em;
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Plus Icon Button */
+.useCasePlusIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    color: var(--foreground-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.useCasePlusIcon:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--foreground-primary);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+:global(:root:not(.dark)) .useCasePlusIcon,
+:global(.light) .useCasePlusIcon,
+:global(html.light) .useCasePlusIcon {
+    border-color: rgba(0, 0, 0, 0.15);
+}
+
+:global(:root:not(.dark)) .useCasePlusIcon:hover,
+:global(.light) .useCasePlusIcon:hover,
+:global(html.light) .useCasePlusIcon:hover {
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode explicit rules */
+:global(.dark) .sectionTitle,
+:global(html.dark) .sectionTitle {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .sectionSubtitle,
+:global(html.dark) .sectionSubtitle {
+    color: var(--foreground-secondary);
+}
+
+:global(.dark) .useCaseTitle,
+:global(html.dark) .useCaseTitle {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .useCasePlusIcon,
+:global(html.dark) .useCasePlusIcon {
+    color: var(--foreground-secondary);
+}

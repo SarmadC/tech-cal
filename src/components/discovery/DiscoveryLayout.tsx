@@ -66,7 +66,7 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
                     )}
 
                     {/* Main Content */}
-                    <div className="flex-1 rounded-3xl border border-border/60 bg-card/80 dark:bg-card/20 p-4 lg:p-6 shadow-lg backdrop-blur transition-colors">
+                    <div className="flex-1 rounded-3xl border border-border/60 bg-card/80 dark:bg-card/20 px-5 md:px-6 lg:px-7 xl:px-8 pb-6 lg:pb-7 pt-5 lg:pt-7 shadow-lg backdrop-blur transition-colors">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                             <h2 className="text-xl font-semibold text-foreground">
                                 Events Found <span className="text-muted-foreground font-normal">({resultCount || 0})</span>
@@ -79,7 +79,7 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-7 xl:gap-8">
                             {children}
                         </div>
                     </div>

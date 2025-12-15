@@ -5,6 +5,7 @@ import { CaretDown, CaretUp } from '@phosphor-icons/react';
 import { EventType } from '@/types';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
 import TagCloud from './TagCloud';
+import '@/app/styles/discovery-sidebar.css';
 
 interface FilterSectionProps {
     title: string;
@@ -16,12 +17,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
     const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
     return (
-        <div className="mb-6">
+        <div className="mb-6 filter-section">
             <button
-                className="flex items-center justify-between w-full mb-3 group text-foreground"
+                className="flex items-center justify-between w-full mb-3 pb-2 border-b border-white/5 group text-foreground"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <h3 className="font-semibold text-sm uppercase tracking-[0.2em] text-muted-foreground">{title}</h3>
+                <h3 className="font-medium text-xs uppercase tracking-[0.16em] text-muted-foreground/80">{title}</h3>
                 {isOpen ? (
                     <CaretUp size={16} className="text-muted-foreground group-hover:text-foreground" />
                 ) : (
@@ -47,7 +48,7 @@ interface CheckboxOptionProps {
 
 const CheckboxOption: React.FC<CheckboxOptionProps> = ({ label, count, checked, onChange }) => {
     return (
-        <label className="flex items-center gap-3 cursor-pointer group text-sm text-muted-foreground">
+        <label className="filter-option flex items-center gap-3 cursor-pointer group text-sm text-muted-foreground rounded-lg px-2 py-2 hover:bg-white/4 transition-colors">
             <div className={`
         w-5 h-5 rounded-full border flex items-center justify-center transition-all duration-200
         ${checked
@@ -76,7 +77,7 @@ const CheckboxOption: React.FC<CheckboxOptionProps> = ({ label, count, checked, 
 };
 
 export interface DiscoverySidebarProps {
-    filters: Pick<UnifiedFilterOptions, 'format' | 'cost' | 'categories'>;
+    filters: Pick<UnifiedFilterOptions, 'format' | 'cost' | 'categories' | 'tags'>;
     onUpdateFilter: UpdateFilterHandler;
     categories: EventType[];
     events?: Array<{
@@ -112,14 +113,17 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
         onUpdateFilter('categories', updated);
     };
 
-    const handleTagClick = (tagName: string) => {
-        // When tag is clicked, update search term to include the tag
-        onUpdateFilter('searchTerm', tagName);
+    const toggleTag = (tagName: string) => {
+        const current = filters.tags || [];
+        const updated = current.includes(tagName)
+            ? current.filter(tag => tag !== tagName)
+            : [...current, tagName];
+        onUpdateFilter('tags', updated);
     };
 
     return (
-        <div className="hidden lg:block w-64 flex-shrink-0 pr-8">
-            <div className="sticky top-6 rounded-3xl border border-border/60 bg-card/80 dark:bg-card/20 p-6 shadow-lg backdrop-blur">
+        <div className="discovery-sidebar hidden lg:block w-72 flex-shrink-0 pr-8">
+            <div className="discovery-sidebar-panel sticky top-6 rounded-3xl border border-border/60 bg-card/80 dark:bg-card/20 p-6 shadow-lg backdrop-blur">
                 <div className="mb-8">
                     <h2 className="text-2xl font-semibold text-foreground">Filters</h2>
                 </div>
@@ -194,7 +198,8 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
                     <FilterSection title="Popular Tags" defaultOpen={true}>
                         <TagCloud
                             events={events}
-                            onTagClick={handleTagClick}
+                            onTagClick={toggleTag}
+                            selectedTags={filters.tags || []}
                             maxTags={15}
                         />
                     </FilterSection>
@@ -207,6 +212,9 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
     const categoriesEqual = prevProps.filters.categories.length === nextProps.filters.categories.length &&
         prevProps.filters.categories.every((cat, idx) => cat === nextProps.filters.categories[idx]);
 
+    const tagsEqual = (prevProps.filters.tags || []).length === (nextProps.filters.tags || []).length &&
+        (prevProps.filters.tags || []).every((tag, idx) => tag === (nextProps.filters.tags || [])[idx]);
+
     const categoriesListEqual = prevProps.categories.length === nextProps.categories.length &&
         prevProps.categories.every((cat, idx) => cat.id === nextProps.categories[idx].id);
 
@@ -216,6 +224,7 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
         prevProps.filters.format === nextProps.filters.format &&
         prevProps.filters.cost === nextProps.filters.cost &&
         categoriesEqual &&
+        tagsEqual &&
         categoriesListEqual &&
         eventsEqual &&
         prevProps.counts?.format === nextProps.counts?.format &&

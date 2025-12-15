@@ -109,6 +109,7 @@ export type OAuthProvider = typeof OAUTH_PROVIDERS[keyof typeof OAUTH_PROVIDERS]
 
 export type EventFilters = { 
   categories?: string[]; 
+  tags?: string[];
   startDate?: Date; 
   endDate?: Date; 
   searchTerm?: string; 

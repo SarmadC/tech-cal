@@ -1,0 +1,236 @@
+/* FAQ Section - CSS Module */
+
+.section {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-24, 96px) 0;
+}
+
+/* Dark mode section background */
+:global(.dark) .section,
+:global(html.dark) .section {
+    background: #08090a;
+}
+
+.sectionContent {
+    padding: 0 var(--space-12);
+}
+
+@media (min-width: 1024px) {
+    .sectionContent {
+        padding: 0 var(--space-6);
+    }
+}
+
+@media (max-width: 640px) {
+    .sectionContent {
+        padding: 0 var(--space-5);
+    }
+}
+
+@media (max-width: 480px) {
+    .sectionContent {
+        padding: 0 var(--space-4);
+    }
+}
+
+@media (max-width: 360px) {
+    .sectionContent {
+        padding: 0 var(--space-3);
+    }
+}
+
+@media (max-width: 768px) {
+    .section {
+        padding: var(--space-12) 0;
+    }
+}
+
+.sectionHeader {
+    text-align: center;
+    margin-bottom: var(--space-12);
+}
+
+.sectionKicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    color: var(--foreground-tertiary);
+    margin-bottom: var(--space-2);
+    font-family: var(--font-sans);
+    font-weight: 500;
+}
+
+.sectionTitle {
+    font-family: var(--font-dm-sans);
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--foreground-primary);
+    margin-bottom: var(--space-3);
+    line-height: 1.2;
+}
+
+.sectionSubtitle {
+    color: var(--foreground-secondary);
+    max-width: 720px;
+    margin: 0 auto;
+    line-height: 1.6;
+    font-size: 1.05rem;
+    font-family: var(--font-sans);
+}
+
+.faqGrid {
+    display: grid;
+    gap: var(--space-4);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.faqItem {
+    background: linear-gradient(135deg, #060606 0%, #0f0f12 50%, #080808 100%);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.faqItem:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+}
+
+.faqItem[open] {
+    border-color: var(--border-strong);
+}
+
+.faqQuestion {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-6) var(--space-6);
+    font-family: var(--font-dm-sans);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--foreground-primary);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: color 0.2s ease;
+}
+
+.faqQuestion::-webkit-details-marker {
+    display: none;
+}
+
+.faqQuestion:hover {
+    color: var(--foreground-secondary);
+}
+
+.faqQuestion:focus {
+    outline: 2px solid var(--border-strong);
+    outline-offset: -2px;
+    border-radius: 12px;
+}
+
+.faqIcon {
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: var(--foreground-tertiary);
+    transition: transform 0.25s ease, color 0.2s ease;
+    flex-shrink: 0;
+    margin-left: var(--space-4);
+}
+
+.faqItem[open] .faqIcon {
+    transform: rotate(45deg);
+    color: var(--foreground-primary);
+}
+
+.faqAnswer {
+    padding: 0 var(--space-6) var(--space-6) var(--space-6);
+    color: var(--foreground-secondary);
+    line-height: 1.65;
+    font-size: 1rem;
+    font-family: var(--font-sans);
+    animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Light mode adjustments */
+:global(:root:not(.dark)) .faqItem,
+:global(.light) .faqItem,
+:global(html.light) .faqItem {
+    background: linear-gradient(135deg, #ffffff 0%, #f7f7fb 50%, #ffffff 100%);
+    border-color: var(--border-default);
+}
+
+:global(:root:not(.dark)) .faqItem:hover,
+:global(.light) .faqItem:hover,
+:global(html.light) .faqItem:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+:global(:root:not(.dark)) .faqQuestion,
+:global(.light) .faqQuestion,
+:global(html.light) .faqQuestion {
+    color: var(--foreground-primary);
+}
+
+:global(:root:not(.dark)) .faqAnswer,
+:global(.light) .faqAnswer,
+:global(html.light) .faqAnswer {
+    color: var(--foreground-secondary);
+}
+
+/* Dark mode explicit rules for proper color inheritance */
+:global(.dark) .faqItem,
+:global(html.dark) .faqItem {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .faqQuestion,
+:global(html.dark) .faqQuestion {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .faqAnswer,
+:global(html.dark) .faqAnswer {
+    color: var(--foreground-secondary);
+}
+
+:global(.dark) .faqIcon,
+:global(html.dark) .faqIcon {
+    color: var(--foreground-tertiary);
+}
+
+:global(.dark) .faqItem[open] .faqIcon,
+:global(html.dark) .faqItem[open] .faqIcon {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .sectionKicker,
+:global(html.dark) .sectionKicker {
+    color: var(--foreground-tertiary);
+}
+
+:global(.dark) .sectionTitle,
+:global(html.dark) .sectionTitle {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .sectionSubtitle,
+:global(html.dark) .sectionSubtitle {
+    color: var(--foreground-secondary);
+}

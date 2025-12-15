@@ -1,0 +1,146 @@
+/* Integrations Section - CSS Module */
+
+.section {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-16) var(--space-6);
+}
+
+/* Dark mode section background */
+:global(.dark) .section,
+:global(html.dark) .section {
+    background: #08090a;
+}
+
+@media (max-width: 768px) {
+    .section {
+        padding: var(--space-12) var(--space-4);
+    }
+}
+
+.sectionHeader {
+    text-align: center;
+    margin-bottom: var(--space-12);
+}
+
+.sectionKicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    color: var(--foreground-tertiary);
+    margin-bottom: var(--space-2);
+    font-family: var(--font-sans);
+    font-weight: 500;
+}
+
+.sectionTitle {
+    font-family: var(--font-dm-sans);
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--foreground-primary);
+    margin-bottom: var(--space-3);
+    line-height: 1.2;
+}
+
+.sectionSubtitle {
+    color: var(--foreground-secondary);
+    max-width: 720px;
+    margin: 0 auto;
+    line-height: 1.6;
+    font-size: 1.05rem;
+    font-family: var(--font-sans);
+}
+
+.integrationsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+}
+
+@media (max-width: 640px) {
+    .integrationsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-3);
+    }
+}
+
+.integrationBadge {
+    padding: var(--space-4) var(--space-6);
+    background: linear-gradient(135deg, #060606 0%, #0f0f12 50%, #080808 100%);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    color: var(--foreground-primary);
+    transition: all 0.25s ease;
+    cursor: default;
+    box-shadow: var(--shadow-sm);
+}
+
+.integrationBadge:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+    background: linear-gradient(135deg, #080808 0%, #121218 50%, #0a0a0a 100%);
+}
+
+/* Light mode adjustments */
+:global(:root:not(.dark)) .integrationBadge,
+:global(.light) .integrationBadge,
+:global(html.light) .integrationBadge {
+    background: linear-gradient(135deg, #ffffff 0%, #f7f7fb 50%, #ffffff 100%);
+    border-color: var(--border-default);
+    color: var(--foreground-primary);
+    box-shadow: var(--shadow-xs);
+}
+
+:global(:root:not(.dark)) .integrationBadge:hover,
+:global(.light) .integrationBadge:hover,
+:global(html.light) .integrationBadge:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-sm);
+}
+
+:global(:root:not(.dark)) .sectionKicker,
+:global(.light) .sectionKicker,
+:global(html.light) .sectionKicker {
+    color: var(--foreground-tertiary);
+}
+
+:global(:root:not(.dark)) .sectionTitle,
+:global(.light) .sectionTitle,
+:global(html.light) .sectionTitle {
+    color: var(--foreground-primary);
+}
+
+:global(:root:not(.dark)) .sectionSubtitle,
+:global(.light) .sectionSubtitle,
+:global(html.light) .sectionSubtitle {
+    color: var(--foreground-secondary);
+}
+
+/* Dark mode explicit rules for proper color inheritance */
+:global(.dark) .integrationBadge,
+:global(html.dark) .integrationBadge {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .sectionKicker,
+:global(html.dark) .sectionKicker {
+    color: var(--foreground-tertiary);
+}
+
+:global(.dark) .sectionTitle,
+:global(html.dark) .sectionTitle {
+    color: var(--foreground-primary);
+}
+
+:global(.dark) .sectionSubtitle,
+:global(html.dark) .sectionSubtitle {
+    color: var(--foreground-secondary);
+}

@@ -13,6 +13,7 @@ interface TagCloudProps {
         }>;
     }>;
     onTagClick: (tagName: string) => void;
+    selectedTags?: string[];
     maxTags?: number;
     className?: string;
 }
@@ -28,6 +29,7 @@ const BLOCKED_TAGS = new Set(['online', 'en']);
 const TagCloud: React.FC<TagCloudProps> = ({
     events,
     onTagClick,
+    selectedTags = [],
     maxTags = 20,
     className = ''
 }) => {
@@ -96,29 +98,44 @@ const TagCloud: React.FC<TagCloudProps> = ({
     return (
         <div className={`space-y-3 ${className}`}>
             <ul className="space-y-1.5">
-                {tagCounts.map(tag => (
-                    <li key={tag.value}>
-                        <button
-                            onClick={() => onTagClick(tag.value)}
-                            className={`
-                                w-full px-1 py-1 flex items-center gap-3 text-left
-                                text-muted-foreground hover:text-foreground
-                                hover:bg-muted/30 rounded-md
-                                transition-colors duration-150
-                                focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
-                            `}
-                            title={`${tag.displayName} (${tag.count} event${tag.count === 1 ? '' : 's'})`}
-                        >
-                            <span className="w-5 h-5 rounded-full border border-border flex-shrink-0" />
-                            <span className="text-sm font-medium">
-                                {tag.displayName}
-                            </span>
-                            <span className="ml-auto text-xs text-muted-foreground">
-                                ({tag.count})
-                            </span>
-                        </button>
-                    </li>
-                ))}
+                {tagCounts.map(tag => {
+                    const isSelected = selectedTags.includes(tag.value);
+                    return (
+                        <li key={tag.value}>
+                            <button
+                                onClick={() => onTagClick(tag.value)}
+                                className={`
+                                    w-full px-1 py-1 flex items-center gap-3 text-left
+                                    rounded-md transition-colors duration-150
+                                    focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+                                    ${isSelected
+                                        ? 'text-foreground bg-muted/40 hover:bg-muted/50'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                                    }
+                                `}
+                                title={`${tag.displayName} (${tag.count} event${tag.count === 1 ? '' : 's'})`}
+                            >
+                                <span className={`
+                                    w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 transition-all duration-200
+                                    ${isSelected
+                                        ? 'border-transparent bg-primary text-primary-foreground'
+                                        : 'border-border bg-transparent'
+                                    }
+                                `}>
+                                    {isSelected && (
+                                        <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                                    )}
+                                </span>
+                                <span className={`text-sm ${isSelected ? 'font-medium' : 'font-medium'}`}>
+                                    {tag.displayName}
+                                </span>
+                                <span className="ml-auto text-xs text-muted-foreground">
+                                    ({tag.count})
+                                </span>
+                            </button>
+                        </li>
+                    );
+                })}
             </ul>
 
             <p className="text-xs text-muted-foreground">

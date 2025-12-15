@@ -40,6 +40,7 @@ const ratelimit = new Ratelimit({
 interface FilteredEventsRequest {
   searchTerm?: string;
   categories?: string[];
+  tags?: string[];
   locations?: string[];
   format?: 'all' | 'virtual' | 'in-person' | 'hybrid';
   budget?: 'all' | 'free-only' | 'low' | 'moderate' | 'high' | 'unlimited';
@@ -152,6 +153,7 @@ export async function POST(request: NextRequest) {
     const {
       searchTerm,
       categories = [],
+      tags = [],
       locations = [],
       format = 'all',
     budget = 'all',
@@ -202,6 +204,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       searchTerm: body.searchTerm || '',
       categories: (body.categories || []).slice().sort(),
+      tags: (body.tags || []).slice().sort(),
       locations: (body.locations || []).slice().sort(),
       format,
       budget,
@@ -240,6 +243,7 @@ export async function POST(request: NextRequest) {
     // Build comprehensive server-side filters
     const eventFilters: EventFilters = {
       categories: categories.length > 0 ? categories : undefined,
+      tags: tags.length > 0 ? tags : undefined,
       locations: locations.length > 0 ? locations : undefined,
       searchTerm: searchTerm || undefined,
       startDate: dateRange?.start ? new Date(dateRange.start) : undefined,
@@ -324,6 +328,54 @@ export async function POST(request: NextRequest) {
     const fetchPage = isCareerImpactSort ? 1 : page; // Always fetch from page 1 when using window
     
     // Enhanced search: Combine FTS with tag and organizer search
+    // Apply tag filtering if tags are specified
+    if (tags.length > 0) {
+      try {
+        console.log('[DEBUG] Filtering by tags:', tags);
+        // Get event IDs that match any of the selected tags (exact match, case-insensitive)
+        const tagFilteredEventIds = await EventService.getEventIdsByTags(tags, supabase, eventFilters);
+        console.log('[DEBUG] Tag filter results:', tagFilteredEventIds.length, 'events');
+        
+        // If we have tag-filtered IDs, add them to eventFilters to restrict the main query
+        if (tagFilteredEventIds.length > 0) {
+          const existingIds = eventFilters.eventIds || [];
+          eventFilters.eventIds = [...new Set([...existingIds, ...tagFilteredEventIds])];
+        } else {
+          // No events match the tags, return empty result early
+          return NextResponse.json({
+            success: true,
+            data: {
+              events: [],
+              pagination: {
+                page,
+                pageSize,
+                total: 0,
+                hasMore: false
+              },
+              filters: {
+                applied: { searchTerm, categories, tags, locations, format, cost, difficulty, dateRange, sortBy },
+                available: {
+                  categories: [],
+                  difficulties: [],
+                  formats: [],
+                  locations: []
+                }
+              },
+              stats: {
+                processingTimeMs: Date.now() - startTime,
+                filteredCount: 0,
+                totalCount: 0
+              },
+              counts: await EventService.getFilterCounts(eventFilters, supabase)
+            }
+          });
+        }
+      } catch (error) {
+        console.error('[API] Tag filter error:', error);
+        // Continue without tag filtering if it fails
+      }
+    }
+
     // PERSONALIZED RANKING: Events are later enriched with career-impact scores
     // and sorted by career-impact if sortBy='career-impact', which combines:
     // - FTS relevance (implicit from tag/organizer matches getting higher scores)
@@ -339,23 +391,24 @@ export async function POST(request: NextRequest) {
         // Import TagBasedMatchingService dynamically to use expandSearchTerm
         const { TagBasedMatchingService } = await import('@/services/tagBasedMatchingService');
 
-        // Expand search term using TAG_SIMILARITIES
+        // MULTI-QUERY OPTIMIZATION: Expand search term using TAG_SIMILARITIES
+        const expansionStart = Date.now();
         expandedSearchTerms = TagBasedMatchingService.expandSearchTerm(searchTerm);
+        const expansionTime = Date.now() - expansionStart;
 
-        // Debug logging (always enabled for tag search debugging)
-        console.log('[DEBUG] Query expansion:', {
+        // Performance logging for query expansion
+        console.log('[PERF] Query expansion:', {
           original: searchTerm,
-          expanded: expandedSearchTerms
+          expanded: expandedSearchTerms,
+          expansionTimeMs: expansionTime,
+          expansionFactor: expandedSearchTerms.length
         });
 
-        // Search with all expanded terms in parallel
-        console.log('[DEBUG] About to search tags with filters:', {
-          expandedTerms: expandedSearchTerms,
-          hasStartDate: !!eventFilters.startDate,
-          hasEndDate: !!eventFilters.endDate,
-          startDate: eventFilters.startDate?.toISOString(),
-          endDate: eventFilters.endDate?.toISOString()
-        });
+        // MULTI-QUERY OPTIMIZATION: Execute all search queries in parallel
+        // This significantly reduces latency compared to sequential execution
+        // Total queries = expandedTerms * 2 (tag + organizer per term)
+        const parallelSearchStart = Date.now();
+        const totalQueries = expandedSearchTerms.length * 2;
 
         const searchPromises = expandedSearchTerms.flatMap(term => [
           EventService.getEventIdsByTagSearch(term, supabase, eventFilters),
@@ -363,6 +416,7 @@ export async function POST(request: NextRequest) {
         ]);
 
         const results = await Promise.all(searchPromises);
+        const parallelSearchTime = Date.now() - parallelSearchStart;
 
         // Separate tag and organizer results
         const tagResults: string[][] = [];
@@ -376,18 +430,29 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        // Flatten and deduplicate
+        // DEDUPLICATION: Flatten and deduplicate results
+        const dedupeStart = Date.now();
         tagMatchedEventIds = [...new Set(tagResults.flat())];
         organizerMatchedEventIds = [...new Set(orgResults.flat())];
+        const dedupeTime = Date.now() - dedupeStart;
 
-        // Debug logging (always enabled for tag search debugging)
-        console.log('[DEBUG] Multi-field search results:', {
+        // Performance metrics for multi-query optimization
+        const avgQueryTime = totalQueries > 0 ? Math.round(parallelSearchTime / totalQueries) : 0;
+        console.log('[PERF] Multi-query optimization:', {
           searchTerm,
-          expandedTerms: expandedSearchTerms,
-          tagMatches: tagMatchedEventIds.length,
-          organizerMatches: organizerMatchedEventIds.length,
-          tagMatchedIds: tagMatchedEventIds.slice(0, 5), // Show first 5 IDs
-          organizerMatchedIds: organizerMatchedEventIds.slice(0, 5)
+          queriesExecuted: totalQueries,
+          parallelExecutionTimeMs: parallelSearchTime,
+          avgQueryTimeMs: avgQueryTime,
+          deduplicationTimeMs: dedupeTime,
+          results: {
+            tagMatches: tagMatchedEventIds.length,
+            organizerMatches: organizerMatchedEventIds.length,
+            totalUniqueMatches: new Set([...tagMatchedEventIds, ...organizerMatchedEventIds]).size
+          },
+          // Estimate sequential execution time (if queries ran one-by-one)
+          estimatedSequentialTimeMs: totalQueries * avgQueryTime,
+          // Time saved by parallel execution
+          timeSavedMs: Math.max(0, (totalQueries * avgQueryTime) - parallelSearchTime)
         });
       } catch (error) {
         console.error('[API] Multi-field search error:', error);
@@ -606,6 +671,29 @@ export async function POST(request: NextRequest) {
 
     const processingTime = Date.now() - startTime;
 
+    // Log overall performance summary
+    console.log('[PERF] Request summary:', {
+      requestId,
+      processingTimeMs: processingTime,
+      filtersApplied: {
+        hasSearch: Boolean(searchTerm),
+        categoriesCount: categories.length,
+        tagsCount: tags.length,
+        locationsCount: locations.length,
+        format: format !== 'all' ? format : null,
+        budget: budget !== 'all' ? budget : null,
+        cost: cost !== 'all' ? cost : null,
+        difficulty: difficulty !== 'all' ? difficulty : null,
+        isRecommended: recommended,
+        sortBy
+      },
+      results: {
+        returned: enrichedEvents.length,
+        total: totalEvents,
+        isColdStart
+      }
+    });
+
     const response: FilteredEventsResponse = {
       success: true,
       data: {
@@ -617,7 +705,7 @@ export async function POST(request: NextRequest) {
           hasMore: page * pageSize < totalEvents
         },
         filters: {
-          applied: { searchTerm, categories, locations, format, cost, difficulty, dateRange, sortBy },
+          applied: { searchTerm, categories, tags, locations, format, cost, difficulty, dateRange, sortBy },
           available: availableFilters
         },
         stats: {

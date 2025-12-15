@@ -13,6 +13,7 @@ export interface UnifiedFilterOptions {
   // Basic filters
   searchTerm: string;
   categories: string[];
+  tags: string[];
   locations: string[];
   dateRange: { start: Date | null; end: Date | null; };
   
@@ -106,6 +107,7 @@ interface UseUnifiedServerFilteringResult {
 const DEFAULT_FILTERS: UnifiedFilterOptions = {
   searchTerm: '',
   categories: [],
+  tags: [],
   locations: [],
   dateRange: { start: null, end: null },
   budget: 'all',
@@ -118,7 +120,7 @@ const DEFAULT_FILTERS: UnifiedFilterOptions = {
   myTracked: false,
   myNetwork: false,
   recommended: false,
-  sortBy: 'default',
+  sortBy: 'popularity',
   sortDirection: 'asc',
   page: 1,
   pageSize: 50
@@ -130,6 +132,7 @@ export const createDefaultUnifiedFilters = (
   ...DEFAULT_FILTERS,
   ...overrides,
   categories: overrides.categories ?? [],
+  tags: overrides.tags ?? [],
   locations: overrides.locations ?? [],
   dateRange: overrides.dateRange ?? { start: null, end: null }
 });

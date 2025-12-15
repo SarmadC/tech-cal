@@ -509,6 +509,102 @@ export class EventService {
     }
 
     /**
+     * Get event IDs by exact tag matches (for filtering)
+     * Returns event IDs that have any of the specified tags (exact match, case-insensitive)
+     */
+    static async getEventIdsByTags(
+        tags: string[],
+        supabaseClient: SupabaseClientType,
+        filters: EventFilters = {}
+    ): Promise<string[]> {
+        try {
+            if (!tags || tags.length === 0) {
+                return [];
+            }
+
+            // Normalize tags to lowercase for case-insensitive matching
+            const normalizedTags = tags.map(tag => tag.trim().toLowerCase()).filter(Boolean);
+            if (normalizedTags.length === 0) {
+                return [];
+            }
+
+            console.log('[DEBUG TagFilter] Filtering by tags:', normalizedTags);
+
+            // Query event_tag_relations joined with event_tags to find matching events
+            // Use .in() for exact matches on normalized tags
+            let query = supabaseClient
+                .from('event_tag_relations')
+                .select(`
+                    event_id,
+                    event_tags!inner (
+                        event_tag
+                    )
+                `);
+
+            // Filter by exact tag matches (case-insensitive)
+            // We need to match any of the tags, so we'll query for each tag and combine results
+            const tagQueries = normalizedTags.map(tag => 
+                supabaseClient
+                    .from('event_tag_relations')
+                    .select(`
+                        event_id,
+                        event_tags!inner (
+                            event_tag
+                        )
+                    `)
+                    .ilike('event_tags.event_tag', tag) // Case-insensitive exact match
+            );
+
+            const results = await Promise.all(tagQueries);
+            const allEventIds = results.flatMap(result => {
+                if (result.error) {
+                    console.error('[DEBUG TagFilter] Query error:', result.error);
+                    return [];
+                }
+                return (result.data || []).map((rel: { event_id: string }) => rel.event_id);
+            });
+
+            // Get unique event IDs
+            let eventIds = [...new Set(allEventIds)];
+            console.log('[DEBUG TagFilter] Found event IDs before date filter:', eventIds.length);
+
+            // If we have date filters, verify events match them
+            if (eventIds.length > 0 && (filters.startDate || filters.endDate)) {
+                let eventQuery = supabaseClient
+                    .from('events')
+                    .select('id')
+                    .in('id', eventIds);
+
+                if (filters.startDate) {
+                    eventQuery = eventQuery.gte('start_time', filters.startDate.toISOString());
+                }
+                if (filters.endDate) {
+                    eventQuery = eventQuery.lte('start_time', filters.endDate.toISOString());
+                }
+
+                const { data: validEvents, error: validError } = await eventQuery;
+
+                if (validError) {
+                    console.error('[DEBUG TagFilter] Date filter error:', validError);
+                    return eventIds; // Return all if filter fails
+                }
+
+                eventIds = (validEvents || []).map((e: { id: string }) => e.id);
+                console.log('[DEBUG TagFilter] Event IDs after date filter:', eventIds.length);
+            }
+
+            console.log('[DEBUG TagFilter] Returning final event IDs:', eventIds.length);
+            return eventIds;
+        } catch (error) {
+            console.error('[DEBUG TagFilter] Exception:', error);
+            Sentry.captureException(error, {
+                extra: { function: 'getEventIdsByTags', tags }
+            });
+            return [];
+        }
+    }
+
+    /**
      * Search events by organizer name
      * Returns event IDs that match the search term in organizer name
      */

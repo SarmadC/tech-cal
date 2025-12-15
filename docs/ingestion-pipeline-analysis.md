@@ -143,3 +143,7 @@ const qualityDistribution = {
 2. Ship migration ensuring `claim_pending_source_events` RPC exists everywhere, then switch normalization to batched processing.
 3. Implement dead-letter handling + alerting to surface failing sources/events within minutes.
 
+
+
+
+

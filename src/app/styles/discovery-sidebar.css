@@ -1,0 +1,32 @@
+.discovery-sidebar {
+    min-width: 16rem;
+}
+
+.discovery-sidebar-panel {
+    --sidebar-pad: 1.25rem; /* base padding */
+    padding: var(--sidebar-pad);
+    gap: 0;
+}
+
+@media (min-width: 1280px) {
+    .discovery-sidebar-panel {
+        --sidebar-pad: 1.5rem; /* slightly more room on xl screens */
+    }
+}
+
+.discovery-sidebar-panel h2 {
+    letter-spacing: -0.01em;
+}
+
+.discovery-sidebar-panel .filter-section:not(:last-child) {
+    margin-bottom: 1.75rem;
+}
+
+.discovery-sidebar-panel .filter-option + .filter-option {
+    margin-top: 0.35rem;
+}
+
+.discovery-sidebar-panel .filter-section .filter-option:first-of-type {
+    margin-top: 0.4rem; /* space between section title and first option */
+}
+
