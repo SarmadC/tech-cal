@@ -1,4 +1,4 @@
-/* FAQ Section - CSS Module */
+﻿/* FAQ Section - CSS Module */
 
 .section {
     width: 100%;
@@ -138,7 +138,7 @@
     font-size: 1.5rem;
     font-weight: 300;
     color: var(--foreground-tertiary);
-    transition: transform 0.25s ease, color 0.2s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
     flex-shrink: 0;
     margin-left: var(--space-4);
 }
@@ -148,24 +148,30 @@
     color: var(--foreground-primary);
 }
 
+.faqAnswerWrapper {
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 0;
+    opacity: 0;
+}
+
+.faqItem[open] .faqAnswerWrapper {
+    max-height: 500px;
+    opacity: 1;
+}
+
 .faqAnswer {
     padding: 0 var(--space-6) var(--space-6) var(--space-6);
     color: var(--foreground-secondary);
     line-height: 1.65;
     font-size: 1rem;
     font-family: var(--font-sans);
-    animation: fadeIn 0.25s ease;
+    transform: translateY(-8px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.faqItem[open] .faqAnswer {
+    transform: translateY(0);
 }
 
 /* Light mode adjustments */

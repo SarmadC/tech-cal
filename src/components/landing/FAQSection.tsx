@@ -47,7 +47,9 @@ export function FAQSection() {
                                 {faq.question}
                                 <span className={styles.faqIcon} aria-hidden>+</span>
                             </summary>
-                            <p className={styles.faqAnswer}>{faq.answer}</p>
+                            <div className={styles.faqAnswerWrapper}>
+                                <p className={styles.faqAnswer}>{faq.answer}</p>
+                            </div>
                         </details>
                     ))}
                 </div>
