@@ -8,7 +8,7 @@ import MobileFeaturesGrid from './MobileFeaturesGrid';
 import MobileUseCasesSection from './MobileUseCasesSection';
 import MobileFAQSection from './MobileFAQSection';
 import MobileFooter from './MobileFooter';
-import MobileNavbar from '@/components/layout/MobileNavbar';
+import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import '@/app/styles/mobile-landing.css';
 import '@/app/styles/mobile-design-system.css';
 
@@ -60,7 +60,7 @@ const MobileLandingPage: React.FC<MobileLandingPageProps> = ({ className = '' })
   return (
     <div className={`mobile-landing-container ${className}`}>
       {/* Mobile Navigation */}
-      <MobileNavbar
+      <UnifiedMobileNavbar
         navItems={navItems}
         showThemeToggle={true}
         showLogo={true}

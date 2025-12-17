@@ -21,7 +21,7 @@ import { EnhancedTeamCard } from '@/components/hackathon/EnhancedTeamCard';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
-import MobileNavbar from '@/components/common/MobileNavbar';
+import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { createHackathonActions } from '@/utils/hackathonActions';
 import { getUserCreatedTeam, canUserCreateTeam } from '@/utils/teamUtils';
 import { formatDate, formatTime, getDateRange, calculateProgress, formatProgress } from '@/utils/hackathonUiUtils';
@@ -606,7 +606,16 @@ export default function HackathonClientView({
   if (isLoading && !initialHackathons.length) {
     return (
       <SidebarProvider>
-        <MobileNavbar />
+        <UnifiedMobileNavbar 
+          navItems={[
+            { name: 'Discover', href: '/discover' },
+            { name: 'Calendar', href: '/calendar' },
+            { name: 'Dashboard', href: '/dashboard' },
+            { name: 'Hackathons', href: '/hackathons' },
+            { name: 'Settings', href: '/dashboard/settings' }
+          ]}
+          fixed={true}
+        />
         <div className="flex h-screen bg-background">
           <AppSidebar />
           <main className="flex-1 flex flex-col overflow-hidden">
@@ -634,7 +643,16 @@ export default function HackathonClientView({
 
   return (
     <SidebarProvider>
-      <MobileNavbar />
+      <UnifiedMobileNavbar 
+        navItems={[
+          { name: 'Discover', href: '/discover' },
+          { name: 'Calendar', href: '/calendar' },
+          { name: 'Dashboard', href: '/dashboard' },
+          { name: 'Hackathons', href: '/hackathons' },
+          { name: 'Settings', href: '/dashboard/settings' }
+        ]}
+        fixed={true}
+      />
       <div className="flex h-screen bg-background">
         <AppSidebar />
         <main className="flex-1 flex flex-col overflow-hidden">

@@ -24,8 +24,8 @@ const REQUIRED_ENV_VARS = [
   'SENTRY_AUTH_TOKEN',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
-  'VERCEL_KV_REST_API_URL',
-  'VERCEL_KV_REST_API_TOKEN',
+  'KV_REST_API_URL',
+  'KV_REST_API_TOKEN',
 ];
 
 // Optional environment variables for features

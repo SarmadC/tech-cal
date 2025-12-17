@@ -17,7 +17,7 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
-import MobileNavbar from '@/components/common/MobileNavbar';
+import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import type { EventType, Event, TrackedEventRecord } from '@/types';
 
 interface DashboardClientViewProps {
@@ -93,7 +93,16 @@ export default function DashboardClientView({
     return (
         <SidebarProvider>
             {/* Mobile Navigation - Only visible on mobile */}
-            <MobileNavbar />
+            <UnifiedMobileNavbar 
+                navItems={[
+                    { name: 'Discover', href: '/discover' },
+                    { name: 'Calendar', href: '/calendar' },
+                    { name: 'Dashboard', href: '/dashboard' },
+                    { name: 'Hackathons', href: '/hackathons' },
+                    { name: 'Settings', href: '/dashboard/settings' }
+                ]}
+                fixed={true}
+            />
             <div className="flex h-screen bg-background">
                 <AppSidebar />
                 <main className="flex-1 flex flex-col overflow-hidden">

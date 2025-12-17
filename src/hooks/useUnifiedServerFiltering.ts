@@ -165,6 +165,30 @@ export function useUnifiedServerFiltering(
 
   const { trackedEventIds } = useTrackedEventIds();
 
+  // Track typing state for fast search mode
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // When search term changes, mark as typing and set timeout to settle
+  useEffect(() => {
+    if (!filters.searchTerm) {
+      setIsTyping(false);
+      return;
+    }
+    setIsTyping(true);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, FILTERING_CONSTANTS.TYPING_SETTLE_MS); // Consider "settled" after typing stops
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [filters.searchTerm]);
+
   const sessionIdRef = useRef<string | null>(null);
   if (!sessionIdRef.current) {
     const randomId = typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function'
@@ -173,46 +197,71 @@ export function useUnifiedServerFiltering(
     sessionIdRef.current = randomId;
   }
 
-  // Debounce search term to avoid excessive API calls
-  const debouncedSearchTerm = useDebounce(filters.searchTerm, FILTERING_CONSTANTS.SEARCH_DEBOUNCE_MS);
-
-  // Create stable filter object for API calls
-  const apiFilters = useMemo(() => ({
+  // Create stable filter signature for debouncing (with date serialization)
+  // This replaces the previous 4-layer chain: searchDebounce -> apiFilters -> signature -> parse
+  const filtersSignature = useMemo(() => JSON.stringify({
     ...filters,
-    searchTerm: debouncedSearchTerm,
     dateRange: filters.dateRange.start || filters.dateRange.end ? {
       start: filters.dateRange.start?.toISOString(),
       end: filters.dateRange.end?.toISOString()
     } : undefined
-  }), [filters, debouncedSearchTerm]);
-  // Debounce all filters (including non-search) to coalesce rapid changes
-  const apiFiltersSignature = useMemo(() => JSON.stringify(apiFilters), [apiFilters]);
-  const debouncedFiltersSignature = useDebounce(apiFiltersSignature, FILTERING_CONSTANTS.FILTERS_DEBOUNCE_MS);
-  const stableFilters = useMemo(() => JSON.parse(debouncedFiltersSignature) as typeof apiFilters, [debouncedFiltersSignature]);
+  }), [filters]);
 
+  // Single unified debounce for all filter changes (100ms)
+  // This replaces dual debouncing (50ms search + 150ms filters) which caused 2-3 extra API calls
+  const debouncedSignature = useDebounce(filtersSignature, FILTERING_CONSTANTS.UNIFIED_DEBOUNCE_MS);
+
+  // Parse debounced filters - only runs when debounce settles
+  const stableFilters = useMemo(
+    () => JSON.parse(debouncedSignature) as Record<string, unknown>,
+    [debouncedSignature]
+  );
+
+  // Final filters for API call
   const fetchFilters = useMemo(() => ({
     ...stableFilters,
     page: filters.page,
     pageSize: filters.pageSize,
     sessionId: sessionIdRef.current ?? 'filters_fallback',
     surface,
-  }), [stableFilters, filters.page, filters.pageSize, surface]);
+    // Fast search mode: skip enrichment when user is actively typing
+    fastSearch: isTyping && Boolean(filters.searchTerm),
+  }), [stableFilters, filters.page, filters.pageSize, surface, isTyping, filters.searchTerm]);
 
   // React Query: paged query for filtered events
   // In development, use shorter staleTime to see changes immediately
   const isDevelopment = process.env.NODE_ENV === 'development';
-  
-  // Versioned query key for cache busting (v2 for tag enrichment improvements)
-  const queryKeyVersion = 'v2';
-  
+
+  // Query key factory for deterministic, consistent cache keys
+  // Ensures arrays are sorted and properties are in consistent order
+  const queryKeyVersion = 'v3'; // Bumped for query key factory changes
+  const createFilterQueryKey = useCallback(
+    (mode: 'paged' | 'infinite') => {
+      // Create a deterministic key by sorting arrays and using consistent property order
+      // Use the debounced signature for the main content to ensure consistency
+      const stableKey = {
+        // The signature already captures the debounced filter state
+        signature: debouncedSignature,
+        // These are not part of the signature but affect the query
+        page: filters.page,
+        pageSize: filters.pageSize,
+        surface,
+        fastSearch: isTyping && Boolean(filters.searchTerm),
+      };
+      return ['filtered-events', queryKeyVersion, mode, stableKey] as const;
+    },
+    [debouncedSignature, filters.page, filters.pageSize, surface, isTyping, filters.searchTerm]
+  );
+
   const {
     data: pagedData,
     isLoading: pagedLoading,
     isFetching: pagedFetching,
+    isPlaceholderData: pagedIsPlaceholder,
     error: pagedError,
     refetch: pagedRefetch,
   } = useQuery({
-    queryKey: ['filtered-events', queryKeyVersion, 'paged', fetchFilters],
+    queryKey: createFilterQueryKey('paged'),
     enabled: isPagedMode,
     placeholderData: (previousData) => previousData,
     staleTime: isDevelopment ? 0 : FILTERING_CONSTANTS.FILTER_CACHE_DURATION_MS,
@@ -259,7 +308,7 @@ export function useUnifiedServerFiltering(
     fetchNextPage,
     hasNextPage,
   } = useInfiniteQuery({
-    queryKey: ['filtered-events', queryKeyVersion, 'infinite', fetchFilters],
+    queryKey: createFilterQueryKey('infinite'),
     enabled: autoLoadAllPages,
     initialPageParam: 1,
     placeholderData: (previousData) => previousData,
@@ -304,14 +353,17 @@ export function useUnifiedServerFiltering(
   const queryError = activeQueryError instanceof Error ? activeQueryError.message : null;
 
   // Separate initial loading from background refetching
-  // isLoading = true only when NO data exists (initial load)
-  // isBackgroundRefetch = true when refetching with existing data
+  // isLoading = true only when NO data exists at all (true initial load)
+  // isBackgroundRefetch = true when refetching with existing/placeholder data
+  // Key insight: when using placeholderData, pagedData exists but isPlaceholderData is true
+  // We should NOT show skeleton when we have placeholder data - just show the old results
   const isInitialLoading = isPagedMode
-    ? (pagedLoading && !pagedData)
+    ? (pagedLoading && !pagedData && !pagedIsPlaceholder)
     : (infiniteLoading && !infiniteData);
 
+  // Treat placeholder data scenario as background refetch (subtle loading indicator only)
   const isBackgroundRefetch = isPagedMode
-    ? (pagedFetching && !!pagedData)
+    ? (pagedFetching && (!!pagedData || pagedIsPlaceholder))
     : (infiniteFetching && !!infiniteData);
 
   const updateFilter: UpdateFilterHandler = useCallback((key, value) => {
@@ -340,7 +392,8 @@ export function useUnifiedServerFiltering(
     }
   }, [isPagedMode, pagedRefetch, infiniteRefetch]);
 
-  // Calculate active filter count
+  // Calculate active filter count - optimized with specific dependencies
+  // This prevents recalculation when pagination changes (page/pageSize/sortBy/sortDirection)
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.categories.length > 0) count++;
@@ -358,7 +411,23 @@ export function useUnifiedServerFiltering(
     if (filters.myNetwork) count++;
     if (filters.recommended) count++;
     return count;
-  }, [filters]);
+  }, [
+    filters.categories.length,
+    filters.locations.length,
+    filters.searchTerm,
+    filters.dateRange.start,
+    filters.dateRange.end,
+    filters.budget,
+    filters.format,
+    filters.cost,
+    filters.difficulty,
+    filters.availability,
+    filters.popularity,
+    filters.duration,
+    filters.myTracked,
+    filters.myNetwork,
+    filters.recommended,
+  ]);
 
   // Quick filter actions (from original useSmartFilters)
   const applyQuickFilter = useCallback((filterType: string) => {

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
+import { getLogoSourcesForClient } from '@/utils/logoUtils';
 
 export interface MobileChaosToOrderSectionProps {
   className?: string;
@@ -69,18 +70,56 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
   const daysInMonth = new Date(YEAR, MONTH_INDEX + 1, 0).getDate();
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const logoUrl = useCallback((name: string) => {
-    const key = name.toLowerCase();
-    const slug = Object.keys(COMPANY_SLUG).find((k) => key.includes(k));
-    if (SUPABASE_URL && slug) return `${SUPABASE_URL}/storage/v1/object/public/logos/${COMPANY_SLUG[slug]}.svg`;
-    const domain = slug ? `${COMPANY_SLUG[slug]}.com` : 'example.com';
-    return `https://logo.clearbit.com/${domain}`;
-  }, [SUPABASE_URL]);
-
-  const logoSources = useMemo(
-    () => eventData.map((e) => logoUrl(e.company)),
-    [eventData, logoUrl]
+  
+  // Get logo sources for each company with fallback chain
+  const logoSourcesMap = useMemo(
+    () => eventData.reduce((acc, e) => {
+      acc[e.company] = getLogoSourcesForClient(e.company, SUPABASE_URL);
+      return acc;
+    }, {} as Record<string, string[]>),
+    [eventData, SUPABASE_URL]
   );
+
+  // Track active logo source for each company (for error handling)
+  const [activeLogoSources, setActiveLogoSources] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    eventData.forEach((e) => {
+      const sources = logoSourcesMap[e.company];
+      if (sources && sources.length > 0) {
+        initial[e.company] = sources[0];
+      }
+    });
+    return initial;
+  });
+
+  useEffect(() => {
+    const updated: Record<string, string> = {};
+    eventData.forEach((e) => {
+      const sources = logoSourcesMap[e.company];
+      if (sources && sources.length > 0) {
+        updated[e.company] = sources[0];
+      }
+    });
+    setActiveLogoSources(updated);
+  }, [eventData, logoSourcesMap]);
+
+  const handleLogoError = useCallback((company: string) => {
+    const sources = logoSourcesMap[company];
+    if (!sources) return;
+    
+    const currentSrc = activeLogoSources[company];
+    const currentIndex = currentSrc ? sources.indexOf(currentSrc) : -1;
+    const nextSrc = currentIndex >= 0 && currentIndex < sources.length - 1 
+      ? sources[currentIndex + 1] 
+      : undefined;
+    
+    if (nextSrc) {
+      setActiveLogoSources((prev) => ({
+        ...prev,
+        [company]: nextSrc,
+      }));
+    }
+  }, [activeLogoSources, logoSourcesMap]);
 
   const getTileSize = () => {
     const el = containerRef.current;
@@ -365,15 +404,22 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
                 style={{ opacity: 0 }}
               >
                 <div className="logo-wrapper" aria-hidden="true">
-                  <Image
-                    src={logoSources[i]}
-                    alt=""
-                    width={22}
-                    height={22}
-                    loading="lazy"
-                    sizes="32px"
-                    style={{ objectFit: 'contain' }}
-                  />
+                  {activeLogoSources[e.company] ? (
+                    <Image
+                      src={activeLogoSources[e.company]}
+                      alt=""
+                      width={22}
+                      height={22}
+                      loading="lazy"
+                      sizes="32px"
+                      style={{ objectFit: 'contain' }}
+                      onError={() => handleLogoError(e.company)}
+                    />
+                  ) : (
+                    <div className="logo-placeholder" style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
+                      {e.company.charAt(0)}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

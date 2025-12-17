@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthNotifications } from '@/hooks/useAuthNotifications';
 import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import Navbar from "@/components/common/Navbar";
-import MobileNavbar from "@/components/layout/MobileNavbar";
+import UnifiedMobileNavbar from "@/components/common/UnifiedMobileNavbar";
 import AnalyticsConsentBanner from '@/components/common/AnalyticsConsentBanner';
 
 export default function ClientLayout({
@@ -25,7 +25,7 @@ export default function ClientLayout({
     useAuthNotifications();
     
     // Pages that should never show navbar (they have their own navigation)
-    const excludedPaths = ['/calendar', '/', '/hackathons', '/dashboard'];
+    const excludedPaths = ['/calendar', '/', '/hackathons', '/dashboard', '/discover', '/events'];
     
     // Marketing pages that should always show navbar (excluding landing page which has custom nav)
     const marketingPaths = ['/pricing', '/blog', '/contact', '/legal'];
@@ -59,7 +59,7 @@ export default function ClientLayout({
         );
     }
 
-    // Navigation items for MobileNavbar
+    // Navigation items for UnifiedMobileNavbar
     const mobileNavItems = [
         { name: 'Features', href: '/#features' },
         { name: 'Pricing', href: '/pricing' },
@@ -76,19 +76,23 @@ export default function ClientLayout({
         );
     } else {
         mobileNavItems.push(
-            { name: 'Sign In', href: '/login' },
-            { name: 'Sign Up', href: '/signup' }
+            { name: 'Sign In', href: '/login' }
         );
     }
 
     return (
         <>
-            {/* Use MobileNavbar on mobile, desktop Navbar otherwise */}
+            {/* Use UnifiedMobileNavbar on mobile, desktop Navbar otherwise */}
             {isMobile ? (
-                <MobileNavbar 
+                <UnifiedMobileNavbar 
                     navItems={mobileNavItems}
                     showThemeToggle={true}
                     showLogo={true}
+                    ctaButton={!user ? {
+                        label: 'Sign Up',
+                        href: '/signup',
+                        variant: 'primary'
+                    } : undefined}
                 />
             ) : (
                 <Navbar />

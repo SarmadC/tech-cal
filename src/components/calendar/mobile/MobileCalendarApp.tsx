@@ -11,7 +11,7 @@ import MobileCalendarMonthView from './MobileCalendarMonthView';
 import MobileSearchFilter from '../MobileSearchFilter';
 import MobileViewEnhancements from './MobileViewEnhancements';
 import MobileAdvancedGestures from './MobileAdvancedGestures';
-import MobileNavbar from '@/components/common/MobileNavbar';
+import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 
 export interface MobileCalendarAppProps {
   events: Event[];
@@ -225,11 +225,16 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
         onDateChange={(date) => handleDateChange(date, true)}
       />
 
-      {/* Mobile Sidebar */}
-      <MobileNavbar 
-        showHamburgerButton={false} 
-        isOpen={isSidebarOpen}
-        onToggle={handleToggleSidebar}
+      {/* Mobile Navigation */}
+      <UnifiedMobileNavbar 
+        navItems={[
+          { name: 'Discover', href: '/discover' },
+          { name: 'Calendar', href: '/calendar' },
+          { name: 'Dashboard', href: '/dashboard' },
+          { name: 'Hackathons', href: '/hackathons' },
+          { name: 'Settings', href: '/dashboard/settings' }
+        ]}
+        fixed={true}
       />
 
     </div>

@@ -8,6 +8,7 @@
 import type { SupabaseClientType } from '@/types';
 import { TIMEOUT_CONFIG } from '@/config/ingestionConstants';
 import * as Sentry from '@sentry/nextjs';
+import { getLogoSources } from '@/utils/logoUtils';
 
 export interface OrganizerInput {
     name: string;
@@ -130,29 +131,35 @@ export class OrganizerEnrichmentService {
     }
 
     /**
-     * Fetch logo from Clearbit API (graceful degradation)
+     * Fetch logo from multiple sources with fallback chain (graceful degradation)
+     * Tries Supabase storage, special logos, Google favicon, Icon Horse, and Clearbit
      */
     private static async fetchLogoFromClearbit(domain: string): Promise<string | null> {
-        try {
-            // Clearbit logo API (already in next.config.ts allowlist)
-            const logoUrl = `https://logo.clearbit.com/${domain}`;
-            
-            // Verify the logo exists with a HEAD request (quick check)
-            const response = await fetch(logoUrl, {
-                method: 'HEAD',
-                signal: AbortSignal.timeout(TIMEOUT_CONFIG.ORGANIZER_LOOKUP_MS),
-            });
+        // Get all logo sources in priority order
+        const logoSources = getLogoSources(domain);
+        
+        // Try each source in sequence
+        for (const logoUrl of logoSources) {
+            try {
+                // Verify the logo exists with a HEAD request (quick check)
+                const response = await fetch(logoUrl, {
+                    method: 'HEAD',
+                    signal: AbortSignal.timeout(TIMEOUT_CONFIG.ORGANIZER_LOOKUP_MS),
+                });
 
-            if (response.ok) {
-                return logoUrl;
+                if (response.ok) {
+                    return logoUrl;
+                }
+            } catch (error) {
+                // Continue to next source on error
+                console.debug('Failed to fetch logo from', logoUrl + ':', error);
+                continue;
             }
-
-            return null;
-        } catch (error) {
-            // Graceful degradation - continue without logo
-            console.debug('Failed to fetch logo for', domain + ':', error);
-            return null;
         }
+
+        // All sources failed
+        console.debug('Failed to fetch logo for', domain, 'from all sources');
+        return null;
     }
 }
 

@@ -19,7 +19,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
     return (
         <div className="mb-6 filter-section">
             <button
-                className="flex items-center justify-between w-full mb-3 pb-2 border-b border-white/5 group text-foreground"
+                className="flex items-center justify-between w-full mb-3 pb-2 border-b border-border group text-foreground"
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <h3 className="font-medium text-xs uppercase tracking-[0.16em] text-muted-foreground/80">{title}</h3>
@@ -48,7 +48,7 @@ interface CheckboxOptionProps {
 
 const CheckboxOption: React.FC<CheckboxOptionProps> = ({ label, count, checked, onChange }) => {
     return (
-        <label className="filter-option flex items-center gap-3 cursor-pointer group text-sm text-muted-foreground rounded-lg px-2 py-2 hover:bg-white/4 transition-colors">
+        <label className="filter-option flex items-center gap-3 cursor-pointer group text-sm text-muted-foreground rounded-lg px-2 py-2 hover:bg-muted transition-colors">
             <div className={`
         w-5 h-5 rounded-full border flex items-center justify-center transition-all duration-200
         ${checked
@@ -94,6 +94,7 @@ export interface DiscoverySidebarProps {
         cost?: Record<string, number>;
         categories?: Record<string, number>;
     };
+    mobileMode?: boolean;
 }
 
 // Memoize to prevent unnecessary re-renders when parent updates
@@ -102,7 +103,8 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
     onUpdateFilter,
     categories,
     events = [],
-    counts = {}
+    counts = {},
+    mobileMode = false
 }) => {
 
     const toggleCategory = (catId: string) => {
@@ -122,56 +124,56 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
     };
 
     return (
-        <div className="discovery-sidebar hidden lg:block w-72 flex-shrink-0 pr-8">
-            <div className="discovery-sidebar-panel sticky top-6 rounded-3xl border border-border/60 bg-card/80 dark:bg-card/20 p-6 shadow-lg backdrop-blur">
+        <div className={`discovery-sidebar ${mobileMode ? 'w-full block' : 'hidden lg:block w-72 flex-shrink-0 pr-8'}`}>
+            <div className={mobileMode ? "" : "discovery-sidebar-panel sticky top-6 rounded-3xl border border-border/60 bg-card/80 dark:bg-card/20 p-6 shadow-lg backdrop-blur"}>
                 <div className="mb-8">
                     <h2 className="text-2xl font-semibold text-foreground">Filters</h2>
                 </div>
 
                 <FilterSection title="Event Format">
-                <CheckboxOption
-                    label="All"
-                    checked={filters.format === 'all'}
-                    onChange={() => onUpdateFilter('format', 'all')}
-                />
-                <CheckboxOption
-                    label="Virtual"
-                    checked={filters.format === 'virtual'}
-                    onChange={() => onUpdateFilter('format', 'virtual')}
-                    count={counts.format?.virtual}
-                />
-                <CheckboxOption
-                    label="In-Person"
-                    checked={filters.format === 'in-person'}
-                    onChange={() => onUpdateFilter('format', 'in-person')}
-                    count={counts.format?.['in-person']}
-                />
-                <CheckboxOption
-                    label="Hybrid"
-                    checked={filters.format === 'hybrid'}
-                    onChange={() => onUpdateFilter('format', 'hybrid')}
-                    count={counts.format?.hybrid}
-                />
+                    <CheckboxOption
+                        label="All"
+                        checked={filters.format === 'all'}
+                        onChange={() => onUpdateFilter('format', 'all')}
+                    />
+                    <CheckboxOption
+                        label="Virtual"
+                        checked={filters.format === 'virtual'}
+                        onChange={() => onUpdateFilter('format', 'virtual')}
+                        count={counts.format?.virtual}
+                    />
+                    <CheckboxOption
+                        label="In-Person"
+                        checked={filters.format === 'in-person'}
+                        onChange={() => onUpdateFilter('format', 'in-person')}
+                        count={counts.format?.['in-person']}
+                    />
+                    <CheckboxOption
+                        label="Hybrid"
+                        checked={filters.format === 'hybrid'}
+                        onChange={() => onUpdateFilter('format', 'hybrid')}
+                        count={counts.format?.hybrid}
+                    />
                 </FilterSection>
 
                 <FilterSection title="Cost">
-                <CheckboxOption
-                    label="Any"
-                    checked={filters.cost === 'all'}
-                    onChange={() => onUpdateFilter('cost', 'all')}
-                />
-                <CheckboxOption
-                    label="Free"
-                    checked={filters.cost === 'free'}
-                    onChange={() => onUpdateFilter('cost', 'free')}
-                    count={counts.cost?.free}
-                />
-                <CheckboxOption
-                    label="Paid"
-                    checked={filters.cost === 'paid'}
-                    onChange={() => onUpdateFilter('cost', 'paid')}
-                    count={counts.cost?.paid}
-                />
+                    <CheckboxOption
+                        label="Any"
+                        checked={filters.cost === 'all'}
+                        onChange={() => onUpdateFilter('cost', 'all')}
+                    />
+                    <CheckboxOption
+                        label="Free"
+                        checked={filters.cost === 'free'}
+                        onChange={() => onUpdateFilter('cost', 'free')}
+                        count={counts.cost?.free}
+                    />
+                    <CheckboxOption
+                        label="Paid"
+                        checked={filters.cost === 'paid'}
+                        onChange={() => onUpdateFilter('cost', 'paid')}
+                        count={counts.cost?.paid}
+                    />
                 </FilterSection>
 
                 <FilterSection title="Categories">

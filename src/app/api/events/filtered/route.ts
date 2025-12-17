@@ -63,6 +63,7 @@ interface FilteredEventsRequest {
   recommended?: boolean;
   sessionId?: string;
   surface?: 'calendar' | 'discover' | 'default';
+  fastSearch?: boolean; // Skip enrichment and counts for instant search results
 }
 
 interface FilteredEventsResponse {
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request
     const rawBody: FilteredEventsRequest = await request.json();
-    const { sessionId: telemetrySessionId, surface: requestSurface, ...body } = rawBody;
+    const { sessionId: telemetrySessionId, surface: requestSurface, fastSearch = false, ...body } = rawBody;
 
     const {
       searchTerm,
@@ -388,59 +389,135 @@ export async function POST(request: NextRequest) {
 
     if (searchTerm && searchTerm.trim()) {
       try {
-        // Import TagBasedMatchingService dynamically to use expandSearchTerm
-        const { TagBasedMatchingService } = await import('@/services/tagBasedMatchingService');
+        // OPTIMIZATION: Skip expansion for very short queries (< 3 chars) or fast search mode
+        const trimmedSearchTerm = searchTerm.trim();
+        const shouldExpand = !fastSearch && trimmedSearchTerm.length >= 3;
 
-        // MULTI-QUERY OPTIMIZATION: Expand search term using TAG_SIMILARITIES
-        const expansionStart = Date.now();
-        expandedSearchTerms = TagBasedMatchingService.expandSearchTerm(searchTerm);
-        const expansionTime = Date.now() - expansionStart;
+        if (shouldExpand) {
+          // Import TagBasedMatchingService dynamically to use expandSearchTerm
+          const { TagBasedMatchingService } = await import('@/services/tagBasedMatchingService');
 
-        // Performance logging for query expansion
-        console.log('[PERF] Query expansion:', {
-          original: searchTerm,
-          expanded: expandedSearchTerms,
-          expansionTimeMs: expansionTime,
-          expansionFactor: expandedSearchTerms.length
-        });
+          // MULTI-QUERY OPTIMIZATION: Expand search term using TAG_SIMILARITIES
+          const expansionStart = Date.now();
+          const allExpandedTerms = TagBasedMatchingService.expandSearchTerm(trimmedSearchTerm);
+          const expansionTime = Date.now() - expansionStart;
 
-        // MULTI-QUERY OPTIMIZATION: Execute all search queries in parallel
-        // This significantly reduces latency compared to sequential execution
-        // Total queries = expandedTerms * 2 (tag + organizer per term)
+          // OPTIMIZATION: Limit expansion to top 5 terms for longer queries to reduce overhead
+          // Keep original term first, then limit similar terms
+          expandedSearchTerms = allExpandedTerms.length > 5 
+            ? [trimmedSearchTerm.toLowerCase(), ...allExpandedTerms.slice(1, 5)]
+            : allExpandedTerms;
+
+          // Performance logging for query expansion
+          console.log('[PERF] Query expansion:', {
+            original: trimmedSearchTerm,
+            expanded: expandedSearchTerms,
+            totalExpanded: allExpandedTerms.length,
+            limitedTo: expandedSearchTerms.length,
+            expansionTimeMs: expansionTime,
+            expansionFactor: expandedSearchTerms.length
+          });
+        } else {
+          // For short queries, use original term only (no expansion)
+          expandedSearchTerms = [trimmedSearchTerm.toLowerCase()];
+          console.log('[PERF] Query expansion skipped (short query):', {
+            original: trimmedSearchTerm,
+            length: trimmedSearchTerm.length
+          });
+        }
+
+        // OPTIMIZATION: Conditional multi-query approach based on query length
+        // Short queries (< 3 chars): FTS only (skip tag/organizer searches for instant results)
+        // Medium queries (3-10 chars): FTS + tag search (skip organizer for faster results)
+        // Long queries (> 10 chars): Full multi-query approach (FTS + tags + organizer)
+        // 
+        // ADDITIONAL OPTIMIZATION: Skip tag search for very common single-word terms that will match too many events
+        // These terms are better handled by FTS alone for performance
+        const queryLength = trimmedSearchTerm.length;
+        const commonTerms = ['data', 'ai', 'web', 'app', 'code', 'tech', 'dev', 'cloud', 'api'];
+        const isCommonTerm = commonTerms.includes(trimmedSearchTerm.toLowerCase());
+        const useTagSearch = queryLength >= 3 && !isCommonTerm; // Skip tag search for common terms
+        const useOrganizerSearch = queryLength > 10 && !isCommonTerm;
+
         const parallelSearchStart = Date.now();
-        const totalQueries = expandedSearchTerms.length * 2;
+        const searchPromises: Promise<string[]>[] = [];
 
-        const searchPromises = expandedSearchTerms.flatMap(term => [
-          EventService.getEventIdsByTagSearch(term, supabase, eventFilters),
-          EventService.getEventIdsByOrganizerSearch(term, supabase)
-        ]);
+        if (useTagSearch) {
+          // Add tag searches for all expanded terms
+          // OPTIMIZATION: Add timeout wrapper to prevent slow queries from blocking
+          expandedSearchTerms.forEach(term => {
+            const tagSearchPromise = EventService.getEventIdsByTagSearch(term, supabase, eventFilters);
+            // Add timeout of 1 second per tag search to prevent blocking
+            const timeoutPromise = new Promise<string[]>((resolve) => {
+              setTimeout(() => {
+                console.warn(`[PERF] Tag search timeout for term: ${term}`);
+                resolve([]); // Return empty on timeout
+              }, 1000);
+            });
+            searchPromises.push(Promise.race([tagSearchPromise, timeoutPromise]));
+          });
+        }
 
-        const results = await Promise.all(searchPromises);
+        if (useOrganizerSearch) {
+          // Add organizer searches for all expanded terms
+          // OPTIMIZATION: Add timeout wrapper to prevent slow queries from blocking
+          expandedSearchTerms.forEach(term => {
+            const orgSearchPromise = EventService.getEventIdsByOrganizerSearch(term, supabase);
+            // Add timeout of 1 second per organizer search to prevent blocking
+            const timeoutPromise = new Promise<string[]>((resolve) => {
+              setTimeout(() => {
+                console.warn(`[PERF] Organizer search timeout for term: ${term}`);
+                resolve([]); // Return empty on timeout
+              }, 1000);
+            });
+            searchPromises.push(Promise.race([orgSearchPromise, timeoutPromise]));
+          });
+        }
+
+        // Execute queries in parallel (if any)
+        const results = searchPromises.length > 0 
+          ? await Promise.all(searchPromises)
+          : [];
         const parallelSearchTime = Date.now() - parallelSearchStart;
 
-        // Separate tag and organizer results
+        // Separate tag and organizer results based on which searches were executed
         const tagResults: string[][] = [];
         const orgResults: string[][] = [];
 
-        results.forEach((ids, index) => {
-          if (index % 2 === 0) {
-            tagResults.push(ids);
-          } else {
-            orgResults.push(ids);
-          }
-        });
+        if (useTagSearch && useOrganizerSearch) {
+          // Both searches executed - alternate pattern
+          results.forEach((ids, index) => {
+            if (index % 2 === 0) {
+              tagResults.push(ids);
+            } else {
+              orgResults.push(ids);
+            }
+          });
+        } else if (useTagSearch) {
+          // Only tag searches executed
+          results.forEach(ids => tagResults.push(ids));
+        } else if (useOrganizerSearch) {
+          // Only organizer searches executed
+          results.forEach(ids => orgResults.push(ids));
+        }
 
         // DEDUPLICATION: Flatten and deduplicate results
         const dedupeStart = Date.now();
-        tagMatchedEventIds = [...new Set(tagResults.flat())];
-        organizerMatchedEventIds = [...new Set(orgResults.flat())];
+        tagMatchedEventIds = tagResults.length > 0 ? [...new Set(tagResults.flat())] : [];
+        organizerMatchedEventIds = orgResults.length > 0 ? [...new Set(orgResults.flat())] : [];
         const dedupeTime = Date.now() - dedupeStart;
+
+        const totalQueries = searchPromises.length;
 
         // Performance metrics for multi-query optimization
         const avgQueryTime = totalQueries > 0 ? Math.round(parallelSearchTime / totalQueries) : 0;
         console.log('[PERF] Multi-query optimization:', {
           searchTerm,
+          queryLength,
+          strategy: queryLength < 3 ? 'FTS-only' : queryLength <= 10 ? 'FTS+tags' : 'FTS+tags+organizer',
           queriesExecuted: totalQueries,
+          tagSearchEnabled: useTagSearch,
+          organizerSearchEnabled: useOrganizerSearch,
           parallelExecutionTimeMs: parallelSearchTime,
           avgQueryTimeMs: avgQueryTime,
           deduplicationTimeMs: dedupeTime,
@@ -513,9 +590,30 @@ export async function POST(request: NextRequest) {
       ? enrichMaxPageEnv
       : Number.MAX_SAFE_INTEGER;
     
+    // OPTIMIZATION: Skip enrichment for simple searches (just search term, no other filters) to improve performance
+    // Enrichment adds significant latency and may not be needed for basic searches
+    const hasOnlySearchTerm = Boolean(searchTerm) && 
+      categories.length === 0 && 
+      tags.length === 0 && 
+      locations.length === 0 &&
+      format === 'all' && 
+      budget === 'all' && 
+      cost === 'all' && 
+      difficulty === 'all' &&
+      !dateRange?.start && 
+      !dateRange?.end &&
+      popularity === 'all' &&
+      duration === 'all' &&
+      !myNetwork &&
+      !recommended &&
+      sortBy !== 'career-impact';
+    
     // Always enrich if: recommended filter is active, sorting by career-impact, or within enrich max page
-    // For discovery view, always enrich to ensure recommendations work
-    const shouldEnrich = recommended || isCareerImpactSort || page <= ENRICH_MAX_PAGE || requestSurface === 'discover';
+    // For discovery view, enrich only if there are filters beyond just search term
+    // Skip enrichment entirely for fast search mode (typing-as-you-search)
+    const shouldEnrich = !fastSearch && (
+      recommended || isCareerImpactSort || (page <= ENRICH_MAX_PAGE && !hasOnlySearchTerm) || (requestSurface === 'discover' && !hasOnlySearchTerm)
+    );
     
     let enrichedEvents;
     try {
@@ -650,11 +748,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate filter statistics (simplified since filtering is now at database level)
-    const counts = await EventService.getFilterCounts(eventFilters, supabase);
-    const availableFilters = {
+    // Skip expensive filter count computation for fast search mode
+    const counts = fastSearch ? null : await EventService.getFilterCounts(eventFilters, supabase);
+    const availableFilters = fastSearch ? {
+      categories: [],
+      difficulties: [
+        { value: 'beginner', count: 0 },
+        { value: 'intermediate', count: 0 },
+        { value: 'advanced', count: 0 },
+      ],
+      formats: [
+        { value: 'virtual', count: 0 },
+        { value: 'in-person', count: 0 },
+        { value: 'hybrid', count: 0 },
+      ],
+      locations: []
+    } : {
       categories: (await getAvailableCategories(supabase)).map((cat) => ({
         ...cat,
-        count: counts.categories[cat.id] || 0
+        count: counts?.categories[cat.id] || 0
       })),
       difficulties: [
         { value: 'beginner', count: 0 }, // Would need separate queries for accurate counts
@@ -662,9 +774,9 @@ export async function POST(request: NextRequest) {
         { value: 'advanced', count: 0 },
       ],
       formats: [
-        { value: 'virtual', count: counts.format.virtual },
-        { value: 'in-person', count: counts.format['in-person'] },
-        { value: 'hybrid', count: counts.format.hybrid },
+        { value: 'virtual', count: counts?.format.virtual || 0 },
+        { value: 'in-person', count: counts?.format['in-person'] || 0 },
+        { value: 'hybrid', count: counts?.format.hybrid || 0 },
       ],
       locations: []
     };
@@ -675,6 +787,7 @@ export async function POST(request: NextRequest) {
     console.log('[PERF] Request summary:', {
       requestId,
       processingTimeMs: processingTime,
+      fastSearch,
       filtersApplied: {
         hasSearch: Boolean(searchTerm),
         categoriesCount: categories.length,
@@ -714,13 +827,18 @@ export async function POST(request: NextRequest) {
           totalCount: totalEvents
         },
         isColdStart,
-        counts
+        counts: counts ?? undefined
       }
     };
 
-    // Store in cache with short TTL to coalesce rapid toggles
+    // OPTIMIZATION: Store in cache with longer TTL for better performance
+    // For common searches (just search term, no other filters), use longer TTL (5 minutes)
+    // For other searches, use shorter TTL (2 minutes)
+    // Reuse hasOnlySearchTerm defined earlier for enrichment decision
+    const cacheTTL = hasOnlySearchTerm ? 300 : 120; // 5 minutes for simple searches, 2 minutes for complex
+    
     try {
-      await kv.set(cacheKey, response, { ex: 60 });
+      await kv.set(cacheKey, response, { ex: cacheTTL });
     } catch (cacheSetErr) {
       console.log('[API] Failed to set filtered events cache:', cacheSetErr instanceof Error ? cacheSetErr.message : 'unknown');
     }
