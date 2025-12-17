@@ -43,15 +43,15 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
   }, []);
 
   const toggleMenu = useCallback(() => {
-    setIsMenuOpen((open) => {
-      if (open) {
-        setIsClosing(true);
-        return open;
-      }
+    if (isMenuOpen) {
+      // Closing
+      setIsClosing(true);
+    } else {
+      // Opening
       setIsClosing(false);
-      return true;
-    });
-  }, []);
+      setIsMenuOpen(true);
+    }
+  }, [isMenuOpen]);
 
   const closeMenu = useCallback(() => {
     setIsClosing(true);
@@ -94,45 +94,60 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
       {/* Navbar */}
       <nav 
         className={cn(
-          "fixed top-0 left-0 right-0 z-40 transition-all duration-300",
-          isScrolled 
-            ? "bg-white/70 dark:bg-gray-900/20 border-b border-white/20 dark:border-gray-700/30 shadow-lg dark:shadow-gray-900/20" 
-            : "bg-transparent",
+          "fixed top-0 left-0 right-0 z-[100] transition-all duration-300",
+          "bg-transparent",
           className
         )}
+        style={{ pointerEvents: 'auto' }}
       >
         <div className="flex items-center justify-end px-4 py-3">
           {/* Logo - Show on left if provided */}
           {showLogo && (
-            <div className="flex items-center space-x-3 mr-auto">
-              <ThemeLogo width={24} height={24} />
+            <div className="flex items-center space-x-3 mr-auto mobile-navbar-logo-wrapper">
+              <ThemeLogo width={32} height={32} />
             </div>
           )}
           
           {/* Hamburger menu - Always on right */}
-          {!isMenuOpen && (
-            <button
-              ref={menuBtnRef}
-              onClick={toggleMenu}
-              className="p-2 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/30 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 transition-all duration-300"
-              aria-label="Toggle menu"
-            >
-              <List size={24} className="text-gray-700 dark:text-gray-300" />
-            </button>
-          )}
+          <button
+            ref={menuBtnRef}
+            onClick={toggleMenu}
+            className={cn(
+              "p-2 rounded-lg transition-all duration-300",
+              "hover:bg-white/10 dark:hover:bg-white/10",
+              "focus:outline-none focus:ring-2 focus:ring-white/30 dark:focus:ring-white/30",
+              isMenuOpen && "opacity-0 pointer-events-none"
+            )}
+            aria-label="Toggle menu"
+            aria-expanded={isMenuOpen}
+          >
+            <List 
+              size={24} 
+              className={cn(
+                "transition-transform duration-300",
+                "text-gray-900 dark:text-white",
+                isMenuOpen && "rotate-90 opacity-0"
+              )} 
+            />
+          </button>
         </div>
       </nav>
 
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[110]">
           {/* Backdrop */}
           <div
             className={cn(
-              'absolute inset-0 bg-black/20 transition-opacity duration-300',
-              isClosing ? 'opacity-0 ease-in' : 'opacity-100 ease-out',
+              'absolute inset-0 bg-black/40 backdrop-blur-sm transition-all duration-300',
+              isClosing ? 'opacity-0' : 'opacity-100',
               'motion-reduce:transition-none'
             )}
+            style={{
+              transitionTimingFunction: isClosing 
+                ? 'cubic-bezier(0.4, 0, 1, 1)' 
+                : 'cubic-bezier(0, 0, 0.2, 1)'
+            }}
             onClick={closeMenu}
           />
           
@@ -140,9 +155,14 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
           <div
             className={cn(
               'absolute top-0 right-0 h-full w-80 max-w-[85vw] transform transition-transform duration-300',
-              isClosing ? 'translate-x-full ease-in' : 'translate-x-0 ease-out',
+              isClosing ? 'translate-x-full' : 'translate-x-0',
               'motion-reduce:transition-none motion-reduce:transform-none'
             )}
+            style={{
+              transitionTimingFunction: isClosing 
+                ? 'cubic-bezier(0.4, 0, 1, 1)' 
+                : 'cubic-bezier(0, 0, 0.2, 1)'
+            }}
             role="dialog"
             aria-modal="true"
             onTransitionEnd={() => {
@@ -165,10 +185,16 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
                 <button
                   ref={closeBtnRef}
                   onClick={closeMenu}
-                  className="p-2 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/30 transition-all duration-300"
+                  className="p-2 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/30 transition-all duration-200 active:scale-95"
                   aria-label="Close menu"
                 >
-                  <X size={20} className="text-gray-700 dark:text-gray-300" />
+                  <X 
+                    size={20} 
+                    className={cn(
+                      "text-gray-700 dark:text-gray-300 transition-transform duration-200",
+                      isClosing && "rotate-90"
+                    )} 
+                  />
                 </button>
               </div>
 
@@ -179,8 +205,18 @@ const MobileNavbar: React.FC<MobileNavbarProps> = ({
                       <a
                         key={item.name}
                         href={item.href}
-                        className={`block py-3 text-xl font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-800/30 rounded-lg transition-colors duration-300 ${isClosing ? 'animate-out slide-out-to-right fade-out' : 'animate-in slide-in-from-right fade-in'}`}
-                        style={{ animationDelay: isClosing ? '0ms' : `${100 + (index * 50)}ms` }}
+                        className={cn(
+                          "block py-3 text-xl font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-800/30 rounded-lg transition-all duration-200 active:scale-[0.98]",
+                          isClosing 
+                            ? "opacity-0 translate-x-4" 
+                            : "opacity-100 translate-x-0"
+                        )}
+                        style={{ 
+                          transitionDelay: isClosing ? '0ms' : `${50 + (index * 30)}ms`,
+                          transitionTimingFunction: isClosing 
+                            ? 'cubic-bezier(0.4, 0, 1, 1)' 
+                            : 'cubic-bezier(0, 0, 0.2, 1)'
+                        }}
                         onClick={() => {
                           closeMenu();
                           item.onClick?.();

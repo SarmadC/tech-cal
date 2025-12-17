@@ -10,6 +10,7 @@ export interface MobileChaosToOrderSectionProps {
 type Vec2 = { x: number; y: number };
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const VERTICAL_OFFSET = 3; // Offset to move cards slightly lower in calendar slots
 
 type Measurement = {
   railY: number;
@@ -24,6 +25,7 @@ const COMPANY_SLUG: Record<string, string> = {
   apple: 'apple',
   microsoft: 'microsoft',
   github: 'github',
+  nvidia: 'nvidia',
   openai: 'openai',
   vercel: 'vercel',
   amazon: 'amazon',
@@ -49,9 +51,9 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     () => [
       { company: 'Meta', date: 'May 1', title: 'Meta Con' },
       { company: 'Google', date: 'May 7', title: 'Google I/O' },
-      { company: 'Apple', date: 'May 11', title: 'WWDC' },
+      { company: 'Docker', date: 'May 11', title: 'DockerCon' },
       { company: 'Microsoft', date: 'May 13', title: 'Build' },
-      { company: 'GitHub', date: 'May 15', title: 'Universe' },
+      { company: 'Nvidia', date: 'May 15', title: 'GTC' },
     ],
     []
   );
@@ -153,7 +155,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
           if (!center) return;
           card.style.opacity = '1';
           card.style.transform = `translate3d(${center.x - measurement.tile / 2}px, ${
-            center.y - measurement.tile / 2
+            center.y - measurement.tile / 2 + VERTICAL_OFFSET
           }px, 0)`;
           card.style.willChange = 'auto';
         });
@@ -188,7 +190,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
       if (!center) return;
 
       const spawnT = `translate3d(${spawn[i].x - tile / 2}px, ${spawn[i].y - tile / 2}px, 0)`;
-      const finalT = `translate3d(${center.x - tile / 2}px, ${center.y - tile / 2}px, 0)`;
+      const finalT = `translate3d(${center.x - tile / 2}px, ${center.y - tile / 2 + VERTICAL_OFFSET}px, 0)`;
 
       // Force GPU layer creation
       card.style.opacity = '1';
@@ -287,7 +289,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
             const day = eventDays[i];
             const c = centers[day];
             if (!c) return;
-            card.style.transform = `translate3d(${c.x - tile / 2}px, ${c.y - tile / 2}px, 0)`;
+            card.style.transform = `translate3d(${c.x - tile / 2}px, ${c.y - tile / 2 + VERTICAL_OFFSET}px, 0)`;
           });
         });
       }, 150); // Debounce 150ms

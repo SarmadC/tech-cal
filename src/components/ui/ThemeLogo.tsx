@@ -33,7 +33,14 @@ export function ThemeLogo({ width = 24, height = 24, className = '' }: ThemeLogo
   // Inline SVG that responds to theme
   const isDark = resolvedTheme === 'dark';
   const bgColor = isDark ? '#000000' : '#FFFFFF';
-  const barsColor = isDark ? '#FFFFFF' : '#000000';
+  const asteriskColor = isDark ? '#FFFFFF' : '#000000';
+  
+  // Opacity levels for 3D effect
+  const opacityDark = 0.3;
+  const opacityMedium = 0.5;
+  const opacityLight = 0.7;
+  const opacityBright = 0.85;
+  const opacityBrightest = 1;
 
   return (
     <svg
@@ -42,20 +49,45 @@ export function ThemeLogo({ width = 24, height = 24, className = '' }: ThemeLogo
       viewBox="0 0 120 120"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      style={{ objectFit: 'contain', borderRadius: '4px' }}
+      style={{ objectFit: 'contain' }}
     >
-      {/* Background with rounded corners */}
-      <rect width="120" height="120" rx="24" fill={bgColor} />
-
-      {/* Logo Mark centered */}
-      <g id="logo-mark" transform="translate(60, 60)">
-        {/* Perfectly centered stacked bars */}
-        <rect x="-28" y="-20" width="56" height="6" fill={barsColor} opacity="0.25" />
-        <rect x="-22" y="-10" width="44" height="6" fill={barsColor} opacity="0.4" />
-        <rect x="-16" y="0" width="32" height="6" fill={barsColor} opacity="0.6" />
-        <rect x="-10" y="10" width="20" height="6" fill={barsColor} opacity="0.8" />
-        <rect x="-4" y="20" width="8" height="6" fill={barsColor} />
-      </g>
+      {/* Background */}
+      <rect width="120" height="120" fill={bgColor} />
+      
+      {/* 3D Asterisk - 6 arms extending from center */}
+      
+      {/* Back-left arm (going back-left into the scene) */}
+      <polygon points="60,60 52,56 28,68 36,72" fill={asteriskColor} opacity={opacityDark} />
+      <polygon points="36,72 28,68 28,76 36,80" fill={asteriskColor} opacity={opacityDark} />
+      <polygon points="60,60 36,72 36,80 60,68" fill={asteriskColor} opacity={opacityMedium} />
+      
+      {/* Back-right arm (going back-right into the scene) */}
+      <polygon points="60,60 68,56 92,68 84,72" fill={asteriskColor} opacity={opacityLight} />
+      <polygon points="84,72 92,68 92,76 84,80" fill={asteriskColor} opacity={opacityMedium} />
+      <polygon points="60,60 84,72 84,80 60,68" fill={asteriskColor} opacity={opacityLight} />
+      
+      {/* Bottom arm (going down) */}
+      <polygon points="52,64 60,68 60,100 52,96" fill={asteriskColor} opacity={opacityMedium} />
+      <polygon points="68,64 60,68 60,100 68,96" fill={asteriskColor} opacity={opacityDark} />
+      <polygon points="52,96 60,100 68,96 60,92" fill={asteriskColor} opacity={opacityDark} />
+      
+      {/* Front-left arm (coming forward-left) */}
+      <polygon points="60,60 52,64 28,52 36,48" fill={asteriskColor} opacity={opacityBright} />
+      <polygon points="36,48 28,52 28,44 36,40" fill={asteriskColor} opacity={opacityLight} />
+      <polygon points="60,60 36,48 36,40 60,52" fill={asteriskColor} opacity={opacityBright} />
+      
+      {/* Front-right arm (coming forward-right) */}
+      <polygon points="60,60 68,64 92,52 84,48" fill={asteriskColor} opacity={opacityBrightest} />
+      <polygon points="84,48 92,52 92,44 84,40" fill={asteriskColor} opacity={opacityBright} />
+      <polygon points="60,60 84,48 84,40 60,52" fill={asteriskColor} opacity={opacityBrightest} />
+      
+      {/* Top arm (going up) */}
+      <polygon points="52,56 60,52 60,20 52,24" fill={asteriskColor} opacity={opacityBrightest} />
+      <polygon points="68,56 60,52 60,20 68,24" fill={asteriskColor} opacity={opacityBrightest} />
+      <polygon points="52,24 60,20 68,24 60,28" fill={asteriskColor} opacity={opacityBrightest} />
+      
+      {/* Center top face (brightest) */}
+      <polygon points="52,56 60,52 68,56 60,60" fill={asteriskColor} opacity={opacityBrightest} />
     </svg>
   );
 }

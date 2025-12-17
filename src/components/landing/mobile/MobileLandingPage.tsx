@@ -5,6 +5,8 @@ import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import MobileHeroSection from './MobileHeroSection';
 import MobileChaosToOrderSection from './MobileChaosToOrderSection';
 import MobileFeaturesGrid from './MobileFeaturesGrid';
+import MobileUseCasesSection from './MobileUseCasesSection';
+import MobileFAQSection from './MobileFAQSection';
 import MobileFooter from './MobileFooter';
 import MobileNavbar from '@/components/layout/MobileNavbar';
 import '@/app/styles/mobile-landing.css';
@@ -71,6 +73,8 @@ const MobileLandingPage: React.FC<MobileLandingPageProps> = ({ className = '' })
         />
         <MobileChaosToOrderSection />
         <MobileFeaturesGrid />
+        <MobileUseCasesSection />
+        <MobileFAQSection />
       </main>
       
       <MobileFooter />
