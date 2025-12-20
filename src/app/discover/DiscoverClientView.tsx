@@ -12,7 +12,7 @@ import { CalendarProvider } from '@/contexts/CalendarContext';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
-import MobileNavbar from '@/components/common/MobileNavbar';
+import MobileBottomNav from '@/components/common/MobileBottomNav';
 import { SmartLoader } from '@/components/Loading';
 import { EventsLoadingSkeleton } from '@/components/ui/LoadingStates';
 import { useNavigation } from '@/utils/navigation';
@@ -28,6 +28,12 @@ const EventDetailPanelDynamic = dynamic(
 const MobileEventDetailPanelDynamic = dynamic(
     () => import('@/components/calendar/mobile/MobileEventDetailPanel'),
     { loading: () => <Loading /> }
+);
+
+// IMPORTANT: Dynamic import must be outside component to prevent re-creation on each render
+const MobileDiscoveryViewDynamic = dynamic(
+    () => import('@/components/calendar/mobile/MobileDiscoveryView'),
+    { ssr: false } // No loading skeleton - prevents jarring flashes during search
 );
 
 interface DiscoverClientViewProps {
@@ -120,11 +126,28 @@ export default function DiscoverClientView({
         }
     }, [profile, showInfo]);
 
-    // Loading skeleton
+    // Loading skeleton for initial page load only
     const loadingSkeleton = <EventsLoadingSkeleton />;
 
     // Main content - Unified responsive view
-    const mainContent = (
+    const mainContent = isMobile ? (
+        <MobileDiscoveryViewDynamic
+            events={eventData.filteredEvents}
+            categories={initialCategories}
+            profile={profile}
+            onEventSelect={handleEventSelect}
+            filters={eventData.filters}
+            onUpdateFilter={eventData.updateFilter}
+            onSearch={eventData.refetch}
+            totalCount={eventData.totalCount}
+            onResetFilters={eventData.resetFilters}
+            activeFilterCount={eventData.activeFilterCount}
+            onNearMeClick={eventData.applyNearMe}
+            isDetectingLocation={eventData.isDetectingLocation}
+            isSearching={eventData.isBackgroundRefetch}
+            countsFromServer={eventData.counts}
+        />
+    ) : (
         <DesktopDiscoveryView
             events={eventData.filteredEvents}
             categories={initialCategories}
@@ -139,6 +162,7 @@ export default function DiscoverClientView({
             activeFilterCount={eventData.activeFilterCount}
             onNearMeClick={eventData.applyNearMe}
             isDetectingLocation={eventData.isDetectingLocation}
+            isSearching={eventData.isBackgroundRefetch}
             countsFromServer={eventData.counts}
         />
     );
@@ -156,21 +180,23 @@ export default function DiscoverClientView({
         >
             <SidebarProvider>
                 {/* Mobile Navigation - Only visible on mobile */}
-                <MobileNavbar />
+                <MobileBottomNav />
                 <div className="flex h-screen bg-background">
                     <AppSidebar />
                     <main className="flex-1 flex flex-col overflow-hidden">
                         {/* Main Navbar - Hidden on mobile */}
-                        <Navbar />
+                        <div className="hidden md:block">
+                            <Navbar />
+                        </div>
                         <div className="flex-1 overflow-auto">
                             {/* Glassmorphic Discovery with gradient background */}
                             <div className="min-h-screen glass-bg-gradient relative">
                                 {/* Subtle atmospheric overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
 
-                                <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
+                                <div className="relative max-w-[1600px] mx-auto px-0 py-0 md:px-6 md:py-8 space-y-6">
                                     {/* Header */}
-                                    <div className="mb-8">
+                                    <div className="mb-8 hidden md:block">
                                         <h1 className="text-3xl font-bold text-glass-primary mb-2">
                                             Discover
                                         </h1>

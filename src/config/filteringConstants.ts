@@ -6,14 +6,20 @@ export const FILTERING_CONSTANTS = {
   /** Rate limit: 30 requests per minute = ~2 seconds minimum, use 3s for safety margin */
   RATE_LIMIT_INTERVAL_MS: 3000,
 
-  /** Cache duration for filtered results (10 minutes) */
-  FILTER_CACHE_DURATION_MS: 10 * 60 * 1000,
+  /** Cache duration for filtered results (15 minutes) - increased for better performance */
+  FILTER_CACHE_DURATION_MS: 15 * 60 * 1000,
 
-  /** Search term debounce delay */
-  SEARCH_DEBOUNCE_MS: 1500,
+  /** Unified debounce for all filter changes - balances responsiveness with API efficiency */
+  UNIFIED_DEBOUNCE_MS: 100,
 
-  /** Coalesce non-search filter changes */
-  FILTERS_DEBOUNCE_MS: 300,
+  /** @deprecated Use UNIFIED_DEBOUNCE_MS instead */
+  SEARCH_DEBOUNCE_MS: 50,
+
+  /** @deprecated Use UNIFIED_DEBOUNCE_MS instead */
+  FILTERS_DEBOUNCE_MS: 150,
+
+  /** Typing settle time - how long to wait before considering user done typing */
+  TYPING_SETTLE_MS: 500,
 
   /** Default page size for paginated results */
   DEFAULT_PAGE_SIZE: 50,

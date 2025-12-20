@@ -88,8 +88,8 @@ class EnvConfigManager {
           token: process.env.UPSTASH_REDIS_REST_TOKEN,
         },
         kv: {
-          url: process.env.VERCEL_KV_REST_API_URL,
-          token: process.env.VERCEL_KV_REST_API_TOKEN,
+          url: process.env.KV_REST_API_URL,
+          token: process.env.KV_REST_API_TOKEN,
         },
       },
     };
@@ -177,8 +177,8 @@ class EnvConfigManager {
       'SENTRY_AUTH_TOKEN',
       'UPSTASH_REDIS_REST_URL',
       'UPSTASH_REDIS_REST_TOKEN',
-      'VERCEL_KV_REST_API_URL',
-      'VERCEL_KV_REST_API_TOKEN',
+      'KV_REST_API_URL',
+      'KV_REST_API_TOKEN',
       'NEXT_PUBLIC_LOG_SCORING',
       'NEXT_PUBLIC_TYPE_PREF_GATE',
       'NEXT_PUBLIC_DISABLE_TYPE_PREF_GATE',

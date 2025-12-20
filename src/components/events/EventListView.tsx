@@ -7,7 +7,7 @@ import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
-import MobileNavbar from '@/components/common/MobileNavbar';
+import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { Button } from '@/components/ui/button';
 import MultiSelectDropdown, { MultiSelectOption } from '@/components/ui/MultiSelectDropdown';
 import { AdminDataTable, AdminDataTableColumn } from '@/components/admin/AdminDataTable';
@@ -261,7 +261,16 @@ export default function EventListView({ initialCategories, profile, locationOpti
 
     return (
         <SidebarProvider>
-            <MobileNavbar />
+            <UnifiedMobileNavbar 
+                navItems={[
+                    { name: 'Discover', href: '/discover' },
+                    { name: 'Calendar', href: '/calendar' },
+                    { name: 'Dashboard', href: '/dashboard' },
+                    { name: 'Hackathons', href: '/hackathons' },
+                    { name: 'Settings', href: '/dashboard/settings' }
+                ]}
+                fixed={true}
+            />
             <div className="flex h-screen bg-background">
                 <AppSidebar />
                 <main className="flex-1 flex flex-col overflow-hidden">

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
+import { getLogoSourcesForClient } from '@/utils/logoUtils';
 
 export interface MobileChaosToOrderSectionProps {
   className?: string;
@@ -10,6 +11,7 @@ export interface MobileChaosToOrderSectionProps {
 type Vec2 = { x: number; y: number };
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const VERTICAL_OFFSET = 3; // Offset to move cards slightly lower in calendar slots
 
 type Measurement = {
   railY: number;
@@ -24,6 +26,7 @@ const COMPANY_SLUG: Record<string, string> = {
   apple: 'apple',
   microsoft: 'microsoft',
   github: 'github',
+  nvidia: 'nvidia',
   openai: 'openai',
   vercel: 'vercel',
   amazon: 'amazon',
@@ -49,9 +52,9 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     () => [
       { company: 'Meta', date: 'May 1', title: 'Meta Con' },
       { company: 'Google', date: 'May 7', title: 'Google I/O' },
-      { company: 'Apple', date: 'May 11', title: 'WWDC' },
+      { company: 'Docker', date: 'May 11', title: 'DockerCon' },
       { company: 'Microsoft', date: 'May 13', title: 'Build' },
-      { company: 'GitHub', date: 'May 15', title: 'Universe' },
+      { company: 'Nvidia', date: 'May 15', title: 'GTC' },
     ],
     []
   );
@@ -67,18 +70,56 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
   const daysInMonth = new Date(YEAR, MONTH_INDEX + 1, 0).getDate();
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const logoUrl = useCallback((name: string) => {
-    const key = name.toLowerCase();
-    const slug = Object.keys(COMPANY_SLUG).find((k) => key.includes(k));
-    if (SUPABASE_URL && slug) return `${SUPABASE_URL}/storage/v1/object/public/logos/${COMPANY_SLUG[slug]}.svg`;
-    const domain = slug ? `${COMPANY_SLUG[slug]}.com` : 'example.com';
-    return `https://logo.clearbit.com/${domain}`;
-  }, [SUPABASE_URL]);
-
-  const logoSources = useMemo(
-    () => eventData.map((e) => logoUrl(e.company)),
-    [eventData, logoUrl]
+  
+  // Get logo sources for each company with fallback chain
+  const logoSourcesMap = useMemo(
+    () => eventData.reduce((acc, e) => {
+      acc[e.company] = getLogoSourcesForClient(e.company, SUPABASE_URL);
+      return acc;
+    }, {} as Record<string, string[]>),
+    [eventData, SUPABASE_URL]
   );
+
+  // Track active logo source for each company (for error handling)
+  const [activeLogoSources, setActiveLogoSources] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    eventData.forEach((e) => {
+      const sources = logoSourcesMap[e.company];
+      if (sources && sources.length > 0) {
+        initial[e.company] = sources[0];
+      }
+    });
+    return initial;
+  });
+
+  useEffect(() => {
+    const updated: Record<string, string> = {};
+    eventData.forEach((e) => {
+      const sources = logoSourcesMap[e.company];
+      if (sources && sources.length > 0) {
+        updated[e.company] = sources[0];
+      }
+    });
+    setActiveLogoSources(updated);
+  }, [eventData, logoSourcesMap]);
+
+  const handleLogoError = useCallback((company: string) => {
+    const sources = logoSourcesMap[company];
+    if (!sources) return;
+    
+    const currentSrc = activeLogoSources[company];
+    const currentIndex = currentSrc ? sources.indexOf(currentSrc) : -1;
+    const nextSrc = currentIndex >= 0 && currentIndex < sources.length - 1 
+      ? sources[currentIndex + 1] 
+      : undefined;
+    
+    if (nextSrc) {
+      setActiveLogoSources((prev) => ({
+        ...prev,
+        [company]: nextSrc,
+      }));
+    }
+  }, [activeLogoSources, logoSourcesMap]);
 
   const getTileSize = () => {
     const el = containerRef.current;
@@ -153,7 +194,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
           if (!center) return;
           card.style.opacity = '1';
           card.style.transform = `translate3d(${center.x - measurement.tile / 2}px, ${
-            center.y - measurement.tile / 2
+            center.y - measurement.tile / 2 + VERTICAL_OFFSET
           }px, 0)`;
           card.style.willChange = 'auto';
         });
@@ -188,7 +229,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
       if (!center) return;
 
       const spawnT = `translate3d(${spawn[i].x - tile / 2}px, ${spawn[i].y - tile / 2}px, 0)`;
-      const finalT = `translate3d(${center.x - tile / 2}px, ${center.y - tile / 2}px, 0)`;
+      const finalT = `translate3d(${center.x - tile / 2}px, ${center.y - tile / 2 + VERTICAL_OFFSET}px, 0)`;
 
       // Force GPU layer creation
       card.style.opacity = '1';
@@ -287,7 +328,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
             const day = eventDays[i];
             const c = centers[day];
             if (!c) return;
-            card.style.transform = `translate3d(${c.x - tile / 2}px, ${c.y - tile / 2}px, 0)`;
+            card.style.transform = `translate3d(${c.x - tile / 2}px, ${c.y - tile / 2 + VERTICAL_OFFSET}px, 0)`;
           });
         });
       }, 150); // Debounce 150ms
@@ -363,15 +404,22 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
                 style={{ opacity: 0 }}
               >
                 <div className="logo-wrapper" aria-hidden="true">
-                  <Image
-                    src={logoSources[i]}
-                    alt=""
-                    width={22}
-                    height={22}
-                    loading="lazy"
-                    sizes="32px"
-                    style={{ objectFit: 'contain' }}
-                  />
+                  {activeLogoSources[e.company] ? (
+                    <Image
+                      src={activeLogoSources[e.company]}
+                      alt=""
+                      width={22}
+                      height={22}
+                      loading="lazy"
+                      sizes="32px"
+                      style={{ objectFit: 'contain' }}
+                      onError={() => handleLogoError(e.company)}
+                    />
+                  ) : (
+                    <div className="logo-placeholder" style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
+                      {e.company.charAt(0)}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

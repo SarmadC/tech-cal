@@ -17,6 +17,7 @@ interface DiscoveryHeaderProps {
     onFilterClick?: () => void;
     onNearMeClick?: () => void;
     isDetectingLocation?: boolean;
+    isSearching?: boolean;
 }
 
 // Timezone to location mapping for fallback location detection
@@ -156,7 +157,8 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     activeFilterCount,
     onFilterClick,
     onNearMeClick,
-    isDetectingLocation = false
+    isDetectingLocation = false,
+    isSearching = false
 }) => {
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [isLocalDetecting, setIsLocalDetecting] = useState(false);
@@ -241,7 +243,11 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 {/* Search Input */}
                 <div className="flex-1 w-full relative group">
                     <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors">
-                        <MagnifyingGlass size={20} />
+                        {isSearching ? (
+                            <SpinnerGap size={20} className="animate-spin" />
+                        ) : (
+                            <MagnifyingGlass size={20} />
+                        )}
                     </div>
                     <input
                         type="text"
@@ -361,6 +367,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
         prevProps.activeFilterCount === nextProps.activeFilterCount &&
         prevProps.onFilterClick === nextProps.onFilterClick &&
         prevProps.isDetectingLocation === nextProps.isDetectingLocation &&
+        prevProps.isSearching === nextProps.isSearching &&
         dateRangeEqual
     );
 });

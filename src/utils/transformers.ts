@@ -1,6 +1,7 @@
 // src/utils/transformers.ts
 
 // 1. UPDATE IMPORTS: Use the new, specific type names. The deprecated aliases are no longer needed here.
+import { getLogoUrlFromInput } from './logoUtils';
 import type {
     SupabaseEvent,
     SupabaseEventType,
@@ -91,53 +92,9 @@ export const extractEventTags = (
 
 // 2. UPDATE SIGNATURES: The transformer now correctly returns the base `Event` type.
 // Helper function to convert logo URL to appropriate format
+// Uses centralized logo utility with multiple fallback sources
 const getLogoUrl = (logoUrl: string | null | undefined, organizerName?: string, supabaseUrl?: string): string | undefined => {
-    if (!logoUrl) return undefined;
-
-    // If it's already a full URL (starts with http), return as-is
-    if (logoUrl.startsWith('http')) {
-        return logoUrl;
-    }
-    
-    // If it's a domain name (contains a dot but no file extension), use special handling
-    if (logoUrl.includes('.') && !logoUrl.includes('/') && !logoUrl.match(/\.(png|jpg|jpeg|svg|webp)$/i)) {
-        // Special handling for known companies with better transparent logos
-        const specialLogos: Record<string, string> = {
-            'meta.com': 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg',
-            'facebook.com': 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg',
-            'google.com': 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg',
-            'microsoft.com': 'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg',
-            'amazon.com': 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
-            'apple.com': 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
-            'netflix.com': 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
-            'uber.com': 'https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png',
-            'airbnb.com': 'https://upload.wikimedia.org/wikipedia/commons/6/69/Airbnb_Logo_B%C3%A9lo.svg',
-            'twitter.com': 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Logo_of_Twitter.svg',
-            'linkedin.com': 'https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png',
-            'github.com': 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
-            'stackoverflow.com': 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Stack_Overflow_icon.svg',
-            'docker.com': 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Docker_%28container_engine%29_logo.svg',
-            'kubernetes.io': 'https://upload.wikimedia.org/wikipedia/commons/3/39/Kubernetes_logo_without_workmark.svg',
-            'aws.amazon.com': 'https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg',
-            'cloud.google.com': 'https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg',
-            'azure.microsoft.com': 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Microsoft_Azure.svg',
-        };
-
-        if (specialLogos[logoUrl]) {
-            return specialLogos[logoUrl];
-        }
-
-        // For other domains, try to use a logo service as fallback
-        // Using a more reliable logo service
-        return `https://logo.clearbit.com/${logoUrl}`;
-    }
-    
-    // If it's a filename (including SVG), construct Supabase storage URL
-    const baseUrl = supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!baseUrl) {
-        return undefined;
-    }
-    return `${baseUrl}/storage/v1/object/public/logos/${logoUrl}`;
+    return getLogoUrlFromInput(logoUrl, organizerName, supabaseUrl);
 };
 
 // Transformer for events_detailed view (flat structure with pre-joined data)

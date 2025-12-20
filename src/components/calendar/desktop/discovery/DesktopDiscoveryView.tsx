@@ -32,6 +32,7 @@ export interface DesktopDiscoveryViewProps {
     activeFilterCount: number;
     onNearMeClick?: () => void;
     isDetectingLocation?: boolean;
+    isSearching?: boolean;
     countsFromServer?: FilterCounts | null;
 }
 
@@ -50,6 +51,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
     activeFilterCount,
     onNearMeClick,
     isDetectingLocation,
+    isSearching,
     countsFromServer
 }) => {
     const { isBookmarked, toggleBookmark } = useEventEngagement();
@@ -114,6 +116,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                         onFilterClick={() => setIsSidebarOpen(true)}
                         onNearMeClick={onNearMeClick}
                         isDetectingLocation={isDetectingLocation}
+                        isSearching={isSearching}
                     />
                 }
                 resultCount={totalCount}

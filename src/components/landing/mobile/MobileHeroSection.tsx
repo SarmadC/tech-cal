@@ -2,76 +2,64 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import dynamic from 'next/dynamic';
+
+const ChromeCross = dynamic(() => import('@/components/ChromeCross'), { ssr: false });
 
 export interface MobileHeroSectionProps {
-  isIOS?: boolean;
-  isAndroid?: boolean;
-  className?: string;
+    isIOS?: boolean;
+    isAndroid?: boolean;
+    className?: string;
 }
 
 const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({
-  isIOS: _isIOS = false,
-  isAndroid: _isAndroid = false,
-  className = ''
+    isIOS: _isIOS = false,
+    isAndroid: _isAndroid = false,
+    className = ''
 }) => {
-  return (
-    <section className={`mobile-hero ${className}`}>
-      {/* Programmatic gradient background */}
-      <div className="mobile-hero-background" aria-hidden="true">
-        <div className="mobile-hero-surface" />
-        <div className="mobile-hero-overlay" />
-      </div>
-
-      {/* Mobile Hero Content - New Layout */}
-      <div className="mobile-hero-content">
-        {/* Hero Image Container */}
-        <div className="mobile-hero-image-container">
-          <Image 
-            src="/kanhaiya-sharma-EiAqej-cGks-unsplash(1).jpg" 
-            alt="Abstract geometric filter symbol"
-            className="hero-image"
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            priority
-          />
-          <div className="hero-image-overlay" />
-          
-          {/* Hero Text Overlay */}
-          <div className="hero-text-overlay">
-            {/* Hero Title */}
-            <h1 className="mobile-hero-title">
-              All-in-One<br />
-              <span className="highlight-text">Tech Events Calendar</span>
-            </h1>
-
-            {/* Hero Subtitle */}
-            <div className="mobile-hero-subtitle">
-              <div className="subtitle-content">
-                <p className="subtitle-main">
-                  Effortless Event Discovery for Everyone
-                </p>
-                <p className="subtitle-secondary">
-                  Never miss important tech events again.<br />
-                  Find, track, and attend events that matter to your career.
-                </p>
-              </div>
+    return (
+        <section className={`mobile-hero ${className}`}>
+            {/* Full-screen ChromeCross animation background */}
+            <div className="mobile-hero-background-animation">
+                <ChromeCross />
             </div>
 
-            {/* CTA Button */}
-            <div className="mobile-hero-cta-container">
-              <div className="mobile-liquid-glass-cta">
-                <Link href="/discover" className="mobile-primary-cta-liquid">
-                  <span>DISCOVER EVENTS</span>
-                </Link>
-              </div>
+            {/* Overlay gradient for text readability */}
+            <div className="mobile-hero-overlay-gradient" />
+
+            {/* Mobile Hero Content - Overlaid on image */}
+            <div className="mobile-hero-content">
+                {/* Text Content Section */}
+                <div className="mobile-hero-text-section">
+                    {/* Hero Title */}
+                    <h1 className="mobile-hero-title">
+                        All-in-One<br />
+                        <span className="highlight-text">Tech Events Calendar</span>
+                    </h1>
+
+                    {/* Hero Subtitle */}
+                    <div className="mobile-hero-subtitle">
+                        <div className="subtitle-content">
+                            <p className="subtitle-main">
+                                Effortless Event Discovery for Everyone
+                            </p>
+                            <p className="subtitle-secondary">
+                                Never miss important tech events again.<br />
+                                Find, track, and attend events that matter to your career.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* CTA Button Section */}
+                <div className="mobile-hero-cta-section">
+                    <Link href="/discover" className="mobile-hero-cta-button">
+                        <span>Discover Events</span>
+                    </Link>
+                </div>
             </div>
-          </div>
-        </div>
-      
-      </div>
-    </section>
-  );
+        </section>
+    );
 };
 
 export default MobileHeroSection;

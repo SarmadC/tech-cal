@@ -51,7 +51,7 @@ const MobileFeaturesGrid: React.FC<MobileFeaturesGridProps> = ({ className = '' 
   const card1Opacity = useTransform(
     scrollYProgress,
     [0, 0.2 + (1 * 0.15), 0.4 + (1 * 0.15)],
-    [0, 0, 1]
+    [1, 1, 1]
   );
 
   const card2Y = useTransform(
@@ -67,7 +67,7 @@ const MobileFeaturesGrid: React.FC<MobileFeaturesGridProps> = ({ className = '' 
   const card2Opacity = useTransform(
     scrollYProgress,
     [0, 0.2 + (2 * 0.15), 0.4 + (2 * 0.15)],
-    [0, 0, 1]
+    [1, 1, 1]
   );
 
   const card3Y = useTransform(
@@ -83,7 +83,7 @@ const MobileFeaturesGrid: React.FC<MobileFeaturesGridProps> = ({ className = '' 
   const card3Opacity = useTransform(
     scrollYProgress,
     [0, 0.2 + (3 * 0.15), 0.4 + (3 * 0.15)],
-    [0, 0, 1]
+    [1, 1, 1]
   );
 
   const cards = [
