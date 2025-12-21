@@ -5,7 +5,7 @@ import {
   normalizeSkillName,
   resolveCanonicalSkillName
 } from '@/utils/skillTaxonomy';
-import { deduplicateSkills, normalizeForComparison } from '@/utils/skillSuggestions';
+import { normalizeForComparison } from '@/utils/skillSuggestions';
 
 /**
  * Validates that onboarding data is complete and properly formatted
@@ -50,14 +50,11 @@ export function validateOnboardingData(data: Partial<CareerOnboardingData>): {
   if (new Set(normInterests).size !== normInterests.length) {
     errors.push('Duplicate entries detected in Areas of Interest');
   }
-  
-  // Cross-field duplicate warning (non-blocking, just informational)
-  const dedupe = deduplicateSkills(primarySkills, skillsToLearn, interests);
-  if (!dedupe.isValid) {
-    const dupeList = dedupe.crossFieldDuplicates.map(d => d.skill).join(', ');
-    errors.push(`Note: ${dupeList} appear${dedupe.crossFieldDuplicates.length === 1 ? 's' : ''} in multiple fields`);
-  }
-  
+
+  // Note: Cross-field duplicates are intentionally allowed
+  // Users can have a skill in both "Current" and "To Learn" to indicate
+  // they want to deepen their existing knowledge
+
   // Skills to learn and interests are optional (progressive profiling)
   // No proficiency validation (removed)
 

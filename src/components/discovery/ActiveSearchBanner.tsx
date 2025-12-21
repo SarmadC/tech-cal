@@ -9,6 +9,7 @@ interface ActiveSearchBannerProps {
   dateRange?: { start: Date | null; end: Date | null };
   expandedTerms?: string[];
   resultCount?: number;
+  activeFilterCount?: number;
   onDismiss?: () => void;
   onClear?: () => void;
 }
@@ -21,6 +22,7 @@ const ActiveSearchBanner: React.FC<ActiveSearchBannerProps> = ({
   dateRange,
   expandedTerms,
   resultCount,
+  activeFilterCount,
   onDismiss,
   onClear
 }) => {
@@ -65,9 +67,16 @@ const ActiveSearchBanner: React.FC<ActiveSearchBannerProps> = ({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className="text-sm font-semibold text-foreground">
-              Active Search
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-foreground">
+                Active Search
+              </h3>
+              {activeFilterCount !== undefined && activeFilterCount > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
+                  +{activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'}
+                </span>
+              )}
+            </div>
             {onDismiss && (
               <button
                 onClick={onDismiss}

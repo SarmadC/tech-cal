@@ -145,9 +145,16 @@ export function HeroSection() {
                         Discover Events
                     </Link>
                     <Link
-                        href="#features"
-                        aria-label="Jump to Kure-Cal features"
+                        href="#product-demo"
+                        aria-label="Jump to Product Demo"
                         className={`hero-secondary-btn inline-flex ${isMobile ? 'h-14' : 'h-12'} items-center justify-center rounded-md ${isMobile ? 'px-6 py-4' : 'px-8 py-4'} font-medium transition-colors focus:outline-none focus:ring-2 ${isMobile ? 'text-base' : 'text-sm'}`}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            const element = document.getElementById('product-demo');
+                            if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }}
                     >
                         View Live Demo
                     </Link>

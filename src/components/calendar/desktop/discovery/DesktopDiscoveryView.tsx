@@ -9,6 +9,8 @@ import EventCard from '@/components/discovery/EventCard';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
 import { calculateFilterCounts, FilterCounts } from '@/utils/filterCountUtils';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
+import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
 import {
     Select,
     SelectContent,
@@ -57,6 +59,30 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
     const { isBookmarked, toggleBookmark } = useEventEngagement();
     const [pendingBookmarkIds, setPendingBookmarkIds] = useState<Set<string>>(new Set());
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Search suggestions and history for autocomplete
+    const { suggestions, isLoading: isSuggestionsLoading } = useSearchSuggestions({
+        searchTerm: filters.searchTerm,
+        events: events as unknown as Parameters<typeof useSearchSuggestions>[0]['events'],
+        categories,
+        maxSuggestions: 6
+    });
+
+    const { history: searchHistory, addSearch } = useSearchHistory({
+        respectAnalyticsConsent: true
+    });
+
+    // Add search to history when search is executed
+    const handleSearchWithHistory = useCallback(() => {
+        if (filters.searchTerm || filters.locations[0]) {
+            addSearch(
+                filters.searchTerm,
+                filters.locations[0] || '',
+                filters.dateRange
+            );
+        }
+        onSearch();
+    }, [filters.searchTerm, filters.locations, filters.dateRange, addSearch, onSearch]);
 
     const handleBookmarkToggle = useCallback(async (event: Event) => {
         if (!event?.id || pendingBookmarkIds.has(event.id)) {
@@ -110,13 +136,16 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                         onLocationChange={(val) => onUpdateFilter('locations', val ? [val] : [])}
                         dateRange={filters.dateRange}
                         onDateRangeChange={(range) => onUpdateFilter('dateRange', range)}
-                        onSearch={onSearch}
+                        onSearch={handleSearchWithHistory}
                         onResetFilters={onResetFilters}
                         activeFilterCount={activeFilterCount}
                         onFilterClick={() => setIsSidebarOpen(true)}
                         onNearMeClick={onNearMeClick}
                         isDetectingLocation={isDetectingLocation}
                         isSearching={isSearching}
+                        suggestions={suggestions}
+                        searchHistory={searchHistory}
+                        isAutocompletLoading={isSuggestionsLoading}
                     />
                 }
                 resultCount={totalCount}

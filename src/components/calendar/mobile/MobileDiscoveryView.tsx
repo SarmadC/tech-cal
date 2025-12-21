@@ -83,7 +83,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
             />
 
             {/* Search & Filter Header (Sticky below navbar) */}
-            <div className="sticky top-[64px] z-30 bg-background/90 backdrop-blur-md border-b border-border/40 px-4 py-3">
+            <div className="sticky top-[var(--navbar-height,64px)] z-30 bg-background/90 backdrop-blur-md border-b border-border/40 px-4 py-3">
                 <div className="flex items-center gap-2">
                     {/* Search Bar - Expanded or Collapsed */}
                     <div className="relative flex-1 min-w-0">
@@ -96,12 +96,13 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                             <input
                                 type="text"
                                 placeholder="Search events..."
+                                maxLength={200}
                                 value={localSearchTerm}
                                 onChange={(e) => handleSearchChange(e.target.value)}
-                                // onKeyDown={(e) => e.key === 'Enter' && onSearch()} // Removed immediate refetch on Enter to rely on debounce or explict button if needed, or keep it but force update
+                                onBlur={(e) => handleSearchChange(e.target.value.trim())}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                        onUpdateFilter('searchTerm', localSearchTerm);
+                                        onUpdateFilter('searchTerm', localSearchTerm.trim());
                                         onSearch();
                                     }
                                 }}

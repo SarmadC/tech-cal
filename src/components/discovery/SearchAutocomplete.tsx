@@ -105,7 +105,7 @@ const SearchAutocomplete: React.FC<SearchAutocompleteProps> = ({
   return (
     <div
       ref={dropdownRef}
-      className="absolute top-full left-0 right-0 mt-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl rounded-xl border border-border/60 shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 duration-200"
+      className="absolute top-full left-0 right-0 mt-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl rounded-xl border border-border/60 shadow-2xl overflow-hidden z-[101] animate-in slide-in-from-top-2 duration-200"
       style={{ maxHeight }}
     >
       {isLoading ? (

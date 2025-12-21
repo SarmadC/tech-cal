@@ -241,7 +241,6 @@
 /* Card Footer */
 .useCaseFooter {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: var(--space-8) var(--space-12);
     min-height: 104px;
@@ -267,8 +266,12 @@
     font-weight: 500;
     color: var(--foreground-primary);
     letter-spacing: -0.018em;
-    line-height: 1.45;
+    line-height: 1.5; /* Increased from 1.45 for better readability */
     margin: 0;
+    /* Allow title to take available space and wrap properly */
+    flex: 1;
+    min-width: 0; /* Allow flex item to shrink below content size */
+    padding-right: var(--space-4); /* Add spacing between title and icon */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'liga' 1, 'kern' 1;

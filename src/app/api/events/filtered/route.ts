@@ -175,11 +175,10 @@ export async function POST(request: NextRequest) {
 
     // Map 'default' to 'date' for consistency
     const sortBy = rawSortBy === 'default' ? 'date' : rawSortBy;
-    
-    // For career-impact sorting, default to descending if not specified
-    const effectiveSortDirection = (sortBy === 'career-impact' && sortDirection === 'asc' && rawSortBy !== 'default')
-      ? 'desc' // Default to desc for career-impact
-      : sortDirection;
+
+    // For career-impact sorting, default to descending (highest scores first)
+    // Only use 'asc' if explicitly requested by the user
+    const effectiveSortDirection = sortBy === 'career-impact' ? 'desc' : sortDirection;
     
     // Validate pagination parameters
     if (page < 1 || pageSize < 1 || pageSize > 100) {
@@ -200,13 +199,17 @@ export async function POST(request: NextRequest) {
 
     const hasTelemetryConsent = Boolean(consentRow?.analytics_consent);
 
+    // Normalize search term and locations for case-insensitive matching
+    const normalizedSearchTerm = (searchTerm || '').trim().toLowerCase();
+    const normalizedLocations = locations.map((l: string) => l.trim().toLowerCase());
+
     // Build a stable cache signature (per-user + filters)
     const normalizedSignature = {
       userId: user.id,
-      searchTerm: body.searchTerm || '',
+      searchTerm: normalizedSearchTerm,
       categories: (body.categories || []).slice().sort(),
       tags: (body.tags || []).slice().sort(),
-      locations: (body.locations || []).slice().sort(),
+      locations: normalizedLocations.slice().sort(),
       format,
       budget,
       cost,
@@ -245,8 +248,8 @@ export async function POST(request: NextRequest) {
     const eventFilters: EventFilters = {
       categories: categories.length > 0 ? categories : undefined,
       tags: tags.length > 0 ? tags : undefined,
-      locations: locations.length > 0 ? locations : undefined,
-      searchTerm: searchTerm || undefined,
+      locations: normalizedLocations.length > 0 ? normalizedLocations : undefined,
+      searchTerm: normalizedSearchTerm || undefined,
       startDate: dateRange?.start ? new Date(dateRange.start) : undefined,
       endDate: dateRange?.end ? new Date(dateRange.end) : undefined,
       format: format !== 'all' ? format : undefined,
@@ -323,8 +326,9 @@ export async function POST(request: NextRequest) {
 
     // For career-impact sorting, we need to fetch a larger window to ensure pagination correctness
     // Events are sorted after enrichment, so we need all candidates before sorting
+    // Scale the window multiplier based on requested page to support deep pagination
     const isCareerImpactSort = sortBy === 'career-impact';
-    const fetchWindowMultiplier = isCareerImpactSort ? 5 : 1; // Fetch 5x pageSize for career-impact sorting
+    const fetchWindowMultiplier = isCareerImpactSort ? Math.max(5, page) : 1;
     const fetchPageSize = pageSize * fetchWindowMultiplier;
     const fetchPage = isCareerImpactSort ? 1 : page; // Always fetch from page 1 when using window
     

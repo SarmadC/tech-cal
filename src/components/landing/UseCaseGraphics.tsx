@@ -12,8 +12,6 @@ export function DiscoveryGraphic() {
     return (
         <svg
             viewBox="0 0 400 300"
-            width="400"
-            height="300"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             aria-hidden="true"
@@ -43,7 +41,7 @@ export function DiscoveryGraphic() {
             {/* Matched event card - output, increased size */}
             <rect
                 x="130"
-                y="230"
+                y="210"
                 width="140"
                 height="85"
                 rx="8"
@@ -51,13 +49,13 @@ export function DiscoveryGraphic() {
                 opacity="0.25"
             />
             {/* Content lines on matched card */}
-            <rect x="145" y="250" width="50" height="6" rx="2" fill="#3b82f6" opacity="0.5" />
-            <rect x="145" y="263" width="85" height="5" rx="2" fill="#3b82f6" opacity="0.35" />
-            <rect x="145" y="275" width="70" height="5" rx="2" fill="#3b82f6" opacity="0.3" />
+            <rect x="145" y="230" width="50" height="6" rx="2" fill="#3b82f6" opacity="0.5" />
+            <rect x="145" y="243" width="85" height="5" rx="2" fill="#3b82f6" opacity="0.35" />
+            <rect x="145" y="255" width="70" height="5" rx="2" fill="#3b82f6" opacity="0.3" />
             
             {/* Match score badge */}
-            <circle cx="255" cy="250" r="13" fill="#3b82f6" opacity="0.4" />
-            <text x="255" y="254" textAnchor="middle" fill="#ffffff" opacity="0.9" fontSize="11" fontWeight="600">
+            <circle cx="255" cy="230" r="13" fill="#3b82f6" opacity="0.4" />
+            <text x="255" y="234" textAnchor="middle" fill="#ffffff" opacity="0.9" fontSize="11" fontWeight="600">
                 95
             </text>
         </svg>
@@ -230,5 +228,6 @@ export function InsightsGraphic() {
         </svg>
     );
 }
+
 
 

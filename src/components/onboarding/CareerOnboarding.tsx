@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import {
   CareerOnboardingData,
@@ -26,10 +27,9 @@ import { ProgressStepper } from './ProgressStepper';
 import { ExperienceLevelSelector } from './ExperienceLevelSelector';
 import { validateOnboardingData, sanitizeOnboardingData } from '@/utils/onboardingUtils';
 import { buildSkillOptionList, mapSkillsToCanonical } from '@/utils/skillTaxonomy';
-import { 
-  getSkillsForRole, 
-  getSuggestedSkillsToLearn,
-  deduplicateSkills
+import {
+  getSkillsForRole,
+  getSuggestedSkillsToLearn
 } from '@/utils/skillSuggestions';
 
 interface CareerOnboardingProps {
@@ -63,7 +63,8 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [includeOptionalSteps, setIncludeOptionalSteps] = useState(false);
   const [step1Errors, setStep1Errors] = useState<Record<string, string>>({});
-  const [step2Duplicates, setStep2Duplicates] = useState<string[]>([]);
+  const [showSaveIndicator, setShowSaveIndicator] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const totalSteps = includeOptionalSteps ? 6 : 3;
 
@@ -77,7 +78,25 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('career-onboarding-data', JSON.stringify(data));
+
+      // Show save indicator briefly (debounced)
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      // Only show if there's actually data to save
+      if (Object.keys(data).length > 0) {
+        setShowSaveIndicator(true);
+        saveTimeoutRef.current = setTimeout(() => {
+          setShowSaveIndicator(false);
+        }, 1500);
+      }
     }
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [data]);
 
   // Clear localStorage on completion or skip
@@ -85,6 +104,31 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     if (typeof window !== 'undefined') {
       localStorage.removeItem('career-onboarding-step');
       localStorage.removeItem('career-onboarding-data');
+    }
+  };
+
+  // Snackbar for confirmations
+  const { showConfirmation } = useSnackbar();
+
+  // Handle skip with confirmation if user has entered data
+  const handleSkip = () => {
+    const hasProgress = data.step1_role?.currentRole ||
+                        (data.step2_skills?.primarySkills?.length ?? 0) > 0 ||
+                        (data.step3_goals?.careerGoals?.length ?? 0) > 0;
+
+    if (hasProgress) {
+      showConfirmation(
+        'Skip Onboarding?',
+        'Your progress will be lost. You can complete your profile later in settings.',
+        () => {
+          clearPersistedState();
+          onSkip?.();
+        },
+        { confirmText: 'Skip anyway', cancelText: 'Keep editing' }
+      );
+    } else {
+      clearPersistedState();
+      onSkip?.();
     }
   };
 
@@ -206,7 +250,15 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
       case 5:
         return !!(data.step5_networking?.networkingGoals?.length);
       case 6:
-        return !!(data.step6_teamBuilding?.teamRole && data.step6_teamBuilding?.collaborationStyle?.length && data.step6_teamBuilding?.teamGoals?.length);
+        // Optional step: complete if user has entered ANY team building data
+        return !!(
+          data.step6_teamBuilding?.teamRole ||
+          data.step6_teamBuilding?.collaborationStyle?.length ||
+          data.step6_teamBuilding?.teamGoals?.length ||
+          data.step6_teamBuilding?.teamSizePreference ||
+          data.step6_teamBuilding?.communicationPreferences?.length ||
+          data.step6_teamBuilding?.projectTypePreferences?.length
+        );
       default:
         return false;
     }
@@ -280,20 +332,6 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     );
   };
 
-  // Consolidated duplicate checker - reusable for all three fields
-  const checkDuplicatesForAllFields = () => {
-    const current = data.step2_skills?.primarySkills || [];
-    const toLearn = data.step2_skills?.skillsToLearn || [];
-    const interests = data.step2_skills?.interests || [];
-    
-    const dedupe = deduplicateSkills(current, toLearn, interests);
-    if (!dedupe.isValid) {
-      setStep2Duplicates(dedupe.crossFieldDuplicates.map(d => d.skill));
-    } else {
-      setStep2Duplicates([]);
-    }
-  };
-
   const renderStep2 = () => (
     <div className="space-y-6">
       <div className="text-center mb-6">
@@ -307,7 +345,6 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         selectedValues={data.step2_skills?.primarySkills || []}
         onChange={(values) => {
           updateData('step2_skills', { primarySkills: values });
-          checkDuplicatesForAllFields();
         }}
         onDuplicateAttempt={(value) => {
           console.warn(`Duplicate attempt: ${value}`);
@@ -326,7 +363,6 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         selectedValues={data.step2_skills?.skillsToLearn || []}
         onChange={(values) => {
           updateData('step2_skills', { skillsToLearn: values });
-          checkDuplicatesForAllFields();
         }}
         onDuplicateAttempt={(value) => {
           console.warn(`Duplicate attempt: ${value}`);
@@ -343,41 +379,11 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         searchable={true}
       />
 
-      {step2Duplicates.length > 0 && (
-        <div className="bg-muted border border-border rounded-lg p-3 text-sm" role="alert">
-          <p className="font-medium text-foreground mb-1">Note:</p>
-          <p className="text-muted-foreground mb-2">
-            {step2Duplicates[0]} appears in multiple fields. Consider keeping skills in only one category.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              const skillToMove = step2Duplicates[0];
-              const currentSkills = data.step2_skills?.primarySkills || [];
-              if (currentSkills.includes(skillToMove)) {
-                // Remove from current skills and add to skills to learn
-                const updatedCurrent = currentSkills.filter(s => s !== skillToMove);
-                const updatedToLearn = [...(data.step2_skills?.skillsToLearn || []), skillToMove];
-                updateData('step2_skills', {
-                  primarySkills: updatedCurrent,
-                  skillsToLearn: updatedToLearn
-                });
-              }
-              setStep2Duplicates([]);
-            }}
-            className="text-xs text-foreground hover:text-foreground/80 font-medium underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
-          >
-            Move {step2Duplicates[0]} to Skills to Learn
-          </button>
-        </div>
-      )}
-
       <MultiSelectDropdown
         options={interestOptions}
         selectedValues={data.step2_skills?.interests || []}
         onChange={(values) => {
           updateData('step2_skills', { interests: values });
-          checkDuplicatesForAllFields();
         }}
         onDuplicateAttempt={(value) => {
           console.warn(`Duplicate attempt: ${value}`);
@@ -877,6 +883,21 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     <div className={`max-w-2xl mx-auto p-6 rounded-lg border border-border bg-card ${className}`}>
       {renderStepIndicator()}
 
+      {/* Progress saved indicator */}
+      <div
+        className={`
+          flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-4
+          transition-opacity duration-300
+          ${showSaveIndicator ? 'opacity-100' : 'opacity-0'}
+        `}
+        aria-live="polite"
+      >
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+        Progress saved
+      </div>
+
       <div className="min-h-96">
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
@@ -922,10 +943,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
           {/* Skip for now button */}
           {onSkip && (
             <button
-              onClick={() => {
-                clearPersistedState();
-                onSkip();
-              }}
+              onClick={handleSkip}
               className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
             >
               Skip for now

@@ -283,12 +283,14 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
           if (e.isIntersecting) animateOnce();
         });
       },
-      { threshold: 0.1, rootMargin: '120px 0px -10% 0px' }
+      { threshold: 0.3, rootMargin: '0px 0px -20% 0px' }
     );
     io.observe(node);
-    // If already visible
+    // If already visible - require ≥30% visibility to trigger
     const r = node.getBoundingClientRect();
-    if (r.top < window.innerHeight && r.bottom > 0) animateOnce();
+    const visibleHeight = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+    const visibilityRatio = visibleHeight / r.height;
+    if (visibilityRatio >= 0.3 && r.top < window.innerHeight && r.bottom > 0) animateOnce();
     return () => io.disconnect();
   }, [animateOnce, measure, placeCardsInstantly, prefersReducedMotion]);
 

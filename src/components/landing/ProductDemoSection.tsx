@@ -110,7 +110,7 @@ export default function ProductDemoSection() {
     };
 
     return (
-        <section className="product-demo-section relative overflow-hidden bg-background flex flex-col items-center justify-center px-4 py-24 md:py-32">
+        <section id="product-demo" className="product-demo-section relative overflow-hidden bg-background flex flex-col items-center justify-center px-4 py-24 md:py-32">
             <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(0,0,0,0.05)_1px,transparent_0)] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.08)_1px,transparent_0)] bg-[size:60px_60px]" />
             <div className="absolute h-full w-full bg-background [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none" />
 

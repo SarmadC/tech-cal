@@ -115,13 +115,14 @@ export function getSkillsForRole(role?: string): string[] {
 
 /**
  * Get complementary skills based on current selection
- * Returns 5-7 adjacent/complementary skills
+ * Returns 5-7 adjacent/complementary skills, excluding skills user already knows
  */
 export function getSuggestedSkillsToLearn(
   currentSkills: string[],
   role?: string
 ): string[] {
   const normalized = currentSkills.map(normalizeForComparison);
+  const normalizedCurrentSet = new Set(normalized);
 
   // Complementary skill map
   const complementary: Record<string, string[]> = {
@@ -149,10 +150,17 @@ export function getSuggestedSkillsToLearn(
 
   // If no matches, get role-based suggestions
   if (suggestions.size === 0 && role) {
-    return getSkillsForRole(role).slice(0, 5);
+    const roleSuggestions = getSkillsForRole(role).slice(0, 5);
+    // Filter out skills the user already has
+    return roleSuggestions.filter(
+      (s) => !normalizedCurrentSet.has(normalizeForComparison(s))
+    );
   }
 
-  return Array.from(suggestions).slice(0, 7);
+  // Filter out skills the user already has
+  return Array.from(suggestions)
+    .filter((s) => !normalizedCurrentSet.has(normalizeForComparison(s)))
+    .slice(0, 7);
 }
 
 /**

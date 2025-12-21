@@ -4,6 +4,9 @@
    ============================================ */
 
 :root {
+  /* --- 0. LAYOUT CONSTANTS --- */
+  --navbar-height: 64px;         /* Height of the main navigation bar */
+
   /* --- 1. CORE MONOCHROME PALETTE --- */
   /* Backgrounds */
   --mono-bg-main: #000000;       /* Absolute black for main backgrounds */

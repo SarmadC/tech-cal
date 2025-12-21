@@ -23,6 +23,11 @@ export default function CareerOnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [lastSubmitData, setLastSubmitData] = useState<{
+    data: CareerOnboardingData;
+    options?: { optionalSectionsCompleted: CareerOptionalSectionStatus };
+  } | null>(null);
   
   const {
     hasCompletedOnboarding,
@@ -111,26 +116,38 @@ export default function CareerOnboardingPage() {
     options?: { optionalSectionsCompleted: CareerOptionalSectionStatus }
   ) => {
     setIsSubmitting(true);
-    
+    setSubmitError(null);
+    setLastSubmitData({ data, options });
+
     try {
       await completeOnboarding(data, options?.optionalSectionsCompleted);
-      
+
       // Invalidate profile queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
       await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
-      
+
       // Trigger auth context refresh
       window.dispatchEvent(new CustomEvent('profile-updated'));
-      
+
       showSuccess('Career profile completed! Discovering personalized events...');
-      
+
       // Redirect to discover page
       router.push('/discover');
     } catch (error) {
       console.error('Career onboarding error:', error);
-      showError('Failed to save career profile. Please try again.');
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Failed to save career profile. Please check your connection and try again.';
+      setSubmitError(errorMessage);
+      showError(errorMessage);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRetry = () => {
+    if (lastSubmitData) {
+      handleComplete(lastSubmitData.data, lastSubmitData.options);
     }
   };
 
@@ -236,6 +253,25 @@ export default function CareerOnboardingPage() {
           </p>
         </div>
 
+        {/* Network Error with Retry */}
+        {submitError && (
+          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-medium text-destructive">Connection Error</h4>
+                <p className="text-sm text-destructive/80 mt-1">{submitError}</p>
+              </div>
+              <button
+                onClick={handleRetry}
+                disabled={isSubmitting}
+                className="flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSubmitting ? 'Retrying...' : 'Retry'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Onboarding Component */}
         <OnboardingErrorBoundary>
           <div className="relative">
@@ -247,7 +283,7 @@ export default function CareerOnboardingPage() {
                 </div>
               </div>
             )}
-            
+
             <CareerOnboarding
               onComplete={handleComplete}
               onSkip={handleSkip}

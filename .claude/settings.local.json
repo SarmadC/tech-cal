@@ -58,7 +58,8 @@
       "Bash(tsx:*)",
       "mcp__playwright__browser_network_requests",
       "Bash(ls:*)",
-      "Bash(1)"
+      "Bash(1)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
