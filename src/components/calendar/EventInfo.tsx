@@ -14,9 +14,11 @@ import { addColorOpacity, getColorWithFullOpacity } from '@/utils/colorUtils';
 interface EventInfoProps {
     event: Event;
     category?: EventType;
+    hideDescription?: boolean;
+    useSingleTagColor?: boolean;
 }
 
-const EventInfo: FC<EventInfoProps> = ({ event, category: _category }) => {
+const EventInfo: FC<EventInfoProps> = ({ event, category: _category, hideDescription = false, useSingleTagColor = false }) => {
     const timelineTheme = useTimelineTheme();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -48,10 +50,18 @@ const EventInfo: FC<EventInfoProps> = ({ event, category: _category }) => {
                 {displayedTags.map((tag) => (
                     <div 
                         key={tag.id} 
-                        className="px-3 py-1 text-xs rounded-md flex items-center space-x-2" 
-                        style={{ 
-                            backgroundColor: addColorOpacity(tag.color, 0.2, isDark), 
-                            color: getColorWithFullOpacity(tag.color, isDark) 
+                        className={`px-3 py-1 text-xs rounded-md flex items-center space-x-2 ${
+                            useSingleTagColor
+                                ? isDark
+                                    ? 'bg-gray-800 text-gray-300'
+                                    : 'bg-gray-100 text-gray-700 border border-gray-300'
+                                : isDark 
+                                    ? 'border border-white/20'
+                                    : 'bg-gray-100 border border-gray-300'
+                        }`}
+                        style={useSingleTagColor ? undefined : { 
+                            backgroundColor: isDark ? addColorOpacity(tag.color, 0.2, isDark) : 'rgb(243 244 246)', // gray-100
+                            color: isDark ? getColorWithFullOpacity(tag.color, isDark) : 'rgb(55 65 81)' // gray-700
                         }}
                     >
                         <span>{tag.name}</span>
@@ -79,9 +89,11 @@ const EventInfo: FC<EventInfoProps> = ({ event, category: _category }) => {
                 </button>
             )}
         </div>
-            <p className={`text-sm leading-relaxed ${timelineTheme.textSecondary}`}>
-                {event.description}
-            </p>
+            {!hideDescription && (
+                <p className={`text-sm leading-relaxed ${timelineTheme.textSecondary}`}>
+                    {event.description}
+                </p>
+            )}
         </>
     );
 };

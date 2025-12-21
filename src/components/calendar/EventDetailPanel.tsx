@@ -2,7 +2,7 @@
 
 import { FC, useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { XIcon, ArrowSquareOutIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon, Star } from '@phosphor-icons/react';
+import { XIcon, ArrowSquareOutIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon, Bookmark } from '@phosphor-icons/react';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
@@ -10,7 +10,6 @@ import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';
 import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
 import EventInfo from './EventInfo';
-import EventTracking from './EventTracking';
 import AdaptiveTimeline from './AdaptiveTimeline';
 import TrackAgendaView, { groupAgendaByTrack } from './TrackAgendaView';
 import { useEventActions } from '@/hooks/useEventActions';
@@ -205,8 +204,8 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
     // Conditional styling based on variant with glassmorphism
     const containerClasses = variant === 'modal'
-        ? `max-h-[85vh] event-detail-glass-modal rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/10 dark:ring-white/20 light:ring-black/10 p-6 flex flex-col relative overflow-hidden`
-        : `h-full event-detail-glass-sidebar border-l border-white/20 dark:border-white/10 shadow-2xl p-6 flex flex-col relative`;
+        ? `max-h-[85vh] event-detail-glass-modal rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-gray-300 dark:ring-white/20 p-6 flex flex-col relative overflow-hidden`
+        : `h-full event-detail-glass-sidebar border-l border-gray-300 dark:border-white/10 shadow-2xl p-6 flex flex-col relative`;
 
     return (
         <div 
@@ -221,7 +220,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
             <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-4 right-6 p-2 rounded-full bg-white/10 dark:bg-black/20 hover:bg-white/20 dark:hover:bg-white/10 border border-white/20 dark:border-white/10 text-gray-600 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 z-10"
+                className="absolute top-4 right-6 p-2 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 z-10"
                 aria-label="Close event details"
             >
                 <XIcon className="w-4 h-4" />
@@ -236,7 +235,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 
                 {/* Adaptive Timeline Section */}
                 {/* Show loading skeleton while fetching, then timeline or track view if agenda exists */}
-                <div className="mt-6 pt-6 border-t border-white/20 dark:border-white/10">
+                <div className="mt-6 pt-6 border-t border-gray-300 dark:border-white/10">
                     <div className="flex items-center justify-between mb-5">
                         <div>
                             <p className="text-xs font-semibold tracking-widest text-gray-500 dark:text-gray-400 uppercase">
@@ -247,7 +246,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                             </h4>
                         </div>
                         {hasTrackAgenda && (
-                            <div className="inline-flex items-center gap-1 rounded-full border border-white/30 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur px-1 py-1">
+                            <div className="inline-flex items-center gap-1 rounded-full border border-gray-300 dark:border-white/10 bg-gray-100 dark:bg-white/5 backdrop-blur px-1 py-1">
                                 <button
                                     type="button"
                                     onClick={() => setAgendaView('timeline')}
@@ -297,37 +296,23 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                 </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-white/20 dark:border-white/10">
-                {/* All actions in a single container */}
+            <div className="mt-6 pt-4 border-t border-gray-300 dark:border-white/10">
+                {/* All actions in a container */}
                 <div className="p-4">
                     <div className="flex items-center gap-3">
-                        {/* Primary CTA - Bookmark Event */}
+                        {/* Primary CTA - Bookmark (takes most space) */}
                         <button 
                             onClick={handleBookmarkEvent}
                             disabled={isBookmarkLoading || !user}
                             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 backdrop-blur-sm
                                 ${eventIsBookmarked 
-                                    ? 'bg-yellow-500/20 dark:bg-yellow-500/20 light:bg-yellow-500/15 hover:bg-yellow-500/30 dark:hover:bg-yellow-500/30 light:hover:bg-yellow-500/20 border border-yellow-500/40 dark:border-yellow-500/40 light:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 light:text-yellow-700'
-                                    : 'bg-gray-900/90 hover:bg-gray-800/90 text-white dark:bg-white/90 dark:hover:bg-white/100 dark:text-gray-900 border border-white/20 dark:border-white/10'
+                                    ? 'bg-yellow-500/15 dark:bg-yellow-500/20 hover:bg-yellow-500/20 dark:hover:bg-yellow-500/30 border border-yellow-500/30 dark:border-yellow-500/40 text-yellow-700 dark:text-yellow-400'
+                                    : 'bg-gray-900 dark:bg-white/90 hover:bg-gray-800 dark:hover:bg-white/100 text-white dark:text-gray-900 border border-gray-800 dark:border-white/10'
                                 } 
                                 ${isBookmarkLoading ? 'opacity-50 cursor-not-allowed' : 'shadow-sm hover:shadow-md'}`}
                         >
-                            <Star className="w-4 h-4" weight={eventIsBookmarked ? "fill" : "regular"} />
-                            <span>{eventIsBookmarked ? 'Unbookmark Event' : 'Bookmark Event'}</span>
-                        </button>
-
-                        {/* Attendance toggle */}
-                        <div className="flex-shrink-0">
-                            <EventTracking event={displayEvent} />
-                        </div>
-
-                        {/* Share icon-only button */}
-                        <button
-                            onClick={() => handleShare()}
-                            className="flex items-center justify-center px-3 py-3 bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-colors backdrop-blur-sm border border-white/20 dark:border-white/10"
-                            title="Share event"
-                        >
-                            <ShareNetworkIcon className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
+                            <Bookmark className="w-4 h-4" weight={eventIsBookmarked ? "fill" : "regular"} />
+                            <span>{eventIsBookmarked ? 'Unbookmark' : 'Bookmark'}</span>
                         </button>
 
                         {/* More menu */}
@@ -335,7 +320,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                             <button
                                 ref={moreMenuButtonRef}
                                 onClick={() => setShowMoreMenu(!showMoreMenu)}
-                                className="flex items-center justify-center px-3 py-3 bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-colors backdrop-blur-sm border border-white/20 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-offset-white"
+                                className="flex items-center justify-center px-3 py-3 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-lg transition-colors backdrop-blur-sm border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-offset-white"
                                 title="More actions"
                                 aria-expanded={showMoreMenu}
                                 aria-haspopup="true"
@@ -347,7 +332,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                             {showMoreMenu && dropdownPosition && typeof document !== 'undefined' && createPortal(
                                 <div 
                                     ref={dropdownRef}
-                                    className="fixed w-48 event-preview-glass-section rounded-lg shadow-lg z-[9999] border border-white/20 dark:border-white/10 backdrop-blur-md"
+                                    className="fixed w-48 event-preview-glass-section rounded-lg shadow-lg z-[9999] border border-gray-300 dark:border-white/10 backdrop-blur-md bg-white dark:bg-gray-800"
                                     style={{
                                         top: `${dropdownPosition.top}px`,
                                         left: `${dropdownPosition.left}px`,
@@ -355,13 +340,26 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                     role="menu"
                                     aria-orientation="vertical"
                                 >
+                                    {/* Share option - first item */}
+                                    <button
+                                        onClick={() => {
+                                            handleShare();
+                                            setShowMoreMenu(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-t-lg transition-colors focus:outline-none border-b border-gray-200 dark:border-white/10"
+                                        role="menuitem"
+                                    >
+                                        <ShareNetworkIcon className="w-4 h-4" />
+                                        <span>Share</span>
+                                    </button>
+                                    
                                     {displayEvent.agendaUrl ? (
                                         <a
                                             href={displayEvent.agendaUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             onClick={() => setShowMoreMenu(false)}
-                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-t-lg transition-colors focus:outline-none"
+                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors focus:outline-none border-b border-gray-200 dark:border-white/10"
                                             role="menuitem"
                                         >
                                             <ArrowSquareOutIcon className="w-4 h-4" />
@@ -373,7 +371,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             onClick={() => setShowMoreMenu(false)}
-                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-t-lg transition-colors focus:outline-none"
+                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors focus:outline-none border-b border-gray-200 dark:border-white/10"
                                             role="menuitem"
                                         >
                                             <ArrowSquareOutIcon className="w-4 h-4" />
@@ -385,7 +383,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                             handleIcsDownload();
                                             setShowMoreMenu(false);
                                         }}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-b-lg transition-colors focus:outline-none"
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-b-lg transition-colors focus:outline-none"
                                         role="menuitem"
                                     >
                                         <DownloadSimpleIcon className="w-4 h-4" />

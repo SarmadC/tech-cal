@@ -8,11 +8,7 @@ import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { MaterialIcon } from '@/components/ui/Icon';
 // Career impact components removed - using inline implementation
 import MobileEventDetailPanel from './MobileEventDetailPanel';
-import { useSwipeGestures } from '@/hooks/useSwipeGestures';
-import { usePullToRefresh } from '@/hooks/usePullToRefresh';
-import { useScrollCollapse } from '@/hooks/useScrollCollapse';
 import { SkeletonLoader, MonthViewSkeleton } from '@/components/ui/SkeletonLoader';
-import { isSameDay, getTodayDate } from '@/utils/dateUtils';
 import DiscoveryCard from './DiscoveryCard';
 
 export interface MobileCalendarMonthViewProps {
@@ -23,7 +19,6 @@ export interface MobileCalendarMonthViewProps {
     onEventSelect?: (event: Event | MultiDayEventInstance) => void;
     onEventClick?: (clickInfo: EventClickArg) => void;
     onDateChange?: (date: Date) => void;
-    onToggleCalendarCollapse?: () => void;
     onRefresh?: () => Promise<void>;
     isCalendarCollapsed?: boolean;
     className?: string;
@@ -35,13 +30,12 @@ export interface MobileCalendarMonthViewProps {
 const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
     events,
     initialDate,
-    categories: _categories,
+    categories,
     profile: _profile,
     onEventSelect,
     onEventClick: _onEventClick,
     onDateChange,
-    onToggleCalendarCollapse: _onToggleCalendarCollapse,
-    onRefresh,
+    onRefresh: _onRefresh,
     isCalendarCollapsed: propIsCalendarCollapsed = false,
     className = '',
     isIOS: _isIOS = false,
@@ -53,54 +47,6 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
     const [_isPreviewVisible, _setIsPreviewVisible] = useState(false);
     const isCalendarCollapsed = propIsCalendarCollapsed;
 
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const calendarGridRef = useRef<HTMLDivElement>(null);
-    const { isCollapsed: _isCollapsed, toggleCollapse: _toggleCollapse } = useScrollCollapse(scrollContainerRef, calendarGridRef);
-
-    // Generate calendar grid for the month
-    const calendarGrid = useMemo(() => {
-        const year = initialDate.getFullYear();
-        const month = initialDate.getMonth();
-
-        // Get first day of the month and last day
-        const firstDay = new Date(year, month, 1);
-        const _lastDay = new Date(year, month + 1, 0);
-
-        // Get the first day of the calendar grid (might be from previous month)
-        const startDate = new Date(firstDay);
-        startDate.setDate(startDate.getDate() - firstDay.getDay());
-
-        // Generate 42 days (6 weeks)
-        const days = [];
-        const currentDate = new Date(startDate);
-
-        for (let i = 0; i < 42; i++) {
-            const date = new Date(currentDate);
-            const isCurrentMonth = date.getMonth() === month;
-            const isToday = isSameDay(date, getTodayDate());
-            const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
-
-            // Get events for this day
-            const dayEvents = events.filter(event => {
-                const eventStart = new Date(event.startTime);
-                return eventStart.toDateString() === date.toDateString();
-            });
-
-            days.push({
-                date: date,
-                dayNumber: date.getDate(),
-                isCurrentMonth,
-                isToday,
-                isSelected,
-                events: dayEvents,
-                hasEvents: dayEvents.length > 0,
-            });
-
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        return days;
-    }, [initialDate, events, selectedDate]);
 
     // Get all events for the current month
     const monthEvents = useMemo(() => {
@@ -115,48 +61,17 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
             .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     }, [events, initialDate]);
 
-    // Enhanced gesture handlers
-    const { swipeHandlers } = useSwipeGestures({
-        onSwipeLeft: () => {
-            // Could navigate to next month if needed
-        },
-        onSwipeRight: () => {
-            // Could navigate to previous month if needed
-        },
-        threshold: 60,
-        preventScroll: false,
-        enableMomentum: true,
-    });
-
-    // Pull to refresh functionality
-    const handleRefresh = useCallback(async () => {
-        if (onRefresh) {
-            await onRefresh();
-        }
-        // Default refresh behavior
-        await new Promise(resolve => setTimeout(resolve, 1000));
-    }, [onRefresh]);
-
-    const {
-        pullToRefreshHandlers: _pullToRefreshHandlers,
-        pullState,
-        pullProgress: _pullProgress,
-        indicatorOpacity,
-        indicatorScale,
-        indicatorRotation,
-        pullTransform,
-    } = usePullToRefresh({
-        onRefresh: handleRefresh,
-        threshold: 80,
-        resistance: 2.5,
-        enabled: true,
-    });
 
     // Event handlers
     const handleDateClick = useCallback((date: Date) => {
         setSelectedDate(date);
         onDateChange?.(date);
     }, [onDateChange]);
+
+    // Sync selectedDate with initialDate changes
+    React.useEffect(() => {
+        setSelectedDate(initialDate);
+    }, [initialDate]);
 
     const handleEventClick = useCallback((event: Event, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -187,10 +102,6 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
 
 
 
-    // Format time for mobile display
-
-    const _monthName = initialDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 
 
@@ -208,73 +119,8 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
 
     return (
         <div className={`mobile-calendar-month-view ${className}`}>
-            {/* Pull to Refresh Indicator */}
-            {pullState.isPulling && (
-                <div
-                    className="pull-refresh-indicator mobile-pull-indicator"
-                    style={{
-                        '--indicator-opacity': indicatorOpacity,
-                        '--indicator-transform': `scale(${indicatorScale}) rotate(${indicatorRotation}deg)`,
-                    } as React.CSSProperties}
-                >
-                    <MaterialIcon name="refresh" size={24} />
-                </div>
-            )}
-
-            {/* Loading Indicator */}
-            {pullState.isRefreshing && (
-                <div className="refresh-loading-indicator">
-                    <MaterialIcon name="refresh" size={20} className="spinning" />
-                    <span>Refreshing...</span>
-                </div>
-            )}
-
             {/* Main Content Container */}
             <div className="mobile-calendar-content-container">
-                {/* Calendar Grid - Collapsible */}
-                <div
-                    className={`mobile-calendar-grid-collapsible ${isCalendarCollapsed ? 'collapsed' : ''}`}
-                    ref={scrollContainerRef}
-                    onTouchStart={swipeHandlers.onTouchStart}
-                    onTouchMove={swipeHandlers.onTouchMove}
-                    onTouchEnd={swipeHandlers.onTouchEnd}
-                    style={{ '--pull-transform': pullTransform } as React.CSSProperties}
-                >
-                    {/* Week day headers */}
-                    <div className="weekday-headers-modern">
-                        {weekDays.map(day => (
-                            <div key={day} className="weekday-header-modern">
-                                {day}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Calendar days */}
-                    <div className="calendar-days-modern" ref={calendarGridRef}>
-                        {calendarGrid.map((day, index) => (
-                            <div
-                                key={index}
-                                className={`calendar-day-modern ${!day.isCurrentMonth ? 'other-month' : ''
-                                    } ${day.isToday ? 'today' : ''} ${day.isSelected ? 'selected' : ''
-                                    } ${day.hasEvents ? 'has-events' : ''}`}
-                                onClick={() => handleDateClick(day.date)}
-                            >
-                                <div className="day-number-modern">{day.dayNumber}</div>
-
-                                {/* Event indicator */}
-                                {day.hasEvents && (
-                                    <div className="event-indicator-single">
-                                        <div
-                                            className="event-dot-single"
-                                            title={`${day.events.length} event${day.events.length > 1 ? 's' : ''}`}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
                 {/* Month Events Discovery - Always visible with different heights */}
                 <div className={`month-events-discovery ${isCalendarCollapsed ? 'collapsed' : ''}`}>
                     <div className="events-header">
@@ -321,7 +167,7 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
                         _setIsPreviewVisible(false);
                         setPreviewEvent(null);
                     }}
-                    categories={_categories}
+                    categories={categories}
                 />
             )}
         </div>

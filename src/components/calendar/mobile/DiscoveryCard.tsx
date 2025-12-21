@@ -22,6 +22,7 @@ export interface DiscoveryCardProps {
     event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore };
     onClick?: () => void;
     onView?: () => void;
+    onDetailsClick?: () => void;
     onLearnMore?: () => void;
     className?: string;
     variant?: 'default' | 'featured' | 'compact';
@@ -34,6 +35,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     event,
     onClick,
     onView,
+    onDetailsClick,
     onLearnMore,
     className = '',
     variant = 'default',
@@ -123,13 +125,13 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
             )}
         >
             {/* Standard Glass Card Structure (matching original aesthetics) */}
-            <div className="glass-card rounded-[24px] p-5 relative overflow-hidden bg-card/80 dark:bg-card/20 border border-border/60 backdrop-blur shadow-sm">
+            <div className="glass-card rounded-[24px] p-5 relative overflow-hidden bg-card/80 dark:bg-[#212023] border border-border/60 backdrop-blur shadow-sm">
 
                 {/* Header Row: Logo | Title | Bookmark */}
                 <div className="flex items-start gap-4 mb-3">
                     {/* Logo Box - Prominent Top Left */}
                     <div className="flex-shrink-0 relative">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-muted/30 border border-border/20 shadow-inner">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-muted/30 border border-border/20 shadow-inner p-2">
                             {(() => {
                                 const logoSizes = 40;
                                 // Prioritize organization logo for the "logo box" feel, or event image if no logo
@@ -142,7 +144,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                                             alt={event.title}
                                             width={56}
                                             height={56}
-                                            className="w-full h-full object-cover"
+                                            className="w-full h-full object-contain"
                                             onError={(e) => {
                                                 e.currentTarget.style.display = 'none';
                                                 // Fallback color handled by parent bg
@@ -189,7 +191,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                         onClick={handleBookmark}
                         className="flex-shrink-0 -mr-2 -mt-2 p-3 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                        <BookmarkSimple weight={isBookmarkedValue ? 'fill' : 'bold'} className={isBookmarkedValue ? 'text-green-500' : 'text-muted-foreground'} size={22} />
+                        <BookmarkSimple weight={isBookmarkedValue ? 'fill' : 'bold'} className={isBookmarkedValue ? 'text-green-500 dark:text-[#fdfdfd]' : 'text-muted-foreground'} size={22} />
                     </button>
                 </div>
 
@@ -228,7 +230,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            onView?.();
+                            onDetailsClick?.();
                         }}
                         className="flex items-center justify-center py-3 rounded-xl border border-input bg-background/50 text-foreground font-semibold text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                     >
@@ -240,7 +242,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                             const url = event.registrationUrl || event.sourceUrl;
                             if (url) window.open(url, '_blank');
                         }}
-                        className="flex items-center justify-center py-3 rounded-xl bg-green-600 text-white font-semibold text-sm hover:bg-green-500 transition-colors shadow-md shadow-green-900/10"
+                        className="flex items-center justify-center py-3 rounded-xl bg-black text-white font-semibold text-sm hover:bg-black/90 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90 transition-colors shadow-md shadow-black/10 dark:shadow-[#fdfdfd]/10"
                     >
                         Register
                     </button>

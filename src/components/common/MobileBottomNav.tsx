@@ -23,7 +23,13 @@ const MobileBottomNav = () => {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#000000] border-t border-white/10 pb-safe md:hidden">
+        <div 
+            className="fixed bottom-0 left-0 right-0 z-50 pb-safe md:hidden"
+            style={{
+                backgroundColor: 'var(--mono-bg-main)',
+                borderTop: '1px solid var(--mono-border-default)',
+            }}
+        >
             <div className="flex justify-around items-center h-[60px] px-2">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
@@ -36,14 +42,20 @@ const MobileBottomNav = () => {
                         >
                             <div className={cn(
                                 "flex items-center justify-center transition-colors duration-200",
-                                isActive ? "text-[#22c55e]" : "text-gray-500 hover:text-gray-300"
+                                isActive 
+                                    ? "text-[var(--mono-text-primary)]" 
+                                    : "text-[var(--mono-text-secondary)] hover:text-[var(--mono-text-primary)]"
                             )}>
                                 <item.icon size={24} weight={isActive ? "bold" : "regular"} />
                             </div>
-                            <span className={cn(
-                                "text-[10px] font-medium transition-colors duration-200",
-                                isActive ? "text-[#22c55e]" : "text-gray-500"
-                            )}>
+                            <span 
+                                className={cn(
+                                    "text-[10px] font-medium transition-colors duration-200",
+                                    isActive 
+                                        ? "text-[var(--mono-text-primary)]" 
+                                        : "text-[var(--mono-text-secondary)]"
+                                )}
+                            >
                                 {item.name}
                             </span>
                         </button>

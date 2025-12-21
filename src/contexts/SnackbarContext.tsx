@@ -101,6 +101,7 @@ function ThemedDialog({ children, theme }: { children: React.ReactNode, theme: s
 export function SnackbarProvider({ children }: { children: React.ReactNode }) {
   const { theme } = useNextTheme();
   const [snackbar, setSnackbar] = useState<SnackbarMessage | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const [confirmation, setConfirmation] = useState<ConfirmationDialog>({
     open: false,
     title: '',
@@ -108,6 +109,11 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     onConfirm: () => {},
     onCancel: () => {}
   });
+
+  // Ensure we're mounted in the browser before rendering MUI components
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const showMessage = useCallback((
     message: string,
@@ -190,7 +196,7 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
       {children}
 
       {/* Snackbar: mount only when a message exists to defer MUI loading */}
-      {snackbar && (
+      {isMounted && snackbar && (
         <MuiSnackbar
           open
           autoHideDuration={snackbar.autoHideDuration || null}
@@ -210,7 +216,7 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Confirmation Dialog: mount only when open to defer MUI loading */}
-      {confirmation.open && (
+      {isMounted && confirmation.open && (
         <ThemedDialog theme={theme}>
           <MuiDialog
             open

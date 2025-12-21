@@ -6,7 +6,7 @@ import DiscoveryCard from './DiscoveryCard';
 import { UnifiedFilterOptions, UpdateFilterHandler } from '@/hooks/useUnifiedServerFiltering';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { FilterCounts } from '@/utils/filterCountUtils';
-import { MagnifyingGlass, SlidersHorizontal, MapPin, SpinnerGap } from '@phosphor-icons/react';
+import { MagnifyingGlass, SlidersHorizontal, NavigationArrow, SpinnerGap } from '@phosphor-icons/react';
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import { calculateFilterCounts } from '@/utils/filterCountUtils';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
@@ -68,7 +68,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     };
 
     return (
-        <div className="min-h-screen bg-background pb-24">
+        <div className="min-h-screen bg-background dark:bg-[#08090a] pb-24 mobile-discovery-view">
             {/* Top Navigation */}
             <UnifiedMobileNavbar
                 navItems={[
@@ -84,9 +84,9 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
 
             {/* Search & Filter Header (Sticky below navbar) */}
             <div className="sticky top-[64px] z-30 bg-background/90 backdrop-blur-md border-b border-border/40 px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
                     {/* Search Bar - Expanded or Collapsed */}
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 min-w-0">
                         <div className="relative">
                             {isSearching ? (
                                 <SpinnerGap className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin" size={18} />
@@ -105,22 +105,34 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                         onSearch();
                                     }
                                 }}
-                                className="w-full bg-muted/50 border border-border/40 rounded-full py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all"
+                                className="w-full bg-muted/50 border border-border/40 rounded-full py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-green-500/50 dark:focus:ring-[#fdfdfd]/50 transition-all"
                             />
                         </div>
                     </div>
 
+                    {/* Near Me Button - Icon Only */}
+                    <button
+                        onClick={onNearMeClick}
+                        className={`flex-shrink-0 flex items-center justify-center p-2.5 rounded-full border transition-colors ${isDetectingLocation
+                            ? 'bg-blue-500/20 border-blue-500/50 text-blue-500'
+                            : 'bg-muted/50 border-border/40 text-muted-foreground hover:bg-muted'
+                            }`}
+                        aria-label="Near Me"
+                    >
+                        <NavigationArrow size={18} weight="fill" />
+                    </button>
+
                     {/* Filter Button */}
                     <button
                         onClick={() => setIsFilterOpen(true)}
-                        className={`relative p-2.5 rounded-full border transition-colors ${activeFilterCount > 0
-                            ? 'bg-green-500/20 border-green-500/50 text-green-500'
+                        className={`relative flex-shrink-0 p-2.5 rounded-full border transition-colors ${activeFilterCount > 0
+                            ? 'bg-green-500/20 border-green-500/50 text-green-500 dark:bg-[#fdfdfd]/20 dark:border-[#fdfdfd]/50 dark:text-[#fdfdfd]'
                             : 'bg-muted/50 border-border/40 text-muted-foreground hover:bg-muted'
                             }`}
                     >
-                        <SlidersHorizontal size={20} weight={activeFilterCount > 0 ? 'bold' : 'regular'} />
+                        <SlidersHorizontal size={18} weight={activeFilterCount > 0 ? 'bold' : 'regular'} />
                         {activeFilterCount > 0 && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 text-[10px] font-bold text-white flex items-center justify-center">
+                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 dark:bg-[#fdfdfd] text-[10px] font-bold text-white dark:text-gray-900 flex items-center justify-center">
                                 {activeFilterCount}
                             </span>
                         )}
@@ -178,7 +190,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                     </button>
                                     <button
                                         onClick={() => setIsFilterOpen(false)}
-                                        className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 shadow-lg shadow-green-900/20 transition-colors"
+                                        className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90 shadow-lg shadow-green-900/20 dark:shadow-[#fdfdfd]/20 transition-colors"
                                     >
                                         Show Results
                                     </button>
@@ -186,24 +198,6 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                             </div>
                         </div>
                     )}
-                </div>
-
-                {/* Secondary Quick Filters (Optional - e.g. Location or Date chips) */}
-                <div className="flex items-center gap-2 mt-3 overflow-x-auto no-scrollbar pb-1">
-                    <button
-                        onClick={onNearMeClick}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap transition-colors ${isDetectingLocation // specific 'near me' active state tracking if needed
-                            ? 'bg-blue-500/20 border-blue-500/50 text-blue-500'
-                            : 'bg-muted/50 border-border/40 text-muted-foreground'
-                            }`}
-                    >
-                        <MapPin size={12} weight="fill" />
-                        Near Me
-                    </button>
-                    {/* Add more chips here if needed */}
-                    <div className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
-                        {totalCount} results
-                    </div>
                 </div>
             </div>
 
@@ -228,7 +222,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                         <DiscoveryCard
                             key={event.id}
                             event={event}
-                            onClick={() => onEventSelect?.(event)}
+                            onDetailsClick={() => onEventSelect?.(event)}
                             className="w-full"
                         />
                     ))

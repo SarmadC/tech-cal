@@ -5,24 +5,20 @@ import { MaterialIcon } from '@/components/ui/Icon';
 import { Badge } from '@/components/ui/badge';
 import MobileQuickDatePicker from './MobileQuickDatePicker';
 
-export interface MobileTopNavigationProps {
+export interface MobileCalendarControlsProps {
   currentDate: Date;
-  onToggleMonthPicker?: () => void;
   onToggleSearchFilter?: () => void;
   onToggleCalendarCollapse?: () => void;
-  onToggleSidebar?: () => void;
   onDateChange?: (date: Date) => void;
   isCalendarCollapsed?: boolean;
   activeFilterCount?: number;
   className?: string;
 }
 
-const MobileTopNavigation: React.FC<MobileTopNavigationProps> = ({
+const MobileCalendarControls: React.FC<MobileCalendarControlsProps> = ({
   currentDate,
-  onToggleMonthPicker: _onToggleMonthPicker,
   onToggleSearchFilter,
   onToggleCalendarCollapse,
-  onToggleSidebar,
   onDateChange,
   isCalendarCollapsed = false,
   activeFilterCount = 0,
@@ -82,8 +78,8 @@ const MobileTopNavigation: React.FC<MobileTopNavigationProps> = ({
   }, []);
 
   return (
-    <div className={`mobile-top-navigation-new ${className}`} role="navigation" aria-label="Mobile calendar navigation">
-      <div className="mobile-nav-content-new">
+    <div className={`mobile-calendar-controls ${className}`} role="toolbar" aria-label="Calendar controls">
+      <div className="mobile-calendar-controls-content">
         {/* Month Dropdown - Far Left */}
         <button
           onClick={handleMonthButtonClick}
@@ -123,17 +119,6 @@ const MobileTopNavigation: React.FC<MobileTopNavigationProps> = ({
               )}
             </button>
           )}
-
-          {/* Hamburger Menu Button */}
-          {onToggleSidebar && (
-            <button
-              onClick={onToggleSidebar}
-              className="mobile-hamburger-button"
-              aria-label="Open sidebar menu"
-            >
-              <MaterialIcon name="menu" size={24} />
-            </button>
-          )}
         </div>
       </div>
 
@@ -151,4 +136,5 @@ const MobileTopNavigation: React.FC<MobileTopNavigationProps> = ({
   );
 };
 
-export default MobileTopNavigation;
+export default MobileCalendarControls;
+

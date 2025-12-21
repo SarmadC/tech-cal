@@ -14,10 +14,20 @@ import { LearningProgressCard } from '@/components/dashboard/LearningProgressCar
 import { PipelineColumn } from '@/components/dashboard/PipelineColumn';
 import { RecentWinsCard } from '@/components/dashboard/RecentWinsCard';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { usePastEventAttendancePrompt } from '@/hooks/usePastEventAttendancePrompt';
+import dynamic from 'next/dynamic';
+
+// Dynamically import attendance prompt modal to avoid SSR issues
+const PastEventAttendancePrompt = dynamic(
+    () => import('@/components/dashboard/PastEventAttendancePrompt'),
+    { ssr: false }
+);
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
+import MobileBottomNav from '@/components/common/MobileBottomNav';
 import type { EventType, Event, TrackedEventRecord } from '@/types';
 
 interface DashboardClientViewProps {
@@ -35,6 +45,16 @@ export default function DashboardClientView({
 }: DashboardClientViewProps) {
     const { user: _user, profile } = useAuth();
     const { careerProfile, hasCompletedOnboarding } = useCareerProfile();
+    const { isMobile } = useDeviceDetection();
+
+    // Past event attendance prompt
+    const {
+        pendingEvents,
+        snoozeEvent,
+        markAttended,
+        markNotAttended,
+        hasPendingPrompts
+    } = usePastEventAttendancePrompt();
     const {
         trackedEvents,
         allUpcomingEvents,
@@ -92,22 +112,27 @@ export default function DashboardClientView({
 
     return (
         <SidebarProvider>
-            {/* Mobile Navigation - Only visible on mobile */}
-            <UnifiedMobileNavbar 
-                navItems={[
-                    { name: 'Discover', href: '/discover' },
-                    { name: 'Calendar', href: '/calendar' },
-                    { name: 'Dashboard', href: '/dashboard' },
-                    { name: 'Hackathons', href: '/hackathons' },
-                    { name: 'Settings', href: '/dashboard/settings' }
-                ]}
-                fixed={true}
-            />
+            {/* Mobile Bottom Navigation - Only visible on mobile */}
+            {isMobile && <MobileBottomNav />}
+            {/* Conditional Navigation - UnifiedMobileNavbar on mobile, Navbar on desktop */}
+            {isMobile ? (
+                <UnifiedMobileNavbar
+                    navItems={[
+                        { name: 'Discover', href: '/discover' },
+                        { name: 'Calendar', href: '/calendar' },
+                        { name: 'Dashboard', href: '/dashboard' },
+                        { name: 'Hackathons', href: '/hackathons' },
+                        { name: 'Settings', href: '/dashboard/settings' }
+                    ]}
+                    fixed={false}
+                    className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/40"
+                />
+            ) : null}
             <div className="flex h-screen bg-background">
                 <AppSidebar />
                 <main className="flex-1 flex flex-col overflow-hidden">
-                    {/* Main Navbar - Hidden on mobile */}
-                    <Navbar />
+                    {/* Main Navbar - Only visible on desktop */}
+                    {!isMobile && <Navbar />}
                     <div className="flex-1 overflow-auto">
                         <PageErrorBoundary name="Dashboard">
                             {/* Glassmorphic Dashboard with gradient background */}
@@ -115,12 +140,14 @@ export default function DashboardClientView({
                                 {/* Subtle atmospheric overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
 
-                                <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
-                                    {/* Breadcrumbs */}
-                                    <Breadcrumbs
-                                        base={[{ label: 'Home', href: '/' }]}
-                                        trail={[{ label: 'Dashboard' }]}
-                                    />
+                                <div className={`relative max-w-[1600px] mx-auto px-6 space-y-6 ${isMobile ? 'pt-20 pb-24' : 'py-8'}`}>
+                                    {/* Breadcrumbs - Hidden on mobile */}
+                                    {!isMobile && (
+                                        <Breadcrumbs
+                                            base={[{ label: 'Home', href: '/' }]}
+                                            trail={[{ label: 'Dashboard' }]}
+                                        />
+                                    )}
                                     {/* Dashboard Header */}
                                     <SectionErrorBoundary name="DashboardHeader">
                                         <DashboardHeader profile={profile} />
@@ -211,6 +238,16 @@ export default function DashboardClientView({
                     </div>
                 </main>
             </div>
+
+            {/* Past Event Attendance Prompt Modal */}
+            {hasPendingPrompts && (
+                <PastEventAttendancePrompt
+                    pendingEvents={pendingEvents}
+                    onAttended={markAttended}
+                    onNotAttended={markNotAttended}
+                    onSnooze={snoozeEvent}
+                />
+            )}
         </SidebarProvider>
     );
 }

@@ -64,3 +64,5 @@ const MobileFAQSection: React.FC<MobileFAQSectionProps> = ({ className = '' }) =
 
 export default MobileFAQSection;
 
+
+

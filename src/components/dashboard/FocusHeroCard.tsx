@@ -150,7 +150,7 @@ export function FocusHeroCard({
                     {metrics.topRecommendedEvent.event.tags.slice(0, 4).map((tag, index) => (
                       <span
                         key={tag.id || index}
-                        className="px-2.5 py-1 text-xs font-medium rounded-full bg-white/10 dark:bg-white/10 light:bg-black/5 border border-white/20 dark:border-white/20 light:border-black/10 text-glass-secondary"
+                        className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-white/10 border border-gray-300 dark:border-white/20 text-gray-800 dark:text-glass-secondary"
                       >
                         {tag.name}
                       </span>
@@ -189,13 +189,13 @@ export function FocusHeroCard({
                           {matchedSkills.slice(0, 4).map((skill, index) => (
                             <span
                               key={index}
-                              className="px-2.5 py-1 text-xs font-medium rounded-full bg-yellow-500/20 dark:bg-yellow-500/20 light:bg-yellow-500/15 border border-yellow-500/40 dark:border-yellow-500/40 light:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 light:text-yellow-700"
+                              className="px-2.5 py-1 text-xs font-medium rounded-full bg-yellow-500/15 dark:bg-yellow-500/20 border border-yellow-500/30 dark:border-yellow-500/40 text-yellow-700 dark:text-yellow-400"
                             >
                               {skill}
                             </span>
                           ))}
                           {matchedSkills.length > 4 && (
-                            <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-white/10 dark:bg-white/10 light:bg-black/5 border border-white/20 dark:border-white/20 light:border-black/10 text-glass-tertiary">
+                            <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-white/10 border border-gray-300 dark:border-white/20 text-gray-800 dark:text-glass-tertiary">
                               +{matchedSkills.length - 4} more
                             </span>
                           )}
@@ -210,12 +210,12 @@ export function FocusHeroCard({
                 {(metrics.topRecommendedEvent.event.difficulty || metrics.topRecommendedEvent.event.targetAudience) && (
                   <div className="flex flex-wrap items-center gap-3 text-xs text-glass-tertiary">
                     {metrics.topRecommendedEvent.event.difficulty && (
-                      <span className="px-2.5 py-1 rounded-full bg-white/10 dark:bg-white/10 light:bg-black/5 border border-white/20 dark:border-white/20 light:border-black/10 capitalize">
+                      <span className="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/10 border border-gray-300 dark:border-white/20 text-gray-800 dark:text-glass-secondary capitalize">
                         {metrics.topRecommendedEvent.event.difficulty}
                       </span>
                     )}
                     {metrics.topRecommendedEvent.event.targetAudience && (
-                      <span className="px-2.5 py-1 rounded-full bg-white/10 dark:bg-white/10 light:bg-black/5 border border-white/20 dark:border-white/20 light:border-black/10">
+                      <span className="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/10 border border-gray-300 dark:border-white/20 text-gray-800 dark:text-glass-secondary">
                         {metrics.topRecommendedEvent.event.targetAudience}
                       </span>
                     )}
@@ -230,10 +230,10 @@ export function FocusHeroCard({
                   return (
                     <button
                       onClick={() => handleBookmark(event)}
-                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-white/30 dark:focus:ring-white/30 light:focus:ring-black/20 ${
+                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-white/30 ${
                         bookmarked
-                          ? 'bg-yellow-500/20 dark:bg-yellow-500/20 light:bg-yellow-500/15 hover:bg-yellow-500/30 dark:hover:bg-yellow-500/30 light:hover:bg-yellow-500/20 border border-yellow-500/40 dark:border-yellow-500/40 light:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 light:text-yellow-700'
-                          : 'bg-white/10 dark:bg-white/10 light:bg-black/5 hover:bg-white/20 dark:hover:bg-white/20 light:hover:bg-black/8 text-glass-primary'
+                          ? 'bg-yellow-500/15 dark:bg-yellow-500/20 hover:bg-yellow-500/20 dark:hover:bg-yellow-500/30 border border-yellow-500/30 dark:border-yellow-500/40 text-yellow-700 dark:text-yellow-400'
+                          : 'bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-800 dark:text-glass-primary'
                       }`}
                     >
                       {bookmarked ? (
@@ -252,7 +252,7 @@ export function FocusHeroCard({
                 })()}
                 <button
                   onClick={() => handleEventClick(metrics.topRecommendedEvent!.event)}
-                  className="px-4 py-2.5 rounded-lg border border-white/20 dark:border-white/20 light:border-black/15 hover:border-white/30 dark:hover:border-white/30 light:hover:border-black/20 text-sm font-medium text-glass-secondary transition-all focus:outline-none focus:ring-2 focus:ring-white/30 dark:focus:ring-white/30 light:focus:ring-black/20"
+                  className="px-4 py-2.5 rounded-lg border border-gray-300 dark:border-white/20 hover:border-gray-400 dark:hover:border-white/30 text-sm font-medium text-gray-700 dark:text-glass-secondary transition-all focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-white/30"
                 >
                   View Details
                 </button>

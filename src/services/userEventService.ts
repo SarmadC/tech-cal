@@ -164,9 +164,46 @@ export class UserEventService {
         supabaseClient: SupabaseClientType
     ): Promise<{ previousStatus: string | null; newStatus: string | null; autoBookmarked: boolean }> {
         try {
-            if (!status) {
-                throw new Error('Status is required for set_attendance_status');
+            // Handle null status separately - RPC function doesn't accept null
+            // When status is null, we directly update the user_events table to clear attendance
+            if (status === null) {
+                // First, get the current status before clearing
+                const { data: existingRecord } = await supabaseClient
+                    .from('user_events')
+                    .select('status')
+                    .eq('user_id', userId)
+                    .eq('event_id', eventId)
+                    .maybeSingle();
+
+                const previousStatus = existingRecord?.status ?? null;
+
+                // Update the record to set status to null
+                const { error: updateError } = await supabaseClient
+                    .from('user_events')
+                    .update({ status: null, notes: notes ?? null })
+                    .eq('user_id', userId)
+                    .eq('event_id', eventId);
+
+                if (updateError) {
+                    console.error('Error clearing attendance status:', updateError);
+                    throw updateError;
+                }
+
+                console.log('Attendance status cleared successfully:', {
+                    userId,
+                    eventId,
+                    previousStatus,
+                    newStatus: null
+                });
+
+                return {
+                    previousStatus,
+                    newStatus: null,
+                    autoBookmarked: false
+                };
             }
+
+            // For non-null status, use the RPC function
             const { data, error } = await supabaseClient.rpc('set_attendance_status', {
                 p_user_id: userId,
                 p_event_id: eventId,

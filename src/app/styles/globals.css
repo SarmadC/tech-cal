@@ -254,6 +254,17 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
     border-color: rgba(255, 255, 255, 0.9);
   }
 
+  /* Mobile discovery cards - single solid background in dark mode */
+  .dark .mobile-discovery-view .glass-card {
+    background: #212023 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .dark .mobile-discovery-view .glass-card:hover {
+    background: #212023 !important;
+  }
+
   /* Gradient border effect for premium cards */
   .glass-border-gradient {
     position: relative;
@@ -301,6 +312,14 @@ button:not([class*="fc-"]):focus, input:not([class*="fc-"]):focus, select:not([c
       radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
       radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 70%),
       linear-gradient(180deg, var(--background-main) 0%, rgba(30, 30, 30, 0.95) 100%);
+  }
+
+  .dark .glass-bg-gradient {
+    background: 
+      radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 70%),
+      linear-gradient(180deg, #08090a 0%, rgba(8, 9, 10, 0.95) 100%);
   }
 
   .light .glass-bg-gradient {
@@ -847,8 +866,8 @@ input::placeholder, textarea::placeholder {
 .dark .mobile-nav-glass-panel {
   background: linear-gradient(
     135deg,
-    rgba(30, 30, 35, 0.90) 0%,
-    rgba(20, 20, 25, 0.85) 100%
+    rgba(8, 9, 10, 0.90) 0%,
+    rgba(8, 9, 10, 0.85) 100%
   );
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow:
@@ -873,7 +892,7 @@ input::placeholder, textarea::placeholder {
   }
 
   .dark .mobile-nav-glass-panel {
-    background: rgba(25, 25, 30, 0.95);
+    background: rgba(8, 9, 10, 0.95);
   }
 }
 

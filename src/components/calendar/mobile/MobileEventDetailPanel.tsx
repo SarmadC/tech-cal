@@ -1,18 +1,17 @@
 'use client';
 
 import { FC, useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
-import { XIcon, ArrowSquareOutIcon, CalendarPlusIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
+import { XIcon, ArrowSquareOutIcon, CalendarPlusIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon, BookmarkSimple, UserCheckIcon, CheckIcon, CircleNotchIcon } from '@phosphor-icons/react';
 import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';
 import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
 import EventInfo from '../EventInfo';
-import EventTracking from '../EventTracking';
 import { useEventActions } from '@/hooks/useEventActions';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
+import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useAuth } from '@/contexts';
-import { generateEventSlug } from '@/utils/slugUtils';
+import { EventStatus } from '@/types';
 
 interface MobileEventDetailPanelProps {
     event: Event;
@@ -30,6 +29,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
     // Add tracking functionality
     const { user } = useAuth();
     const { trackedEventIds, trackEvent, untrackEvent, isLoading: isTrackingLoading } = useTrackedEventsUnified();
+    const { getAttendanceStatus, setAttendanceStatus, isLoading: isAttendanceLoading } = useEventEngagement();
     
     // Update eventWithAgenda when event prop changes
     useEffect(() => {
@@ -55,6 +55,50 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
         } else {
             await trackEvent(displayEvent.id, 'bookmarked');
         }
+    };
+
+    // Attendance functionality
+    const trackingEventId = ('originalEventId' in displayEvent ? (displayEvent as MultiDayEventInstance).originalEventId : null) || displayEvent.id;
+    const attendanceStatus = getAttendanceStatus(trackingEventId);
+    
+    const getAttendanceState = () => {
+        if (!attendanceStatus || attendanceStatus === null) {
+            return { state: 'none', label: 'Attending', nextAction: 'attending' };
+        }
+        if (attendanceStatus === 'attending') {
+            return { state: 'attending', label: 'Attending', nextAction: 'attended' };
+        }
+        if (attendanceStatus === 'attended') {
+            return { state: 'attended', label: 'Attended', nextAction: null };
+        }
+        return { state: 'none', label: 'Attending', nextAction: 'attending' };
+    };
+
+    const attendanceState = getAttendanceState();
+
+    const handleAttendanceToggle = async () => {
+        if (!user) return;
+        
+        let newStatus: EventStatus | null = null;
+        if (attendanceState.nextAction === 'attending') {
+            newStatus = 'attending';
+        } else if (attendanceState.nextAction === 'attended') {
+            newStatus = 'attended';
+        } else {
+            newStatus = null; // Remove attendance
+        }
+        
+        await setAttendanceStatus(trackingEventId, newStatus);
+    };
+
+    const getAttendanceIcon = () => {
+        if (isAttendanceLoading) {
+            return <CircleNotchIcon size={18} className="animate-spin" />;
+        }
+        if (attendanceState.state === 'attended') {
+            return <CheckIcon size={18} weight="fill" />;
+        }
+        return <UserCheckIcon size={18} weight={attendanceState.state === 'attending' ? 'fill' : 'regular'} />;
     };
 
     // Fetch complete event details with agenda
@@ -127,7 +171,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
     }, [showMoreMenu]);
 
     // Mobile-optimized container classes
-    const containerClasses = `fixed inset-0 z-50 bg-white dark:bg-gray-900 overflow-y-auto`;
+    const containerClasses = `fixed inset-0 z-50 bg-white dark:bg-[#08090a] overflow-y-auto`;
 
     const toggleDescription = () => {
         setShowFullDescription(!showFullDescription);
@@ -141,7 +185,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
     return (
         <div className={containerClasses}>
             {/* Mobile Header - Fixed */}
-            <div className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+            <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#08090a]/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between px-4 py-3">
                     <div className="flex-1 min-w-0">
                         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -209,6 +253,8 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                     <EventInfo 
                         event={displayEvent} 
                         category={category}
+                        hideDescription={true}
+                        useSingleTagColor={true}
                     />
                 </div>
 
@@ -246,17 +292,12 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                             </div>
                         )}
 
-                {/* Event Tracking */}
-                <div className="space-y-3">
-                    <EventTracking event={displayEvent} />
-                </div>
-
                                         </div>
                                         
             {/* Mobile Action Bar - Fixed Bottom */}
-            <div className="sticky bottom-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 p-4">
+            <div className="sticky bottom-0 bg-white/95 dark:bg-[#08090a]/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex items-center gap-3">
-                    {/* Track Event Button */}
+                    {/* Bookmark Event Button */}
                     <button
                         onClick={handleTrackEvent}
                         disabled={isTrackingLoading}
@@ -264,20 +305,29 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                             isTracked
                                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }`}
+                        } disabled:opacity-50`}
                     >
-                        <CalendarPlusIcon size={18} weight={isTracked ? 'fill' : 'regular'} />
-                        {isTracked ? 'Tracking' : 'Track Event'}
+                        <BookmarkSimple size={18} weight={isTracked ? 'fill' : 'regular'} />
+                        {isTracked ? 'Bookmarked' : 'Bookmark'}
                     </button>
 
-                    {/* Share Button */}
-                    <button
-                        onClick={handleShare}
-                        className="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                        aria-label="Share event"
-                    >
-                        <ShareNetworkIcon size={18} />
-                    </button>
+                    {/* Attendance Button */}
+                    {user && (
+                        <button
+                            onClick={handleAttendanceToggle}
+                            disabled={isAttendanceLoading}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                                attendanceState.state === 'attending'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : attendanceState.state === 'attended'
+                                        ? 'bg-green-600 text-white hover:bg-green-700 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            } disabled:opacity-50`}
+                        >
+                            {getAttendanceIcon()}
+                            <span>{attendanceState.label}</span>
+                        </button>
+                    )}
 
                     {/* More Options */}
                     <div className="relative" ref={moreMenuRef}>
@@ -292,6 +342,16 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                         {/* More Menu Dropdown */}
                         {showMoreMenu && (
                             <div className="absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+                                <button
+                                    onClick={() => {
+                                        handleShare();
+                                        setShowMoreMenu(false);
+                                    }}
+                                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
+                                >
+                                    <ShareNetworkIcon size={16} />
+                                    Share Event
+                                </button>
                                 <a
                                     href={googleCalendarLink}
                                     target="_blank"
@@ -303,7 +363,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                     Add to Google Calendar
                                 </a>
                                 <button
-                                                            onClick={() => {
+                                    onClick={() => {
                                         handleIcsDownload();
                                         setShowMoreMenu(false);
                                     }}
@@ -312,14 +372,21 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                     <DownloadSimpleIcon size={16} />
                                     Download ICS
                                 </button>
-                                <Link
-                                    href={`/events/${generateEventSlug(displayEvent.title, displayEvent.id)}`}
-                                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                    onClick={() => setShowMoreMenu(false)}
-                                >
-                                    <ArrowSquareOutIcon size={16} />
-                                    View Full Page
-                                </Link>
+                                {(displayEvent.registrationUrl || displayEvent.sourceUrl) && (
+                                    <button
+                                        onClick={() => {
+                                            const url = displayEvent.registrationUrl || displayEvent.sourceUrl;
+                                            if (url) {
+                                                window.open(url, '_blank', 'noopener,noreferrer');
+                                            }
+                                            setShowMoreMenu(false);
+                                        }}
+                                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
+                                    >
+                                        <ArrowSquareOutIcon size={16} />
+                                        Visit Event Page
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

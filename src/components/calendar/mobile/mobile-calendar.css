@@ -1712,9 +1712,25 @@
 
 /* ========== NEW MOBILE TOP NAVIGATION ========== */
 
+/* Calendar Controls Bar */
+.mobile-calendar-controls {
+  position: static;
+  z-index: 40;
+  background: var(--background-elevated);
+  border-bottom: 1px solid var(--border-default);
+  backdrop-filter: blur(8px);
+}
+
+.mobile-calendar-controls-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+/* Legacy mobile-top-navigation-new styles (kept for backward compatibility) */
 .mobile-top-navigation-new {
-  position: sticky;
-  top: 0;
+  position: static;
   z-index: 50;
   background: var(--background-elevated);
   border-bottom: 1px solid var(--border-default);
@@ -1768,11 +1784,17 @@
   transition: all 0.2s ease;
   flex: 1;
   justify-content: flex-start;
-
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .mobile-month-dropdown:hover {
   background: var(--background-secondary);
+}
+
+.mobile-month-dropdown:active {
+  transform: scale(0.98);
+  opacity: 0.8;
 }
 
 .month-text {
@@ -1927,13 +1949,20 @@
   color: var(--foreground-tertiary);
 }
 
+/* ========== COLLAPSIBLE CALENDAR CONTAINER ========== */
+.mobile-collapsible-calendar {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
 /* ========== COLLAPSIBLE CALENDAR GRID ========== */
 
 .mobile-calendar-grid-collapsible {
   background: var(--background-main);
   padding: 16px;
   border-radius: 16px 16px 0 0;
-  margin-top: -8px;
+  margin-top: 0;
   position: relative;
   z-index: 1;
   box-shadow: var(--shadow-sm);
@@ -1957,6 +1986,23 @@
   pointer-events: none;
   transition: all 0.4s cubic-bezier(0.55, 0.06, 0.68, 0.19);
   will-change: max-height, opacity, transform, padding, margin;
+}
+
+/* Navigation bar within collapsible calendar */
+.mobile-calendar-grid-collapsible .month-navigation-modern {
+  margin-bottom: 12px;
+  padding: 0;
+}
+
+.mobile-calendar-grid-collapsible .month-title-modern {
+  flex: 1;
+  text-align: center;
+}
+
+.mobile-calendar-grid-collapsible .month-title-modern .month-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--foreground-primary);
 }
 
 
@@ -3220,6 +3266,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding-bottom: 80px; /* Space for fixed bottom navigation (60px nav + 20px padding) */
 }
 
 /* ========== MOBILE ADVANCED GESTURES ========== */
@@ -3529,34 +3576,100 @@
   border-radius: 12px;
 }
 
-.calendar-day-modern:hover {
+.calendar-day-modern:hover:not(.today):not(.selected) {
   background: var(--background-secondary);
 }
 
-.calendar-day-modern.today {
-  background: #3b82f6;
-  color: white;
+/* Today's date - Subtle ring indicator when NOT selected */
+.calendar-day-modern.today:not(.selected) {
+  background: transparent;
+  color: var(--foreground-primary);
+  border: 2px solid #3b82f6;
   border-radius: 16px;
   font-weight: 600;
-  border: 2px solid #3b82f6;
+  position: relative;
 }
 
-.calendar-day-modern.today .day-number-modern {
-  color: white;
+.calendar-day-modern.today:not(.selected)::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 16px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  pointer-events: none;
 }
 
-.calendar-day-modern.selected {
+.calendar-day-modern.today:not(.selected) .day-number-modern {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+/* Selected date - Prominent background */
+.calendar-day-modern.selected:not(.today) {
   background: #10b981;
   color: white;
   font-weight: 600;
   border-radius: 14px;
   border: 2px solid #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+  transform: scale(1.05);
+  z-index: 2;
 }
 
-.calendar-day-modern.selected .day-number-modern {
+.calendar-day-modern.selected:not(.today) .day-number-modern {
   color: white;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+/* Today AND Selected - Combined style (selected takes priority) */
+.calendar-day-modern.today.selected {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  font-weight: 700;
+  border-radius: 16px;
+  border: 2px solid #3b82f6;
+  transform: scale(1.08);
+  z-index: 3;
+  position: relative;
+}
+
+.calendar-day-modern.today.selected::after {
+  content: 'Today';
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  background: #10b981;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.calendar-day-modern.today.selected .day-number-modern {
+  color: white;
+  font-weight: 800;
+}
+
+/* Hover states */
+.calendar-day-modern.today:not(.selected):hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #2563eb;
+}
+
+.calendar-day-modern.selected:not(.today):hover {
+  background: #059669;
+  border-color: #059669;
+  transform: scale(1.07);
+}
+
+.calendar-day-modern.today.selected:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #2563eb;
+  transform: scale(1.1);
 }
 
 .calendar-day-modern.other-month {
@@ -3613,20 +3726,76 @@
   margin-bottom: var(--space-1);
 }
 
-.event-indicator-single {
+/* Multiple color-coded event indicators */
+.event-indicator-multiple {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 3px;
   margin-top: 2px;
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 
-.event-dot-single {
-  width: 8px;
-  height: 8px;
+.event-dot-multiple {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #f59e0b;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: var(--event-color, #f59e0b);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.event-dot-multiple:hover {
+  transform: scale(1.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.event-count-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--foreground-secondary);
+  background: var(--background-secondary);
+  padding: 1px 4px;
+  border-radius: 8px;
+  line-height: 1.2;
+  margin-left: 2px;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* Ensure dots are visible on today/selected days */
+/* Event dots on selected dates (green background) */
+.calendar-day-modern.selected .event-dot-multiple {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Event dots on today when selected (blue gradient background) */
+.calendar-day-modern.today.selected .event-dot-multiple {
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Event dots on today when NOT selected (ring style) - keep original colors */
+.calendar-day-modern.today:not(.selected) .event-dot-multiple {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Event count badges */
+.calendar-day-modern.selected .event-count-badge,
+.calendar-day-modern.today.selected .event-count-badge {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Event count badge on today when NOT selected */
+.calendar-day-modern.today:not(.selected) .event-count-badge {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .more-events-modern {

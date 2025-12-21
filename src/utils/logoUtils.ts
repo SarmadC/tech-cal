@@ -164,3 +164,5 @@ export function getLogoSourcesForClient(
   return getLogoSources(companyName, supabaseUrl);
 }
 
+
+

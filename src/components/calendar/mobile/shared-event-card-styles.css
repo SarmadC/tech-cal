@@ -72,6 +72,18 @@
   );
 }
 
+/* Mobile discovery cards - single solid background in dark mode */
+.dark .glass-card.mobile-discovery-card,
+.dark .mobile-discovery-view .glass-card {
+  background: #212023 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dark .mobile-discovery-view .glass-card::before {
+  display: none !important;
+}
+
 /* Enhanced hover states */
 .event-card-enhanced-depth:hover {
   box-shadow:
@@ -147,6 +159,22 @@
     0 8px 24px rgba(0, 0, 0, 0.4),
     0 1px 3px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Mobile discovery cards - override with single solid background in dark mode */
+.dark .mobile-discovery-view .mobile-event-card.event-card-enhanced-depth,
+.dark .mobile-discovery-view .discovery-card-glass.event-card-enhanced-depth {
+  background: #212023 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.dark .mobile-discovery-view .mobile-event-card.event-card-enhanced-depth::before,
+.dark .mobile-discovery-view .discovery-card-glass.event-card-enhanced-depth::before {
+  display: none !important;
 }
 
 /* Apply to enhanced-event-card */

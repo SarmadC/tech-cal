@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 
-import { loginAction, oauthSignInAction } from '@/app/auth/actions';
+import { loginAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import Loading from '@/components/Loading';
@@ -127,21 +127,13 @@ export default function LoginPage() {
 
         try {
             const intendedNext = searchParams.get('redirect') || '/discover';
-            await oauthSignInAction(provider, intendedNext);
-            // If we reach this point without a redirect, something is wrong
-            setTimeout(() => {
-                setIsOAuthLoading(false);
-                setOauthStartTime(null);
-                setPendingProvider(null);
-                showError("Sign-in Error: The sign-in process didn't complete as expected. Please try again.");
-            }, 1000);
-        } catch (error) {
-            // Check if this is a Next.js redirect (which is expected)
-            if (error instanceof Error && (error.message === 'NEXT_REDIRECT' || error.message.includes('NEXT_REDIRECT'))) {
-                // This is expected - the user is being redirected to OAuth provider
-                return;
-            }
+            // Use route handler instead of server action for proper cookie handling
+            const oauthUrl = new URL(`/api/auth/oauth/${provider}`, window.location.origin);
+            oauthUrl.searchParams.set('next', intendedNext);
             
+            // Navigate to route handler which will handle OAuth initiation and redirect
+            window.location.href = oauthUrl.toString();
+        } catch (error) {
             // This is an actual error
             console.error('[LoginPage] OAuth sign-in error:', error);
             setIsOAuthLoading(false);

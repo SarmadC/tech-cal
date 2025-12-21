@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, useState, useRef, useEffect, useCallback } from 'react';
-import { X, MagnifyingGlass, Funnel, Calendar, MapPin, Users, Clock, Tag, Star, ArrowClockwise, CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { X, MagnifyingGlass, Funnel, Calendar, MapPin, Users, Clock, Tag, Star, ArrowClockwise } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SmartFilterOptions } from '@/hooks/useSmartFilters';
@@ -67,7 +67,6 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [activeTab, setActiveTab] = useState<'search' | 'filters'>('search');
     const [_isSearchFocused, setIsSearchFocused] = useState(false);
-    const [calendarDate, setCalendarDate] = useState(new Date());
     
     const searchInputRef = useRef<HTMLInputElement>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -184,54 +183,6 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
         },
     ];
 
-    // Calendar navigation functions
-    const navigateCalendar = (direction: 'prev' | 'next') => {
-        const newDate = new Date(calendarDate);
-        newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
-        setCalendarDate(newDate);
-    };
-
-    const generateCalendarDays = () => {
-        const year = calendarDate.getFullYear();
-        const month = calendarDate.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const _lastDay = new Date(year, month + 1, 0);
-        const startDate = new Date(firstDay);
-        
-        // Start from Sunday of the week containing the first day
-        startDate.setDate(firstDay.getDate() - firstDay.getDay());
-        
-        const days = [];
-        const today = new Date();
-        
-        for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
-            const currentDate = new Date(startDate);
-            currentDate.setDate(startDate.getDate() + i);
-            
-            // Find events for this day
-            const dayEvents = events.filter(event => {
-                const eventDate = new Date(event.startTime);
-                return eventDate.toDateString() === currentDate.toDateString();
-            });
-            
-            days.push({
-                date: currentDate,
-                isCurrentMonth: currentDate.getMonth() === month,
-                isToday: currentDate.toDateString() === today.toDateString(),
-                dayNumber: currentDate.getDate(),
-                hasEvents: dayEvents.length > 0,
-                events: dayEvents
-            });
-        }
-        
-        return days;
-    };
-
-    // Helper function to get event color
-    const getEventColor = (event: { eventTypeId: string }) => {
-        const category = categories.find(cat => cat.id === event.eventTypeId);
-        return category?.color || 'var(--accent-primary)';
-    };
 
     const formatOptions = [
         { value: 'all', label: 'All Formats', icon: 'calendar' as const },
@@ -548,78 +499,6 @@ const MobileSearchFilter: FC<MobileSearchFilterProps> = ({
                                             <span>{dateOption.label}</span>
                                         </button>
                                     ))}
-                                </div>
-
-                                {/* Inline Calendar Interface */}
-                                <div className="mobile-inline-calendar">
-                                    <div className="mobile-calendar-navigation">
-                                        <button
-                                            onClick={() => navigateCalendar('prev')}
-                                            className="mobile-calendar-nav-button"
-                                        >
-                                            <CaretLeft size={18} />
-                                        </button>
-                                        <span className="mobile-calendar-month-title">
-                                            {calendarDate.toLocaleDateString('en-US', { 
-                                                month: 'long', 
-                                                year: 'numeric' 
-                                            })}
-                                        </span>
-                                        <button
-                                            onClick={() => navigateCalendar('next')}
-                                            className="mobile-calendar-nav-button"
-                                        >
-                                            <CaretRight size={18} />
-                                        </button>
-                                    </div>
-
-                                    <div className="mobile-calendar-grid-inline">
-                                        <div className="mobile-calendar-weekdays">
-                                            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                                                <div key={day} className="mobile-calendar-weekday">
-                                                    {day}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="mobile-calendar-days">
-                                            {generateCalendarDays().map((day, index) => (
-                                                <button
-                                                    key={index}
-                                                    onClick={() => {
-                                                        if (onDateChange) {
-                                                            console.log('MobileSearchFilter: Date selected:', day.date);
-                                                            onDateChange(day.date);
-                                                            onClose();
-                                                        }
-                                                    }}
-                                                    className={`mobile-calendar-day ${
-                                                        day.isCurrentMonth ? 'current-month' : 'other-month'
-                                                    } ${day.isToday ? 'today' : ''} ${
-                                                        day.hasEvents ? 'has-events' : ''
-                                                    }`}
-                                                >
-                                                    <div className="mobile-calendar-day-number">{day.dayNumber}</div>
-                                                    {day.hasEvents && (
-                                                        <div className="mobile-calendar-event-indicators">
-                                                            {day.events.slice(0, 3).map((event, eventIndex) => (
-                                                                <div
-                                                                    key={`${event.id}-${eventIndex}`}
-                                                                    className="mobile-calendar-event-dot"
-                                                                    style={{
-                                                                        '--event-color': getEventColor(event),
-                                                                    } as React.CSSProperties}
-                                                                    title={event.title}
-                                                                />
-                                                            ))}
-                                                            {day.events.length > 3 && (
-                                                                <div className="mobile-calendar-more-events">+{day.events.length - 3}</div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         )}

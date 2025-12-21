@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
-import { signupAction, oauthSignInAction } from '@/app/auth/actions';
+import { signupAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
 import type { OAuthProvider } from '@/types';
 import type { AuthFormState } from '@/app/auth/actions';
@@ -22,14 +22,13 @@ export default function SignupPage() {
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         try {
-            await oauthSignInAction(provider);
-        } catch (error) {
-            // Check if this is a Next.js redirect (which is expected)
-            if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
-                // This is expected - the user is being redirected to OAuth provider
-                return;
-            }
+            // Use route handler instead of server action for proper cookie handling
+            const oauthUrl = new URL(`/api/auth/oauth/${provider}`, window.location.origin);
+            oauthUrl.searchParams.set('next', '/discover');
             
+            // Navigate to route handler which will handle OAuth initiation and redirect
+            window.location.href = oauthUrl.toString();
+        } catch (error) {
             // This is an actual error
             console.error('[SignupPage] OAuth sign-in error:', error);
         }
