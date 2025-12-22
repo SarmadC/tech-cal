@@ -280,4 +280,125 @@ describe('CareerImpactService', () => {
       expect(result.confidence).toBeLessThanOrEqual(1.0);
     });
   });
+
+  // ============================================
+  // RESULT-BASED METHODS (v2 API) TESTS
+  // ============================================
+
+  describe('calculateScoreWithResult', () => {
+    it('should return success result for valid input', async () => {
+      const result = await CareerImpactService.calculateScoreWithResult(mockInput);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        CareerImpactTestUtils.assertScoreInRange(result.data.overall);
+        CareerImpactTestUtils.assertConfidenceInRange(result.data.confidence);
+        expect(result.metadata).toBeDefined();
+        expect(result.metadata?.duration).toBeGreaterThanOrEqual(0);
+        expect(result.metadata?.algorithm).toBeDefined();
+      }
+    });
+
+    it('should return failure for missing event', async () => {
+      const invalidInput = { 
+        event: null as unknown as Event, 
+        careerProfile: mockCareerProfile 
+      };
+
+      const result = await CareerImpactService.calculateScoreWithResult(invalidInput);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('INVALID_EVENT');
+        expect(result.error.message).toContain('Event is required');
+      }
+    });
+
+    it('should return failure for missing profile', async () => {
+      const invalidInput = { 
+        event: mockEvent, 
+        careerProfile: null as unknown as CareerProfile 
+      };
+
+      const result = await CareerImpactService.calculateScoreWithResult(invalidInput);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('INVALID_PROFILE');
+        expect(result.error.message).toContain('Career profile is required');
+      }
+    });
+
+    it('should return failure for empty profile', async () => {
+      const emptyProfile = CareerImpactTestUtils.createMockCareerProfile({
+        primarySkills: [],
+        interests: [],
+        currentRole: undefined
+      });
+
+      const result = await CareerImpactService.calculateScoreWithResult({
+        event: mockEvent,
+        careerProfile: emptyProfile
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('INSUFFICIENT_DATA');
+        expect(result.error.details).toBeDefined();
+      }
+    });
+  });
+
+  describe('getScoreLiteWithResult', () => {
+    it('should return success result with lite score', async () => {
+      const result = await CareerImpactService.getScoreLiteWithResult(mockInput);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data).toHaveProperty('overall');
+        expect(result.data).toHaveProperty('confidence');
+        expect(result.data).toHaveProperty('category');
+        CareerImpactTestUtils.assertScoreInRange(result.data.overall);
+      }
+    });
+  });
+
+  describe('calculateBatchWithResult', () => {
+    it('should return success result with batch scores', async () => {
+      const events = [
+        CareerImpactTestUtils.createMockEvent(),
+        CareerImpactTestUtils.createHighImpactEvent(),
+        CareerImpactTestUtils.createLowImpactEvent()
+      ];
+
+      const result = await CareerImpactService.calculateBatchWithResult({
+        events,
+        careerProfile: mockCareerProfile
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.size).toBe(3);
+        expect(result.metadata?.candidateCount).toBe(3);
+        
+        // Check each individual result
+        for (const [eventId, eventResult] of result.data.entries()) {
+          expect(eventResult.success).toBe(true);
+        }
+      }
+    });
+
+    it('should return failure for empty events array', async () => {
+      const result = await CareerImpactService.calculateBatchWithResult({
+        events: [],
+        careerProfile: mockCareerProfile
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('NO_EVENTS_FOUND');
+      }
+    });
+  });
 });
+

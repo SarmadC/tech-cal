@@ -8,6 +8,7 @@
 import type { SupabaseClientType } from '@/types';
 import type { Database } from '@/types/supabase';
 import * as Sentry from '@sentry/nextjs';
+import { normalizeTimezone, isValidIanaTimezone } from '@/utils/ingestion/ExtractNormalization';
 import { EventUpdateService } from './EventUpdateService';
 import { EventRepository } from './repositories/EventRepository';
 
@@ -553,10 +554,46 @@ export class EventEnrichmentService {
 
             for (const { field, dbField } of fieldMappings) {
                 if (fields[field] !== undefined) {
-                    updateData[dbField] = fields[field];
+                    let valueToStore = fields[field];
+                    
+                    // Normalize timezone to IANA format if provided
+                    if (field === 'timezone' && valueToStore) {
+                        const timezoneStr = valueToStore as string;
+                        
+                        // If already in IANA format, validate and use as-is
+                        if (isValidIanaTimezone(timezoneStr)) {
+                            valueToStore = timezoneStr;
+                        } else {
+                            // Try to normalize to IANA format
+                            const normalized = normalizeTimezone(
+                                timezoneStr,
+                                {
+                                    // Try to extract city/country from event location if available
+                                    city: existingEvent.location ? this.extractCityFromLocation(existingEvent.location) : undefined,
+                                    country: existingEvent.location ? this.extractCountryFromLocation(existingEvent.location) : undefined,
+                                }
+                            );
+                            // Only update if we got a valid IANA timezone (not just fallback)
+                            if (normalized.source !== 'fallback' || normalized.confidence >= 0.3) {
+                                if (isValidIanaTimezone(normalized.timezone)) {
+                                    valueToStore = normalized.timezone;
+                                } else {
+                                    // Normalization produced invalid format - reject the update
+                                    console.warn('[EventEnrichmentService] Invalid timezone format after normalization:', normalized.timezone);
+                                    continue; // Skip this field update
+                                }
+                            } else {
+                                // If normalization failed, reject the update (don't store invalid format)
+                                console.warn('[EventEnrichmentService] Could not normalize timezone:', timezoneStr);
+                                continue; // Skip this field update
+                            }
+                        }
+                    }
+                    
+                    updateData[dbField] = valueToStore;
                     // Track edit if value changed
                     const previousValue = existingEvent[dbField as keyof typeof existingEvent];
-                    const newValue = fields[field];
+                    const newValue = valueToStore;
                     if (JSON.stringify(previousValue) !== JSON.stringify(newValue)) {
                         edits.push({
                             fieldName: dbField,
@@ -1272,6 +1309,25 @@ export class EventEnrichmentService {
                 prerequisites: [],
             };
         }
+    }
+
+    /**
+     * Extract city from location string (e.g., "San Francisco, CA, USA" -> "San Francisco")
+     */
+    private static extractCityFromLocation(location: string): string | undefined {
+        if (!location) return undefined;
+        const parts = location.split(',').map(p => p.trim());
+        return parts[0] || undefined;
+    }
+
+    /**
+     * Extract country from location string (e.g., "San Francisco, CA, USA" -> "USA")
+     */
+    private static extractCountryFromLocation(location: string): string | undefined {
+        if (!location) return undefined;
+        const parts = location.split(',').map(p => p.trim());
+        // Country is typically the last part
+        return parts.length > 1 ? parts[parts.length - 1] : undefined;
     }
 }
 

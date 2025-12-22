@@ -12,6 +12,7 @@ import type { Database } from '@/types/supabase';
 import * as Sentry from '@sentry/nextjs';
 import { env } from '@/utils/env';
 import { cleanEventDescription } from '@/utils/ingestion/DescriptionCleaner';
+import { normalizeTimezone, isValidIanaTimezone } from '@/utils/ingestion/ExtractNormalization';
 import { EventRepository } from './repositories/EventRepository';
 import { EventTagEnrichmentService } from '@/services/eventTagEnrichmentService';
 import { TagNormalizationService } from '@/services/tagNormalizationService';
@@ -88,8 +89,8 @@ export class EventNormalizer {
             // Normalize location
             const location = this.normalizeLocation(record.location);
 
-            // Parse timezone
-            const timezone = record.timezone || this.extractTimezone(record.location, record.startTime);
+            // Parse and normalize timezone to IANA format
+            const timezone = this.extractTimezone(record.timezone, record.location, record.startTime);
 
             // Prepare event insert
             type EventInsert = Database['public']['Tables']['events']['Insert'];
@@ -410,23 +411,71 @@ export class EventNormalizer {
     }
 
     /**
-     * Extract timezone from location or date string
+     * Extract and normalize timezone to IANA format.
+     * Uses sophisticated normalization to convert short codes (PT, ET) to IANA identifiers (America/Los_Angeles).
+     * 
+     * @param explicitTimezone Explicit timezone from record (e.g., "PT", "America/Los_Angeles")
+     * @param location Location string (e.g., "San Francisco, CA, USA")
+     * @param startTime Start time string (for extracting timezone from ISO date if needed)
+     * @returns IANA timezone identifier (e.g., "America/Los_Angeles") or null
      */
-    private static extractTimezone(location: string, startTime: string): string | null {
-        // Try to extract from ISO date string
-        try {
-            // Date strings with timezone info will preserve it
-            if (startTime.includes('+') || startTime.includes('-') && startTime.match(/[+-]\d{2}:\d{2}$/)) {
-                // Timezone already in string
-                return null; // Will be parsed correctly by PostgreSQL
+    private static extractTimezone(
+        explicitTimezone?: string | null,
+        location?: string,
+        startTime?: string
+    ): string | null {
+        // Helper to extract city from location string
+        const extractCity = (loc: string): string | undefined => {
+            if (!loc) return undefined;
+            const parts = loc.split(',').map(p => p.trim());
+            return parts[0] || undefined;
+        };
+
+        // Helper to extract country from location string
+        const extractCountry = (loc: string): string | undefined => {
+            if (!loc) return undefined;
+            const parts = loc.split(',').map(p => p.trim());
+            // Country is typically the last part
+            return parts.length > 1 ? parts[parts.length - 1] : undefined;
+        };
+
+        // Try to extract timezone from ISO date string first
+        if (startTime && !explicitTimezone) {
+            try {
+                // Date strings with timezone info will preserve it
+                if (startTime.includes('+') || (startTime.includes('-') && startTime.match(/[+-]\d{2}:\d{2}$/))) {
+                    // Timezone already in string - PostgreSQL will parse it correctly
+                    // Return null to let PostgreSQL handle it
+                    return null;
+                }
+            } catch {
+                // Ignore parsing errors
             }
-        } catch {
-            // Ignore parsing errors
         }
 
-        // Could add timezone extraction from location (e.g., "San Francisco" -> "America/Los_Angeles")
-        // For now, return null and let PostgreSQL use server timezone
-        return null;
+        // Use sophisticated normalization function to convert to IANA format
+        const normalized = normalizeTimezone(
+            explicitTimezone,
+            {
+                city: location ? extractCity(location) : undefined,
+                country: location ? extractCountry(location) : undefined,
+            },
+            'UTC' // Fallback to UTC if no timezone can be determined
+        );
+
+        // Return IANA format timezone (e.g., "America/Los_Angeles")
+        // If confidence is very low and it's just the fallback, return null instead
+        if (normalized.source === 'fallback' && normalized.confidence < 0.3) {
+            return null;
+        }
+
+        // Validate the normalized timezone is in IANA format
+        if (!isValidIanaTimezone(normalized.timezone)) {
+            console.warn('[EventNormalizer] Normalized timezone is not in IANA format:', normalized.timezone);
+            return null;
+        }
+
+        return normalized.timezone;
     }
 
     /**

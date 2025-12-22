@@ -174,6 +174,39 @@ export function normalizeTimezone(
 }
 
 /**
+ * Validate if a timezone string is in IANA format.
+ * IANA timezone identifiers follow patterns like:
+ * - Continent/City (e.g., America/Los_Angeles, Europe/London)
+ * - Etc/GMT+X (e.g., Etc/GMT+5, Etc/GMT-8)
+ * - UTC
+ * 
+ * @param timezone Timezone string to validate
+ * @returns true if timezone is in valid IANA format, false otherwise
+ */
+export function isValidIanaTimezone(timezone: string | null | undefined): boolean {
+    if (!timezone) return true; // null/undefined is valid (optional field)
+    
+    const trimmed = timezone.trim();
+    
+    // Check for Continent/City format (e.g., America/Los_Angeles, Europe/London)
+    if (/^[A-Za-z_]+[A-Za-z0-9_]*\/[A-Za-z_]+[A-Za-z0-9_]*$/.test(trimmed)) {
+        return true;
+    }
+    
+    // Check for Etc/GMT format (e.g., Etc/GMT+5, Etc/GMT-8)
+    if (/^Etc\/GMT[+-]?\d+$/.test(trimmed)) {
+        return true;
+    }
+    
+    // Check for UTC
+    if (trimmed === 'UTC') {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
  * Convert a loose time string to 24-hour HH:MM format.
  */
 export function parseLocalTime(value?: string | null): string | undefined {

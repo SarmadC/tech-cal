@@ -20,64 +20,52 @@ import {
   CareerImpactCalculationInput,
   CareerImpactCalculationOptions,
   ComponentScore,
-  ScoringAlgorithmConfig
 } from '@/types/careerImpact';
 import { BaseScoringStrategy } from '../ScoringStrategy';
 import { CareerImpactCache } from '@/services/cache/careerImpactCache';
-import { TagBasedMatchingService } from '@/services/tagBasedMatchingService';
 import { BehavioralBoostService } from '@/services/behavioralBoostService';
 import { calculateTypePreferenceScore, normalizeEventType } from '@/utils/eventTypeUtils';
-import { hasSeniorSpeaker } from '@/utils/speakerUtils';
 import * as Sentry from '@sentry/nextjs';
 import { AnalyticsService } from '@/services/analyticsService';
 import { toBase64 } from '@/utils/base64';
+import {
+  ADVANCED_SCORER_CONFIG,
+  SCORE_THRESHOLDS,
+  CONFIDENCE_BOOSTS,
+  EVENT_TYPE_SCORES,
+  DEFAULT_EVENT_TYPE_SCORE,
+} from '@/config/scoringConfig';
+
+// Import extracted scoring utilities
+import {
+  calculateSkillMatchingScore,
+  analyzeContentDepth,
+  analyzeLearningFormat,
+} from '@/lib/scoring/skillScoringUtils';
+import {
+  calculateSeniorityMatch,
+  calculateCareerGoalsMatch,
+  calculateLearningStyleMatch,
+} from '@/lib/scoring/careerStageScoringUtils';
+import {
+  analyzeSpeakerQuality,
+  analyzeNetworkingOpportunities,
+  applyNetworkingGoalBoosts,
+  analyzeIndustryNetworking,
+  analyzeEventScale,
+} from '@/lib/scoring/networkingScoringUtils';
 
 export class AdvancedScorer extends BaseScoringStrategy {
   readonly version = 'v2.0.0';
   readonly name = 'Advanced Scorer';
 
-  private readonly config: ScoringAlgorithmConfig = {
-    version: 'v2.0.0',
-    weights: {
-      skillRelevance: 0.30,      // Enhanced: Most important for career growth
-      careerStageMatch: 0.25,    // Enhanced: Critical for relevance
-      networkingValue: 0.20,     // Balanced: Important for advancement
-      industryRelevance: 0.15,   // Moderate: Sector alignment
-      timingBonus: 0.10,         // Reduced: Timing is less critical
-    },
-    thresholds: {
-      highImpact: 85,            // Raised: More selective for high impact
-      moderateImpact: 65,        // Raised: Better distinction
-      lowImpact: 45,             // Raised: Improved categorization
-    },
-    confidenceFactors: {
-      dataCompleteness: 0.35,    // Enhanced: More data = higher confidence
-      profileCompleteness: 0.40, // Enhanced: Profile quality matters
-      eventDetailLevel: 0.25,    // Balanced: Event details important
-    },
-  };
-
-  private readonly SCORE_THRESHOLDS = {
-    HIGH: 80,
-    MODERATE: 60,
-    LOW: 40
-  } as const;
-
-  private readonly CONFIDENCE_BOOSTS = {
-    HIGH: 0.2,
-    MODERATE: 0.15,
-    LOW: 0.1
-  } as const;
-
-  // Shared beginner keyword list (DRY across methods)
-  private static readonly BEGINNER_KEYWORDS = [
-    'beginner', 'intro', 'introduction', '101', 'fundamentals', 'basics', 'getting started', 'learn'
-  ];
+  // Use centralized config from scoringConfig.ts
+  private readonly config = ADVANCED_SCORER_CONFIG;
 
   /**
    * Get the algorithm configuration
    */
-  getConfig(): ScoringAlgorithmConfig {
+  getConfig(): typeof ADVANCED_SCORER_CONFIG {
     return { ...this.config };
   }
 
@@ -239,12 +227,12 @@ export class AdvancedScorer extends BaseScoringStrategy {
     let updatedExplanation = explanation;
     let updatedConfidence = confidence;
 
-    if (score >= this.SCORE_THRESHOLDS.HIGH) {
+    if (score >= SCORE_THRESHOLDS.HIGH) {
       updatedExplanation += highMessage;
-      updatedConfidence += this.CONFIDENCE_BOOSTS.HIGH;
-    } else if (score >= this.SCORE_THRESHOLDS.MODERATE) {
+      updatedConfidence += CONFIDENCE_BOOSTS.HIGH;
+    } else if (score >= SCORE_THRESHOLDS.MODERATE) {
       updatedExplanation += moderateMessage;
-      updatedConfidence += this.CONFIDENCE_BOOSTS.LOW;
+      updatedConfidence += CONFIDENCE_BOOSTS.LOW;
     } else {
       updatedExplanation += lowMessage;
     }
@@ -297,23 +285,12 @@ export class AdvancedScorer extends BaseScoringStrategy {
     }
 
     // 1. Event Type & Format Analysis (35% of score - reduced from 40% to accommodate event type preference)
-    const eventTypeScores: Record<string, number> = {
-      // Canonical types (normalized)
-      'workshop': 95,      // Hands-on learning
-      'conference': 75,    // Knowledge sharing
-      'webinar': 70,       // Focused learning
-      'meetup': 60,        // Community learning
-      // Non-canonical fallbacks
-      'training': 90,      // Structured skill building
-      'course': 85,        // Comprehensive learning
-      'networking': 35,    // Limited skill focus
-      'social': 15,        // Minimal skill development
-    };
+    // Event type scores are imported from @/config/scoringConfig
 
     const rawEventType = (event.category?.name || '').toLowerCase();
     const canonicalEventType = normalizeEventType(rawEventType);
     const eventTypeKey = canonicalEventType || rawEventType || 'unknown';
-    const eventTypeScore = eventTypeScores[eventTypeKey] || eventTypeScores[rawEventType] || 30;
+    const eventTypeScore = EVENT_TYPE_SCORES[eventTypeKey] || EVENT_TYPE_SCORES[rawEventType] || DEFAULT_EVENT_TYPE_SCORE;
     const eventTypeName = eventTypeKey;
 
     const eventTypeResult = this.applyScoreComponent(
@@ -332,8 +309,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
     explanation = eventTypeResult.updatedExplanation;
     confidence = eventTypeResult.updatedConfidence;
 
-    // 2. Skill Matching Analysis (35% of score)
-    const skillMatchScore = this.calculateSkillMatchingScore(event, careerProfile, scoringTriggers, appliedAdjustments);
+    // 2. Skill Matching Analysis (35% of score) - Uses extracted utility
+    const skillMatchScore = calculateSkillMatchingScore(event, careerProfile, scoringTriggers, appliedAdjustments);
 
     const skillMatchResult = this.applyScoreComponent(
       skillMatchScore,
@@ -351,8 +328,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
     explanation = skillMatchResult.updatedExplanation;
     confidence = skillMatchResult.updatedConfidence;
 
-    // 3. Content Depth Analysis (10% of score - reduced from 15% to accommodate event type preference)
-    const contentScore = this.analyzeContentDepth(event);
+    // 3. Content Depth Analysis (10% of score) - Uses extracted utility
+    const contentScore = analyzeContentDepth(event);
 
     const contentResult = this.applyScoreComponent(
       contentScore,
@@ -370,8 +347,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
     explanation = contentResult.updatedExplanation;
     confidence = contentResult.updatedConfidence;
 
-    // 4. Learning Format Analysis (10% of score)
-    const formatScore = this.analyzeLearningFormat(event);
+    // 4. Learning Format Analysis (10% of score) - Uses extracted utility
+    const formatScore = analyzeLearningFormat(event);
 
     const formatResult = this.applyScoreComponent(
       formatScore,
@@ -443,204 +420,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
     };
   }
 
-  private calculateSkillMatchingScore(
-    event: Event,
-    careerProfile: CareerProfile,
-    scoringTriggers: string[],
-    appliedAdjustments: Record<string, unknown>
-  ): number {
-    const primarySkills = careerProfile.primarySkills || [];
-    const skillsToLearn = careerProfile.skillsToLearn || [];
-    const learningStyle = careerProfile.learningStyle || [];
-
-    // Determine if user is a beginner
-    const isBeginner = learningStyle.includes('hands-on') || primarySkills.length < 3;
-
-    // 1. Tag-based matching (primary approach)
-    const tagMatchResult = TagBasedMatchingService.calculateTagSimilarity(event, careerProfile);
-    let score = tagMatchResult.score;
-
-    // 2. Apply 60/40 split for skills to learn (already handled in TagBasedMatchingService)
-    // The service applies 67% weight for beginners, 40% for others
-
-    // 3. Keyword fallback for sparse tags (guard: only if <5 tags)
-    const hasRichTags = (event.tags?.length || 0) >= 5;
-
-    if (!hasRichTags && skillsToLearn.length > 0) {
-      const keywordScore = this.calculateKeywordMatchScore(
-        event,
-        skillsToLearn,
-        isBeginner
-      );
-      // Cap keyword contribution at 20 points, weight at 0.25x
-      score += Math.min(keywordScore * 0.25, 20);
-
-      // Small, bounded boost for canonical workshops when tags are sparse
-      // and we had at least one keyword match (no double counting scaling)
-      const canonicalTypeForSkills = normalizeEventType((event.category?.name || '').toLowerCase());
-      if (keywordScore > 0 && !hasRichTags && canonicalTypeForSkills === 'workshop') {
-        const workshopKeywordBoost = 3; // bounded, fixed
-        score += workshopKeywordBoost;
-        scoringTriggers.push('workshop_keyword_boost');
-      }
-
-      // Additional tiny boost for beginner-friendly workshops when user isn't marked beginner
-      // to avoid overlap with calculateBeginnerBoost. Conditions: sparse tags, canonical workshop,
-      // beginner keywords present, skillsToLearn non-empty.
-      const beginnerFriendly = AdvancedScorer.BEGINNER_KEYWORDS.some(
-        kw => ((event.title || '') + ' ' + (event.description || '')).toLowerCase().includes(kw)
-      );
-      if (!isBeginner && beginnerFriendly && !hasRichTags && canonicalTypeForSkills === 'workshop' && skillsToLearn.length > 0) {
-        const nonBeginnerWorkshopFriendlyBoost = 2; // tiny, bounded
-        score += nonBeginnerWorkshopFriendlyBoost;
-        scoringTriggers.push('workshop_beginner_friendly_nudge');
-      }
-
-      // Modest negative adjustment for canonical webinars when tags are sparse and no keyword match
-      if (keywordScore === 0 && canonicalTypeForSkills === 'webinar') {
-        const webinarNoKeywordPenalty = 3; // bounded, fixed
-        score -= webinarNoKeywordPenalty;
-        scoringTriggers.push('webinar_no_keyword_penalty');
-      }
-    }
-
-    // 4. Beginner boost heuristics
-    if (isBeginner && skillsToLearn.length > 0) {
-      const beginnerBoost = this.calculateBeginnerBoost(event);
-      if (beginnerBoost > 0) {
-        score += beginnerBoost;
-        scoringTriggers.push('beginner_boost');
-        appliedAdjustments.beginnerBoost = beginnerBoost;
-      }
-    }
-
-    return Math.min(score, 100);
-  }
-
-  /**
-   * Calculate keyword-based matching for events with sparse tags
-   * Returns raw score (will be weighted and capped by caller)
-   */
-  private calculateKeywordMatchScore(
-    event: Event,
-    skillsToLearn: string[],
-    isBeginner: boolean
-  ): number {
-    const searchText = `${event.title || ''} ${event.description || ''}`.toLowerCase();
-    let matchCount = 0;
-
-    for (const skill of skillsToLearn) {
-      const skillLower = skill.toLowerCase();
-      if (searchText.includes(skillLower)) {
-        matchCount++;
-      }
-    }
-
-    // Base: 20 points per match (will be weighted by caller)
-    let score = matchCount * 20;
-
-    // Bonus for beginners if event explicitly mentions learning/beginner
-    if (isBeginner) {
-      const hasBeginnerKeywords = AdvancedScorer.BEGINNER_KEYWORDS.some(kw => searchText.includes(kw));
-      if (hasBeginnerKeywords) {
-        score += 10;
-      }
-    }
-
-    return score;
-  }
-
-  /**
-   * Calculate beginner-friendly boost based on event characteristics
-   * Capped at 15 points total
-   */
-  private calculateBeginnerBoost(event: Event): number {
-    let boost = 0;
-    const title = (event.title || '').toLowerCase();
-    const description = (event.description || '').toLowerCase();
-    const searchText = title + ' ' + description;
-
-    // 1. Explicit beginner keywords (+8 points)
-    if (AdvancedScorer.BEGINNER_KEYWORDS.some(kw => searchText.includes(kw))) {
-      boost += 8;
-    }
-
-    // 2. Prerequisites: No prerequisites or "no experience required" (+5 points)
-    if (!event.prerequisites || event.prerequisites.toLowerCase().includes('no experience')) {
-      boost += 5;
-    }
-
-    // 3. Event type: Workshop/Training/Bootcamp (+4 points)
-    const beginnerFriendlyTypes = ['workshop', 'training', 'bootcamp', 'tutorial'];
-    const eventType = (event.category?.name || '').toLowerCase();
-    if (beginnerFriendlyTypes.some(type => eventType.includes(type))) {
-      boost += 4;
-    }
-
-    // 4. Duration: 2-6 hours is ideal for beginners (+3 points)
-    if (event.startTime && event.endTime) {
-      const duration = new Date(event.endTime).getTime() - new Date(event.startTime).getTime();
-      const hours = duration / (1000 * 60 * 60);
-      if (hours >= 2 && hours <= 6) {
-        boost += 3;
-      }
-    }
-
-    // Cap total boost at 15
-    return Math.min(boost, 15);
-  }
-
-  private analyzeContentDepth(event: Event): number {
-    let score = 50;
-    const title = event.title || '';
-    const description = event.description || '';
-
-    // Length analysis
-    if (description.length > 500) score += 15;
-    else if (description.length > 200) score += 10;
-    else if (description.length < 50) score -= 20;
-
-    // Technical depth indicators
-    const depthKeywords = [
-      'advanced', 'deep dive', 'comprehensive', 'masterclass', 'bootcamp',
-      'certification', 'hands-on', 'practical', 'real-world', 'case study'
-    ];
-
-    const hasDepthKeywords = depthKeywords.some(keyword =>
-      (title + description).toLowerCase().includes(keyword)
-    );
-
-    if (hasDepthKeywords) score += 20;
-
-    // Prerequisites analysis (indicates depth)
-    if (event.prerequisites) {
-      score += 10;
-    }
-
-    return Math.min(score, 100);
-  }
-
-  private analyzeLearningFormat(event: Event): number {
-    let score = 60; // Base score for any event
-
-    // Interactive elements
-    if (event.agendaUrl) score += 10;
-    if (event.attendeeCount && event.attendeeCount < 50) score += 15; // Small groups
-    else if (event.attendeeCount && event.attendeeCount > 200) score -= 10; // Large groups
-
-    // Duration analysis (optimal learning sessions)
-    if (event.startTime && event.endTime) {
-      const duration = new Date(event.endTime).getTime() - new Date(event.startTime).getTime();
-      const hours = duration / (1000 * 60 * 60);
-
-      if (hours >= 4 && hours <= 8) score += 15; // Optimal full-day learning
-      else if (hours >= 2 && hours < 4) score += 10; // Good half-day session
-      else if (hours > 8) score += 5; // Extended learning
-      else score -= 5; // Too short
-    }
-
-    return Math.min(score, 100);
-  }
+  // Skill scoring methods now use extracted utilities from @/lib/scoring/skillScoringUtils
+  // Removed: calculateKeywordMatchScore, calculateBeginnerBoost, analyzeContentDepth, analyzeLearningFormat
 
   // =================================================================
   // CAREER STAGE MATCH COMPONENT
@@ -655,8 +436,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
     let confidence = 0.3;
     const details: Record<string, unknown> = {};
 
-    // 1. Seniority Level Matching (50% of score)
-    const seniorityScore = this.calculateSeniorityMatch(event, careerProfile);
+    // 1. Seniority Level Matching (50% of score) - Uses extracted utility
+    const seniorityScore = calculateSeniorityMatch(event, careerProfile);
     score += (seniorityScore * 0.5);
     details.seniorityScore = seniorityScore;
 
@@ -670,8 +451,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
       explanation += 'Limited match for your seniority level';
     }
 
-    // 2. Career Goals Alignment (30% of score)
-    const goalsScore = this.calculateCareerGoalsMatch(event, careerProfile);
+    // 2. Career Goals Alignment (30% of score) - Uses extracted utility
+    const goalsScore = calculateCareerGoalsMatch(event, careerProfile);
     score += (goalsScore * 0.3);
     details.goalsScore = goalsScore;
 
@@ -685,8 +466,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
       explanation += '. Limited alignment with career goals';
     }
 
-    // 3. Learning Style Match (20% of score)
-    const learningScore = this.calculateLearningStyleMatch(event, careerProfile);
+    // 3. Learning Style Match (20% of score) - Uses extracted utility
+    const learningScore = calculateLearningStyleMatch(event, careerProfile);
     score += (learningScore * 0.2);
     details.learningScore = learningScore;
 
@@ -702,124 +483,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
       details
     };
   }
-
-  private calculateSeniorityMatch(event: Event, careerProfile: CareerProfile): number {
-    const seniority = careerProfile.seniority || 'mid-level';
-    const eventText = `${event.title || ''} ${event.description || ''}`.toLowerCase();
-
-    const seniorityMatches: Record<string, { keywords: string[], eventTypes: string[], score: number }> = {
-      'junior': {
-        keywords: ['beginner', 'introduction', 'fundamentals', 'basics', 'getting started', 'entry level'],
-        eventTypes: ['workshop', 'training', 'course'],
-        score: 85
-      },
-      'mid-level': {
-        keywords: ['intermediate', 'advanced', 'professional', 'practical', 'real-world', 'hands-on'],
-        eventTypes: ['workshop', 'conference', 'training'],
-        score: 80
-      },
-      'senior': {
-        keywords: ['advanced', 'expert', 'leadership', 'architecture', 'strategy', 'senior', 'principal'],
-        eventTypes: ['conference', 'workshop', 'networking'],
-        score: 75
-      },
-      'executive': {
-        keywords: ['leadership', 'strategy', 'management', 'executive', 'c-level', 'vision', 'transformation'],
-        eventTypes: ['conference', 'networking', 'social'],
-        score: 70
-      }
-    };
-
-    const match = seniorityMatches[seniority];
-    if (!match) return 50;
-
-    let score = match.score;
-
-    const keywordMatches = match.keywords.filter(keyword => eventText.includes(keyword));
-    if (keywordMatches.length > 0) {
-      score += Math.min(keywordMatches.length * 5, 20);
-    }
-
-    const rawTypeSeniority = (event.category?.name || '').toLowerCase();
-    const canonicalSeniority = normalizeEventType(rawTypeSeniority);
-    if (match.eventTypes.includes(canonicalSeniority) || match.eventTypes.includes(rawTypeSeniority)) {
-      score += 10;
-    }
-
-    // Adjust for mismatched seniority indicators
-    const otherSeniorities = Object.keys(seniorityMatches).filter(s => s !== seniority);
-    for (const otherSeniority of otherSeniorities) {
-      const otherMatch = seniorityMatches[otherSeniority];
-      const otherKeywordMatches = otherMatch.keywords.filter(keyword => eventText.includes(keyword));
-      if (otherKeywordMatches.length > keywordMatches.length) {
-        score -= 15;
-      }
-    }
-
-    return Math.min(Math.max(score, 20), 100);
-  }
-
-  private calculateCareerGoalsMatch(event: Event, careerProfile: CareerProfile): number {
-    const goals = careerProfile.careerGoals || [];
-    if (goals.length === 0) return 50;
-
-    const eventText = `${event.title || ''} ${event.description || ''}`.toLowerCase();
-    let score = 0;
-    let totalWeight = 0;
-
-    const goalKeywords: Record<string, string[]> = {
-      'skill-development': ['learn', 'skill', 'training', 'workshop', 'course', 'certification'],
-      'career-advancement': ['career', 'advancement', 'promotion', 'leadership', 'management'],
-      'networking': ['network', 'connect', 'meet', 'community', 'industry'],
-      'industry-knowledge': ['industry', 'trends', 'market', 'sector', 'domain'],
-      'leadership-growth': ['leadership', 'management', 'team', 'strategy', 'vision']
-    };
-
-    for (const goal of goals) {
-      const keywords = goalKeywords[goal] || [];
-      const weight = 1.0;
-      totalWeight += weight;
-
-      let goalScore = 0;
-      for (const keyword of keywords) {
-        if (eventText.includes(keyword)) {
-          goalScore += 20;
-        }
-      }
-
-      score += Math.min(goalScore, 100) * weight;
-    }
-
-    return totalWeight > 0 ? Math.min(score / totalWeight, 100) : 50;
-  }
-
-  private calculateLearningStyleMatch(event: Event, careerProfile: CareerProfile): number {
-    const learningStyles = careerProfile.learningStyle || [];
-    if (learningStyles.length === 0) return 60;
-
-    const eventText = `${event.title || ''} ${event.description || ''}`.toLowerCase();
-    let score = 0;
-
-    if (learningStyles.includes('hands-on')) {
-      const handsOnKeywords = ['hands-on', 'practical', 'workshop', 'lab', 'exercise', 'coding'];
-      const hasHandsOn = handsOnKeywords.some(keyword => eventText.includes(keyword));
-      score += hasHandsOn ? 40 : 20;
-    }
-
-    if (learningStyles.includes('theoretical')) {
-      const theoreticalKeywords = ['presentation', 'demo', 'visual', 'chart', 'diagram', 'showcase', 'lecture'];
-      const hasTheoretical = theoreticalKeywords.some(keyword => eventText.includes(keyword));
-      score += hasTheoretical ? 40 : 20;
-    }
-
-    if (learningStyles.includes('interactive')) {
-      const interactiveKeywords = ['interactive', 'discussion', 'q&a', 'panel', 'workshop'];
-      const hasInteractive = interactiveKeywords.some(keyword => eventText.includes(keyword));
-      score += hasInteractive ? 40 : 20;
-    }
-
-    return Math.min(score, 100);
-  }
+  // Career stage scoring methods now use extracted utilities from @/lib/scoring/careerStageScoringUtils
+  // Removed: calculateSeniorityMatch, calculateCareerGoalsMatch, calculateLearningStyleMatch
 
   // =================================================================
   // NETWORKING VALUE COMPONENT
@@ -834,8 +499,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
     let confidence = 0.3;
     const details: Record<string, unknown> = {};
 
-    // 1. Speaker Quality Analysis (40% of score)
-    const speakerScore = this.analyzeSpeakerQuality(event, careerProfile);
+    // 1. Speaker Quality Analysis (40% of score) - Uses extracted utility
+    const speakerScore = analyzeSpeakerQuality(event, careerProfile);
     score += (speakerScore * 0.4);
     details.speakerScore = speakerScore;
 
@@ -849,8 +514,8 @@ export class AdvancedScorer extends BaseScoringStrategy {
       explanation += 'Limited speaker information available';
     }
 
-    // 2. Networking Opportunities (30% of score)
-    const networkingScore = this.analyzeNetworkingOpportunities(event);
+    // 2. Networking Opportunities (30% of score) - Uses extracted utility
+    const networkingScore = analyzeNetworkingOpportunities(event);
     score += (networkingScore * 0.3);
     details.networkingScore = networkingScore;
 
@@ -864,18 +529,18 @@ export class AdvancedScorer extends BaseScoringStrategy {
       explanation += '. Limited networking opportunities';
     }
 
-    // 3. Industry Alignment (20% of score)
-    const industryScore = this.analyzeIndustryNetworking(event, careerProfile);
+    // 3. Industry Alignment (20% of score) - Uses extracted utility
+    const industryScore = analyzeIndustryNetworking(event, careerProfile);
     score += (industryScore * 0.2);
     details.industryScore = industryScore;
 
-    // 4. Event Scale & Prestige (10% of score)
-    const scaleScore = this.analyzeEventScale(event);
+    // 4. Event Scale & Prestige (10% of score) - Uses extracted utility
+    const scaleScore = analyzeEventScale(event);
     score += (scaleScore * 0.1);
     details.scaleScore = scaleScore;
 
-    // 5. Goal-specific boosts (bounded)
-    const goalBoost = this.applyNetworkingGoalBoosts(event, careerProfile);
+    // 5. Goal-specific boosts (bounded) - Uses extracted utility
+    const goalBoost = applyNetworkingGoalBoosts(event, careerProfile);
     score += goalBoost;
 
     // Cap score at 100
@@ -890,216 +555,9 @@ export class AdvancedScorer extends BaseScoringStrategy {
       details
     };
   }
-
-  private analyzeSpeakerQuality(event: Event, careerProfile: CareerProfile): number {
-    const speakers = event.speakerLineup || [];
-    if (speakers.length === 0) return 30;
-
-    let score = 0;
-    const industry = careerProfile.industry?.toLowerCase() || '';
-    const seniority = careerProfile.seniority || 'mid-level';
-
-    for (const speaker of speakers) {
-      let speakerScore = 50;
-
-      const title = speaker.title?.toLowerCase() || '';
-      const company = speaker.company?.toLowerCase() || '';
-
-      if (title.includes('ceo') || title.includes('cto') || title.includes('vp') ||
-          title.includes('director') || title.includes('head')) {
-        speakerScore += 25;
-      }
-      else if (title.includes('senior') || title.includes('principal') ||
-               title.includes('architect') || title.includes('lead')) {
-        speakerScore += 20;
-      }
-      else if (title.includes('engineer') || title.includes('developer') ||
-               title.includes('manager') || title.includes('analyst')) {
-        speakerScore += 15;
-      }
-
-      const prestigiousCompanies = ['google', 'microsoft', 'amazon', 'apple', 'meta', 'netflix', 'uber', 'airbnb'];
-      if (prestigiousCompanies.some(prestigious => company.includes(prestigious))) {
-        speakerScore += 20;
-      }
-
-      if (industry && (title.includes(industry) || company.includes(industry))) {
-        speakerScore += 15;
-      }
-
-      if ((seniority === 'senior' && title.includes('senior')) ||
-          (seniority === 'junior' && !title.includes('senior') && !title.includes('lead'))) {
-        speakerScore += 10;
-      }
-
-      score += Math.min(speakerScore, 100);
-    }
-
-    const averaged = score / speakers.length;
-    // Senior presence bonus (small, additive, bounded) applied after averaging
-    const seniorBonus = hasSeniorSpeaker(speakers) ? 10 : 0;
-    return Math.min(averaged + seniorBonus, 100);
-  }
-
-  private analyzeNetworkingOpportunities(event: Event): number {
-    let score = 40;
-    const rawType = (event.category?.name || '').toLowerCase();
-    const canonical = normalizeEventType(rawType);
-    const networkingBase: Record<string, number> = {
-      conference: 90,
-      meetup: 85,
-      workshop: 60,
-      webinar: 20,
-    };
-    if (canonical in networkingBase) {
-      score = Math.max(score, networkingBase[canonical]);
-    } else if (rawType.includes('social')) {
-      score = Math.max(score, 80);
-    } else if (rawType.includes('training') || rawType.includes('course')) {
-      score = Math.max(score, 50);
-    }
-
-    const attendeeCount = event.attendeeCount || 0;
-    if (attendeeCount >= 50 && attendeeCount <= 200) {
-      score += 15;
-    } else if (attendeeCount >= 20 && attendeeCount < 50) {
-      score += 10;
-    } else if (attendeeCount > 200 && attendeeCount <= 500) {
-      score += 5;
-    } else if (attendeeCount > 500) {
-      score -= 10;
-    }
-
-    if (event.title?.toLowerCase().includes('network') ||
-        event.description?.toLowerCase().includes('network')) {
-      score += 10;
-    }
-
-    return Math.min(score, 100);
-  }
-
-  private applyNetworkingGoalBoosts(event: Event, careerProfile: CareerProfile): number {
-    const goals = careerProfile.networkingGoals || [];
-    if (!goals.length) return 0;
-
-    const rawType = (event.category?.name || '').toLowerCase();
-    const canonical = normalizeEventType(rawType);
-    const speakers = event.speakerLineup || [];
-    const attendees = event.attendeeCount || 0;
-    const description = (event.description || '').toLowerCase();
-
-    let boost = 0;
-
-    for (const goal of goals) {
-      switch (goal) {
-        case 'find-mentors': {
-          if (hasSeniorSpeaker(speakers)) boost += 12;
-          if (['summit', 'executive', 'leadership'].some(t => rawType.includes(t))) boost += 8;
-          break;
-        }
-        case 'find-peers': {
-          if (canonical === 'meetup') boost += 12;
-          if (attendees >= 50 && attendees <= 200) boost += 10;
-          else if (attendees > 200 && attendees <= 500) boost += 6;
-          // Small alignment nudge for meetups in a narrower sweet spot
-          if (canonical === 'meetup') {
-            if (attendees >= 30 && attendees <= 80) boost += 2; // intimate groups
-            else if (attendees > 80 && attendees <= 150) boost += 1; // still conducive
-          }
-          break;
-        }
-        case 'find-collaborators': {
-          if (canonical === 'workshop' || rawType.includes('project')) boost += 15; // hackathon/bootcamp alias → workshop
-          if (description.includes('team') || description.includes('collaborate')) boost += 6;
-          break;
-        }
-        case 'find-employers': {
-          if (['career', 'fair', 'recruiting', 'hiring', 'job'].some(t => rawType.includes(t))) boost += 16;
-          if (description.includes('hiring') || description.includes('recruiting')) boost += 8;
-          break;
-        }
-        case 'industry-insights': {
-          if (canonical === 'conference' || rawType.includes('summit') || rawType.includes('panel')) boost += 12;
-          if (speakers.length >= 3) boost += 6;
-          break;
-        }
-        case 'thought-leadership': {
-          if (canonical === 'conference' || rawType.includes('summit')) boost += 12;
-          if (description.includes('call for speakers') || description.includes('speaking opportunity')) boost += 10;
-          break;
-        }
-        default:
-          break;
-      }
-    }
-
-    return boost;
-  }
-
-  private analyzeIndustryNetworking(event: Event, careerProfile: CareerProfile): number {
-    const industry = careerProfile.industry?.toLowerCase() || '';
-    if (!industry) return 60;
-
-    const eventText = `${event.title || ''} ${event.description || ''}`.toLowerCase();
-
-    const industryKeywords: Record<string, string[]> = {
-      'technology': ['tech', 'software', 'digital', 'innovation', 'startup', 'ai', 'ml'],
-      'finance': ['finance', 'fintech', 'banking', 'investment', 'trading', 'crypto'],
-      'healthcare': ['healthcare', 'medical', 'pharma', 'biotech', 'clinical'],
-      'education': ['education', 'edtech', 'learning', 'training', 'academic'],
-      'retail': ['retail', 'ecommerce', 'consumer', 'shopping', 'marketplace']
-    };
-
-    const keywords = industryKeywords[industry] || [];
-    let score = 50;
-
-    for (const keyword of keywords) {
-      if (eventText.includes(keyword)) {
-        score += 10;
-      }
-    }
-
-    const speakers = event.speakerLineup || [];
-    for (const speaker of speakers) {
-      const company = speaker.company?.toLowerCase() || '';
-      if (company.includes(industry)) {
-        score += 15;
-      }
-    }
-
-    return Math.min(score, 100);
-  }
-
-  private analyzeEventScale(event: Event): number {
-    let score = 50;
-
-    const attendeeCount = event.attendeeCount || 0;
-    if (attendeeCount >= 1000) {
-      score += 30;
-    } else if (attendeeCount >= 500) {
-      score += 20;
-    } else if (attendeeCount >= 100) {
-      score += 10;
-    }
-
-    const organizer = event.organizer?.toLowerCase() || '';
-    const prestigiousOrganizers = ['google', 'microsoft', 'aws', 'oracle', 'salesforce', 'adobe'];
-    if (prestigiousOrganizers.some(prestigious => organizer.includes(prestigious))) {
-      score += 20;
-    }
-
-    if (event.startTime && event.endTime) {
-      const duration = new Date(event.endTime).getTime() - new Date(event.startTime).getTime();
-      const days = duration / (1000 * 60 * 60 * 24);
-      if (days >= 2) {
-        score += 15;
-      } else if (days >= 1) {
-        score += 10;
-      }
-    }
-
-    return Math.min(score, 100);
-  }
+  // Networking scoring methods now use extracted utilities from @/lib/scoring/networkingScoringUtils
+  // Removed: analyzeSpeakerQuality, analyzeNetworkingOpportunities, applyNetworkingGoalBoosts, 
+  //          analyzeIndustryNetworking, analyzeEventScale
 
   // =================================================================
   // INDUSTRY RELEVANCE COMPONENT

@@ -10,6 +10,7 @@
  * - Batch processing
  * - Cache management
  * - Strategy selection (default or user-specific)
+ * - Result-based error handling (v2 methods)
  */
 
 import { CareerImpactScore } from '@/types';
@@ -23,6 +24,16 @@ import {
 } from '@/types/careerImpact';
 import { CareerImpactCache } from '@/services/cache/careerImpactCache';
 import { ScoringStrategyFactory } from '@/services/scoring';
+import {
+  Result,
+  success,
+  failure,
+  failureFromError,
+  RecommendationErrorCode,
+  tryAsync,
+  ResultMetadata,
+} from '@/types/recommendationResult';
+import * as Sentry from '@sentry/nextjs';
 
 export class CareerImpactService {
   static readonly EMPTY_COMPONENTS = {
@@ -291,4 +302,228 @@ export class CareerImpactService {
   ): Promise<CareerImpactScore> {
     return await this._calculateScore(input, options);
   }
+
+  // ============================================
+  // RESULT-BASED METHODS (v2 API)
+  // ============================================
+
+  /**
+   * Calculate career impact score with Result-based error handling
+   * 
+   * Returns a Result<CareerImpactScore> for type-safe error handling.
+   * Use this method when you want explicit error handling without exceptions.
+   */
+  static async calculateScoreWithResult(
+    input: CareerImpactCalculationInput,
+    options: CareerImpactCalculationOptions = {}
+  ): Promise<Result<CareerImpactScore>> {
+    const startTime = Date.now();
+
+    // Input validation
+    if (!input.event) {
+      return failure(
+        RecommendationErrorCode.INVALID_EVENT,
+        'Event is required for score calculation',
+        { input: { hasEvent: false } }
+      );
+    }
+
+    if (!input.careerProfile) {
+      return failure(
+        RecommendationErrorCode.INVALID_PROFILE,
+        'Career profile is required for score calculation',
+        { input: { hasProfile: false } }
+      );
+    }
+
+    // Check if profile has minimum required data
+    const profile = input.careerProfile;
+    const hasMinimumData = 
+      (profile.primarySkills?.length || 0) > 0 ||
+      (profile.interests?.length || 0) > 0 ||
+      profile.currentRole;
+
+    if (!hasMinimumData) {
+      return failure(
+        RecommendationErrorCode.INSUFFICIENT_DATA,
+        'Career profile needs at least one skill, interest, or role',
+        { 
+          primarySkillsCount: profile.primarySkills?.length || 0,
+          interestsCount: profile.interests?.length || 0,
+          hasRole: !!profile.currentRole 
+        }
+      );
+    }
+
+    // Perform calculation with error handling
+    const result = await tryAsync(
+      async () => this._calculateScore(input, options),
+      RecommendationErrorCode.SCORING_FAILED
+    );
+
+    const duration = Date.now() - startTime;
+
+    // Add metadata to successful results
+    if (result.success) {
+      const strategy = ScoringStrategyFactory.getDefaultStrategy();
+      const metadata: ResultMetadata = {
+        duration,
+        cached: false,
+        algorithm: strategy.version,
+      };
+
+      return success(result.data, metadata);
+    }
+
+    // Log errors to Sentry for monitoring
+    this._logError('calculateScoreWithResult', result.error, {
+      eventId: input.event.id,
+      profileId: input.careerProfile.userId,
+      duration,
+    });
+
+    return result;
+  }
+
+  /**
+   * Get lightweight career impact score with Result-based error handling
+   */
+  static async getScoreLiteWithResult(
+    input: CareerImpactCalculationInput,
+    options: CareerImpactCalculationOptions = {}
+  ): Promise<Result<CareerImpactScoreLite>> {
+    const startTime = Date.now();
+
+    // Use cached version if available
+    const cached = await this._tryGetCached(
+      input.event.id,
+      input.careerProfile,
+      options.skipCache
+    );
+
+    if (cached) {
+      return success(cached, {
+        duration: Date.now() - startTime,
+        cached: true,
+      });
+    }
+
+    // Calculate full score and extract lite version
+    const fullResult = await this.calculateScoreWithResult(input, options);
+
+    if (!fullResult.success) {
+      return fullResult; // Propagate error
+    }
+
+    const lite: CareerImpactScoreLite = {
+      overall: fullResult.data.overall,
+      confidence: fullResult.data.confidence,
+      category: fullResult.data.explanation.careerImpactCategory,
+    };
+
+    // Cache the result
+    this._setCached(input.event.id, input.careerProfile, lite, options.skipCache);
+
+    return success(lite, {
+      duration: Date.now() - startTime,
+      cached: false,
+      algorithm: fullResult.metadata?.algorithm,
+    });
+  }
+
+  /**
+   * Calculate batch career impact scores with Result-based error handling
+   * Returns individual results for each event, allowing partial success
+   */
+  static async calculateBatchWithResult(
+    input: BatchCareerImpactInput,
+    options: CareerImpactCalculationOptions = {}
+  ): Promise<Result<Map<string, Result<CareerImpactScore>>>> {
+    const startTime = Date.now();
+
+    if (!input.events || input.events.length === 0) {
+      return failure(
+        RecommendationErrorCode.NO_EVENTS_FOUND,
+        'No events provided for batch calculation'
+      );
+    }
+
+    if (!input.careerProfile) {
+      return failure(
+        RecommendationErrorCode.INVALID_PROFILE,
+        'Career profile is required for batch calculation'
+      );
+    }
+
+    const results = new Map<string, Result<CareerImpactScore>>();
+
+    for (const event of input.events) {
+      const result = await this.calculateScoreWithResult(
+        { event, careerProfile: input.careerProfile },
+        options
+      );
+      results.set(event.id, result);
+    }
+
+    const successCount = Array.from(results.values()).filter(r => r.success).length;
+    const duration = Date.now() - startTime;
+
+    return success(results, {
+      duration,
+      candidateCount: input.events.length,
+    });
+  }
+
+  // ============================================
+  // ERROR LOGGING HELPERS
+  // ============================================
+
+  /**
+   * Log error to Sentry with context
+   */
+  private static _logError(
+    operation: string,
+    error: { code: string; message: string; details?: Record<string, unknown> },
+    context: Record<string, unknown>
+  ): void {
+    try {
+      Sentry.captureException(new Error(`${operation}: ${error.message}`), {
+        tags: {
+          errorCode: error.code,
+          operation,
+        },
+        extra: {
+          ...context,
+          ...error.details,
+        },
+      });
+    } catch {
+      // Fail silently if Sentry is not available
+      console.error(`[CareerImpactService] ${operation} failed:`, error.message, context);
+    }
+  }
+
+  /**
+   * Log warning for cache-related issues
+   */
+  private static _logCacheWarning(
+    operation: string,
+    error: unknown,
+    context?: Record<string, unknown>
+  ): void {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[CareerImpactService] ${operation}:`, message, context);
+
+    try {
+      Sentry.addBreadcrumb({
+        category: 'cache',
+        level: 'warning',
+        message: `${operation}: ${message}`,
+        data: context,
+      });
+    } catch {
+      // Fail silently
+    }
+  }
 }
+

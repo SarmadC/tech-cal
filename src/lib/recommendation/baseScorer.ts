@@ -13,6 +13,13 @@
 import { Event, CareerProfile } from '@/types';
 import { resolveSkillIds, matchSkillIdsInText } from '@/lib/skills/skillRegistry';
 import { getRoleKeywords } from '@/utils/roleTaxonomy';
+import {
+  ALIGNMENT_WEIGHTS,
+  GOAL_KEYWORDS,
+  LEARNING_STYLE_KEYWORDS,
+  getGoalReason,
+  getLearningStyleReason,
+} from '@/config/scoringConfig';
 
 /**
  * Test if a keyword matches as a complete word in the text
@@ -65,101 +72,11 @@ function matchesWholeWord(text: string, keyword: string): boolean {
   return regex.test(text);
 }
 
-/**
- * Scoring weights configuration
- * These control how much each factor contributes to the overall alignment score
- * 
- * Tuned to produce 50-80% scores for genuinely good matches:
- * - Event with 2-3 skill matches should score 50-60%
- * - Event with skills + goals + interests should score 70-80%
- * - Event with just 1 match should score 20-30%
- */
-export const ALIGNMENT_WEIGHTS = {
-  skillsToLearn: 25,      // Highest priority - learning new skills (was 20)
-  primarySkills: 15,      // Maintaining/advancing existing skills (was 10)
-  careerGoals: 18,        // Supporting career objectives (was 15)
-  interests: 12,          // Personal interests alignment (was 8)
-  learningStyle: 8,       // Preferred learning format (was 5)
-  networking: 15,         // Networking opportunities (was 10)
-  role: 10,               // Role alignment weight
-} as const;
+// Scoring weights and keywords are imported from @/config/scoringConfig
+// Re-export for backward compatibility with consumers of this module
+export { ALIGNMENT_WEIGHTS, GOAL_KEYWORDS, LEARNING_STYLE_KEYWORDS } from '@/config/scoringConfig';
 
-/**
- * Keywords for matching career goals to event content
- */
-export const GOAL_KEYWORDS: Record<string, string[]> = {
-  'skill-development': ['workshop', 'training', 'bootcamp', 'course', 'tutorial', 'hands-on', 'upskill', 'skill'],
-  'role-transition': [
-    'career transition',
-    'career change',
-    'career pivot',
-    'new role',
-    'role change',
-    'switch careers',
-    'job search',
-    'interview',
-    'resume',
-    'cv'
-  ],
-  'leadership-growth': [
-    'leadership',
-    'manager',
-    'management',
-    'people leader',
-    'executive',
-    'influence',
-    'stakeholder',
-    'coaching',
-    'mentoring'
-  ],
-  'networking': [
-    'networking',
-    'meetup',
-    'mixer',
-    'community',
-    'connect',
-    'connections',
-    'roundtable',
-    'happy hour',
-    'social'
-  ]
-} as const;
-
-/**
- * Keywords for matching learning styles to event formats
- */
-export const LEARNING_STYLE_KEYWORDS: Record<string, string[]> = {
-  'hands-on': ['workshop', 'lab', 'hands-on', 'practical', 'coding'],
-  'theoretical': ['lecture', 'presentation', 'keynote', 'talk'],
-  'interactive': ['panel', 'discussion', 'q&a', 'interactive'],
-  'networking': ['networking', 'meetup', 'mixer', 'social', 'github'],
-  'case-studies': ['case study', 'real-world', 'example', 'demo'],
-  'peer-learning': ['community', 'peer', 'group', 'collaborative']
-} as const;
-
-function getGoalReason(goal: string): string {
-  const goalMap: Record<string, string> = {
-    'skill-development': 'Build in-demand skills',
-    'role-transition': 'Support your role transition',
-    'leadership-growth': 'Grow leadership capabilities',
-    'networking': 'Build industry relationships'
-  };
-
-  return goalMap[goal] ?? `Supports ${goal.replace('-', ' ')}`;
-}
-
-function getLearningStyleReason(style: string): string {
-  const styleMap: Record<string, string> = {
-    'hands-on': 'Hands-on workshop format',
-    'theoretical': 'Expert-led session style',
-    'interactive': 'Interactive discussion format',
-    'networking': 'Collaborative peer exchange format',
-    'case-studies': 'Case-study driven format',
-    'peer-learning': 'Collaborative peer-learning format'
-  };
-
-  return styleMap[style] ?? `Fits ${style.replace('-', ' ')} learning`;
-}
+// getGoalReason and getLearningStyleReason are imported from @/config/scoringConfig
 
 /**
  * Alignment reason (without UI-specific properties)
