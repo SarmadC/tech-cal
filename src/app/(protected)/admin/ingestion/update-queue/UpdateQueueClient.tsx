@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { AdminDataTable, type AdminDataTableColumn } from '@/components/admin/AdminDataTable';
+import EventPreviewPanel, { type QueueItemPreview } from '@/components/admin/EventPreviewPanel';
 import { useAdminToolbar } from '@/contexts/AdminToolbarContext';
 import useAdminHotkeys from '@/components/admin/useAdminHotkeys';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -121,6 +122,7 @@ export default function UpdateQueueClient() {
     const [bulkActionLoading, setBulkActionLoading] = useState(false);
     const [bulkActionError, setBulkActionError] = useState<string | null>(null);
     const [bulkTargetIds, setBulkTargetIds] = useState<string[]>([]);
+    const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
     const [pagination, setPagination] = useState({
         page: pageParam,
         pageSize: pageSizeParam,
@@ -134,6 +136,7 @@ export default function UpdateQueueClient() {
         actions: true,
     });
     const [columnsPanelOpen, setColumnsPanelOpen] = useState(false);
+    const [previewItem, setPreviewItem] = useState<QueueItemPreview | null>(null);
 
     const viewMode = viewParam === 'cards' ? 'cards' : 'table';
 
@@ -475,6 +478,7 @@ export default function UpdateQueueClient() {
 
         setBulkActionLoading(true);
         setBulkActionError(null);
+        setBulkProgress({ current: 0, total: targetIds.length });
 
         const actionParam = bulkAction === 'pending' ? 'reset' : bulkAction;
         const actionLabel = bulkAction === 'pending' ? 'mark pending' : bulkAction;
@@ -482,7 +486,10 @@ export default function UpdateQueueClient() {
         let successCount = 0;
         const failures: string[] = [];
 
-        for (const id of targetIds) {
+        for (let i = 0; i < targetIds.length; i++) {
+            const id = targetIds[i];
+            setBulkProgress({ current: i + 1, total: targetIds.length });
+
             try {
                 const response = await fetch(
                     `/api/admin/ingestion/update-queue/${id}?action=${actionParam}`,
@@ -857,6 +864,22 @@ export default function UpdateQueueClient() {
                             </div>
                         )}
 
+                        {/* Progress Bar */}
+                        {bulkActionLoading && bulkProgress.total > 0 && (
+                            <div className="mt-4">
+                                <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                                    <span>Processing...</span>
+                                    <span>{bulkProgress.current} / {bulkProgress.total} ({Math.round((bulkProgress.current / bulkProgress.total) * 100)}%)</span>
+                                </div>
+                                <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                                    <div
+                                        className="h-full bg-emerald-500 transition-all duration-200 ease-out"
+                                        style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         <div className="mt-6 flex justify-end gap-3">
                             <Button
                                 variant="outline"
@@ -871,7 +894,9 @@ export default function UpdateQueueClient() {
                                 onClick={performBulkAction}
                                 disabled={bulkActionLoading || selectedItemsForBulk.length === 0}
                             >
-                                {bulkActionLoading ? 'Processing…' : activeBulkMeta.confirmLabel}
+                                {bulkActionLoading
+                                    ? `Processing ${bulkProgress.current}/${bulkProgress.total}…`
+                                    : activeBulkMeta.confirmLabel}
                             </Button>
                         </div>
                     </div>
@@ -915,6 +940,7 @@ export default function UpdateQueueClient() {
                     onPageChange={(nextPage) => updateQuery({ page: nextPage })}
                     onPageSizeChange={(nextSize) => updateQuery({ pageSize: nextSize, page: 1 }, { resetPage: true })}
                     toolbar={tableToolbar}
+                    onRowClick={(item) => setPreviewItem(item as QueueItemPreview)}
                 />
             ) : (
                 <div className="space-y-4">
@@ -982,6 +1008,17 @@ export default function UpdateQueueClient() {
             {shortcutsOpen && (
                 <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />
             )}
+
+            {previewItem && (
+                <EventPreviewPanel
+                    item={previewItem}
+                    onClose={() => setPreviewItem(null)}
+                    onActionComplete={() => {
+                        setPreviewItem(null);
+                        fetchQueueItems();
+                    }}
+                />
+            )}
         </div>
     );
 }
@@ -991,10 +1028,10 @@ function MetricItem({ label, value, tone }: { label: string; value: number; tone
         tone === 'amber'
             ? 'text-amber-300'
             : tone === 'emerald'
-            ? 'text-emerald-300'
-            : tone === 'rose'
-            ? 'text-rose-300'
-            : 'text-slate-100';
+                ? 'text-emerald-300'
+                : tone === 'rose'
+                    ? 'text-rose-300'
+                    : 'text-slate-100';
     return (
         <div className="rounded-md border border-slate-800/60 bg-slate-950/60 px-3 py-2">
             <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>

@@ -303,6 +303,13 @@ export class EventUpdateService {
                 continue; // Skip unchanged fields
             }
 
+            // Agenda is a relationship field that requires inserting into event_agenda table
+            // Always route to review to handle via EventEnrichmentService.createOrUpdateAgendaItems()
+            if (diff.fieldName === 'agenda') {
+                reviewRequired.push(diff);
+                continue;
+            }
+
             const protectionMode = await this.getFieldProtectionStatus(
                 eventId,
                 diff.fieldName,
@@ -340,7 +347,8 @@ export class EventUpdateService {
             }
 
             // Don't update relationships here - handle separately
-            const relationshipFields = ['tags', 'audiences', 'prerequisites'];
+            // Agenda requires inserting into event_agenda table, not updating events table
+            const relationshipFields = ['tags', 'audiences', 'prerequisites', 'agenda'];
             const scalarUpdateData = Object.fromEntries(
                 Object.entries(updateData).filter(([key]) => !relationshipFields.includes(key))
             );

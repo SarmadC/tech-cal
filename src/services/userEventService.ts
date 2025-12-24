@@ -430,7 +430,6 @@ export class UserEventService {
                             event_tags (
                                 id,
                                 event_tag,
-                                color,
                                 category
                             )
                         )
@@ -448,13 +447,84 @@ export class UserEventService {
             }
 
             const { data, error } = await query;
-            if (error) throw error;
+            if (error) {
+                // Log the full error object for debugging
+                console.error('Supabase query error in getTrackedEvents:', {
+                    error, // Full error object
+                    errorCode: error.code ?? 'NO_CODE',
+                    errorMessage: error.message ?? 'NO_MESSAGE',
+                    errorDetails: error.details ?? 'NO_DETAILS',
+                    errorHint: error.hint ?? 'NO_HINT',
+                    errorName: error.name ?? 'NO_NAME',
+                    errorStringified: JSON.stringify(error, null, 2),
+                    userId,
+                    page,
+                    pageSize
+                });
+                
+                Sentry.captureException(error, {
+                    extra: {
+                        function: 'getTrackedEvents',
+                        userId,
+                        page,
+                        pageSize,
+                        errorCode: error.code,
+                        errorMessage: error.message,
+                        errorDetails: error.details,
+                    }
+                });
+                
+                throw error;
+            }
 
             // This works because we already updated `trackedEventTransformer` to return `TrackedEventRecord`.
             return (data as SupabaseTrackedEventWithDetails[] || []).map(trackedEventTransformer.toApp);
         } catch (error) {
-            console.error('Error fetching tracked events:', error);
-            Sentry.captureException(error, { extra: { function: 'getTrackedEvents', userId } });
+            // Extract error details for better logging with safe property access
+            let errorDetails: Record<string, unknown>;
+            
+            if (error instanceof Error) {
+                const supabaseError = error as Error & { code?: string; details?: string; hint?: string };
+                errorDetails = {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                    ...(supabaseError.code && { code: supabaseError.code }),
+                    ...(supabaseError.details && { details: supabaseError.details }),
+                    ...(supabaseError.hint && { hint: supabaseError.hint })
+                };
+            } else {
+                // For non-Error types, safely stringify
+                try {
+                    errorDetails = {
+                        errorType: typeof error,
+                        errorString: String(error),
+                        errorJSON: JSON.stringify(error, Object.getOwnPropertyNames(error instanceof Object ? error : {}))
+                    };
+                } catch {
+                    errorDetails = {
+                        errorType: typeof error,
+                        errorString: String(error)
+                    };
+                }
+            }
+
+            console.error('Error fetching tracked events:', {
+                ...errorDetails,
+                userId,
+                page,
+                pageSize
+            });
+            
+            Sentry.captureException(error, { 
+                extra: { 
+                    function: 'getTrackedEvents', 
+                    userId,
+                    page,
+                    pageSize,
+                    errorDetails
+                } 
+            });
             throw new Error('Failed to fetch tracked events.');
         }
     }

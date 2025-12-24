@@ -2,14 +2,18 @@
  * Update Review Client Component
  * 
  * Shows field-by-field diffs with approve/reject actions
+ * Supports vim-style keyboard navigation: j/k to move, a to approve, r to reject
  */
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { MaterialIcon } from '@/components/ui/Icon';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface QueueField {
@@ -48,7 +52,13 @@ interface UpdateReviewClientProps {
     } | null;
 }
 
+interface NextPendingItem {
+    id: string;
+    eventTitle: string;
+}
+
 export default function UpdateReviewClient({ queueId, initialData }: UpdateReviewClientProps) {
+    const router = useRouter();
     const [queue, setQueue] = useState<QueueItem | null>(initialData?.queue || null);
     const [fields, setFields] = useState<QueueField[]>(initialData?.fields || []);
     const [loading, setLoading] = useState(!initialData);
@@ -58,6 +68,15 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editedValues, setEditedValues] = useState<Record<string, string>>({});
     const [savingField, setSavingField] = useState<string | null>(null);
+
+    // Keyboard navigation state
+    const [focusedFieldIndex, setFocusedFieldIndex] = useState<number>(-1);
+    const [shortcutsOpen, setShortcutsOpen] = useState(false);
+    const fieldRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+    // "Up next" navigation state
+    const [nextItem, setNextItem] = useState<NextPendingItem | null>(null);
+    const [showNextPrompt, setShowNextPrompt] = useState(false);
 
     const fetchQueueDetail = useCallback(async () => {
         setLoading(true);
@@ -108,6 +127,29 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
         }
     }, [initialData, fetchQueueDetail]);
 
+    // Fetch next pending item for "up next" navigation
+    const fetchNextPending = useCallback(async (): Promise<NextPendingItem | null> => {
+        try {
+            const response = await fetch('/api/admin/ingestion/update-queue?status=pending&pageSize=1&sort=created_at&direction=asc', {
+                credentials: 'include',
+            });
+            if (!response.ok) return null;
+            const data = await response.json();
+            const items = data.items || [];
+            // Find next item that's not the current one
+            const next = items.find((item: { id: string }) => item.id !== queueId);
+            if (next) {
+                return {
+                    id: next.id,
+                    eventTitle: next.event?.title || 'Untitled Event',
+                };
+            }
+            return null;
+        } catch {
+            return null;
+        }
+    }, [queueId]);
+
     const handleApproveAll = async () => {
         setActionLoading(true);
         setMessage(null);
@@ -118,7 +160,15 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             );
             if (!response.ok) throw new Error('Failed to approve');
             setMessage({ type: 'success', text: 'All fields approved successfully' });
-            await fetchQueueDetail();
+
+            // Check for next pending item
+            const next = await fetchNextPending();
+            if (next) {
+                setNextItem(next);
+                setShowNextPrompt(true);
+            } else {
+                await fetchQueueDetail();
+            }
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to approve' });
         } finally {
@@ -136,7 +186,15 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             );
             if (!response.ok) throw new Error('Failed to reject');
             setMessage({ type: 'success', text: 'All fields rejected' });
-            await fetchQueueDetail();
+
+            // Check for next pending item
+            const next = await fetchNextPending();
+            if (next) {
+                setNextItem(next);
+                setShowNextPrompt(true);
+            } else {
+                await fetchQueueDetail();
+            }
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to reject' });
         } finally {
@@ -146,7 +204,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
 
     const handleDeleteEvent = async () => {
         if (!queue?.event_id) return;
-        
+
         if (!confirm(`Are you sure you want to delete this event? This cannot be undone.\n\nEvent: ${queue.event?.title || 'Unknown'}`)) {
             return;
         }
@@ -199,6 +257,146 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             setActionLoading(false);
         }
     };
+
+    // Single field approve/reject for keyboard navigation
+    const handleApproveSingleField = async (fieldName: string) => {
+        setActionLoading(true);
+        setMessage(null);
+        try {
+            const response = await fetch(
+                `/api/admin/ingestion/update-queue/${queueId}?action=approve-selective`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fieldNames: [fieldName] }),
+                }
+            );
+            if (!response.ok) throw new Error('Failed to approve field');
+            setMessage({ type: 'success', text: `Field "${fieldName}" approved` });
+            await fetchQueueDetail();
+        } catch (error) {
+            setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to approve' });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleRejectSingleField = async (fieldName: string) => {
+        setActionLoading(true);
+        setMessage(null);
+        try {
+            // Use reject-selective endpoint if available, otherwise reject all and re-approve others
+            const response = await fetch(
+                `/api/admin/ingestion/update-queue/${queueId}?action=reject-selective`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fieldNames: [fieldName] }),
+                }
+            );
+            if (!response.ok) throw new Error('Failed to reject field');
+            setMessage({ type: 'success', text: `Field "${fieldName}" rejected` });
+            await fetchQueueDetail();
+        } catch (error) {
+            setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to reject' });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // Keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't handle if in an input/textarea or if shortcuts modal is open
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                return;
+            }
+
+            if (e.key === '?' && e.shiftKey) {
+                e.preventDefault();
+                setShortcutsOpen(true);
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                if (shortcutsOpen) {
+                    setShortcutsOpen(false);
+                }
+                return;
+            }
+
+            // Navigation
+            if (e.key === 'j' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                setFocusedFieldIndex((prev) => Math.min(prev + 1, fields.length - 1));
+                return;
+            }
+
+            if (e.key === 'k' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                setFocusedFieldIndex((prev) => Math.max(prev - 1, 0));
+                return;
+            }
+
+            // Actions on focused field
+            if (focusedFieldIndex >= 0 && focusedFieldIndex < fields.length) {
+                const focusedField = fields[focusedFieldIndex];
+
+                if (focusedField.field_status !== 'pending') {
+                    return; // Only allow actions on pending fields
+                }
+
+                if (e.key === 'a') {
+                    e.preventDefault();
+                    handleApproveSingleField(focusedField.field_name);
+                    return;
+                }
+
+                if (e.key === 'r') {
+                    e.preventDefault();
+                    handleRejectSingleField(focusedField.field_name);
+                    return;
+                }
+
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    toggleFieldSelection(focusedField.field_name);
+                    return;
+                }
+
+                if (e.key === 'e') {
+                    e.preventDefault();
+                    startEditingField(focusedField);
+                    return;
+                }
+            }
+
+            // Bulk actions
+            if (e.key === 'A' && e.shiftKey) {
+                e.preventDefault();
+                handleApproveAll();
+                return;
+            }
+
+            if (e.key === 'R' && e.shiftKey) {
+                e.preventDefault();
+                handleRejectAll();
+                return;
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [fields, focusedFieldIndex, shortcutsOpen, handleApproveAll, handleRejectAll]);
+
+    // Scroll focused field into view
+    useEffect(() => {
+        if (focusedFieldIndex >= 0) {
+            const el = fieldRefs.current.get(focusedFieldIndex);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [focusedFieldIndex]);
 
     const toggleFieldSelection = (fieldName: string) => {
         const newSelected = new Set(selectedFields);
@@ -329,7 +527,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
     const isPastEvent = queue?.event?.start_time
         ? new Date(queue.event.start_time) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // More than 7 days ago
         : false;
-    
+
     const daysAgo = queue?.event?.start_time
         ? Math.floor((Date.now() - new Date(queue.event.start_time).getTime()) / (24 * 60 * 60 * 1000))
         : null;
@@ -353,11 +551,10 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             {/* Message */}
             {message && (
                 <div
-                    className={`p-4 rounded-lg ${
-                        message.type === 'success'
-                            ? 'bg-green-50 text-green-800'
-                            : 'bg-red-50 text-red-800'
-                    }`}
+                    className={`p-4 rounded-lg ${message.type === 'success'
+                        ? 'bg-green-50 text-green-800'
+                        : 'bg-red-50 text-red-800'
+                        }`}
                 >
                     {message.text}
                 </div>
@@ -510,21 +707,28 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                         <div className="text-center py-8 text-gray-500">No field changes found</div>
                     ) : (
                         <div className="space-y-4">
-                            {fields.map((field) => {
+                            {fields.map((field, index) => {
                                 const isPending = field.field_status === 'pending';
                                 const isSelected = selectedFields.has(field.field_name);
                                 const isEditing = editingField === field.field_name;
+                                const isFocused = focusedFieldIndex === index;
 
                                 return (
                                     <div
                                         key={field.id}
-                                        className={`border rounded-lg p-4 ${
+                                        ref={(el) => {
+                                            if (el) fieldRefs.current.set(index, el);
+                                        }}
+                                        className={cn(
+                                            'border rounded-lg p-4 transition-all',
                                             isPending
                                                 ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/40'
                                                 : field.field_status === 'approved'
-                                                ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30'
-                                                : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30'
-                                        }`}
+                                                    ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30'
+                                                    : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30',
+                                            isFocused && 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900'
+                                        )}
+                                        onClick={() => setFocusedFieldIndex(index)}
                                     >
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex items-center gap-3">
@@ -619,6 +823,104 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                     )}
                 </CardContent>
             </Card>
+
+            {/* Keyboard Hint */}
+            <div className="fixed bottom-4 right-4 z-40">
+                <button
+                    onClick={() => setShortcutsOpen(true)}
+                    className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-2 text-xs text-slate-300 shadow-lg hover:bg-slate-800 transition-colors"
+                >
+                    <MaterialIcon name="info" size={14} />
+                    Press <kbd className="rounded bg-slate-700 px-1.5 py-0.5 font-mono">?</kbd> for shortcuts
+                </button>
+            </div>
+
+            {/* Shortcuts Overlay */}
+            {shortcutsOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+                        <div className="mb-4 flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-100">Keyboard Shortcuts</h2>
+                                <p className="text-sm text-slate-400">Navigate and review fields without using your mouse.</p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShortcutsOpen(false)}
+                                className="text-slate-300 hover:bg-slate-800"
+                            >
+                                <MaterialIcon name="close" size={16} />
+                            </Button>
+                        </div>
+                        <div className="space-y-2">
+                            {[
+                                { keys: 'j / ↓', description: 'Move to next field' },
+                                { keys: 'k / ↑', description: 'Move to previous field' },
+                                { keys: 'a', description: 'Approve focused field' },
+                                { keys: 'r', description: 'Reject focused field' },
+                                { keys: 'Space', description: 'Toggle field selection' },
+                                { keys: 'e', description: 'Edit focused field' },
+                                { keys: 'Shift+A', description: 'Approve all fields' },
+                                { keys: 'Shift+R', description: 'Reject all fields' },
+                                { keys: 'Esc', description: 'Close this dialog' },
+                            ].map((shortcut) => (
+                                <div
+                                    key={shortcut.keys}
+                                    className="flex items-center justify-between gap-3 rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                                >
+                                    <span className="font-mono text-xs uppercase tracking-wide text-slate-200">
+                                        {shortcut.keys}
+                                    </span>
+                                    <span className="text-sm text-slate-400">{shortcut.description}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="mt-4 text-center text-xs text-slate-500">Press Esc to close.</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Up Next Prompt */}
+            {showNextPrompt && nextItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+                        <div className="text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
+                                <MaterialIcon name="check" size={24} className="text-emerald-400" />
+                            </div>
+                            <h2 className="text-lg font-semibold text-slate-100">Review Complete!</h2>
+                            <p className="mt-2 text-sm text-slate-400">
+                                Would you like to review the next pending item?
+                            </p>
+                            <p className="mt-1 text-sm font-medium text-slate-200 truncate">
+                                {nextItem.eventTitle}
+                            </p>
+                        </div>
+                        <div className="mt-6 flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
+                                onClick={() => {
+                                    setShowNextPrompt(false);
+                                    router.push('/admin/ingestion/update-queue');
+                                }}
+                            >
+                                Back to Queue
+                            </Button>
+                            <Button
+                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                onClick={() => {
+                                    setShowNextPrompt(false);
+                                    router.push(`/admin/ingestion/update-queue/${nextItem.id}`);
+                                }}
+                            >
+                                Review Next
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

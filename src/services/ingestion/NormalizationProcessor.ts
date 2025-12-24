@@ -517,6 +517,7 @@ export class NormalizationProcessor {
                                     name: record.organizer || 'Unknown',
                                     domain: record.organizerDomain,
                                     websiteUrl: record.sourceUrl,
+                                    sourceUrl: record.sourceUrl, // For og:image extraction
                                 },
                                 supabaseClient
                             );

@@ -37,7 +37,7 @@ const securityHeaders = [
         script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.sentry-cdn.com;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
         style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
-        img-src 'self' data: blob: https: https://cdn.jsdelivr.net https://mddgtexrnnlctttbcpsy.supabase.co https://upload.wikimedia.org https://logo.clearbit.com https://www.google.com https://icon.horse https://lh3.googleusercontent.com https://avatars.githubusercontent.com;
+        img-src 'self' data: blob: https:;
         font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
         connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.bigdatacloud.net;
         frame-ancestors 'none';
@@ -62,6 +62,10 @@ const nextConfig: NextConfig = {
   // Configure external image domains - migrated to remotePatterns for Next.js 16
   images: {
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',  // Allow any HTTPS hostname for og:images from event sources
+      },
       {
         protocol: 'https',
         hostname: 'mddgtexrnnlctttbcpsy.supabase.co',

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { CalendarBlank, FunnelSimple, Repeat } from '@phosphor-icons/react';
+import { CalendarBlank, FunnelSimple, Repeat, CaretDown } from '@phosphor-icons/react';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { generateEventSlug } from '@/utils/slugUtils';
 import Loading from '@/components/Loading';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
+import MobileEventListCard from './MobileEventListCard';
 
 interface EventListViewProps {
     initialCategories: EventType[];
@@ -95,6 +96,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
 
     const [selectedEvent, setSelectedEvent] = useState<TrackedEvent | null>(null);
     const [isClosing, setIsClosing] = useState(false);
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     const isMobile = useIsMobile();
 
     const rows: EventRow[] = useMemo(() => filteredEvents.map((event: TrackedEvent) => {
@@ -261,7 +263,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
 
     return (
         <SidebarProvider>
-            <UnifiedMobileNavbar 
+            <UnifiedMobileNavbar
                 navItems={[
                     { name: 'Discover', href: '/discover' },
                     { name: 'Calendar', href: '/calendar' },
@@ -270,167 +272,341 @@ export default function EventListView({ initialCategories, profile, locationOpti
                     { name: 'Settings', href: '/dashboard/settings' }
                 ]}
                 fixed={true}
+                className="bg-white/80 dark:bg-[#08090a]/80 backdrop-blur-md border-b border-border/40"
             />
-            <div className="flex h-screen bg-background">
-                <AppSidebar />
+            <div className="flex h-screen bg-white dark:bg-[#08090a]">
+                {!isMobile && <AppSidebar />}
                 <main className="flex-1 flex flex-col overflow-hidden">
-                    <Navbar />
+                    {!isMobile && <Navbar />}
                     <div className="flex-1 overflow-auto">
-                        <div className="min-h-screen glass-bg-gradient relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
-                            <div className="relative max-w-[1600px] mx-auto px-6 pt-16 pb-8 space-y-6">
-                                <header className="flex flex-col gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
-                                            <CalendarBlank weight="bold" size={20} />
+                        <div className="min-h-screen relative bg-white dark:bg-[#08090a]">
+
+                            {/* Mobile View */}
+                            {isMobile ? (
+                                <div className="relative px-4 pt-20 pb-24 space-y-4">
+                                    {/* Mobile Header */}
+                                    <header className="flex items-center gap-3">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
+                                            <CalendarBlank weight="bold" size={18} />
                                         </div>
-                                        <div>
-                                            <h1 className="text-3xl font-semibold text-foreground-primary">Event Listings</h1>
-                                            <p className="text-sm text-foreground-secondary">
-                                                Browse and organize upcoming events with advanced filtering controls.
+                                        <div className="flex-1 min-w-0">
+                                            <h1 className="text-xl font-semibold text-foreground-primary">Event Listings</h1>
+                                            <p className="text-xs text-foreground-secondary truncate">
+                                                {totalCount} events available
                                             </p>
                                         </div>
-                                    </div>
-                                </header>
+                                    </header>
 
-                                <section
-                                    className="glass-card border border-white/10 p-6 shadow-2xl space-y-4"
-                                    aria-labelledby="event-filters"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-sm text-foreground-secondary">
-                                            <FunnelSimple size={16} />
-                                            <span id="event-filters">{appliedFiltersLabel}</span>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                resetFilters();
-                                            }}
+                                    {/* Mobile Collapsible Filters */}
+                                    <section className="glass-card border border-white/10 rounded-xl overflow-hidden">
+                                        <button
+                                            type="button"
+                                            onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+                                            className="w-full flex items-center justify-between p-4 text-left"
+                                            aria-expanded={mobileFiltersOpen}
+                                            aria-controls="mobile-filters-content"
                                         >
-                                            <Repeat size={16} className="mr-2" />
-                                            Reset
-                                        </Button>
-                                    </div>
+                                            <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+                                                <FunnelSimple size={16} />
+                                                <span>{appliedFiltersLabel}</span>
+                                            </div>
+                                            <CaretDown
+                                                size={16}
+                                                className={`text-foreground-tertiary transition-transform duration-200 ${mobileFiltersOpen ? 'rotate-180' : ''}`}
+                                            />
+                                        </button>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                                        <div className="flex flex-col gap-2">
-                                            <label htmlFor="start-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">Start Date</label>
-                                            <input
-                                                id="start-date"
-                                                type="date"
-                                                value={toInputValue(filters.dateRange.start)}
-                                                onChange={(event) => {
-                                                    const value = event.target.value ? new Date(`${event.target.value}T00:00:00`) : null;
-                                                    updateFilter('dateRange', { start: value, end: filters.dateRange.end });
-                                                    updateFilter('page', 1);
-                                                }}
-                                                className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary placeholder:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 focus:border-accent-primary/60 transition-colors"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label htmlFor="end-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">End Date</label>
-                                            <input
-                                                id="end-date"
-                                                type="date"
-                                                value={toInputValue(filters.dateRange.end)}
-                                                onChange={(event) => {
-                                                    const value = event.target.value ? new Date(`${event.target.value}T23:59:59`) : null;
-                                                    updateFilter('dateRange', { start: filters.dateRange.start, end: value });
-                                                    updateFilter('page', 1);
-                                                }}
-                                                className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary placeholder:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 focus:border-accent-primary/60 transition-colors"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <MultiSelectDropdown
-                                                label="Categories"
-                                                options={categoryOptions}
-                                                selectedValues={filters.categories}
-                                                onChange={(values) => {
-                                                    updateFilter('categories', values);
-                                                    updateFilter('page', 1);
-                                                }}
-                                                placeholder="Select categories"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <MultiSelectDropdown
-                                                label="Locations"
-                                                options={locationSelectOptions}
-                                                selectedValues={filters.locations}
-                                                onChange={(values) => {
-                                                    updateFilter('locations', values);
-                                                    updateFilter('page', 1);
-                                                }}
-                                                placeholder="Select locations"
-                                                className="bg-transparent"
-                                            />
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm text-foreground-secondary">
-                                                Showing {rangeStart}-{rangeEnd} of {totalCount} events
-                                            </p>
-                                            {error && (
-                                                <p className="text-xs text-destructive mt-1">
-                                                    Failed to refresh events.{' '}
-                                                    <button className="underline" onClick={() => refetch()}>Try again</button>
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs text-foreground-secondary">
-                                            <span>Sorted by</span>
-                                            <Badge variant="outline" className="border-border-color/60 bg-background-secondary/60 text-foreground-secondary">
-                                                {sortLabel}
-                                            </Badge>
-                                        </div>
-                                    </div>
-
-                                    <AdminToolbarProvider>
-                                    <AdminDataTable<EventRow>
-                                            columns={columns}
-                                            rows={rows}
-                                            getRowId={(row) => row.id}
-                                            sortKey={tableSortKey}
-                                            sortDirection={filters.sortDirection}
-                                            onSortChange={handleSortChange}
-                                            isLoading={isLoading}
-                                            onRowClick={(row) => handleOpenDetails(row.event)}
-                                            className="glass-card border border-white/10 px-6 py-6 text-foreground-primary backdrop-blur-xl"
-                                            containerClassName="glass-card border border-white/10 bg-white/[0.04] backdrop-blur-xl [&_thead]:bg-white/[0.08] [&_tbody_tr]:border-white/[0.05] [&_tbody_tr:hover]:bg-white/[0.06]"
-                                            footerClassName="glass-card border border-white/10 bg-white/[0.04] text-foreground-secondary"
-                                            tableClassName="text-foreground-primary"
-                                            headerClassName="bg-transparent text-foreground-secondary"
-                                            headerRowClassName="border-white/[0.06]"
-                                            bodyRowClassName="border-white/[0.04] hover:bg-white/[0.06] text-foreground-primary"
-                                            pageSize={pagination.pageSize}
-                                            pageSizeOptions={pageSizeOptions}
-                                            onPageSizeChange={handlePageSizeChange}
-                                            page={pagination.page}
-                                            onPageChange={handlePageChange}
-                                            total={totalCount}
-                                            emptyState={(
-                                                <div className="py-12 text-center">
-                                                    <h3 className="text-lg font-semibold text-foreground-primary mb-2">No events match the current filters</h3>
-                                                    <p className="text-sm text-foreground-secondary mb-4">
-                                                        Adjust your date range, categories, or locations to discover more events.
-                                                    </p>
-                                                    <Button size="sm" onClick={() => { resetFilters(); }}>
-                                                        Reset filters
-                                                    </Button>
+                                        {mobileFiltersOpen && (
+                                            <div id="mobile-filters-content" className="px-4 pb-4 space-y-4 border-t border-white/10 pt-4">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <label htmlFor="mobile-start-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">Start</label>
+                                                        <input
+                                                            id="mobile-start-date"
+                                                            type="date"
+                                                            value={toInputValue(filters.dateRange.start)}
+                                                            onChange={(event) => {
+                                                                const value = event.target.value ? new Date(`${event.target.value}T00:00:00`) : null;
+                                                                updateFilter('dateRange', { start: value, end: filters.dateRange.end });
+                                                                updateFilter('page', 1);
+                                                            }}
+                                                            className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 transition-colors"
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <label htmlFor="mobile-end-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">End</label>
+                                                        <input
+                                                            id="mobile-end-date"
+                                                            type="date"
+                                                            value={toInputValue(filters.dateRange.end)}
+                                                            onChange={(event) => {
+                                                                const value = event.target.value ? new Date(`${event.target.value}T23:59:59`) : null;
+                                                                updateFilter('dateRange', { start: filters.dateRange.start, end: value });
+                                                                updateFilter('page', 1);
+                                                            }}
+                                                            className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 transition-colors"
+                                                        />
+                                                    </div>
                                                 </div>
-                                            )}
-                                        />
-                                    </AdminToolbarProvider>
+                                                <MultiSelectDropdown
+                                                    label="Categories"
+                                                    options={categoryOptions}
+                                                    selectedValues={filters.categories}
+                                                    onChange={(values) => {
+                                                        updateFilter('categories', values);
+                                                        updateFilter('page', 1);
+                                                    }}
+                                                    placeholder="Select categories"
+                                                />
+                                                <MultiSelectDropdown
+                                                    label="Locations"
+                                                    options={locationSelectOptions}
+                                                    selectedValues={filters.locations}
+                                                    onChange={(values) => {
+                                                        updateFilter('locations', values);
+                                                        updateFilter('page', 1);
+                                                    }}
+                                                    placeholder="Select locations"
+                                                />
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => resetFilters()}
+                                                    className="w-full"
+                                                >
+                                                    <Repeat size={14} className="mr-2" />
+                                                    Reset Filters
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </section>
 
-                                </section>
-                            </div>
+                                    {/* Mobile Sort Info */}
+                                    <div className="flex items-center justify-between text-xs text-foreground-secondary">
+                                        <span>Showing {rangeStart}-{rangeEnd} of {totalCount}</span>
+                                        <Badge variant="outline" className="border-border-color/40 bg-background-secondary/40 text-foreground-tertiary text-[10px]">
+                                            {sortLabel}
+                                        </Badge>
+                                    </div>
+
+                                    {/* Mobile Event Cards */}
+                                    {isLoading ? (
+                                        <div className="flex items-center justify-center py-12">
+                                            <Loading />
+                                        </div>
+                                    ) : rows.length === 0 ? (
+                                        <div className="py-12 text-center">
+                                            <h3 className="text-lg font-semibold text-foreground-primary mb-2">No events found</h3>
+                                            <p className="text-sm text-foreground-secondary mb-4">
+                                                Adjust your filters to discover more events.
+                                            </p>
+                                            <Button size="sm" onClick={() => resetFilters()}>
+                                                Reset filters
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {rows.map((row) => (
+                                                <MobileEventListCard
+                                                    key={row.id}
+                                                    event={row.event}
+                                                    category={initialCategories.find(c => c.id === row.event.eventTypeId)}
+                                                    onClick={() => handleOpenDetails(row.event)}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Mobile Pagination */}
+                                    {!isLoading && rows.length > 0 && pagination.totalPages > 1 && (
+                                        <div className="flex items-center justify-center gap-2 pt-4">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handlePageChange(pagination.page - 1)}
+                                                disabled={pagination.page <= 1}
+                                                className="text-xs"
+                                            >
+                                                Previous
+                                            </Button>
+                                            <span className="text-sm text-foreground-secondary">
+                                                {pagination.page} / {pagination.totalPages}
+                                            </span>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handlePageChange(pagination.page + 1)}
+                                                disabled={pagination.page >= pagination.totalPages}
+                                                className="text-xs"
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {error && (
+                                        <p className="text-xs text-destructive text-center">
+                                            Failed to load events.{' '}
+                                            <button className="underline" onClick={() => refetch()}>Try again</button>
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                /* Desktop View (unchanged) */
+                                <div className="relative max-w-[1600px] mx-auto px-6 pt-16 pb-8 space-y-6">
+                                    <header className="flex flex-col gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
+                                                <CalendarBlank weight="bold" size={20} />
+                                            </div>
+                                            <div>
+                                                <h1 className="text-3xl font-semibold text-foreground-primary">Event Listings</h1>
+                                                <p className="text-sm text-foreground-secondary">
+                                                    Browse and organize upcoming events with advanced filtering controls.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </header>
+
+                                    <section
+                                        className="glass-card border border-white/10 p-6 shadow-2xl space-y-4"
+                                        aria-labelledby="event-filters"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+                                                <FunnelSimple size={16} />
+                                                <span id="event-filters">{appliedFiltersLabel}</span>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    resetFilters();
+                                                }}
+                                            >
+                                                <Repeat size={16} className="mr-2" />
+                                                Reset
+                                            </Button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                                            <div className="flex flex-col gap-2">
+                                                <label htmlFor="start-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">Start Date</label>
+                                                <input
+                                                    id="start-date"
+                                                    type="date"
+                                                    value={toInputValue(filters.dateRange.start)}
+                                                    onChange={(event) => {
+                                                        const value = event.target.value ? new Date(`${event.target.value}T00:00:00`) : null;
+                                                        updateFilter('dateRange', { start: value, end: filters.dateRange.end });
+                                                        updateFilter('page', 1);
+                                                    }}
+                                                    className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary placeholder:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 focus:border-accent-primary/60 transition-colors"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <label htmlFor="end-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">End Date</label>
+                                                <input
+                                                    id="end-date"
+                                                    type="date"
+                                                    value={toInputValue(filters.dateRange.end)}
+                                                    onChange={(event) => {
+                                                        const value = event.target.value ? new Date(`${event.target.value}T23:59:59`) : null;
+                                                        updateFilter('dateRange', { start: filters.dateRange.start, end: value });
+                                                        updateFilter('page', 1);
+                                                    }}
+                                                    className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary placeholder:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 focus:border-accent-primary/60 transition-colors"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <MultiSelectDropdown
+                                                    label="Categories"
+                                                    options={categoryOptions}
+                                                    selectedValues={filters.categories}
+                                                    onChange={(values) => {
+                                                        updateFilter('categories', values);
+                                                        updateFilter('page', 1);
+                                                    }}
+                                                    placeholder="Select categories"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <MultiSelectDropdown
+                                                    label="Locations"
+                                                    options={locationSelectOptions}
+                                                    selectedValues={filters.locations}
+                                                    onChange={(values) => {
+                                                        updateFilter('locations', values);
+                                                        updateFilter('page', 1);
+                                                    }}
+                                                    placeholder="Select locations"
+                                                    className="bg-transparent"
+                                                />
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm text-foreground-secondary">
+                                                    Showing {rangeStart}-{rangeEnd} of {totalCount} events
+                                                </p>
+                                                {error && (
+                                                    <p className="text-xs text-destructive mt-1">
+                                                        Failed to refresh events.{' '}
+                                                        <button className="underline" onClick={() => refetch()}>Try again</button>
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-foreground-secondary">
+                                                <span>Sorted by</span>
+                                                <Badge variant="outline" className="border-border-color/60 bg-background-secondary/60 text-foreground-secondary">
+                                                    {sortLabel}
+                                                </Badge>
+                                            </div>
+                                        </div>
+
+                                        <AdminToolbarProvider>
+                                            <AdminDataTable<EventRow>
+                                                columns={columns}
+                                                rows={rows}
+                                                getRowId={(row) => row.id}
+                                                sortKey={tableSortKey}
+                                                sortDirection={filters.sortDirection}
+                                                onSortChange={handleSortChange}
+                                                isLoading={isLoading}
+                                                onRowClick={(row) => handleOpenDetails(row.event)}
+                                                className="glass-card border border-white/10 px-6 py-6 text-foreground-primary backdrop-blur-xl"
+                                                containerClassName="glass-card border border-white/10 bg-white/[0.04] backdrop-blur-xl [&_thead]:bg-white/[0.08] [&_tbody_tr]:border-white/[0.05] [&_tbody_tr:hover]:bg-white/[0.06]"
+                                                footerClassName="glass-card border border-white/10 bg-white/[0.04] text-foreground-secondary"
+                                                tableClassName="text-foreground-primary"
+                                                headerClassName="bg-transparent text-foreground-secondary"
+                                                headerRowClassName="border-white/[0.06]"
+                                                bodyRowClassName="border-white/[0.04] hover:bg-white/[0.06] text-foreground-primary"
+                                                pageSize={pagination.pageSize}
+                                                pageSizeOptions={pageSizeOptions}
+                                                onPageSizeChange={handlePageSizeChange}
+                                                page={pagination.page}
+                                                onPageChange={handlePageChange}
+                                                total={totalCount}
+                                                emptyState={(
+                                                    <div className="py-12 text-center">
+                                                        <h3 className="text-lg font-semibold text-foreground-primary mb-2">No events match the current filters</h3>
+                                                        <p className="text-sm text-foreground-secondary mb-4">
+                                                            Adjust your date range, categories, or locations to discover more events.
+                                                        </p>
+                                                        <Button size="sm" onClick={() => { resetFilters(); }}>
+                                                            Reset filters
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            />
+                                        </AdminToolbarProvider>
+
+                                    </section>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </main>
@@ -445,18 +621,16 @@ export default function EventListView({ initialCategories, profile, locationOpti
                             />
                         ) : (
                             <div
-                                className={`fixed inset-0 z-40 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
-                                    isClosing ? 'opacity-0' : 'opacity-100'
-                                }`}
+                                className={`fixed inset-0 z-40 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'
+                                    }`}
                                 onClick={handleCloseDetails}
                                 role="presentation"
                             >
                                 <div
-                                    className={`h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform translate-x-0 duration-300 ease-out ${
-                                        isClosing 
-                                            ? 'animate-out slide-out-to-right' 
+                                    className={`h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform translate-x-0 duration-300 ease-out ${isClosing
+                                            ? 'animate-out slide-out-to-right'
                                             : 'animate-in slide-in-from-right'
-                                    }`}
+                                        }`}
                                     onClick={(event) => event.stopPropagation()}
                                     role="dialog"
                                     aria-modal="true"

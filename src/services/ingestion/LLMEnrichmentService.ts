@@ -561,12 +561,12 @@ export class LLMEnrichmentService {
             newValue: unknown,
         ) => {
             const hasChanged = JSON.stringify(oldValue ?? null) !== JSON.stringify(newValue ?? null);
-            if (!hasChanged && newValue == null) return;
+            if (!hasChanged) return; // Skip unchanged fields entirely
             diffs.push({
                 fieldName,
                 oldValue,
                 newValue,
-                hasChanged: true,
+                hasChanged,
             });
         };
 

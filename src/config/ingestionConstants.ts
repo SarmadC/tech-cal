@@ -70,6 +70,19 @@ export const RSS_DEFAULTS = {
     COLLECTOR_VERSION: '1.0.0',
 } as const;
 
+// OG Image Extraction Configuration
+export const OG_IMAGE_CONFIG = {
+    FETCH_TIMEOUT_MS: 5000, // 5 second timeout for fetching source URLs
+    SKIP_DOMAINS: [
+        'meetup.com',
+        'eventbrite.com',
+        'lu.ma',
+        'luma-cdn.com',
+        'zoom.us',
+        'teams.microsoft.com',
+    ],
+} as const;
+
 // Data Validation Limits
 export const VALIDATION_LIMITS = {
     MIN_TITLE_LENGTH: 3, // Minimum title length

@@ -9,11 +9,13 @@ import type { SupabaseClientType } from '@/types';
 import { TIMEOUT_CONFIG } from '@/config/ingestionConstants';
 import * as Sentry from '@sentry/nextjs';
 import { getLogoSources } from '@/utils/logoUtils';
+import { OgImageExtractorService } from './OgImageExtractorService';
 
 export interface OrganizerInput {
     name: string;
     domain?: string;
     websiteUrl?: string;
+    sourceUrl?: string; // Event source URL for og:image extraction
 }
 
 export class OrganizerEnrichmentService {
@@ -87,8 +89,8 @@ export class OrganizerEnrichmentService {
                 }
             }
 
-            // Create new organizer
-            const logoUrl = domain ? await this.fetchLogoFromClearbit(domain) : null;
+            // Create new organizer - try og:image first, then domain services
+            const logoUrl = await this.fetchLogo(input.sourceUrl, domain);
 
             const { data: newOrganizer, error: createError } = await supabaseClient
                 .from('organizers')
@@ -131,10 +133,34 @@ export class OrganizerEnrichmentService {
     }
 
     /**
+     * Fetch logo with og:image as primary source, falling back to domain services
+     */
+    private static async fetchLogo(
+        sourceUrl: string | undefined,
+        domain: string | undefined
+    ): Promise<string | null> {
+        // Try og:image from source URL first (primary source)
+        if (sourceUrl) {
+            const ogImage = await OgImageExtractorService.extractOgImage(sourceUrl);
+            if (ogImage) {
+                console.debug(`Got og:image for organizer from ${sourceUrl}`);
+                return ogImage;
+            }
+        }
+
+        // Fall back to domain-based services
+        if (domain) {
+            return this.fetchLogoFromDomainServices(domain);
+        }
+
+        return null;
+    }
+
+    /**
      * Fetch logo from multiple sources with fallback chain (graceful degradation)
      * Tries Supabase storage, special logos, Google favicon, Icon Horse, and Clearbit
      */
-    private static async fetchLogoFromClearbit(domain: string): Promise<string | null> {
+    private static async fetchLogoFromDomainServices(domain: string): Promise<string | null> {
         // Get all logo sources in priority order
         const logoSources = getLogoSources(domain);
         

@@ -1,8 +1,10 @@
-import { createClient } from '@/utils/supabase/server';
-import { isAdminUser } from '@/lib/adminAuth';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { MaterialIcon } from '@/components/ui/Icon';
 
 type ExtractionJobLogRow = {
     id: string;
@@ -23,6 +25,8 @@ type ExtractionJobLogRow = {
         title: string | null;
     } | null;
 };
+
+type StatusFilter = 'all' | 'succeeded' | 'failed' | 'pending';
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive'> = {
     succeeded: 'default',
@@ -58,73 +62,161 @@ const formatStatus = (status: string) => {
     return lower.charAt(0).toUpperCase() + lower.slice(1);
 };
 
-export const dynamic = 'force-dynamic';
+export default function AdminApiActivityPage() {
+    const [activity, setActivity] = useState<ExtractionJobLogRow[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+    const [limit, setLimit] = useState(30);
 
-export default async function AdminApiActivityPage() {
-    const supabase = await createClient();
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    const fetchActivity = useCallback(async () => {
+        setLoading(true);
+        setError(null);
 
-    if (!user) {
-        redirect('/login');
-    }
+        try {
+            const params = new URLSearchParams({
+                limit: limit.toString(),
+            });
 
-    const isAdmin = await isAdminUser(user.id, supabase);
-    if (!isAdmin) {
-        redirect('/');
-    }
+            if (statusFilter !== 'all') {
+                params.set('status', statusFilter);
+            }
 
-    const { data: logs, error } = await supabase
-        .from('extraction_job_log')
-        .select(
-            `
-            id,
-            event_id,
-            source_url,
-            normalized_url,
-            source_domain,
-            adapter,
-            decision,
-            status,
-            duration_ms,
-            started_at,
-            completed_at,
-            cache_hit,
-            metadata,
-            events:events(id,title)
-        `
-        )
-        .order('started_at', { ascending: false })
-        .limit(30);
+            if (searchQuery) {
+                params.set('search', searchQuery);
+            }
 
-    if (error) {
-        console.error('[AdminApiActivityPage] Failed to load extraction_job_log', error);
-    }
+            const response = await fetch(`/api/admin/activity?${params.toString()}`, {
+                credentials: 'include',
+            });
 
-    const activity = (logs ?? []) as ExtractionJobLogRow[];
+            if (!response.ok) {
+                throw new Error('Failed to fetch activity');
+            }
+
+            const data = await response.json();
+            setActivity(data.items || []);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
+        } finally {
+            setLoading(false);
+        }
+    }, [limit, statusFilter, searchQuery]);
+
+    useEffect(() => {
+        fetchActivity();
+    }, [fetchActivity]);
+
+    // Filter activity locally for search (in addition to server-side)
+    const filteredActivity = activity.filter((item) => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+            item.source_url.toLowerCase().includes(query) ||
+            item.source_domain?.toLowerCase().includes(query) ||
+            item.adapter?.toLowerCase().includes(query) ||
+            item.events?.title?.toLowerCase().includes(query) ||
+            item.id.toLowerCase().includes(query)
+        );
+    });
+
+    const statusFilters: { value: StatusFilter; label: string }[] = [
+        { value: 'all', label: 'All' },
+        { value: 'succeeded', label: 'Succeeded' },
+        { value: 'failed', label: 'Failed' },
+        { value: 'pending', label: 'Pending' },
+    ];
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-2">
                 <h1 className="text-2xl font-semibold text-slate-100">API Activity</h1>
                 <p className="text-sm text-slate-400 max-w-3xl">
-                    Review the most recent enrichment jobs hitting our ingestion APIs. This feed reflects entries from `extraction_job_log`,
-                    showing status, adapter, latency, and Firecrawl usage so you can troubleshoot quickly.
+                    Review extraction jobs hitting the ingestion APIs. Filter by status or search for specific URLs and events.
                 </p>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-4">
+                {/* Search */}
+                <div className="relative flex-1 max-w-md">
+                    <MaterialIcon
+                        name="search"
+                        size={16}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Search by URL, domain, or event..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-900 pl-10 pr-4 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-600"
+                    />
+                </div>
+
+                {/* Status Filter */}
+                <div className="flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1">
+                    {statusFilters.map((filter) => (
+                        <button
+                            key={filter.value}
+                            onClick={() => setStatusFilter(filter.value)}
+                            className={`px-3 py-1 rounded text-xs transition-colors ${statusFilter === filter.value
+                                    ? 'bg-slate-700 text-white'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                        >
+                            {filter.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Limit */}
+                <select
+                    value={limit}
+                    onChange={(e) => setLimit(Number(e.target.value))}
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+                >
+                    <option value={30}>30 items</option>
+                    <option value={50}>50 items</option>
+                    <option value={100}>100 items</option>
+                </select>
+
+                {/* Refresh */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={fetchActivity}
+                    disabled={loading}
+                    className="text-slate-400 hover:text-white"
+                >
+                    <MaterialIcon name="refresh" size={16} className={loading ? 'animate-spin' : ''} />
+                </Button>
             </div>
 
             <Card className="border border-slate-800/60 bg-slate-950/70">
                 <CardHeader>
-                    <CardTitle>Recent Extraction Jobs</CardTitle>
+                    <CardTitle className="flex items-center justify-between">
+                        <span>Extraction Jobs</span>
+                        <span className="text-sm font-normal text-slate-400">
+                            {filteredActivity.length} {filteredActivity.length === 1 ? 'result' : 'results'}
+                        </span>
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {activity.length === 0 ? (
-                        <div className="rounded-lg border border-slate-800/60 bg-slate-950/60 p-6 text-sm text-slate-400">
-                            No extraction jobs recorded yet. Once new enrichment runs are triggered you’ll see them here instantly.
+                    {loading && activity.length === 0 ? (
+                        <div className="flex items-center justify-center py-12">
+                            <MaterialIcon name="refresh" size={24} className="animate-spin text-slate-400" />
+                            <span className="ml-2 text-slate-400">Loading activity...</span>
+                        </div>
+                    ) : filteredActivity.length === 0 ? (
+                        <div className="rounded-lg border border-slate-800/60 bg-slate-950/60 p-6 text-sm text-slate-400 text-center">
+                            {searchQuery || statusFilter !== 'all'
+                                ? 'No jobs match your filters. Try adjusting your search or status filter.'
+                                : 'No extraction jobs recorded yet. Once new enrichment runs are triggered you\'ll see them here.'}
                         </div>
                     ) : (
-                        activity.map((item) => {
+                        filteredActivity.map((item) => {
                             const badgeVariant = STATUS_VARIANT[item.status?.toLowerCase()] ?? 'secondary';
                             const duration = formatDuration(item.duration_ms, item.started_at, item.completed_at);
                             const actorLabel = item.adapter ?? 'Rules-first';
@@ -138,7 +230,13 @@ export default async function AdminApiActivityPage() {
                                         <div className="flex flex-col gap-1">
                                             <span className="font-mono text-[13px] text-slate-500">{item.id}</span>
                                             <span className="text-slate-100">
-                                                {item.events?.title ?? item.source_domain ?? new URL(item.source_url).hostname}
+                                                {item.events?.title ?? item.source_domain ?? (() => {
+                                                    try {
+                                                        return new URL(item.source_url).hostname;
+                                                    } catch {
+                                                        return item.source_url;
+                                                    }
+                                                })()}
                                             </span>
                                             <a
                                                 href={item.source_url}
@@ -188,7 +286,7 @@ export default async function AdminApiActivityPage() {
 
                     {error && (
                         <p className="text-xs text-amber-400">
-                            Unable to load live data at the moment. Showing an empty state above. Check the network console for more details.
+                            Unable to load data: {error}
                         </p>
                     )}
                 </CardContent>
@@ -196,4 +294,3 @@ export default async function AdminApiActivityPage() {
         </div>
     );
 }
-

@@ -20,6 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
+import { useAdminQueueCounts } from '@/hooks/useAdminQueueCounts';
 
 type NavItem = {
     title: string;
@@ -41,6 +42,7 @@ const BASE_PATH = '/admin';
 export default function AdminSidebar() {
     const pathname = usePathname();
     const { open, toggle } = useSidebar();
+    const { counts } = useAdminQueueCounts();
 
     const sections: NavSection[] = useMemo(
         () => [
@@ -49,7 +51,7 @@ export default function AdminSidebar() {
                 items: [
                     {
                         title: 'Command Center',
-                        description: 'Today’s pipeline health',
+                        description: "Today's pipeline health",
                         href: BASE_PATH,
                         icon: <MaterialIcon name="dashboard" size={18} />,
                         exact: true,
@@ -64,7 +66,7 @@ export default function AdminSidebar() {
                         description: 'Review pending event merges',
                         href: `${BASE_PATH}/ingestion/update-queue`,
                         icon: <MaterialIcon name="refresh" size={18} />,
-                        badge: null,
+                        badge: counts?.updateQueue ?? null,
                         hotkey: 'g u',
                     },
                     {
@@ -72,7 +74,7 @@ export default function AdminSidebar() {
                         description: 'Flagged items & human review',
                         href: `${BASE_PATH}/ingestion/moderation`,
                         icon: <MaterialIcon name="warning" size={18} />,
-                        badge: null,
+                        badge: counts?.moderation ?? null,
                         hotkey: 'g m',
                     },
                     {
@@ -80,7 +82,7 @@ export default function AdminSidebar() {
                         description: 'Metadata and AI enhancements',
                         href: `${BASE_PATH}/ingestion/enrichment`,
                         icon: <MaterialIcon name="trending-up" size={18} />,
-                        badge: null,
+                        badge: counts?.enrichment ?? null,
                         hotkey: 'g e',
                     },
                     {
@@ -88,7 +90,7 @@ export default function AdminSidebar() {
                         description: 'Lock critical fields from overrides',
                         href: `${BASE_PATH}/ingestion/field-protection`,
                         icon: <MaterialIcon name="settings" size={18} />,
-                        badge: null,
+                        badge: counts?.fieldProtection ?? null,
                         hotkey: 'g f',
                     },
                 ],
@@ -111,7 +113,7 @@ export default function AdminSidebar() {
                 ],
             },
         ],
-        []
+        [counts]
     );
 
     const isActive = (item: NavItem) => {

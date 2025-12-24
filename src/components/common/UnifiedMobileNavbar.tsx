@@ -66,7 +66,7 @@ export default function UnifiedMobileNavbar({
     };
 
     const navbarContent = (
-        <Navbar className={cn(fixed && "!absolute !top-0", className)}>
+        <Navbar className={cn(fixed && "!absolute !top-0", !fixed && className)}>
             <MobileNav>
                 <MobileNavHeader>
                     {showLogo && <NavbarLogo />}
@@ -129,7 +129,7 @@ export default function UnifiedMobileNavbar({
 
     if (fixed) {
         return (
-            <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
+            <div className={cn("fixed top-0 left-0 right-0 z-50 pointer-events-none", className)}>
                 <div className="pointer-events-auto">
                     {navbarContent}
                 </div>
