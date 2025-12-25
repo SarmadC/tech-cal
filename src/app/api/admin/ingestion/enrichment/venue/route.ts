@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import { EventEnrichmentService, type VenueInput } from '@/services/ingestion/EventEnrichmentService';
 
@@ -26,7 +27,8 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const venueData = body as VenueInput;
+        // Extract venueData from body (client may send { venueId, venueData })
+        const venueData = (body.venueData || body) as VenueInput;
 
         if (!venueData.name) {
             return NextResponse.json(
@@ -35,13 +37,28 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Use service client to bypass RLS for venue creation
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         const result = await EventEnrichmentService.createOrSelectVenue(
             venueData,
             null,
-            supabase
+            serviceClient
         );
 
         if (!result.success) {
+            console.error('Venue creation failed:', result.error);
             return NextResponse.json(
                 { error: result.error || 'Failed to create venue' },
                 { status: 500 }
@@ -89,13 +106,28 @@ export async function PUT(request: NextRequest) {
             );
         }
 
+        // Use service client to bypass RLS for venue updates
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         const result = await EventEnrichmentService.createOrSelectVenue(
             venueData,
             venueId,
-            supabase
+            serviceClient
         );
 
         if (!result.success) {
+            console.error('Venue update failed:', result.error);
             return NextResponse.json(
                 { error: result.error || 'Failed to update venue' },
                 { status: 500 }

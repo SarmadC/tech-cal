@@ -1,141 +1,48 @@
 /**
  * Enrichment Editor Client Component
- * 
+ *
  * Interactive UI for enriching an event with agenda items, speakers, and organizer logo.
+ * Refactored to use section components for maintainability.
  */
 
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import Image from 'next/image';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
-import type { Database } from '@/types/supabase';
-import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
+import LogoExtractorModal from '@/components/admin/LogoExtractorModal';
+import { cn } from '@/lib/utils';
 
-const toDateTimeLocalValue = (value?: string | null) => {
-    if (!value) return '';
-    const match = value.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
-    if (match) return match[1];
+// Import section components
+import {
+    BasicInfoSection,
+    ClassificationSection,
+    TimingCapacitySection,
+    PricingSection,
+    FeaturesSection,
+    SocialVirtualSection,
+    AgendaSection,
+    SpeakersSection,
+} from '@/components/admin/enrichment/sections';
 
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    return date.toISOString().slice(0, 16);
-};
+// Import types from shared types file
+import type {
+    EventWithRelationships,
+    AgendaItemWithSpeakers,
+    LookupData,
+    CoreFieldsState,
+    RelationshipsState,
+    VenueData,
+    OrganizerData,
+    AgendaItemInput,
+    Speaker,
+} from '@/components/admin/enrichment/types';
 
-const parseDateTimeLocalValue = (value: string) => {
-    if (!value) return '';
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) {
-        return `${value}:00`;
-    }
-    return value;
-};
-
-interface Speaker {
-    id?: string;
-    name: string;
-    linkedinUrl?: string;
-    title?: string;
-    company?: string;
-    bio?: string;
-    photoUrl?: string;
-}
-
-interface AgendaItemInput {
-    title: string;
-    startTime: string;
-    endTime: string;
-    type?: string;
-    description?: string;
-    location?: string;
-    dayNumber?: number;
-    track?: string;
-    sortOrder?: number;
-    speakerIds?: string[]; // TODO: Future enhancement - allow linking speakers to specific agenda items
-    capacity?: number | null;
-    difficultyLevel?: string | null;
-    prerequisites?: string | null;
-    isRequired?: boolean | null;
-}
-
-interface LookupData {
-    eventTypes: Array<{ id: string; name: string | null; color: string | null; icon: string | null; description: string | null }>;
-    venues: Array<{ id: string; name: string; address: string | null; city: string | null; state_province: string | null; country: string | null }>;
-    eventSeries: Array<{ id: string; name: string; description: string | null; logo_url: string | null; website_url: string | null }>;
-    eventTags: Array<{ id: string; event_tag: string; category: string | null; color: string | null }>;
-    targetAudiences: Array<{ id: string; name: string; description: string | null }>;
-    prerequisites: Array<{ id: string; name: string; description: string | null }>;
-}
-
-type EventsRow = Database['public']['Tables']['events']['Row'];
-type OrganizerRow = Database['public']['Tables']['organizers']['Row'];
-type EventTypeRow = Database['public']['Tables']['event_type']['Row'];
-type VenueRow = Database['public']['Tables']['venues']['Row'];
-type EventSeriesRow = Database['public']['Tables']['event_series']['Row'];
-type EventTagRelationRow = Database['public']['Tables']['event_tag_relations']['Row'] & {
-    event_tags: Database['public']['Tables']['event_tags']['Row'] | null;
-};
-type EventAudienceRelationRow = Database['public']['Tables']['event_target_audiences']['Row'] & {
-    target_audiences: Database['public']['Tables']['target_audiences']['Row'] | null;
-};
-type EventPrerequisiteRelationRow = Database['public']['Tables']['event_prerequisites']['Row'] & {
-    prerequisites: Database['public']['Tables']['prerequisites']['Row'] | null;
-};
-type EventAgendaRow = Database['public']['Tables']['event_agenda']['Row'];
-type AgendaSpeakerRelation = Database['public']['Tables']['agenda_speakers']['Row'] & {
-    speakers: Database['public']['Tables']['speakers']['Row'] | null;
-};
-type EventFormatEnum = Database['public']['Enums']['event_format_enum'];
-type PricingTypeEnum = Database['public']['Enums']['pricing_type_enum'];
-
-export type EventWithRelationships = EventsRow & {
-    organizer?: OrganizerRow | null;
-    event_type?: EventTypeRow | null;
-    venue?: VenueRow | null;
-    series?: EventSeriesRow | null;
-    event_tag_relations?: EventTagRelationRow[] | null;
-    event_target_audiences?: EventAudienceRelationRow[] | null;
-    event_prerequisites?: EventPrerequisiteRelationRow[] | null;
-    speaker_lineup?: Speaker[] | null;
-    event_agenda?: EventAgendaRow[] | null;
-};
-
-export type AgendaItemWithSpeakers = EventAgendaRow & {
-    agenda_speakers?: AgendaSpeakerRelation[] | null;
-};
-
-interface CoreFieldsState {
-    description: string;
-    location: string;
-    timezone: string;
-    end_time: string | null;
-    language: string;
-    source_url: string;
-    registration_url: string;
-    livestream_url: string;
-    event_image_url: string;
-    agenda_url: string;
-    price_min: number | null;
-    price_max: number | null;
-    currency: string;
-    pricing_type: PricingTypeEnum | null;
-    difficulty_level: string | null;
-    event_format: EventFormatEnum | null;
-    status: string;
-    prerequisites: string;
-    target_audience: string;
-    certificate_offered: boolean;
-    recording_available: boolean;
-    accessibility_features: Record<string, unknown> | null;
-    social_media_hashtag: string;
-    virtual_platform: string;
-    capacity: number | null;
-    attendee_count: number | null;
-    registration_deadline: string | null;
-    is_multi_day: boolean;
-    daily_schedule: Record<string, unknown> | null;
-}
+// Re-export types for backward compatibility
+export type { EventWithRelationships, AgendaItemWithSpeakers };
 
 interface EnrichmentEditorClientProps {
     event: EventWithRelationships;
@@ -174,6 +81,7 @@ export default function EnrichmentEditorClient({
         description: event.description ?? '',
         location: event.location ?? '',
         timezone: event.timezone ?? '',
+        start_time: event.start_time ?? null,
         end_time: event.end_time ?? null,
         language: event.language ?? '',
         source_url: event.source_url ?? '',
@@ -203,7 +111,7 @@ export default function EnrichmentEditorClient({
     });
 
     // Relationships state
-    const [relationships, setRelationships] = useState({
+    const [relationships, setRelationships] = useState<RelationshipsState>({
         event_type_id: event.event_type?.id || null,
         venue_id: event.venue?.id || null,
         series_id: event.series?.id || null,
@@ -213,7 +121,7 @@ export default function EnrichmentEditorClient({
     });
 
     // Venue state (for creating/editing)
-    const [venueData, setVenueData] = useState({
+    const [venueData, setVenueData] = useState<VenueData>({
         name: event.venue?.name ?? '',
         address: event.venue?.address ?? '',
         city: event.venue?.city ?? '',
@@ -227,10 +135,10 @@ export default function EnrichmentEditorClient({
     const [isCreatingVenue, setIsCreatingVenue] = useState(!event.venue?.id);
 
     // Organizer state
-    const [organizerData, setOrganizerData] = useState({
+    const [organizerData, setOrganizerData] = useState<OrganizerData>({
         description: event.organizer?.description || '',
         website_url: event.organizer?.website_url || '',
-        social_media: event.organizer?.social_media || null,
+        social_media: (event.organizer?.social_media as Record<string, unknown>) || null,
     });
 
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -269,6 +177,11 @@ export default function EnrichmentEditorClient({
     // Logo upload state
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoUploading, setLogoUploading] = useState(false);
+    const [logoUploadMode, setLogoUploadMode] = useState<'manual' | 'extract'>('manual');
+    const [logoExtractorOpen, setLogoExtractorOpen] = useState(false);
+    const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(
+        event.organizer?.logo_url || null
+    );
 
     const handleAddAgendaItem = useCallback(() => {
         setAgendaItems([...agendaItems, {
@@ -318,7 +231,7 @@ export default function EnrichmentEditorClient({
 
         try {
             // Validate agenda items
-            const validItems = agendaItems.filter(item => 
+            const validItems = agendaItems.filter(item =>
                 item.title && item.startTime && item.endTime
             );
 
@@ -423,6 +336,16 @@ export default function EnrichmentEditorClient({
 
             setSuccess(true);
             setLogoFile(null);
+            // Update the current logo URL display
+            if (data.logoUrl) {
+                console.log('Setting logo URL:', data.logoUrl);
+                // Add cache-busting to force image refresh
+                const cleanUrl = data.logoUrl.split('?')[0];
+                const urlWithCache = `${cleanUrl}?t=${Date.now()}`;
+                setCurrentLogoUrl(urlWithCache);
+            } else {
+                console.warn('No logoUrl in response:', data);
+            }
             setTimeout(() => setSuccess(false), 3000);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -432,6 +355,128 @@ export default function EnrichmentEditorClient({
             setLogoUploading(false);
         }
     }, [logoFile, event.organizer]);
+
+    const handleLogoFromUrl = useCallback(async (imageUrl: string) => {
+        if (!event.organizer) {
+            setError('No organizer to attach logo to');
+            return;
+        }
+
+        setLogoUploading(true);
+        setError(null);
+        setSuccess(false);
+
+        try {
+            // Fetch the image through server-side proxy to bypass CSP
+            const fetchResponse = await fetch('/api/admin/ingestion/enrichment/fetch-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl }),
+            });
+
+            const fetchData = await fetchResponse.json();
+
+            if (!fetchResponse.ok) {
+                throw new Error(fetchData.error || 'Failed to fetch image from URL');
+            }
+
+            // Validate fetch response data
+            if (!fetchData.imageData || !fetchData.contentType || !fetchData.filename) {
+                throw new Error('Invalid response from image fetch: missing required fields');
+            }
+
+            // Convert base64 back to blob
+            let binaryString: string;
+            try {
+                binaryString = atob(fetchData.imageData);
+            } catch (err) {
+                throw new Error('Failed to decode base64 image data');
+            }
+
+            if (binaryString.length === 0) {
+                throw new Error('Decoded image data is empty');
+            }
+
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const blob = new Blob([bytes], { type: fetchData.contentType });
+            
+            // Validate blob size
+            if (blob.size === 0) {
+                throw new Error('Blob size is 0 bytes');
+            }
+
+            // Create File object with proper properties
+            const file = new File([blob], fetchData.filename, { 
+                type: fetchData.contentType,
+                lastModified: Date.now(),
+            });
+
+            // Validate file object
+            if (file.size === 0) {
+                throw new Error('File size is 0 bytes after creation');
+            }
+
+            if (!file.type || !file.type.startsWith('image/')) {
+                console.warn('File type may be invalid:', file.type);
+            }
+
+            console.log('Created file for upload:', {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+            });
+
+            // Upload to Supabase
+            const formData = new FormData();
+            formData.append('organizerId', event.organizer.id);
+            formData.append('file', file);
+
+            const uploadResponse = await fetch('/api/admin/ingestion/enrichment/logo', {
+                method: 'POST',
+                body: formData,
+            });
+
+            let data;
+            try {
+                data = await uploadResponse.json();
+            } catch (parseError) {
+                console.error('Failed to parse upload response:', parseError);
+                throw new Error(`Failed to upload logo: Invalid response from server (${uploadResponse.status})`);
+            }
+
+            if (!uploadResponse.ok) {
+                const errorMessage = data?.error || `Failed to upload logo: HTTP ${uploadResponse.status}`;
+                console.error('Logo upload failed:', {
+                    status: uploadResponse.status,
+                    error: errorMessage,
+                    data,
+                });
+                throw new Error(errorMessage);
+            }
+
+            setSuccess(true);
+            if (data.logoUrl) {
+                console.log('Setting logo URL:', data.logoUrl);
+                // Add cache-busting to force image refresh
+                const cleanUrl = data.logoUrl.split('?')[0];
+                const urlWithCache = `${cleanUrl}?t=${Date.now()}`;
+                setCurrentLogoUrl(urlWithCache);
+            } else {
+                console.warn('No logoUrl in response:', data);
+            }
+            setTimeout(() => setSuccess(false), 3000);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            setError(errorMessage);
+            Sentry.captureException(err);
+        } finally {
+            setLogoUploading(false);
+        }
+    }, [event.organizer]);
 
     const handleSaveCoreFields = useCallback(async () => {
         setLoading(true);
@@ -522,306 +567,41 @@ export default function EnrichmentEditorClient({
             )}
 
             {/* Basic Information Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Basic Information</CardTitle>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSection('basicInfo')}
-                        >
-                            {expandedSections.basicInfo ? 'Collapse' : 'Expand'}
-                        </Button>
-                    </div>
-                </CardHeader>
-                {expandedSections.basicInfo && (
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <textarea
-                                placeholder="Description"
-                                value={coreFields.description}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, description: e.target.value }))}
-                                className="w-full px-3 py-2 border rounded"
-                                rows={4}
-                            />
-                            <div className="flex justify-end">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setIsDescriptionExpanded(true)}
-                                    aria-haspopup="dialog"
-                                >
-                                    Expand editor
-                                </Button>
-                            </div>
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Location"
-                            value={coreFields.location}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, location: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="text"
-                            placeholder="Timezone (e.g., America/New_York)"
-                            value={coreFields.timezone}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, timezone: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="datetime-local"
-                            placeholder="End Time"
-                            value={toDateTimeLocalValue(coreFields.end_time)}
-                            onChange={(e) => {
-                                const next = parseDateTimeLocalValue(e.target.value);
-                                setCoreFields(prev => ({ ...prev, end_time: next || null }));
-                            }}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="text"
-                            placeholder="Language"
-                            value={coreFields.language}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, language: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                    </CardContent>
-                )}
-            </Card>
+            <BasicInfoSection
+                expanded={expandedSections.basicInfo}
+                onToggle={() => toggleSection('basicInfo')}
+                coreFields={coreFields}
+                setCoreFields={setCoreFields}
+                onExpandDescription={() => setIsDescriptionExpanded(true)}
+            />
 
             {/* Event Classification Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Event Classification</CardTitle>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSection('classification')}
-                        >
-                            {expandedSections.classification ? 'Collapse' : 'Expand'}
-                        </Button>
-                    </div>
-                </CardHeader>
-                {expandedSections.classification && (
-                    <CardContent className="space-y-4">
-                        <select
-                            value={relationships.event_type_id || ''}
-                            onChange={(e) => setRelationships(prev => ({ ...prev, event_type_id: e.target.value || null }))}
-                            className="w-full px-3 py-2 border rounded"
-                        >
-                            <option value="">Select Event Type</option>
-                            {lookupData.eventTypes.map(type => (
-                                <option key={type.id} value={type.id}>{type.name}</option>
-                            ))}
-                        </select>
-                        <select
-                            value={coreFields.event_format || ''}
-                            onChange={(e) => {
-                                const value = e.target.value as EventFormatEnum | '';
-                                setCoreFields(prev => ({
-                                    ...prev,
-                                    event_format: value ? (value as EventFormatEnum) : null,
-                                }));
-                            }}
-                            className="w-full px-3 py-2 border rounded"
-                        >
-                            <option value="">Select Format</option>
-                            <option value="Online">Online</option>
-                            <option value="In-person">In-person</option>
-                            <option value="Hybrid">Hybrid</option>
-                        </select>
-                        <input
-                            type="text"
-                            placeholder="Status (free-form)"
-                            value={coreFields.status}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, status: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <select
-                            value={coreFields.difficulty_level || ''}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, difficulty_level: e.target.value || null }))}
-                            className="w-full px-3 py-2 border rounded"
-                        >
-                            <option value="">Select Difficulty</option>
-                            <option value="beginner">Beginner</option>
-                            <option value="intermediate">Intermediate</option>
-                            <option value="advanced">Advanced</option>
-                        </select>
-                        <MultiSelectDropdown
-                            label="Tags"
-                            placeholder="Select tags..."
-                            options={lookupData.eventTags.map(tag => ({
-                                value: tag.id,
-                                label: tag.event_tag,
-                                category: tag.category ?? undefined,
-                            }))}
-                            selectedValues={relationships.tagIds}
-                            onChange={(values) => setRelationships(prev => ({ ...prev, tagIds: values }))}
-                        />
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Target Audiences (multi-select + free-form)</label>
-                            <select
-                                multiple
-                                value={relationships.audienceIds}
-                                onChange={(e) => {
-                                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                    setRelationships(prev => ({ ...prev, audienceIds: selected }));
-                                }}
-                                className="w-full px-3 py-2 border rounded mb-2 min-h-[80px]"
-                            >
-                                {lookupData.targetAudiences.map(audience => (
-                                    <option key={audience.id} value={audience.id}>{audience.name}</option>
-                                ))}
-                            </select>
-                            <textarea
-                                placeholder="Target Audience (free-form text - can be used alongside selections above)"
-                                value={coreFields.target_audience}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, target_audience: e.target.value }))}
-                                className="w-full px-3 py-2 border rounded"
-                                rows={2}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Prerequisites (multi-select + free-form)</label>
-                            <select
-                                multiple
-                                value={relationships.prerequisiteIds}
-                                onChange={(e) => {
-                                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                                    setRelationships(prev => ({ ...prev, prerequisiteIds: selected }));
-                                }}
-                                className="w-full px-3 py-2 border rounded mb-2 min-h-[80px]"
-                            >
-                                {lookupData.prerequisites.map(prereq => (
-                                    <option key={prereq.id} value={prereq.id}>{prereq.name}</option>
-                                ))}
-                            </select>
-                            <textarea
-                                placeholder="Prerequisites (free-form text - can be used alongside selections above)"
-                                value={coreFields.prerequisites}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, prerequisites: e.target.value }))}
-                                className="w-full px-3 py-2 border rounded"
-                                rows={2}
-                            />
-                        </div>
-                    </CardContent>
-                )}
-            </Card>
+            <ClassificationSection
+                expanded={expandedSections.classification}
+                onToggle={() => toggleSection('classification')}
+                coreFields={coreFields}
+                setCoreFields={setCoreFields}
+                relationships={relationships}
+                setRelationships={setRelationships}
+                lookupData={lookupData}
+                eventTagRelations={event.event_tag_relations ?? null}
+            />
 
             {/* Timing & Capacity Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Timing & Capacity</CardTitle>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSection('timingCapacity')}
-                        >
-                            {expandedSections.timingCapacity ? 'Collapse' : 'Expand'}
-                        </Button>
-                    </div>
-                </CardHeader>
-                {expandedSections.timingCapacity && (
-                    <CardContent className="space-y-4">
-                        <input
-                            type="datetime-local"
-                            placeholder="Registration Deadline"
-                            value={toDateTimeLocalValue(coreFields.registration_deadline)}
-                            onChange={(e) => {
-                                const next = parseDateTimeLocalValue(e.target.value);
-                                setCoreFields(prev => ({ ...prev, registration_deadline: next || null }));
-                            }}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="number"
-                            placeholder="Capacity"
-                            value={coreFields.capacity ?? ''}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, capacity: e.target.value ? parseInt(e.target.value) : null }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="number"
-                            placeholder="Attendee Count (read-only)"
-                            value={coreFields.attendee_count ?? ''}
-                            disabled
-                            className="w-full px-3 py-2 border rounded bg-gray-100"
-                        />
-                        <label className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
-                                checked={coreFields.is_multi_day}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, is_multi_day: e.target.checked }))}
-                            />
-                            <span>Is Multi-day Event</span>
-                        </label>
-                    </CardContent>
-                )}
-            </Card>
+            <TimingCapacitySection
+                expanded={expandedSections.timingCapacity}
+                onToggle={() => toggleSection('timingCapacity')}
+                coreFields={coreFields}
+                setCoreFields={setCoreFields}
+            />
 
             {/* Pricing Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Pricing</CardTitle>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSection('pricing')}
-                        >
-                            {expandedSections.pricing ? 'Collapse' : 'Expand'}
-                        </Button>
-                    </div>
-                </CardHeader>
-                {expandedSections.pricing && (
-                    <CardContent className="space-y-4">
-                        <select
-                            value={coreFields.pricing_type || ''}
-                            onChange={(e) => {
-                                const value = e.target.value as PricingTypeEnum | '';
-                                setCoreFields(prev => ({
-                                    ...prev,
-                                    pricing_type: value ? (value as PricingTypeEnum) : null,
-                                }));
-                            }}
-                            className="w-full px-3 py-2 border rounded"
-                        >
-                            <option value="">Select Pricing Type</option>
-                            <option value="Free">Free</option>
-                            <option value="Paid">Paid</option>
-                            <option value="Varies">Varies</option>
-                        </select>
-                        <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Price Min"
-                            value={coreFields.price_min ?? ''}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, price_min: e.target.value ? parseFloat(e.target.value) : null }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Price Max"
-                            value={coreFields.price_max ?? ''}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, price_max: e.target.value ? parseFloat(e.target.value) : null }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="text"
-                            placeholder="Currency (ISO 4217, e.g., USD)"
-                            value={coreFields.currency}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, currency: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                    </CardContent>
-                )}
-            </Card>
+            <PricingSection
+                expanded={expandedSections.pricing}
+                onToggle={() => toggleSection('pricing')}
+                coreFields={coreFields}
+                setCoreFields={setCoreFields}
+            />
 
             {/* URLs & Media Section */}
             <Card>
@@ -905,91 +685,20 @@ export default function EnrichmentEditorClient({
             </Card>
 
             {/* Features Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Features</CardTitle>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSection('features')}
-                        >
-                            {expandedSections.features ? 'Collapse' : 'Expand'}
-                        </Button>
-                    </div>
-                </CardHeader>
-                {expandedSections.features && (
-                    <CardContent className="space-y-4">
-                        <label className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
-                                checked={coreFields.certificate_offered}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, certificate_offered: e.target.checked }))}
-                            />
-                            <span>Certificate Offered</span>
-                        </label>
-                        <label className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
-                                checked={coreFields.recording_available}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, recording_available: e.target.checked }))}
-                            />
-                            <span>Recording Available</span>
-                        </label>
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Accessibility Features (JSON)</label>
-                            <textarea
-                                placeholder='{"wheelchair_accessible": true, "sign_language": false}'
-                                value={coreFields.accessibility_features ? JSON.stringify(coreFields.accessibility_features, null, 2) : ''}
-                                onChange={(e) => {
-                                    try {
-                                        const parsed = e.target.value ? JSON.parse(e.target.value) : null;
-                                        setCoreFields(prev => ({ ...prev, accessibility_features: parsed }));
-                                    } catch {
-                                        // Invalid JSON, keep as is
-                                    }
-                                }}
-                                className="w-full px-3 py-2 border rounded font-mono text-sm"
-                                rows={4}
-                            />
-                        </div>
-                    </CardContent>
-                )}
-            </Card>
+            <FeaturesSection
+                expanded={expandedSections.features}
+                onToggle={() => toggleSection('features')}
+                coreFields={coreFields}
+                setCoreFields={setCoreFields}
+            />
 
             {/* Social & Virtual Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Social & Virtual</CardTitle>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSection('socialVirtual')}
-                        >
-                            {expandedSections.socialVirtual ? 'Collapse' : 'Expand'}
-                        </Button>
-                    </div>
-                </CardHeader>
-                {expandedSections.socialVirtual && (
-                    <CardContent className="space-y-4">
-                        <input
-                            type="text"
-                            placeholder="Social Media Hashtag"
-                            value={coreFields.social_media_hashtag}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, social_media_hashtag: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="text"
-                            placeholder="Virtual Platform"
-                            value={coreFields.virtual_platform}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, virtual_platform: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                    </CardContent>
-                )}
-            </Card>
+            <SocialVirtualSection
+                expanded={expandedSections.socialVirtual}
+                onToggle={() => toggleSection('socialVirtual')}
+                coreFields={coreFields}
+                setCoreFields={setCoreFields}
+            />
 
             {/* Save All Button */}
             <Card>
@@ -1006,218 +715,24 @@ export default function EnrichmentEditorClient({
             </Card>
 
             {/* Agenda Items Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Agenda Items</CardTitle>
-                            <CardDescription>
-                                Add agenda items with times, descriptions, and speakers
-                            </CardDescription>
-                        </div>
-                        <Button onClick={handleAddAgendaItem} size="sm">
-                            Add Item
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {agendaItems.map((item, index) => (
-                            <div key={index} className="border rounded-lg p-4 space-y-3">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input
-                                        type="text"
-                                        placeholder="Title"
-                                        value={item.title}
-                                        onChange={(e) => handleUpdateAgendaItem(index, { title: e.target.value })}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                    <select
-                                        value={item.type}
-                                        onChange={(e) => handleUpdateAgendaItem(index, { type: e.target.value })}
-                                        className="px-3 py-2 border rounded"
-                                    >
-                                        <option value="keynote">Keynote</option>
-                                        <option value="session">Session</option>
-                                        <option value="workshop">Workshop</option>
-                                        <option value="panel">Panel</option>
-                                        <option value="break">Break</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input
-                                        type="datetime-local"
-                                        placeholder="Start Time"
-                                        value={toDateTimeLocalValue(item.startTime)}
-                                        onChange={(e) => handleUpdateAgendaItem(index, { startTime: parseDateTimeLocalValue(e.target.value) })}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                    <input
-                                        type="datetime-local"
-                                        placeholder="End Time"
-                                        value={toDateTimeLocalValue(item.endTime)}
-                                        onChange={(e) => handleUpdateAgendaItem(index, { endTime: parseDateTimeLocalValue(e.target.value) })}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                </div>
-                                <textarea
-                                    placeholder="Description (optional)"
-                                    value={item.description || ''}
-                                    onChange={(e) => handleUpdateAgendaItem(index, { description: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded"
-                                    rows={2}
-                                />
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input
-                                        type="number"
-                                        placeholder="Capacity"
-                                        value={item.capacity ?? ''}
-                                        onChange={(e) => handleUpdateAgendaItem(index, { capacity: e.target.value ? parseInt(e.target.value) : null })}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                    <select
-                                        value={item.difficultyLevel || ''}
-                                        onChange={(e) => handleUpdateAgendaItem(index, { difficultyLevel: e.target.value || null })}
-                                        className="px-3 py-2 border rounded"
-                                    >
-                                        <option value="">Difficulty Level</option>
-                                        <option value="beginner">Beginner</option>
-                                        <option value="intermediate">Intermediate</option>
-                                        <option value="advanced">Advanced</option>
-                                    </select>
-                                </div>
-                                <textarea
-                                    placeholder="Prerequisites (optional)"
-                                    value={item.prerequisites || ''}
-                                    onChange={(e) => handleUpdateAgendaItem(index, { prerequisites: e.target.value || null })}
-                                    className="w-full px-3 py-2 border rounded"
-                                    rows={2}
-                                />
-                                <label className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={item.isRequired || false}
-                                        onChange={(e) => handleUpdateAgendaItem(index, { isRequired: e.target.checked })}
-                                    />
-                                    <span>Is Required</span>
-                                </label>
-                                <div className="flex justify-end">
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => handleRemoveAgendaItem(index)}
-                                    >
-                                        Remove
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                        {agendaItems.length === 0 && (
-                            <p className="text-muted-foreground text-center py-4">
-                                No agenda items yet. Add an item to get started.
-                            </p>
-                        )}
-                    </div>
-                    <div className="mt-4">
-                        <Button
-                            onClick={handleSaveAgenda}
-                            disabled={loading}
-                            className="w-full"
-                        >
-                            {loading ? 'Saving...' : 'Save Agenda Items'}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+            <AgendaSection
+                agendaItems={agendaItems}
+                onAdd={handleAddAgendaItem}
+                onUpdate={handleUpdateAgendaItem}
+                onRemove={handleRemoveAgendaItem}
+                onSave={handleSaveAgenda}
+                loading={loading}
+            />
 
             {/* Speakers Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Speakers</CardTitle>
-                            <CardDescription>
-                                Add speakers with LinkedIn URLs and other details
-                            </CardDescription>
-                        </div>
-                        <Button onClick={handleAddSpeaker} size="sm">
-                            Add Speaker
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {speakers.map((speaker, index) => (
-                            <div key={index} className="border rounded-lg p-4 space-y-3">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input
-                                        type="text"
-                                        placeholder="Speaker Name *"
-                                        value={speaker.name}
-                                        onChange={(e) => handleUpdateSpeaker(index, { name: e.target.value })}
-                                        className="px-3 py-2 border rounded"
-                                        required
-                                    />
-                                    <input
-                                        type="url"
-                                        placeholder="LinkedIn URL"
-                                        value={speaker.linkedinUrl || ''}
-                                        onChange={(e) => handleUpdateSpeaker(index, { linkedinUrl: e.target.value })}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input
-                                        type="text"
-                                        placeholder="Title (optional)"
-                                        value={speaker.title || ''}
-                                        onChange={(e) => handleUpdateSpeaker(index, { title: e.target.value })}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Company (optional)"
-                                        value={speaker.company || ''}
-                                        onChange={(e) => handleUpdateSpeaker(index, { company: e.target.value })}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                </div>
-                                <textarea
-                                    placeholder="Bio (optional)"
-                                    value={speaker.bio || ''}
-                                    onChange={(e) => handleUpdateSpeaker(index, { bio: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded"
-                                    rows={2}
-                                />
-                                <div className="flex justify-end">
-                                    <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => handleRemoveSpeaker(index)}
-                                    >
-                                        Remove
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                        {speakers.length === 0 && (
-                            <p className="text-muted-foreground text-center py-4">
-                                No speakers yet. Add a speaker to get started.
-                            </p>
-                        )}
-                    </div>
-                    <div className="mt-4">
-                        <Button
-                            onClick={handleSaveSpeakers}
-                            disabled={loading}
-                            className="w-full"
-                        >
-                            {loading ? 'Saving...' : 'Save Speakers'}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+            <SpeakersSection
+                speakers={speakers}
+                onAdd={handleAddSpeaker}
+                onUpdate={handleUpdateSpeaker}
+                onRemove={handleRemoveSpeaker}
+                onSave={handleSaveSpeakers}
+                loading={loading}
+            />
 
             {/* Venue Section */}
             <Card>
@@ -1450,27 +965,103 @@ export default function EnrichmentEditorClient({
                                     rows={4}
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Logo</label>
-                                <input
-                                    type="file"
-                                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                                    className="w-full"
-                                />
-                                {event.organizer.logo_url && (
-                                    <p className="text-sm text-muted-foreground mt-2">
-                                        Current logo: {event.organizer.logo_url}
-                                    </p>
+
+                            {/* Enhanced Logo Section */}
+                            <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+                                <label className="block text-sm font-semibold text-slate-200 mb-3">
+                                    Organizer Logo
+                                </label>
+
+                                {/* Current Logo Preview */}
+                                {currentLogoUrl && (
+                                    <div className="mb-4 flex items-center gap-4 rounded-lg border border-slate-700 bg-slate-800/50 p-3">
+                                        <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-slate-600 bg-white">
+                                            <Image
+                                                key={currentLogoUrl}
+                                                src={
+                                                    currentLogoUrl.startsWith('http') 
+                                                        ? currentLogoUrl 
+                                                        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logos/${currentLogoUrl}`
+                                                }
+                                                alt="Current logo"
+                                                fill
+                                                className="object-contain p-1"
+                                                unoptimized
+                                                onError={(e) => {
+                                                    console.error('Failed to load logo:', currentLogoUrl);
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-slate-200">Current Logo</p>
+                                            <p className="max-w-[300px] truncate text-xs text-slate-400">
+                                                {currentLogoUrl}
+                                            </p>
+                                        </div>
+                                    </div>
                                 )}
-                                <Button
-                                    onClick={handleUploadLogo}
-                                    disabled={!logoFile || logoUploading}
-                                    className="w-full mt-2"
-                                >
-                                    {logoUploading ? 'Uploading...' : 'Upload Logo'}
-                                </Button>
+
+                                {/* Upload Mode Tabs */}
+                                <div className="mb-4 flex gap-1 rounded-lg bg-slate-800 p-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setLogoUploadMode('manual')}
+                                        className={cn(
+                                            'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                                            logoUploadMode === 'manual'
+                                                ? 'bg-slate-700 text-slate-100'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                        )}
+                                    >
+                                        Manual Upload
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setLogoUploadMode('extract')}
+                                        className={cn(
+                                            'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                                            logoUploadMode === 'extract'
+                                                ? 'bg-slate-700 text-slate-100'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                        )}
+                                    >
+                                        Extract from URL
+                                    </button>
+                                </div>
+
+                                {logoUploadMode === 'manual' ? (
+                                    <div className="space-y-3">
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                                            onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                                            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 file:mr-3 file:rounded file:border-0 file:bg-slate-600 file:px-3 file:py-1 file:text-sm file:text-slate-100"
+                                        />
+                                        <Button
+                                            onClick={handleUploadLogo}
+                                            disabled={!logoFile || logoUploading}
+                                            className="w-full"
+                                        >
+                                            {logoUploading ? 'Uploading...' : 'Upload Logo'}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        <p className="text-xs text-slate-400">
+                                            Extract logos from an event or company website. We&apos;ll scan the page for images and let you pick the best one.
+                                        </p>
+                                        <Button
+                                            onClick={() => setLogoExtractorOpen(true)}
+                                            disabled={logoUploading}
+                                            variant="secondary"
+                                            className="w-full"
+                                        >
+                                            {logoUploading ? 'Processing...' : 'Open Logo Extractor'}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
+
                             <Button
                                 onClick={async () => {
                                     const response = await fetch('/api/admin/ingestion/enrichment/organizer', {
@@ -1497,6 +1088,14 @@ export default function EnrichmentEditorClient({
                     )}
                 </Card>
             )}
+
+            {/* Logo Extractor Modal */}
+            <LogoExtractorModal
+                isOpen={logoExtractorOpen}
+                onClose={() => setLogoExtractorOpen(false)}
+                onSelect={handleLogoFromUrl}
+                initialUrl={coreFields.source_url}
+            />
 
             {/* Back Button */}
             <div className="flex justify-end">

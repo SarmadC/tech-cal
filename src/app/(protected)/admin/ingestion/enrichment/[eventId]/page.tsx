@@ -73,7 +73,7 @@ export default async function EnrichmentEditorPage({
             series:event_series(id, name, description, logo_url, website_url),
             event_tag_relations(
                 tag_id,
-                event_tags(id, event_tag, category, color)
+                event_tags(id, event_tag, category)
             ),
             event_target_audiences(
                 audience_id,
@@ -89,7 +89,15 @@ export default async function EnrichmentEditorPage({
         .eq('id', eventId)
         .single();
 
-    if (error || !event) {
+    if (error) {
+        console.error('Error fetching event:', error);
+        console.error('Event ID:', eventId);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        notFound();
+    }
+
+    if (!event) {
+        console.error('Event not found for ID:', eventId);
         notFound();
     }
 

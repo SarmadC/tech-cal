@@ -144,6 +144,11 @@ const MobileCalendarMonthView: React.FC<MobileCalendarMonthViewProps> = ({
                                         } as unknown as React.MouseEvent<HTMLDivElement>;
                                         handleEventClick(event, syntheticEvent);
                                     }}
+                                    onDetailsClick={() => {
+                                        setPreviewEvent(event);
+                                        _setIsPreviewVisible(true);
+                                        onEventSelect?.(event);
+                                    }}
                                     showCareerImpact={true}
                                     variant="compact"
                                     className="mb-3"

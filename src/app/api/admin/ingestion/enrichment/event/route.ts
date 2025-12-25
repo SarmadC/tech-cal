@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import { EventEnrichmentService, type EventCoreFieldsInput, type EventRelationshipsInput } from '@/services/ingestion/EventEnrichmentService';
 
@@ -38,16 +39,31 @@ export async function PUT(request: NextRequest) {
             );
         }
 
+        // Use service client to bypass RLS for all database operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         // Update core fields if provided
         if (coreFields) {
             const coreResult = await EventEnrichmentService.updateEventCoreFields(
                 eventId,
                 coreFields,
-                supabase,
+                serviceClient,
                 user.id
             );
 
             if (!coreResult.success) {
+                console.error('Failed to update core fields:', coreResult.error);
                 return NextResponse.json(
                     { error: coreResult.error || 'Failed to update core fields' },
                     { status: 500 }
@@ -60,11 +76,12 @@ export async function PUT(request: NextRequest) {
             const relResult = await EventEnrichmentService.manageEventRelationships(
                 eventId,
                 relationships,
-                supabase,
+                serviceClient,
                 user.id
             );
 
             if (!relResult.success) {
+                console.error('Failed to update relationships:', relResult.error);
                 return NextResponse.json(
                     { error: relResult.error || 'Failed to update relationships' },
                     { status: 500 }

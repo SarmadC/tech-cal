@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
 import * as Sentry from '@sentry/nextjs';
+import pLimit from 'p-limit';
 import type { SupabaseClientType, Json } from '@/types';
 import {
     type EnrichmentMetadata,
@@ -20,6 +21,7 @@ import type { FieldDiff } from './EventUpdateService';
 
 const CONTENT_LIMIT = 100_000; // ~100KB
 const MAX_RETRIES = 3;
+const CONCURRENT_LIMIT = 5; // Limit concurrent LLM API calls
 
 type EventRow = {
     id: string;
@@ -86,13 +88,14 @@ export class LLMEnrichmentService {
     async processBatch(limit = 10): Promise<EnrichmentBatchResult> {
         await this.resetStuckProcessing();
         const events = await this.fetchPendingEvents(limit);
-        const results: EnrichmentJobResult[] = [];
 
-        for (const event of events) {
-            // eslint-disable-next-line no-await-in-loop
-            const result = await this.processEvent(event.id);
-            results.push(result);
-        }
+        // Process events in parallel with concurrency limit
+        const concurrencyLimiter = pLimit(CONCURRENT_LIMIT);
+        const results = await Promise.all(
+            events.map((event) =>
+                concurrencyLimiter(() => this.processEvent(event.id))
+            )
+        );
 
         const succeeded = results.filter(r => r.status === 'enriched').length;
         const failed = results.length - succeeded;
@@ -641,13 +644,14 @@ export class LLMEnrichmentService {
      */
     async processInferenceBatch(limit = 20): Promise<EnrichmentBatchResult> {
         const events = await this.fetchEventsForInference(limit);
-        const results: EnrichmentJobResult[] = [];
 
-        for (const event of events) {
-            // eslint-disable-next-line no-await-in-loop
-            const result = await this.processEventInference(event.id);
-            results.push(result);
-        }
+        // Process events in parallel with concurrency limit
+        const concurrencyLimiter = pLimit(CONCURRENT_LIMIT);
+        const results = await Promise.all(
+            events.map((event) =>
+                concurrencyLimiter(() => this.processEventInference(event.id))
+            )
+        );
 
         const succeeded = results.filter(r => r.status === 'enriched').length;
         const failed = results.length - succeeded;

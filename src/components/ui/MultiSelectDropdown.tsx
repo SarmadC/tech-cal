@@ -85,8 +85,9 @@ export default function MultiSelectDropdown({
 
   const handleToggle = () => {
     if (disabled) return;
-    setIsOpen(!isOpen);
-    if (!isOpen && searchable) {
+    const newIsOpen = !isOpen;
+    setIsOpen(newIsOpen);
+    if (newIsOpen && searchable) {
       setTimeout(() => searchRef.current?.focus(), 0);
     }
   };
@@ -354,23 +355,7 @@ export default function MultiSelectDropdown({
         aria-label={label || placeholder}
         aria-describedby={description ? `${label}-description` : undefined}
         tabIndex={disabled ? -1 : 0}
-        className="relative w-full px-4 py-2 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1"
-        style={{
-          borderColor: 'var(--border-default)',
-          borderWidth: '1px',
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          ...(isOpen && { borderColor: 'var(--accent-primary)' })
-        }}
-        onMouseEnter={(e) => {
-          if (!disabled && !isOpen) {
-            e.currentTarget.style.borderColor = 'var(--border-strong)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!disabled && !isOpen) {
-            e.currentTarget.style.borderColor = 'var(--border-default)';
-          }
-        }}
+        className="w-full px-3 py-2 border rounded cursor-pointer"
         onClick={handleToggle}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -391,12 +376,12 @@ export default function MultiSelectDropdown({
         }}
       >
         <div className="flex items-center justify-between">
-          <span className="opacity-80">
+          <span>
             {selectedValues.length === 0 ? placeholder : `${selectedValues.length} selected`}
           </span>
           <CaretDown 
             size={16} 
-            className={`transition-transform opacity-60 ${isOpen ? 'rotate-180' : ''}`}
+            className={isOpen ? 'rotate-180' : ''}
           />
         </div>
       </div>
@@ -407,11 +392,15 @@ export default function MultiSelectDropdown({
           ref={listboxRef}
           role="listbox"
           aria-label={`${label || 'Options'} selection`}
-          className="absolute z-50 w-full mt-1 rounded-lg max-h-60 overflow-hidden glass-card"
-          style={{ backdropFilter: 'blur(24px)' }}
+          className="absolute z-[9999] w-full mt-1 rounded-lg max-h-60 overflow-hidden shadow-2xl"
+          style={{ 
+            backdropFilter: 'blur(24px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+          }}
         >
           {searchable && (
-            <div className="p-2" style={{ borderBottomColor: 'var(--border-default)', borderBottomWidth: '1px', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+            <div className="p-2 border-b">
               <input
                 ref={searchRef}
                 type="text"
@@ -424,14 +413,13 @@ export default function MultiSelectDropdown({
                     handleRemove(selectedValues[selectedValues.length - 1]);
                   }
                 }}
-                className="w-full px-3 py-2 text-sm rounded focus:outline-none focus:ring-1 focus:ring-white"
-                style={{ borderColor: 'var(--border-default)', borderWidth: '1px', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                className="w-full px-3 py-2 border rounded"
                 aria-label="Search options"
               />
             </div>
           )}
           
-          <div className="max-h-48 overflow-y-auto" role="group">
+          <div className="max-h-48 overflow-y-auto overflow-x-visible" role="group">
             {filteredOptions.length === 0 ? (
               <>
                 {allowCustom && searchTerm.trim() ? (

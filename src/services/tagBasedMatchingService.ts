@@ -474,7 +474,7 @@ export class TagBasedMatchingService {
             event_type:event_type_id!inner(*),
             organizer:organizers (*),
             tags:event_tag_relations (
-              event_tags (event_tag, category, color)
+              event_tags (event_tag, category)
             ),
             event_agenda (
               id, title, description, start_time, end_time, agenda_type
@@ -505,7 +505,7 @@ export class TagBasedMatchingService {
         event_type:event_type_id!inner(*),
         organizer:organizers (*),
         tags:event_tag_relations (
-          event_tags (event_tag, category, color)
+          event_tags (event_tag, category)
         ),
         event_agenda (
           id, title, description, start_time, end_time, agenda_type
@@ -712,7 +712,7 @@ export class TagBasedMatchingService {
         event_type:event_type_id!inner(*),
         organizer:organizers (*),
         tags:event_tag_relations (
-          event_tags (event_tag, category, color)
+          event_tags (event_tag, category)
         ),
         event_agenda (
           id, title, description, start_time, end_time, agenda_type
@@ -974,7 +974,7 @@ export class TagBasedMatchingService {
         event_type:event_type_id!inner(*),
         organizer:organizers (*),
         tags:event_tag_relations (
-          event_tags (event_tag, category, color)
+          event_tags (event_tag, category)
         ),
         event_agenda (
           id, title, description, start_time, end_time, agenda_type
@@ -1109,7 +1109,7 @@ export class TagBasedMatchingService {
         event_type:event_type_id!inner(*),
         organizer:organizers (*),
         tags:event_tag_relations (
-          event_tags (event_tag, category, color)
+          event_tags (event_tag, category)
         ),
         event_agenda (
           id, title, description, start_time, end_time, agenda_type
@@ -1211,7 +1211,7 @@ export class TagBasedMatchingService {
 
   private static normalizeSupabaseEvent(event: Record<string, unknown>): SupabaseEventWithDetails {
     const relations = Array.isArray(event.tags)
-      ? (event.tags as Array<{ event_tags?: { id: string; event_tag: string; color?: string | null; category?: string | null } | null }>)
+      ? (event.tags as Array<{ event_tags?: { id: string; event_tag: string; category?: string | null } | null }>)
       : [];
 
     const normalizedTags: EventTag[] = relations.flatMap((relation) => {
@@ -1220,7 +1220,7 @@ export class TagBasedMatchingService {
       return [{
         id: tag.id,
         name: tag.event_tag,
-        color: tag.color || '#6b7280',
+        color: '#6b7280', // Default color since color column was removed from event_tags
         category: tag.category || 'General'
       }];
     });

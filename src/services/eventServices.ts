@@ -228,7 +228,7 @@ export class EventService {
         const tagIds = tagRelations.map(rel => rel.tag_id);
         const { data: tags } = await supabaseClient
             .from('event_tags')
-            .select('id, event_tag, color, category')
+            .select('id, event_tag, category')
             .in('id', tagIds);
 
         // Create a map of event_id to tags
@@ -242,7 +242,7 @@ export class EventService {
                 eventTagsMap.get(rel.event_id).push({
                     id: tag.id,
                     name: tag.event_tag,
-                    color: tag.color || '#6b7280',
+                    color: '#6b7280', // Default color since color column was removed from event_tags
                     category: tag.category || 'General'
                 });
             }
@@ -1748,7 +1748,7 @@ export class EventService {
                     event_type:event_type_id (*),
                     organizer:organizers (*),
                     tags:event_tag_relations (
-                        event_tags (event_tag, category, color)
+                        event_tags (event_tag, category)
                     )
                 `)
                 .in('tags.event_tags.event_tag', tagNames)

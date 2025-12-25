@@ -60,7 +60,9 @@
       "Bash(ls:*)",
       "Bash(1)",
       "Bash(grep:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(REFRESH_ALL=1 npx tsx:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

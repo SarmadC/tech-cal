@@ -38,6 +38,7 @@ export interface EventCoreFieldsInput {
     description?: string | null;
     location?: string | null;
     timezone?: string | null;
+    start_time?: string | null;
     end_time?: string | null;
     language?: string | null;
     registration_url?: string | null;
@@ -327,7 +328,7 @@ export class EventEnrichmentService {
         organizerId: string,
         file: File,
         supabaseClient: SupabaseClientType
-    ): Promise<{ success: boolean; logoUrl?: string; error?: string }> {
+    ): Promise<{ success: boolean; logoUrl?: string; fileName?: string; error?: string }> {
         try {
             // Validate file type
             const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
@@ -370,20 +371,13 @@ export class EventEnrichmentService {
 
             const publicUrl = urlData.publicUrl;
 
-            // Update organizer record
-            const { error: updateError } = await supabaseClient
-                .from('organizers')
-                .update({ logo_url: fileName }) // Store just the filename, not full URL
-                .eq('id', organizerId);
-
-            if (updateError) {
-                console.warn('Failed to update organizer logo_url:', updateError);
-                // Still return success since file was uploaded
-            }
+            // Note: Database update is handled by the caller using a service client
+            // to bypass RLS policies. This function only handles the file upload.
 
             return {
                 success: true,
                 logoUrl: publicUrl,
+                fileName: fileName, // Return filename for database update
             };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -522,6 +516,7 @@ export class EventEnrichmentService {
                 { field: 'description', dbField: 'description' },
                 { field: 'location', dbField: 'location' },
                 { field: 'timezone', dbField: 'timezone' },
+                { field: 'start_time', dbField: 'start_time' },
                 { field: 'end_time', dbField: 'end_time' },
                 { field: 'language', dbField: 'language' },
                 { field: 'registration_url', dbField: 'registration_url' },
@@ -555,6 +550,27 @@ export class EventEnrichmentService {
             for (const { field, dbField } of fieldMappings) {
                 if (fields[field] !== undefined) {
                     let valueToStore = fields[field];
+                    
+                    // Normalize currency to ISO 4217 format (3-letter uppercase code)
+                    if (field === 'currency') {
+                        if (!valueToStore || (typeof valueToStore === 'string' && valueToStore.trim() === '')) {
+                            valueToStore = null;
+                        } else if (typeof valueToStore === 'string') {
+                            const trimmed = valueToStore.trim().toUpperCase();
+                            // Validate it's a 3-letter ISO 4217 code
+                            if (trimmed.length === 3 && /^[A-Z]{3}$/.test(trimmed)) {
+                                valueToStore = trimmed;
+                            } else {
+                                // Invalid currency format - reject the update
+                                console.warn('[EventEnrichmentService] Invalid currency format (must be 3-letter ISO 4217 code):', valueToStore);
+                                continue; // Skip this field update
+                            }
+                        } else {
+                            // Non-string value - reject
+                            console.warn('[EventEnrichmentService] Currency must be a string:', valueToStore);
+                            continue; // Skip this field update
+                        }
+                    }
                     
                     // Normalize timezone to IANA format if provided
                     if (field === 'timezone' && valueToStore) {
@@ -933,21 +949,20 @@ export class EventEnrichmentService {
                 return { success: true };
             }
 
-            // Verify all tags exist (or create missing ones)
-            const finalTagIds: string[] = [];
-            for (const tagId of tagIds) {
-                const { data: existingTag } = await supabaseClient
-                    .from('event_tags')
-                    .select('id')
-                    .eq('id', tagId)
-                    .single();
+            // Verify all tags exist using batch query (instead of sequential queries)
+            const { data: existingTags } = await supabaseClient
+                .from('event_tags')
+                .select('id')
+                .in('id', tagIds);
 
-                if (existingTag) {
-                    finalTagIds.push(tagId);
-                } else if (createMissingTags) {
-                    // Create tag (would need tag name, but we only have ID - skip for now)
-                    // This would require additional input
-                    console.warn(`Tag ID ${tagId} not found and createMissingTags is true, but tag creation requires name`);
+            const existingTagIds = new Set((existingTags ?? []).map(t => t.id));
+            const finalTagIds = tagIds.filter(id => existingTagIds.has(id));
+
+            // Log warnings for missing tags if createMissingTags was requested
+            if (createMissingTags) {
+                const missingIds = tagIds.filter(id => !existingTagIds.has(id));
+                if (missingIds.length > 0) {
+                    console.warn(`Tag IDs not found (createMissingTags requires name): ${missingIds.join(', ')}`);
                 }
             }
 
@@ -1007,20 +1022,20 @@ export class EventEnrichmentService {
                 return { success: true };
             }
 
-            // Verify all audiences exist (or create missing ones)
-            const finalAudienceIds: string[] = [];
-            for (const audienceId of audienceIds) {
-                const { data: existingAudience } = await supabaseClient
-                    .from('target_audiences')
-                    .select('id')
-                    .eq('id', audienceId)
-                    .single();
+            // Verify all audiences exist using batch query (instead of sequential queries)
+            const { data: existingAudiences } = await supabaseClient
+                .from('target_audiences')
+                .select('id')
+                .in('id', audienceIds);
 
-                if (existingAudience) {
-                    finalAudienceIds.push(audienceId);
-                } else if (createMissingAudiences) {
-                    // Create audience (would need name, but we only have ID - skip for now)
-                    console.warn(`Audience ID ${audienceId} not found and createMissingAudiences is true, but audience creation requires name`);
+            const existingAudienceIds = new Set((existingAudiences ?? []).map(a => a.id));
+            const finalAudienceIds = audienceIds.filter(id => existingAudienceIds.has(id));
+
+            // Log warnings for missing audiences if createMissingAudiences was requested
+            if (createMissingAudiences) {
+                const missingIds = audienceIds.filter(id => !existingAudienceIds.has(id));
+                if (missingIds.length > 0) {
+                    console.warn(`Audience IDs not found (createMissingAudiences requires name): ${missingIds.join(', ')}`);
                 }
             }
 
@@ -1080,20 +1095,20 @@ export class EventEnrichmentService {
                 return { success: true };
             }
 
-            // Verify all prerequisites exist (or create missing ones)
-            const finalPrerequisiteIds: string[] = [];
-            for (const prerequisiteId of prerequisiteIds) {
-                const { data: existingPrerequisite } = await supabaseClient
-                    .from('prerequisites')
-                    .select('id')
-                    .eq('id', prerequisiteId)
-                    .single();
+            // Verify all prerequisites exist using batch query (instead of sequential queries)
+            const { data: existingPrerequisites } = await supabaseClient
+                .from('prerequisites')
+                .select('id')
+                .in('id', prerequisiteIds);
 
-                if (existingPrerequisite) {
-                    finalPrerequisiteIds.push(prerequisiteId);
-                } else if (createMissingPrerequisites) {
-                    // Create prerequisite (would need name, but we only have ID - skip for now)
-                    console.warn(`Prerequisite ID ${prerequisiteId} not found and createMissingPrerequisites is true, but prerequisite creation requires name`);
+            const existingPrerequisiteIds = new Set((existingPrerequisites ?? []).map(p => p.id));
+            const finalPrerequisiteIds = prerequisiteIds.filter(id => existingPrerequisiteIds.has(id));
+
+            // Log warnings for missing prerequisites if createMissingPrerequisites was requested
+            if (createMissingPrerequisites) {
+                const missingIds = prerequisiteIds.filter(id => !existingPrerequisiteIds.has(id));
+                if (missingIds.length > 0) {
+                    console.warn(`Prerequisite IDs not found (createMissingPrerequisites requires name): ${missingIds.join(', ')}`);
                 }
             }
 
@@ -1260,7 +1275,7 @@ export class EventEnrichmentService {
         eventTypes: Array<{ id: string; name: string | null; color: string | null; icon: string | null; description: string | null }>;
         venues: Array<{ id: string; name: string; address: string | null; city: string | null; state_province: string | null; country: string | null }>;
         eventSeries: Array<{ id: string; name: string; description: string | null; logo_url: string | null; website_url: string | null }>;
-        eventTags: Array<{ id: string; event_tag: string; category: string | null; color: string | null }>;
+        eventTags: Array<{ id: string; event_tag: string; category: string | null }>;
         targetAudiences: Array<{ id: string; name: string; description: string | null }>;
         prerequisites: Array<{ id: string; name: string; description: string | null }>;
     }> {
@@ -1278,7 +1293,9 @@ export class EventEnrichmentService {
                     .select('id, name, description, logo_url, website_url'),
                 supabaseClient
                     .from('event_tags')
-                    .select('id, event_tag, category, color'),
+                    .select('id, event_tag, category')
+                    .order('event_tag', { ascending: true })
+                    .limit(10000), // Explicitly set high limit to ensure all tags are fetched
                 supabaseClient
                     .from('target_audiences')
                     .select('id, name, description'),
@@ -1287,11 +1304,21 @@ export class EventEnrichmentService {
                     .select('id, name, description'),
             ]);
 
+            const eventTags = (eventTagsResult.data || []) as Array<{ id: string; event_tag: string; category: string | null }>;
+            
+            // Log warning if eventTags query failed or returned no results
+            // Only log if error exists and has meaningful content (Supabase errors have message or code)
+            if (eventTagsResult.error && (eventTagsResult.error.message || eventTagsResult.error.code)) {
+                console.error('Error fetching event tags:', eventTagsResult.error);
+            } else if (eventTags.length === 0 && !eventTagsResult.error) {
+                console.warn('No event tags found in database. This may indicate a data issue.');
+            }
+
             return {
                 eventTypes: (eventTypesResult.data || []) as Array<{ id: string; name: string | null; color: string | null; icon: string | null; description: string | null }>,
                 venues: (venuesResult.data || []) as Array<{ id: string; name: string; address: string | null; city: string | null; state_province: string | null; country: string | null }>,
                 eventSeries: (eventSeriesResult.data || []) as Array<{ id: string; name: string; description: string | null; logo_url: string | null; website_url: string | null }>,
-                eventTags: (eventTagsResult.data || []) as Array<{ id: string; event_tag: string; category: string | null; color: string | null }>,
+                eventTags,
                 targetAudiences: (targetAudiencesResult.data || []) as Array<{ id: string; name: string; description: string | null }>,
                 prerequisites: (prerequisitesResult.data || []) as Array<{ id: string; name: string; description: string | null }>,
             };

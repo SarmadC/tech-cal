@@ -59,7 +59,7 @@ export const extractEventTags = (
                 eventTags.push({
                     id: relation.event_tags.id,
                     name: relation.event_tags.event_tag,
-                    color: relation.event_tags.color || '#3B82F6',
+                    color: '#3B82F6', // Default color since color column was removed from event_tags
                     category: relation.event_tags.category || 'general'
                 });
             }

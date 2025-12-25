@@ -4,6 +4,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { isAdminUser } from '@/lib/adminAuth';
 import AdminLandingClient, { type AdminSummaryMetrics } from './AdminLandingClient';
 
@@ -24,13 +25,40 @@ export default async function AdminLandingPage() {
         redirect('/');
     }
 
-    // TODO: hydrate real metrics once telemetry endpoints are available
-    const metrics: AdminSummaryMetrics = {
+    // Fetch real queue counts from the API
+    let metrics: AdminSummaryMetrics = {
         updateQueuePending: null,
         moderationFlags: null,
         enrichmentBacklog: null,
         protectedFields: null,
     };
+
+    try {
+        // Get the host from headers to construct absolute URL
+        const headersList = await headers();
+        const host = headersList.get('host') || 'localhost:3000';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+
+        const response = await fetch(`${protocol}://${host}/api/admin/ingestion/queue-counts`, {
+            headers: {
+                cookie: headersList.get('cookie') || '',
+            },
+            cache: 'no-store',
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            metrics = {
+                updateQueuePending: data.updateQueue ?? null,
+                moderationFlags: data.moderation ?? null,
+                enrichmentBacklog: data.enrichment ?? null,
+                protectedFields: data.fieldProtection ?? null,
+            };
+        }
+    } catch (error) {
+        console.error('[AdminLandingPage] Error fetching queue counts:', error);
+        // Fall back to null metrics on error
+    }
 
     return (
         <div className="space-y-6">
@@ -38,6 +66,7 @@ export default async function AdminLandingPage() {
         </div>
     );
 }
+
 
 
 

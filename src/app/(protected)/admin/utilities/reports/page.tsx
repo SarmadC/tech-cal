@@ -179,7 +179,19 @@ function IngestionSummaryView({ report }: { report: IngestionSummaryReport }) {
 function ModerationSLAView({ report }: { report: ModerationSLAReport }) {
     const { metrics } = report;
 
-    const slaColor = metrics.withinSLA >= 90 ? 'text-emerald-400' : metrics.withinSLA >= 70 ? 'text-amber-400' : 'text-rose-400';
+    // Determine SLA status: overdueCount takes priority over withinSLA percentage
+    // If items are overdue, we can't show "Healthy" regardless of historical SLA compliance
+    const getSLAStatus = () => {
+        if (metrics.overdueCount > 0) {
+            return metrics.overdueCount > 50 ? 'Critical' : 'At Risk';
+        }
+        if (metrics.withinSLA >= 90) return 'Healthy';
+        if (metrics.withinSLA >= 70) return 'At Risk';
+        return 'Critical';
+    };
+
+    const slaStatus = getSLAStatus();
+    const slaColor = slaStatus === 'Healthy' ? 'text-emerald-400' : slaStatus === 'At Risk' ? 'text-amber-400' : 'text-rose-400';
 
     return (
         <div className="space-y-6">
@@ -208,8 +220,8 @@ function ModerationSLAView({ report }: { report: ModerationSLAReport }) {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         SLA Status
-                        <Badge variant={metrics.withinSLA >= 90 ? 'default' : 'destructive'}>
-                            {metrics.withinSLA >= 90 ? 'Healthy' : metrics.withinSLA >= 70 ? 'At Risk' : 'Critical'}
+                        <Badge variant={slaStatus === 'Healthy' ? 'default' : 'destructive'}>
+                            {slaStatus}
                         </Badge>
                     </CardTitle>
                 </CardHeader>
@@ -217,8 +229,8 @@ function ModerationSLAView({ report }: { report: ModerationSLAReport }) {
                     <div className="space-y-4">
                         <div className="h-4 w-full rounded-full bg-slate-800 overflow-hidden">
                             <div
-                                className={`h-full transition-all ${metrics.withinSLA >= 90 ? 'bg-emerald-500' :
-                                    metrics.withinSLA >= 70 ? 'bg-amber-500' : 'bg-rose-500'
+                                className={`h-full transition-all ${slaStatus === 'Healthy' ? 'bg-emerald-500' :
+                                    slaStatus === 'At Risk' ? 'bg-amber-500' : 'bg-rose-500'
                                     }`}
                                 style={{ width: `${metrics.withinSLA}%` }}
                             />

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     console.log('[DEBUG API] Searching for tags matching:', term);
     const { data: tags, error: tagError } = await supabase
       .from('event_tags')
-      .select('*')
+      .select('id, event_tag, category')
       .ilike('event_tag', `%${term}%`);
 
     if (tagError) {

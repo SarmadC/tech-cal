@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+import pLimit from 'p-limit';
 import { createClient } from '@/utils/supabase/server';
 import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import { LLMEnrichmentService } from '@/services/ingestion/LLMEnrichmentService';
+
+// Limit concurrent LLM API calls to avoid rate limiting
+const CONCURRENT_LIMIT = 5;
 
 export const runtime = 'nodejs';
 
@@ -51,14 +55,15 @@ export async function POST(request: NextRequest) {
         const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
         const enrichmentService = new LLMEnrichmentService(serviceClient);
 
-        // If specific eventIds provided, process them individually
+        // If specific eventIds provided, process them in parallel with concurrency limit
         if (eventIds && Array.isArray(eventIds) && eventIds.length > 0) {
-            const results = [];
-            for (const eventId of eventIds) {
-                // eslint-disable-next-line no-await-in-loop
-                const result = await enrichmentService.processEventInference(eventId);
-                results.push(result);
-            }
+            const concurrencyLimiter = pLimit(CONCURRENT_LIMIT);
+
+            const results = await Promise.all(
+                eventIds.map((eventId) =>
+                    concurrencyLimiter(() => enrichmentService.processEventInference(eventId))
+                )
+            );
 
             const succeeded = results.filter((r) => r.status === 'enriched').length;
             const failed = results.length - succeeded;
@@ -147,6 +152,7 @@ export async function GET() {
         return NextResponse.json({ error: message }, { status: 500 });
     }
 }
+
 
 
 

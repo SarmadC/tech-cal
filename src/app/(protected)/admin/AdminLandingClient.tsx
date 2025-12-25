@@ -6,8 +6,9 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MaterialIcon } from '@/components/ui/Icon';
+import { MaterialIcon, type IconName } from '@/components/ui/Icon';
 import { useAdminToolbar } from '@/contexts/AdminToolbarContext';
+import { cn } from '@/lib/utils';
 
 export interface AdminSummaryMetrics {
     updateQueuePending?: number | null;
@@ -15,6 +16,33 @@ export interface AdminSummaryMetrics {
     enrichmentBacklog?: number | null;
     protectedFields?: number | null;
 }
+
+type QueueHealth = 'healthy' | 'warning' | 'critical';
+
+function getQueueHealth(value: number | null | undefined, thresholds: { warning: number; critical: number }): QueueHealth {
+    if (value === null || value === undefined || value === 0) return 'healthy';
+    if (value >= thresholds.critical) return 'critical';
+    if (value >= thresholds.warning) return 'warning';
+    return 'healthy';
+}
+
+const healthStyles: Record<QueueHealth, { ring: string; badge: string; indicator: string }> = {
+    healthy: {
+        ring: 'ring-emerald-500/20',
+        badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+        indicator: 'bg-emerald-500',
+    },
+    warning: {
+        ring: 'ring-amber-500/20',
+        badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+        indicator: 'bg-amber-500',
+    },
+    critical: {
+        ring: 'ring-rose-500/20',
+        badge: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+        indicator: 'bg-rose-500',
+    },
+};
 
 export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryMetrics }) {
     const { setTitle, setSubtitle, setQuickFilters, setSearch, setToolbarContent } = useAdminToolbar();
@@ -32,40 +60,52 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
         };
     }, [setQuickFilters, setSearch, setSubtitle, setTitle, setToolbarContent]);
 
-    const cards = [
-        {
-            title: 'Update queue',
-            description: 'Deduplicate events and approve merges from ingestion.',
-            href: '/admin/ingestion/update-queue',
-            icon: 'refresh' as const,
-            metric: formatMetric(metrics.updateQueuePending),
-            metricLabel: 'Pending updates',
-        },
-        {
-            title: 'Moderation',
-            description: 'Resolve flagged content and quality issues before publishing.',
-            href: '/admin/ingestion/moderation',
-            icon: 'warning' as const,
-            metric: formatMetric(metrics.moderationFlags),
-            metricLabel: 'Items flagged',
-        },
-        {
-            title: 'Enrichment',
-            description: 'Fill in agenda, speakers, and metadata gaps for live events.',
-            href: '/admin/ingestion/enrichment',
-            icon: 'dashboard' as const,
-            metric: formatMetric(metrics.enrichmentBacklog),
-            metricLabel: 'Events needing work',
-        },
-        {
-            title: 'Field protection',
-            description: 'Lock sensitive fields to keep curated edits safe.',
-            href: '/admin/ingestion/field-protection',
-            icon: 'settings' as const,
-            metric: formatMetric(metrics.protectedFields),
-            metricLabel: 'Protected fields',
-        },
-    ];
+    const cards: Array<{
+        title: string;
+        description: string;
+        href: string;
+        icon: IconName;
+        metric: string;
+        metricLabel: string;
+        health: QueueHealth;
+    }> = [
+            {
+                title: 'Update queue',
+                description: 'Deduplicate events and approve merges from ingestion.',
+                href: '/admin/ingestion/update-queue',
+                icon: 'refresh',
+                metric: formatMetric(metrics.updateQueuePending),
+                metricLabel: 'Pending updates',
+                health: getQueueHealth(metrics.updateQueuePending, { warning: 10, critical: 50 }),
+            },
+            {
+                title: 'Moderation',
+                description: 'Resolve flagged content and quality issues before publishing.',
+                href: '/admin/ingestion/moderation',
+                icon: 'warning',
+                metric: formatMetric(metrics.moderationFlags),
+                metricLabel: 'Items flagged',
+                health: getQueueHealth(metrics.moderationFlags, { warning: 5, critical: 20 }),
+            },
+            {
+                title: 'Enrichment',
+                description: 'Fill in agenda, speakers, and metadata gaps for live events.',
+                href: '/admin/ingestion/enrichment',
+                icon: 'dashboard',
+                metric: formatMetric(metrics.enrichmentBacklog),
+                metricLabel: 'Events needing work',
+                health: getQueueHealth(metrics.enrichmentBacklog, { warning: 25, critical: 100 }),
+            },
+            {
+                title: 'Field protection',
+                description: 'Lock sensitive fields to keep curated edits safe.',
+                href: '/admin/ingestion/field-protection',
+                icon: 'settings',
+                metric: formatMetric(metrics.protectedFields),
+                metricLabel: 'Protected fields',
+                health: 'healthy', // No urgency for field protection
+            },
+        ];
 
     const playbooks = [
         {
@@ -73,7 +113,7 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
             steps: [
                 'Review the update queue for pending merges.',
                 'Look at moderation backlog for high severity issues.',
-                'Spot check enrichment backlog for today’s events.',
+                'Spot check enrichment backlog for today&apos;s events.',
             ],
         },
         {
@@ -86,8 +126,42 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
         },
     ];
 
+    // Calculate overall system health
+    const criticalCount = cards.filter(c => c.health === 'critical').length;
+    const warningCount = cards.filter(c => c.health === 'warning').length;
+    const overallHealth: QueueHealth = criticalCount > 0 ? 'critical' : warningCount > 0 ? 'warning' : 'healthy';
+    const healthLabel = overallHealth === 'healthy' ? 'All systems healthy' :
+        overallHealth === 'warning' ? 'Some queues need attention' :
+            'Critical queues require action';
+
     return (
         <div className="space-y-6">
+            {/* System Health Banner */}
+            <div className={cn(
+                'flex items-center gap-3 rounded-lg border px-4 py-3',
+                overallHealth === 'healthy' && 'border-emerald-500/30 bg-emerald-500/10',
+                overallHealth === 'warning' && 'border-amber-500/30 bg-amber-500/10',
+                overallHealth === 'critical' && 'border-rose-500/30 bg-rose-500/10'
+            )}>
+                <div className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-full',
+                    healthStyles[overallHealth].badge
+                )}>
+                    <MaterialIcon
+                        name={overallHealth === 'healthy' ? 'check-circle' : 'warning'}
+                        size={18}
+                    />
+                </div>
+                <div>
+                    <p className="text-sm font-medium text-slate-200">{healthLabel}</p>
+                    <p className="text-xs text-slate-400">
+                        {criticalCount > 0 && `${criticalCount} critical • `}
+                        {warningCount > 0 && `${warningCount} warning • `}
+                        Last checked just now
+                    </p>
+                </div>
+            </div>
+
             <Card className="border border-slate-800/50 bg-slate-950/60 text-slate-200">
                 <CardHeader className="space-y-2">
                     <CardTitle className="text-base font-semibold">Pipelines at a glance</CardTitle>
@@ -98,20 +172,39 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
                 <CardContent>
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         {cards.map((card) => (
-                            <Card key={card.title} className="border border-slate-800/60 bg-slate-950/70 text-slate-200">
+                            <Card
+                                key={card.title}
+                                className={cn(
+                                    'group relative overflow-hidden border border-slate-800/60 bg-slate-950/70 text-slate-200 transition-all duration-200 hover:border-slate-700 hover:bg-slate-900/80',
+                                    card.health !== 'healthy' && `ring-1 ${healthStyles[card.health].ring}`
+                                )}
+                            >
+                                {/* Health indicator dot */}
+                                <div className={cn(
+                                    'absolute right-3 top-3 h-2 w-2 rounded-full',
+                                    healthStyles[card.health].indicator,
+                                    card.health !== 'healthy' && 'animate-pulse'
+                                )} />
+
                                 <CardHeader className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-sm uppercase tracking-wide text-slate-400">
-                                            <MaterialIcon name={card.icon} size={16} />
-                                            <span>{card.title}</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 transition-colors group-hover:bg-slate-700">
+                                            <MaterialIcon name={card.icon} size={16} className="text-slate-300" />
                                         </div>
-                                        <Badge className="bg-slate-900/60 text-xs text-slate-300">{card.metricLabel}</Badge>
+                                        <span className="text-sm font-medium uppercase tracking-wide text-slate-400">
+                                            {card.title}
+                                        </span>
                                     </div>
-                                    <div className="text-3xl font-semibold text-slate-100">{card.metric}</div>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-3xl font-semibold text-slate-100">{card.metric}</span>
+                                        <Badge className={cn('text-xs', healthStyles[card.health].badge)}>
+                                            {card.metricLabel}
+                                        </Badge>
+                                    </div>
                                     <p className="text-sm text-slate-400">{card.description}</p>
                                 </CardHeader>
                                 <CardContent>
-                                    <Button asChild variant="secondary" className="w-full">
+                                    <Button asChild variant="secondary" className="w-full transition-transform group-hover:scale-[1.02]">
                                         <Link href={card.href}>
                                             Open {card.title}
                                             <MaterialIcon name="arrow-forward" size={16} />
@@ -131,7 +224,7 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
                     </CardHeader>
                     <CardContent className="space-y-5">
                         {playbooks.map((playbook) => (
-                            <div key={playbook.title} className="rounded-lg border border-slate-800/40 bg-slate-900/50 p-4">
+                            <div key={playbook.title} className="rounded-lg border border-slate-800/40 bg-slate-900/50 p-4 transition-colors hover:bg-slate-900/70">
                                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-300">
                                     <MaterialIcon name="check-circle" size={14} />
                                     {playbook.title}
@@ -139,7 +232,9 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
                                 <ul className="space-y-2 text-sm text-slate-300">
                                     {playbook.steps.map((step, idx) => (
                                         <li key={idx} className="flex gap-3">
-                                            <span className="text-xs text-slate-500">{idx + 1}.</span>
+                                            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs text-slate-400">
+                                                {idx + 1}
+                                            </span>
                                             <span>{step}</span>
                                         </li>
                                     ))}
@@ -154,20 +249,18 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
                         <CardTitle className="text-base font-semibold">Quick actions</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm text-slate-300">
-                        <div className="flex items-start gap-3 rounded border border-slate-800/50 bg-slate-900/60 p-3">
+                        <a
+                            href="https://supabase.com/dashboard"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-start gap-3 rounded border border-slate-800/50 bg-slate-900/60 p-3 transition-colors hover:border-slate-700 hover:bg-slate-800/60"
+                        >
                             <MaterialIcon name="arrow-up-right" size={16} className="text-slate-400" />
                             <div>
                                 <p className="font-medium text-slate-200">Jump to Supabase logs</p>
                                 <p className="text-xs text-slate-400">Investigate ingestion function failures or timeouts.</p>
                             </div>
-                        </div>
-                        <div className="flex items-start gap-3 rounded border border-slate-800/50 bg-slate-900/60 p-3">
-                            <MaterialIcon name="arrow-up-right" size={16} className="text-slate-400" />
-                            <div>
-                                <p className="font-medium text-slate-200">Review staging diff</p>
-                                <p className="text-xs text-slate-400">Compare staging events against production for upcoming launches.</p>
-                            </div>
-                        </div>
+                        </a>
                         <Button asChild variant="secondary" className="w-full">
                             <Link href="/admin/ingestion/update-queue">
                                 Start triaging now
@@ -191,4 +284,3 @@ function formatMetric(value?: number | null) {
     }
     return value.toString();
 }
-
