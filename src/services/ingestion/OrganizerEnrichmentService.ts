@@ -28,6 +28,17 @@ export class OrganizerEnrichmentService {
         supabaseClient: SupabaseClientType
     ): Promise<string | null> {
         try {
+            // Don't create organizers with placeholder or empty names
+            const normalizedName = input.name?.trim();
+            if (!normalizedName || 
+                normalizedName === '' || 
+                normalizedName === 'Unknown' || 
+                normalizedName.toLowerCase() === 'unknown organizer' ||
+                normalizedName.toLowerCase() === 'tbd' ||
+                normalizedName.toLowerCase() === 'tba') {
+                return null;
+            }
+
             // Extract domain from website URL if not provided
             let domain = input.domain;
             if (!domain && input.websiteUrl) {
@@ -62,12 +73,12 @@ export class OrganizerEnrichmentService {
             }
 
             // Try to find by name (fuzzy match)
-            if (input.name && input.name !== 'Unknown') {
+            if (normalizedName) {
                 // Exact match first
                 const { data: exactMatch } = await supabaseClient
                     .from('organizers')
                     .select('id')
-                    .eq('name', input.name)
+                    .eq('name', normalizedName)
                     .single();
 
                 if (exactMatch) {
@@ -76,7 +87,7 @@ export class OrganizerEnrichmentService {
 
                 // Fuzzy match on name using pg_trgm
                 // Note: This requires the GIN index we created in the migration
-                const namePattern = `%${input.name}%`;
+                const namePattern = `%${normalizedName}%`;
                 const { data: nameFuzzy } = await supabaseClient
                     .from('organizers')
                     .select('id, name')
@@ -95,7 +106,7 @@ export class OrganizerEnrichmentService {
             const { data: newOrganizer, error: createError } = await supabaseClient
                 .from('organizers')
                 .insert({
-                    name: input.name,
+                    name: normalizedName,
                     domain: domain || null,
                     website_url: input.websiteUrl || null,
                     logo_url: logoUrl,

@@ -1,27 +1,24 @@
 'use client';
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
+
 import type { ClassificationSectionProps, EventFormatEnum } from '../types';
 
 export function ClassificationSection({
-    expanded,
-    onToggle,
     coreFields,
     setCoreFields,
     relationships,
     setRelationships,
     lookupData,
     eventTagRelations,
-}: ClassificationSectionProps) {
+}: Omit<ClassificationSectionProps, 'expanded' | 'onToggle'>) {
     // Build list of all available tags for the dropdown
     // Primary source: lookupData.eventTags (contains ALL tags from event_tags table)
     // Fallback: eventTagRelations (only selected tags for this event, used if lookupData is incomplete)
     const allTags = React.useMemo(() => {
         const tagMap = new Map<string, { id: string; event_tag: string; category: string | null }>();
-        
+
         // PRIMARY: Add ALL tags from lookup data (this should contain all tags in the database)
         if (lookupData.eventTags && Array.isArray(lookupData.eventTags)) {
             lookupData.eventTags.forEach(tag => {
@@ -34,7 +31,7 @@ export function ClassificationSection({
                 }
             });
         }
-        
+
         // FALLBACK: Add tags from event data only if they're missing from lookup data
         // This handles edge cases where a tag might exist in the relation but not in lookupData
         if (eventTagRelations && Array.isArray(eventTagRelations)) {
@@ -48,77 +45,246 @@ export function ClassificationSection({
                 }
             });
         }
-        
+
         return Array.from(tagMap.values());
     }, [lookupData.eventTags, eventTagRelations]);
+
+    // State for creating new tags
+    const [newTagName, setNewTagName] = useState('');
+    const [creatingTag, setCreatingTag] = useState(false);
+    const [tagCreationError, setTagCreationError] = useState<string | null>(null);
+    const [localTags, setLocalTags] = useState<Array<{ id: string; event_tag: string; category: string | null }>>([]);
+
+    // Combine lookup tags with locally created tags
+    const allTagsWithLocal = React.useMemo(() => {
+        const tagMap = new Map<string, { id: string; event_tag: string; category: string | null }>();
+
+        // Add all tags from lookup data
+        if (lookupData.eventTags && Array.isArray(lookupData.eventTags)) {
+            lookupData.eventTags.forEach(tag => {
+                if (tag.id && tag.event_tag) {
+                    tagMap.set(tag.id, {
+                        id: tag.id,
+                        event_tag: tag.event_tag,
+                        category: tag.category ?? null,
+                    });
+                }
+            });
+        }
+
+        // Add tags from event data
+        if (eventTagRelations && Array.isArray(eventTagRelations)) {
+            eventTagRelations.forEach(relation => {
+                if (relation.event_tags && relation.tag_id && !tagMap.has(relation.tag_id)) {
+                    tagMap.set(relation.tag_id, {
+                        id: relation.tag_id,
+                        event_tag: relation.event_tags.event_tag,
+                        category: relation.event_tags.category ?? null,
+                    });
+                }
+            });
+        }
+
+        // Add locally created tags
+        localTags.forEach(tag => {
+            tagMap.set(tag.id, tag);
+        });
+
+        return Array.from(tagMap.values());
+    }, [lookupData.eventTags, eventTagRelations, localTags]);
+
+    const createNewTag = async (tagName: string) => {
+        const trimmedName = tagName.trim();
+        if (!trimmedName) {
+            setTagCreationError('Tag name is required');
+            return;
+        }
+
+        // Check for duplicate
+        const isDuplicate = allTagsWithLocal.some(
+            tag => tag.event_tag.toLowerCase() === trimmedName.toLowerCase()
+        );
+        if (isDuplicate) {
+            setTagCreationError('Tag already exists');
+            return;
+        }
+
+        setCreatingTag(true);
+        setTagCreationError(null);
+
+        try {
+            const response = await fetch('/api/admin/ingestion/enrichment/tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tagName: trimmedName }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to create tag');
+            }
+
+            if (data.success && data.tagId) {
+                // Add new tag to local state
+                const newTag = {
+                    id: data.tagId,
+                    event_tag: trimmedName,
+                    category: null,
+                };
+                setLocalTags(prev => [...prev, newTag]);
+
+                // Auto-select the new tag
+                setRelationships(prev => ({
+                    ...prev,
+                    tagIds: [...prev.tagIds, data.tagId],
+                }));
+                setNewTagName('');
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to create tag';
+            setTagCreationError(errorMessage);
+        } finally {
+            setCreatingTag(false);
+        }
+    };
+
     return (
-        <Card>
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                    <CardTitle>Event Classification</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={onToggle}>
-                        {expanded ? 'Collapse' : 'Expand'}
-                    </Button>
+        <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                <h3 className="text-lg font-medium text-slate-200">Event Classification</h3>
+            </div>
+            <div className="grid gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Event Type</label>
+                        <select
+                            value={relationships.event_type_id || ''}
+                            onChange={(e) => setRelationships(prev => ({ ...prev, event_type_id: e.target.value || null }))}
+                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                        >
+                            <option value="" className="bg-[#1C1C1C]">Select Event Type</option>
+                            {lookupData.eventTypes.map(type => (
+                                <option key={type.id} value={type.id} className="bg-[#1C1C1C]">{type.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="grid gap-2">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Format</label>
+                        <select
+                            value={coreFields.event_format || ''}
+                            onChange={(e) => {
+                                const value = e.target.value as EventFormatEnum | '';
+                                setCoreFields(prev => ({
+                                    ...prev,
+                                    event_format: value ? (value as EventFormatEnum) : null,
+                                }));
+                            }}
+
+                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                        >
+                            <option value="" className="bg-[#1C1C1C]">Select Format</option>
+                            <option value="Online" className="bg-[#1C1C1C]">Online</option>
+                            <option value="In-person" className="bg-[#1C1C1C]">In-person</option>
+                            <option value="Hybrid" className="bg-[#1C1C1C]">Hybrid</option>
+                        </select>
+                    </div>
                 </div>
-            </CardHeader>
-            {expanded && (
-                <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Status</label>
+                        <input
+                            type="text"
+                            placeholder="Status (free-form)"
+                            value={coreFields.status}
+                            onChange={(e) => setCoreFields(prev => ({ ...prev, status: e.target.value }))}
+                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Difficulty</label>
+                        <select
+                            value={coreFields.difficulty_level || ''}
+                            onChange={(e) => setCoreFields(prev => ({ ...prev, difficulty_level: e.target.value || null }))}
+                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                        >
+                            <option value="" className="bg-[#1C1C1C]">Select Difficulty</option>
+                            <option value="beginner" className="bg-[#1C1C1C]">Beginner</option>
+                            <option value="intermediate" className="bg-[#1C1C1C]">Intermediate</option>
+                            <option value="advanced" className="bg-[#1C1C1C]">Advanced</option>
+                        </select>
+                    </div>
+                </div>
+                <div className="grid gap-2">
+                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tags</label>
                     <select
-                        value={relationships.event_type_id || ''}
-                        onChange={(e) => setRelationships(prev => ({ ...prev, event_type_id: e.target.value || null }))}
-                        className="w-full px-3 py-2 border rounded"
+                        multiple
+                        value={relationships.tagIds}
+                        onChange={(e) => {
+                            const selected = Array.from(e.target.selectedOptions, option => option.value);
+                            setRelationships(prev => ({ ...prev, tagIds: selected }));
+                        }}
+                        className="w-full bg-transparent border border-white/10 rounded-md px-3 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors min-h-[80px]"
                     >
-                        <option value="">Select Event Type</option>
-                        {lookupData.eventTypes.map(type => (
-                            <option key={type.id} value={type.id}>{type.name}</option>
+                        {allTagsWithLocal.map(tag => (
+                            <option key={tag.id} value={tag.id} className="bg-[#1C1C1C] py-1">{tag.event_tag}</option>
                         ))}
                     </select>
-                    <select
-                        value={coreFields.event_format || ''}
-                        onChange={(e) => {
-                            const value = e.target.value as EventFormatEnum | '';
-                            setCoreFields(prev => ({
-                                ...prev,
-                                event_format: value ? (value as EventFormatEnum) : null,
-                            }));
-                        }}
-                        className="w-full px-3 py-2 border rounded"
-                    >
-                        <option value="">Select Format</option>
-                        <option value="Online">Online</option>
-                        <option value="In-person">In-person</option>
-                        <option value="Hybrid">Hybrid</option>
-                    </select>
-                    <input
-                        type="text"
-                        placeholder="Status (free-form)"
-                        value={coreFields.status}
-                        onChange={(e) => setCoreFields(prev => ({ ...prev, status: e.target.value }))}
-                        className="w-full px-3 py-2 border rounded"
-                    />
-                    <select
-                        value={coreFields.difficulty_level || ''}
-                        onChange={(e) => setCoreFields(prev => ({ ...prev, difficulty_level: e.target.value || null }))}
-                        className="w-full px-3 py-2 border rounded"
-                    >
-                        <option value="">Select Difficulty</option>
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                    </select>
-                    <MultiSelectDropdown
-                        label="Tags"
-                        placeholder="Select tags..."
-                        options={allTags.map(tag => ({
-                            value: tag.id,
-                            label: tag.event_tag,
-                            category: tag.category ?? undefined,
-                        }))}
-                        selectedValues={relationships.tagIds}
-                        onChange={(values) => setRelationships(prev => ({ ...prev, tagIds: values }))}
-                    />
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Target Audiences (multi-select + free-form)</label>
+
+                    {/* Selected Tags Display */}
+                    {relationships.tagIds.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                            {relationships.tagIds.map(tagId => {
+                                const tag = allTagsWithLocal.find(t => t.id === tagId);
+                                if (!tag) return null;
+                                return (
+                                    <span
+                                        key={tagId}
+                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-500/20 text-indigo-200 text-xs border border-indigo-500/30"
+                                    >
+                                        {tag.event_tag}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setRelationships(prev => ({
+                                                    ...prev,
+                                                    tagIds: prev.tagIds.filter(id => id !== tagId)
+                                                }));
+                                            }}
+                                            className="hover:text-white focus:outline-none"
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="Create new tag..."
+                            value={newTagName}
+                            onChange={(e) => setNewTagName(e.target.value)}
+                            className="flex-1 bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                        />
+                        <Button
+                            onClick={() => createNewTag(newTagName)}
+                            disabled={!newTagName.trim() || creatingTag}
+                            size="sm"
+                            variant="secondary"
+                        >
+                            {creatingTag ? 'Creating...' : 'Create Tag'}
+                        </Button>
+                    </div>
+                    {tagCreationError && (
+                        <p className="text-xs text-rose-500 mt-1">{tagCreationError}</p>
+                    )}
+                </div>
+                <div className="grid gap-2">
+                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Target Audiences</label>
+                    <div className="grid gap-2">
                         <select
                             multiple
                             value={relationships.audienceIds}
@@ -126,22 +292,24 @@ export function ClassificationSection({
                                 const selected = Array.from(e.target.selectedOptions, option => option.value);
                                 setRelationships(prev => ({ ...prev, audienceIds: selected }));
                             }}
-                            className="w-full px-3 py-2 border rounded mb-2 min-h-[80px]"
+                            className="w-full bg-transparent border border-white/10 rounded-md px-3 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors min-h-[80px]"
                         >
                             {lookupData.targetAudiences.map(audience => (
-                                <option key={audience.id} value={audience.id}>{audience.name}</option>
+                                <option key={audience.id} value={audience.id} className="bg-[#1C1C1C] py-1">{audience.name}</option>
                             ))}
                         </select>
                         <textarea
-                            placeholder="Target Audience (free-form text - can be used alongside selections above)"
+                            placeholder="Additional details (free-form)"
                             value={coreFields.target_audience}
                             onChange={(e) => setCoreFields(prev => ({ ...prev, target_audience: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
+                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700 resize-none"
                             rows={2}
                         />
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Prerequisites (multi-select + free-form)</label>
+                </div>
+                <div className="grid gap-2">
+                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Prerequisites</label>
+                    <div className="grid gap-2">
                         <select
                             multiple
                             value={relationships.prerequisiteIds}
@@ -149,22 +317,22 @@ export function ClassificationSection({
                                 const selected = Array.from(e.target.selectedOptions, option => option.value);
                                 setRelationships(prev => ({ ...prev, prerequisiteIds: selected }));
                             }}
-                            className="w-full px-3 py-2 border rounded mb-2 min-h-[80px]"
+                            className="w-full bg-transparent border border-white/10 rounded-md px-3 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors min-h-[80px]"
                         >
                             {lookupData.prerequisites.map(prereq => (
-                                <option key={prereq.id} value={prereq.id}>{prereq.name}</option>
+                                <option key={prereq.id} value={prereq.id} className="bg-[#1C1C1C] py-1">{prereq.name}</option>
                             ))}
                         </select>
                         <textarea
-                            placeholder="Prerequisites (free-form text - can be used alongside selections above)"
+                            placeholder="Additional details (free-form)"
                             value={coreFields.prerequisites}
                             onChange={(e) => setCoreFields(prev => ({ ...prev, prerequisites: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
+                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700 resize-none"
                             rows={2}
                         />
                     </div>
-                </CardContent>
-            )}
-        </Card>
+                </div>
+            </div>
+        </div >
     );
 }

@@ -1,43 +1,38 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import type { SocialVirtualSectionProps } from '../types';
 
 export function SocialVirtualSection({
-    expanded,
-    onToggle,
     coreFields,
     setCoreFields,
-}: SocialVirtualSectionProps) {
+}: Omit<SocialVirtualSectionProps, 'expanded' | 'onToggle'>) {
     return (
-        <Card>
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                    <CardTitle>Social & Virtual</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={onToggle}>
-                        {expanded ? 'Collapse' : 'Expand'}
-                    </Button>
-                </div>
-            </CardHeader>
-            {expanded && (
-                <CardContent className="space-y-4">
+        <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                <h3 className="text-lg font-medium text-slate-200">Social & Virtual</h3>
+            </div>
+            <div className="grid gap-4">
+                <div className="grid gap-2">
+                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Social Media Hashtag</label>
                     <input
                         type="text"
-                        placeholder="Social Media Hashtag"
+                        placeholder="#hashtag"
                         value={coreFields.social_media_hashtag}
                         onChange={(e) => setCoreFields(prev => ({ ...prev, social_media_hashtag: e.target.value }))}
-                        className="w-full px-3 py-2 border rounded"
+                        className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
                     />
+                </div>
+                <div className="grid gap-2">
+                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Virtual Platform</label>
                     <input
                         type="text"
-                        placeholder="Virtual Platform"
+                        placeholder="Zoom, Google Meet, etc."
                         value={coreFields.virtual_platform}
                         onChange={(e) => setCoreFields(prev => ({ ...prev, virtual_platform: e.target.value }))}
-                        className="w-full px-3 py-2 border rounded"
+                        className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
                     />
-                </CardContent>
-            )}
-        </Card>
+                </div>
+            </div>
+        </div>
     );
 }

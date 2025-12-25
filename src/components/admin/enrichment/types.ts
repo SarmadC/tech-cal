@@ -122,6 +122,7 @@ export interface VenueData {
 }
 
 export interface OrganizerData {
+    name: string;
     description: string;
     website_url: string;
     social_media: Record<string, unknown> | null;

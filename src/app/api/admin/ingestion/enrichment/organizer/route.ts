@@ -1,7 +1,7 @@
 /**
  * API Route: Organizer Enrichment
  * 
- * PUT: Update organizer fields (description, website_url, social_media)
+ * PUT: Update organizer fields (name, description, website_url, social_media)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -28,6 +28,7 @@ export async function PUT(request: NextRequest) {
         const { organizerId, data } = body as {
             organizerId: string;
             data: {
+                name?: string | null;
                 description?: string | null;
                 website_url?: string | null;
                 social_media?: Record<string, unknown> | null;

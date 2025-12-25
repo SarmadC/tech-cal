@@ -1144,11 +1144,12 @@ export class EventEnrichmentService {
 
     /**
      * Enrich organizer with safe fields only
-     * Excludes: domain, trust_score, auto_discovered, name
+     * Excludes: domain, trust_score, auto_discovered
      */
     static async enrichOrganizer(
         organizerId: string,
         data: {
+            name?: string | null;
             description?: string | null;
             website_url?: string | null;
             social_media?: Record<string, unknown> | null;
@@ -1158,6 +1159,31 @@ export class EventEnrichmentService {
     ): Promise<{ success: boolean; error?: string }> {
         try {
             const updateData: Record<string, unknown> = {};
+
+            // Validate and update name if provided
+            if (data.name !== undefined) {
+                const trimmedName = data.name?.trim();
+                if (!trimmedName || trimmedName === '') {
+                    return {
+                        success: false,
+                        error: 'Organizer name is required and cannot be empty',
+                    };
+                }
+                // Prevent placeholder names
+                const normalizedName = trimmedName.toLowerCase();
+                if (
+                    normalizedName === 'unknown' ||
+                    normalizedName === 'unknown organizer' ||
+                    normalizedName === 'tbd' ||
+                    normalizedName === 'tba'
+                ) {
+                    return {
+                        success: false,
+                        error: 'Organizer name cannot be a placeholder value (Unknown, TBD, TBA)',
+                    };
+                }
+                updateData.name = trimmedName;
+            }
 
             if (data.description !== undefined) updateData.description = data.description;
             if (data.website_url !== undefined) updateData.website_url = data.website_url;

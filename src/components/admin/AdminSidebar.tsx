@@ -51,64 +51,57 @@ export default function AdminSidebar() {
                 items: [
                     {
                         title: 'Command Center',
-                        description: "Today's pipeline health",
                         href: BASE_PATH,
-                        icon: <MaterialIcon name="dashboard" size={18} />,
+                        icon: <MaterialIcon name="dashboard" size={16} />,
                         exact: true,
                     },
                 ],
             },
             {
-                label: 'Ingestion Pipeline',
+                label: 'Ingestion',
                 items: [
                     {
                         title: 'Update Queue',
-                        description: 'Review pending event merges',
                         href: `${BASE_PATH}/ingestion/update-queue`,
-                        icon: <MaterialIcon name="refresh" size={18} />,
+                        icon: <MaterialIcon name="menu" size={16} />,
                         badge: counts?.updateQueue ?? null,
-                        hotkey: 'g u',
+                        hotkey: 'G U',
                     },
                     {
                         title: 'Moderation',
-                        description: 'Flagged items & human review',
                         href: `${BASE_PATH}/ingestion/moderation`,
-                        icon: <MaterialIcon name="warning" size={18} />,
+                        icon: <MaterialIcon name="warning" size={16} />,
                         badge: counts?.moderation ?? null,
-                        hotkey: 'g m',
+                        hotkey: 'G M',
                     },
                     {
                         title: 'Enrichment',
-                        description: 'Metadata and AI enhancements',
                         href: `${BASE_PATH}/ingestion/enrichment`,
-                        icon: <MaterialIcon name="trending-up" size={18} />,
+                        icon: <MaterialIcon name="star" size={16} />,
                         badge: counts?.enrichment ?? null,
-                        hotkey: 'g e',
+                        hotkey: 'G E',
                     },
                     {
                         title: 'Field Protection',
-                        description: 'Lock critical fields from overrides',
                         href: `${BASE_PATH}/ingestion/field-protection`,
-                        icon: <MaterialIcon name="settings" size={18} />,
+                        icon: <MaterialIcon name="warning" size={16} />,
                         badge: counts?.fieldProtection ?? null,
-                        hotkey: 'g f',
+                        hotkey: 'G F',
                     },
                 ],
             },
             {
-                label: 'Utilities',
+                label: 'System',
                 items: [
                     {
                         title: 'API Activity',
-                        description: 'Audit recent ingestion jobs',
                         href: `${BASE_PATH}/utilities/activity`,
-                        icon: <MaterialIcon name="compass" size={18} />,
+                        icon: <MaterialIcon name="code" size={16} />,
                     },
                     {
                         title: 'Reports',
-                        description: 'Scheduled digests & exports',
                         href: `${BASE_PATH}/utilities/reports`,
-                        icon: <MaterialIcon name="bar-chart" size={18} />,
+                        icon: <MaterialIcon name="bar-chart" size={16} />,
                     },
                 ],
             },
@@ -124,126 +117,105 @@ export default function AdminSidebar() {
     };
 
     return (
-        <Sidebar className="bg-slate-950 text-slate-100">
+        <Sidebar className="bg-[#1C1C1C] border-r border-[#2C2C2C] text-[#EEEEEE]">
             {open ? (
                 <>
-                    <SidebarHeader className="flex items-center justify-between gap-2">
-                        <div>
-                            <p className="text-xs uppercase tracking-widest text-slate-400">Tech-Cal</p>
-                            <h2 className="text-base font-semibold">Admin Console</h2>
+                    <SidebarHeader className="h-12 flex items-center justify-between px-4 border-b border-[#2C2C2C]">
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-4 rounded-sm bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center">
+                                <div className="h-2 w-2 rounded-full bg-indigo-500" />
+                            </div>
+                            <span className="text-sm font-medium text-slate-200">Tech-Cal Admin</span>
                         </div>
                         <button
-                            type="button"
-                            onClick={() => {
-                                (document.activeElement as HTMLElement | null)?.blur?.();
-                                toggle();
-                            }}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-slate-300 transition hover:bg-white/10"
-                            aria-label="Collapse admin navigation"
-                            title="Collapse admin navigation"
+                            onClick={() => toggle()}
+                            className="text-slate-500 hover:text-slate-300 transition-colors"
                         >
-                            <MaterialIcon name="chevron_double_left" size={16} />
+                            <MaterialIcon name="chevron_left" size={16} />
                         </button>
                     </SidebarHeader>
-                    <SidebarContent className="space-y-6">
+                    <SidebarContent className="px-2 py-4 space-y-6">
                         {sections.map((section) => (
-                            <SidebarGroup key={section.label}>
-                                <SidebarGroupLabel className="px-2 text-[11px] text-slate-400">
+                            <div key={section.label}>
+                                <div className="px-2 mb-1 text-[10px] font-medium uppercase tracking-wider text-slate-500">
                                     {section.label}
-                                </SidebarGroupLabel>
-                                <SidebarGroupContent>
-                                    <SidebarMenu>
-                                        {section.items.map((item) => {
-                                            const active = isActive(item);
-                                            return (
-                                                <SidebarMenuItem key={item.title}>
-                                                    <SidebarMenuButton asChild>
-                                                        <Link
-                                                            href={item.href}
-                                                            className={cn(
-                                                                'group relative flex items-start gap-3 rounded-md px-3 py-2 text-left transition-colors',
-                                                                active
-                                                                    ? 'bg-white/10 text-white shadow-inner'
-                                                                    : 'text-slate-200 hover:bg-white/5'
-                                                            )}
-                                                        >
-                                                            <span className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-md bg-white/10 text-slate-100 transition group-hover:bg-white/20">
-                                                                {item.icon}
-                                                            </span>
-                                                            <span className="flex-1">
-                                                                <span className="flex items-center gap-2">
-                                                                    <span className="text-sm font-medium leading-none">
-                                                                        {item.title}
-                                                                    </span>
-                                                                    {typeof item.badge === 'number' && (
-                                                                        <Badge variant="secondary" className="bg-slate-800 text-xs">
-                                                                            {item.badge}
-                                                                        </Badge>
-                                                                    )}
-                                                                </span>
-                                                                {item.description && (
-                                                                    <span className="mt-1 block text-xs leading-snug text-slate-400">
-                                                                        {item.description}
-                                                                    </span>
-                                                                )}
-                                                            </span>
-                                                            {item.hotkey && (
-                                                                <kbd className="rounded border border-white/20 bg-white/5 px-2 py-1 text-[10px] uppercase text-slate-300">
-                                                                    {item.hotkey}
-                                                                </kbd>
-                                                            )}
-                                                        </Link>
-                                                    </SidebarMenuButton>
-                                                </SidebarMenuItem>
-                                            );
-                                        })}
-                                    </SidebarMenu>
-                                </SidebarGroupContent>
-                            </SidebarGroup>
+                                </div>
+                                <div className="space-y-0.5">
+                                    {section.items.map((item) => {
+                                        const active = isActive(item);
+                                        return (
+                                            <Link
+                                                key={item.title}
+                                                href={item.href}
+                                                className={cn(
+                                                    'group flex items-center justify-between px-2 py-1.5 rounded-md text-[13px] transition-colors',
+                                                    active
+                                                        ? 'bg-white/5 text-slate-100 font-medium'
+                                                        : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-2.5">
+                                                    <span className={cn("transition-colors", active ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-400")}>
+                                                        {item.icon}
+                                                    </span>
+                                                    <span>{item.title}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {item.badge ? (
+                                                        <span className="flex h-4 min-w-[16px] items-center justify-center rounded px-1 text-[10px] font-medium bg-indigo-500/20 text-indigo-300">
+                                                            {item.badge}
+                                                        </span>
+                                                    ) : null}
+                                                    {item.hotkey && (
+                                                        <span className="hidden group-hover:inline-block text-[10px] text-slate-600 font-mono">
+                                                            {item.hotkey}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         ))}
                     </SidebarContent>
-                    <SidebarFooter className="px-3 py-4 text-xs text-slate-500">
-                        <p>Keyboard shortcuts: press `?`</p>
+                    <SidebarFooter className="p-4 border-t border-[#2C2C2C]">
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold">
+                                A
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-slate-300">Admin User</div>
+                                <div className="text-[10px]">admin@tech-cal.com</div>
+                            </div>
+                        </div>
                     </SidebarFooter>
                 </>
             ) : (
-                <>
-                    <SidebarContent className="flex h-full flex-col items-center gap-6 py-5">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                (document.activeElement as HTMLElement | null)?.blur?.();
-                                toggle();
-                            }}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-slate-200 transition hover:bg-white/10"
-                            aria-label="Expand admin navigation"
-                            title="Expand admin navigation"
-                        >
-                            <MaterialIcon name="menu" size={16} />
-                        </button>
-                        <SidebarMenu className="items-center gap-4">
-                            {sections.flatMap((section) => section.items).map((item) => {
-                                const active = isActive(item);
-                                return (
-                                    <SidebarMenuItem key={item.title}>
-                                        <SidebarMenuButton asChild>
-                                            <Link
-                                                href={item.href}
-                                                title={item.title}
-                                                className={cn(
-                                                    'flex h-10 w-10 items-center justify-center rounded-md border border-transparent text-slate-200 transition',
-                                                    active ? 'border-white/30 bg-white/10 text-white' : 'hover:bg-white/10'
-                                                )}
-                                            >
-                                                {item.icon}
-                                            </Link>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                );
-                            })}
-                        </SidebarMenu>
-                    </SidebarContent>
-                </>
+                <SidebarContent className="flex flex-col items-center py-4 gap-4">
+                    <button
+                        onClick={() => toggle()}
+                        className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-white/5 text-slate-400"
+                    >
+                        <MaterialIcon name="menu" size={16} />
+                    </button>
+                    {sections.flatMap(s => s.items).map((item) => {
+                        const active = isActive(item);
+                        return (
+                            <Link
+                                key={item.title}
+                                href={item.href}
+                                title={item.title}
+                                className={cn(
+                                    'h-8 w-8 flex items-center justify-center rounded-md transition-colors',
+                                    active ? 'bg-white/10 text-indigo-400' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
+                                )}
+                            >
+                                {item.icon}
+                            </Link>
+                        );
+                    })}
+                </SidebarContent>
             )}
         </Sidebar>
     );

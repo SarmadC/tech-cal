@@ -26,6 +26,7 @@ export interface MultiSelectDropdownProps {
   suggestionLabel?: string;
   allowCustom?: boolean;
   onDuplicateAttempt?: (value: string) => void;
+  variant?: 'default' | 'minimal';
 }
 
 export default function MultiSelectDropdown({
@@ -42,7 +43,8 @@ export default function MultiSelectDropdown({
   suggestions,
   suggestionLabel,
   allowCustom = false,
-  onDuplicateAttempt
+  onDuplicateAttempt,
+  variant = 'default'
 }: MultiSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,7 +55,7 @@ export default function MultiSelectDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listboxRef = useRef<HTMLDivElement>(null);
-  
+
   const maxVisibleChips = 3;
 
   // Group options by category if they have one
@@ -94,7 +96,7 @@ export default function MultiSelectDropdown({
 
   const handleSelect = (value: string) => {
     if (disabled) return;
-    
+
     // Check for duplicate
     if (selectedValues.map(normalizeForComparison).includes(normalizeForComparison(value))) {
       if (onDuplicateAttempt) {
@@ -102,7 +104,7 @@ export default function MultiSelectDropdown({
       }
       return;
     }
-    
+
     const isSelected = selectedValues.includes(value);
     let newValues: string[];
 
@@ -113,7 +115,7 @@ export default function MultiSelectDropdown({
         return; // Don't add if max selections reached
       }
       newValues = [...selectedValues, value];
-      
+
       // Announce addition
       const option = options.find(opt => opt.value === value);
       const label = option?.label || value;
@@ -126,13 +128,13 @@ export default function MultiSelectDropdown({
 
   const handleRemove = (value: string) => {
     if (disabled) return;
-    
+
     // Announce removal
     const option = options.find(opt => opt.value === value);
     const label = option?.label || value;
     setLiveRegionMessage(`${label} removed`);
     setTimeout(() => setLiveRegionMessage(''), 1000);
-    
+
     onChange(selectedValues.filter(v => v !== value));
   };
 
@@ -148,28 +150,28 @@ export default function MultiSelectDropdown({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-  
+
   const getLabel = (value: string) => {
     const option = options.find(opt => opt.value === value);
     return option?.label || value;
   };
-  
+
   const handleShowMore = () => {
     setShowAllChips(true);
     setLiveRegionMessage(`Showing all ${selectedValues.length} selected items`);
     setTimeout(() => setLiveRegionMessage(''), 1000);
   };
-  
+
   const handleCustomEntry = () => {
     const validation = validateSkillEntry(searchTerm);
-    
+
     if (!validation.valid) {
       setValidationError(validation.error || 'Invalid entry');
       return;
     }
-    
+
     if (!validation.normalized) return;
-    
+
     // Check for duplicate
     if (selectedValues.map(normalizeForComparison).includes(normalizeForComparison(validation.normalized))) {
       if (onDuplicateAttempt) {
@@ -177,12 +179,12 @@ export default function MultiSelectDropdown({
       }
       return;
     }
-    
+
     handleSelect(validation.normalized);
     setSearchTerm('');
     setValidationError('');
   };
-  
+
   // Filter suggestions to exclude already-selected
   const filteredSuggestions = suggestions?.filter(
     s => !selectedValues.map(normalizeForComparison).includes(normalizeForComparison(s))
@@ -226,7 +228,7 @@ export default function MultiSelectDropdown({
           {label}
         </label>
       )}
-      
+
       {/* Suggestion chips */}
       {filteredSuggestions.length > 0 && (
         <div className="space-y-2 mb-3">
@@ -270,7 +272,7 @@ export default function MultiSelectDropdown({
           </div>
         </div>
       )}
-      
+
       {/* Selected chips display (above dropdown) */}
       {selectedValues.length > 0 && (
         <div className="space-y-2 mb-3">
@@ -279,13 +281,16 @@ export default function MultiSelectDropdown({
               <span
                 key={value}
                 role="listitem"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors duration-200"
-                style={{
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border transition-colors duration-200 ${variant === 'minimal'
+                    ? 'rounded-md bg-white/5 border-white/10 text-slate-200'
+                    : 'rounded-full'
+                  }`}
+                style={variant === 'default' ? {
                   backgroundColor: 'var(--success-light)',
                   borderColor: 'var(--success)',
                   color: 'var(--success)',
                   boxShadow: 'var(--shadow-xs)'
-                }}
+                } : undefined}
               >
                 <span>{getLabel(value)}</span>
                 {!disabled && (
@@ -293,20 +298,23 @@ export default function MultiSelectDropdown({
                     type="button"
                     onClick={() => handleRemove(value)}
                     aria-label={`Remove ${getLabel(value)}`}
-                    className="flex items-center justify-center w-5 h-5 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 transition-colors"
-                    style={{ 
+                    className={`flex items-center justify-center w-4 h-4 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-1 transition-colors ${variant === 'minimal'
+                        ? 'text-slate-400 hover:text-slate-200 hover:bg-white/10'
+                        : ''
+                      }`}
+                    style={variant === 'default' ? {
                       backgroundColor: 'rgba(34, 197, 94, 0.2)',
                       color: 'var(--success)'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.3)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.2)'}
+                    } : undefined}
+                    onMouseEnter={variant === 'default' ? (e) => e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.3)' : undefined}
+                    onMouseLeave={variant === 'default' ? (e) => e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.2)' : undefined}
                   >
-                    <X size={14} weight="bold" />
+                    <X size={12} weight="bold" />
                   </button>
                 )}
               </span>
             ))}
-            
+
             {hasOverflow && !showAllChips && (
               <button
                 type="button"
@@ -321,7 +329,7 @@ export default function MultiSelectDropdown({
                 +{selectedValues.length - maxVisibleChips} more
               </button>
             )}
-            
+
             {hasOverflow && showAllChips && (
               <button
                 type="button"
@@ -339,12 +347,12 @@ export default function MultiSelectDropdown({
           </div>
         </div>
       )}
-      
+
       {/* ARIA live region for announcements */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {liveRegionMessage}
       </div>
-      
+
       <div
         role="combobox"
         aria-expanded={isOpen}
@@ -355,7 +363,10 @@ export default function MultiSelectDropdown({
         aria-label={label || placeholder}
         aria-describedby={description ? `${label}-description` : undefined}
         tabIndex={disabled ? -1 : 0}
-        className="w-full px-3 py-2 border rounded cursor-pointer"
+        className={`w-full px-3 py-2 border rounded cursor-pointer ${variant === 'minimal'
+            ? 'bg-transparent border-white/10 text-slate-200 hover:border-white/20'
+            : ''
+          }`}
         onClick={handleToggle}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -376,31 +387,31 @@ export default function MultiSelectDropdown({
         }}
       >
         <div className="flex items-center justify-between">
-          <span>
+          <span className={selectedValues.length === 0 ? 'text-slate-500' : ''}>
             {selectedValues.length === 0 ? placeholder : `${selectedValues.length} selected`}
           </span>
-          <CaretDown 
-            size={16} 
-            className={isOpen ? 'rotate-180' : ''}
+          <CaretDown
+            size={16}
+            className={`${isOpen ? 'rotate-180' : ''} ${variant === 'minimal' ? 'text-slate-500' : ''}`}
           />
         </div>
       </div>
 
       {isOpen && (
-        <div 
+        <div
           id="multiselect-listbox"
           ref={listboxRef}
           role="listbox"
           aria-label={`${label || 'Options'} selection`}
           className="absolute z-[9999] w-full mt-1 rounded-lg max-h-60 overflow-hidden shadow-2xl"
-          style={{ 
+          style={{
             backdropFilter: 'blur(24px)',
             backgroundColor: 'rgba(15, 23, 42, 0.95)',
             border: '1px solid rgba(148, 163, 184, 0.2)',
           }}
         >
           {searchable && (
-            <div className="p-2 border-b">
+            <div className="p-2 border-b border-white/10">
               <input
                 ref={searchRef}
                 type="text"
@@ -413,12 +424,12 @@ export default function MultiSelectDropdown({
                     handleRemove(selectedValues[selectedValues.length - 1]);
                   }
                 }}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded bg-slate-900 border-white/10 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
                 aria-label="Search options"
               />
             </div>
           )}
-          
+
           <div className="max-h-48 overflow-y-auto overflow-x-visible" role="group">
             {filteredOptions.length === 0 ? (
               <>
@@ -442,7 +453,7 @@ export default function MultiSelectDropdown({
                     Create &quot;{searchTerm.trim()}&quot;
                   </div>
                 ) : (
-                  <div className="px-4 py-3 text-sm text-center opacity-70">
+                  <div className="px-4 py-3 text-sm text-center opacity-70 text-slate-400">
                     No options found
                   </div>
                 )}
@@ -456,7 +467,7 @@ export default function MultiSelectDropdown({
               filteredOptions.map(([category, categoryOptions]) => (
                 <div key={typeof category === 'string' ? category : 'other'}>
                   {typeof category === 'string' && category !== 'Other' && (
-                    <div className="px-4 py-2 text-xs font-semibold sticky top-0" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', borderBottomColor: 'var(--border-default)', borderBottomWidth: '1px', opacity: 0.6 }}>
+                    <div className="px-4 py-2 text-xs font-semibold sticky top-0 text-slate-400 bg-slate-900/90 backdrop-blur-sm border-b border-white/5">
                       {category}
                     </div>
                   )}
@@ -465,7 +476,7 @@ export default function MultiSelectDropdown({
                     const isDisabled = maxSelections && selectedValues.length >= maxSelections && !isSelected;
                     const globalIndex = getAllOptions().findIndex(opt => opt.value === option.value);
                     const isFocused = globalIndex === focusedIndex;
-                    
+
                     return (
                       <div
                         key={option.value}
@@ -473,15 +484,15 @@ export default function MultiSelectDropdown({
                         role="option"
                         aria-selected={isSelected}
                         tabIndex={-1}
-                        className="px-4 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors focus:outline-none"
+                        className={`px-4 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors focus:outline-none ${isSelected ? 'text-indigo-400' : 'text-slate-300'
+                          }`}
                         style={{
-                          backgroundColor: (isSelected || isFocused) ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                          color: isSelected ? 'var(--accent-primary)' : undefined,
-                          ...(isFocused && { outline: '2px solid', outlineColor: 'var(--accent-primary)', outlineOffset: '-2px' })
+                          backgroundColor: (isSelected || isFocused) ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                          ...(isFocused && { outline: 'none', backgroundColor: 'rgba(255, 255, 255, 0.08)' })
                         }}
                         onMouseEnter={(e) => {
                           if (!isDisabled && !isSelected && !isFocused) {
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                           }
                         }}
                         onMouseLeave={(e) => {
@@ -493,7 +504,7 @@ export default function MultiSelectDropdown({
                         onKeyDown={(e) => handleKeyDownInListbox(e, option.value)}
                       >
                         <span>{option.label}</span>
-                        {isSelected && <Check size={16} style={{ color: 'var(--accent-primary)' }} />}
+                        {isSelected && <Check size={16} className="text-indigo-400" />}
                       </div>
                     );
                   })}
@@ -501,9 +512,9 @@ export default function MultiSelectDropdown({
               ))
             )}
           </div>
-          
+
           {maxSelections && (
-            <div className="px-4 py-2 text-xs opacity-70" style={{ borderTopColor: 'var(--border-default)', borderTopWidth: '1px', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+            <div className="px-4 py-2 text-xs opacity-70 text-slate-400 border-t border-white/10 bg-white/5">
               {selectedValues.length} of {maxSelections} selected
             </div>
           )}

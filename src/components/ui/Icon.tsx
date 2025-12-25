@@ -46,9 +46,10 @@ import {
   CodeIcon,
   ArrowUpRightIcon,
   CompassIcon,
+  ImageIcon,
 } from '@phosphor-icons/react';
 
-export type IconName = 
+export type IconName =
   | 'video-call'
   | 'person'
   | 'location'
@@ -94,7 +95,8 @@ export type IconName =
   | 'home'
   | 'code'
   | 'arrow-up-right'
-  | 'compass';
+  | 'compass'
+  | 'image';
 
 interface IconProps {
   name: IconName;
@@ -150,24 +152,25 @@ const iconMap = {
   'code': CodeIcon,
   'arrow-up-right': ArrowUpRightIcon,
   'compass': CompassIcon,
+  'image': ImageIcon,
 } as const;
 
-export const MaterialIcon: React.FC<IconProps> = ({ 
-  name, 
-  size = 16, 
-  className = '', 
-  color 
+export const MaterialIcon: React.FC<IconProps> = ({
+  name,
+  size = 16,
+  className = '',
+  color
 }) => {
   const IconComponent = iconMap[name];
-  
+
   if (!IconComponent) {
     console.warn(`Icon "${name}" not found`);
     return null;
   }
 
   return (
-    <IconComponent 
-      size={size} 
+    <IconComponent
+      size={size}
       className={className}
       color={color}
     />

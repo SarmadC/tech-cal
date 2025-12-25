@@ -102,3 +102,68 @@ export async function PUT(request: NextRequest) {
     }
 }
 
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Check admin access
+        const isAdmin = await isAdminUser(user.id, supabase);
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        const { searchParams } = new URL(request.url);
+        const eventId = searchParams.get('eventId');
+
+        if (!eventId) {
+            return NextResponse.json(
+                { error: 'Missing required field: eventId' },
+                { status: 400 }
+            );
+        }
+
+        // Use service client to bypass RLS for all database operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
+        const { error } = await serviceClient
+            .from('events')
+            .delete()
+            .eq('id', eventId);
+
+        if (error) {
+            console.error('Failed to delete event:', error);
+            return NextResponse.json(
+                { error: error.message || 'Failed to delete event' },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Event deleted successfully',
+        });
+    } catch (error) {
+        console.error('Error in event deletion API:', error);
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
+    }
+}

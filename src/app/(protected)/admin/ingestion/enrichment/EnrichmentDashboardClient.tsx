@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useAdminToolbar } from '@/contexts/AdminToolbarContext';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import type { EnrichmentMetadata } from '@/types/enrichment';
+import { cn } from '@/lib/utils';
 
 const COLUMNS_STORAGE_KEY = 'techcal.admin.enrichment.columns';
 
@@ -331,12 +332,12 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                     setBulkProgress((prev) =>
                                         prev
                                             ? {
-                                                  ...prev,
-                                                  active: false,
-                                                  completed: data.total,
-                                                  succeeded: data.summary?.succeeded ?? prev.succeeded,
-                                                  failed: data.summary?.failed ?? prev.failed,
-                                              }
+                                                ...prev,
+                                                active: false,
+                                                completed: data.total,
+                                                succeeded: data.summary?.succeeded ?? prev.succeeded,
+                                                failed: data.summary?.failed ?? prev.failed,
+                                            }
                                             : null
                                     );
                                     showSuccess(
@@ -461,16 +462,16 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                     key: 'event',
                     header: 'Event',
                     render: (event) => (
-                        <div className="flex flex-col gap-1">
-                            <div className="font-medium text-slate-100">{event.title}</div>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        <div className="flex flex-col gap-0.5">
+                            <div className="font-medium text-slate-200 text-[13px]">{event.title}</div>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500">
                                 {event.ingestion_source_id && (
-                                    <span className="inline-flex items-center gap-1 rounded border border-slate-800/50 bg-slate-900/60 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                                        <MaterialIcon name="label" size={12} />
+                                    <span className="font-mono text-slate-400">
                                         {event.ingestion_source_id}
                                     </span>
                                 )}
-                                <span className="text-slate-500">{formatDistanceToNow(new Date(event.start_time), { addSuffix: true })}</span>
+                                <span>•</span>
+                                <span>{formatDistanceToNow(new Date(event.start_time), { addSuffix: true })}</span>
                             </div>
                         </div>
                     ),
@@ -482,19 +483,33 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                     key: 'status',
                     header: 'Status',
                     cellClassName: 'max-w-xl',
-                    render: (event) => (
-                        <div className="flex flex-col gap-1 text-xs text-slate-300">
-                            <Badge className={statusBadgeStyles[event.enrichment_status] ?? 'bg-slate-800 text-slate-100'}>
-                                {event.enrichment_status}
-                            </Badge>
-                            {event.enrichment_metadata?.last_error && (
-                                <span className="text-amber-200 text-[11px] leading-snug whitespace-pre-wrap break-words">
-                                    {event.enrichment_metadata.last_error}
-                                </span>
-                            )}
-                        </div>
-                    ),
-                    width: 320,
+                    render: (event) => {
+                        const statusColors: Record<string, string> = {
+                            pending: 'bg-amber-500',
+                            processing: 'bg-blue-500',
+                            enriched: 'bg-emerald-500',
+                            failed: 'bg-rose-500',
+                            approved: 'bg-emerald-600',
+                            rejected: 'bg-rose-600',
+                            skipped: 'bg-slate-600',
+                        };
+                        const color = statusColors[event.enrichment_status] || 'bg-slate-500';
+
+                        return (
+                            <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                    <div className={cn("h-1.5 w-1.5 rounded-full", color)} />
+                                    <span className="text-[11px] capitalize text-slate-300">{event.enrichment_status}</span>
+                                </div>
+                                {event.enrichment_metadata?.last_error && (
+                                    <span className="text-rose-400 text-[10px] leading-snug line-clamp-1">
+                                        {event.enrichment_metadata.last_error}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    },
+                    width: 200,
                 });
             }
 
@@ -503,11 +518,11 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                     key: 'updated_at',
                     header: 'Updated',
                     render: (event) => (
-                        <div className="text-xs text-slate-400">
+                        <div className="text-[11px] text-slate-500">
                             {event.updated_at ? formatDistanceToNow(new Date(event.updated_at), { addSuffix: true }) : '—'}
                         </div>
                     ),
-                    width: 140,
+                    width: 120,
                 });
             }
 
@@ -515,39 +530,42 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 baseColumns.push({
                     key: 'actions',
                     header: 'Actions',
-                    align: 'center',
+                    align: 'right',
                     render: (event) => (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                                 size="sm"
-                                variant="secondary"
+                                variant="ghost"
+                                className="h-6 px-2 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-white/5"
                                 onClick={() => triggerEnrichment([event.id])}
                                 disabled={loading || !event.source_url}
-                                title={!event.source_url ? 'No source URL - use Infer instead' : 'Scrape source URL and extract data'}
+                                title={!event.source_url ? 'No source URL' : 'Scrape'}
                             >
                                 Scrape
                             </Button>
                             <Button
                                 size="sm"
-                                variant="outline"
+                                variant="ghost"
+                                className="h-6 px-2 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-white/5"
                                 onClick={() => triggerInference([event.id])}
                                 disabled={loading}
-                                title="Generate description and tags from title (no scraping)"
+                                title="Infer"
                             >
                                 Infer
                             </Button>
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                disabled={!event.source_url}
-                                onClick={() => window.open(event.source_url, '_blank', 'noopener,noreferrer')}
-                                title="Open source URL"
-                            >
-                                <MaterialIcon name="arrow-up-right" size={14} />
-                            </Button>
+                            {event.source_url && (
+                                <a
+                                    href={event.source_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex h-6 w-6 items-center justify-center rounded hover:bg-white/5 text-slate-500 hover:text-slate-300"
+                                >
+                                    <MaterialIcon name="arrow-up-right" size={12} />
+                                </a>
+                            )}
                         </div>
                     ),
-                    width: 220,
+                    width: 180,
                 });
             }
 
@@ -587,72 +605,59 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
         <div className="space-y-4">
             {/* Progress Bar */}
             {bulkProgress && (
-                <div className="rounded-lg border border-slate-800/60 bg-slate-950/60 p-4">
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                        <span className="text-slate-200">
+                <div className="rounded-lg border border-white/5 bg-[#1C1C1C] p-3 mb-4">
+                    <div className="mb-2 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>
                             {bulkProgress.active ? (
                                 <>
                                     {bulkProgress.mode === 'enrich' ? 'Enriching' : 'Inferring'}{' '}
-                                    {bulkProgress.completed}/{bulkProgress.total}...
+                                    <span className="text-slate-200">{bulkProgress.completed}/{bulkProgress.total}</span>
                                 </>
                             ) : (
                                 <>
-                                    Complete: {bulkProgress.succeeded} succeeded, {bulkProgress.failed} failed
+                                    Complete: <span className="text-emerald-400">{bulkProgress.succeeded}</span> succeeded, <span className="text-rose-400">{bulkProgress.failed}</span> failed
                                 </>
                             )}
                         </span>
                         {bulkProgress.active && bulkProgress.currentTitle && (
-                            <span className="text-xs text-slate-400 truncate max-w-[300px]">
+                            <span className="truncate max-w-[300px] opacity-70">
                                 {bulkProgress.currentTitle}
                             </span>
                         )}
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-white/5">
                         <div
-                            className="h-full bg-emerald-500 transition-all duration-300"
+                            className="h-full bg-indigo-500 transition-all duration-300"
                             style={{ width: `${(bulkProgress.completed / bulkProgress.total) * 100}%` }}
                         />
                     </div>
                     {!bulkProgress.active && bulkProgress.errors.length > 0 && (
                         <div className="mt-3 space-y-1">
-                            <p className="text-xs font-medium text-rose-400">Errors ({bulkProgress.errors.length}):</p>
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-rose-400">Errors ({bulkProgress.errors.length})</p>
                             <div className="max-h-32 overflow-y-auto space-y-1">
                                 {bulkProgress.errors.slice(0, 5).map((err) => (
-                                    <div key={err.eventId} className="text-xs text-slate-400">
-                                        <span className="text-slate-300">{err.title}:</span>{' '}
-                                        <span className="text-rose-300">{err.error}</span>
+                                    <div key={err.eventId} className="text-[11px] text-slate-500">
+                                        <span className="text-slate-400">{err.title}:</span>{' '}
+                                        <span className="text-rose-400">{err.error}</span>
                                     </div>
                                 ))}
-                                {bulkProgress.errors.length > 5 && (
-                                    <p className="text-xs text-slate-500">
-                                        + {bulkProgress.errors.length - 5} more errors
-                                    </p>
-                                )}
                             </div>
                         </div>
                     )}
                     {!bulkProgress.active && (
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            className="mt-2"
-                            onClick={() => setBulkProgress(null)}
-                        >
-                            Dismiss
-                        </Button>
+                        <div className="mt-2 flex justify-end">
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-[11px] text-slate-400 hover:text-slate-200"
+                                onClick={() => setBulkProgress(null)}
+                            >
+                                Dismiss
+                            </Button>
+                        </div>
                     )}
                 </div>
             )}
-
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400">
-                    {filteredEvents.length} events (status filter: {statusFilter})
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => refresh()} disabled={loading}>
-                    <MaterialIcon name="refresh" size={14} />
-                    Refresh
-                </Button>
-            </div>
 
             <AdminDataTable
                 columns={columns}
@@ -671,57 +676,84 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                 onPageChange={() => undefined}
                 onPageSizeChange={() => undefined}
                 toolbar={
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <span className="text-xs text-slate-400">Trigger enrichment and monitor status</span>
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <MaterialIcon name="search" size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                                <input
+                                    type="text"
+                                    placeholder="Filter events..."
+                                    className="h-7 w-64 rounded-md border border-white/10 bg-white/5 pl-8 pr-3 text-[13px] text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                                    value={searchValue}
+                                    onChange={(e) => setSearchValue(e.target.value)}
+                                />
+                            </div>
+                            <div className="h-4 w-px bg-white/10 mx-1" />
+                            <div className="flex items-center gap-1">
+                                {['all', 'pending', 'enriched', 'failed'].map((status) => (
+                                    <button
+                                        key={status}
+                                        onClick={() => setStatusFilter(status as any)}
+                                        className={cn(
+                                            "px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
+                                            statusFilter === status
+                                                ? "bg-white/10 text-slate-200"
+                                                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                                        )}
+                                    >
+                                        {status}
+                                        {statusCounts[status] ? <span className="ml-1 opacity-50">{statusCounts[status]}</span> : null}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                         <div className="flex items-center gap-2">
                             <div ref={columnsPanelRef} className="relative">
                                 <Button
                                     type="button"
                                     size="sm"
-                                    variant="outline"
+                                    variant="ghost"
                                     onClick={() => setColumnsPanelOpen((prev) => !prev)}
-                                    className="bg-slate-900/60 text-slate-200 hover:bg-slate-800"
-                                    aria-expanded={columnsPanelOpen}
-                                    aria-haspopup="true"
+                                    className={cn("h-7 w-7 p-0 text-slate-400 hover:text-slate-200", columnsPanelOpen && "bg-white/10 text-slate-200")}
+                                    title="Columns"
                                 >
                                     <MaterialIcon name="settings" size={14} />
-                                    Columns
                                 </Button>
                                 {columnsPanelOpen && (
-                                    <div className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-slate-800 bg-slate-950 p-3 shadow-xl">
-                                        <p className="mb-2 text-xs font-semibold uppercase text-slate-400">Visible columns</p>
-                                        <div className="space-y-2 text-sm text-slate-200">
+                                    <div className="absolute right-0 z-40 mt-2 w-48 rounded-lg border border-white/10 bg-[#1C1C1C] p-2 shadow-xl">
+                                        <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-slate-500">Columns</p>
+                                        <div className="space-y-1">
                                             {(
                                                 [
-                                                    ['status', 'Status & errors'],
-                                                    ['updated', 'Last updated'],
-                                                    ['actions', 'Quick actions'],
+                                                    ['status', 'Status'],
+                                                    ['updated', 'Last Updated'],
+                                                    ['actions', 'Actions'],
                                                 ] as Array<[keyof ColumnVisibility, string]>
                                             ).map(([key, label]) => (
-                                                <label key={key} className="flex items-center gap-2">
+                                                <label key={key} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-white/5 cursor-pointer">
                                                     <input
                                                         type="checkbox"
-                                                        className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-primary focus:ring-2 focus:ring-primary"
+                                                        className="h-3.5 w-3.5 rounded border-white/10 bg-white/5 text-indigo-500 focus:ring-0"
                                                         checked={visibleColumns[key]}
                                                         onChange={() => toggleColumnVisibility(key)}
                                                     />
-                                                    <span>{label}</span>
+                                                    <span className="text-[13px] text-slate-300">{label}</span>
                                                 </label>
                                             ))}
                                         </div>
-                                        <p className="mt-3 text-[11px] text-slate-500">
-                                            Preferences sync to your browser.
-                                        </p>
                                     </div>
                                 )}
                             </div>
-                            <a
-                                href="/admin/ingestion/update-queue"
-                                className="inline-flex items-center gap-1 text-xs text-slate-400 transition hover:text-slate-200"
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => refresh()}
+                                disabled={loading}
+                                className="h-7 w-7 p-0 text-slate-400 hover:text-slate-200"
+                                title="Refresh"
                             >
-                                <MaterialIcon name="arrow_back" size={12} />
-                                Back to review queue
-                            </a>
+                                <MaterialIcon name="refresh" size={14} />
+                            </Button>
                         </div>
                     </div>
                 }

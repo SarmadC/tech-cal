@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
 import { TagBasedMatchingService } from '../tagBasedMatchingService';
 import type { AgendaItem, Event, EventTag, SupabaseClientType } from '@/types';
 import type { CareerProfile } from '@/types/career';
@@ -108,7 +109,7 @@ describe('TagBasedMatchingService', () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
-    (mockSupabase.from as vi.Mock).mockReset();
+    (mockSupabase.from as Mock).mockReset();
     });
 
     afterEach(() => {
@@ -233,7 +234,7 @@ describe('TagBasedMatchingService', () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
-    (mockSupabase.from as vi.Mock).mockReset();
+    (mockSupabase.from as Mock).mockReset();
     });
 
     afterEach(() => {
@@ -260,7 +261,7 @@ describe('TagBasedMatchingService', () => {
           organizer: { name: 'Test Org' }
         }];
 
-        (mockSupabase.from as vi.Mock).mockImplementation((table: string) => {
+        (mockSupabase.from as Mock).mockImplementation((table: string) => {
           if (table === 'event_agenda') {
             return createAgendaQueryBuilder(agendaData);
           }
@@ -309,7 +310,7 @@ describe('TagBasedMatchingService', () => {
           organizer: { name: 'Test Org' }
         }];
 
-        (mockSupabase.from as vi.Mock).mockImplementation((table: string) => {
+        (mockSupabase.from as Mock).mockImplementation((table: string) => {
           if (table === 'event_agenda') {
             return createAgendaQueryBuilder(agendaData);
           }
@@ -366,7 +367,7 @@ describe('TagBasedMatchingService', () => {
           _matchLocation: 'description'
         };
 
-        (mockSupabase.from as vi.Mock).mockImplementation((table: string) => {
+        (mockSupabase.from as Mock).mockImplementation((table: string) => {
           if (table === 'event_agenda') {
             return createAgendaQueryBuilder();
           }

@@ -511,16 +511,27 @@ export class NormalizationProcessor {
                                 }
                             }
 
-                            // Find or create organizer
-                            const organizerId = await OrganizerEnrichmentService.findOrCreateOrganizer(
-                                {
-                                    name: record.organizer || 'Unknown',
-                                    domain: record.organizerDomain,
-                                    websiteUrl: record.sourceUrl,
-                                    sourceUrl: record.sourceUrl, // For og:image extraction
-                                },
-                                supabaseClient
-                            );
+                            // Find or create organizer - only if we have a valid organizer name
+                            // Don't create organizers with placeholder names like "Unknown"
+                            const organizerName = record.organizer?.trim();
+                            const hasValidOrganizer = organizerName && 
+                                organizerName !== '' && 
+                                organizerName !== 'Unknown' &&
+                                organizerName.toLowerCase() !== 'unknown organizer' &&
+                                organizerName.toLowerCase() !== 'tbd' &&
+                                organizerName.toLowerCase() !== 'tba';
+                            
+                            const organizerId = hasValidOrganizer
+                                ? await OrganizerEnrichmentService.findOrCreateOrganizer(
+                                    {
+                                        name: organizerName,
+                                        domain: record.organizerDomain,
+                                        websiteUrl: record.sourceUrl,
+                                        sourceUrl: record.sourceUrl, // For og:image extraction
+                                    },
+                                    supabaseClient
+                                )
+                                : null;
 
                             // Calculate quality score before normalizing
                             const qualityScore = await QualityScoringService.calculateQualityScore(

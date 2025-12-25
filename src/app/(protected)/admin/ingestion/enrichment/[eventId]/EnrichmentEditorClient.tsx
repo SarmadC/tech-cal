@@ -9,12 +9,14 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
-import LogoExtractorModal from '@/components/admin/LogoExtractorModal';
+import ImageExtractorModal from '@/components/admin/ImageExtractorModal';
 import { cn } from '@/lib/utils';
+import { MaterialIcon } from '@/components/ui/Icon';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 // Import section components
 import {
@@ -59,22 +61,9 @@ export default function EnrichmentEditorClient({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const { showSuccess, showError } = useSnackbar();
 
-    // Section collapse state
-    const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-        basicInfo: true,
-        classification: false,
-        timingCapacity: false,
-        pricing: false,
-        urlsMedia: false,
-        features: false,
-        socialVirtual: false,
-        venue: false,
-        series: false,
-        agenda: true,
-        speakers: true,
-        organizer: false,
-    });
+
 
     // Core event fields state
     const [coreFields, setCoreFields] = useState<CoreFieldsState>({
@@ -136,6 +125,7 @@ export default function EnrichmentEditorClient({
 
     // Organizer state
     const [organizerData, setOrganizerData] = useState<OrganizerData>({
+        name: event.organizer?.name || '',
         description: event.organizer?.description || '',
         website_url: event.organizer?.website_url || '',
         social_media: (event.organizer?.social_media as Record<string, unknown>) || null,
@@ -182,6 +172,8 @@ export default function EnrichmentEditorClient({
     const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(
         event.organizer?.logo_url || null
     );
+
+    const [eventImageExtractorOpen, setEventImageExtractorOpen] = useState(false);
 
     const handleAddAgendaItem = useCallback(() => {
         setAgendaItems([...agendaItems, {
@@ -403,14 +395,14 @@ export default function EnrichmentEditorClient({
             }
 
             const blob = new Blob([bytes], { type: fetchData.contentType });
-            
+
             // Validate blob size
             if (blob.size === 0) {
                 throw new Error('Blob size is 0 bytes');
             }
 
             // Create File object with proper properties
-            const file = new File([blob], fetchData.filename, { 
+            const file = new File([blob], fetchData.filename, {
                 type: fetchData.contentType,
                 lastModified: Date.now(),
             });
@@ -478,6 +470,85 @@ export default function EnrichmentEditorClient({
         }
     }, [event.organizer]);
 
+    const handleEventImageFromUrl = useCallback(async (imageUrl: string) => {
+        setLoading(true);
+        setError(null);
+        setSuccess(false);
+
+        try {
+            // Fetch the image through server-side proxy to bypass CSP
+            const fetchResponse = await fetch('/api/admin/ingestion/enrichment/fetch-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl }),
+            });
+
+            const fetchData = await fetchResponse.json();
+
+            if (!fetchResponse.ok) {
+                throw new Error(fetchData.error || 'Failed to fetch image from URL');
+            }
+
+            // Validate fetch response data
+            if (!fetchData.imageData || !fetchData.contentType || !fetchData.filename) {
+                throw new Error('Invalid response from image fetch: missing required fields');
+            }
+
+            // Convert base64 back to blob
+            let binaryString: string;
+            try {
+                binaryString = atob(fetchData.imageData);
+            } catch (err) {
+                throw new Error('Failed to decode base64 image data');
+            }
+
+            if (binaryString.length === 0) {
+                throw new Error('Decoded image data is empty');
+            }
+
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const blob = new Blob([bytes], { type: fetchData.contentType });
+
+            // Create File object
+            const file = new File([blob], fetchData.filename, {
+                type: fetchData.contentType,
+                lastModified: Date.now(),
+            });
+
+            // Upload to Supabase
+            const formData = new FormData();
+            formData.append('eventId', event.id);
+            formData.append('file', file);
+
+            const uploadResponse = await fetch('/api/admin/ingestion/enrichment/image', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await uploadResponse.json();
+
+            if (!uploadResponse.ok) {
+                throw new Error(data.error || 'Failed to upload image');
+            }
+
+            if (data.imageUrl) {
+                setCoreFields(prev => ({ ...prev, event_image_url: data.imageUrl }));
+                setSuccess(true);
+                setTimeout(() => setSuccess(false), 3000);
+            }
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            setError(errorMessage);
+            Sentry.captureException(err);
+        } finally {
+            setLoading(false);
+        }
+    }, [event.id]);
+
     const handleSaveCoreFields = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -511,263 +582,302 @@ export default function EnrichmentEditorClient({
         }
     }, [coreFields, relationships, event.id]);
 
-    const toggleSection = useCallback((section: string) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [section]: !prev[section],
-        }));
-    }, []);
+    const scrollToSection = (id: string) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+
+
+    const sections = [
+        { id: 'basic-info', label: 'Basic Info', icon: 'info' },
+        { id: 'classification', label: 'Classification', icon: 'label' },
+        { id: 'timing', label: 'Timing & Capacity', icon: 'time' },
+        { id: 'pricing', label: 'Pricing', icon: 'money' },
+        { id: 'urls', label: 'URLs & Media', icon: 'arrow-up-right' },
+        { id: 'features', label: 'Features', icon: 'star' },
+        { id: 'social', label: 'Social & Virtual', icon: 'arrow-up-right' },
+        { id: 'agenda', label: 'Agenda', icon: 'calendar' },
+        { id: 'speakers', label: 'Speakers', icon: 'people' },
+        { id: 'venue', label: 'Venue', icon: 'location' },
+        { id: 'organizer', label: 'Organizer', icon: 'building' },
+    ];
 
     return (
-        <div className="space-y-6">
-            {/* Event Info */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Event Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-2">
-                        <p><strong>Title:</strong> {event.title}</p>
-                        <p>
-                            <strong>Source URL:</strong>{' '}
-                            {coreFields.source_url ? (
-                                <a
-                                    href={coreFields.source_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:underline"
-                                >
-                                    {coreFields.source_url}
-                                </a>
-                            ) : (
-                                <span className="text-slate-500">Not set</span>
-                            )}
-                        </p>
-                        {event.organizer && (
-                            <p><strong>Organizer:</strong> {event.organizer.name}</p>
-                        )}
+        <div className="flex gap-8 items-start">
+            {/* Sidebar Navigation */}
+            <div className="w-64 shrink-0 sticky top-6 space-y-6">
+                <div className="space-y-1">
+                    <div className="px-3 py-2">
+                        <h2 className="font-semibold text-slate-200">{event.title}</h2>
+                        <p className="text-xs text-slate-500 mt-1">Enrichment Editor</p>
                     </div>
-                </CardContent>
-            </Card>
+                    <nav className="space-y-0.5">
+                        {sections.map((section) => (
+                            <button
+                                key={section.id}
+                                onClick={() => scrollToSection(section.id)}
+                                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-white/5 rounded-md transition-colors text-left"
+                            >
+                                <MaterialIcon name={section.icon as any} size={16} />
+                                {section.label}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
 
-            {/* Error/Success Messages */}
-            {error && (
-                <Card className="border-destructive">
-                    <CardContent className="pt-6">
-                        <p className="text-destructive">{error}</p>
-                    </CardContent>
-                </Card>
-            )}
-            {success && (
-                <Card className="border-green-500">
-                    <CardContent className="pt-6">
-                        <p className="text-green-600">Saved successfully!</p>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Basic Information Section */}
-            <BasicInfoSection
-                expanded={expandedSections.basicInfo}
-                onToggle={() => toggleSection('basicInfo')}
-                coreFields={coreFields}
-                setCoreFields={setCoreFields}
-                onExpandDescription={() => setIsDescriptionExpanded(true)}
-            />
-
-            {/* Event Classification Section */}
-            <ClassificationSection
-                expanded={expandedSections.classification}
-                onToggle={() => toggleSection('classification')}
-                coreFields={coreFields}
-                setCoreFields={setCoreFields}
-                relationships={relationships}
-                setRelationships={setRelationships}
-                lookupData={lookupData}
-                eventTagRelations={event.event_tag_relations ?? null}
-            />
-
-            {/* Timing & Capacity Section */}
-            <TimingCapacitySection
-                expanded={expandedSections.timingCapacity}
-                onToggle={() => toggleSection('timingCapacity')}
-                coreFields={coreFields}
-                setCoreFields={setCoreFields}
-            />
-
-            {/* Pricing Section */}
-            <PricingSection
-                expanded={expandedSections.pricing}
-                onToggle={() => toggleSection('pricing')}
-                coreFields={coreFields}
-                setCoreFields={setCoreFields}
-            />
-
-            {/* URLs & Media Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>URLs & Media</CardTitle>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSection('urlsMedia')}
-                        >
-                            {expandedSections.urlsMedia ? 'Collapse' : 'Expand'}
-                        </Button>
-                    </div>
-                </CardHeader>
-                {expandedSections.urlsMedia && (
-                    <CardContent className="space-y-4">
-                        <input
-                            type="url"
-                            placeholder="Source URL"
-                            value={coreFields.source_url}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, source_url: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="url"
-                            placeholder="Registration URL"
-                            value={coreFields.registration_url}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, registration_url: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="url"
-                            placeholder="Livestream URL"
-                            value={coreFields.livestream_url}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, livestream_url: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <input
-                            type="url"
-                            placeholder="Agenda URL"
-                            value={coreFields.agenda_url}
-                            onChange={(e) => setCoreFields(prev => ({ ...prev, agenda_url: e.target.value }))}
-                            className="w-full px-3 py-2 border rounded"
-                        />
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Event Image</label>
-                            <input
-                                type="file"
-                                accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                                onChange={async (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                        const formData = new FormData();
-                                        formData.append('eventId', event.id);
-                                        formData.append('file', file);
-                                        const response = await fetch('/api/admin/ingestion/enrichment/image', {
-                                            method: 'POST',
-                                            body: formData,
-                                        });
-                                        const data = await response.json();
-                                        if (response.ok && data.imageUrl) {
-                                            setCoreFields(prev => ({ ...prev, event_image_url: data.imageUrl }));
-                                            setSuccess(true);
-                                            setTimeout(() => setSuccess(false), 3000);
-                                        } else {
-                                            setError(data.error || 'Failed to upload image');
-                                        }
-                                    }
-                                }}
-                                className="w-full"
-                            />
-                            {coreFields.event_image_url && (
-                                <p className="text-sm text-muted-foreground mt-2">
-                                    Current: <a href={coreFields.event_image_url} target="_blank" rel="noopener noreferrer" className="text-primary">{coreFields.event_image_url}</a>
-                                </p>
-                            )}
-                        </div>
-                    </CardContent>
-                )}
-            </Card>
-
-            {/* Features Section */}
-            <FeaturesSection
-                expanded={expandedSections.features}
-                onToggle={() => toggleSection('features')}
-                coreFields={coreFields}
-                setCoreFields={setCoreFields}
-            />
-
-            {/* Social & Virtual Section */}
-            <SocialVirtualSection
-                expanded={expandedSections.socialVirtual}
-                onToggle={() => toggleSection('socialVirtual')}
-                coreFields={coreFields}
-                setCoreFields={setCoreFields}
-            />
-
-            {/* Save All Button */}
-            <Card>
-                <CardContent className="pt-6">
+                <div className="px-3 pt-4 border-t border-white/5 space-y-3">
                     <Button
                         onClick={handleSaveCoreFields}
                         disabled={loading}
-                        className="w-full"
-                        size="lg"
+                        className="w-full justify-start"
+                        variant="secondary"
                     >
-                        {loading ? 'Saving...' : 'Save All Event Fields'}
+                        <MaterialIcon name="check" size={16} className="mr-2" />
+                        Save Changes
                     </Button>
-                </CardContent>
-            </Card>
+                    <Button
+                        onClick={() => router.push('/admin/ingestion/enrichment')}
+                        variant="ghost"
+                        className="w-full justify-start text-slate-400 hover:text-slate-200"
+                    >
+                        <MaterialIcon name="arrow_back" size={16} className="mr-2" />
+                        Back to Dashboard
+                    </Button>
 
-            {/* Agenda Items Section */}
-            <AgendaSection
-                agendaItems={agendaItems}
-                onAdd={handleAddAgendaItem}
-                onUpdate={handleUpdateAgendaItem}
-                onRemove={handleRemoveAgendaItem}
-                onSave={handleSaveAgenda}
-                loading={loading}
-            />
+                    <div className="pt-4 border-t border-white/5">
+                        <ConfirmationDialog
+                            triggerLabel="Delete Event"
+                            title="Delete Event?"
+                            description="This action cannot be undone. This will permanently delete the event and all associated data."
+                            confirmLabel="Delete Forever"
+                            variant="destructive"
+                            onConfirm={async () => {
+                                try {
+                                    const response = await fetch(`/api/admin/ingestion/enrichment/event?eventId=${event.id}`, {
+                                        method: 'DELETE',
+                                    });
 
-            {/* Speakers Section */}
-            <SpeakersSection
-                speakers={speakers}
-                onAdd={handleAddSpeaker}
-                onUpdate={handleUpdateSpeaker}
-                onRemove={handleRemoveSpeaker}
-                onSave={handleSaveSpeakers}
-                loading={loading}
-            />
+                                    if (!response.ok) {
+                                        const data = await response.json();
+                                        throw new Error(data.error || 'Failed to delete event');
+                                    }
 
-            {/* Venue Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Venue</CardTitle>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSection('venue')}
-                        >
-                            {expandedSections.venue ? 'Collapse' : 'Expand'}
-                        </Button>
+                                    showSuccess('Event deleted successfully');
+                                    router.push('/admin/ingestion/enrichment');
+                                } catch (err) {
+                                    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+                                    showError(errorMessage);
+                                    Sentry.captureException(err);
+                                }
+                            }}
+                            disabled={loading}
+                        />
                     </div>
-                </CardHeader>
-                {expandedSections.venue && (
-                    <CardContent className="space-y-4">
+                </div>
+
+                {/* Status Messages */}
+                {error && (
+                    <div className="mx-3 p-3 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+                        {error}
+                    </div>
+                )}
+                {success && (
+                    <div className="mx-3 p-3 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+                        Saved successfully!
+                    </div>
+                )}
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 min-w-0 space-y-12 pb-20">
+                {/* Basic Information Section */}
+                <div id="basic-info" className="scroll-mt-6">
+                    <BasicInfoSection
+                        coreFields={coreFields}
+                        setCoreFields={setCoreFields}
+                        onExpandDescription={() => setIsDescriptionExpanded(true)}
+                    />
+                </div>
+
+                {/* Event Classification Section */}
+                <div id="classification" className="scroll-mt-6">
+                    <ClassificationSection
+                        coreFields={coreFields}
+                        setCoreFields={setCoreFields}
+                        relationships={relationships}
+                        setRelationships={setRelationships}
+                        lookupData={lookupData}
+                        eventTagRelations={event.event_tag_relations ?? null}
+                    />
+                </div>
+
+                {/* Timing & Capacity Section */}
+                <div id="timing" className="scroll-mt-6">
+                    <TimingCapacitySection
+                        coreFields={coreFields}
+                        setCoreFields={setCoreFields}
+                    />
+                </div>
+
+                {/* Pricing Section */}
+                <div id="pricing" className="scroll-mt-6">
+                    <PricingSection
+                        coreFields={coreFields}
+                        setCoreFields={setCoreFields}
+                    />
+                </div>
+
+                {/* URLs & Media Section */}
+                <div id="urls" className="scroll-mt-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                        <h3 className="text-lg font-medium text-slate-200">URLs & Media</h3>
+                    </div>
+                    <div className="grid gap-4">
+                        <div className="grid gap-2">
+                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Source URL</label>
+                            <input
+                                type="url"
+                                placeholder="https://..."
+                                value={coreFields.source_url}
+                                onChange={(e) => setCoreFields(prev => ({ ...prev, source_url: e.target.value }))}
+                                className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Registration URL</label>
+                            <input
+                                type="url"
+                                placeholder="https://..."
+                                value={coreFields.registration_url}
+                                onChange={(e) => setCoreFields(prev => ({ ...prev, registration_url: e.target.value }))}
+                                className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Livestream URL</label>
+                            <input
+                                type="url"
+                                placeholder="https://..."
+                                value={coreFields.livestream_url}
+                                onChange={(e) => setCoreFields(prev => ({ ...prev, livestream_url: e.target.value }))}
+                                className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Agenda URL</label>
+                            <input
+                                type="url"
+                                placeholder="https://..."
+                                value={coreFields.agenda_url}
+                                onChange={(e) => setCoreFields(prev => ({ ...prev, agenda_url: e.target.value }))}
+                                className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                            />
+                        </div>
+                        <div className="grid gap-2 pt-4">
+                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Event Image</label>
+                            <div className="flex items-start gap-4">
+                                {coreFields.event_image_url && (
+                                    <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                                        <Image
+                                            src={coreFields.event_image_url}
+                                            alt="Event"
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                )}
+                                <div className="flex-1">
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setEventImageExtractorOpen(true)}
+                                            className="text-xs"
+                                        >
+                                            <MaterialIcon name="image" size={16} className="mr-2" />
+                                            Update Image
+                                        </Button>
+                                    </div>
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        Recommended: 1200x630px or larger. JPG, PNG, WebP.
+                                    </p>
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        Recommended: 1200x630px or larger. JPG, PNG, WebP.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Features Section */}
+                <div id="features" className="scroll-mt-6">
+                    <FeaturesSection
+                        coreFields={coreFields}
+                        setCoreFields={setCoreFields}
+                    />
+                </div>
+
+                {/* Social & Virtual Section */}
+                <div id="social" className="scroll-mt-6">
+                    <SocialVirtualSection
+                        coreFields={coreFields}
+                        setCoreFields={setCoreFields}
+                    />
+                </div>
+
+                {/* Agenda Items Section */}
+                <div id="agenda" className="scroll-mt-6">
+                    <AgendaSection
+                        agendaItems={agendaItems}
+                        onAdd={handleAddAgendaItem}
+                        onUpdate={handleUpdateAgendaItem}
+                        onRemove={handleRemoveAgendaItem}
+                        onSave={handleSaveAgenda}
+                        loading={loading}
+                    />
+                </div>
+
+                {/* Speakers Section */}
+                <div id="speakers" className="scroll-mt-6">
+                    <SpeakersSection
+                        speakers={speakers}
+                        onAdd={handleAddSpeaker}
+                        onUpdate={handleUpdateSpeaker}
+                        onRemove={handleRemoveSpeaker}
+                        onSave={handleSaveSpeakers}
+                        loading={loading}
+                    />
+                </div>
+
+                {/* Venue Section */}
+                <div id="venue" className="scroll-mt-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                        <h3 className="text-lg font-medium text-slate-200">Venue</h3>
+                    </div>
+                    <div className="space-y-4">
                         <div>
-                            <label className="flex items-center space-x-2 mb-2">
+                            <label className="flex items-center space-x-2 mb-4 cursor-pointer">
                                 <input
                                     type="checkbox"
                                     checked={isCreatingVenue}
                                     onChange={(e) => setIsCreatingVenue(e.target.checked)}
+                                    className="rounded border-white/10 bg-white/5 text-indigo-500 focus:ring-0"
                                 />
-                                <span>Create New Venue</span>
+                                <span className="text-sm text-slate-300">Create New Venue</span>
                             </label>
                             {!isCreatingVenue && (
                                 <select
                                     value={relationships.venue_id || ''}
                                     onChange={(e) => setRelationships(prev => ({ ...prev, venue_id: e.target.value || null }))}
-                                    className="w-full px-3 py-2 border rounded"
+                                    className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
                                 >
-                                    <option value="">Select Existing Venue</option>
+                                    <option value="" className="bg-[#1C1C1C]">Select Existing Venue</option>
                                     {lookupData.venues.map(venue => (
-                                        <option key={venue.id} value={venue.id}>
+                                        <option key={venue.id} value={venue.id} className="bg-[#1C1C1C]">
                                             {venue.name} {venue.city ? `(${venue.city})` : ''}
                                         </option>
                                     ))}
@@ -775,387 +885,234 @@ export default function EnrichmentEditorClient({
                             )}
                         </div>
                         {isCreatingVenue && (
-                            <>
-                                <input
-                                    type="text"
-                                    placeholder="Venue Name *"
-                                    value={venueData.name}
-                                    onChange={(e) => setVenueData(prev => ({ ...prev, name: e.target.value }))}
-                                    className="w-full px-3 py-2 border rounded"
-                                    required
-                                />
-                                <textarea
-                                    placeholder="Address"
-                                    value={venueData.address}
-                                    onChange={(e) => setVenueData(prev => ({ ...prev, address: e.target.value }))}
-                                    className="w-full px-3 py-2 border rounded"
-                                    rows={2}
-                                />
-                                <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-4">
+                                <div className="grid gap-2">
+                                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Venue Name</label>
                                     <input
                                         type="text"
-                                        placeholder="City"
-                                        value={venueData.city}
-                                        onChange={(e) => setVenueData(prev => ({ ...prev, city: e.target.value }))}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="State/Province"
-                                        value={venueData.state_province}
-                                        onChange={(e) => setVenueData(prev => ({ ...prev, state_province: e.target.value }))}
-                                        className="px-3 py-2 border rounded"
+                                        placeholder="Venue Name"
+                                        value={venueData.name}
+                                        onChange={(e) => setVenueData(prev => ({ ...prev, name: e.target.value }))}
+                                        className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                        required
                                     />
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid gap-2">
+                                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Address</label>
+                                    <textarea
+                                        placeholder="Full Address"
+                                        value={venueData.address}
+                                        onChange={(e) => setVenueData(prev => ({ ...prev, address: e.target.value }))}
+                                        className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700 resize-none"
+                                        rows={2}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">City</label>
+                                        <input
+                                            type="text"
+                                            placeholder="City"
+                                            value={venueData.city}
+                                            onChange={(e) => setVenueData(prev => ({ ...prev, city: e.target.value }))}
+                                            className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">State/Province</label>
+                                        <input
+                                            type="text"
+                                            placeholder="State"
+                                            value={venueData.state_province}
+                                            onChange={(e) => setVenueData(prev => ({ ...prev, state_province: e.target.value }))}
+                                            className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid gap-2">
+                                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Country</label>
                                     <input
                                         type="text"
                                         placeholder="Country"
                                         value={venueData.country}
                                         onChange={(e) => setVenueData(prev => ({ ...prev, country: e.target.value }))}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Venue Type"
-                                        value={venueData.venue_type}
-                                        onChange={(e) => setVenueData(prev => ({ ...prev, venue_type: e.target.value }))}
-                                        className="px-3 py-2 border rounded"
+                                        className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
                                     />
                                 </div>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <input
-                                        type="number"
-                                        placeholder="Capacity"
-                                        value={venueData.capacity ?? ''}
-                                        onChange={(e) => setVenueData(prev => ({ ...prev, capacity: e.target.value ? parseInt(e.target.value) : null }))}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                    <input
-                                        type="number"
-                                        step="0.000001"
-                                        placeholder="Latitude"
-                                        value={venueData.latitude ?? ''}
-                                        onChange={(e) => setVenueData(prev => ({ ...prev, latitude: e.target.value ? parseFloat(e.target.value) : null }))}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                    <input
-                                        type="number"
-                                        step="0.000001"
-                                        placeholder="Longitude"
-                                        value={venueData.longitude ?? ''}
-                                        onChange={(e) => setVenueData(prev => ({ ...prev, longitude: e.target.value ? parseFloat(e.target.value) : null }))}
-                                        className="px-3 py-2 border rounded"
-                                    />
-                                </div>
-                                <Button
-                                    onClick={async () => {
-                                        const response = await fetch('/api/admin/ingestion/enrichment/venue', {
-                                            method: isCreatingVenue ? 'POST' : 'PUT',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({
-                                                venueId: event.venue?.id,
-                                                venueData,
-                                            }),
-                                        });
-                                        const data = await response.json();
-                                        if (response.ok && data.venueId) {
-                                            setRelationships(prev => ({ ...prev, venue_id: data.venueId }));
-                                            setSuccess(true);
-                                            setTimeout(() => setSuccess(false), 3000);
-                                        } else {
-                                            setError(data.error || 'Failed to save venue');
-                                        }
-                                    }}
-                                    className="w-full"
-                                >
-                                    {isCreatingVenue ? 'Create Venue' : 'Update Venue'}
-                                </Button>
-                            </>
-                        )}
-                    </CardContent>
-                )}
-            </Card>
-
-            {/* Event Series Section */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Event Series</CardTitle>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSection('series')}
-                        >
-                            {expandedSections.series ? 'Collapse' : 'Expand'}
-                        </Button>
-                    </div>
-                </CardHeader>
-                {expandedSections.series && (
-                    <CardContent className="space-y-4">
-                        <select
-                            value={relationships.series_id || ''}
-                            onChange={(e) => setRelationships(prev => ({ ...prev, series_id: e.target.value || null }))}
-                            className="w-full px-3 py-2 border rounded"
-                        >
-                            <option value="">Select Event Series</option>
-                            {lookupData.eventSeries.map(series => (
-                                <option key={series.id} value={series.id}>
-                                    {series.name}
-                                </option>
-                            ))}
-                        </select>
-                        {event.series && (
-                            <div className="text-sm text-muted-foreground">
-                                <p><strong>Description:</strong> {event.series.description || 'N/A'}</p>
-                                {event.series.website_url && (
-                                    <p><strong>Website:</strong> <a href={event.series.website_url} target="_blank" rel="noopener noreferrer" className="text-primary">{event.series.website_url}</a></p>
-                                )}
                             </div>
                         )}
-                    </CardContent>
-                )}
-            </Card>
+                    </div>
+                </div>
 
-            {/* Organizer Section (Enhanced) */}
-            {event.organizer && (
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle>Organizer</CardTitle>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleSection('organizer')}
-                            >
-                                {expandedSections.organizer ? 'Collapse' : 'Expand'}
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    {expandedSections.organizer && (
-                        <CardContent className="space-y-4">
-                            <textarea
-                                placeholder="Description"
-                                value={organizerData.description}
-                                onChange={(e) => setOrganizerData(prev => ({ ...prev, description: e.target.value }))}
-                                className="w-full px-3 py-2 border rounded"
-                                rows={3}
-                            />
-                            <input
-                                type="url"
-                                placeholder="Website URL"
-                                value={organizerData.website_url}
-                                onChange={(e) => setOrganizerData(prev => ({ ...prev, website_url: e.target.value }))}
-                                className="w-full px-3 py-2 border rounded"
-                            />
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Social Media (JSON)</label>
+                {/* Organizer Section */}
+                <div id="organizer" className="scroll-mt-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                        <h3 className="text-lg font-medium text-slate-200">Organizer</h3>
+                    </div>
+                    {event.organizer ? (
+                        <div className="space-y-6">
+                            <div className="flex items-start gap-6">
+                                <div className="space-y-3">
+                                    <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                                        {currentLogoUrl ? (
+                                            <Image
+                                                src={currentLogoUrl}
+                                                alt={event.organizer.name}
+                                                fill
+                                                className="object-contain p-2"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center text-slate-600">
+                                                <MaterialIcon name="building" size={32} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setLogoExtractorOpen(true)}
+                                        className="w-full text-xs"
+                                    >
+                                        Update Logo
+                                    </Button>
+                                </div>
+                                <div className="flex-1 space-y-4">
+                                    <div className="grid gap-2">
+                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Name</label>
+                                        <input
+                                            type="text"
+                                            value={organizerData.name}
+                                            onChange={(e) => setOrganizerData(prev => ({ ...prev, name: e.target.value }))}
+                                            className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Website</label>
+                                        <input
+                                            type="url"
+                                            value={organizerData.website_url}
+                                            onChange={(e) => setOrganizerData(prev => ({ ...prev, website_url: e.target.value }))}
+                                            className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Description</label>
                                 <textarea
-                                    placeholder='{"twitter": "@handle", "linkedin": "company/page"}'
-                                    value={organizerData.social_media ? JSON.stringify(organizerData.social_media, null, 2) : ''}
-                                    onChange={(e) => {
-                                        try {
-                                            const parsed = e.target.value ? JSON.parse(e.target.value) : null;
-                                            setOrganizerData(prev => ({ ...prev, social_media: parsed }));
-                                        } catch {
-                                            // Invalid JSON, keep as is
-                                        }
-                                    }}
-                                    className="w-full px-3 py-2 border rounded font-mono text-sm"
-                                    rows={4}
+                                    value={organizerData.description}
+                                    onChange={(e) => setOrganizerData(prev => ({ ...prev, description: e.target.value }))}
+                                    className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700 resize-none"
+                                    rows={3}
                                 />
                             </div>
-
-                            {/* Enhanced Logo Section */}
-                            <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
-                                <label className="block text-sm font-semibold text-slate-200 mb-3">
-                                    Organizer Logo
-                                </label>
-
-                                {/* Current Logo Preview */}
-                                {currentLogoUrl && (
-                                    <div className="mb-4 flex items-center gap-4 rounded-lg border border-slate-700 bg-slate-800/50 p-3">
-                                        <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-slate-600 bg-white">
-                                            <Image
-                                                key={currentLogoUrl}
-                                                src={
-                                                    currentLogoUrl.startsWith('http') 
-                                                        ? currentLogoUrl 
-                                                        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logos/${currentLogoUrl}`
-                                                }
-                                                alt="Current logo"
-                                                fill
-                                                className="object-contain p-1"
-                                                unoptimized
-                                                onError={(e) => {
-                                                    console.error('Failed to load logo:', currentLogoUrl);
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-slate-200">Current Logo</p>
-                                            <p className="max-w-[300px] truncate text-xs text-slate-400">
-                                                {currentLogoUrl}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Upload Mode Tabs */}
-                                <div className="mb-4 flex gap-1 rounded-lg bg-slate-800 p-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => setLogoUploadMode('manual')}
-                                        className={cn(
-                                            'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                                            logoUploadMode === 'manual'
-                                                ? 'bg-slate-700 text-slate-100'
-                                                : 'text-slate-400 hover:text-slate-200'
-                                        )}
-                                    >
-                                        Manual Upload
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setLogoUploadMode('extract')}
-                                        className={cn(
-                                            'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                                            logoUploadMode === 'extract'
-                                                ? 'bg-slate-700 text-slate-100'
-                                                : 'text-slate-400 hover:text-slate-200'
-                                        )}
-                                    >
-                                        Extract from URL
-                                    </button>
-                                </div>
-
-                                {logoUploadMode === 'manual' ? (
-                                    <div className="space-y-3">
-                                        <input
-                                            type="file"
-                                            accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                                            onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                                            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 file:mr-3 file:rounded file:border-0 file:bg-slate-600 file:px-3 file:py-1 file:text-sm file:text-slate-100"
-                                        />
-                                        <Button
-                                            onClick={handleUploadLogo}
-                                            disabled={!logoFile || logoUploading}
-                                            className="w-full"
-                                        >
-                                            {logoUploading ? 'Uploading...' : 'Upload Logo'}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <p className="text-xs text-slate-400">
-                                            Extract logos from an event or company website. We&apos;ll scan the page for images and let you pick the best one.
-                                        </p>
-                                        <Button
-                                            onClick={() => setLogoExtractorOpen(true)}
-                                            disabled={logoUploading}
-                                            variant="secondary"
-                                            className="w-full"
-                                        >
-                                            {logoUploading ? 'Processing...' : 'Open Logo Extractor'}
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <Button
-                                onClick={async () => {
-                                    const response = await fetch('/api/admin/ingestion/enrichment/organizer', {
-                                        method: 'PUT',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            organizerId: event.organizer?.id ?? null,
-                                            data: organizerData,
-                                        }),
-                                    });
-                                    const data = await response.json();
-                                    if (response.ok) {
-                                        setSuccess(true);
-                                        setTimeout(() => setSuccess(false), 3000);
-                                    } else {
-                                        setError(data.error || 'Failed to update organizer');
-                                    }
-                                }}
-                                className="w-full"
-                            >
-                                Save Organizer
-                            </Button>
-                        </CardContent>
+                        </div>
+                    ) : (
+                        <div className="p-4 rounded border border-white/10 bg-white/5 text-center text-slate-400">
+                            No organizer associated with this event.
+                        </div>
                     )}
-                </Card>
-            )}
+                </div>
+            </div>
 
-            {/* Logo Extractor Modal */}
-            <LogoExtractorModal
+            {/* Image Extractor Modal */}
+            <ImageExtractorModal
                 isOpen={logoExtractorOpen}
                 onClose={() => setLogoExtractorOpen(false)}
                 onSelect={handleLogoFromUrl}
-                initialUrl={coreFields.source_url}
+                onFileSelected={(file) => {
+                    setLogoFile(file);
+                    handleUploadLogo();
+                }}
+                initialUrl={event.organizer?.website_url || ''}
+                title="Update Logo"
+                description="Upload a file or extract from website"
+                contextName={event.organizer?.name || ''}
             />
 
-            {/* Back Button */}
-            <div className="flex justify-end">
-                <Button
-                    variant="outline"
-                    onClick={() => router.push('/admin/ingestion/enrichment')}
-                >
-                    Back to Dashboard
-                </Button>
-            </div>
+            <ImageExtractorModal
+                isOpen={eventImageExtractorOpen}
+                onClose={() => setEventImageExtractorOpen(false)}
+                onSelect={handleEventImageFromUrl}
+                onFileSelected={async (file) => {
+                    const formData = new FormData();
+                    formData.append('eventId', event.id);
+                    formData.append('file', file);
+                    try {
+                        const response = await fetch('/api/admin/ingestion/enrichment/image', {
+                            method: 'POST',
+                            body: formData,
+                        });
+                        const data = await response.json();
+                        if (response.ok && data.imageUrl) {
+                            setCoreFields(prev => ({ ...prev, event_image_url: data.imageUrl }));
+                            setSuccess(true);
+                            setTimeout(() => setSuccess(false), 3000);
+                        } else {
+                            setError(data.error || 'Failed to upload image');
+                        }
+                    } catch (err) {
+                        setError('Failed to upload image');
+                    }
+                    setEventImageExtractorOpen(false);
+                }}
+                initialUrl={coreFields.source_url || coreFields.registration_url || ''}
+                title="Update Event Image"
+                description="Upload a file or extract from website"
+                contextName={event.title}
+            />
 
-            {isDescriptionExpanded && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="description-editor-title"
-                >
-                    <div className="flex h-[80vh] w-[min(90vw,900px)] flex-col rounded-xl border border-slate-800 bg-slate-950 shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-                            <h2 id="description-editor-title" className="text-base font-semibold text-slate-100">
-                                Edit Description
-                            </h2>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setIsDescriptionExpanded(false)}
-                                aria-label="Close description editor"
-                            >
-                                ×
-                            </Button>
-                        </div>
-                        <div className="flex-1 overflow-hidden px-5 py-4">
-                            <textarea
-                                ref={expandedDescriptionRef}
-                                value={coreFields.description}
-                                onChange={(e) => setCoreFields(prev => ({ ...prev, description: e.target.value }))}
-                                className="h-full w-full resize-none rounded-lg border border-slate-300 bg-slate-50 p-4 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/40 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-100"
-                            />
-                        </div>
-                        <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-4">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => setIsDescriptionExpanded(false)}
-                            >
-                                Close
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={() => setIsDescriptionExpanded(false)}
-                            >
-                                Done
-                            </Button>
+            {/* Description Editor Modal */}
+            {
+                isDescriptionExpanded && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="description-editor-title"
+                    >
+                        <div className="flex h-[80vh] w-[min(90vw,900px)] flex-col rounded-xl border border-slate-800 bg-slate-950 shadow-2xl">
+                            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+                                <h2 id="description-editor-title" className="text-base font-semibold text-slate-100">
+                                    Edit Description
+                                </h2>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setIsDescriptionExpanded(false)}
+                                    aria-label="Close description editor"
+                                >
+                                    <MaterialIcon name="close" size={20} />
+                                </Button>
+                            </div>
+                            <div className="flex-1 overflow-hidden px-5 py-4">
+                                <textarea
+                                    ref={expandedDescriptionRef}
+                                    value={coreFields.description}
+                                    onChange={(e) => setCoreFields(prev => ({ ...prev, description: e.target.value }))}
+                                    className="h-full w-full resize-none rounded-lg border border-slate-300 bg-slate-50 p-4 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/40 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-100"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-4">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setIsDescriptionExpanded(false)}
+                                >
+                                    Close
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => setIsDescriptionExpanded(false)}
+                                >
+                                    Done
+                                </Button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
-

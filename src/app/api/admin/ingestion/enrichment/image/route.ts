@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import { EventEnrichmentService } from '@/services/ingestion/EventEnrichmentService';
 
@@ -35,10 +36,24 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Get service client for storage and database operations (bypasses RLS)
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            return NextResponse.json(
+                { error: 'Missing Supabase service credentials' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
+        // Use service client for storage and database operations (bypasses RLS)
         const result = await EventEnrichmentService.uploadEventImage(
             eventId,
             file,
-            supabase
+            serviceClient
         );
 
         if (!result.success) {

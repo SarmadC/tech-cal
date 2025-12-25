@@ -71,7 +71,7 @@ export function AdminDataTable<T>({
     sortDirection = 'asc',
     onSortChange,
     isLoading = false,
-    emptyState = <p className="py-10 text-center text-sm text-foreground-tertiary">No records found.</p>,
+    emptyState = <p className="py-10 text-center text-sm text-slate-500">No records found.</p>,
     selectable = false,
     selectedRowIds,
     defaultSelectedRowIds = [],
@@ -157,7 +157,7 @@ export function AdminDataTable<T>({
         if (!sortable) return null;
         const isActive = sortKey === columnKey;
         return (
-            <span className={cn('ml-1 inline-flex h-5 w-5 items-center justify-center rounded transition', isActive ? 'text-foreground-primary' : 'text-foreground-tertiary')}>
+            <span className={cn('ml-1 inline-flex h-5 w-5 items-center justify-center rounded transition', isActive ? 'text-slate-200' : 'text-slate-600')}>
                 <MaterialIcon
                     name="expand-more"
                     size={14}
@@ -181,26 +181,26 @@ export function AdminDataTable<T>({
     return (
         <div className={cn('space-y-3', className)}>
             {toolbar && (
-                <div className="rounded-lg border border-border-default bg-background-secondary p-3">
+                <div className="rounded-lg border border-white/5 bg-[#1C1C1C] p-3">
                     {toolbar}
                 </div>
             )}
 
             <div className={cn(
                 'relative overflow-hidden rounded-lg shadow-sm',
-                containerClassName ?? 'border border-border-default bg-background-secondary'
+                containerClassName ?? 'border border-white/5 bg-[#1C1C1C]'
             )}>
                 <div className={cn('relative max-h-[70vh] overflow-y-auto', stickyHeader && 'supports-[position:sticky]:[&_thead]:sticky supports-[position:sticky]:[&_thead]:top-0 supports-[position:sticky]:[&_thead]:z-10')}>
                     <Table className={cn('min-w-full', tableClassName)}>
-                        <TableHeader className={cn(headerClassName ?? 'bg-background-elevated text-foreground-secondary')}>
-                            <TableRow className={cn('border-b border-border-default', headerRowClassName)}>
+                        <TableHeader className={cn(headerClassName ?? 'bg-[#1C1C1C] text-slate-500')}>
+                            <TableRow className={cn('border-b border-white/5', headerRowClassName)}>
                                 {selectable && (
                                     <TableHead className="w-10 px-3">
                                         <label className="flex cursor-pointer items-center justify-center">
-                                                    <input
-                                                        ref={selectAllRef}
-                                                        type="checkbox"
-                                                        className="h-4 w-4 rounded border-border-default bg-background-tertiary text-primary focus:ring-2 focus:ring-primary"
+                                            <input
+                                                ref={selectAllRef}
+                                                type="checkbox"
+                                                className="h-3.5 w-3.5 rounded border-white/10 bg-white/5 text-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0"
                                                 checked={
                                                     currentSelection.length > 0 &&
                                                     currentSelection.length === allSelectableIds.length
@@ -223,7 +223,7 @@ export function AdminDataTable<T>({
                                         <TableHead
                                             key={columnKey}
                                             className={cn(
-                                                'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground-tertiary',
+                                                'px-4 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-slate-500',
                                                 column.align === 'right' && 'text-right',
                                                 column.align === 'center' && 'text-center',
                                                 column.headerClassName
@@ -235,11 +235,11 @@ export function AdminDataTable<T>({
                                                 type="button"
                                                 onClick={() => handleChangeSort(column)}
                                                 className={cn(
-                                                    'flex w-full items-center justify-start gap-1 text-xs uppercase tracking-wide',
+                                                    'flex w-full items-center justify-start gap-1 text-[10px] uppercase tracking-wider',
                                                     column.align === 'right' && 'justify-end',
                                                     column.align === 'center' && 'justify-center',
-                                                    column.sortable ? 'text-foreground-secondary hover:text-foreground-primary' : 'cursor-default',
-                                                    isActiveSort && 'text-foreground-primary'
+                                                    column.sortable ? 'text-slate-500 hover:text-slate-300' : 'cursor-default',
+                                                    isActiveSort && 'text-slate-200'
                                                 )}
                                                 disabled={!column.sortable}
                                                 aria-pressed={column.sortable ? isActiveSort : undefined}
@@ -257,7 +257,7 @@ export function AdminDataTable<T>({
                                 <TableRow>
                                     <TableCell
                                         colSpan={columns.length + (selectable ? 1 : 0)}
-                                        className="py-10 text-center text-sm text-foreground-tertiary"
+                                        className="py-10 text-center text-sm text-slate-500"
                                     >
                                         Loading data…
                                     </TableCell>
@@ -266,7 +266,7 @@ export function AdminDataTable<T>({
                                 <TableRow>
                                     <TableCell
                                         colSpan={columns.length + (selectable ? 1 : 0)}
-                                        className="py-10 text-center text-sm text-foreground-tertiary"
+                                        className="py-10 text-center text-sm text-slate-500"
                                     >
                                         {emptyState}
                                     </TableCell>
@@ -279,8 +279,8 @@ export function AdminDataTable<T>({
                                         <TableRow
                                             key={rowId}
                                             className={cn(
-                                                'border-b border-border-default text-sm text-foreground-primary transition-colors hover:bg-background-elevated',
-                                                isSelected && 'bg-background-tertiary',
+                                                'border-b border-white/5 text-sm text-slate-300 transition-colors hover:bg-white/5',
+                                                isSelected && 'bg-white/[0.02]',
                                                 onRowClick && 'cursor-pointer',
                                                 bodyRowClassName
                                             )}
@@ -295,11 +295,11 @@ export function AdminDataTable<T>({
                                             }}
                                         >
                                             {selectable && (
-                                                <TableCell className="w-10 px-3">
+                                                <TableCell className="w-10 px-3 py-2">
                                                     <label className="flex cursor-pointer items-center justify-center">
                                                         <input
                                                             type="checkbox"
-                                                            className="h-4 w-4 rounded border-border-default bg-background-tertiary text-primary focus:ring-2 focus:ring-primary"
+                                                            className="h-3.5 w-3.5 rounded border-white/10 bg-white/5 text-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0"
                                                             checked={isSelected}
                                                             onChange={() => toggleRow(rowId)}
                                                             aria-label={`Select ${rowId}`}
@@ -311,7 +311,7 @@ export function AdminDataTable<T>({
                                                 <TableCell
                                                     key={column.key.toString()}
                                                     className={cn(
-                                                        'px-4 py-3 align-middle',
+                                                        'px-4 py-2 align-middle',
                                                         column.align === 'right' && 'text-right',
                                                         column.align === 'center' && 'text-center',
                                                         column.cellClassName
@@ -339,20 +339,20 @@ export function AdminDataTable<T>({
 
             <div className={cn(
                 'flex flex-col gap-3 rounded-lg px-4 py-3 text-sm shadow-sm md:flex-row md:items-center md:justify-between',
-                footerClassName ?? 'border border-border-default bg-background-secondary text-foreground-secondary'
+                footerClassName ?? 'border border-white/5 bg-[#1C1C1C] text-slate-500'
             )}>
                 <div className="flex items-center gap-2">
-                    <span className="text-foreground-secondary">Rows per page:</span>
+                    <span className="text-slate-500">Rows per page:</span>
                     <Select
                         value={String(pageSize)}
                         onValueChange={(value) => onPageSizeChange?.(Number(value))}
                     >
-                        <SelectTrigger className="h-8 w-20 rounded-md border border-border-default bg-background-tertiary text-xs text-foreground-primary">
+                        <SelectTrigger className="h-7 w-20 rounded-md border border-white/10 bg-white/5 text-xs text-slate-300">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-background-elevated text-foreground-primary">
+                        <SelectContent className="bg-[#1C1C1C] border-white/10 text-slate-300">
                             {pageSizeOptions.map((option) => (
-                                <SelectItem key={option} value={String(option)} className="text-foreground-primary">
+                                <SelectItem key={option} value={String(option)} className="text-slate-300 focus:bg-white/10 focus:text-slate-100">
                                     {option}
                                 </SelectItem>
                             ))}
@@ -360,11 +360,11 @@ export function AdminDataTable<T>({
                     </Select>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs uppercase tracking-wide text-foreground-tertiary">
-                    <span className="text-[0.65rem] leading-none tracking-widest">
+                <div className="flex items-center gap-4 text-[10px] uppercase tracking-wider text-slate-500">
+                    <span className="leading-none">
                         Showing {hasRows ? `${rangeStart}-${rangeEnd}` : '0'} of {total}
                     </span>
-                    <span className="text-[0.65rem] leading-none tracking-widest">
+                    <span className="leading-none">
                         Page {clampedPage} of {totalPages}
                     </span>
                     <div className="flex items-center gap-2">
@@ -374,9 +374,9 @@ export function AdminDataTable<T>({
                             size="sm"
                             onClick={() => onPageChange?.(Math.max(1, clampedPage - 1))}
                             disabled={clampedPage <= 1}
-                            className="bg-background-tertiary text-foreground-primary hover:bg-background-elevated border-border-default"
+                            className="h-7 bg-white/5 text-slate-300 hover:bg-white/10 border-white/10"
                         >
-                            <MaterialIcon name="chevron_left" size={16} />
+                            <MaterialIcon name="chevron_left" size={14} />
                             Prev
                         </Button>
                         <Button
@@ -385,10 +385,10 @@ export function AdminDataTable<T>({
                             size="sm"
                             onClick={() => onPageChange?.(Math.min(totalPages, clampedPage + 1))}
                             disabled={clampedPage >= totalPages}
-                            className="bg-background-tertiary text-foreground-primary hover:bg-background-elevated border-border-default"
+                            className="h-7 bg-white/5 text-slate-300 hover:bg-white/10 border-white/10"
                         >
                             Next
-                            <MaterialIcon name="chevron_right" size={16} />
+                            <MaterialIcon name="chevron_right" size={14} />
                         </Button>
                     </div>
                 </div>
