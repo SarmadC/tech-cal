@@ -8,7 +8,11 @@ import { MaterialIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
 import { useAdminToolbar } from '@/contexts/AdminToolbarContext';
 
-export default function AdminTopbar() {
+interface AdminTopbarProps {
+    onMobileMenuToggle?: () => void;
+}
+
+export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
     const {
         title,
         subtitle,
@@ -105,7 +109,20 @@ export default function AdminTopbar() {
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex flex-col gap-1">
-                            <AdminBreadcrumbs />
+                            {/* Mobile menu button and breadcrumbs */}
+                            <div className="flex items-center gap-3">
+                                {onMobileMenuToggle && (
+                                    <button
+                                        type="button"
+                                        onClick={onMobileMenuToggle}
+                                        className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/80 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200 md:hidden"
+                                        aria-label="Open navigation menu"
+                                    >
+                                        <MaterialIcon name="menu" size={20} />
+                                    </button>
+                                )}
+                                <AdminBreadcrumbs />
+                            </div>
                             {title && (
                                 <h1 className="text-xl font-semibold text-white lg:text-2xl">
                                     {title}

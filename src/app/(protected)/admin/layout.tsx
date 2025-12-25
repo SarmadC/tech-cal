@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminTopbar from '@/components/admin/AdminTopbar';
+import AdminMobileNav from '@/components/admin/AdminMobileNav';
 import { AdminToolbarProvider } from '@/contexts/AdminToolbarContext';
 
 interface AdminLayoutProps {
@@ -13,6 +14,10 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const handleCloseMobileNav = useCallback(() => setMobileNavOpen(false), []);
+    const handleToggleMobileNav = useCallback(() => setMobileNavOpen((prev) => !prev), []);
+
     return (
         <ProtectedRoute>
             <SidebarProvider
@@ -21,8 +26,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
                 <AdminToolbarProvider>
                     <AdminSidebar />
+                    <AdminMobileNav isOpen={mobileNavOpen} onClose={handleCloseMobileNav} />
                     <div className="flex flex-1 flex-col md:ml-[var(--sidebar-width)]">
-                        <AdminTopbar />
+                        <AdminTopbar onMobileMenuToggle={handleToggleMobileNav} />
                         <div className="flex-1 overflow-auto bg-muted/10">
                             <div className="mx-auto w-full max-w-6xl px-4 py-6 lg:px-8">
                                 {children}
