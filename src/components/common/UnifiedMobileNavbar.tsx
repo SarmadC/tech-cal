@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { SignOut } from '@phosphor-icons/react';
 import {
     Navbar,
     MobileNav,
@@ -13,6 +14,7 @@ import {
     NavbarThemeToggle,
 } from "@/components/ui/resizable-navbar";
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavItem {
     name: string;
@@ -43,11 +45,17 @@ export default function UnifiedMobileNavbar({
     const router = useRouter();
     const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const { user, signOut } = useAuth();
 
     // Close menu when route changes
     useEffect(() => {
         setIsMobileMenuOpen(false);
     }, [pathname]);
+
+    const handleSignOut = async () => {
+        setIsMobileMenuOpen(false);
+        await signOut();
+    };
 
     const handleNavClick = (href: string) => {
         setIsMobileMenuOpen(false);
@@ -120,6 +128,29 @@ export default function UnifiedMobileNavbar({
                             >
                                 {ctaButton.label}
                             </NavbarButton>
+                        </div>
+                    )}
+
+                    {/* Sign Out Button - Only shown when logged in */}
+                    {user && (
+                        <div className={ctaButton ? "mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-700" : ""}>
+                            <button
+                                onClick={handleSignOut}
+                                className="flex items-center justify-between w-full text-red-600 dark:text-red-400 text-xl font-medium hover:text-red-700 dark:hover:text-red-300 transition-colors group"
+                            >
+                                <span className="flex items-center gap-3">
+                                    <SignOut size={24} weight="bold" />
+                                    Sign Out
+                                </span>
+                                <svg
+                                    className="w-4 h-4 text-red-400 group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
                         </div>
                     )}
                 </MobileNavMenu>
