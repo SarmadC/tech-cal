@@ -1,9 +1,10 @@
-import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { NextRequest, NextResponse } from 'next/server'
+import type { Database } from '@/types/supabase'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
     const error = searchParams.get('error')
@@ -38,8 +39,29 @@ export async function GET(request: Request) {
     }
 
     try {
-        const supabase = await createClient()
-        
+        // Track cookies that need to be set/removed on the response
+        const cookiesToSet: { name: string; value: string; options: CookieOptions }[] = []
+
+        // Create Supabase client that explicitly reads from request cookies
+        // This ensures PKCE code verifier cookie is properly read during session exchange
+        const supabase = createServerClient<Database>(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    get(name: string) {
+                        return request.cookies.get(name)?.value
+                    },
+                    set(name: string, value: string, options: CookieOptions) {
+                        cookiesToSet.push({ name, value, options })
+                    },
+                    remove(name: string, options: CookieOptions) {
+                        cookiesToSet.push({ name, value: '', options: { ...options, maxAge: 0 } })
+                    },
+                },
+            }
+        )
+
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
         if (exchangeError) {
@@ -54,8 +76,15 @@ export async function GET(request: Request) {
             return NextResponse.redirect(`${origin}/login?error=no-session&message=${errorMessage}`);
         }
 
-        // Successful authentication - redirect to intended destination
-        return NextResponse.redirect(`${origin}${next}`)
+        // Successful authentication - redirect to intended destination with session cookies
+        const response = NextResponse.redirect(`${origin}${next}`)
+
+        // Apply all session cookies set during the exchange
+        for (const cookie of cookiesToSet) {
+            response.cookies.set(cookie.name, cookie.value, cookie.options)
+        }
+
+        return response
 
     } catch (error) {
         console.error('[AUTH CALLBACK] Unexpected error during callback:', error);
