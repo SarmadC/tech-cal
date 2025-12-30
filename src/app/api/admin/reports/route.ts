@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 
 export interface IngestionSummaryReport {
@@ -80,6 +81,20 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         const url = new URL(request.url);
         const reportType = url.searchParams.get('type') || 'ingestion-summary';
         const startDateStr = url.searchParams.get('startDate');
@@ -92,7 +107,7 @@ export async function GET(request: NextRequest) {
             : new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tableClient = supabase as any;
+        const tableClient = serviceClient as any;
 
         if (reportType === 'ingestion-summary') {
             const report = await generateIngestionSummary(tableClient, startDate, endDate);

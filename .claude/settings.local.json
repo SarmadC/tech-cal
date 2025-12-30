@@ -63,7 +63,8 @@
       "Bash(npx tsx:*)",
       "Bash(REFRESH_ALL=1 npx tsx:*)",
       "Bash(wc:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(npx supabase:*)"
     ],
     "deny": [],
     "ask": []

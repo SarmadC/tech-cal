@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import { EventEnrichmentService } from '@/services/ingestion/EventEnrichmentService';
 
@@ -42,10 +43,24 @@ export async function PUT(request: NextRequest) {
             );
         }
 
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         const result = await EventEnrichmentService.enrichOrganizer(
             organizerId,
             data,
-            supabase
+            serviceClient
         );
 
         if (!result.success) {

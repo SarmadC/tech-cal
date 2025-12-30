@@ -63,7 +63,8 @@ export class UserEventService {
             });
 
             if (error) {
-                console.error('RPC error tracking event:', error);
+                console.error('RPC error tracking event: Operation failed');
+                Sentry.captureException(error, { extra: { function: 'trackEvent', userId, eventId, status, operation: 'rpc_call' } });
                 throw error;
             }
 
@@ -71,12 +72,9 @@ export class UserEventService {
             
             if (!result || !result.success) {
                 const errorMessage = result?.message || result?.error || 'Failed to track event';
-                console.error('❌ Function returned failure:', {
-                    data: result,
-                    errorMessage,
-                    userId,
-                    eventId,
-                    status
+                console.error('Failed to track event: Function returned failure');
+                Sentry.captureException(new Error(errorMessage), { 
+                    extra: { function: 'trackEvent', userId, eventId, status, result } 
                 });
                 throw new Error(errorMessage);
             }
@@ -88,7 +86,7 @@ export class UserEventService {
                 isNewTracking: result.is_new_tracking
             });
         } catch (error) {
-            console.error('Error tracking event:', error);
+            console.error('Error tracking event: Operation failed');
             Sentry.captureException(error, { extra: { function: 'trackEvent', userId, eventId, status } });
             throw new Error('Failed to track event.');
         }
@@ -113,7 +111,8 @@ export class UserEventService {
             });
 
             if (error) {
-                console.error('RPC error toggling bookmark:', error);
+                console.error('RPC error toggling bookmark: Operation failed');
+                Sentry.captureException(error, { extra: { function: 'toggleBookmark', userId, eventId, isBookmarked, operation: 'rpc_call' } });
                 throw error;
             }
 
@@ -121,12 +120,9 @@ export class UserEventService {
             
             if (!result || !result.success) {
                 const errorMessage = result?.error || 'Failed to toggle bookmark';
-                console.error('❌ Function returned failure:', {
-                    data: result,
-                    errorMessage,
-                    userId,
-                    eventId,
-                    isBookmarked
+                console.error('Failed to toggle bookmark: Function returned failure');
+                Sentry.captureException(new Error(errorMessage), { 
+                    extra: { function: 'toggleBookmark', userId, eventId, isBookmarked, result } 
                 });
                 throw new Error(errorMessage);
             }
@@ -145,7 +141,7 @@ export class UserEventService {
                 isNewRow: result.is_new_row
             };
         } catch (error) {
-            console.error('Error toggling bookmark:', error);
+            console.error('Error toggling bookmark: Operation failed');
             Sentry.captureException(error, { extra: { function: 'toggleBookmark', userId, eventId, isBookmarked } });
             throw new Error('Failed to toggle bookmark.');
         }
@@ -185,7 +181,8 @@ export class UserEventService {
                     .eq('event_id', eventId);
 
                 if (updateError) {
-                    console.error('Error clearing attendance status:', updateError);
+                    console.error('Error clearing attendance status: Operation failed');
+                    Sentry.captureException(updateError, { extra: { function: 'setAttendanceStatus', userId, eventId, operation: 'clear_status' } });
                     throw updateError;
                 }
 
@@ -212,21 +209,19 @@ export class UserEventService {
             });
 
             if (error) {
-                console.error('RPC error setting attendance status:', {
-                    error,
-                    errorCode: error.code,
-                    errorMessage: error.message,
-                    errorDetails: error.details,
-                    errorHint: error.hint,
-                    userId,
-                    eventId,
-                    status,
-                    params: {
-                        p_user_id: userId,
-                        p_event_id: eventId,
-                        p_status: status ?? null,
-                        p_notes: notes ?? null
-                    }
+                console.error('RPC error setting attendance status: Operation failed');
+                Sentry.captureException(error, { 
+                    extra: { 
+                        function: 'setAttendanceStatus', 
+                        userId, 
+                        eventId, 
+                        status,
+                        operation: 'rpc_call',
+                        errorCode: error.code,
+                        errorMessage: error.message,
+                        errorDetails: error.details,
+                        errorHint: error.hint
+                    } 
                 });
                 throw error;
             }
@@ -235,12 +230,9 @@ export class UserEventService {
             
             if (!result || !result.success) {
                 const errorMessage = result?.error || 'Failed to set attendance status';
-                console.error('❌ Function returned failure:', {
-                    data: result,
-                    errorMessage,
-                    userId,
-                    eventId,
-                    status
+                console.error('Failed to set attendance status: Function returned failure');
+                Sentry.captureException(new Error(errorMessage), { 
+                    extra: { function: 'setAttendanceStatus', userId, eventId, status, result } 
                 });
                 throw new Error(errorMessage);
             }
@@ -259,7 +251,7 @@ export class UserEventService {
                 autoBookmarked: result.auto_bookmarked
             };
         } catch (error) {
-            console.error('Error setting attendance status:', error);
+            console.error('Error setting attendance status: Operation failed');
             Sentry.captureException(error, { extra: { function: 'setAttendanceStatus', userId, eventId, status } });
             throw new Error('Failed to set attendance status.');
         }
@@ -279,7 +271,7 @@ export class UserEventService {
 
             return (data || []).map(item => item.event_id);
         } catch (error) {
-            console.error('Error fetching all tracked event IDs:', error);
+            console.error('Error fetching all tracked event IDs: Operation failed');
             Sentry.captureException(error, { extra: { function: 'getAllTrackedEventIds', userId } });
             throw new Error('Failed to fetch tracked event IDs.');
         }
@@ -349,7 +341,7 @@ export class UserEventService {
                 };
             });
         } catch (error) {
-            console.error('Error fetching lightweight tracked events:', error);
+            console.error('Error fetching lightweight tracked events: Operation failed');
             Sentry.captureException(error, { extra: { function: 'getLightweightTrackedEvents', userId } });
             throw new Error('Failed to fetch dashboard event data.');
         }
@@ -371,7 +363,8 @@ export class UserEventService {
             });
 
             if (error) {
-                console.error('RPC error untracking event:', error);
+                console.error('RPC error untracking event: Operation failed');
+                Sentry.captureException(error, { extra: { function: 'untrackEvent', userId, eventId, operation: 'rpc_call' } });
                 throw error;
             }
 
@@ -379,11 +372,9 @@ export class UserEventService {
             
             if (!result || !result.success) {
                 const errorMessage = result?.message || result?.error || 'Failed to untrack event';
-                console.error('❌ Function returned failure:', {
-                    data: result,
-                    errorMessage,
-                    userId,
-                    eventId
+                console.error('Failed to untrack event: Function returned failure');
+                Sentry.captureException(new Error(errorMessage), { 
+                    extra: { function: 'untrackEvent', userId, eventId, result } 
                 });
                 throw new Error(errorMessage);
             }
@@ -401,7 +392,7 @@ export class UserEventService {
                 external_provider: result.external_provider
             };
         } catch (error) {
-            console.error('Error untracking event:', error);
+            console.error('Error untracking event: Operation failed');
             Sentry.captureException(error, { extra: { function: 'untrackEvent', userId, eventId } });
             throw new Error('Failed to untrack event.');
         }
@@ -448,20 +439,7 @@ export class UserEventService {
 
             const { data, error } = await query;
             if (error) {
-                // Log the full error object for debugging
-                console.error('Supabase query error in getTrackedEvents:', {
-                    error, // Full error object
-                    errorCode: error.code ?? 'NO_CODE',
-                    errorMessage: error.message ?? 'NO_MESSAGE',
-                    errorDetails: error.details ?? 'NO_DETAILS',
-                    errorHint: error.hint ?? 'NO_HINT',
-                    errorName: error.name ?? 'NO_NAME',
-                    errorStringified: JSON.stringify(error, null, 2),
-                    userId,
-                    page,
-                    pageSize
-                });
-                
+                console.error('Supabase query error in getTrackedEvents: Operation failed');
                 Sentry.captureException(error, {
                     extra: {
                         function: 'getTrackedEvents',
@@ -473,14 +451,15 @@ export class UserEventService {
                         errorDetails: error.details,
                     }
                 });
-                
                 throw error;
             }
 
             // This works because we already updated `trackedEventTransformer` to return `TrackedEventRecord`.
             return (data as SupabaseTrackedEventWithDetails[] || []).map(trackedEventTransformer.toApp);
         } catch (error) {
-            // Extract error details for better logging with safe property access
+            console.error('Error fetching tracked events: Operation failed');
+            
+            // Extract error details for Sentry only (not logged to console)
             let errorDetails: Record<string, unknown>;
             
             if (error instanceof Error) {
@@ -488,33 +467,16 @@ export class UserEventService {
                 errorDetails = {
                     name: error.name,
                     message: error.message,
-                    stack: error.stack,
                     ...(supabaseError.code && { code: supabaseError.code }),
                     ...(supabaseError.details && { details: supabaseError.details }),
                     ...(supabaseError.hint && { hint: supabaseError.hint })
                 };
             } else {
-                // For non-Error types, safely stringify
-                try {
-                    errorDetails = {
-                        errorType: typeof error,
-                        errorString: String(error),
-                        errorJSON: JSON.stringify(error, Object.getOwnPropertyNames(error instanceof Object ? error : {}))
-                    };
-                } catch {
-                    errorDetails = {
-                        errorType: typeof error,
-                        errorString: String(error)
-                    };
-                }
+                errorDetails = {
+                    errorType: typeof error,
+                    errorString: String(error)
+                };
             }
-
-            console.error('Error fetching tracked events:', {
-                ...errorDetails,
-                userId,
-                page,
-                pageSize
-            });
             
             Sentry.captureException(error, { 
                 extra: { 
@@ -554,7 +516,7 @@ export class UserEventService {
                 status: data?.status as EventStatus | null | undefined 
             };
         } catch (error) {
-            console.error('Error checking event tracking status:', error);
+            console.error('Error checking event tracking status: Operation failed');
             Sentry.captureException(error, { extra: { function: 'isEventTracked', userId, eventId } });
             throw new Error('Failed to check tracking status.');
         }
@@ -591,7 +553,7 @@ export class UserEventService {
 
             return { tracked: newEventIds.length, skipped: existingEventIds.size };
         } catch (error) {
-            console.error('Error bulk tracking events:', error);
+            console.error('Error bulk tracking events: Operation failed');
             Sentry.captureException(error, { extra: { function: 'bulkTrackEvents', userId, eventIdsCount: eventIds.length, status } });
             throw new Error('Failed to track events in bulk.');
         }

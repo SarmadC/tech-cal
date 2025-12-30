@@ -556,13 +556,60 @@ export default function EnrichmentEditorClient({
         setSuccess(false);
 
         try {
+            // If creating a new venue, create it first
+            let finalRelationships = relationships;
+            if (isCreatingVenue && venueData.name) {
+                // Validate required field
+                if (!venueData.name.trim()) {
+                    setError('Venue name is required');
+                    setLoading(false);
+                    return;
+                }
+
+                // Create the venue
+                const venueResponse = await fetch('/api/admin/ingestion/enrichment/venue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        venueData: {
+                            name: venueData.name.trim(),
+                            address: venueData.address?.trim() || null,
+                            city: venueData.city?.trim() || null,
+                            state_province: venueData.state_province?.trim() || null,
+                            country: venueData.country?.trim() || null,
+                            venue_type: venueData.venue_type || null,
+                            capacity: venueData.capacity || null,
+                            latitude: venueData.latitude || null,
+                            longitude: venueData.longitude || null,
+                        },
+                    }),
+                });
+
+                const venueData_result = await venueResponse.json();
+
+                if (!venueResponse.ok) {
+                    throw new Error(venueData_result.error || 'Failed to create venue');
+                }
+
+                if (!venueData_result.venueId) {
+                    throw new Error('Venue creation succeeded but no venue ID returned');
+                }
+
+                // Update relationships with the new venue ID
+                finalRelationships = {
+                    ...relationships,
+                    venue_id: venueData_result.venueId,
+                };
+            }
+
+            // Save event fields and relationships
             const response = await fetch('/api/admin/ingestion/enrichment/event', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     eventId: event.id,
                     coreFields,
-                    relationships,
+                    relationships: finalRelationships,
                     // Include organizer data if organizer exists
                     ...(event.organizer?.id && {
                         organizerData: {
@@ -583,15 +630,17 @@ export default function EnrichmentEditorClient({
             }
 
             setSuccess(true);
+            showSuccess('Event updated successfully');
             setTimeout(() => setSuccess(false), 3000);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
             setError(errorMessage);
+            showError(errorMessage);
             Sentry.captureException(err);
         } finally {
             setLoading(false);
         }
-    }, [coreFields, relationships, event.id, event.organizer?.id, organizerData]);
+    }, [coreFields, relationships, event.id, event.organizer?.id, organizerData, isCreatingVenue, venueData, showSuccess, showError]);
 
     const scrollToSection = (id: string) => {
         const element = document.getElementById(id);

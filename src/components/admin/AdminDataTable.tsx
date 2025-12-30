@@ -100,6 +100,7 @@ export function AdminDataTable<T>({
     } = useAdminToolbar();
 
     const [internalSelection, setInternalSelection] = useState<string[]>(defaultSelectedRowIds);
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
     const controlledSelection = selectedRowIds !== undefined;
     const currentSelection = controlledSelection ? selectedRowIds : internalSelection;
@@ -114,8 +115,27 @@ export function AdminDataTable<T>({
         };
     }, [bulkActions, currentSelection.length, selectable, setBulkActions, setSelectedRowCount]);
 
-    const toggleRow = (rowId: string) => {
+    const allSelectableIds = useMemo(() => rows.map((row) => getRowId(row)), [getRowId, rows]);
+
+    const toggleRow = (rowId: string, event?: React.MouseEvent) => {
         if (!selectable) return;
+
+        const currentIndex = allSelectableIds.indexOf(rowId);
+
+        // Shift-click range selection
+        if (event?.shiftKey && lastSelectedIndex !== null && currentIndex !== -1) {
+            const start = Math.min(lastSelectedIndex, currentIndex);
+            const end = Math.max(lastSelectedIndex, currentIndex);
+            const rangeIds = allSelectableIds.slice(start, end + 1);
+            const nextSelection = Array.from(new Set([...currentSelection, ...rangeIds]));
+            if (!controlledSelection) {
+                setInternalSelection(nextSelection);
+            }
+            onSelectionChange?.(nextSelection);
+            return;
+        }
+
+        // Normal toggle
         const nextSelection = currentSelection.includes(rowId)
             ? currentSelection.filter((id) => id !== rowId)
             : [...currentSelection, rowId];
@@ -123,9 +143,8 @@ export function AdminDataTable<T>({
             setInternalSelection(nextSelection);
         }
         onSelectionChange?.(nextSelection);
+        setLastSelectedIndex(currentIndex);
     };
-
-    const allSelectableIds = useMemo(() => rows.map((row) => getRowId(row)), [getRowId, rows]);
 
     const selectAllRef = useRef<HTMLInputElement>(null);
 
@@ -279,7 +298,7 @@ export function AdminDataTable<T>({
                                         <TableRow
                                             key={rowId}
                                             className={cn(
-                                                'border-b border-default text-sm text-foreground-tertiary transition-colors hover:bg-accent-primary-light',
+                                                'group border-b border-default text-sm text-foreground-tertiary transition-colors hover:bg-accent-primary-light',
                                                 isSelected && 'bg-accent-primary-light/50',
                                                 onRowClick && 'cursor-pointer',
                                                 bodyRowClassName
@@ -296,12 +315,18 @@ export function AdminDataTable<T>({
                                         >
                                             {selectable && (
                                                 <TableCell className="w-10 px-3 py-2">
-                                                    <label className="flex cursor-pointer items-center justify-center">
+                                                    <label
+                                                        className="flex cursor-pointer items-center justify-center"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            toggleRow(rowId, e);
+                                                        }}
+                                                    >
                                                         <input
                                                             type="checkbox"
                                                             className="h-3.5 w-3.5 rounded border-default bg-background-tertiary text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-0"
                                                             checked={isSelected}
-                                                            onChange={() => toggleRow(rowId)}
+                                                            onChange={() => {}} // Handled by label onClick
                                                             aria-label={`Select ${rowId}`}
                                                         />
                                                     </label>

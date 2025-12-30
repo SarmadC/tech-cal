@@ -9,7 +9,6 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { format, formatDistanceToNow } from 'date-fns';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
@@ -29,7 +28,6 @@ const STATUS_OPTIONS = [
     { value: 'all', label: 'All' },
 ] as const;
 
-const VIEW_STORAGE_KEY = 'techcal.admin.updateQueue.view';
 const PAGE_SIZE_STORAGE_KEY = 'techcal.admin.updateQueue.pageSize';
 const COLUMNS_STORAGE_KEY = 'techcal.admin.updateQueue.columns';
 
@@ -91,11 +89,11 @@ interface QueueItem {
 }
 
 const statusBadgeStyles: Record<QueueItem['status'], string> = {
-    pending: 'bg-amber-400/15 text-amber-200 border border-amber-500/30',
-    approved: 'bg-emerald-400/15 text-emerald-200 border border-emerald-500/30',
-    rejected: 'bg-rose-500/15 text-rose-200 border border-rose-500/30',
-    auto_applied: 'bg-sky-500/15 text-sky-200 border border-sky-500/30',
-    partially_approved: 'bg-purple-500/15 text-purple-200 border border-purple-500/30',
+    pending: 'bg-amber-500/20 text-amber-300',
+    approved: 'bg-emerald-500/20 text-emerald-300',
+    rejected: 'bg-rose-500/20 text-rose-300',
+    auto_applied: 'bg-sky-500/20 text-sky-300',
+    partially_approved: 'bg-purple-500/20 text-purple-300',
 };
 
 export default function UpdateQueueClient() {
@@ -108,7 +106,6 @@ export default function UpdateQueueClient() {
     const directionParam = searchParams.get('direction') === 'asc' ? 'asc' : 'desc';
     const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10) || 1;
     const pageSizeParam = Number.parseInt(searchParams.get('pageSize') ?? '20', 10) || 20;
-    const viewParam = searchParams.get('view');
     const queryParam = searchParams.get('q') ?? '';
 
     const [items, setItems] = useState<QueueItem[]>([]);
@@ -137,8 +134,6 @@ export default function UpdateQueueClient() {
     });
     const [columnsPanelOpen, setColumnsPanelOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<QueueItemPreview | null>(null);
-
-    const viewMode = viewParam === 'cards' ? 'cards' : 'table';
 
     const [searchTerm, setSearchTerm] = useState(queryParam);
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -245,17 +240,6 @@ export default function UpdateQueueClient() {
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
-        if (!viewParam) {
-            const storedView = window.localStorage.getItem(VIEW_STORAGE_KEY);
-            if (storedView === 'table' || storedView === 'cards') {
-                updateQuery({ view: storedView });
-            }
-        }
-    }, [viewParam, updateQuery]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-
         if (!searchParams.has('pageSize')) {
             const storedPageSize = window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY);
             const parsed = storedPageSize ? Number.parseInt(storedPageSize, 10) : null;
@@ -281,11 +265,6 @@ export default function UpdateQueueClient() {
             // ignore parse errors
         }
     }, []);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        window.localStorage.setItem(VIEW_STORAGE_KEY, viewMode);
-    }, [viewMode]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -361,12 +340,6 @@ export default function UpdateQueueClient() {
     }, [fetchQueueItems]);
 
     useEffect(() => {
-        if (viewMode === 'cards' && selectedRows.length > 0) {
-            setSelectedRows([]);
-        }
-    }, [viewMode, selectedRows.length]);
-
-    useEffect(() => {
         setSelectedRows((prev) =>
             prev.filter((id) => items.some((item) => item.id === id))
         );
@@ -395,6 +368,8 @@ export default function UpdateQueueClient() {
 
             showSuccess(`Cleared ${cleared} pending ${cleared === 1 ? 'update' : 'updates'}.`);
             updateQuery({ page: 1 }, { resetPage: true });
+            // Wait for router to settle before re-fetching to avoid stale closure values
+            await new Promise(resolve => setTimeout(resolve, 100));
             await fetchQueueItems();
         } catch (err) {
             console.error('Error clearing pending queue items:', err);
@@ -405,6 +380,29 @@ export default function UpdateQueueClient() {
             setClearing(false);
         }
     }, [fetchQueueItems, showError, showSuccess, updateQuery]);
+
+    // Inline row action state and handler
+    const [rowActionLoading, setRowActionLoading] = useState<Record<string, boolean>>({});
+
+    const handleRowAction = useCallback(async (id: string, action: 'approve' | 'reject') => {
+        setRowActionLoading(prev => ({ ...prev, [id]: true }));
+        try {
+            const response = await fetch(
+                `/api/admin/ingestion/update-queue/${id}?action=${action}`,
+                { method: 'POST' }
+            );
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || `Failed to ${action}`);
+            }
+            showSuccess(`Update ${action === 'approve' ? 'approved' : 'rejected'}`);
+            await fetchQueueItems();
+        } catch (err) {
+            showError(err instanceof Error ? err.message : `Failed to ${action}`);
+        } finally {
+            setRowActionLoading(prev => ({ ...prev, [id]: false }));
+        }
+    }, [fetchQueueItems, showError, showSuccess]);
 
     const toggleColumnVisibility = useCallback((key: keyof ColumnVisibility) => {
         setVisibleColumns((prev) => {
@@ -422,7 +420,6 @@ export default function UpdateQueueClient() {
 
     const moveSelection = useCallback(
         (direction: 'next' | 'prev') => {
-            if (viewMode !== 'table') return;
             if (items.length === 0) return;
             const ids = items.map((item) => item.id);
             setSelectedRows((prev) => {
@@ -443,18 +440,13 @@ export default function UpdateQueueClient() {
                 return [ids[nextIndex]];
             });
         },
-        [items, viewMode]
+        [items]
     );
 
     const triggerBulkAction = useCallback(
         (action: BulkActionType) => {
-            if (viewMode !== 'table') {
-                showInfo('Switch to table view to use bulk review actions.');
-                return;
-            }
-
             if (selectedRows.length === 0) {
-                showInfo('Select rows in table view before triggering bulk actions.');
+                showInfo('Select rows before triggering bulk actions.');
                 return;
             }
 
@@ -463,7 +455,7 @@ export default function UpdateQueueClient() {
             setBulkActionError(null);
             setBulkDialogOpen(true);
         },
-        [selectedRows, showInfo, viewMode]
+        [selectedRows, showInfo]
     );
 
     const performBulkAction = useCallback(async () => {
@@ -472,7 +464,7 @@ export default function UpdateQueueClient() {
         const targetIds = (bulkTargetIds.length > 0 ? bulkTargetIds : selectedRows).filter(Boolean);
         if (targetIds.length === 0) {
             setBulkDialogOpen(false);
-            showInfo('Select rows in table view before triggering bulk actions.');
+            showInfo('Select rows before triggering bulk actions.');
             return;
         }
 
@@ -602,26 +594,20 @@ export default function UpdateQueueClient() {
                 key: 'metrics',
                 header: 'Fields',
                 render: (item) => (
-                    <div className="grid gap-1 text-xs text-foreground-tertiary">
-                        <div className="flex items-center justify-between gap-6">
-                            <span className="text-foreground-tertiary">Total</span>
-                            <span className="font-medium text-foreground-primary">{item.fieldCounts.total}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-6">
-                            <span className="text-foreground-tertiary">Pending</span>
-                            <span className="font-medium text-amber-300">{item.fieldCounts.pending}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-6">
-                            <span className="text-foreground-tertiary">Approved</span>
-                            <span className="font-medium text-emerald-300">{item.fieldCounts.approved}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-6">
-                            <span className="text-foreground-tertiary">Rejected</span>
-                            <span className="font-medium text-rose-300">{item.fieldCounts.rejected}</span>
-                        </div>
+                    <div className="flex items-center gap-3 text-xs">
+                        <span className="text-foreground-muted">{item.fieldCounts.total} total</span>
+                        {item.fieldCounts.pending > 0 && (
+                            <span className="text-amber-300">{item.fieldCounts.pending} pending</span>
+                        )}
+                        {item.fieldCounts.approved > 0 && (
+                            <span className="text-emerald-300">{item.fieldCounts.approved} approved</span>
+                        )}
+                        {item.fieldCounts.rejected > 0 && (
+                            <span className="text-rose-300">{item.fieldCounts.rejected} rejected</span>
+                        )}
                     </div>
                 ),
-                width: 200,
+                width: 280,
             });
         }
 
@@ -645,21 +631,58 @@ export default function UpdateQueueClient() {
         if (visibleColumns.actions) {
             base.push({
                 key: 'actions',
-                header: 'Review',
-                render: (item) => (
-                    <Link href={`/admin/ingestion/update-queue/${item.id}`} className="inline-flex">
-                        <Button size="sm" variant="secondary">
-                            Open
-                        </Button>
-                    </Link>
-                ),
-                align: 'center',
-                width: 120,
+                header: '',
+                render: (item) => {
+                    const isLoading = rowActionLoading[item.id];
+                    const isPending = item.status === 'pending';
+                    return (
+                        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                            {isPending && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRowAction(item.id, 'approve');
+                                        }}
+                                        disabled={isLoading}
+                                        className="rounded p-1.5 text-emerald-400 transition-colors hover:bg-emerald-400/10 disabled:opacity-50"
+                                        title="Approve all fields"
+                                    >
+                                        <MaterialIcon name="check" size={16} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRowAction(item.id, 'reject');
+                                        }}
+                                        disabled={isLoading}
+                                        className="rounded p-1.5 text-rose-400 transition-colors hover:bg-rose-400/10 disabled:opacity-50"
+                                        title="Reject all fields"
+                                    >
+                                        <MaterialIcon name="close" size={16} />
+                                    </button>
+                                </>
+                            )}
+                            <Link
+                                href={`/admin/ingestion/update-queue/${item.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="rounded p-1.5 text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground-secondary"
+                                title="Open full review"
+                            >
+                                <MaterialIcon name="arrow-up-right" size={16} />
+                            </Link>
+                        </div>
+                    );
+                },
+                align: 'right',
+                width: 110,
             });
         }
 
         return base;
-    }, [visibleColumns]);
+    }, [visibleColumns, rowActionLoading, handleRowAction]);
 
     const bulkActions = useMemo(
         () => [
@@ -749,51 +772,29 @@ export default function UpdateQueueClient() {
     );
 
     const viewControls = (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default/60 bg-background-main/60 px-4 py-3">
-            <div className="flex items-center gap-2">
-                <span className="text-xs uppercase tracking-wide text-foreground-muted">View</span>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                    onClick={() => updateQuery({ view: 'table' })}
-                    aria-pressed={viewMode === 'table'}
-                >
-                    Table
-                </Button>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
-                    onClick={() => updateQuery({ view: 'cards' })}
-                    aria-pressed={viewMode === 'cards'}
-                >
-                    Cards
-                </Button>
-            </div>
-            <div className="flex items-center gap-2">
-                {statusParam === 'pending' && (
-                    <ConfirmationDialog
-                        triggerLabel="Clear pending"
-                        title="Clear all pending updates?"
-                        description="This permanently deletes every pending queue entry. This action cannot be undone."
-                        confirmLabel="Delete"
-                        cancelLabel="Cancel"
-                        variant="destructive"
-                        onConfirm={handleClearPending}
-                        disabled={clearing || loading}
-                    />
-                )}
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShortcutsOpen(true)}
-                >
-                    <MaterialIcon name="info" size={14} />
-                    Shortcuts
-                </Button>
-            </div>
+        <div className="flex items-center justify-end gap-2">
+            {statusParam === 'pending' && (
+                <ConfirmationDialog
+                    triggerLabel="Clear pending"
+                    title="Clear all pending updates?"
+                    description="This permanently deletes every pending queue entry. This action cannot be undone."
+                    confirmLabel="Delete"
+                    cancelLabel="Cancel"
+                    variant="destructive"
+                    onConfirm={handleClearPending}
+                    disabled={clearing || loading}
+                />
+            )}
+            <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setShortcutsOpen(true)}
+                className="text-foreground-muted hover:text-foreground-secondary"
+            >
+                <MaterialIcon name="info" size={14} />
+                <span className="hidden sm:inline">Shortcuts</span>
+            </Button>
         </div>
     );
 
@@ -904,106 +905,41 @@ export default function UpdateQueueClient() {
             )}
 
             {error && (
-                <Card className="border border-rose-500/30 bg-rose-500/10 text-rose-100">
-                    <CardContent className="flex items-start justify-between gap-4 pt-4">
-                        <div>
-                            <strong className="block text-sm font-semibold">Error</strong>
-                            <p className="text-sm">{error}</p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => setError(null)} className="text-rose-200 hover:bg-rose-500/20">
-                            Dismiss
-                        </Button>
-                    </CardContent>
-                </Card>
+                <div className="flex items-start justify-between gap-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-rose-100">
+                    <div>
+                        <strong className="block text-sm font-semibold">Error</strong>
+                        <p className="text-sm">{error}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setError(null)} className="text-rose-200 hover:bg-rose-500/20">
+                        Dismiss
+                    </Button>
+                </div>
             )}
 
             {viewControls}
 
-            {viewMode === 'table' ? (
-                <AdminDataTable
-                    columns={columns}
-                    rows={items}
-                    getRowId={(item) => item.id}
-                    sortKey={sortParam}
-                    sortDirection={directionParam}
-                    onSortChange={(key, direction) => {
-                        updateQuery({ sort: key, direction });
-                    }}
-                    isLoading={loading}
-                    selectable
-                    selectedRowIds={selectedRows}
-                    onSelectionChange={setSelectedRows}
-                    bulkActions={bulkActions}
-                    page={pageParam}
-                    pageSize={pageSizeParam}
-                    total={pagination.total}
-                    onPageChange={(nextPage) => updateQuery({ page: nextPage })}
-                    onPageSizeChange={(nextSize) => updateQuery({ pageSize: nextSize, page: 1 }, { resetPage: true })}
-                    toolbar={tableToolbar}
-                    onRowClick={(item) => setPreviewItem(item as QueueItemPreview)}
-                />
-            ) : (
-                <div className="space-y-4">
-                    {loading && items.length === 0 ? (
-                        <div className="rounded-lg border border-default/60 bg-background-main/60 px-6 py-12 text-center text-sm text-foreground-tertiary">
-                            Loading queue items…
-                        </div>
-                    ) : items.length === 0 ? (
-                        <div className="rounded-lg border border-default/60 bg-background-main/60 px-6 py-12 text-center text-sm text-foreground-tertiary">
-                            No queue items match the current filters.
-                        </div>
-                    ) : (
-                        items.map((item) => (
-                            <Card key={item.id} className="border border-default/60 bg-background-main/70 text-foreground-secondary shadow-sm">
-                                <CardHeader className="flex flex-col gap-2">
-                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                        <div>
-                                            <CardTitle className="text-lg font-semibold text-foreground-primary">
-                                                {item.event?.title ?? 'Untitled Event'}
-                                            </CardTitle>
-                                            <div className="mt-1 flex flex-wrap gap-3 text-xs text-foreground-tertiary">
-                                                <span>{item.event?.organizer?.name ?? 'Unknown organizer'}</span>
-                                                {item.event?.start_time && (
-                                                    <span>{format(new Date(item.event.start_time), 'MMM d, yyyy')}</span>
-                                                )}
-                                                <span>Update ID: {item.id}</span>
-                                                <span>Source: {item.source_event_id ?? 'N/A'}</span>
-                                            </div>
-                                        </div>
-                                        <Badge className={cn('px-3 py-1 text-[11px] font-medium uppercase tracking-wide', statusBadgeStyles[item.status])}>
-                                            {item.status.replace('_', ' ')}
-                                        </Badge>
-                                    </div>
-                                    {item.requires_review_reason && (
-                                        <p className="text-sm text-foreground-tertiary">
-                                            <span className="font-medium text-foreground-secondary">Review:</span> {item.requires_review_reason}
-                                        </p>
-                                    )}
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-3 text-sm text-foreground-tertiary md:grid-cols-4">
-                                        <MetricItem label="Total fields" value={item.fieldCounts.total} />
-                                        <MetricItem label="Pending" value={item.fieldCounts.pending} tone="amber" />
-                                        <MetricItem label="Approved" value={item.fieldCounts.approved} tone="emerald" />
-                                        <MetricItem label="Rejected" value={item.fieldCounts.rejected} tone="rose" />
-                                    </div>
-                                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-foreground-tertiary">
-                                        <span>
-                                            Created {format(new Date(item.created_at), 'MMM d, yyyy HH:mm')} (
-                                            {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })})
-                                        </span>
-                                        <Link href={`/admin/ingestion/update-queue/${item.id}`}>
-                                            <Button size="sm" variant="secondary">
-                                                Review details
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))
-                    )}
-                </div>
-            )}
+            <AdminDataTable
+                columns={columns}
+                rows={items}
+                getRowId={(item) => item.id}
+                sortKey={sortParam}
+                sortDirection={directionParam}
+                onSortChange={(key, direction) => {
+                    updateQuery({ sort: key, direction });
+                }}
+                isLoading={loading}
+                selectable
+                selectedRowIds={selectedRows}
+                onSelectionChange={setSelectedRows}
+                bulkActions={bulkActions}
+                page={pageParam}
+                pageSize={pageSizeParam}
+                total={pagination.total}
+                onPageChange={(nextPage) => updateQuery({ page: nextPage })}
+                onPageSizeChange={(nextSize) => updateQuery({ pageSize: nextSize, page: 1 }, { resetPage: true })}
+                toolbar={tableToolbar}
+                onRowClick={(item) => setPreviewItem(item as QueueItemPreview)}
+            />
 
             {shortcutsOpen && (
                 <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />
@@ -1023,23 +959,6 @@ export default function UpdateQueueClient() {
     );
 }
 
-function MetricItem({ label, value, tone }: { label: string; value: number; tone?: 'amber' | 'emerald' | 'rose' }) {
-    const toneClasses =
-        tone === 'amber'
-            ? 'text-amber-300'
-            : tone === 'emerald'
-                ? 'text-emerald-300'
-                : tone === 'rose'
-                    ? 'text-rose-300'
-                    : 'text-foreground-primary';
-    return (
-        <div className="rounded-md border border-default/60 bg-background-main/60 px-3 py-2">
-            <p className="text-xs uppercase tracking-wide text-foreground-tertiary">{label}</p>
-            <p className={cn('text-lg font-semibold', toneClasses)}>{value}</p>
-        </div>
-    );
-}
-
 function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
     const shortcuts: Array<{ keys: string; description: string }> = [
         { keys: 'g u', description: 'Go to Update Queue' },
@@ -1047,9 +966,9 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
         { keys: 'g e', description: 'Go to Enrichment' },
         { keys: '/', description: 'Focus search' },
         { keys: 'j / k', description: 'Move selection down/up' },
-        { keys: 'a', description: 'Approve selection (coming soon)' },
-        { keys: 'r', description: 'Reject selection (coming soon)' },
-        { keys: 'p', description: 'Mark pending (coming soon)' },
+        { keys: 'a', description: 'Approve selected items' },
+        { keys: 'r', description: 'Reject selected items' },
+        { keys: 'p', description: 'Mark selected as pending' },
         { keys: '?', description: 'Show this help' },
     ];
 

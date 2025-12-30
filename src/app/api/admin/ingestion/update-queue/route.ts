@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import type { Database } from '@/types/supabase';
 
@@ -51,8 +52,6 @@ export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tableClient = supabase as any;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -63,6 +62,22 @@ export async function GET(request: NextRequest) {
         if (!isAdmin) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
+
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = serviceClient as any;
 
         // Parse query parameters
         const searchParams = request.nextUrl.searchParams;
@@ -98,7 +113,7 @@ export async function GET(request: NextRequest) {
         const eventsMap: Record<string, EventSummary> = {};
 
         if (eventIds.length > 0) {
-            const { data: events, error: eventsError } = await supabase
+            const { data: events, error: eventsError } = await serviceClient
                 .from('events')
                 .select('id, title, start_time, organizer_id')
                 .in('id', eventIds);
@@ -109,7 +124,7 @@ export async function GET(request: NextRequest) {
                 const organizersMap: Record<string, Pick<OrganizerRow, 'id' | 'name'>> = {};
 
                 if (organizerIds.length > 0) {
-                    const { data: organizers } = await supabase
+                    const { data: organizers } = await serviceClient
                         .from('organizers')
                         .select('id, name')
                         .in('id', organizerIds);
@@ -205,8 +220,6 @@ export async function DELETE(_request: NextRequest) {
         const {
             data: { user },
         } = await supabase.auth.getUser();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tableClient = supabase as any;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -216,6 +229,22 @@ export async function DELETE(_request: NextRequest) {
         if (!isAdmin) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
+
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = serviceClient as any;
 
         const { data: pendingItems, error: fetchError } = await tableClient
             .from('event_update_queue')
@@ -232,26 +261,41 @@ export async function DELETE(_request: NextRequest) {
             return NextResponse.json({ cleared: 0 });
         }
 
-        const { error: fieldsError } = await tableClient
+        // Delete fields first (foreign key constraint)
+        const { data: deletedFields, error: fieldsError } = await tableClient
             .from('event_update_queue_fields')
             .delete()
-            .in('queue_id', pendingIds);
+            .in('queue_id', pendingIds)
+            .select('id');
 
         if (fieldsError) {
+            console.error('Fields delete error:', fieldsError);
             throw new Error(`Failed to delete queue fields: ${fieldsError.message}`);
         }
 
-        const { error: queueDeleteError } = await tableClient
+        console.log(`Deleted ${deletedFields?.length ?? 0} field records`);
+
+        // Delete queue items
+        const { data: deletedItems, error: queueDeleteError } = await tableClient
             .from('event_update_queue')
             .delete()
-            .in('id', pendingIds);
+            .in('id', pendingIds)
+            .select('id');
 
         if (queueDeleteError) {
+            console.error('Queue delete error:', queueDeleteError);
             throw new Error(`Failed to delete queue items: ${queueDeleteError.message}`);
         }
 
+        const actuallyDeleted = deletedItems?.length ?? 0;
+        console.log(`Deleted ${actuallyDeleted} of ${pendingIds.length} queue items`);
+
+        if (actuallyDeleted === 0 && pendingIds.length > 0) {
+            console.warn('No items were deleted - check RLS policies on event_update_queue table');
+        }
+
         return NextResponse.json({
-            cleared: pendingIds.length,
+            cleared: actuallyDeleted,
         });
     } catch (error) {
         console.error('Error clearing pending queue items:', error);

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
+import * as Sentry from '@sentry/nextjs';
 
 type AppSupabaseClient = SupabaseClient<Database>;
 
@@ -23,7 +24,8 @@ export async function isAdminUser(
             .maybeSingle();
 
         if (error) {
-            console.warn('Failed to verify admin status:', error);
+            console.warn('Failed to verify admin status: Operation failed');
+            Sentry.captureException(error, { extra: { function: 'isAdminUser', userId } });
             return false;
         }
 
@@ -31,7 +33,8 @@ export async function isAdminUser(
 
         return profile?.is_admin === true;
     } catch (error) {
-        console.error('Unexpected admin check error:', error);
+        console.error('Unexpected admin check error: Operation failed');
+        Sentry.captureException(error, { extra: { function: 'isAdminUser', userId } });
         return false;
     }
 }

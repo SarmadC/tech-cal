@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
-import { isEventLive, isEventPast } from '@/utils/dateUtils';
+import { isEventLive, isEventPast, formatTime } from '@/utils/dateUtils';
 import { isMultiDayEvent, getMultiDayDuration, getCategoryColor } from '@/utils/eventUtils';
 // Career impact components removed - using inline implementation
 import { getPillColor } from '@/utils/pillColorUtils';
@@ -163,8 +163,21 @@ export const EventCard: React.FC<EventCardProps> = ({
     const isCompact = isWeekView && cardSize <= 2;
     const isDense = isWeekView && cardSize <= 4;
     const isExtraLarge = cardSize > 8;
+    const isUltraLarge = cardSize > 12;
+
+    // Layout mode for adaptive content
+    const layoutMode = cardSize < 4 ? 'compact'
+        : cardSize < 8 ? 'normal'
+            : cardSize < 12 ? 'expanded'
+                : 'full';
 
     const showTimelineRail = isDayView && cardSize >= 8;
+
+    // Time displays for tall cards
+    const showStartTime = (isDayView || isWeekView) && cardSize >= 8;
+    const showEndTime = (isDayView || isWeekView) && cardSize >= 12;
+    const startTimeFormatted = showStartTime ? formatTime(event.startTime) : '';
+    const endTimeFormatted = showEndTime && event.endTime ? formatTime(event.endTime) : '';
 
 
 
@@ -172,8 +185,9 @@ export const EventCard: React.FC<EventCardProps> = ({
     // Day view specific content display
     // Hide duration for medium (5–6) and extra-large (>8) day cards to match CSS
     const _showDayDuration = isDayView && !((cardSize >= 5 && cardSize <= 6) || (cardSize > 8));
-    const showDayLocation = isDayView && event.location;
-    const showDayOrganizer = isDayView && event.organizer;
+    const showDayLocation = isDayView && event.location && cardSize >= 5;
+    const showDayOrganizer = isDayView && event.organizer && cardSize >= 6;
+    const showDayDescription = isDayView && event.description && cardSize >= 10;
 
     // Small cards: Basic info only
     // Show location for medium and larger cards (span > 4)
@@ -315,6 +329,62 @@ export const EventCard: React.FC<EventCardProps> = ({
                                     )}
                                 </div>
                             )}
+
+                            {/* Description for very tall cards */}
+                            {showDayDescription && (
+                                <div className="event-description" style={{
+                                    marginTop: '12px',
+                                    fontSize: '0.85rem',
+                                    color: 'var(--text-on-pastel)',
+                                    opacity: 0.9,
+                                    lineHeight: 1.4,
+                                    maxHeight: '4.2em',
+                                    overflow: 'hidden',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical'
+                                }}>
+                                    {event.description}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Start time for tall cards */}
+                    {showStartTime && (
+                        <div className="event-start-time" style={{
+                            marginTop: cardSize >= 12 ? '16px' : '12px',
+                            padding: '6px 10px',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            color: 'var(--text-on-pastel)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            <MaterialIcon name="time" size={14} color={titleColor} />
+                            Starts: {startTimeFormatted}
+                        </div>
+                    )}
+
+                    {/* End time for ultra tall cards (shown at bottom) */}
+                    {showEndTime && (
+                        <div className="event-end-time" style={{
+                            marginTop: 'auto',
+                            padding: '6px 10px',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            color: 'var(--text-on-pastel)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            <MaterialIcon name="time" size={14} color={titleColor} />
+                            Ends: {endTimeFormatted}
                         </div>
                     )}
 

@@ -1,9 +1,11 @@
 // src/components/calendar/shared/TimeSlotGrid.tsx
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Event, MultiDayEventInstance } from '@/types';
 import { EventCard } from './EventCard';
+import { EventOverflowPopover } from './EventOverflowPopover';
+import '@/app/styles/event-overflow-popover.css';
 import { calculateOverlapLayout, EventLayoutInfo } from '@/utils/eventViewUtils';
 
 export interface TimeSlot {
@@ -33,6 +35,10 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
     onEventHover,
     onEventLeave
 }) => {
+    const [popoverState, setPopoverState] = useState<{
+        events: (Event | MultiDayEventInstance)[];
+        anchorEl: HTMLElement | null;
+    } | null>(null);
     // Calculate the number of half-hour slots needed
     const totalHours = endHour - startHour + 1;
     const totalSlots = totalHours * 2 + 1; // +1 for the final time label
@@ -243,21 +249,60 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
 
                     const isCompressed = layoutInfo.totalColumns > 1;
 
+                    // Determine overlap mode: cascade (2-3), stacked (4+), or none (1)
+                    const overlapMode = layoutInfo.totalColumns === 1 ? 'none'
+                        : layoutInfo.totalColumns <= 3 ? 'cascade'
+                            : 'stacked';
+
+                    // For stacked mode, only show the first event
+                    const isHiddenInStack = overlapMode === 'stacked' && layoutInfo.columnIndex > 0;
+
+                    if (isHiddenInStack) {
+                        return null; // Don't render hidden events in stacked mode
+                    }
+
+                    // Calculate styles based on mode
+                    let positionStyles: React.CSSProperties = {};
+
+                    if (overlapMode === 'cascade') {
+                        // Cascade: minimum width with vertical offset
+                        const cascadeOffset = layoutInfo.columnIndex * 5; // 5px per event
+                        positionStyles = {
+                            gridColumn: columnIndex,
+                            gridRow: `${startRow} / ${endRow}`,
+                            minWidth: '150px',
+                            width: '150px',
+                            marginLeft: `${layoutInfo.columnIndex * 10}px`, // Slight horizontal offset too
+                            transform: `translateY(${cascadeOffset}px)`,
+                            zIndex: 20 - layoutInfo.columnIndex, // First event on top
+                        } as React.CSSProperties & { '--cascade-index': number };
+                    } else if (overlapMode === 'stacked') {
+                        // Stacked: full width for first event only
+                        positionStyles = {
+                            gridColumn: columnIndex,
+                            gridRow: `${startRow} / ${endRow}`,
+                            width: '100%',
+                            zIndex: 10 + eventIndex,
+                        };
+                    } else {
+                        // None: standard positioning
+                        positionStyles = {
+                            gridColumn: columnIndex,
+                            gridRow: `${startRow} / ${endRow}`,
+                            width: '100%',
+                            zIndex: 10 + eventIndex,
+                        };
+                    }
+
                     return (
                         <div
                             key={eventKey}
-                            className={`week-event-positioned ${isCompressed ? 'is-compressed' : ''}`}
+                            className={`week-event-positioned ${overlapMode === 'cascade' ? 'cascade' : ''} ${isCompressed ? 'is-compressed' : ''}`}
                             style={{
-                                gridColumn: columnIndex,
-                                gridRow: `${startRow} / ${endRow}`,
-                                zIndex: 10 + eventIndex,
-                                // Apply overlap positioning using width and margin
-                                '--width-percent': `${widthPercent}%`,
-                                '--left-percent': `${leftPercent}%`,
-                                width: `${widthPercent}%`,
-                                marginLeft: `${leftPercent}%`,
+                                ...positionStyles,
                                 padding: '1px 2px',
                                 boxSizing: 'border-box',
+                                position: 'relative',
                             } as React.CSSProperties}
                         >
                             <EventCard
@@ -274,10 +319,38 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                                     height: '100%'
                                 }}
                             />
+
+                            {/* Overflow badge for stacked mode */}
+                            {overlapMode === 'stacked' && layoutInfo.totalColumns > 1 && (
+                                <div
+                                    className="overflow-badge"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        // Get all events for this day/time slot
+                                        const allEvents = dayEvents || [];
+                                        setPopoverState({
+                                            events: allEvents,
+                                            anchorEl: e.currentTarget as HTMLElement,
+                                        });
+                                    }}
+                                >
+                                    +{layoutInfo.totalColumns - 1}
+                                </div>
+                            )}
                         </div>
                     );
                 });
             })}
+
+            {/* Event Overflow Popover */}
+            {popoverState && popoverState.anchorEl && (
+                <EventOverflowPopover
+                    events={popoverState.events}
+                    anchorEl={popoverState.anchorEl}
+                    onClose={() => setPopoverState(null)}
+                    onEventClick={onEventClick}
+                />
+            )}
         </div>
     );
 };

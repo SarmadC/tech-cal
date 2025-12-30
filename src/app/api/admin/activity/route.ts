@@ -6,7 +6,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
+import { commonSchemas, adminSchemas, sanitizeSearchQuery } from '@/lib/apiValidation';
 
 export async function GET(request: NextRequest) {
     try {
@@ -22,12 +24,28 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const url = new URL(request.url);
-        const limit = parseInt(url.searchParams.get('limit') || '30', 10);
-        const status = url.searchParams.get('status'); // 'succeeded' | 'failed' | 'pending'
-        const search = url.searchParams.get('search');
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-        let query = supabase
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
+        const url = new URL(request.url);
+        
+        // Validate and parse query parameters
+        const limit = commonSchemas.limit.parse(url.searchParams.get('limit'));
+        const status = adminSchemas.statusFilter.parse(url.searchParams.get('status'));
+        const search = sanitizeSearchQuery(url.searchParams.get('search'));
+
+        let query = serviceClient
             .from('extraction_job_log')
             .select(`
                 id,
@@ -59,10 +77,12 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Apply search filter if provided
+        // Apply search filter if provided - search is already sanitized
         if (search) {
-            // For text search, we'll filter by source_url, source_domain, or adapter
-            query = query.or(`source_url.ilike.%${search}%,source_domain.ilike.%${search}%,adapter.ilike.%${search}%`);
+            const searchPattern = `%${search}%`;
+            // Build filter string safely - Supabase PostgREST will handle the escaping
+            // Format: "column.ilike.pattern,column2.ilike.pattern"
+            query = query.or(`source_url.ilike.${searchPattern},source_domain.ilike.${searchPattern},adapter.ilike.${searchPattern}`);
         }
 
         const { data, error } = await query;

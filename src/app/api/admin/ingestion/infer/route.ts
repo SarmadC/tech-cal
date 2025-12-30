@@ -114,8 +114,22 @@ export async function GET() {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         // Count events that could benefit from inference
-        const { count: missingDescriptionCount } = await supabase
+        const { count: missingDescriptionCount } = await serviceClient
             .from('events')
             .select('id', { count: 'exact', head: true })
             .eq('status', 'confirmed')
@@ -123,7 +137,7 @@ export async function GET() {
             .not('title', 'is', null);
 
         // Count events with tags
-        const { data: eventsWithTags } = await supabase
+        const { data: eventsWithTags } = await serviceClient
             .from('event_tag_relations')
             .select('event_id')
             .limit(10000);
@@ -131,7 +145,7 @@ export async function GET() {
         const uniqueEventsWithTags = new Set((eventsWithTags ?? []).map(r => r.event_id)).size;
 
         // Total confirmed events
-        const { count: totalEvents } = await supabase
+        const { count: totalEvents } = await serviceClient
             .from('events')
             .select('id', { count: 'exact', head: true })
             .eq('status', 'confirmed');

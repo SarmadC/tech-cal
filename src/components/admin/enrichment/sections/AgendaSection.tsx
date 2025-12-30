@@ -32,7 +32,7 @@ export function AgendaSection({
                     <div key={index} className="rounded-lg border border-default bg-background-tertiary p-4 space-y-4">
                         <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 grid gap-4">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <div className="grid gap-2">
                                         <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Title</label>
                                         <input
@@ -57,6 +57,16 @@ export function AgendaSection({
                                             <option value="break" className="bg-background-main">Break</option>
                                             <option value="other" className="bg-background-main">Other</option>
                                         </select>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Track</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Track (optional)"
+                                            value={item.track || ''}
+                                            onChange={(e) => onUpdate(index, { track: e.target.value })}
+                                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
+                                        />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -87,6 +97,16 @@ export function AgendaSection({
                                         onChange={(e) => onUpdate(index, { description: e.target.value })}
                                         className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted resize-none"
                                         rows={2}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Location</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Location within venue (optional)"
+                                        value={item.location || ''}
+                                        onChange={(e) => onUpdate(index, { location: e.target.value })}
+                                        className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">

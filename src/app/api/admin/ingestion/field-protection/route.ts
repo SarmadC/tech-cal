@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 
 export async function GET(_request: NextRequest) {
@@ -24,13 +25,25 @@ export async function GET(_request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const client = supabase as unknown as {
-            from: (table: string) => ReturnType<typeof supabase.from>;
-        };
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
 
         // Fetch all field protection rules
-        const { data: rules, error } = await client
-            .from('event_field_protection_config')
+        // Type definitions for ingestion admin tables are not generated; cast for query usage.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const protectionTable = (serviceClient as any).from('event_field_protection_config');
+        const { data: rules, error } = await protectionTable
             .select('*')
             .order('field_name', { ascending: true });
 
@@ -52,9 +65,6 @@ export async function GET(_request: NextRequest) {
 export async function PUT(request: NextRequest) {
     try {
         const supabase = await createClient();
-        const tableClient = supabase as unknown as {
-            from: (table: string) => ReturnType<typeof supabase.from>;
-        };
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
@@ -93,12 +103,26 @@ export async function PUT(request: NextRequest) {
             }
         }
 
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         // Upsert each rule
         const results = [];
         for (const update of updates) {
             // Type definitions for ingestion admin tables are not generated; cast for upsert usage.
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const protectionTable = tableClient.from('event_field_protection_config') as any;
+            const protectionTable = (serviceClient as any).from('event_field_protection_config');
 
             const { data, error } = await protectionTable
                 .upsert({

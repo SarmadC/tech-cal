@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import type { AgendaItemInput } from '@/services/ingestion/EventEnrichmentService';
 
@@ -48,9 +49,6 @@ export async function GET(
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tableClient = supabase as any;
-
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -60,6 +58,22 @@ export async function GET(
         if (!isAdmin) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
+
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = serviceClient as any;
 
         const { id: queueId } = await context.params;
 
@@ -112,8 +126,6 @@ export async function POST(
 ) {
     try {
         const supabase = await createClient();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const tableClient = supabase as any;
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
@@ -125,6 +137,22 @@ export async function POST(
         if (!isAdmin) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
+
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableClient = serviceClient as any;
 
         const { id: queueId } = await context.params;
         const url = new URL(request.url);

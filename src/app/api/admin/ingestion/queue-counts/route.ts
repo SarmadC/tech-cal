@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 
 export interface QueueCountsResponse {
@@ -29,8 +30,22 @@ export async function GET() {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        // Use service client to bypass RLS for admin operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         // Fetch counts in parallel - use type assertions for tables not in generated types
-        const tableClient = supabase as any;
+        const tableClient = serviceClient as any;
         
         const [
             updateQueueResult,
@@ -45,13 +60,13 @@ export async function GET() {
                 .eq('status', 'pending'),
             
             // Pending moderation items
-            supabase
+            serviceClient
                 .from('event_moderation_queue')
                 .select('id', { count: 'exact', head: true })
                 .eq('status', 'pending'),
             
             // Events needing enrichment (pending status)
-            supabase
+            serviceClient
                 .from('events')
                 .select('id', { count: 'exact', head: true })
                 .eq('enrichment_status', 'pending')

@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { isAdminUser } from '@/lib/adminAuth';
 import { EventEnrichmentService, type AgendaItemInput } from '@/services/ingestion/EventEnrichmentService';
 
@@ -45,10 +46,24 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Use service client to bypass RLS for agenda operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         const result = await EventEnrichmentService.createOrUpdateAgendaItems(
             eventId,
             items,
-            supabase,
+            serviceClient,
             user.id
         );
 
@@ -97,8 +112,22 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
+        // Use service client to bypass RLS for agenda operations
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing Supabase service credentials');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
+        const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
         // Get agenda IDs for this event
-        const { data: agendaItems } = await supabase
+        const { data: agendaItems } = await serviceClient
             .from('event_agenda')
             .select('id')
             .eq('event_id', eventId);
@@ -107,13 +136,13 @@ export async function DELETE(request: NextRequest) {
             const agendaIds = agendaItems.map(a => a.id);
 
             // Delete agenda_speakers links
-            await supabase
+            await serviceClient
                 .from('agenda_speakers')
                 .delete()
                 .in('agenda_id', agendaIds);
 
             // Delete agenda items
-            await supabase
+            await serviceClient
                 .from('event_agenda')
                 .delete()
                 .eq('event_id', eventId);

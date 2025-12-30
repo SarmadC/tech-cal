@@ -698,7 +698,7 @@
 }
 
 /* ===================================
-   HOVER TO EXPAND BEHAVIOR
+   HOVER TO EXPAND BEHAVIOR (Legacy - being replaced)
    =================================== */
 
 /* When hovering a compressed event container, expand it to full day width */
@@ -721,12 +721,55 @@
     border: 1px solid var(--border-default) !important;
 }
 
-/* Reveal hidden details on hover (if we used CSS classes to hide them, 
-   but since we used React state, we rely on the expansion to just show more of the title/truncated content)
-   
-   If we want to re-show hidden React elements, we'd need to use CSS classes instead of conditional rendering. 
-   For now, we just expand the "strip" so the title is readable.
-*/
+/* ===================================
+   CASCADE MODE (2-3 Overlaps)
+   =================================== */
+
+.week-event-positioned.cascade {
+    min-width: 150px !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.week-event-positioned.cascade .event-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-subtle);
+}
+
+.week-event-positioned.cascade:hover {
+    transform: translateY(calc(var(--cascade-index, 0) * 5px)) scale(1.02) !important;
+    z-index: 100 !important;
+}
+
+.week-event-positioned.cascade:hover .event-card {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* ===================================
+   OVERFLOW BADGE (4+ Overlaps)
+   =================================== */
+
+.overflow-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+    user-select: none;
+    backdrop-filter: blur(4px);
+}
+
+.overflow-badge:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
 
 
 /* ===================================
