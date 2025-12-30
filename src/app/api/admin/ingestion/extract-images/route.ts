@@ -10,6 +10,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { isAdminUser } from '@/lib/adminAuth';
 
+// Use Node.js runtime for better fetch support and external URL access
+export const runtime = 'nodejs';
+
 interface ExtractedImage {
     src: string;
     alt?: string;
@@ -237,7 +240,7 @@ export async function POST(request: NextRequest) {
         if (isDirectImageUrl(url)) {
             // Verify the image URL is accessible (use HEAD to avoid downloading large images)
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout (increased from 10s)
 
             try {
                 // Try HEAD first (lightweight check)
@@ -249,6 +252,7 @@ export async function POST(request: NextRequest) {
                         Accept: 'image/*,*/*;q=0.8',
                     },
                     signal: controller.signal,
+                    redirect: 'follow', // Explicitly follow redirects
                 });
 
                 // If HEAD fails (405 Method Not Allowed or 404), try GET as fallback
@@ -261,6 +265,7 @@ export async function POST(request: NextRequest) {
                             Accept: 'image/*,*/*;q=0.8',
                         },
                         signal: controller.signal,
+                        redirect: 'follow', // Explicitly follow redirects
                     });
                 }
 
@@ -269,7 +274,7 @@ export async function POST(request: NextRequest) {
                 // If still not OK, return error
                 if (!response.ok) {
                     return NextResponse.json(
-                        { error: `Failed to fetch image: HTTP ${response.status}` },
+                        { error: `Failed to fetch image: HTTP ${response.status} ${response.statusText}` },
                         { status: 400 }
                     );
                 }
@@ -297,10 +302,26 @@ export async function POST(request: NextRequest) {
             } catch (err) {
                 clearTimeout(timeoutId);
                 if (err instanceof Error && err.name === 'AbortError') {
-                    return NextResponse.json({ error: 'Request timeout' }, { status: 408 });
+                    return NextResponse.json({ error: 'Request timeout - the server took too long to respond' }, { status: 408 });
                 }
+                
+                // Provide more specific error messages
+                let errorMessage = 'Failed to fetch image';
+                if (err instanceof Error) {
+                    const errMsg = err.message.toLowerCase();
+                    if (errMsg.includes('network') || errMsg.includes('fetch')) {
+                        errorMessage = 'Network error: Unable to reach the server. Please check the URL and try again.';
+                    } else if (errMsg.includes('certificate') || errMsg.includes('ssl') || errMsg.includes('tls')) {
+                        errorMessage = 'SSL/TLS error: The server certificate could not be verified.';
+                    } else if (errMsg.includes('dns')) {
+                        errorMessage = 'DNS error: Could not resolve the domain name.';
+                    } else {
+                        errorMessage = `Failed to fetch image: ${err.message}`;
+                    }
+                }
+                
                 return NextResponse.json(
-                    { error: `Failed to fetch image: ${err instanceof Error ? err.message : 'Unknown error'}` },
+                    { error: errorMessage },
                     { status: 400 }
                 );
             }
@@ -308,7 +329,7 @@ export async function POST(request: NextRequest) {
 
         // Not a direct image URL - fetch and parse HTML
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout (increased from 10s)
 
         let html: string;
         try {
@@ -318,15 +339,19 @@ export async function POST(request: NextRequest) {
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
                 },
                 signal: controller.signal,
+                redirect: 'follow', // Explicitly follow redirects
             });
 
             clearTimeout(timeoutId);
 
             if (!response.ok) {
                 return NextResponse.json(
-                    { error: `Failed to fetch URL: HTTP ${response.status}` },
+                    { error: `Failed to fetch URL: HTTP ${response.status} ${response.statusText}` },
                     { status: 400 }
                 );
             }
@@ -335,10 +360,35 @@ export async function POST(request: NextRequest) {
         } catch (err) {
             clearTimeout(timeoutId);
             if (err instanceof Error && err.name === 'AbortError') {
-                return NextResponse.json({ error: 'Request timeout' }, { status: 408 });
+                return NextResponse.json({ error: 'Request timeout - the server took too long to respond' }, { status: 408 });
             }
+            
+            // Provide more specific error messages
+            let errorMessage = 'Failed to fetch URL';
+            if (err instanceof Error) {
+                const errMsg = err.message.toLowerCase();
+                // Log the full error for debugging (server-side only)
+                console.error(`Failed to fetch URL ${url}:`, {
+                    message: err.message,
+                    name: err.name,
+                    stack: err.stack,
+                });
+                
+                if (errMsg.includes('network') || errMsg.includes('fetch') || errMsg.includes('econnrefused') || errMsg.includes('enotfound')) {
+                    errorMessage = 'Network error: Unable to reach the server. The server may be blocking automated requests or experiencing connectivity issues. Please verify the URL is accessible and try again.';
+                } else if (errMsg.includes('certificate') || errMsg.includes('ssl') || errMsg.includes('tls') || errMsg.includes('cert')) {
+                    errorMessage = 'SSL/TLS error: The server certificate could not be verified.';
+                } else if (errMsg.includes('dns') || errMsg.includes('getaddrinfo')) {
+                    errorMessage = 'DNS error: Could not resolve the domain name. Please check the URL is correct.';
+                } else if (errMsg.includes('timeout') || errMsg.includes('timed out')) {
+                    errorMessage = 'Request timeout: The server took too long to respond.';
+                } else {
+                    errorMessage = `Failed to fetch URL: ${err.message}`;
+                }
+            }
+            
             return NextResponse.json(
-                { error: `Failed to fetch URL: ${err instanceof Error ? err.message : 'Unknown error'}` },
+                { error: errorMessage },
                 { status: 400 }
             );
         }

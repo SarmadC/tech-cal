@@ -1,9 +1,10 @@
 // src/components/calendar/shared/TimeSlotGrid.tsx
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Event, MultiDayEventInstance } from '@/types';
 import { EventCard } from './EventCard';
+import { calculateOverlapLayout, EventLayoutInfo } from '@/utils/eventViewUtils';
 
 export interface TimeSlot {
     hour: number;
@@ -41,7 +42,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const minWidth = isMobile ? '600px' : '1200px';
     const timeColumnWidth = isMobile ? '60px' : '80px';
-    
+
     const gridColsStyle = {
         gridTemplateColumns: `${timeColumnWidth} repeat(7, 1fr)`,
         gridTemplateRows: `repeat(${totalSlots}, 40px)`, // Increased from 30px to 40px per half-hour
@@ -53,7 +54,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
         // Use the event's actual times (which for multi-day instances are already the daily schedule times)
         const eventStart = new Date(event.startTime);
         const eventEnd = event.endTime ? new Date(event.endTime) : new Date(eventStart.getTime() + 60 * 60 * 1000);
-        
+
         // Debug logging for grid positioning
         console.log('Grid positioning for event:', {
             eventTitle: event.title,
@@ -122,6 +123,16 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
 
         return info;
     };
+
+    // Calculate overlap layout for each day to position events side-by-side
+    const overlapLayouts = useMemo(() => {
+        const layouts = new Map<number, Map<string, EventLayoutInfo>>();
+        weekDays.forEach((_, dayIndex) => {
+            const dayEvents = eventsByDay.get(dayIndex) || [];
+            layouts.set(dayIndex, calculateOverlapLayout(dayEvents));
+        });
+        return layouts;
+    }, [eventsByDay, weekDays]);
 
     return (
         <div
@@ -197,7 +208,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
 
                 return dayEvents.map((event, eventIndex) => {
                     const { startRow, endRow, span } = getEventGridPosition(event, day);
-                    
+
                     // Skip events that don't have a valid position
                     if (startRow < 1 || endRow <= startRow) {
                         return null;
@@ -205,6 +216,12 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
 
                     // Get visual info for multi-day events
                     const visualInfo = getEventVisualInfo(event);
+
+                    // Get overlap layout info for side-by-side positioning
+                    const dayLayout = overlapLayouts.get(dayIndex);
+                    const layoutInfo = dayLayout?.get(event.id) || { columnIndex: 0, totalColumns: 1 };
+                    const widthPercent = 100 / layoutInfo.totalColumns;
+                    const leftPercent = layoutInfo.columnIndex * widthPercent;
 
                     // Regular single-day event rendering
                     const spanClasses = [
@@ -224,16 +241,24 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                         ? `${event.originalEventId}-day${dayIndex}-${eventIndex}`
                         : `${event.id}-${dayIndex}-${eventIndex}`;
 
+                    const isCompressed = layoutInfo.totalColumns > 1;
+
                     return (
                         <div
                             key={eventKey}
-                            className="week-event-positioned"
+                            className={`week-event-positioned ${isCompressed ? 'is-compressed' : ''}`}
                             style={{
                                 gridColumn: columnIndex,
                                 gridRow: `${startRow} / ${endRow}`,
                                 zIndex: 10 + eventIndex,
-                                padding: '1px 2px'
-                            }}
+                                // Apply overlap positioning using width and margin
+                                '--width-percent': `${widthPercent}%`,
+                                '--left-percent': `${leftPercent}%`,
+                                width: `${widthPercent}%`,
+                                marginLeft: `${leftPercent}%`,
+                                padding: '1px 2px',
+                                boxSizing: 'border-box',
+                            } as React.CSSProperties}
                         >
                             <EventCard
                                 event={event}
@@ -244,6 +269,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                                 visualInfo={{ span, ...visualInfo }}
                                 className={spanClasses}
                                 showCareerImpact={true}
+                                isCompressed={isCompressed}
                                 style={{
                                     height: '100%'
                                 }}

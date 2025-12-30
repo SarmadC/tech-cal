@@ -151,26 +151,26 @@ export function ClassificationSection({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <h3 className="text-lg font-medium text-slate-200">Event Classification</h3>
+            <div className="flex items-center justify-between border-b border-default pb-2">
+                <h3 className="text-lg font-medium text-foreground-primary">Event Classification</h3>
             </div>
             <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Event Type</label>
+                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Event Type</label>
                         <select
                             value={relationships.event_type_id || ''}
                             onChange={(e) => setRelationships(prev => ({ ...prev, event_type_id: e.target.value || null }))}
-                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors"
                         >
-                            <option value="" className="bg-[#1C1C1C]">Select Event Type</option>
+                            <option value="" className="bg-background-main">Select Event Type</option>
                             {lookupData.eventTypes.map(type => (
-                                <option key={type.id} value={type.id} className="bg-[#1C1C1C]">{type.name}</option>
+                                <option key={type.id} value={type.id} className="bg-background-main">{type.name}</option>
                             ))}
                         </select>
                     </div>
                     <div className="grid gap-2">
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Format</label>
+                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Format</label>
                         <select
                             value={coreFields.event_format || ''}
                             onChange={(e) => {
@@ -181,42 +181,42 @@ export function ClassificationSection({
                                 }));
                             }}
 
-                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors"
                         >
-                            <option value="" className="bg-[#1C1C1C]">Select Format</option>
-                            <option value="Online" className="bg-[#1C1C1C]">Online</option>
-                            <option value="In-person" className="bg-[#1C1C1C]">In-person</option>
-                            <option value="Hybrid" className="bg-[#1C1C1C]">Hybrid</option>
+                            <option value="" className="bg-background-main">Select Format</option>
+                            <option value="Online" className="bg-background-main">Online</option>
+                            <option value="In-person" className="bg-background-main">In-person</option>
+                            <option value="Hybrid" className="bg-background-main">Hybrid</option>
                         </select>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Status</label>
+                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Status</label>
                         <input
                             type="text"
                             placeholder="Status (free-form)"
                             value={coreFields.status}
                             onChange={(e) => setCoreFields(prev => ({ ...prev, status: e.target.value }))}
-                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                         />
                     </div>
                     <div className="grid gap-2">
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Difficulty</label>
+                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Difficulty</label>
                         <select
                             value={coreFields.difficulty_level || ''}
                             onChange={(e) => setCoreFields(prev => ({ ...prev, difficulty_level: e.target.value || null }))}
-                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors"
                         >
-                            <option value="" className="bg-[#1C1C1C]">Select Difficulty</option>
-                            <option value="beginner" className="bg-[#1C1C1C]">Beginner</option>
-                            <option value="intermediate" className="bg-[#1C1C1C]">Intermediate</option>
-                            <option value="advanced" className="bg-[#1C1C1C]">Advanced</option>
+                            <option value="" className="bg-background-main">Select Difficulty</option>
+                            <option value="beginner" className="bg-background-main">Beginner</option>
+                            <option value="intermediate" className="bg-background-main">Intermediate</option>
+                            <option value="advanced" className="bg-background-main">Advanced</option>
                         </select>
                     </div>
                 </div>
                 <div className="grid gap-2">
-                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tags</label>
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Tags</label>
                     <select
                         multiple
                         value={relationships.tagIds}
@@ -224,10 +224,10 @@ export function ClassificationSection({
                             const selected = Array.from(e.target.selectedOptions, option => option.value);
                             setRelationships(prev => ({ ...prev, tagIds: selected }));
                         }}
-                        className="w-full bg-transparent border border-white/10 rounded-md px-3 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors min-h-[80px]"
+                        className="w-full bg-transparent border border-default rounded-md px-3 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors min-h-[80px]"
                     >
                         {allTagsWithLocal.map(tag => (
-                            <option key={tag.id} value={tag.id} className="bg-[#1C1C1C] py-1">{tag.event_tag}</option>
+                            <option key={tag.id} value={tag.id} className="bg-background-main py-1">{tag.event_tag}</option>
                         ))}
                     </select>
 
@@ -240,7 +240,7 @@ export function ClassificationSection({
                                 return (
                                     <span
                                         key={tagId}
-                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-500/20 text-indigo-200 text-xs border border-indigo-500/30"
+                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-accent-primary-light text-accent-primary text-xs border border-accent-primary/30"
                                     >
                                         {tag.event_tag}
                                         <button
@@ -267,7 +267,7 @@ export function ClassificationSection({
                             placeholder="Create new tag..."
                             value={newTagName}
                             onChange={(e) => setNewTagName(e.target.value)}
-                            className="flex-1 bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                            className="flex-1 bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                         />
                         <Button
                             onClick={() => createNewTag(newTagName)}
@@ -283,7 +283,7 @@ export function ClassificationSection({
                     )}
                 </div>
                 <div className="grid gap-2">
-                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Target Audiences</label>
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Target Audiences</label>
                     <div className="grid gap-2">
                         <select
                             multiple
@@ -292,23 +292,23 @@ export function ClassificationSection({
                                 const selected = Array.from(e.target.selectedOptions, option => option.value);
                                 setRelationships(prev => ({ ...prev, audienceIds: selected }));
                             }}
-                            className="w-full bg-transparent border border-white/10 rounded-md px-3 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors min-h-[80px]"
+                            className="w-full bg-transparent border border-default rounded-md px-3 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors min-h-[80px]"
                         >
                             {lookupData.targetAudiences.map(audience => (
-                                <option key={audience.id} value={audience.id} className="bg-[#1C1C1C] py-1">{audience.name}</option>
+                                <option key={audience.id} value={audience.id} className="bg-background-main py-1">{audience.name}</option>
                             ))}
                         </select>
                         <textarea
                             placeholder="Additional details (free-form)"
                             value={coreFields.target_audience}
                             onChange={(e) => setCoreFields(prev => ({ ...prev, target_audience: e.target.value }))}
-                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700 resize-none"
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted resize-none"
                             rows={2}
                         />
                     </div>
                 </div>
                 <div className="grid gap-2">
-                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Prerequisites</label>
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Prerequisites</label>
                     <div className="grid gap-2">
                         <select
                             multiple
@@ -317,17 +317,17 @@ export function ClassificationSection({
                                 const selected = Array.from(e.target.selectedOptions, option => option.value);
                                 setRelationships(prev => ({ ...prev, prerequisiteIds: selected }));
                             }}
-                            className="w-full bg-transparent border border-white/10 rounded-md px-3 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors min-h-[80px]"
+                            className="w-full bg-transparent border border-default rounded-md px-3 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors min-h-[80px]"
                         >
                             {lookupData.prerequisites.map(prereq => (
-                                <option key={prereq.id} value={prereq.id} className="bg-[#1C1C1C] py-1">{prereq.name}</option>
+                                <option key={prereq.id} value={prereq.id} className="bg-background-main py-1">{prereq.name}</option>
                             ))}
                         </select>
                         <textarea
                             placeholder="Additional details (free-form)"
                             value={coreFields.prerequisites}
                             onChange={(e) => setCoreFields(prev => ({ ...prev, prerequisites: e.target.value }))}
-                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700 resize-none"
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted resize-none"
                             rows={2}
                         />
                     </div>

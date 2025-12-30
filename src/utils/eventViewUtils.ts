@@ -360,4 +360,115 @@ export function detectOverlappingEvents(
     return overlapMap;
 }
 
+// ============================================
+// OVERLAP LAYOUT CALCULATION FOR WEEK VIEW
+// ============================================
+
+export interface EventLayoutInfo {
+    columnIndex: number;
+    totalColumns: number;
+}
+
+/**
+ * Calculate column layout for overlapping events within a single day
+ * Uses a greedy column assignment algorithm to position events side-by-side
+ */
+export function calculateOverlapLayout(
+    events: (Event | MultiDayEventInstance)[]
+): Map<string, EventLayoutInfo> {
+    const layoutMap = new Map<string, EventLayoutInfo>();
+    
+    if (events.length === 0) return layoutMap;
+    
+    // Sort events by start time, then by duration (longer events first for better layout)
+    const sortedEvents = [...events].sort((a, b) => {
+        const startA = new Date(a.startTime).getTime();
+        const startB = new Date(b.startTime).getTime();
+        if (startA !== startB) return startA - startB;
+        
+        // For same start time, prefer longer events
+        const endA = a.endTime ? new Date(a.endTime).getTime() : startA + 3600000;
+        const endB = b.endTime ? new Date(b.endTime).getTime() : startB + 3600000;
+        return (endB - startB) - (endA - startA);
+    });
+    
+    // Track columns - each column tracks when it becomes free (end time)
+    const columns: number[] = [];
+    
+    // Assign each event to the first available column
+    const eventColumns: Map<string, number> = new Map();
+    
+    for (const event of sortedEvents) {
+        const eventStart = new Date(event.startTime).getTime();
+        const eventEnd = event.endTime 
+            ? new Date(event.endTime).getTime() 
+            : eventStart + 3600000;
+        
+        // Find the first column where this event fits (no overlap)
+        let assignedColumn = -1;
+        for (let i = 0; i < columns.length; i++) {
+            if (columns[i] <= eventStart) {
+                assignedColumn = i;
+                columns[i] = eventEnd;
+                break;
+            }
+        }
+        
+        // If no existing column fits, create a new one
+        if (assignedColumn === -1) {
+            assignedColumn = columns.length;
+            columns.push(eventEnd);
+        }
+        
+        eventColumns.set(event.id, assignedColumn);
+    }
+    
+    // Group events into overlapping clusters to determine column counts
+    const clusters: (Event | MultiDayEventInstance)[][] = [];
+    
+    for (const event of sortedEvents) {
+        const eventStart = new Date(event.startTime).getTime();
+        const eventEnd = event.endTime 
+            ? new Date(event.endTime).getTime() 
+            : eventStart + 3600000;
+        
+        // Find if this event overlaps with any existing cluster
+        let addedToCluster = false;
+        for (const cluster of clusters) {
+            const overlapsWithCluster = cluster.some(clusterEvent => {
+                const cStart = new Date(clusterEvent.startTime).getTime();
+                const cEnd = clusterEvent.endTime 
+                    ? new Date(clusterEvent.endTime).getTime() 
+                    : cStart + 3600000;
+                return eventStart < cEnd && cStart < eventEnd;
+            });
+            
+            if (overlapsWithCluster) {
+                cluster.push(event);
+                addedToCluster = true;
+                break;
+            }
+        }
+        
+        if (!addedToCluster) {
+            clusters.push([event]);
+        }
+    }
+    
+    // For each cluster, determine the max column count
+    for (const cluster of clusters) {
+        const maxColumn = Math.max(...cluster.map(e => eventColumns.get(e.id) || 0));
+        const totalColumns = maxColumn + 1;
+        
+        for (const event of cluster) {
+            layoutMap.set(event.id, {
+                columnIndex: eventColumns.get(event.id) || 0,
+                totalColumns
+            });
+        }
+    }
+    
+    return layoutMap;
+}
+
 

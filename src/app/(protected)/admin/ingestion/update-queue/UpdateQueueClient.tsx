@@ -556,14 +556,14 @@ export default function UpdateQueueClient() {
                 render: (item) => (
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium text-slate-100">{item.event?.title ?? 'Untitled Event'}</span>
+                            <span className="font-medium text-foreground-primary">{item.event?.title ?? 'Untitled Event'}</span>
                             {item.requires_review_reason && (
-                                <Badge className="bg-slate-800 text-xs text-slate-200">
+                                <Badge className="bg-background-tertiary text-xs text-foreground-secondary">
                                     Needs review
                                 </Badge>
                             )}
                         </div>
-                        <div className="flex flex-wrap gap-3 text-xs text-slate-400">
+                        <div className="flex flex-wrap gap-3 text-xs text-foreground-tertiary">
                             <span>{item.event?.organizer?.name ?? 'Unknown organizer'}</span>
                             {item.event?.start_time && (
                                 <span>{format(new Date(item.event.start_time), 'MMM d, yyyy')}</span>
@@ -572,7 +572,7 @@ export default function UpdateQueueClient() {
                             <span>
                                 Source:{' '}
                                 {item.event?.title ? (
-                                    <span className="font-medium text-slate-200">{item.event.title}</span>
+                                    <span className="font-medium text-foreground-secondary">{item.event.title}</span>
                                 ) : (
                                     item.source_event_id ?? 'N/A'
                                 )}
@@ -602,21 +602,21 @@ export default function UpdateQueueClient() {
                 key: 'metrics',
                 header: 'Fields',
                 render: (item) => (
-                    <div className="grid gap-1 text-xs text-slate-300">
+                    <div className="grid gap-1 text-xs text-foreground-tertiary">
                         <div className="flex items-center justify-between gap-6">
-                            <span className="text-slate-400">Total</span>
-                            <span className="font-medium text-slate-100">{item.fieldCounts.total}</span>
+                            <span className="text-foreground-tertiary">Total</span>
+                            <span className="font-medium text-foreground-primary">{item.fieldCounts.total}</span>
                         </div>
                         <div className="flex items-center justify-between gap-6">
-                            <span className="text-slate-400">Pending</span>
+                            <span className="text-foreground-tertiary">Pending</span>
                             <span className="font-medium text-amber-300">{item.fieldCounts.pending}</span>
                         </div>
                         <div className="flex items-center justify-between gap-6">
-                            <span className="text-slate-400">Approved</span>
+                            <span className="text-foreground-tertiary">Approved</span>
                             <span className="font-medium text-emerald-300">{item.fieldCounts.approved}</span>
                         </div>
                         <div className="flex items-center justify-between gap-6">
-                            <span className="text-slate-400">Rejected</span>
+                            <span className="text-foreground-tertiary">Rejected</span>
                             <span className="font-medium text-rose-300">{item.fieldCounts.rejected}</span>
                         </div>
                     </div>
@@ -631,9 +631,9 @@ export default function UpdateQueueClient() {
                 header: 'Queued',
                 sortable: true,
                 render: (item) => (
-                    <div className="flex flex-col text-xs text-slate-300">
+                    <div className="flex flex-col text-xs text-foreground-tertiary">
                         <span>{format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}</span>
-                        <span className="text-slate-500">
+                        <span className="text-foreground-muted">
                             {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                         </span>
                     </div>
@@ -696,7 +696,7 @@ export default function UpdateQueueClient() {
 
     const tableToolbar = (
         <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400">
+            <div className="text-xs uppercase tracking-wide text-foreground-tertiary">
                 {loading
                     ? 'Loading...'
                     : `Showing ${items.length} of ${pagination.total || items.length} items`}
@@ -708,7 +708,7 @@ export default function UpdateQueueClient() {
                         size="sm"
                         variant="outline"
                         onClick={() => setColumnsPanelOpen((prev) => !prev)}
-                        className="bg-slate-900/60 text-slate-200 hover:bg-slate-800"
+                        className="bg-background-secondary/60 text-foreground-secondary hover:bg-background-tertiary"
                         aria-expanded={columnsPanelOpen}
                         aria-haspopup="true"
                     >
@@ -716,9 +716,9 @@ export default function UpdateQueueClient() {
                         Columns
                     </Button>
                     {columnsPanelOpen && (
-                        <div className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-slate-800 bg-slate-950 p-3 shadow-xl">
-                            <p className="mb-2 text-xs font-semibold uppercase text-slate-400">Visible columns</p>
-                            <div className="space-y-2 text-sm text-slate-200">
+                        <div className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-default bg-background-main p-3 shadow-xl">
+                            <p className="mb-2 text-xs font-semibold uppercase text-foreground-tertiary">Visible columns</p>
+                            <div className="space-y-2 text-sm text-foreground-secondary">
                                 {(
                                     [
                                         ['status', 'Status & badges'],
@@ -730,7 +730,7 @@ export default function UpdateQueueClient() {
                                     <label key={key} className="flex items-center gap-2">
                                         <input
                                             type="checkbox"
-                                            className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-primary focus:ring-2 focus:ring-primary"
+                                            className="h-4 w-4 rounded border-default bg-background-secondary text-primary focus:ring-2 focus:ring-primary"
                                             checked={visibleColumns[key]}
                                             onChange={() => toggleColumnVisibility(key)}
                                         />
@@ -738,7 +738,7 @@ export default function UpdateQueueClient() {
                                     </label>
                                 ))}
                             </div>
-                            <p className="mt-3 text-[11px] text-slate-500">
+                            <p className="mt-3 text-[11px] text-foreground-muted">
                                 Preferences sync to your browser.
                             </p>
                         </div>
@@ -749,9 +749,9 @@ export default function UpdateQueueClient() {
     );
 
     const viewControls = (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800/60 bg-slate-950/60 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default/60 bg-background-main/60 px-4 py-3">
             <div className="flex items-center gap-2">
-                <span className="text-xs uppercase tracking-wide text-slate-500">View</span>
+                <span className="text-xs uppercase tracking-wide text-foreground-muted">View</span>
                 <Button
                     type="button"
                     size="sm"
@@ -804,12 +804,12 @@ export default function UpdateQueueClient() {
         <div className="space-y-5">
             {bulkDialogOpen && activeBulkMeta && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="w-full max-w-xl rounded-lg border border-slate-800 bg-slate-950 p-6 shadow-2xl">
+                    <div className="w-full max-w-xl rounded-lg border border-default bg-background-main p-6 shadow-2xl">
                         <div className="flex items-start justify-between gap-3">
                             <div>
-                                <p className="text-[11px] uppercase tracking-wide text-slate-400">Bulk review</p>
-                                <h3 className="text-lg font-semibold text-slate-50">{activeBulkMeta.title}</h3>
-                                <p className="mt-2 text-sm text-slate-300">
+                                <p className="text-[11px] uppercase tracking-wide text-foreground-tertiary">Bulk review</p>
+                                <h3 className="text-lg font-semibold text-foreground-primary">{activeBulkMeta.title}</h3>
+                                <p className="mt-2 text-sm text-foreground-tertiary">
                                     {activeBulkMeta.description}{' '}
                                     This will affect {bulkSelectionCount} {bulkSelectionCount === 1 ? 'update' : 'updates'}.
                                 </p>
@@ -819,27 +819,27 @@ export default function UpdateQueueClient() {
                                 size="icon"
                                 onClick={() => !bulkActionLoading && setBulkDialogOpen(false)}
                                 disabled={bulkActionLoading}
-                                className="text-slate-300 hover:text-slate-50"
+                                className="text-foreground-tertiary hover:text-foreground-primary"
                                 aria-label="Close bulk review dialog"
                             >
                                 <MaterialIcon name="close" size={16} />
                             </Button>
                         </div>
 
-                        <div className="mt-4 max-h-52 space-y-2 overflow-y-auto rounded-md border border-slate-800/60 bg-slate-900/40 p-3">
+                        <div className="mt-4 max-h-52 space-y-2 overflow-y-auto rounded-md border border-default/60 bg-background-secondary/40 p-3">
                             {selectedItemsForBulk.length === 0 && (
-                                <p className="text-sm text-slate-400">No rows selected.</p>
+                                <p className="text-sm text-foreground-tertiary">No rows selected.</p>
                             )}
                             {selectedItemsForBulk.slice(0, 8).map((item) => (
                                 <div
                                     key={item.id}
-                                    className="flex items-center justify-between gap-3 rounded border border-transparent px-2 py-1 hover:border-slate-800"
+                                    className="flex items-center justify-between gap-3 rounded border border-transparent px-2 py-1 hover:border-default"
                                 >
                                     <div className="flex flex-col">
-                                        <span className="text-sm font-medium text-slate-100">
+                                        <span className="text-sm font-medium text-foreground-primary">
                                             {item.event?.title ?? 'Untitled Event'}
                                         </span>
-                                        <span className="text-xs text-slate-500">Update ID: {item.id}</span>
+                                        <span className="text-xs text-foreground-muted">Update ID: {item.id}</span>
                                     </div>
                                     <Badge
                                         className={cn(
@@ -852,7 +852,7 @@ export default function UpdateQueueClient() {
                                 </div>
                             ))}
                             {selectedItemsForBulk.length > 8 && (
-                                <p className="pt-1 text-xs text-slate-400">
+                                <p className="pt-1 text-xs text-foreground-tertiary">
                                     +{selectedItemsForBulk.length - 8} more selected
                                 </p>
                             )}
@@ -867,11 +867,11 @@ export default function UpdateQueueClient() {
                         {/* Progress Bar */}
                         {bulkActionLoading && bulkProgress.total > 0 && (
                             <div className="mt-4">
-                                <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                                <div className="flex items-center justify-between text-xs text-foreground-tertiary mb-2">
                                     <span>Processing...</span>
                                     <span>{bulkProgress.current} / {bulkProgress.total} ({Math.round((bulkProgress.current / bulkProgress.total) * 100)}%)</span>
                                 </div>
-                                <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                                <div className="h-2 w-full rounded-full bg-background-tertiary overflow-hidden">
                                     <div
                                         className="h-full bg-emerald-500 transition-all duration-200 ease-out"
                                         style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
@@ -885,7 +885,7 @@ export default function UpdateQueueClient() {
                                 variant="outline"
                                 onClick={() => setBulkDialogOpen(false)}
                                 disabled={bulkActionLoading}
-                                className="border-slate-700 text-slate-200"
+                                className="border-default text-foreground-secondary"
                             >
                                 Cancel
                             </Button>
@@ -945,23 +945,23 @@ export default function UpdateQueueClient() {
             ) : (
                 <div className="space-y-4">
                     {loading && items.length === 0 ? (
-                        <div className="rounded-lg border border-slate-800/60 bg-slate-950/60 px-6 py-12 text-center text-sm text-slate-400">
+                        <div className="rounded-lg border border-default/60 bg-background-main/60 px-6 py-12 text-center text-sm text-foreground-tertiary">
                             Loading queue items…
                         </div>
                     ) : items.length === 0 ? (
-                        <div className="rounded-lg border border-slate-800/60 bg-slate-950/60 px-6 py-12 text-center text-sm text-slate-400">
+                        <div className="rounded-lg border border-default/60 bg-background-main/60 px-6 py-12 text-center text-sm text-foreground-tertiary">
                             No queue items match the current filters.
                         </div>
                     ) : (
                         items.map((item) => (
-                            <Card key={item.id} className="border border-slate-800/60 bg-slate-950/70 text-slate-200 shadow-sm">
+                            <Card key={item.id} className="border border-default/60 bg-background-main/70 text-foreground-secondary shadow-sm">
                                 <CardHeader className="flex flex-col gap-2">
                                     <div className="flex flex-wrap items-start justify-between gap-3">
                                         <div>
-                                            <CardTitle className="text-lg font-semibold text-slate-100">
+                                            <CardTitle className="text-lg font-semibold text-foreground-primary">
                                                 {item.event?.title ?? 'Untitled Event'}
                                             </CardTitle>
-                                            <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-400">
+                                            <div className="mt-1 flex flex-wrap gap-3 text-xs text-foreground-tertiary">
                                                 <span>{item.event?.organizer?.name ?? 'Unknown organizer'}</span>
                                                 {item.event?.start_time && (
                                                     <span>{format(new Date(item.event.start_time), 'MMM d, yyyy')}</span>
@@ -975,19 +975,19 @@ export default function UpdateQueueClient() {
                                         </Badge>
                                     </div>
                                     {item.requires_review_reason && (
-                                        <p className="text-sm text-slate-300">
-                                            <span className="font-medium text-slate-200">Review:</span> {item.requires_review_reason}
+                                        <p className="text-sm text-foreground-tertiary">
+                                            <span className="font-medium text-foreground-secondary">Review:</span> {item.requires_review_reason}
                                         </p>
                                     )}
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-3 text-sm text-slate-300 md:grid-cols-4">
+                                    <div className="grid grid-cols-2 gap-3 text-sm text-foreground-tertiary md:grid-cols-4">
                                         <MetricItem label="Total fields" value={item.fieldCounts.total} />
                                         <MetricItem label="Pending" value={item.fieldCounts.pending} tone="amber" />
                                         <MetricItem label="Approved" value={item.fieldCounts.approved} tone="emerald" />
                                         <MetricItem label="Rejected" value={item.fieldCounts.rejected} tone="rose" />
                                     </div>
-                                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-foreground-tertiary">
                                         <span>
                                             Created {format(new Date(item.created_at), 'MMM d, yyyy HH:mm')} (
                                             {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })})
@@ -1031,10 +1031,10 @@ function MetricItem({ label, value, tone }: { label: string; value: number; tone
                 ? 'text-emerald-300'
                 : tone === 'rose'
                     ? 'text-rose-300'
-                    : 'text-slate-100';
+                    : 'text-foreground-primary';
     return (
-        <div className="rounded-md border border-slate-800/60 bg-slate-950/60 px-3 py-2">
-            <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
+        <div className="rounded-md border border-default/60 bg-background-main/60 px-3 py-2">
+            <p className="text-xs uppercase tracking-wide text-foreground-tertiary">{label}</p>
             <p className={cn('text-lg font-semibold', toneClasses)}>{value}</p>
         </div>
     );
@@ -1054,28 +1054,28 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
     ];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-            <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-950 p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background-main/80 backdrop-blur">
+            <div className="w-full max-w-md rounded-xl border border-default bg-background-main p-6 shadow-2xl">
                 <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
-                        <h2 className="text-lg font-semibold text-slate-100">Keyboard shortcuts</h2>
-                        <p className="text-sm text-slate-400">Speed through high-volume review without touching your mouse.</p>
+                        <h2 className="text-lg font-semibold text-foreground-primary">Keyboard shortcuts</h2>
+                        <p className="text-sm text-foreground-tertiary">Speed through high-volume review without touching your mouse.</p>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-300 hover:bg-slate-800">
+                    <Button variant="ghost" size="icon" onClick={onClose} className="text-foreground-tertiary hover:bg-background-tertiary">
                         <MaterialIcon name="close" size={16} />
                     </Button>
                 </div>
                 <div className="space-y-3">
                     {shortcuts.map((shortcut) => (
-                        <div key={shortcut.keys} className="flex items-center justify-between gap-3 rounded-md border border-slate-800/60 bg-slate-900/60 px-3 py-2">
-                            <span className="text-xs font-mono uppercase tracking-wide text-slate-200">
+                        <div key={shortcut.keys} className="flex items-center justify-between gap-3 rounded-md border border-default/60 bg-background-secondary/60 px-3 py-2">
+                            <span className="text-xs font-mono uppercase tracking-wide text-foreground-secondary">
                                 {shortcut.keys}
                             </span>
-                            <span className="text-sm text-slate-300">{shortcut.description}</span>
+                            <span className="text-sm text-foreground-tertiary">{shortcut.description}</span>
                         </div>
                     ))}
                 </div>
-                <p className="mt-4 text-center text-xs text-slate-500">Press Esc to close.</p>
+                <p className="mt-4 text-center text-xs text-foreground-muted">Press Esc to close.</p>
             </div>
         </div>
     );

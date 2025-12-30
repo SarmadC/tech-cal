@@ -68,7 +68,7 @@ export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
         }
         return (
             <div
-                className="flex flex-col gap-2 rounded-lg border border-slate-700/40 bg-slate-900/60 px-4 py-3 text-slate-200 shadow-sm backdrop-blur"
+                className="flex flex-col gap-2 rounded-lg border border-default bg-background-secondary px-4 py-3 text-foreground-secondary shadow-sm backdrop-blur"
                 role="status"
                 aria-live="polite"
             >
@@ -92,7 +92,7 @@ export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
                             {action.icon}
                             <span>{action.label}</span>
                             {action.shortcut && (
-                                <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] uppercase text-slate-300">
+                                <span className="rounded bg-background-tertiary px-1.5 py-0.5 text-[10px] uppercase text-foreground-tertiary">
                                     {action.shortcut}
                                 </span>
                             )}
@@ -104,7 +104,7 @@ export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
     }, [bulkActions, selectedRowCount]);
 
     return (
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/90 shadow-md backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-default bg-background-main/90 shadow-md backdrop-blur">
             <div className="mx-auto w-full max-w-6xl px-4 py-4 lg:px-8">
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -115,7 +115,7 @@ export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
                                     <button
                                         type="button"
                                         onClick={onMobileMenuToggle}
-                                        className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/80 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200 md:hidden"
+                                        className="flex h-9 w-9 items-center justify-center rounded-md border border-default bg-background-secondary text-foreground-tertiary transition-colors hover:bg-background-tertiary hover:text-foreground-secondary md:hidden"
                                         aria-label="Open navigation menu"
                                     >
                                         <MaterialIcon name="menu" size={20} />
@@ -124,12 +124,12 @@ export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
                                 <AdminBreadcrumbs />
                             </div>
                             {title && (
-                                <h1 className="text-xl font-semibold text-white lg:text-2xl">
+                                <h1 className="text-xl font-semibold text-foreground-primary lg:text-2xl">
                                     {title}
                                 </h1>
                             )}
                             {subtitle && (
-                                <p className="text-sm text-slate-400 lg:text-base">
+                                <p className="text-sm text-foreground-tertiary lg:text-base">
                                     {subtitle}
                                 </p>
                             )}
@@ -137,21 +137,21 @@ export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
                         {showSearch && (
                             <form onSubmit={handleSubmit} className="w-full lg:max-w-md">
                                 <div className="relative flex items-center">
-                                    <span className="pointer-events-none absolute left-3 text-slate-500">
+                                    <span className="pointer-events-none absolute left-3 text-foreground-muted">
                                         <MaterialIcon name="search" size={16} />
                                     </span>
                                     <input
                                         ref={searchInputRef}
                                         type="search"
                                         name="admin-search"
-                                        className="h-10 w-full rounded-md border border-slate-700/60 bg-slate-900/80 pl-9 pr-12 text-sm text-slate-100 placeholder:text-slate-500 shadow-inner focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/40"
+                                        className="h-10 w-full rounded-md border border-default bg-background-secondary pl-9 pr-12 text-sm text-foreground-primary placeholder:text-foreground-muted shadow-inner focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/40"
                                         placeholder={search?.placeholder ?? 'Search admin data...'}
                                         value={search?.value ?? ''}
                                         onChange={(event) => search?.onChange?.(event.target.value)}
                                         aria-label="Search admin data"
                                     />
-                                    <div className="pointer-events-none absolute right-2 flex items-center gap-1 text-[10px] uppercase text-slate-500">
-                                        <span className="rounded border border-slate-700 px-1.5 py-0.5">/</span>
+                                    <div className="pointer-events-none absolute right-2 flex items-center gap-1 text-[10px] uppercase text-foreground-muted">
+                                        <span className="rounded border border-default px-1.5 py-0.5">/</span>
                                     </div>
                                 </div>
                             </form>
@@ -169,13 +169,13 @@ export default function AdminTopbar({ onMobileMenuToggle }: AdminTopbarProps) {
                                         'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition',
                                         filter.active
                                             ? 'border-emerald-400/80 bg-emerald-500/20 text-emerald-200 shadow-sm'
-                                            : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:text-white'
+                                            : 'border-default bg-background-secondary text-foreground-tertiary hover:border-strong hover:text-foreground-primary'
                                     )}
                                     aria-pressed={filter.active}
                                     title={filter.tooltip}
                                 >
                                     {filter.badge !== undefined && (
-                                        <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-200">
+                                        <span className="rounded-full bg-background-tertiary px-1.5 py-0.5 text-[10px] text-foreground-secondary">
                                             {filter.badge}
                                         </span>
                                     )}

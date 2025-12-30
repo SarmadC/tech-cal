@@ -103,18 +103,18 @@ export function BasicInfoSection({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <h3 className="text-lg font-medium text-slate-200">Basic Information</h3>
+            <div className="flex items-center justify-between border-b border-default pb-2">
+                <h3 className="text-lg font-medium text-foreground-primary">Basic Information</h3>
             </div>
             <div className="grid gap-4">
                 <div className="grid gap-2">
-                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Description</label>
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Description</label>
                     <div className="relative">
                         <textarea
                             placeholder="Description"
                             value={coreFields.description}
                             onChange={(e) => setCoreFields(prev => ({ ...prev, description: e.target.value }))}
-                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700 resize-none"
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted resize-none"
                             rows={4}
                         />
                         <Button
@@ -122,34 +122,34 @@ export function BasicInfoSection({
                             variant="ghost"
                             size="sm"
                             onClick={onExpandDescription}
-                            className="absolute right-0 top-0 text-xs text-slate-500 hover:text-slate-300"
+                            className="absolute right-0 top-0 text-xs text-foreground-muted hover:text-foreground-tertiary"
                         >
                             Expand
                         </Button>
                     </div>
                 </div>
                 <div className="grid gap-2">
-                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Location</label>
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Location</label>
                     <input
                         type="text"
                         placeholder="Location"
                         value={coreFields.location}
                         onChange={(e) => setCoreFields(prev => ({ ...prev, location: e.target.value }))}
-                        className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                        className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                     />
                 </div>
                 <div className="grid gap-2">
-                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Timezone</label>
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Timezone</label>
                     <select
                         value={coreFields.timezone || ''}
                         onChange={(e) => setCoreFields(prev => ({ ...prev, timezone: e.target.value || '' }))}
-                        className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                        className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors"
                     >
-                        <option value="" className="bg-[#1C1C1C]">Select timezone</option>
+                        <option value="" className="bg-background-main">Select timezone</option>
                         {Object.entries(timezoneGroups).map(([region, timezones]) => (
-                            <optgroup key={region} label={region} className="bg-[#1C1C1C] text-slate-400">
+                            <optgroup key={region} label={region} className="bg-background-main text-foreground-tertiary">
                                 {timezones.map(tz => (
-                                    <option key={tz.value} value={tz.value} className="bg-[#1C1C1C] text-slate-200">
+                                    <option key={tz.value} value={tz.value} className="bg-background-main text-foreground-primary">
                                         {tz.label}
                                     </option>
                                 ))}
@@ -164,7 +164,7 @@ export function BasicInfoSection({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Start Date & Time</label>
+                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Start Date & Time</label>
                         <input
                             type="datetime-local"
                             value={toDateTimeLocalValue(coreFields.start_time)}
@@ -172,11 +172,11 @@ export function BasicInfoSection({
                                 const next = parseDateTimeLocalValue(e.target.value);
                                 setCoreFields(prev => ({ ...prev, start_time: next || null }));
                             }}
-                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors [color-scheme:dark]"
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors [color-scheme:dark]"
                         />
                     </div>
                     <div className="grid gap-2">
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">End Date & Time</label>
+                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">End Date & Time</label>
                         <input
                             type="datetime-local"
                             value={toDateTimeLocalValue(coreFields.end_time)}
@@ -184,18 +184,18 @@ export function BasicInfoSection({
                                 const next = parseDateTimeLocalValue(e.target.value);
                                 setCoreFields(prev => ({ ...prev, end_time: next || null }));
                             }}
-                            className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors [color-scheme:dark]"
+                            className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors [color-scheme:dark]"
                         />
                     </div>
                 </div>
                 <div className="grid gap-2">
-                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Language</label>
+                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Language</label>
                     <input
                         type="text"
                         placeholder="Language"
                         value={coreFields.language}
                         onChange={(e) => setCoreFields(prev => ({ ...prev, language: e.target.value }))}
-                        className="w-full bg-transparent border-b border-white/10 px-2 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                        className="w-full bg-transparent border-b border-default px-2 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                     />
                 </div>
             </div>

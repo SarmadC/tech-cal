@@ -26,10 +26,17 @@ export async function PUT(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { eventId, coreFields, relationships } = body as {
+        const { eventId, coreFields, relationships, organizerData } = body as {
             eventId: string;
             coreFields?: EventCoreFieldsInput;
             relationships?: EventRelationshipsInput;
+            organizerData?: {
+                organizerId: string;
+                name?: string;
+                description?: string;
+                website_url?: string;
+                social_media?: Record<string, unknown> | null;
+            };
         };
 
         if (!eventId) {
@@ -84,6 +91,28 @@ export async function PUT(request: NextRequest) {
                 console.error('Failed to update relationships:', relResult.error);
                 return NextResponse.json(
                     { error: relResult.error || 'Failed to update relationships' },
+                    { status: 500 }
+                );
+            }
+        }
+
+        // Update organizer data if provided
+        if (organizerData && organizerData.organizerId) {
+            const orgResult = await EventEnrichmentService.enrichOrganizer(
+                organizerData.organizerId,
+                {
+                    name: organizerData.name,
+                    description: organizerData.description,
+                    website_url: organizerData.website_url,
+                    social_media: organizerData.social_media,
+                },
+                serviceClient
+            );
+
+            if (!orgResult.success) {
+                console.error('Failed to update organizer:', orgResult.error);
+                return NextResponse.json(
+                    { error: orgResult.error || 'Failed to update organizer' },
                     { status: 500 }
                 );
             }

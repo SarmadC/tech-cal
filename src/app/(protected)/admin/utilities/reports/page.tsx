@@ -47,8 +47,8 @@ export default function AdminReportsPage() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-semibold text-slate-100">Reports & Analytics</h1>
-                <p className="text-sm text-slate-400 max-w-3xl">
+                <h1 className="text-2xl font-semibold text-foreground-primary">Reports & Analytics</h1>
+                <p className="text-sm text-foreground-tertiary max-w-3xl">
                     View ingestion metrics, moderation SLA compliance, and enrichment coverage across your event data.
                 </p>
             </div>
@@ -62,8 +62,8 @@ export default function AdminReportsPage() {
                         size="sm"
                         onClick={() => setActiveReport(tab.type)}
                         className={activeReport === tab.type
-                            ? 'bg-slate-700 text-white'
-                            : 'border-slate-700 text-slate-300 hover:bg-slate-800'}
+                            ? 'bg-background-tertiary text-white'
+                            : 'border-default text-foreground-tertiary hover:bg-background-tertiary'}
                     >
                         <MaterialIcon name={tab.icon} size={16} className="mr-2" />
                         {tab.label}
@@ -73,15 +73,15 @@ export default function AdminReportsPage() {
 
             {/* Date Range Selector */}
             <div className="flex items-center gap-4">
-                <span className="text-sm text-slate-400">Date Range:</span>
-                <div className="flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1">
+                <span className="text-sm text-foreground-tertiary">Date Range:</span>
+                <div className="flex gap-1 rounded-lg border border-default800 bg-background-950/60 p-1">
                     {datePresets.map((preset) => (
                         <button
                             key={preset.value}
                             onClick={() => setDatePreset(preset.value)}
                             className={`px-3 py-1 rounded text-xs transition-colors ${datePreset === preset.value
-                                ? 'bg-slate-700 text-white'
-                                : 'text-slate-400 hover:text-slate-200'
+                                ? 'bg-background-tertiary text-white'
+                                : 'text-foreground-tertiary hover:text-foreground-200'
                                 }`}
                         >
                             {preset.label}
@@ -93,7 +93,7 @@ export default function AdminReportsPage() {
                     size="sm"
                     onClick={fetchReport}
                     disabled={loading}
-                    className="text-slate-400 hover:text-white"
+                    className="text-foreground-tertiary hover:text-white"
                 >
                     <MaterialIcon name="refresh" size={16} className={loading ? 'animate-spin' : ''} />
                 </Button>
@@ -111,8 +111,8 @@ export default function AdminReportsPage() {
             {/* Loading State */}
             {loading && !data && (
                 <div className="flex items-center justify-center py-12">
-                    <MaterialIcon name="refresh" size={24} className="animate-spin text-slate-400" />
-                    <span className="ml-2 text-slate-400">Loading report...</span>
+                    <MaterialIcon name="refresh" size={24} className="animate-spin text-foreground-tertiary" />
+                    <span className="ml-2 text-foreground-tertiary">Loading report...</span>
                 </div>
             )}
 
@@ -150,20 +150,20 @@ function IngestionSummaryView({ report }: { report: IngestionSummaryReport }) {
             </div>
 
             {/* Daily Breakdown */}
-            <Card className="border border-slate-800/60 bg-slate-950/70">
+            <Card className="border border-default800/60 bg-background-950/70">
                 <CardHeader>
                     <CardTitle>Daily Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-2">
                         {dailyBreakdown.map((day) => (
-                            <div key={day.date} className="flex items-center justify-between py-2 border-b border-slate-800/40 last:border-0">
-                                <span className="text-sm text-slate-300 font-mono">{day.date}</span>
+                            <div key={day.date} className="flex items-center justify-between py-2 border-b border-default800/40 last:border-0">
+                                <span className="text-sm text-foreground-tertiary font-mono">{day.date}</span>
                                 <div className="flex gap-6">
-                                    <span className="text-sm text-slate-400">
+                                    <span className="text-sm text-foreground-tertiary">
                                         <span className="text-emerald-400">{day.newEvents}</span> new
                                     </span>
-                                    <span className="text-sm text-slate-400">
+                                    <span className="text-sm text-foreground-tertiary">
                                         <span className="text-blue-400">{day.updatedEvents}</span> updates
                                     </span>
                                 </div>
@@ -216,7 +216,7 @@ function ModerationSLAView({ report }: { report: ModerationSLAReport }) {
             </div>
 
             {/* SLA Status Card */}
-            <Card className="border border-slate-800/60 bg-slate-950/70">
+            <Card className="border border-default800/60 bg-background-950/70">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         SLA Status
@@ -227,7 +227,7 @@ function ModerationSLAView({ report }: { report: ModerationSLAReport }) {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        <div className="h-4 w-full rounded-full bg-slate-800 overflow-hidden">
+                        <div className="h-4 w-full rounded-full bg-background-tertiary overflow-hidden">
                             <div
                                 className={`h-full transition-all ${slaStatus === 'Healthy' ? 'bg-emerald-500' :
                                     slaStatus === 'At Risk' ? 'bg-amber-500' : 'bg-rose-500'
@@ -235,7 +235,7 @@ function ModerationSLAView({ report }: { report: ModerationSLAReport }) {
                                 style={{ width: `${metrics.withinSLA}%` }}
                             />
                         </div>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-foreground-tertiary">
                             Target: 24-hour review SLA. {metrics.overdueCount > 0
                                 ? `${metrics.overdueCount} items are overdue.`
                                 : 'All items are within SLA.'}
@@ -261,7 +261,7 @@ function EnrichmentCoverageView({ report }: { report: EnrichmentCoverageReport }
             </div>
 
             {/* Field Coverage */}
-            <Card className="border border-slate-800/60 bg-slate-950/70">
+            <Card className="border border-default800/60 bg-background-950/70">
                 <CardHeader>
                     <CardTitle>Field Coverage</CardTitle>
                 </CardHeader>
@@ -270,10 +270,10 @@ function EnrichmentCoverageView({ report }: { report: EnrichmentCoverageReport }
                         {byField.map((field) => (
                             <div key={field.fieldName} className="space-y-1">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-300 capitalize">{field.fieldName.replace('_', ' ')}</span>
-                                    <span className="text-slate-400">{field.percentage}%</span>
+                                    <span className="text-foreground-tertiary capitalize">{field.fieldName.replace('_', ' ')}</span>
+                                    <span className="text-foreground-tertiary">{field.percentage}%</span>
                                 </div>
-                                <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                                <div className="h-2 w-full rounded-full bg-background-tertiary overflow-hidden">
                                     <div
                                         className="h-full bg-blue-500 transition-all"
                                         style={{ width: `${field.percentage}%` }}
@@ -298,10 +298,10 @@ function MetricCard({
     valueClassName?: string;
 }) {
     return (
-        <Card className="border border-slate-800/60 bg-slate-950/70">
+        <Card className="border border-default800/60 bg-background-950/70">
             <CardContent className="pt-4">
-                <p className="text-xs text-slate-400 uppercase tracking-wider">{label}</p>
-                <p className={`text-2xl font-semibold mt-1 ${valueClassName || 'text-slate-100'}`}>
+                <p className="text-xs text-foreground-tertiary uppercase tracking-wider">{label}</p>
+                <p className={`text-2xl font-semibold mt-1 ${valueClassName || 'text-foreground-primary'}`}>
                     {value}
                 </p>
             </CardContent>

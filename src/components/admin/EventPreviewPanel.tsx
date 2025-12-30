@@ -81,7 +81,10 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                 const response = await fetch(`/api/admin/ingestion/update-queue/${item.id}`, {
                     credentials: 'include',
                 });
-                if (!response.ok) throw new Error('Failed to fetch fields');
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`Failed to fetch fields: ${response.status} ${text}`);
+                }
                 const data = await response.json();
                 setFields(data.fields || []);
             } catch (error) {
@@ -170,7 +173,7 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
             <div
                 className={cn(
                     'fixed inset-y-0 right-0 z-50 w-full max-w-2xl',
-                    'bg-slate-950 border-l border-slate-800',
+                    'bg-background-main border-l border-default',
                     'flex flex-col shadow-2xl',
                     'animate-in slide-in-from-right duration-300'
                 )}
@@ -179,12 +182,12 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                 aria-labelledby="preview-title"
             >
                 {/* Header */}
-                <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-4">
+                <div className="flex items-start justify-between gap-4 border-b border-default px-6 py-4">
                     <div className="min-w-0 flex-1">
-                        <h2 id="preview-title" className="text-lg font-semibold text-slate-100 truncate">
+                        <h2 id="preview-title" className="text-lg font-semibold text-foreground-primary truncate">
                             {item.event?.title ?? 'Untitled Event'}
                         </h2>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-foreground-tertiary">
                             {item.event?.organizer?.name && <span>{item.event.organizer.name}</span>}
                             {item.event?.start_time && (
                                 <span>• {format(new Date(item.event.start_time), 'MMM d, yyyy')}</span>
@@ -196,7 +199,7 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                     </div>
                     <button
                         onClick={onClose}
-                        className="rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                        className="rounded-md p-2 text-foreground-tertiary hover:bg-background-tertiary hover:text-foreground-secondary"
                         aria-label="Close panel"
                     >
                         <MaterialIcon name="close" size={20} />
@@ -204,28 +207,28 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-4 gap-4 border-b border-slate-800/60 bg-slate-900/40 px-6 py-4">
+                <div className="grid grid-cols-4 gap-4 border-b border-default bg-background-secondary px-6 py-4">
                     <div className="text-center">
-                        <div className="text-2xl font-semibold text-slate-100">{item.fieldCounts.total}</div>
-                        <div className="text-xs text-slate-500">Total Fields</div>
+                        <div className="text-2xl font-semibold text-foreground-primary">{item.fieldCounts.total}</div>
+                        <div className="text-xs text-foreground-muted">Total Fields</div>
                     </div>
                     <div className="text-center">
                         <div className="text-2xl font-semibold text-amber-300">{item.fieldCounts.pending}</div>
-                        <div className="text-xs text-slate-500">Pending</div>
+                        <div className="text-xs text-foreground-muted">Pending</div>
                     </div>
                     <div className="text-center">
                         <div className="text-2xl font-semibold text-emerald-300">{item.fieldCounts.approved}</div>
-                        <div className="text-xs text-slate-500">Approved</div>
+                        <div className="text-xs text-foreground-muted">Approved</div>
                     </div>
                     <div className="text-center">
                         <div className="text-2xl font-semibold text-rose-300">{item.fieldCounts.rejected}</div>
-                        <div className="text-xs text-slate-500">Rejected</div>
+                        <div className="text-xs text-foreground-muted">Rejected</div>
                     </div>
                 </div>
 
                 {/* Review Reason */}
                 {item.requires_review_reason && (
-                    <div className="border-b border-slate-800/60 bg-amber-950/20 px-6 py-3">
+                    <div className="border-b border-default bg-amber-950/20 px-6 py-3">
                         <div className="flex items-center gap-2 text-sm text-amber-200">
                             <MaterialIcon name="warning" size={16} />
                             <span className="font-medium">Review needed:</span>
@@ -236,14 +239,14 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
 
                 {/* Field Changes */}
                 <div className="flex-1 overflow-y-auto px-6 py-4">
-                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-foreground-muted">
                         Field Changes
                     </h3>
 
                     {loading ? (
-                        <div className="py-8 text-center text-sm text-slate-500">Loading fields...</div>
+                        <div className="py-8 text-center text-sm text-foreground-muted">Loading fields...</div>
                     ) : fields.length === 0 ? (
-                        <div className="py-8 text-center text-sm text-slate-500">No field changes found</div>
+                        <div className="py-8 text-center text-sm text-foreground-muted">No field changes found</div>
                     ) : (
                         <div className="space-y-3">
                             {fields.slice(0, 10).map((field) => (
@@ -251,11 +254,11 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                                     key={field.id}
                                     className={cn(
                                         'rounded-lg border p-3',
-                                        fieldStatusStyles[field.field_status] ?? 'border-slate-800 bg-slate-900/40'
+                                        fieldStatusStyles[field.field_status] ?? 'border-default bg-background-secondary'
                                     )}
                                 >
                                     <div className="flex items-center gap-2 mb-2">
-                                        <code className="text-xs font-medium text-slate-200">
+                                        <code className="text-xs font-medium text-foreground-secondary">
                                             {field.field_name}
                                         </code>
                                         <Badge
@@ -271,14 +274,14 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                         <div>
-                                            <div className="text-slate-500 mb-1">Current</div>
-                                            <div className="text-slate-400 font-mono truncate">
+                                            <div className="text-foreground-muted mb-1">Current</div>
+                                            <div className="text-foreground-tertiary font-mono truncate">
                                                 {formatValue(field.old_value)}
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="text-slate-500 mb-1">New</div>
-                                            <div className="text-slate-200 font-mono truncate">
+                                            <div className="text-foreground-muted mb-1">New</div>
+                                            <div className="text-foreground-secondary font-mono truncate">
                                                 {formatValue(field.new_value)}
                                             </div>
                                         </div>
@@ -286,7 +289,7 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                                 </div>
                             ))}
                             {fields.length > 10 && (
-                                <div className="text-center text-xs text-slate-500">
+                                <div className="text-center text-xs text-foreground-muted">
                                     +{fields.length - 10} more fields
                                 </div>
                             )}
@@ -295,11 +298,11 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                 </div>
 
                 {/* Footer Actions */}
-                <div className="border-t border-slate-800 bg-slate-900/60 px-6 py-4">
+                <div className="border-t border-default bg-background-secondary px-6 py-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <Link
                             href={`/admin/ingestion/update-queue/${item.id}`}
-                            className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200"
+                            className="inline-flex items-center gap-2 text-sm text-foreground-tertiary hover:text-foreground-secondary"
                         >
                             <MaterialIcon name="arrow-up-right" size={14} />
                             Open full review
@@ -328,12 +331,12 @@ export default function EventPreviewPanel({ item, onClose, onActionComplete }: E
                         )}
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                    <div className="mt-3 flex items-center justify-between text-xs text-foreground-muted">
                         <span>
                             Queued {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                         </span>
                         <span className="flex items-center gap-1">
-                            <kbd className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[10px]">
+                            <kbd className="rounded border border-default bg-background-tertiary px-1.5 py-0.5 text-[10px]">
                                 Esc
                             </kbd>
                             to close

@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import { getLogoUrlFromInput } from '@/utils/logoUtils';
 
 // Import section components
 import {
@@ -170,7 +171,7 @@ export default function EnrichmentEditorClient({
     const [logoUploadMode, setLogoUploadMode] = useState<'manual' | 'extract'>('manual');
     const [logoExtractorOpen, setLogoExtractorOpen] = useState(false);
     const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(
-        event.organizer?.logo_url || null
+        getLogoUrlFromInput(event.organizer?.logo_url || null, event.organizer?.name) || null
     );
 
     const [eventImageExtractorOpen, setEventImageExtractorOpen] = useState(false);
@@ -562,6 +563,16 @@ export default function EnrichmentEditorClient({
                     eventId: event.id,
                     coreFields,
                     relationships,
+                    // Include organizer data if organizer exists
+                    ...(event.organizer?.id && {
+                        organizerData: {
+                            organizerId: event.organizer.id,
+                            name: organizerData.name,
+                            description: organizerData.description,
+                            website_url: organizerData.website_url,
+                            social_media: organizerData.social_media,
+                        },
+                    }),
                 }),
             });
 
@@ -580,7 +591,7 @@ export default function EnrichmentEditorClient({
         } finally {
             setLoading(false);
         }
-    }, [coreFields, relationships, event.id]);
+    }, [coreFields, relationships, event.id, event.organizer?.id, organizerData]);
 
     const scrollToSection = (id: string) => {
         const element = document.getElementById(id);
@@ -611,15 +622,15 @@ export default function EnrichmentEditorClient({
             <div className="w-64 shrink-0 sticky top-6 space-y-6">
                 <div className="space-y-1">
                     <div className="px-3 py-2">
-                        <h2 className="font-semibold text-slate-200">{event.title}</h2>
-                        <p className="text-xs text-slate-500 mt-1">Enrichment Editor</p>
+                        <h2 className="font-semibold text-foreground-primary">{event.title}</h2>
+                        <p className="text-xs text-foreground-muted mt-1">Enrichment Editor</p>
                     </div>
                     <nav className="space-y-0.5">
                         {sections.map((section) => (
                             <button
                                 key={section.id}
                                 onClick={() => scrollToSection(section.id)}
-                                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-white/5 rounded-md transition-colors text-left"
+                                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary rounded-md transition-colors text-left"
                             >
                                 <MaterialIcon name={section.icon as any} size={16} />
                                 {section.label}
@@ -641,7 +652,7 @@ export default function EnrichmentEditorClient({
                     <Button
                         onClick={() => router.push('/admin/ingestion/enrichment')}
                         variant="ghost"
-                        className="w-full justify-start text-slate-400 hover:text-slate-200"
+                        className="w-full justify-start text-foreground-tertiary hover:text-foreground-primary"
                     >
                         <MaterialIcon name="arrow_back" size={16} className="mr-2" />
                         Back to Dashboard
@@ -733,54 +744,54 @@ export default function EnrichmentEditorClient({
                 {/* URLs & Media Section */}
                 <div id="urls" className="scroll-mt-6 space-y-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h3 className="text-lg font-medium text-slate-200">URLs & Media</h3>
+                        <h3 className="text-lg font-medium text-foreground-primary">URLs & Media</h3>
                     </div>
                     <div className="grid gap-4">
                         <div className="grid gap-2">
-                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Source URL</label>
+                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Source URL</label>
                             <input
                                 type="url"
                                 placeholder="https://..."
                                 value={coreFields.source_url}
                                 onChange={(e) => setCoreFields(prev => ({ ...prev, source_url: e.target.value }))}
-                                className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                             />
                         </div>
                         <div className="grid gap-2">
-                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Registration URL</label>
+                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Registration URL</label>
                             <input
                                 type="url"
                                 placeholder="https://..."
                                 value={coreFields.registration_url}
                                 onChange={(e) => setCoreFields(prev => ({ ...prev, registration_url: e.target.value }))}
-                                className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                             />
                         </div>
                         <div className="grid gap-2">
-                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Livestream URL</label>
+                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Livestream URL</label>
                             <input
                                 type="url"
                                 placeholder="https://..."
                                 value={coreFields.livestream_url}
                                 onChange={(e) => setCoreFields(prev => ({ ...prev, livestream_url: e.target.value }))}
-                                className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                             />
                         </div>
                         <div className="grid gap-2">
-                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Agenda URL</label>
+                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Agenda URL</label>
                             <input
                                 type="url"
                                 placeholder="https://..."
                                 value={coreFields.agenda_url}
                                 onChange={(e) => setCoreFields(prev => ({ ...prev, agenda_url: e.target.value }))}
-                                className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                             />
                         </div>
                         <div className="grid gap-2 pt-4">
-                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Event Image</label>
+                            <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Event Image</label>
                             <div className="flex items-start gap-4">
                                 {coreFields.event_image_url && (
-                                    <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                                    <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-default bg-background-tertiary">
                                         <Image
                                             src={coreFields.event_image_url}
                                             alt="Event"
@@ -801,10 +812,10 @@ export default function EnrichmentEditorClient({
                                             Update Image
                                         </Button>
                                     </div>
-                                    <p className="mt-2 text-xs text-slate-500">
+                                    <p className="mt-2 text-xs text-foreground-muted">
                                         Recommended: 1200x630px or larger. JPG, PNG, WebP.
                                     </p>
-                                    <p className="mt-2 text-xs text-slate-500">
+                                    <p className="mt-2 text-xs text-foreground-muted">
                                         Recommended: 1200x630px or larger. JPG, PNG, WebP.
                                     </p>
                                 </div>
@@ -856,7 +867,7 @@ export default function EnrichmentEditorClient({
                 {/* Venue Section */}
                 <div id="venue" className="scroll-mt-6 space-y-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h3 className="text-lg font-medium text-slate-200">Venue</h3>
+                        <h3 className="text-lg font-medium text-foreground-primary">Venue</h3>
                     </div>
                     <div className="space-y-4">
                         <div>
@@ -865,19 +876,19 @@ export default function EnrichmentEditorClient({
                                     type="checkbox"
                                     checked={isCreatingVenue}
                                     onChange={(e) => setIsCreatingVenue(e.target.checked)}
-                                    className="rounded border-white/10 bg-white/5 text-indigo-500 focus:ring-0"
+                                    className="rounded border-default bg-background-tertiary text-accent-primary focus:ring-0"
                                 />
-                                <span className="text-sm text-slate-300">Create New Venue</span>
+                                <span className="text-sm text-foreground-tertiary">Create New Venue</span>
                             </label>
                             {!isCreatingVenue && (
                                 <select
                                     value={relationships.venue_id || ''}
                                     onChange={(e) => setRelationships(prev => ({ ...prev, venue_id: e.target.value || null }))}
-                                    className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                                    className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors"
                                 >
-                                    <option value="" className="bg-[#1C1C1C]">Select Existing Venue</option>
+                                    <option value="" className="bg-background-main">Select Existing Venue</option>
                                     {lookupData.venues.map(venue => (
-                                        <option key={venue.id} value={venue.id} className="bg-[#1C1C1C]">
+                                        <option key={venue.id} value={venue.id} className="bg-background-main">
                                             {venue.name} {venue.city ? `(${venue.city})` : ''}
                                         </option>
                                     ))}
@@ -887,56 +898,56 @@ export default function EnrichmentEditorClient({
                         {isCreatingVenue && (
                             <div className="grid gap-4">
                                 <div className="grid gap-2">
-                                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Venue Name</label>
+                                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Venue Name</label>
                                     <input
                                         type="text"
                                         placeholder="Venue Name"
                                         value={venueData.name}
                                         onChange={(e) => setVenueData(prev => ({ ...prev, name: e.target.value }))}
-                                        className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                        className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                                         required
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Address</label>
+                                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Address</label>
                                     <textarea
                                         placeholder="Full Address"
                                         value={venueData.address}
                                         onChange={(e) => setVenueData(prev => ({ ...prev, address: e.target.value }))}
-                                        className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700 resize-none"
+                                        className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted resize-none"
                                         rows={2}
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
-                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">City</label>
+                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">City</label>
                                         <input
                                             type="text"
                                             placeholder="City"
                                             value={venueData.city}
                                             onChange={(e) => setVenueData(prev => ({ ...prev, city: e.target.value }))}
-                                            className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                            className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                                         />
                                     </div>
                                     <div className="grid gap-2">
-                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">State/Province</label>
+                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">State/Province</label>
                                         <input
                                             type="text"
                                             placeholder="State"
                                             value={venueData.state_province}
                                             onChange={(e) => setVenueData(prev => ({ ...prev, state_province: e.target.value }))}
-                                            className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                            className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                                         />
                                     </div>
                                 </div>
                                 <div className="grid gap-2">
-                                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Country</label>
+                                    <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Country</label>
                                     <input
                                         type="text"
                                         placeholder="Country"
                                         value={venueData.country}
                                         onChange={(e) => setVenueData(prev => ({ ...prev, country: e.target.value }))}
-                                        className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                        className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                                     />
                                 </div>
                             </div>
@@ -947,13 +958,13 @@ export default function EnrichmentEditorClient({
                 {/* Organizer Section */}
                 <div id="organizer" className="scroll-mt-6 space-y-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h3 className="text-lg font-medium text-slate-200">Organizer</h3>
+                        <h3 className="text-lg font-medium text-foreground-primary">Organizer</h3>
                     </div>
                     {event.organizer ? (
                         <div className="space-y-6">
                             <div className="flex items-start gap-6">
                                 <div className="space-y-3">
-                                    <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                                    <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-default bg-background-tertiary">
                                         {currentLogoUrl ? (
                                             <Image
                                                 src={currentLogoUrl}
@@ -962,7 +973,7 @@ export default function EnrichmentEditorClient({
                                                 className="object-contain p-2"
                                             />
                                         ) : (
-                                            <div className="flex h-full w-full items-center justify-center text-slate-600">
+                                            <div className="flex h-full w-full items-center justify-center text-foreground-muted">
                                                 <MaterialIcon name="building" size={32} />
                                             </div>
                                         )}
@@ -978,37 +989,37 @@ export default function EnrichmentEditorClient({
                                 </div>
                                 <div className="flex-1 space-y-4">
                                     <div className="grid gap-2">
-                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Name</label>
+                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Name</label>
                                         <input
                                             type="text"
                                             value={organizerData.name}
                                             onChange={(e) => setOrganizerData(prev => ({ ...prev, name: e.target.value }))}
-                                            className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                            className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                                         />
                                     </div>
                                     <div className="grid gap-2">
-                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Website</label>
+                                        <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Website</label>
                                         <input
                                             type="url"
                                             value={organizerData.website_url}
                                             onChange={(e) => setOrganizerData(prev => ({ ...prev, website_url: e.target.value }))}
-                                            className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700"
+                                            className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted"
                                         />
                                     </div>
                                 </div>
                             </div>
                             <div className="grid gap-2">
-                                <label className="text-xs font-medium text-slate-400 uppercase tracking-wide">Description</label>
+                                <label className="text-xs font-medium text-foreground-tertiary uppercase tracking-wide">Description</label>
                                 <textarea
                                     value={organizerData.description}
                                     onChange={(e) => setOrganizerData(prev => ({ ...prev, description: e.target.value }))}
-                                    className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors placeholder:text-slate-700 resize-none"
+                                    className="w-full bg-transparent border-b border-default px-0 py-2 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none transition-colors placeholder:text-foreground-muted resize-none"
                                     rows={3}
                                 />
                             </div>
                         </div>
                     ) : (
-                        <div className="p-4 rounded border border-white/10 bg-white/5 text-center text-slate-400">
+                        <div className="p-4 rounded border border-default bg-background-tertiary text-center text-foreground-tertiary">
                             No organizer associated with this event.
                         </div>
                     )}
@@ -1066,14 +1077,14 @@ export default function EnrichmentEditorClient({
             {
                 isDescriptionExpanded && (
                     <div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-background-main/80 backdrop-blur"
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="description-editor-title"
                     >
-                        <div className="flex h-[80vh] w-[min(90vw,900px)] flex-col rounded-xl border border-slate-800 bg-slate-950 shadow-2xl">
-                            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-                                <h2 id="description-editor-title" className="text-base font-semibold text-slate-100">
+                        <div className="flex h-[80vh] w-[min(90vw,900px)] flex-col rounded-xl border border-default bg-background-main shadow-2xl">
+                            <div className="flex items-center justify-between border-b border-default px-5 py-4">
+                                <h2 id="description-editor-title" className="text-base font-semibold text-foreground-primary">
                                     Edit Description
                                 </h2>
                                 <Button
@@ -1091,10 +1102,10 @@ export default function EnrichmentEditorClient({
                                     ref={expandedDescriptionRef}
                                     value={coreFields.description}
                                     onChange={(e) => setCoreFields(prev => ({ ...prev, description: e.target.value }))}
-                                    className="h-full w-full resize-none rounded-lg border border-slate-300 bg-slate-50 p-4 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/40 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-100"
+                                    className="h-full w-full resize-none rounded-lg border border-default bg-background-secondary p-4 text-sm text-foreground-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-slate-500/40 dark:border-default dark:bg-background-secondary/80 dark:text-foreground-primary"
                                 />
                             </div>
-                            <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-4">
+                            <div className="flex justify-end gap-2 border-t border-default px-5 py-4">
                                 <Button
                                     type="button"
                                     variant="ghost"

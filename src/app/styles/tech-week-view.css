@@ -698,6 +698,38 @@
 }
 
 /* ===================================
+   HOVER TO EXPAND BEHAVIOR
+   =================================== */
+
+/* When hovering a compressed event container, expand it to full day width */
+.week-event-positioned.is-compressed {
+    transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), margin-left 0.2s cubic-bezier(0.2, 0, 0, 1), z-index 0s linear 0.2s;
+    /* Ensure z-index is lower than hovered one */
+    z-index: 10;
+}
+
+.week-event-positioned.is-compressed:hover {
+    width: 100% !important;
+    margin-left: 0 !important;
+    z-index: 100 !important;
+    transition: width 0.25s cubic-bezier(0.2, 0, 0, 1), margin-left 0.25s cubic-bezier(0.2, 0, 0, 1), z-index 0s linear 0s;
+}
+
+/* Ensure the card inside styles appropriately during expansion */
+.week-event-positioned.is-compressed:hover .event-card {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid var(--border-default) !important;
+}
+
+/* Reveal hidden details on hover (if we used CSS classes to hide them, 
+   but since we used React state, we rely on the expansion to just show more of the title/truncated content)
+   
+   If we want to re-show hidden React elements, we'd need to use CSS classes instead of conditional rendering. 
+   For now, we just expand the "strip" so the title is readable.
+*/
+
+
+/* ===================================
    4. HEADER & DAY LABELS
    =================================== */
 

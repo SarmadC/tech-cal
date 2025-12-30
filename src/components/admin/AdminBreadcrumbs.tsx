@@ -81,19 +81,19 @@ export default function AdminBreadcrumbs({ trail = [] }: { trail?: AdminCrumb[] 
     }
 
     return (
-        <nav aria-label="Admin breadcrumbs" className="flex items-center gap-2 text-xs text-slate-400">
+        <nav aria-label="Admin breadcrumbs" className="flex items-center gap-2 text-xs text-foreground-tertiary">
             {breadcrumbs.map((crumb, index) => {
                 const isLast = index === breadcrumbs.length - 1;
                 const content = crumb.href && !isLast ? (
                     <Link
                         href={crumb.href}
-                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-foreground-secondary transition hover:bg-accent-primary-light hover:text-foreground-primary"
                     >
                         {crumb.icon}
                         <span>{crumb.label}</span>
                     </Link>
                 ) : (
-                    <span className={cn('inline-flex items-center gap-1 px-1.5 py-0.5', isLast && 'text-white')}>
+                    <span className={cn('inline-flex items-center gap-1 px-1.5 py-0.5', isLast && 'text-foreground-primary')}>
                         {crumb.icon}
                         <span>{crumb.label}</span>
                     </span>
@@ -102,7 +102,7 @@ export default function AdminBreadcrumbs({ trail = [] }: { trail?: AdminCrumb[] 
                 return (
                     <span key={`${crumb.label}-${index}`} className="flex items-center gap-2">
                         {content}
-                        {!isLast && <span className="text-slate-600">/</span>}
+                        {!isLast && <span className="text-foreground-muted">/</span>}
                     </span>
                 );
             })}

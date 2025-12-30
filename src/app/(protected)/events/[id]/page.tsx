@@ -17,7 +17,6 @@ import EventActions from '@/components/calendar/EventActions';
 
 type EventDetailPageProps = {
     params: Promise<{ id: string }>;
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {

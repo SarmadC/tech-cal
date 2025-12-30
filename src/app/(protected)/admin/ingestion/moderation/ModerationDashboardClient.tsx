@@ -336,15 +336,15 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                     item.events?.organizer?.name ?? item.source_events?.raw_payload?.record?.organizer ?? 'Unknown organizer';
                 return (
                     <div className="flex flex-col gap-2">
-                        <div className="font-medium text-slate-100">{eventTitle}</div>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        <div className="font-medium text-foreground-primary">{eventTitle}</div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-foreground-tertiary">
                             <span>{organizer}</span>
-                            <span className="inline-flex items-center gap-1 rounded border border-slate-800/60 bg-slate-900/60 px-2 py-0.5 text-[11px]">
+                            <span className="inline-flex items-center gap-1 rounded border border-default/60 bg-background-secondary/60 px-2 py-0.5 text-[11px]">
                                 <MaterialIcon name="dashboard" size={12} />
                                 {item.ingestion_quality_score.toFixed(0)}
                             </span>
                             {item.reason_codes.map((code) => (
-                                <Badge key={code} variant="outline" className="bg-slate-900/50 text-[10px] uppercase tracking-wide">
+                                <Badge key={code} variant="outline" className="bg-background-secondary/50 text-[10px] uppercase tracking-wide">
                                     {code.replace(/_/g, ' ')}
                                 </Badge>
                             ))}
@@ -368,9 +368,9 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
             key: 'reason',
             header: 'Flagged Reason',
             render: (item) => (
-                <div className="text-xs text-slate-300">
+                <div className="text-xs text-foreground-tertiary">
                     {item.reason_codes.length === 0 ? (
-                        <span className="text-slate-500">No reason captured</span>
+                        <span className="text-foreground-muted">No reason captured</span>
                     ) : (
                         item.reason_codes.map((code) => code.replace(/_/g, ' ')).join(', ')
                     )}
@@ -382,9 +382,9 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
             header: 'Flagged',
             sortable: true,
             render: (item) => (
-                <div className="text-xs text-slate-300">
+                <div className="text-xs text-foreground-tertiary">
                     <div>{format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}</div>
-                    <div className="text-slate-500">
+                    <div className="text-foreground-muted">
                         {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                     </div>
                 </div>
@@ -445,10 +445,10 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
 
     const tableToolbar = (
         <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs uppercase tracking-wider text-slate-400">
+            <div className="text-xs uppercase tracking-wider text-foreground-tertiary">
                 {totalItems === 0 ? 'No records match the current filters.' : `Showing ${paginatedItems.length} of ${totalItems} flagged events`}
             </div>
-            <Link href="/admin/ingestion/update-queue" className="text-xs text-slate-300 hover:text-slate-50">
+            <Link href="/admin/ingestion/update-queue" className="text-xs text-foreground-tertiary hover:text-slate-50">
                 Need the update queue instead?
             </Link>
         </div>
@@ -467,9 +467,9 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
     return (
         <>
             <div className="space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800/60 bg-slate-950/60 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default/60 bg-background-main/60 px-4 py-3">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs uppercase tracking-wide text-slate-500">View</span>
+                        <span className="text-xs uppercase tracking-wide text-foreground-muted">View</span>
                         <Button
                             type="button"
                             size="sm"
@@ -489,7 +489,7 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                             Cards
                         </Button>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <div className="flex items-center gap-2 text-xs text-foreground-tertiary">
                         {selectedRows.length > 0 && <span>{selectedRows.length} selected</span>}
                         <span>Total backlog: {data.length}</span>
                     </div>
@@ -520,8 +520,8 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 ) : (
                     <div className="space-y-4">
                         {paginatedItems.length === 0 ? (
-                            <Card className="border border-slate-800/60 bg-slate-950/60">
-                                <CardContent className="p-6 text-center text-sm text-slate-400">
+                            <Card className="border border-default/60 bg-background-main/60">
+                                <CardContent className="p-6 text-center text-sm text-foreground-tertiary">
                                     No events match the current filters.
                                 </CardContent>
                             </Card>
@@ -534,16 +534,16 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                                 const quality = item.ingestion_quality_score.toFixed(0);
                                 const qualityComponents = event?.ingestion_provenance?.quality_components;
                                 return (
-                                    <Card key={item.id} className="border border-slate-800/60 bg-slate-950/70 text-slate-200">
+                                    <Card key={item.id} className="border border-default/60 bg-background-main/70 text-foreground-secondary">
                                         <CardHeader className="flex flex-wrap items-start justify-between gap-3">
                                         <div className="space-y-2">
                                             <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-                                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                                            <div className="flex flex-wrap items-center gap-2 text-xs text-foreground-tertiary">
                                                 <span>{organizer}</span>
                                                 <Badge className="bg-amber-500/20 px-2 py-0.5 text-[11px] uppercase tracking-wide text-amber-200">
                                                     {item.status.replace(/_/g, ' ')}
                                                 </Badge>
-                                                <span className="inline-flex items-center gap-1 rounded border border-slate-800/60 bg-slate-900/60 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                                                <span className="inline-flex items-center gap-1 rounded border border-default/60 bg-background-secondary/60 px-2 py-0.5 text-[10px] uppercase tracking-wide">
                                                     <MaterialIcon name="dashboard" size={12} />
                                                     Quality {quality}
                                                 </span>
@@ -570,34 +570,34 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
-                                        <div className="grid gap-3 text-xs text-slate-300 md:grid-cols-3">
+                                        <div className="grid gap-3 text-xs text-foreground-tertiary md:grid-cols-3">
                                             <div>
-                                                <div className="text-slate-500">Flagged</div>
+                                                <div className="text-foreground-muted">Flagged</div>
                                                 <div>{format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}</div>
-                                                <div className="text-slate-500">
+                                                <div className="text-foreground-muted">
                                                     {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                                                 </div>
                                             </div>
                                             <div>
-                                                <div className="text-slate-500">Event time</div>
+                                                <div className="text-foreground-muted">Event time</div>
                                                 <div>{event?.start_time ? format(new Date(event.start_time), 'PPP p') : source?.startTime ? format(new Date(source.startTime), 'PPP p') : 'N/A'}</div>
                                             </div>
                                             <div>
-                                                <div className="text-slate-500">Location</div>
+                                                <div className="text-foreground-muted">Location</div>
                                                 <div>{event?.location ?? source?.location ?? 'N/A'}</div>
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            <div className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
                                                 Reason codes
                                             </div>
                                             <div className="flex flex-wrap gap-2">
                                                 {item.reason_codes.length === 0 ? (
-                                                    <span className="text-xs text-slate-500">No reason captured</span>
+                                                    <span className="text-xs text-foreground-muted">No reason captured</span>
                                                 ) : (
                                                     item.reason_codes.map((code) => (
-                                                        <Badge key={code} variant="outline" className="bg-slate-900/50 text-[10px] uppercase">
+                                                        <Badge key={code} variant="outline" className="bg-background-secondary/50 text-[10px] uppercase">
                                                             {code.replace(/_/g, ' ')}
                                                         </Badge>
                                                     ))
@@ -606,7 +606,7 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                                         </div>
 
                                         {qualityComponents && (
-                                            <div className="grid gap-3 text-xs text-slate-300 md:grid-cols-4">
+                                            <div className="grid gap-3 text-xs text-foreground-tertiary md:grid-cols-4">
                                                 <QualityMetric label="Source trust" value={qualityComponents.source_trust} />
                                                 <QualityMetric label="Metadata" value={qualityComponents.metadata_completeness} />
                                                 <QualityMetric label="Speakers" value={qualityComponents.speaker_verification} />
@@ -616,12 +616,12 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
 
                                         {item.recommended_tags && item.recommended_tags.length > 0 && (
                                             <div className="space-y-2">
-                                                <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                                <div className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
                                                     Recommended tags
                                                 </div>
                                                 <div className="flex flex-wrap gap-2 text-xs">
                                                     {item.recommended_tags.map((tag) => (
-                                                        <Badge key={tag} variant="outline" className="bg-slate-900/60">
+                                                        <Badge key={tag} variant="outline" className="bg-background-secondary/60">
                                                             {tag}
                                                         </Badge>
                                                     ))}
@@ -630,9 +630,9 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                                         )}
 
                                         <div className="space-y-2">
-                                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Feedback</div>
+                                            <div className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">Feedback</div>
                                             <textarea
-                                                className="min-h-[80px] w-full rounded-md border border-slate-800/60 bg-slate-950/60 p-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-600/40"
+                                                className="min-h-[80px] w-full rounded-md border border-default/60 bg-background-main/60 p-3 text-sm text-foreground-primary focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-600/40"
                                                 placeholder="Leave review guidance for future automations (optional)"
                                                 value={feedback[item.id] ?? ''}
                                                 onChange={(event) =>
@@ -655,9 +655,9 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
 
 function QualityMetric({ label, value }: { label: string; value?: number }) {
     return (
-        <div className="rounded-md border border-slate-800/50 bg-slate-900/60 px-3 py-2">
-            <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
-            <div className="text-sm font-semibold text-slate-100">{value !== undefined ? `${value.toFixed(0)}%` : '—'}</div>
+        <div className="rounded-md border border-default/50 bg-background-secondary/60 px-3 py-2">
+            <div className="text-[11px] uppercase tracking-wide text-foreground-muted">{label}</div>
+            <div className="text-sm font-semibold text-foreground-primary">{value !== undefined ? `${value.toFixed(0)}%` : '—'}</div>
         </div>
     );
 }
@@ -672,28 +672,28 @@ function ModerationShortcutsOverlay({ onClose }: { onClose: () => void }) {
     ];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-            <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-950 p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background-main/80 backdrop-blur">
+            <div className="w-full max-w-md rounded-xl border border-default bg-background-main p-6 shadow-2xl">
                 <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
-                        <h2 className="text-lg font-semibold text-slate-100">Moderation shortcuts</h2>
-                        <p className="text-sm text-slate-400">
+                        <h2 className="text-lg font-semibold text-foreground-primary">Moderation shortcuts</h2>
+                        <p className="text-sm text-foreground-tertiary">
                             Stay in flow while triaging ingestion issues.
                         </p>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-300 hover:bg-slate-800">
+                    <Button variant="ghost" size="icon" onClick={onClose} className="text-foreground-tertiary hover:bg-background-tertiary">
                         <MaterialIcon name="close" size={16} />
                     </Button>
                 </div>
                 <div className="space-y-2">
                     {shortcuts.map((item) => (
-                        <div key={item.keys} className="flex items-center justify-between gap-3 rounded-md border border-slate-800/60 bg-slate-900/60 px-3 py-2">
-                            <span className="font-mono text-xs uppercase tracking-wide text-slate-200">{item.keys}</span>
-                            <span className="text-sm text-slate-300">{item.description}</span>
+                        <div key={item.keys} className="flex items-center justify-between gap-3 rounded-md border border-default/60 bg-background-secondary/60 px-3 py-2">
+                            <span className="font-mono text-xs uppercase tracking-wide text-foreground-secondary">{item.keys}</span>
+                            <span className="text-sm text-foreground-tertiary">{item.description}</span>
                         </div>
                     ))}
                 </div>
-                <p className="mt-4 text-center text-xs text-slate-500">Press Esc to close.</p>
+                <p className="mt-4 text-center text-xs text-foreground-muted">Press Esc to close.</p>
             </div>
         </div>
     );

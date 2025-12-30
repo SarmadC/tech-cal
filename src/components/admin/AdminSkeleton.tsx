@@ -14,7 +14,7 @@ export function Skeleton({ className }: SkeletonProps) {
     return (
         <div
             className={cn(
-                'animate-pulse rounded-md bg-slate-800/50',
+                'animate-pulse rounded-md bg-background-tertiary/50',
                 className
             )}
         />
@@ -30,7 +30,7 @@ export function TableSkeleton({ rows = 5, columns = 4 }: TableSkeletonProps) {
     return (
         <div className="space-y-3">
             {/* Header */}
-            <div className="flex gap-4 pb-2 border-b border-slate-800">
+            <div className="flex gap-4 pb-2 border-b border-default">
                 {Array.from({ length: columns }).map((_, i) => (
                     <Skeleton key={`header-${i}`} className="h-4 flex-1" />
                 ))}
@@ -58,7 +58,7 @@ export function CardSkeleton({ count = 3 }: CardSkeletonProps) {
             {Array.from({ length: count }).map((_, i) => (
                 <div
                     key={i}
-                    className="rounded-lg border border-slate-800/60 bg-slate-950/60 p-4 space-y-3"
+                    className="rounded-lg border border-default bg-background-main p-4 space-y-3"
                 >
                     <div className="flex justify-between items-start">
                         <div className="space-y-2 flex-1">
@@ -92,7 +92,7 @@ export function MetricSkeleton({ count = 4 }: MetricSkeletonProps) {
             {Array.from({ length: count }).map((_, i) => (
                 <div
                     key={i}
-                    className="rounded-lg border border-slate-800/60 bg-slate-950/70 p-4 space-y-2"
+                    className="rounded-lg border border-default bg-background-main p-4 space-y-2"
                 >
                     <Skeleton className="h-3 w-20" />
                     <Skeleton className="h-8 w-16" />
@@ -129,7 +129,7 @@ export function PageSkeleton({ title = true, filters = true, metrics = false, co
 
             {metrics && <MetricSkeleton />}
 
-            <div className="rounded-lg border border-slate-800/60 bg-slate-950/70 p-6">
+            <div className="rounded-lg border border-default bg-background-main p-6">
                 {content === 'table' ? <TableSkeleton /> : <CardSkeleton />}
             </div>
         </div>

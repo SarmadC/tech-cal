@@ -28,6 +28,7 @@ export interface EventCardProps {
     style?: React.CSSProperties;
     isOverlapping?: boolean;
     showCareerImpact?: boolean;
+    isCompressed?: boolean;
 }
 
 export const EventCard: React.FC<EventCardProps> = ({
@@ -40,7 +41,8 @@ export const EventCard: React.FC<EventCardProps> = ({
     className = '',
     style = {},
     isOverlapping = false,
-    showCareerImpact = true
+    showCareerImpact = true,
+    isCompressed = false
 }) => {
 
     const live = isEventLive(event.startTime, event.endTime);
@@ -105,12 +107,12 @@ export const EventCard: React.FC<EventCardProps> = ({
             if (instance.dayInfo) {
                 const { currentDay, totalDays } = instance.dayInfo;
                 const maxDots = Math.min(totalDays, 5); // Max 5 dots
-                
+
                 return (
                     <div className="multi-day-dots">
                         {Array.from({ length: maxDots }, (_, i) => (
-                            <div 
-                                key={i} 
+                            <div
+                                key={i}
                                 className={`multi-day-dot ${i < currentDay ? 'active' : ''}`}
                             />
                         ))}
@@ -118,11 +120,11 @@ export const EventCard: React.FC<EventCardProps> = ({
                 );
             }
         }
-        
+
         // Fallback for regular multi-day events
         if (isMultiDayEvent(event)) {
             const totalDays = Math.min(getMultiDayDuration(event), 5); // Max 5 dots
-            
+
             return (
                 <div className="multi-day-dots">
                     {Array.from({ length: totalDays }, (_, i) => (
@@ -131,7 +133,7 @@ export const EventCard: React.FC<EventCardProps> = ({
                 </div>
             );
         }
-        
+
         return null;
     };
 
@@ -172,15 +174,15 @@ export const EventCard: React.FC<EventCardProps> = ({
     const _showDayDuration = isDayView && !((cardSize >= 5 && cardSize <= 6) || (cardSize > 8));
     const showDayLocation = isDayView && event.location;
     const showDayOrganizer = isDayView && event.organizer;
-    
+
     // Small cards: Basic info only
     // Show location for medium and larger cards (span > 4)
-    const showWeekLocation = viewType === 'week' && cardSize > 4;
-    const showWeekOrganizer = viewType === 'week' && cardSize >= 5;
-    
+    const showWeekLocation = !isCompressed && viewType === 'week' && cardSize > 4;
+    const showWeekOrganizer = !isCompressed && viewType === 'week' && cardSize >= 5;
+
     // Medium cards: Add progress indicators
-    const showWeekProgress = viewType === 'week' && cardSize >= 3;
-    
+    const showWeekProgress = !isCompressed && viewType === 'week' && cardSize >= 3;
+
 
     return (
         <div
@@ -219,52 +221,67 @@ export const EventCard: React.FC<EventCardProps> = ({
 
             <div className="event-content">
                 {/* Enhanced Content Tiers */}
-                            {/* Tier 1: Basic Info (Always Visible) */}
-            <div className="event-card-basic-info">
-                {/* Top section: No longer needed since logo moved to bottom-left corner */}
+                {/* Tier 1: Basic Info (Always Visible) */}
+                <div className="event-card-basic-info">
+                    {/* Top section: No longer needed since logo moved to bottom-left corner */}
 
-                {/* Main title section */}
-                <div className="event-title-section">
-                    <div className="flex items-start justify-between">
-                        <h3 className="event-title flex-1">{event.title}</h3>
-                        {/* Career Impact Display */}
-                        {showCareerImpact && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
-                            <div className="flex-shrink-0 ml-2">
-                                <div className="flex items-center gap-1">
-                                    <div className={`
+                    {/* Main title section */}
+                    <div className="event-title-section">
+                        <div className="flex items-start justify-between">
+                            <h3 className="event-title flex-1">{event.title}</h3>
+                            {/* Career Impact Display */}
+                            {showCareerImpact && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
+                                <div className="flex-shrink-0 ml-2">
+                                    <div className="flex items-center gap-1">
+                                        <div className={`
                                         w-2 h-2 rounded-full
                                         ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
-                                          (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
-                                          (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                                                (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
+                                                    (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
                                     `} />
-                                    {cardSize >= 4 && (
-                                        <span className="text-xs font-medium text-muted-foreground">
-                                            {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}%
-                                        </span>
-                                    )}
+                                        {cardSize >= 4 && (
+                                            <span className="text-xs font-medium text-muted-foreground">
+                                                {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}%
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
-                
 
-                {/* Day view specific content - Time, Duration, Location */}
-                {isDayView && (
-                    <div className="event-day-meta">
-                        {/* Event Tags - show only for medium+ cards (span 5+) in day view */}
-                        {cardSize >= 5 && event.tags && event.tags.length > 0 && (
-                            <div className="event-tags-section">
-                                <div className="event-tags-row">
-                                    {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
-                                    {event.tags
-                                        .filter((tag, index, self) => 
+
+                    {/* Day view specific content - Time, Duration, Location */}
+                    {isDayView && (
+                        <div className="event-day-meta">
+                            {/* Event Tags - show only for medium+ cards (span 5+) in day view */}
+                            {cardSize >= 5 && event.tags && event.tags.length > 0 && (
+                                <div className="event-tags-section">
+                                    <div className="event-tags-row">
+                                        {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
+                                        {event.tags
+                                            .filter((tag, index, self) =>
+                                                index === self.findIndex(t => t.name === tag.name)
+                                            )
+                                            .slice(0, 2) // Limit to 2 tags for day view
+                                            .map((tag, index) => (
+                                                <React.Fragment key={index}>
+                                                    {/* Tag Name */}
+                                                    <span
+                                                        className="event-session-type"
+                                                        style={{
+                                                            backgroundColor: getPillColor(categoryColor, 0.3),
+                                                            color: 'white'
+                                                        }}
+                                                    >
+                                                        {tag.name}
+                                                    </span>
+                                                </React.Fragment>
+                                            ))}
+                                        {/* Add +n indicator if there are more than 2 tags */}
+                                        {event.tags.filter((tag, index, self) =>
                                             index === self.findIndex(t => t.name === tag.name)
-                                        )
-                                        .slice(0, 2) // Limit to 2 tags for day view
-                                        .map((tag, index) => (
-                                            <React.Fragment key={index}>
-                                                {/* Tag Name */}
+                                        ).length > 2 && (
                                                 <span
                                                     className="event-session-type"
                                                     style={{
@@ -272,14 +289,97 @@ export const EventCard: React.FC<EventCardProps> = ({
                                                         color: 'white'
                                                     }}
                                                 >
-                                                    {tag.name}
+                                                    +{event.tags.filter((tag, index, self) =>
+                                                        index === self.findIndex(t => t.name === tag.name)
+                                                    ).length - 2}
                                                 </span>
-                                            </React.Fragment>
-                                        ))}
-                                    {/* Add +n indicator if there are more than 2 tags */}
-                                    {event.tags.filter((tag, index, self) => 
+                                            )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Location and Organizer */}
+                            {(showDayLocation || showDayOrganizer) && (
+                                <div className="event-location-organizer">
+                                    {showDayLocation && (
+                                        <span className="event-location">
+                                            {getLocationIcon(event.location)}
+                                            {event.location}
+                                        </span>
+                                    )}
+                                    {showDayOrganizer && (
+                                        <span className="event-organizer">
+                                            <MaterialIcon name="building" size={10} color={titleColor} />
+                                            {event.organizer}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Multi-day day indicator - subtle dots - only show for multi-day events */}
+                    {'dayInfo' in event && event.dayInfo && event.dayInfo.totalDays > 1 && (
+                        <div className="event-day-dots">
+                            {Array.from({ length: event.dayInfo.totalDays }, (_, i) => (
+                                <div
+                                    key={i}
+                                    className={`day-dot ${i + 1 === event.dayInfo!.currentDay ? 'active' : ''}`}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Organizer logo in bottom-left corner */}
+                    {event.organization?.logo && (
+                        <div className="event-organizer-logo-corner">
+                            <Image
+                                src={event.organization.logo}
+                                alt={`${event.organization.name} logo`}
+                                width={18}
+                                height={18}
+                                className="organizer-logo-corner-image"
+                                onError={(e) => {
+                                    // Silently handle logo loading errors without console spam
+                                    e.currentTarget.style.display = 'none';
+                                }}
+                                onLoad={(e) => {
+                                    // Ensure logo is visible when it loads successfully
+                                    e.currentTarget.style.display = 'block';
+                                }}
+                            />
+                        </div>
+                    )}
+
+
+                    {/* Event Tags Display - only for week view */}
+                    {viewType === 'week' && !isCompressed && cardSize >= 3 && event.tags && event.tags.length > 0 && (
+                        <div className="event-tags-section">
+                            <div className="event-tags-row">
+                                {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
+                                {event.tags
+                                    .filter((tag, index, self) =>
                                         index === self.findIndex(t => t.name === tag.name)
-                                    ).length > 2 && (
+                                    )
+                                    .slice(0, (sizeBucket === 'small' ? 1 : 2))
+                                    .map((tag) => (
+                                        <span
+                                            key={tag.id}
+                                            className="event-session-type"
+                                            style={{
+                                                backgroundColor: getPillColor(categoryColor, 0.3),
+                                                color: 'white'
+                                            }}
+                                        >
+                                            {tag.name}
+                                        </span>
+                                    ))}
+                                {/* Add +n indicator if there are more than 2 tags */}
+                                {(() => {
+                                    const uniqueCount = event.tags.filter((tag, index, self) => index === self.findIndex(t => t.name === tag.name)).length;
+                                    const limit = sizeBucket === 'small' ? 1 : 2;
+                                    return uniqueCount > limit;
+                                })() && (
                                         <span
                                             className="event-session-type"
                                             style={{
@@ -287,186 +387,88 @@ export const EventCard: React.FC<EventCardProps> = ({
                                                 color: 'white'
                                             }}
                                         >
-                                            +{event.tags.filter((tag, index, self) =>
-                                                index === self.findIndex(t => t.name === tag.name)
-                                            ).length - 2}
+                                            +{(() => {
+                                                const uniqueCount = event.tags.filter((tag, index, self) => index === self.findIndex(t => t.name === tag.name)).length;
+                                                const limit = sizeBucket === 'small' ? 1 : 2;
+                                                return uniqueCount - limit;
+                                            })()}
                                         </span>
                                     )}
-                                </div>
                             </div>
-                        )}
-                        
-                        {/* Location and Organizer */}
-                        {(showDayLocation || showDayOrganizer) && (
-                            <div className="event-location-organizer">
-                                {showDayLocation && (
-                                    <span className="event-location">
-                                        {getLocationIcon(event.location)}
-                                        {event.location}
-                                    </span>
-                                )}
-                                {showDayOrganizer && (
-                                    <span className="event-organizer">
-                                        <MaterialIcon name="building" size={10} color={titleColor} />
-                                        {event.organizer}
-                                    </span>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Multi-day day indicator - subtle dots - only show for multi-day events */}
-                {'dayInfo' in event && event.dayInfo && event.dayInfo.totalDays > 1 && (
-                    <div className="event-day-dots">
-                        {Array.from({ length: event.dayInfo.totalDays }, (_, i) => (
-                            <div 
-                                key={i}
-                                className={`day-dot ${i + 1 === event.dayInfo!.currentDay ? 'active' : ''}`}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* Organizer logo in bottom-left corner */}
-                {event.organization?.logo && (
-                    <div className="event-organizer-logo-corner">
-                        <Image
-                            src={event.organization.logo}
-                            alt={`${event.organization.name} logo`}
-                            width={18}
-                            height={18}
-                            className="organizer-logo-corner-image"
-                            onError={(e) => {
-                                // Silently handle logo loading errors without console spam
-                                e.currentTarget.style.display = 'none';
-                            }}
-                            onLoad={(e) => {
-                                // Ensure logo is visible when it loads successfully
-                                e.currentTarget.style.display = 'block';
-                            }}
-                        />
-                    </div>
-                )}
-
-
-                {/* Event Tags Display - only for week view */}
-                {viewType === 'week' && cardSize >= 3 && event.tags && event.tags.length > 0 && (
-                    <div className="event-tags-section">
-                        <div className="event-tags-row">
-                            {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
-                            {event.tags
-                                .filter((tag, index, self) => 
-                                    index === self.findIndex(t => t.name === tag.name)
-                                )
-                                .slice(0, (sizeBucket === 'small' ? 1 : 2))
-                                .map((tag) => (
-                                    <span
-                                        key={tag.id}
-                                        className="event-session-type"
-                                        style={{
-                                            backgroundColor: getPillColor(categoryColor, 0.3),
-                                            color: 'white'
-                                        }}
-                                    >
-                                        {tag.name}
-                                    </span>
-                                ))}
-                            {/* Add +n indicator if there are more than 2 tags */}
-                            {(() => {
-                                const uniqueCount = event.tags.filter((tag, index, self) => index === self.findIndex(t => t.name === tag.name)).length;
-                                const limit = sizeBucket === 'small' ? 1 : 2;
-                                return uniqueCount > limit;
-                            })() && (
-                                <span
-                                    className="event-session-type"
-                                    style={{
-                                        backgroundColor: getPillColor(categoryColor, 0.3),
-                                        color: 'white'
-                                    }}
-                                >
-                                    +{(() => {
-                                        const uniqueCount = event.tags.filter((tag, index, self) => index === self.findIndex(t => t.name === tag.name)).length;
-                                        const limit = sizeBucket === 'small' ? 1 : 2;
-                                        return uniqueCount - limit;
-                                    })()}
-                                </span>
-                            )}
                         </div>
-                    </div>
-                )}
-
-
-
-                {/* Basic location and organizer */}
-                <div className="event-info">
-                    {showWeekLocation && event.location && (
-                        <span className="event-location-text">
-                            {getLocationIcon(event.location)}
-                            {event.location}
-                        </span>
                     )}
-                    {showWeekOrganizer && event.organizer && (
-                        <span className="event-organizer-text">
-                            <MaterialIcon name="building" size={10} color={titleColor} />
-                            {event.organizer}
-                        </span>
+
+
+
+                    {/* Basic location and organizer */}
+                    <div className="event-info">
+                        {showWeekLocation && !isCompressed && event.location && (
+                            <span className="event-location-text">
+                                {getLocationIcon(event.location)}
+                                {event.location}
+                            </span>
+                        )}
+                        {showWeekOrganizer && event.organizer && (
+                            <span className="event-organizer-text">
+                                <MaterialIcon name="building" size={10} color={titleColor} />
+                                {event.organizer}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Tier 2: Extended Info (2+ hour events) - Multi-day progress only */}
+                <div className="event-card-extended-info">
+                    {showWeekProgress && ('isMultiDay' in event && event.isMultiDay && event.multiDaySpan && event.multiDaySpan > 1) && (
+                        <div className="multi-day-progress">
+                            <div className="progress-bar">
+                                <div className="progress-fill" style={{ width: '20%' }} />
+                            </div>
+                        </div>
                     )}
                 </div>
-            </div>
 
-            {/* Tier 2: Extended Info (2+ hour events) - Multi-day progress only */}
-            <div className="event-card-extended-info">
-                {showWeekProgress && ('isMultiDay' in event && event.isMultiDay && event.multiDaySpan && event.multiDaySpan > 1) && (
-                    <div className="multi-day-progress">
-                        <div className="progress-bar">
-                            <div className="progress-fill" style={{ width: '20%' }} />
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Tier 3: Rich Content (4+ hour events) */}
-            <div className="event-card-rich-content">
-                {/* Career Impact Explanation for Extra Large Cards */}
-                {showCareerImpact && isExtraLarge && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
-                    <div className="career-impact-explanation">
-                        <div className="flex items-center gap-2 mb-2">
-                            <MaterialIcon name="trending-up" size={12} color="var(--foreground-secondary)" />
-                            <span className="text-xs font-medium text-gray-600">Career Impact</span>
-                        </div>
-                        <div className="career-impact-details">
-                            <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2 px-2 py-1 bg-gray-100 rounded-md">
-                                    <div className={`
+                {/* Tier 3: Rich Content (4+ hour events) */}
+                <div className="event-card-rich-content">
+                    {/* Career Impact Explanation for Extra Large Cards */}
+                    {showCareerImpact && isExtraLarge && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
+                        <div className="career-impact-explanation">
+                            <div className="flex items-center gap-2 mb-2">
+                                <MaterialIcon name="trending-up" size={12} color="var(--foreground-secondary)" />
+                                <span className="text-xs font-medium text-gray-600">Career Impact</span>
+                            </div>
+                            <div className="career-impact-details">
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2 px-2 py-1 bg-gray-100 rounded-md">
+                                        <div className={`
                                         w-2 h-2 rounded-full
                                         ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
-                                          (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
-                                          (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
+                                                (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
+                                                    (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
                                     `} />
-                                    <span className="text-xs font-medium">
-                                        {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}% Match
-                                    </span>
+                                        <span className="text-xs font-medium">
+                                            {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}% Match
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="career-impact-reasons text-xs text-gray-600 mt-1">
-                                <div className="flex items-start gap-1">
-                                    <span className="text-green-500 mt-0.5">•</span>
-                                    <span>High relevance to your career goals</span>
+                                <div className="career-impact-reasons text-xs text-gray-600 mt-1">
+                                    <div className="flex items-start gap-1">
+                                        <span className="text-green-500 mt-0.5">•</span>
+                                        <span>High relevance to your career goals</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
 
-            {/* Tier 4: Premium Content (6+ hour events) - only show if we have rich data */}
-            <div className="event-card-premium-content">
-                {/* Additional premium content can go here */}
-            </div>
+                {/* Tier 4: Premium Content (6+ hour events) - only show if we have rich data */}
+                <div className="event-card-premium-content">
+                    {/* Additional premium content can go here */}
+                </div>
 
 
-            {/* Day view content - time removed since calendar grid already shows time slots */}
+                {/* Day view content - time removed since calendar grid already shows time slots */}
             </div>
 
             {/* Multi-day dots */}

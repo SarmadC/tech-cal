@@ -153,8 +153,8 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
                     />
                 </div>
                 <div>
-                    <p className="text-sm font-medium text-slate-200">{healthLabel}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-sm font-medium text-foreground-secondary">{healthLabel}</p>
+                    <p className="text-xs text-foreground-tertiary">
                         {criticalCount > 0 && `${criticalCount} critical • `}
                         {warningCount > 0 && `${warningCount} warning • `}
                         Last checked just now
@@ -162,10 +162,10 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
                 </div>
             </div>
 
-            <Card className="border border-slate-800/50 bg-slate-950/60 text-slate-200">
+            <Card className="border border-default/50 bg-background-main/60 text-foreground-secondary">
                 <CardHeader className="space-y-2">
                     <CardTitle className="text-base font-semibold">Pipelines at a glance</CardTitle>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-foreground-tertiary">
                         Keep queues moving to prevent ingestion bottlenecks. Metrics update as soon as you clear a flow.
                     </p>
                 </CardHeader>
@@ -175,7 +175,7 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
                             <Card
                                 key={card.title}
                                 className={cn(
-                                    'group relative overflow-hidden border border-slate-800/60 bg-slate-950/70 text-slate-200 transition-all duration-200 hover:border-slate-700 hover:bg-slate-900/80',
+                                    'group relative overflow-hidden border border-default/60 bg-background-main/70 text-foreground-secondary transition-all duration-200 hover:border-strong hover:bg-background-secondary/80',
                                     card.health !== 'healthy' && `ring-1 ${healthStyles[card.health].ring}`
                                 )}
                             >
@@ -188,20 +188,20 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
 
                                 <CardHeader className="space-y-3">
                                     <div className="flex items-center gap-2">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 transition-colors group-hover:bg-slate-700">
-                                            <MaterialIcon name={card.icon} size={16} className="text-slate-300" />
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-background-tertiary transition-colors group-hover:bg-slate-700">
+                                            <MaterialIcon name={card.icon} size={16} className="text-foreground-tertiary" />
                                         </div>
-                                        <span className="text-sm font-medium uppercase tracking-wide text-slate-400">
+                                        <span className="text-sm font-medium uppercase tracking-wide text-foreground-tertiary">
                                             {card.title}
                                         </span>
                                     </div>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-semibold text-slate-100">{card.metric}</span>
+                                        <span className="text-3xl font-semibold text-foreground-primary">{card.metric}</span>
                                         <Badge className={cn('text-xs', healthStyles[card.health].badge)}>
                                             {card.metricLabel}
                                         </Badge>
                                     </div>
-                                    <p className="text-sm text-slate-400">{card.description}</p>
+                                    <p className="text-sm text-foreground-tertiary">{card.description}</p>
                                 </CardHeader>
                                 <CardContent>
                                     <Button asChild variant="secondary" className="w-full transition-transform group-hover:scale-[1.02]">
@@ -218,21 +218,21 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
             </Card>
 
             <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
-                <Card className="border border-slate-800/60 bg-slate-950/60 text-slate-200">
+                <Card className="border border-default/60 bg-background-main/60 text-foreground-secondary">
                     <CardHeader>
                         <CardTitle className="text-base font-semibold">Operational playbooks</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-5">
                         {playbooks.map((playbook) => (
-                            <div key={playbook.title} className="rounded-lg border border-slate-800/40 bg-slate-900/50 p-4 transition-colors hover:bg-slate-900/70">
-                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-300">
+                            <div key={playbook.title} className="rounded-lg border border-default/40 bg-background-secondary/50 p-4 transition-colors hover:bg-background-secondary/70">
+                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-foreground-tertiary">
                                     <MaterialIcon name="check-circle" size={14} />
                                     {playbook.title}
                                 </h3>
-                                <ul className="space-y-2 text-sm text-slate-300">
+                                <ul className="space-y-2 text-sm text-foreground-tertiary">
                                     {playbook.steps.map((step, idx) => (
                                         <li key={idx} className="flex gap-3">
-                                            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs text-slate-400">
+                                            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-background-tertiary text-xs text-foreground-tertiary">
                                                 {idx + 1}
                                             </span>
                                             <span>{step}</span>
@@ -244,21 +244,21 @@ export default function AdminLandingClient({ metrics }: { metrics: AdminSummaryM
                     </CardContent>
                 </Card>
 
-                <Card className="border border-slate-800/60 bg-slate-950/60 text-slate-200">
+                <Card className="border border-default/60 bg-background-main/60 text-foreground-secondary">
                     <CardHeader>
                         <CardTitle className="text-base font-semibold">Quick actions</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3 text-sm text-slate-300">
+                    <CardContent className="space-y-3 text-sm text-foreground-tertiary">
                         <a
                             href="https://supabase.com/dashboard"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-start gap-3 rounded border border-slate-800/50 bg-slate-900/60 p-3 transition-colors hover:border-slate-700 hover:bg-slate-800/60"
+                            className="flex items-start gap-3 rounded border border-default/50 bg-background-secondary/60 p-3 transition-colors hover:border-strong hover:bg-background-tertiary/60"
                         >
-                            <MaterialIcon name="arrow-up-right" size={16} className="text-slate-400" />
+                            <MaterialIcon name="arrow-up-right" size={16} className="text-foreground-tertiary" />
                             <div>
-                                <p className="font-medium text-slate-200">Jump to Supabase logs</p>
-                                <p className="text-xs text-slate-400">Investigate ingestion function failures or timeouts.</p>
+                                <p className="font-medium text-foreground-secondary">Jump to Supabase logs</p>
+                                <p className="text-xs text-foreground-tertiary">Investigate ingestion function failures or timeouts.</p>
                             </div>
                         </a>
                         <Button asChild variant="secondary" className="w-full">

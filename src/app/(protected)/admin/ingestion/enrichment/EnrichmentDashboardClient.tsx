@@ -77,7 +77,7 @@ const statusBadgeStyles: Record<string, string> = {
     failed: 'bg-rose-500/20 text-rose-100',
     approved: 'bg-emerald-600/20 text-emerald-50',
     rejected: 'bg-rose-600/20 text-rose-50',
-    skipped: 'bg-slate-700 text-slate-100',
+    skipped: 'bg-background-tertiary text-foreground-primary',
 };
 
 export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentDashboardClientProps) {
@@ -463,10 +463,10 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                     header: 'Event',
                     render: (event) => (
                         <div className="flex flex-col gap-0.5">
-                            <div className="font-medium text-slate-200 text-[13px]">{event.title}</div>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                            <div className="font-medium text-foreground-primary text-[13px]">{event.title}</div>
+                            <div className="flex items-center gap-2 text-[11px] text-foreground-muted">
                                 {event.ingestion_source_id && (
-                                    <span className="font-mono text-slate-400">
+                                    <span className="font-mono text-foreground-tertiary">
                                         {event.ingestion_source_id}
                                     </span>
                                 )}
@@ -491,15 +491,15 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                             failed: 'bg-rose-500',
                             approved: 'bg-emerald-600',
                             rejected: 'bg-rose-600',
-                            skipped: 'bg-slate-600',
+                            skipped: 'bg-background-tertiary',
                         };
-                        const color = statusColors[event.enrichment_status] || 'bg-slate-500';
+                        const color = statusColors[event.enrichment_status] || 'bg-background-tertiary';
 
                         return (
                             <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2">
                                     <div className={cn("h-1.5 w-1.5 rounded-full", color)} />
-                                    <span className="text-[11px] capitalize text-slate-300">{event.enrichment_status}</span>
+                                    <span className="text-[11px] capitalize text-foreground-tertiary">{event.enrichment_status}</span>
                                 </div>
                                 {event.enrichment_metadata?.last_error && (
                                     <span className="text-rose-400 text-[10px] leading-snug line-clamp-1">
@@ -518,7 +518,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                     key: 'updated_at',
                     header: 'Updated',
                     render: (event) => (
-                        <div className="text-[11px] text-slate-500">
+                        <div className="text-[11px] text-foreground-muted">
                             {event.updated_at ? formatDistanceToNow(new Date(event.updated_at), { addSuffix: true }) : '—'}
                         </div>
                     ),
@@ -536,7 +536,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                             <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 px-2 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                                className="h-6 px-2 text-[10px] text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
                                 onClick={() => triggerEnrichment([event.id])}
                                 disabled={loading || !event.source_url}
                                 title={!event.source_url ? 'No source URL' : 'Scrape'}
@@ -546,7 +546,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                             <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 px-2 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                                className="h-6 px-2 text-[10px] text-foreground-tertiary hover:text-foreground-primary hover:bg-background-tertiary"
                                 onClick={() => triggerInference([event.id])}
                                 disabled={loading}
                                 title="Infer"
@@ -558,7 +558,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                     href={event.source_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex h-6 w-6 items-center justify-center rounded hover:bg-white/5 text-slate-500 hover:text-slate-300"
+                                    className="flex h-6 w-6 items-center justify-center rounded hover:bg-background-tertiary text-foreground-muted hover:text-foreground-tertiary"
                                 >
                                     <MaterialIcon name="arrow-up-right" size={12} />
                                 </a>
@@ -605,13 +605,13 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
         <div className="space-y-4">
             {/* Progress Bar */}
             {bulkProgress && (
-                <div className="rounded-lg border border-white/5 bg-[#1C1C1C] p-3 mb-4">
-                    <div className="mb-2 flex items-center justify-between text-[11px] text-slate-400">
+                <div className="rounded-lg border border-default bg-background-main p-3 mb-4">
+                    <div className="mb-2 flex items-center justify-between text-[11px] text-foreground-tertiary">
                         <span>
                             {bulkProgress.active ? (
                                 <>
                                     {bulkProgress.mode === 'enrich' ? 'Enriching' : 'Inferring'}{' '}
-                                    <span className="text-slate-200">{bulkProgress.completed}/{bulkProgress.total}</span>
+                                    <span className="text-foreground-primary">{bulkProgress.completed}/{bulkProgress.total}</span>
                                 </>
                             ) : (
                                 <>
@@ -625,9 +625,9 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                             </span>
                         )}
                     </div>
-                    <div className="h-1 w-full overflow-hidden rounded-full bg-white/5">
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-background-tertiary">
                         <div
-                            className="h-full bg-indigo-500 transition-all duration-300"
+                            className="h-full bg-accent-primary transition-all duration-300"
                             style={{ width: `${(bulkProgress.completed / bulkProgress.total) * 100}%` }}
                         />
                     </div>
@@ -636,8 +636,8 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                             <p className="text-[10px] font-medium uppercase tracking-wider text-rose-400">Errors ({bulkProgress.errors.length})</p>
                             <div className="max-h-32 overflow-y-auto space-y-1">
                                 {bulkProgress.errors.slice(0, 5).map((err) => (
-                                    <div key={err.eventId} className="text-[11px] text-slate-500">
-                                        <span className="text-slate-400">{err.title}:</span>{' '}
+                                    <div key={err.eventId} className="text-[11px] text-foreground-muted">
+                                        <span className="text-foreground-tertiary">{err.title}:</span>{' '}
                                         <span className="text-rose-400">{err.error}</span>
                                     </div>
                                 ))}
@@ -649,7 +649,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                             <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 text-[11px] text-slate-400 hover:text-slate-200"
+                                className="h-6 text-[11px] text-foreground-tertiary hover:text-foreground-primary"
                                 onClick={() => setBulkProgress(null)}
                             >
                                 Dismiss
@@ -679,16 +679,16 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <div className="relative">
-                                <MaterialIcon name="search" size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                                <MaterialIcon name="search" size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-foreground-muted" />
                                 <input
                                     type="text"
                                     placeholder="Filter events..."
-                                    className="h-7 w-64 rounded-md border border-white/10 bg-white/5 pl-8 pr-3 text-[13px] text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                                    className="h-7 w-64 rounded-md border border-default bg-background-tertiary pl-8 pr-3 text-[13px] text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/50"
                                     value={searchValue}
                                     onChange={(e) => setSearchValue(e.target.value)}
                                 />
                             </div>
-                            <div className="h-4 w-px bg-white/10 mx-1" />
+                            <div className="h-4 w-px bg-accent-primary-light mx-1" />
                             <div className="flex items-center gap-1">
                                 {['all', 'pending', 'enriched', 'failed'].map((status) => (
                                     <button
@@ -697,8 +697,8 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                         className={cn(
                                             "px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
                                             statusFilter === status
-                                                ? "bg-white/10 text-slate-200"
-                                                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                                                ? "bg-accent-primary-light text-foreground-primary"
+                                                : "text-foreground-muted hover:text-foreground-tertiary hover:bg-background-tertiary"
                                         )}
                                     >
                                         {status}
@@ -714,14 +714,14 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => setColumnsPanelOpen((prev) => !prev)}
-                                    className={cn("h-7 w-7 p-0 text-slate-400 hover:text-slate-200", columnsPanelOpen && "bg-white/10 text-slate-200")}
+                                    className={cn("h-7 w-7 p-0 text-foreground-tertiary hover:text-foreground-primary", columnsPanelOpen && "bg-accent-primary-light text-foreground-primary")}
                                     title="Columns"
                                 >
                                     <MaterialIcon name="settings" size={14} />
                                 </Button>
                                 {columnsPanelOpen && (
-                                    <div className="absolute right-0 z-40 mt-2 w-48 rounded-lg border border-white/10 bg-[#1C1C1C] p-2 shadow-xl">
-                                        <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-slate-500">Columns</p>
+                                    <div className="absolute right-0 z-40 mt-2 w-48 rounded-lg border border-default bg-background-main p-2 shadow-xl">
+                                        <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">Columns</p>
                                         <div className="space-y-1">
                                             {(
                                                 [
@@ -730,14 +730,14 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                                     ['actions', 'Actions'],
                                                 ] as Array<[keyof ColumnVisibility, string]>
                                             ).map(([key, label]) => (
-                                                <label key={key} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-white/5 cursor-pointer">
+                                                <label key={key} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-background-tertiary cursor-pointer">
                                                     <input
                                                         type="checkbox"
-                                                        className="h-3.5 w-3.5 rounded border-white/10 bg-white/5 text-indigo-500 focus:ring-0"
+                                                        className="h-3.5 w-3.5 rounded border-default bg-background-tertiary text-accent-primary focus:ring-0"
                                                         checked={visibleColumns[key]}
                                                         onChange={() => toggleColumnVisibility(key)}
                                                     />
-                                                    <span className="text-[13px] text-slate-300">{label}</span>
+                                                    <span className="text-[13px] text-foreground-tertiary">{label}</span>
                                                 </label>
                                             ))}
                                         </div>
@@ -749,7 +749,7 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                 variant="ghost"
                                 onClick={() => refresh()}
                                 disabled={loading}
-                                className="h-7 w-7 p-0 text-slate-400 hover:text-slate-200"
+                                className="h-7 w-7 p-0 text-foreground-tertiary hover:text-foreground-primary"
                                 title="Refresh"
                             >
                                 <MaterialIcon name="refresh" size={14} />
@@ -762,23 +762,23 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
             {/* Confirmation Dialog */}
             {confirmDialog.open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-lg border border-slate-800 bg-slate-950 p-6 shadow-xl">
-                        <h2 className="text-lg font-semibold text-slate-100">
+                    <div className="w-full max-w-md rounded-lg border border-default bg-background-main p-6 shadow-xl">
+                        <h2 className="text-lg font-semibold text-foreground-primary">
                             {confirmDialog.mode === 'enrich' ? 'Scrape & Enrich' : 'Infer Metadata'} {confirmDialog.eventIds.length} Events?
                         </h2>
-                        <p className="mt-2 text-sm text-slate-400">
+                        <p className="mt-2 text-sm text-foreground-tertiary">
                             {confirmDialog.mode === 'enrich'
                                 ? 'This will scrape source URLs and extract event data using LLM.'
                                 : 'This will generate descriptions and infer tags from event titles (no web scraping).'}
                         </p>
-                        <div className="mt-4 max-h-48 overflow-y-auto rounded border border-slate-800 bg-slate-900/50 p-2">
+                        <div className="mt-4 max-h-48 overflow-y-auto rounded border border-default bg-background-secondary/50 p-2">
                             {confirmDialog.eventIds.slice(0, 8).map((id) => (
-                                <div key={id} className="truncate py-1 text-sm text-slate-300">
+                                <div key={id} className="truncate py-1 text-sm text-foreground-tertiary">
                                     {eventTitleMap.get(id) || id}
                                 </div>
                             ))}
                             {confirmDialog.eventIds.length > 8 && (
-                                <div className="py-1 text-xs text-slate-500">
+                                <div className="py-1 text-xs text-foreground-muted">
                                     + {confirmDialog.eventIds.length - 8} more events
                                 </div>
                             )}
@@ -804,14 +804,14 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
 
             {/* Keyboard Shortcuts Modal */}
             {shortcutsOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-                    <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-950 p-6 shadow-2xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background-main/80 backdrop-blur">
+                    <div className="w-full max-w-md rounded-xl border border-default bg-background-main p-6 shadow-2xl">
                         <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-100">Keyboard Shortcuts</h2>
-                                <p className="text-sm text-slate-400">Speed through enrichment without touching your mouse.</p>
+                                <h2 className="text-lg font-semibold text-foreground-primary">Keyboard Shortcuts</h2>
+                                <p className="text-sm text-foreground-tertiary">Speed through enrichment without touching your mouse.</p>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => setShortcutsOpen(false)} className="text-slate-300 hover:bg-slate-800">
+                            <Button variant="ghost" size="sm" onClick={() => setShortcutsOpen(false)} className="text-foreground-tertiary hover:bg-background-tertiary">
                                 <MaterialIcon name="close" size={16} />
                             </Button>
                         </div>
@@ -824,15 +824,15 @@ export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentD
                                 { keys: '?', description: 'Show this help' },
                                 { keys: 'Esc', description: 'Close dialogs/modals' },
                             ].map((shortcut) => (
-                                <div key={shortcut.keys} className="flex items-center justify-between gap-3 rounded-md border border-slate-800/60 bg-slate-900/60 px-3 py-2">
-                                    <span className="font-mono text-xs uppercase tracking-wide text-slate-200">
+                                <div key={shortcut.keys} className="flex items-center justify-between gap-3 rounded-md border border-default/60 bg-background-secondary/60 px-3 py-2">
+                                    <span className="font-mono text-xs uppercase tracking-wide text-foreground-primary">
                                         {shortcut.keys}
                                     </span>
-                                    <span className="text-sm text-slate-300">{shortcut.description}</span>
+                                    <span className="text-sm text-foreground-tertiary">{shortcut.description}</span>
                                 </div>
                             ))}
                         </div>
-                        <p className="mt-4 text-center text-xs text-slate-500">Press Esc to close.</p>
+                        <p className="mt-4 text-center text-xs text-foreground-muted">Press Esc to close.</p>
                     </div>
                 </div>
             )}

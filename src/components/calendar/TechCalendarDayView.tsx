@@ -7,7 +7,13 @@ import { EventCard } from './shared/EventCard';
 import '@/app/styles/tech-day-view.css';
 import '@/app/styles/event-card.css';
 import { processEventsForDayView } from '@/utils/multiDayEventUtils';
-import { getIconForCategory, getEventVisualInfo, createCategoryColumnMap, detectOverlappingEvents } from '@/utils/eventViewUtils';
+import {
+    getIconForCategory,
+    getEventVisualInfo,
+    createCategoryColumnMap,
+    calculateOverlapLayout,
+    EventLayoutInfo
+} from '@/utils/eventViewUtils';
 import { formatTime } from '@/utils/dateUtils';
 import { getPillColor } from '@/utils/pillColorUtils';
 import { getCategoryColor } from '@/utils/eventUtils';
@@ -22,8 +28,6 @@ export interface TechCalendarDayViewProps {
 
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => ({ hour: i }));
 
-
-
 export function TechCalendarDayView({ events, initialDate, categories, onEventSelect }: TechCalendarDayViewProps) {
     const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
     const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
@@ -33,40 +37,13 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
     const dayEvents = useMemo(() => {
         // Use proper day view processing for multi-day events
         const processedEvents = processEventsForDayView(events, initialDate);
-        
+
         console.log('Day view events processed:', {
             originalEvents: events.length,
             processedEvents: processedEvents.length,
             viewDate: initialDate.toDateString()
         });
-        
-        // Log detailed original events data
-        events.forEach((e, index) => {
-            console.log('Original event', index, '(' + e.title + '):', {
-                title: e.title,
-                startTime: e.startTime,
-                endTime: e.endTime,
-                isMultiDay: 'isMultiDay' in e ? e.isMultiDay : 'NOT FOUND',
-                dailySchedule: 'dailySchedule' in e ? e.dailySchedule : 'NOT FOUND',
-                eventPattern: 'eventPattern' in e ? e.eventPattern : 'NOT FOUND',
-                hasIsMultiDay: 'isMultiDay' in e,
-                hasDailySchedule: 'dailySchedule' in e,
-                hasEventPattern: 'eventPattern' in e,
-                allKeys: Object.keys(e)
-            });
-        });
-        
-        // Log detailed processed events data
-        console.log('Processed events detailed:', processedEvents.map(e => ({
-            title: e.title,
-            startTime: e.startTime,
-            endTime: e.endTime,
-            isInstance: 'isInstance' in e ? e.isInstance : false,
-            originalEventId: 'originalEventId' in e ? e.originalEventId : null,
-            instanceDate: 'instanceDate' in e ? e.instanceDate : null,
-            dayInfo: 'dayInfo' in e ? e.dayInfo : null
-        })));
-        
+
         return processedEvents;
     }, [events, initialDate]);
 
@@ -74,12 +51,22 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
         return createCategoryColumnMap(categories);
     }, [categories]);
 
-    // Detect overlapping events for blur effect
-    const overlapMap = useMemo(() => {
-        return detectOverlappingEvents(dayEvents);
-    }, [dayEvents]);
+    // Calculate overlap layouts for each category column
+    const layoutsByCategory = useMemo(() => {
+        const layouts = new Map<string, Map<string, EventLayoutInfo>>();
 
-    // Handlers can remain the same
+        categories.forEach(category => {
+            // Filter events for this specific category
+            const categoryEvents = dayEvents.filter(e => e.eventTypeId === category.id);
+            // Calculate layout for these events
+            const layout = calculateOverlapLayout(categoryEvents);
+            layouts.set(category.id, layout);
+        });
+
+        return layouts;
+    }, [dayEvents, categories]);
+
+    // Handlers
     const handleEventClick = (event: Event) => {
         setIsPreviewVisible(false);
         onEventSelect?.(event);
@@ -156,9 +143,18 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                         if (!gridColumn) return null;
 
                         const visualInfo = getEventVisualInfo(event);
-                        const { startRow, endRow } = visualInfo;
+                        const { startRow, endRow, span } = visualInfo;
 
-                        // Get category color for this event (same logic as month view)
+                        // Get layout info for overlaps
+                        const categoryLayout = layoutsByCategory.get(event.eventTypeId);
+                        const layoutInfo = categoryLayout?.get(event.id) || { columnIndex: 0, totalColumns: 1 };
+
+                        // Calculate width and position based on overlap
+                        const widthPercent = 100 / layoutInfo.totalColumns;
+                        const leftPercent = layoutInfo.columnIndex * widthPercent;
+                        const isOverlapping = layoutInfo.totalColumns > 1;
+
+                        // Get category color for this event
                         const categoryColor = getCategoryColor(event);
                         const titleColor = getPillColor(categoryColor, 0.5);
 
@@ -167,9 +163,14 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                 key={event.id}
                                 style={{
                                     gridColumn: gridColumn,
-                                    gridRow: `${startRow} / ${endRow}`
+                                    gridRow: `${startRow} / ${endRow}`,
+                                    // Apply overlap positioning
+                                    width: `${widthPercent}%`,
+                                    marginLeft: `${leftPercent}%`,
+                                    zIndex: 10 + layoutInfo.columnIndex, // Layer stacking for overlaps
+                                    paddingRight: isOverlapping ? '2px' : '0' // Add slight gap
                                 }}
-                                className="h-full p-px"
+                                className="h-full p-px relative"
                             >
                                 <EventCard
                                     event={event}
@@ -178,7 +179,7 @@ export function TechCalendarDayView({ events, initialDate, categories, onEventSe
                                     onLeave={handleEventLeave}
                                     viewType="day"
                                     visualInfo={visualInfo}
-                                    isOverlapping={overlapMap.get(event.id) || false}
+                                    isOverlapping={isOverlapping}
                                     showCareerImpact={true}
                                     style={{
                                         '--category-title-color': titleColor,

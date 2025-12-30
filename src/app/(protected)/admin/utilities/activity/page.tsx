@@ -131,8 +131,8 @@ export default function AdminApiActivityPage() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-semibold text-slate-100">API Activity</h1>
-                <p className="text-sm text-slate-400 max-w-3xl">
+                <h1 className="text-2xl font-semibold text-foreground-100">API Activity</h1>
+                <p className="text-sm text-foreground-400 max-w-3xl">
                     Review extraction jobs hitting the ingestion APIs. Filter by status or search for specific URLs and events.
                 </p>
             </div>
@@ -144,26 +144,26 @@ export default function AdminApiActivityPage() {
                     <MaterialIcon
                         name="search"
                         size={16}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-400"
                     />
                     <input
                         type="text"
                         placeholder="Search by URL, domain, or event..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-lg border border-slate-700 bg-slate-900 pl-10 pr-4 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-600"
+                        className="w-full rounded-lg border border-default700 bg-background-900 pl-10 pr-4 py-2 text-sm text-foreground-100 placeholder:text-foreground-500 focus:border-default600 focus:outline-none focus:ring-1 focus:ring-slate-600"
                     />
                 </div>
 
                 {/* Status Filter */}
-                <div className="flex gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1">
+                <div className="flex gap-1 rounded-lg border border-default800 bg-background-950/60 p-1">
                     {statusFilters.map((filter) => (
                         <button
                             key={filter.value}
                             onClick={() => setStatusFilter(filter.value)}
                             className={`px-3 py-1 rounded text-xs transition-colors ${statusFilter === filter.value
-                                    ? 'bg-slate-700 text-white'
-                                    : 'text-slate-400 hover:text-slate-200'
+                                    ? 'bg-background-700 text-white'
+                                    : 'text-foreground-400 hover:text-foreground-200'
                                 }`}
                         >
                             {filter.label}
@@ -175,7 +175,7 @@ export default function AdminApiActivityPage() {
                 <select
                     value={limit}
                     onChange={(e) => setLimit(Number(e.target.value))}
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+                    className="rounded-lg border border-default700 bg-background-900 px-3 py-2 text-sm text-foreground-100 focus:border-default600 focus:outline-none"
                 >
                     <option value={30}>30 items</option>
                     <option value={50}>50 items</option>
@@ -188,17 +188,17 @@ export default function AdminApiActivityPage() {
                     size="sm"
                     onClick={fetchActivity}
                     disabled={loading}
-                    className="text-slate-400 hover:text-white"
+                    className="text-foreground-400 hover:text-white"
                 >
                     <MaterialIcon name="refresh" size={16} className={loading ? 'animate-spin' : ''} />
                 </Button>
             </div>
 
-            <Card className="border border-slate-800/60 bg-slate-950/70">
+            <Card className="border border-default800/60 bg-background-950/70">
                 <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                         <span>Extraction Jobs</span>
-                        <span className="text-sm font-normal text-slate-400">
+                        <span className="text-sm font-normal text-foreground-400">
                             {filteredActivity.length} {filteredActivity.length === 1 ? 'result' : 'results'}
                         </span>
                     </CardTitle>
@@ -206,11 +206,11 @@ export default function AdminApiActivityPage() {
                 <CardContent className="space-y-4">
                     {loading && activity.length === 0 ? (
                         <div className="flex items-center justify-center py-12">
-                            <MaterialIcon name="refresh" size={24} className="animate-spin text-slate-400" />
-                            <span className="ml-2 text-slate-400">Loading activity...</span>
+                            <MaterialIcon name="refresh" size={24} className="animate-spin text-foreground-400" />
+                            <span className="ml-2 text-foreground-400">Loading activity...</span>
                         </div>
                     ) : filteredActivity.length === 0 ? (
-                        <div className="rounded-lg border border-slate-800/60 bg-slate-950/60 p-6 text-sm text-slate-400 text-center">
+                        <div className="rounded-lg border border-default800/60 bg-background-950/60 p-6 text-sm text-foreground-400 text-center">
                             {searchQuery || statusFilter !== 'all'
                                 ? 'No jobs match your filters. Try adjusting your search or status filter.'
                                 : 'No extraction jobs recorded yet. Once new enrichment runs are triggered you\'ll see them here.'}
@@ -224,12 +224,12 @@ export default function AdminApiActivityPage() {
                             return (
                                 <div
                                     key={item.id}
-                                    className="rounded-lg border border-slate-800/60 bg-slate-950/60 p-4 text-sm text-slate-300"
+                                    className="rounded-lg border border-default800/60 bg-background-950/60 p-4 text-sm text-foreground-300"
                                 >
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div className="flex flex-col gap-1">
-                                            <span className="font-mono text-[13px] text-slate-500">{item.id}</span>
-                                            <span className="text-slate-100">
+                                            <span className="font-mono text-[13px] text-foreground-500">{item.id}</span>
+                                            <span className="text-foreground-100">
                                                 {item.events?.title ?? item.source_domain ?? (() => {
                                                     try {
                                                         return new URL(item.source_url).hostname;
@@ -250,32 +250,32 @@ export default function AdminApiActivityPage() {
                                         <Badge variant={badgeVariant}>{formatStatus(item.status)}</Badge>
                                     </div>
 
-                                    <div className="mt-3 grid gap-3 text-xs text-slate-400 md:grid-cols-3">
+                                    <div className="mt-3 grid gap-3 text-xs text-foreground-400 md:grid-cols-3">
                                         <div>
-                                            <span className="block text-slate-500">Started</span>
+                                            <span className="block text-foreground-500">Started</span>
                                             <span>{new Date(item.started_at).toLocaleString()}</span>
                                         </div>
                                         <div>
-                                            <span className="block text-slate-500">Duration</span>
+                                            <span className="block text-foreground-500">Duration</span>
                                             <span>{duration}</span>
                                         </div>
                                         <div>
-                                            <span className="block text-slate-500">Adapter</span>
+                                            <span className="block text-foreground-500">Adapter</span>
                                             <span>{actorLabel}</span>
                                         </div>
                                     </div>
 
-                                    <div className="mt-3 grid gap-3 text-xs text-slate-400 md:grid-cols-3">
+                                    <div className="mt-3 grid gap-3 text-xs text-foreground-400 md:grid-cols-3">
                                         <div>
-                                            <span className="block text-slate-500">Decision</span>
+                                            <span className="block text-foreground-500">Decision</span>
                                             <span>{item.decision}</span>
                                         </div>
                                         <div>
-                                            <span className="block text-slate-500">Cache Hit</span>
+                                            <span className="block text-foreground-500">Cache Hit</span>
                                             <span>{item.cache_hit ? 'Yes' : 'No'}</span>
                                         </div>
                                         <div>
-                                            <span className="block text-slate-500">Normalized URL</span>
+                                            <span className="block text-foreground-500">Normalized URL</span>
                                             <span className="break-all">{item.normalized_url}</span>
                                         </div>
                                     </div>

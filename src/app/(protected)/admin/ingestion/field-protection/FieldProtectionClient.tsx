@@ -180,7 +180,7 @@ export default function FieldProtectionClient({ initialRules }: FieldProtectionC
             key: 'field_name',
             header: 'Field',
             render: (rule) => (
-                <code className="rounded bg-slate-900/60 px-2 py-1 text-sm text-slate-100">
+                <code className="rounded bg-background-secondary/60 px-2 py-1 text-sm text-foreground-primary">
                     {rule.field_name}
                 </code>
             ),
@@ -199,9 +199,9 @@ export default function FieldProtectionClient({ initialRules }: FieldProtectionC
             key: 'updated_at',
             header: 'Updated',
             render: (rule) => (
-                <div className="text-xs text-slate-300">
+                <div className="text-xs text-foreground-tertiary">
                     <div>{formatDistanceToNow(new Date(rule.updated_at), { addSuffix: true })}</div>
-                    {rule.updated_by && <div className="text-slate-500">by {rule.updated_by}</div>}
+                    {rule.updated_by && <div className="text-foreground-muted">by {rule.updated_by}</div>}
                 </div>
             ),
             width: 160,
@@ -292,24 +292,24 @@ export default function FieldProtectionClient({ initialRules }: FieldProtectionC
                 isLoading={loading && filteredRules.length === 0}
                 toolbar={
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="text-xs uppercase tracking-wide text-slate-400">
+                        <div className="text-xs uppercase tracking-wide text-foreground-tertiary">
                             {filteredRules.length} fields • {selectedRows.length} selected
                         </div>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-foreground-muted">
                             Use bulk actions to programmatically lock sensitive properties.
                         </span>
                     </div>
                 }
             />
 
-            <Card className="border border-slate-800/60 bg-slate-950/60 text-slate-200">
+            <Card className="border border-default800/60 bg-background-950/60 text-foreground-200">
                 <CardHeader className="space-y-2">
                     <CardTitle className="text-base font-semibold">Mode reference</CardTitle>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-foreground-tertiary">
                         Configure how ingestion updates interact with manually curated data.
                     </p>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm text-slate-300">
+                <CardContent className="space-y-3 text-sm text-foreground-tertiary">
                     <div className="flex items-start gap-3">
                         <Badge className={MODE_BADGE_CLASSES.auto_update}>{MODE_LABELS.auto_update}</Badge>
                         <span>Allow trusted ingestion sources to overwrite this field automatically.</span>
@@ -338,28 +338,28 @@ function FieldProtectionShortcutsOverlay({ onClose }: { onClose: () => void }) {
         { keys: '?', label: 'Show this help' },
     ];
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-            <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-950 p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background-950/80 backdrop-blur">
+            <div className="w-full max-w-md rounded-xl border border-default800 bg-background-950 p-6 shadow-2xl">
                 <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
-                        <h2 className="text-lg font-semibold text-slate-100">Field protection shortcuts</h2>
-                        <p className="text-sm text-slate-400">
+                        <h2 className="text-lg font-semibold text-foreground-primary">Field protection shortcuts</h2>
+                        <p className="text-sm text-foreground-tertiary">
                             Update multiple fields without taking your hands off the keyboard.
                         </p>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-300 hover:bg-slate-800">
+                    <Button variant="ghost" size="icon" onClick={onClose} className="text-foreground-tertiary hover:bg-background-800">
                         <MaterialIcon name="close" size={16} />
                     </Button>
                 </div>
                 <div className="space-y-2">
                     {shortcuts.map((shortcut) => (
-                        <div key={shortcut.keys} className="flex items-center justify-between gap-3 rounded-md border border-slate-800/60 bg-slate-900/60 px-3 py-2">
-                            <span className="font-mono text-xs uppercase tracking-wide text-slate-200">{shortcut.keys}</span>
-                            <span className="text-sm text-slate-300">{shortcut.label}</span>
+                        <div key={shortcut.keys} className="flex items-center justify-between gap-3 rounded-md border border-default800/60 bg-background-secondary/60 px-3 py-2">
+                            <span className="font-mono text-xs uppercase tracking-wide text-foreground-200">{shortcut.keys}</span>
+                            <span className="text-sm text-foreground-tertiary">{shortcut.label}</span>
                         </div>
                     ))}
                 </div>
-                <p className="mt-4 text-center text-xs text-slate-500">Press Esc to close.</p>
+                <p className="mt-4 text-center text-xs text-foreground-muted">Press Esc to close.</p>
             </div>
         </div>
     );

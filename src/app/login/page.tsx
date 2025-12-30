@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 
 import { loginAction } from '@/app/auth/actions';
@@ -13,7 +13,7 @@ import Loading from '@/components/Loading';
 import type { OAuthProvider } from '@/types';
 import type { AuthFormState } from '@/app/auth/actions';
 
-export default function LoginPage() {
+function LoginPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { showError, showInfo } = useSnackbar();
@@ -251,5 +251,14 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+// Wrap in Suspense to handle useSearchParams() in Next.js 15+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<Loading />}>
+            <LoginPageContent />
+        </Suspense>
     );
 }

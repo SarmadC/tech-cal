@@ -1,9 +1,8 @@
 // src/components/calendar/TechCalendarWeekView.tsx
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Event, EventType, AppProfile, MultiDayEvent, MultiDayEventInstance } from '@/types';
-import EventPreviewCard from './EventPreviewCard';
 import { WeekHeader } from './shared/WeekHeader';
 import { TimeSlotGrid } from './shared/TimeSlotGrid';
 import '@/app/styles/tech-week-view.css';
@@ -29,11 +28,6 @@ export default function TechCalendarWeekView({
     profile: _profile,
     onEventSelect,
 }: TechCalendarWeekViewProps) {
-    const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
-    const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-    const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-    const [hideTimer, setHideTimer] = useState<NodeJS.Timeout | null>(null);
-
     // Get week days
     const weekDays = useMemo(() => {
         return getWeekDays(initialDate);
@@ -51,30 +45,9 @@ export default function TechCalendarWeekView({
     // Process events using the proper multi-day processing function
     const processedEvents = useMemo(() => {
         if (!events || events.length === 0) return [];
-        
-        console.log('Week view processing events:', {
-            originalEvents: events.length,
-            events: events.map(e => ({
-                title: e.title,
-                startTime: e.startTime,
-                endTime: e.endTime,
-                isMultiDay: e.isMultiDay,
-                dailySchedule: e.dailySchedule
-            }))
-        });
-        
+
         const processed = processEventsForWeekView(events);
-        
-        console.log('Week view processed events:', {
-            processedCount: processed.length,
-            processedEvents: processed.map(e => ({
-                title: e.title,
-                startTime: e.startTime,
-                endTime: e.endTime,
-                isInstance: 'isInstance' in e ? e.isInstance : false
-            }))
-        });
-        
+
         return processed;
     }, [events]);
 
@@ -115,50 +88,16 @@ export default function TechCalendarWeekView({
 
     // Event handlers
     const handleEventClick = (event: Event | MultiDayEventInstance) => {
-        setIsPreviewVisible(false);
         onEventSelect?.(event);
     };
 
     const handleEventHover = (event: Event | MultiDayEventInstance, mouseEvent: React.MouseEvent) => {
-        if (hideTimer) {
-            clearTimeout(hideTimer);
-            setHideTimer(null);
-        }
-
-        const rect = mouseEvent.currentTarget.getBoundingClientRect();
-        setPreviewEvent(event);
-        setPreviewPosition({ x: rect.right + 10, y: rect.top });
-        setIsPreviewVisible(true);
+        // Hover handling will be managed by CSS/EventCard for expansion
     };
 
     const handleEventLeave = () => {
-        const timer = setTimeout(() => {
-            setIsPreviewVisible(false);
-            setPreviewEvent(null);
-        }, 300);
-        setHideTimer(timer);
+        // Leave handling will be managed by CSS/EventCard for expansion
     };
-
-    const handlePreviewHover = () => {
-        if (hideTimer) {
-            clearTimeout(hideTimer);
-            setHideTimer(null);
-        }
-    };
-
-    const handlePreviewLeave = () => {
-        setIsPreviewVisible(false);
-        setPreviewEvent(null);
-    };
-
-    // Cleanup timer on unmount
-    useEffect(() => {
-        return () => {
-            if (hideTimer) {
-                clearTimeout(hideTimer);
-            }
-        };
-    }, [hideTimer]);
 
     return (
         <div className="tech-calendar-week-view flex-shrink-0 w-full">
@@ -178,18 +117,6 @@ export default function TechCalendarWeekView({
                     onEventLeave={handleEventLeave}
                 />
             </div>
-
-            {/* Event Preview Card */}
-            {previewEvent && (
-                <EventPreviewCard
-                    event={previewEvent}
-                    isVisible={isPreviewVisible}
-                    position={previewPosition}
-                    onClose={handlePreviewLeave}
-                    onHover={handlePreviewHover}
-                    onLeave={handlePreviewLeave}
-                />
-            )}
         </div>
     );
 }

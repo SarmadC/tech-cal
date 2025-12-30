@@ -828,27 +828,27 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             <div className="fixed bottom-4 right-4 z-40">
                 <button
                     onClick={() => setShortcutsOpen(true)}
-                    className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-2 text-xs text-slate-300 shadow-lg hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-2 rounded-lg border border-default bg-background-secondary/90 px-3 py-2 text-xs text-foreground-tertiary shadow-lg hover:bg-background-tertiary transition-colors"
                 >
                     <MaterialIcon name="info" size={14} />
-                    Press <kbd className="rounded bg-slate-700 px-1.5 py-0.5 font-mono">?</kbd> for shortcuts
+                    Press <kbd className="rounded bg-background-tertiary px-1.5 py-0.5 font-mono">?</kbd> for shortcuts
                 </button>
             </div>
 
             {/* Shortcuts Overlay */}
             {shortcutsOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+                    <div className="w-full max-w-md rounded-xl border border-default bg-background-secondary p-6 shadow-2xl">
                         <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-100">Keyboard Shortcuts</h2>
-                                <p className="text-sm text-slate-400">Navigate and review fields without using your mouse.</p>
+                                <h2 className="text-lg font-semibold text-foreground-primary">Keyboard Shortcuts</h2>
+                                <p className="text-sm text-foreground-400">Navigate and review fields without using your mouse.</p>
                             </div>
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setShortcutsOpen(false)}
-                                className="text-slate-300 hover:bg-slate-800"
+                                className="text-foreground-tertiary hover:bg-background-tertiary"
                             >
                                 <MaterialIcon name="close" size={16} />
                             </Button>
@@ -867,16 +867,16 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
                             ].map((shortcut) => (
                                 <div
                                     key={shortcut.keys}
-                                    className="flex items-center justify-between gap-3 rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                                    className="flex items-center justify-between gap-3 rounded-md border border-default800 bg-background-950/60 px-3 py-2"
                                 >
-                                    <span className="font-mono text-xs uppercase tracking-wide text-slate-200">
+                                    <span className="font-mono text-xs uppercase tracking-wide text-foreground-200">
                                         {shortcut.keys}
                                     </span>
-                                    <span className="text-sm text-slate-400">{shortcut.description}</span>
+                                    <span className="text-sm text-foreground-400">{shortcut.description}</span>
                                 </div>
                             ))}
                         </div>
-                        <p className="mt-4 text-center text-xs text-slate-500">Press Esc to close.</p>
+                        <p className="mt-4 text-center text-xs text-foreground-500">Press Esc to close.</p>
                     </div>
                 </div>
             )}
@@ -884,23 +884,23 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             {/* Up Next Prompt */}
             {showNextPrompt && nextItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+                    <div className="w-full max-w-md rounded-xl border border-default bg-background-secondary p-6 shadow-2xl">
                         <div className="text-center">
                             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
                                 <MaterialIcon name="check" size={24} className="text-emerald-400" />
                             </div>
-                            <h2 className="text-lg font-semibold text-slate-100">Review Complete!</h2>
-                            <p className="mt-2 text-sm text-slate-400">
+                            <h2 className="text-lg font-semibold text-foreground-primary">Review Complete!</h2>
+                            <p className="mt-2 text-sm text-foreground-400">
                                 Would you like to review the next pending item?
                             </p>
-                            <p className="mt-1 text-sm font-medium text-slate-200 truncate">
+                            <p className="mt-1 text-sm font-medium text-foreground-200 truncate">
                                 {nextItem.eventTitle}
                             </p>
                         </div>
                         <div className="mt-6 flex gap-3">
                             <Button
                                 variant="outline"
-                                className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
+                                className="flex-1 border-default text-foreground-tertiary hover:bg-background-tertiary"
                                 onClick={() => {
                                     setShowNextPrompt(false);
                                     router.push('/admin/ingestion/update-queue');

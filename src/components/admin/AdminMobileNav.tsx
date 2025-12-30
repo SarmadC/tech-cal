@@ -130,22 +130,22 @@ export default function AdminMobileNav({ isOpen, onClose }: AdminMobileNavProps)
             {/* Slide-out nav drawer */}
             <nav
                 className={cn(
-                    'fixed left-0 top-0 z-[80] h-full w-[280px] bg-[#1C1C1C] shadow-2xl transition-transform duration-300 ease-out md:hidden',
+                    'fixed left-0 top-0 z-[80] h-full w-[280px] bg-background-main shadow-2xl transition-transform duration-300 ease-out md:hidden',
                     isOpen ? 'translate-x-0' : '-translate-x-full'
                 )}
                 aria-label="Mobile admin navigation"
             >
                 {/* Header */}
-                <div className="flex h-14 items-center justify-between border-b border-[#2C2C2C] px-4">
+                <div className="flex h-14 items-center justify-between border-b border-default px-4">
                     <div className="flex items-center gap-2">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-sm border border-indigo-500/50 bg-indigo-500/20">
-                            <div className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
+                        <div className="flex h-5 w-5 items-center justify-center rounded-sm border border-accent-primary/50 bg-accent-primary-light">
+                            <div className="h-2.5 w-2.5 rounded-full bg-accent-primary" />
                         </div>
-                        <span className="text-sm font-medium text-slate-200">Tech-Cal Admin</span>
+                        <span className="text-sm font-medium text-foreground-secondary">Tech-Cal Admin</span>
                     </div>
                     <button
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-foreground-tertiary transition-colors hover:bg-accent-primary-light hover:text-foreground-secondary"
                         aria-label="Close navigation"
                     >
                         <MaterialIcon name="close" size={20} />
@@ -156,7 +156,7 @@ export default function AdminMobileNav({ isOpen, onClose }: AdminMobileNavProps)
                 <div className="flex-1 overflow-y-auto px-3 py-4">
                     {sections.map((section) => (
                         <div key={section.label} className="mb-6">
-                            <div className="mb-2 px-2 text-[11px] font-medium uppercase tracking-wider text-slate-500">
+                            <div className="mb-2 px-2 text-[11px] font-medium uppercase tracking-wider text-foreground-muted">
                                 {section.label}
                             </div>
                             <div className="space-y-1">
@@ -169,8 +169,8 @@ export default function AdminMobileNav({ isOpen, onClose }: AdminMobileNavProps)
                                             className={cn(
                                                 'group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors',
                                                 active
-                                                    ? 'bg-white/10 font-medium text-slate-100'
-                                                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                                                    ? 'bg-accent-primary-light font-medium text-foreground-primary'
+                                                    : 'text-foreground-tertiary hover:bg-accent-primary-light hover:text-foreground-secondary'
                                             )}
                                         >
                                             <div className="flex items-center gap-3">
@@ -178,8 +178,8 @@ export default function AdminMobileNav({ isOpen, onClose }: AdminMobileNavProps)
                                                     className={cn(
                                                         'transition-colors',
                                                         active
-                                                            ? 'text-indigo-400'
-                                                            : 'text-slate-500 group-hover:text-slate-400'
+                                                            ? 'text-accent-primary'
+                                                            : 'text-foreground-muted group-hover:text-foreground-tertiary'
                                                     )}
                                                 >
                                                     {item.icon}
@@ -187,7 +187,7 @@ export default function AdminMobileNav({ isOpen, onClose }: AdminMobileNavProps)
                                                 <span>{item.title}</span>
                                             </div>
                                             {item.badge ? (
-                                                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-indigo-500/20 px-1.5 text-[11px] font-medium text-indigo-300">
+                                                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent-primary-light px-1.5 text-[11px] font-medium text-accent-primary">
                                                     {item.badge}
                                                 </span>
                                             ) : null}
@@ -200,14 +200,14 @@ export default function AdminMobileNav({ isOpen, onClose }: AdminMobileNavProps)
                 </div>
 
                 {/* Footer */}
-                <div className="border-t border-[#2C2C2C] p-4">
+                <div className="border-t border-default p-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-accent-primary to-accent-primary/80 text-xs font-bold text-accent-primary-foreground">
                             A
                         </div>
                         <div className="flex-1">
-                            <div className="text-sm text-slate-300">Admin User</div>
-                            <div className="text-xs text-slate-500">admin@tech-cal.com</div>
+                            <div className="text-sm text-foreground-tertiary">Admin User</div>
+                            <div className="text-xs text-foreground-muted">admin@tech-cal.com</div>
                         </div>
                     </div>
                 </div>
