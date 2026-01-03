@@ -28,8 +28,34 @@ export class ProfileService {
 
             return profileTransformer.toApp(data);
         } catch (error) {
-            console.error('Error fetching profile:', error);
-            Sentry.captureException(error, { extra: { function: 'getProfile', userId } });
+            // Handle both Error objects and Supabase PostgrestError objects (which aren't instanceof Error)
+            const errorAny = error as any;
+            const errorDetails = {
+                message: errorAny?.message || (typeof error === 'string' ? error : 'Unknown error'),
+                code: errorAny?.code,
+                details: errorAny?.details,
+                hint: errorAny?.hint,
+                name: errorAny?.name
+            };
+
+            console.error('Error fetching profile (structured):', errorDetails);
+            
+            // Fallback: Try to JSON stringify if it looks empty in console
+            if (Object.keys(errorDetails).every(k => !errorDetails[k as keyof typeof errorDetails])) {
+                 try {
+                    console.error('Error fetching profile (JSON):', JSON.stringify(error, null, 2));
+                 } catch (e) {
+                    console.error('Error fetching profile (non-serializable):', String(error));
+                 }
+            }
+
+            Sentry.captureException(error, { 
+                extra: { 
+                    function: 'getProfile', 
+                    userId,
+                    errorDetails
+                } 
+            });
             
             // Re-throw ProfileNotFoundError as-is for specific handling
             if (error instanceof Error && error.name === 'ProfileNotFoundError') {
@@ -62,8 +88,24 @@ export class ProfileService {
 
             return profileTransformer.toApp(data);
         } catch (error) {
-            console.error('Error creating profile:', error);
-            Sentry.captureException(error, { extra: { function: 'createProfile', userId: profileData.id } });
+            // Handle both Error objects and Supabase PostgrestError objects
+            const errorAny = error as any;
+            const errorDetails = {
+                message: errorAny?.message || (typeof error === 'string' ? error : 'Unknown error'),
+                code: errorAny?.code,
+                details: errorAny?.details,
+                hint: errorAny?.hint
+            };
+            
+            console.error('Error creating profile (structured):', errorDetails);
+
+            Sentry.captureException(error, { 
+                extra: { 
+                    function: 'createProfile', 
+                    userId: profileData.id,
+                    errorDetails
+                } 
+            });
             throw new Error('Failed to create profile.');
         }
     }
@@ -103,8 +145,26 @@ export class ProfileService {
 
             return newProfile;
         } catch (error) {
-            console.error('Error updating profile:', error);
-            Sentry.captureException(error, { extra: { function: 'updateProfile', userId, updates } });
+            // Handle both Error objects and Supabase PostgrestError objects
+            const errorAny = error as any;
+            const errorDetails = {
+                message: errorAny?.message || (typeof error === 'string' ? error : 'Unknown error'),
+                code: errorAny?.code,
+                details: errorAny?.details,
+                hint: errorAny?.hint,
+                updates
+            };
+
+            console.error('Error updating profile (structured):', errorDetails);
+
+            Sentry.captureException(error, { 
+                extra: { 
+                    function: 'updateProfile', 
+                    userId, 
+                    updates,
+                    errorDetails
+                } 
+            });
             throw new Error('Failed to update profile.');
         }
     }

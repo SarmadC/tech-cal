@@ -257,32 +257,28 @@ const MonthEventCardComponent: React.FC<MonthEventCardProps> = ({
             onMouseLeave={onLeave}
             tabIndex={0}
             role="button"
-            aria-label={`${event.title}${timeLabel ? `, ${timeLabel}` : ''}${durationLabel ? `, ${durationLabel}` : ''}${showCategory ? `, ${event.category!.name}` : ''}`}
+            aria-label={`${event.title}`}
         >
             <span className="month-event-card-accent" aria-hidden="true" />
-            <span className="month-event-card-label">{event.title}</span>
 
-            {showCategory && (
-                <span className="month-event-card-meta">
-                    <span className="month-event-card-pill month-event-card-pill--category">
-                        {event.category!.name}
-                    </span>
-                </span>
-            )}
-
+            {/* Icon Lockup: Left Aligned */}
             {event.organization?.logo && (
-                <span className="month-event-card-logo">
+                <span className="month-event-card-logo" style={{ marginRight: '6px', marginLeft: '2px' }}>
                     <Image
                         src={event.organization.logo}
                         alt={`${event.organization.name} logo`}
-                        width={20}
-                        height={20}
+                        width={16}
+                        height={16}
                         onError={(imageEvent) => {
                             imageEvent.currentTarget.style.visibility = 'hidden';
                         }}
                     />
                 </span>
             )}
+
+            <span className="month-event-card-label" style={{ padding: '2px 0' }}>{event.title}</span>
+
+            {/* Redundant pills removed for cleaner look as per user request */}
         </div>
     );
 };

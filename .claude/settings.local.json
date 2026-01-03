@@ -64,7 +64,8 @@
       "Bash(REFRESH_ALL=1 npx tsx:*)",
       "Bash(wc:*)",
       "Bash(xargs:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "mcp__playwright__browser_run_code"
     ],
     "deny": [],
     "ask": []

@@ -37,23 +37,23 @@ const MobileNavigationControls: FC<MobileNavigationControlsProps> = ({
     const formatDateDisplay = (date: Date) => {
         switch (view) {
             case 'month':
-                return date.toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    year: 'numeric' 
+                return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    year: 'numeric'
                 });
             case 'week':
                 const startOfWeek = new Date(date);
                 const dayOfWeek = startOfWeek.getDay();
                 const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
                 startOfWeek.setDate(startOfWeek.getDate() + daysToMonday);
-                
+
                 const endOfWeek = new Date(startOfWeek);
                 endOfWeek.setDate(startOfWeek.getDate() + 6);
-                
+
                 return `${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
             case 'day':
-                return date.toLocaleDateString('en-US', { 
-                    month: 'short', 
+                return date.toLocaleDateString('en-US', {
+                    month: 'short',
                     day: 'numeric',
                     year: 'numeric'
                 });

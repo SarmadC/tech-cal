@@ -3,7 +3,7 @@
 'use client'
 
 // 1. CORRECTED IMPORTS
-import { useEffect, useActionState } from 'react';      // Core hooks from 'react'
+import { useEffect, useActionState, useRef, useState } from 'react';      // Core hooks from 'react'
 import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
 
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -19,28 +19,96 @@ interface ProfileSettingsFormProps {
     profile: AppProfile | null;
 }
 
+/**
+ * Get UTC offset in minutes for a given timezone
+ */
+function getTimezoneOffset(timezone: string): number | null {
+    try {
+        const now = new Date();
+
+        // Get UTC hours and minutes
+        const utcHours = now.getUTCHours();
+        const utcMinutes = now.getUTCMinutes();
+
+        // Get timezone hours and minutes
+        const tzFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+
+        const tzParts = tzFormatter.formatToParts(now);
+        const tzHours = parseInt(tzParts.find(p => p.type === 'hour')?.value || '0', 10);
+        const tzMinutes = parseInt(tzParts.find(p => p.type === 'minute')?.value || '0', 10);
+
+        // Calculate difference in minutes
+        const utcTotalMinutes = utcHours * 60 + utcMinutes;
+        const tzTotalMinutes = tzHours * 60 + tzMinutes;
+
+        let offsetMinutes = tzTotalMinutes - utcTotalMinutes;
+
+        // Handle day rollover (if difference is > 12 hours, it's probably the wrong direction)
+        if (offsetMinutes > 12 * 60) {
+            offsetMinutes -= 24 * 60;
+        } else if (offsetMinutes < -12 * 60) {
+            offsetMinutes += 24 * 60;
+        }
+
+        return offsetMinutes;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Find the closest matching timezone from TIMEZONE_OPTIONS based on UTC offset
+ */
+function findClosestTimezone(detectedTimezone: string): typeof TIMEZONE_OPTIONS[number] | undefined {
+    const detectedOffset = getTimezoneOffset(detectedTimezone);
+    if (detectedOffset === null) return undefined;
+
+    // Find all timezones with the same offset
+    const matchingTimezones = TIMEZONE_OPTIONS.filter(tz => {
+        const tzOffset = getTimezoneOffset(tz.value);
+        return tzOffset !== null && tzOffset === detectedOffset;
+    });
+
+    if (matchingTimezones.length === 0) return undefined;
+
+    // Prefer common US timezones for North American offsets
+    const usTimezones = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Anchorage'];
+    const usMatch = matchingTimezones.find(tz => usTimezones.includes(tz.value));
+    if (usMatch) return usMatch;
+
+    // Otherwise, return the first match
+    return matchingTimezones[0];
+}
+
 // A dedicated component for the submit button to handle pending state
-function SaveButton() {
+function SaveButton({ isDirty }: { isDirty: boolean }) {
     const { pending } = useFormStatus();
+    const isDisabled = pending || !isDirty;
 
     return (
-        <Button 
-            type="submit" 
-            disabled={pending}
-            className="px-6 py-3 min-w-[120px] transition-colors disabled:opacity-50"
+        <Button
+            type="submit"
+            disabled={isDisabled}
+            className="px-4 py-2 text-sm font-medium transition-all duration-200"
             style={{
-                backgroundColor: 'var(--accent-primary) !important',
-                color: 'var(--accent-primary-foreground) !important',
-                border: 'none'
+                backgroundColor: isDirty && !pending ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)',
+                color: isDirty && !pending ? 'var(--accent-primary-foreground)' : 'rgba(255, 255, 255, 0.4)',
+                border: 'none',
+                cursor: isDisabled ? 'not-allowed' : 'pointer'
             }}
             onMouseEnter={(e) => {
-                if (!pending) {
-                    e.currentTarget.style.backgroundColor = 'var(--accent-primary-hover) !important';
+                if (!isDisabled) {
+                    e.currentTarget.style.backgroundColor = 'var(--accent-primary-hover)';
                 }
             }}
             onMouseLeave={(e) => {
-                if (!pending) {
-                    e.currentTarget.style.backgroundColor = 'var(--accent-primary) !important';
+                if (!isDisabled) {
+                    e.currentTarget.style.backgroundColor = isDirty ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)';
                 }
             }}
         >
@@ -50,10 +118,7 @@ function SaveButton() {
                     Saving...
                 </>
             ) : (
-                <>
-                    <MaterialIcon name="check" size={16} className="mr-2" />
-                    Save Changes
-                </>
+                'Save Changes'
             )}
         </Button>
     );
@@ -61,6 +126,10 @@ function SaveButton() {
 
 export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
     const { showSuccess, showError } = useSnackbar();
+    const timezoneSelectRef = useRef<HTMLSelectElement>(null);
+    const fullNameInputRef = useRef<HTMLInputElement>(null);
+    const [isDirty, setIsDirty] = useState(false);
+
     const initialState: FormState = {
         message: '',
         errors: {},
@@ -69,6 +138,43 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
 
     // 2. RENAME useFormState to useActionState
     const [state, formAction] = useActionState(updateUserProfileAction, initialState);
+
+    // Track form changes
+    useEffect(() => {
+        const checkDirty = () => {
+            const currentName = fullNameInputRef.current?.value || '';
+            const currentTimezone = timezoneSelectRef.current?.value || '';
+            const originalName = profile?.fullName || '';
+            const originalTimezone = profile?.timezone || '';
+
+            setIsDirty(
+                currentName !== originalName ||
+                currentTimezone !== originalTimezone
+            );
+        };
+
+        const nameInput = fullNameInputRef.current;
+        const timezoneSelect = timezoneSelectRef.current;
+
+        if (nameInput) {
+            nameInput.addEventListener('input', checkDirty);
+        }
+        if (timezoneSelect) {
+            timezoneSelect.addEventListener('change', checkDirty);
+        }
+
+        return () => {
+            if (nameInput) nameInput.removeEventListener('input', checkDirty);
+            if (timezoneSelect) timezoneSelect.removeEventListener('change', checkDirty);
+        };
+    }, [profile]);
+
+    // Reset dirty state after successful save
+    useEffect(() => {
+        if (state.success) {
+            setIsDirty(false);
+        }
+    }, [state.success]);
 
     // Use useEffect to show snackbar notifications based on the server's response.
     useEffect(() => {
@@ -79,69 +185,125 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
         }
     }, [state, showSuccess, showError]);
 
+    const handleAutoDetectTimezone = () => {
+        try {
+            const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            // First, try to find exact match in TIMEZONE_OPTIONS
+            let matchingTimezone = TIMEZONE_OPTIONS.find(tz => tz.value === detectedTimezone);
+
+            // If no exact match, try to find closest match by UTC offset
+            if (!matchingTimezone) {
+                matchingTimezone = findClosestTimezone(detectedTimezone);
+            }
+
+            if (matchingTimezone && timezoneSelectRef.current) {
+                timezoneSelectRef.current.value = matchingTimezone.value;
+                setIsDirty(true);
+                // Trigger change event to update form state
+                timezoneSelectRef.current.dispatchEvent(new Event('change', { bubbles: true }));
+                showSuccess(`Timezone set to ${matchingTimezone.label}`);
+            } else {
+                showError(`Unable to find matching timezone for ${detectedTimezone}`);
+            }
+        } catch (error) {
+            showError('Unable to detect timezone');
+        }
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div>
-                <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--foreground-primary)' }}>Profile Information</h3>
-                <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)' }}>
+                <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--foreground-primary)' }}>Profile Information</h3>
+                <p className="text-sm" style={{ color: 'var(--foreground-secondary)' }}>
                     Update your personal information and preferences.
                 </p>
             </div>
-            
-            <form action={formAction} className="space-y-6">
-                <div>
-                    <label htmlFor="fullName" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground-primary)' }}>
+
+            <form action={formAction} className="space-y-8">
+                {/* Full Name Field */}
+                <div className="space-y-2">
+                    <label
+                        htmlFor="fullName"
+                        className="block text-sm font-medium"
+                        style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                    >
                         Full Name
                     </label>
                     <input
+                        ref={fullNameInputRef}
                         id="fullName"
                         name="fullName"
                         defaultValue={profile?.fullName || ''}
                         placeholder="Enter your full name"
-                        className="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
+                        className="w-full px-3 py-2.5 rounded-md text-sm focus:outline-none transition-all duration-200"
                         style={{
-                            backgroundColor: 'var(--background-main)',
-                            border: '1px solid var(--border-default)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid transparent',
                             color: 'var(--foreground-primary)'
                         }}
                         onFocus={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                            e.currentTarget.style.boxShadow = '0 0 0 2px var(--accent-primary-light)';
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                         }}
                         onBlur={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--border-default)';
-                            e.currentTarget.style.boxShadow = 'none';
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.borderColor = 'transparent';
                         }}
                     />
                     {state.errors?.fullName && (
-                        <p className="mt-2 text-sm flex items-center" role="alert" style={{ color: 'var(--error)' }}>
-                            <MaterialIcon name="error" size={16} className="mr-1" />
+                        <p className="text-xs flex items-center mt-1.5" role="alert" style={{ color: 'var(--error)' }}>
+                            <MaterialIcon name="error" size={14} className="mr-1.5" />
                             {state.errors.fullName[0]}
                         </p>
                     )}
                 </div>
 
-                <div>
-                    <label htmlFor="timezone" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground-primary)' }}>
-                        Timezone
-                    </label>
+                {/* Timezone Field */}
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <label
+                            htmlFor="timezone"
+                            className="block text-sm font-medium"
+                            style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                        >
+                            Timezone
+                        </label>
+                        <button
+                            type="button"
+                            onClick={handleAutoDetectTimezone}
+                            className="text-xs font-medium transition-colors"
+                            style={{
+                                color: 'rgba(255, 255, 255, 0.5)',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                            }}
+                        >
+                            Auto-detect
+                        </button>
+                    </div>
                     <select
+                        ref={timezoneSelectRef}
                         id="timezone"
                         name="timezone"
                         defaultValue={profile?.timezone || ''}
-                        className="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
+                        className="w-full px-3 py-2.5 rounded-md text-sm focus:outline-none transition-all duration-200"
                         style={{
-                            backgroundColor: 'var(--background-main)',
-                            border: '1px solid var(--border-default)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid transparent',
                             color: 'var(--foreground-primary)'
                         }}
                         onFocus={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                            e.currentTarget.style.boxShadow = '0 0 0 2px var(--accent-primary-light)';
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                         }}
                         onBlur={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--border-default)';
-                            e.currentTarget.style.boxShadow = 'none';
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.borderColor = 'transparent';
                         }}
                     >
                         <option value="">Select your timezone</option>
@@ -162,18 +324,16 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
                         ))}
                     </select>
                     {state.errors?.timezone && (
-                        <p className="mt-2 text-sm flex items-center" role="alert" style={{ color: 'var(--error)' }}>
-                            <MaterialIcon name="error" size={16} className="mr-1" />
+                        <p className="text-xs flex items-center mt-1.5" role="alert" style={{ color: 'var(--error)' }}>
+                            <MaterialIcon name="error" size={14} className="mr-1.5" />
                             {state.errors.timezone[0]}
                         </p>
                     )}
                 </div>
 
-                <div 
-                    className="flex justify-end pt-6 border-t"
-                    style={{ borderColor: 'var(--border-default)' }}
-                >
-                    <SaveButton />
+                {/* Save Button */}
+                <div className="flex justify-end pt-4">
+                    <SaveButton isDirty={isDirty} />
                 </div>
             </form>
         </div>

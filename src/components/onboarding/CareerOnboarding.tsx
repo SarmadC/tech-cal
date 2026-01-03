@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSnackbar } from '@/contexts/SnackbarContext';
-import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, CheckCircle } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -130,14 +130,18 @@ interface CareerOnboardingProps {
     onComplete: (data: CareerOnboardingData, options?: { optionalSectionsCompleted: CareerOptionalSectionStatus }) => void;
     onSkip?: () => void;
     className?: string;
+    initialData?: Partial<CareerOnboardingData>; // Initial data to populate form (for edit mode)
+    preserveDataOnSkip?: boolean; // If true, don't clear data when skipping (for edit mode)
 }
 
 const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     onComplete,
     onSkip,
-    className = ''
+    className = '',
+    initialData,
+    preserveDataOnSkip = false
 }) => {
-    // Load persisted state
+    // Load persisted state or use initial data
     const [currentStep, setCurrentStep] = useState(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('career-onboarding-step');
@@ -148,6 +152,11 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     });
 
     const [data, setData] = useState<Partial<CareerOnboardingData>>(() => {
+        // If initialData is provided (edit mode), use it
+        if (initialData && Object.keys(initialData).length > 0) {
+            return initialData;
+        }
+        // Otherwise, load from localStorage
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('career-onboarding-data');
             return saved ? JSON.parse(saved) : {};
@@ -160,6 +169,7 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     const [step1Errors, setStep1Errors] = useState<Record<string, string>>({});
     const [showSaveIndicator, setShowSaveIndicator] = useState(false);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [fieldSuccessStates, setFieldSuccessStates] = useState<Record<string, boolean>>({});
 
     const totalSteps = includeOptionalSteps ? 6 : 3;
     // Helper to check if we are in "setup" mode (step 0)
@@ -198,6 +208,13 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
     };
 
     const handleSkip = () => {
+        // If preserveDataOnSkip is true (edit mode), just skip without clearing
+        if (preserveDataOnSkip) {
+            onSkip?.();
+            return;
+        }
+
+        // Otherwise, check for progress and show confirmation
         const hasProgress = data.step1_role?.currentRole ||
             (data.step2_skills?.primarySkills?.length ?? 0) > 0 ||
             (data.step3_goals?.careerGoals?.length ?? 0) > 0;
@@ -318,41 +335,165 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [currentStep, data, isStepComplete]); // Dependencies for keyboard listener
 
-    const renderStep1 = () => (
-        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
-            <SectionHeader title="Tell us about your role" subtitle="This helps us find your peer group and relevant events." />
+    const renderStep1 = () => {
+        const hasRole = !!data.step1_role?.currentRole;
+        const hasSeniority = !!data.step1_role?.seniority;
+        
+        return (
+            <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
+                <SectionHeader title="Tell us about your role" subtitle="This helps us find your peer group and relevant events." />
 
-            <motion.div variants={staggerItem} className="space-y-6">
-                <RoleAutocomplete
-                    id="current-role"
-                    label="Current Role"
-                    hint="Search for your role"
-                    value={data.step1_role?.currentRole || ''}
-                    onChange={(value) => {
-                        updateData('step1_role', { ...data.step1_role, currentRole: value });
-                        if (value) setStep1Errors(prev => { const { currentRole, ...rest } = prev; return rest; });
-                    }}
-                    error={step1Errors.currentRole}
-                    required
-                />
-
-                <AnimatePresence>
-                    {data.step1_role?.currentRole && (
-                        <ExperienceLevelSelector
-                            value={data.step1_role?.seniority || ''}
+                <motion.div variants={staggerItem} className="space-y-6 relative">
+                    {/* Success feedback wrapper for role field */}
+                    <motion.div
+                        className="relative"
+                        animate={{
+                            scale: fieldSuccessStates.currentRole ? [1, 1.02, 1] : 1,
+                        }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <RoleAutocomplete
+                            id="current-role"
+                            label="Current Role"
+                            hint="Search for your role"
+                            value={data.step1_role?.currentRole || ''}
                             onChange={(value) => {
-                                updateData('step1_role', { ...data.step1_role, seniority: value as SeniorityLevel });
-                                if (value) setStep1Errors(prev => { const { seniority, ...rest } = prev; return rest; });
+                                updateData('step1_role', { ...data.step1_role, currentRole: value });
+                                if (value) {
+                                    setStep1Errors(prev => { const { currentRole, ...rest } = prev; return rest; });
+                                    // Show success feedback
+                                    setFieldSuccessStates(prev => ({ ...prev, currentRole: true }));
+                                    setTimeout(() => {
+                                        setFieldSuccessStates(prev => ({ ...prev, currentRole: false }));
+                                    }, 2000);
+                                }
                             }}
-                            error={step1Errors.seniority}
-                            // Pass down styling to match progressive disclosure
-                            className="overflow-hidden"
+                            error={step1Errors.currentRole}
+                            required
+                            showSuccess={fieldSuccessStates.currentRole}
                         />
-                    )}
-                </AnimatePresence>
+                        
+                        {/* Success checkmark indicator */}
+                        <AnimatePresence>
+                            {fieldSuccessStates.currentRole && hasRole && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0, x: -20 }}
+                                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                                    exit={{ opacity: 0, scale: 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                    className="absolute right-3 top-[calc(100%-2.5rem)] flex items-center gap-2"
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ 
+                                            delay: 0.1, 
+                                            type: "spring", 
+                                            stiffness: 400,
+                                            damping: 12
+                                        }}
+                                        className="bg-emerald-500/20 rounded-full p-1"
+                                    >
+                                        <CheckCircle size={16} className="text-emerald-400" weight="fill" />
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+
+                    {/* Ghost connector line - shows when role is selected but seniority is not */}
+                    <AnimatePresence>
+                        {hasRole && !hasSeniority && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.4 }}
+                                className="relative flex items-center justify-center py-4"
+                            >
+                                <div 
+                                    className="absolute left-6 w-px h-16 border-l border-dashed"
+                                    style={{ 
+                                        borderColor: 'var(--border-default)',
+                                        opacity: 0.2
+                                    }}
+                                />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Ghost placeholder for Experience Level */}
+                    <AnimatePresence>
+                        {hasRole && !hasSeniority && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 0.2, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="space-y-3 pointer-events-none"
+                            >
+                                <label className="text-sm font-medium flex items-center" style={{ color: 'var(--foreground-secondary)' }}>
+                                    Experience Level <span className="text-red-500 ml-1">*</span>
+                                </label>
+                                <div 
+                                    className="rounded-xl border border-dashed p-4"
+                                    style={{ 
+                                        backgroundColor: 'var(--background-secondary)',
+                                        borderColor: 'var(--border-default)',
+                                        opacity: 0.2
+                                    }}
+                                >
+                                    <div className="h-12 bg-secondary/30 rounded-lg" />
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Actual Experience Level Selector */}
+                    <AnimatePresence mode="wait">
+                        {hasRole && (
+                            <motion.div
+                                key="experience-selector"
+                                initial={{ opacity: 0, height: 0, y: 20 }}
+                                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                                exit={{ opacity: 0, height: 0, y: -20 }}
+                                transition={{ 
+                                    type: "spring",
+                                    stiffness: 300,
+                                    damping: 30,
+                                    opacity: { duration: 0.2 }
+                                }}
+                                className="overflow-hidden"
+                            >
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.2 }}
+                                >
+                                    <ExperienceLevelSelector
+                                        value={data.step1_role?.seniority || ''}
+                                        onChange={(value) => {
+                                            updateData('step1_role', { ...data.step1_role, seniority: value as SeniorityLevel });
+                                            if (value) {
+                                                setStep1Errors(prev => { const { seniority, ...rest } = prev; return rest; });
+                                                // Show success feedback
+                                                setFieldSuccessStates(prev => ({ ...prev, seniority: true }));
+                                                setTimeout(() => {
+                                                    setFieldSuccessStates(prev => ({ ...prev, seniority: false }));
+                                                }, 2000);
+                                            }
+                                        }}
+                                        error={step1Errors.seniority}
+                                        className="overflow-visible"
+                                    />
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </motion.div>
             </motion.div>
-        </motion.div>
-    );
+        );
+    };
 
     const renderStep2 = () => (
         <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
@@ -573,13 +714,18 @@ const CareerOnboarding: React.FC<CareerOnboardingProps> = ({
             <AnimatePresence mode="wait">
                 <motion.div
                     key={currentStep}
-                    initial={{ opacity: 0, x: 20, filter: "blur(5px)" }}
-                    animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, x: -20, filter: "blur(5px)" }}
+                    initial={{ opacity: 0, x: 20, filter: "blur(5px)", height: "auto" }}
+                    animate={{ opacity: 1, x: 0, filter: "blur(0px)", height: "auto" }}
+                    exit={{ opacity: 0, x: -20, filter: "blur(5px)", height: "auto" }}
                     transition={springTransition}
                     className="min-h-[400px]"
                 >
-                    {renderContent()}
+                    <motion.div
+                        layout
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    >
+                        {renderContent()}
+                    </motion.div>
                 </motion.div>
             </AnimatePresence>
 

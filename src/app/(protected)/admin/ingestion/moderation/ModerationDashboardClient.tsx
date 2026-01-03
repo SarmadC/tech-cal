@@ -6,13 +6,11 @@
 
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { format, formatDistanceToNow } from 'date-fns';
 import * as Sentry from '@sentry/nextjs';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AdminDataTable, type AdminDataTableColumn } from '@/components/admin/AdminDataTable';
@@ -21,6 +19,16 @@ import useAdminHotkeys from '@/components/admin/useAdminHotkeys';
 import { useDebounce } from '@/hooks/useDebounce';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import { cn } from '@/lib/utils';
+
+const COLUMNS_STORAGE_KEY = 'techcal.admin.moderation.columns';
+
+type ColumnVisibility = {
+    status: boolean;
+    reason: boolean;
+    created_at: boolean;
+    actions: boolean;
+};
 
 interface QueueItem {
     id: string;
@@ -75,21 +83,76 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
     const queryParam = searchParams.get('q') ?? '';
     const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10) || 1;
     const pageSizeParam = Number.parseInt(searchParams.get('pageSize') ?? '20', 10) || 20;
-    const viewParam = searchParams.get('view') ?? 'table';
 
     const [data, setData] = useState<QueueItem[]>(initialQueueItems);
     const [selectedRows, setSelectedRows] = useState<string[]>([]);
-    const [feedback, setFeedback] = useState<Record<string, string>>({});
     const [actionLoading, setActionLoading] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
-
-    const viewMode = viewParam === 'cards' ? 'cards' : 'table';
+    const [columnsPanelOpen, setColumnsPanelOpen] = useState(false);
+    const columnsPanelRef = useRef<HTMLDivElement>(null);
 
     const [searchTerm, setSearchTerm] = useState(queryParam);
     const debouncedSearch = useDebounce(searchTerm, 250);
 
+    const [visibleColumns, setVisibleColumns] = useState<ColumnVisibility>({
+        status: true,
+        reason: true,
+        created_at: true,
+        actions: true,
+    });
+
     const { setTitle, setSubtitle, setSearch, setQuickFilters, setToolbarContent, focusSearch } = useAdminToolbar();
     const { showSuccess, showError, showInfo } = useSnackbar();
+
+    // Load column visibility from localStorage
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const stored = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
+        if (!stored) return;
+        try {
+            const parsed = JSON.parse(stored) as Partial<ColumnVisibility>;
+            setVisibleColumns((prev) => ({
+                ...prev,
+                ...Object.fromEntries(
+                    Object.entries(parsed).map(([key, value]) => [key, Boolean(value)])
+                ) as ColumnVisibility,
+            }));
+        } catch {
+            // ignore parse errors
+        }
+    }, []);
+
+    // Save column visibility to localStorage
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(visibleColumns));
+    }, [visibleColumns]);
+
+    // Close columns panel on outside click
+    useEffect(() => {
+        if (!columnsPanelOpen) return;
+        const handleClick = (event: MouseEvent) => {
+            if (columnsPanelRef.current && !columnsPanelRef.current.contains(event.target as Node)) {
+                setColumnsPanelOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [columnsPanelOpen]);
+
+    const toggleColumnVisibility = useCallback((key: keyof ColumnVisibility) => {
+        setVisibleColumns((prev) => {
+            const activeCount = Object.values(prev).filter(Boolean).length;
+            const nextValue = !prev[key];
+            if (!nextValue && activeCount <= 1) {
+                return prev; // Prevent hiding all columns
+            }
+            return {
+                ...prev,
+                [key]: nextValue,
+            };
+        });
+    }, []);
 
     const updateQuery = useCallback(
         (updates: Record<string, string | number | undefined>) => {
@@ -150,6 +213,14 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
         return ['all', ...uniqueStatuses];
     }, [data]);
 
+    const statusCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        data.forEach((item) => {
+            counts[item.status] = (counts[item.status] ?? 0) + 1;
+        });
+        return counts;
+    }, [data]);
+
     useEffect(() => {
         setQuickFilters(
             statusOptions.map((status) => ({
@@ -159,14 +230,14 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 badge:
                     status === 'all'
                         ? data.length
-                        : data.filter((item) => item.status === status).length || undefined,
+                        : statusCounts[status] || undefined,
                 onToggle: () => {
                     setSelectedRows([]);
                     updateQuery({ status: status === 'all' ? undefined : status, page: 1 });
                 },
             }))
         );
-    }, [data, statusParam, setQuickFilters, statusOptions, updateQuery]);
+    }, [data, statusParam, setQuickFilters, statusOptions, statusCounts, updateQuery]);
 
     const filteredItems = useMemo(() => {
         const needle = queryParam.trim().toLowerCase();
@@ -252,7 +323,6 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                         action,
                         queueItemIds: [item.id],
                         eventId: item.event_id ?? undefined,
-                        feedback: feedback[item.id] || null,
                     }),
                 });
                 const result = await response.json();
@@ -260,11 +330,6 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                     throw new Error(result.error ?? 'Failed to process moderation action');
                 }
                 setData((prev) => prev.filter((entry) => entry.id !== item.id));
-                setFeedback((prev) => {
-                    const next = { ...prev };
-                    delete next[item.id];
-                    return next;
-                });
                 showSuccess(`Marked "${item.events?.title ?? item.source_events?.raw_payload?.record?.title ?? 'Untitled'}" as ${action}.`);
             } catch (err) {
                 console.error('Error performing action:', err);
@@ -274,12 +339,11 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 setActionLoading(false);
             }
         },
-        [feedback, showError, showSuccess]
+        [showError, showSuccess]
     );
 
     const moveSelection = useCallback(
         (direction: 'next' | 'prev') => {
-            if (viewMode !== 'table') return;
             if (paginatedItems.length === 0) return;
             const ids = paginatedItems.map((item) => item.id);
             setSelectedRows((prev) => {
@@ -296,7 +360,7 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
                 return [ids[nextIndex]];
             });
         },
-        [paginatedItems, viewMode]
+        [paginatedItems]
     );
 
     useAdminHotkeys({
@@ -319,107 +383,129 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
         return () => document.removeEventListener('keydown', handler);
     }, [shortcutsOpen]);
 
-    useEffect(() => {
-        if (viewMode === 'cards' && selectedRows.length) {
-            setSelectedRows([]);
-        }
-    }, [viewMode, selectedRows.length]);
+    const statusBadgeStyles: Record<string, string> = {
+        pending: 'bg-amber-500/20 text-amber-300',
+        approved: 'bg-emerald-500/20 text-emerald-300',
+        rejected: 'bg-rose-500/20 text-rose-300',
+    };
 
-    const columns: AdminDataTableColumn<QueueItem>[] = useMemo(() => [
-        {
-            key: 'summary',
-            header: 'Event',
-            render: (item) => {
-                const eventTitle =
-                    item.events?.title ?? item.source_events?.raw_payload?.record?.title ?? 'Untitled Event';
-                const organizer =
-                    item.events?.organizer?.name ?? item.source_events?.raw_payload?.record?.organizer ?? 'Unknown organizer';
-                return (
-                    <div className="flex flex-col gap-2">
-                        <div className="font-medium text-foreground-primary">{eventTitle}</div>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-foreground-tertiary">
-                            <span>{organizer}</span>
-                            <span className="inline-flex items-center gap-1 rounded border border-default/60 bg-background-secondary/60 px-2 py-0.5 text-[11px]">
-                                <MaterialIcon name="dashboard" size={12} />
-                                {item.ingestion_quality_score.toFixed(0)}
-                            </span>
-                            {item.reason_codes.map((code) => (
-                                <Badge key={code} variant="outline" className="bg-background-secondary/50 text-[10px] uppercase tracking-wide">
-                                    {code.replace(/_/g, ' ')}
-                                </Badge>
-                            ))}
+    const columns: AdminDataTableColumn<QueueItem>[] = useMemo(() => {
+        const baseColumns: AdminDataTableColumn<QueueItem>[] = [
+            {
+                key: 'summary',
+                header: 'Event',
+                render: (item) => {
+                    const eventTitle =
+                        item.events?.title ?? item.source_events?.raw_payload?.record?.title ?? 'Untitled Event';
+                    const organizer =
+                        item.events?.organizer?.name ?? item.source_events?.raw_payload?.record?.organizer ?? 'Unknown organizer';
+                    return (
+                        <div className="flex flex-col gap-0.5">
+                            <div className="font-medium text-foreground-primary text-[13px]">{eventTitle}</div>
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-foreground-muted">
+                                <span>{organizer}</span>
+                                <span className="inline-flex items-center gap-1 rounded border border-default/60 bg-background-secondary/60 px-2 py-0.5">
+                                    <MaterialIcon name="dashboard" size={12} />
+                                    {item.ingestion_quality_score.toFixed(0)}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                );
+                    );
+                },
             },
-        },
-        {
-            key: 'status',
-            header: 'Status',
-            align: 'center',
-            render: (item) => (
-                <Badge className="bg-amber-500/20 px-3 py-1 text-[11px] uppercase tracking-wide text-amber-200">
-                    {item.status.replace(/_/g, ' ')}
-                </Badge>
-            ),
-            width: 140,
-        },
-        {
-            key: 'reason',
-            header: 'Flagged Reason',
-            render: (item) => (
-                <div className="text-xs text-foreground-tertiary">
-                    {item.reason_codes.length === 0 ? (
-                        <span className="text-foreground-muted">No reason captured</span>
-                    ) : (
-                        item.reason_codes.map((code) => code.replace(/_/g, ' ')).join(', ')
-                    )}
-                </div>
-            ),
-        },
-        {
-            key: 'created_at',
-            header: 'Flagged',
-            sortable: true,
-            render: (item) => (
-                <div className="text-xs text-foreground-tertiary">
-                    <div>{format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}</div>
-                    <div className="text-foreground-muted">
-                        {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+        ];
+
+        if (visibleColumns.status) {
+            baseColumns.push({
+                key: 'status',
+                header: 'Status',
+                align: 'center',
+                render: (item) => {
+                    const badgeStyle = statusBadgeStyles[item.status] || 'bg-background-tertiary text-foreground-primary';
+                    return (
+                        <Badge className={cn('px-3 py-1 text-[11px] font-medium uppercase tracking-wide', badgeStyle)}>
+                            {item.status.replace(/_/g, ' ')}
+                        </Badge>
+                    );
+                },
+                width: 140,
+            });
+        }
+
+        if (visibleColumns.reason) {
+            baseColumns.push({
+                key: 'reason',
+                header: 'Flagged Reason',
+                render: (item) => (
+                    <div className="text-[11px] text-foreground-tertiary">
+                        {item.reason_codes.length === 0 ? (
+                            <span className="text-foreground-muted">No reason captured</span>
+                        ) : (
+                            item.reason_codes.map((code) => code.replace(/_/g, ' ')).join(', ')
+                        )}
                     </div>
-                </div>
-            ),
-            width: 160,
-        },
-        {
-            key: 'actions',
-            header: 'Moderate',
-            align: 'center',
-            render: (item) => (
-                <div className="flex flex-col items-center gap-2">
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={actionLoading}
-                        onClick={() => handleSingleAction(item, 'approve')}
-                        className="w-full"
-                    >
-                        Approve
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="destructive"
-                        disabled={actionLoading}
-                        onClick={() => handleSingleAction(item, 'reject')}
-                        className="w-full"
-                    >
-                        Reject
-                    </Button>
-                </div>
-            ),
-            width: 140,
-        },
-    ], [actionLoading, handleSingleAction]);
+                ),
+            });
+        }
+
+        if (visibleColumns.created_at) {
+            baseColumns.push({
+                key: 'created_at',
+                header: 'Flagged',
+                sortable: true,
+                render: (item) => (
+                    <div className="flex flex-col text-[11px] text-foreground-tertiary">
+                        <span>{format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}</span>
+                        <span className="text-foreground-muted">
+                            {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                        </span>
+                    </div>
+                ),
+                width: 160,
+            });
+        }
+
+        if (visibleColumns.actions) {
+            baseColumns.push({
+                key: 'actions',
+                header: '',
+                align: 'right',
+                render: (item) => {
+                    return (
+                        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSingleAction(item, 'approve');
+                                }}
+                                disabled={actionLoading}
+                                className="rounded p-1.5 text-emerald-400 transition-colors hover:bg-emerald-400/10 disabled:opacity-50"
+                                title="Approve"
+                            >
+                                <MaterialIcon name="check" size={16} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSingleAction(item, 'reject');
+                                }}
+                                disabled={actionLoading}
+                                className="rounded p-1.5 text-rose-400 transition-colors hover:bg-rose-400/10 disabled:opacity-50"
+                                title="Reject"
+                            >
+                                <MaterialIcon name="close" size={16} />
+                            </button>
+                        </div>
+                    );
+                },
+                width: 110,
+            });
+        }
+
+        return baseColumns;
+    }, [actionLoading, handleSingleAction, visibleColumns, statusBadgeStyles]);
 
     const bulkActions = useMemo(
         () => [
@@ -444,220 +530,121 @@ export default function ModerationDashboardClient({ initialQueueItems, error }: 
     );
 
     const tableToolbar = (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs uppercase tracking-wider text-foreground-tertiary">
-                {totalItems === 0 ? 'No records match the current filters.' : `Showing ${paginatedItems.length} of ${totalItems} flagged events`}
+        <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+                <div className="relative">
+                    <MaterialIcon name="search" size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-foreground-muted" />
+                    <input
+                        type="text"
+                        placeholder="Filter events..."
+                        className="h-7 w-64 rounded-md border border-default bg-background-tertiary pl-8 pr-3 text-[13px] text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/50"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className="h-4 w-px bg-accent-primary-light mx-1" />
+                <div className="flex items-center gap-1">
+                    {statusOptions.map((status) => {
+                        const isActive = status === 'all' ? statusParam === 'all' : statusParam === status;
+                        const count = status === 'all' ? data.length : statusCounts[status] || 0;
+                        return (
+                            <button
+                                key={status}
+                                onClick={() => {
+                                    setSelectedRows([]);
+                                    updateQuery({ status: status === 'all' ? undefined : status, page: 1 });
+                                }}
+                                className={cn(
+                                    "px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
+                                    isActive
+                                        ? "bg-accent-primary-light text-foreground-primary"
+                                        : "text-foreground-muted hover:text-foreground-tertiary hover:bg-background-tertiary"
+                                )}
+                            >
+                                {status === 'all' ? 'All' : status.replace(/_/g, ' ')}
+                                {count > 0 && <span className="ml-1 opacity-50">{count}</span>}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
-            <Link href="/admin/ingestion/update-queue" className="text-xs text-foreground-tertiary hover:text-slate-50">
-                Need the update queue instead?
-            </Link>
+            <div className="flex items-center gap-2">
+                <div ref={columnsPanelRef} className="relative">
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setColumnsPanelOpen((prev) => !prev)}
+                        className={cn("h-7 w-7 p-0 text-foreground-tertiary hover:text-foreground-primary", columnsPanelOpen && "bg-accent-primary-light text-foreground-primary")}
+                        title="Columns"
+                    >
+                        <MaterialIcon name="settings" size={14} />
+                    </Button>
+                    {columnsPanelOpen && (
+                        <div className="absolute right-0 z-40 mt-2 w-48 rounded-lg border border-default bg-background-main p-2 shadow-xl">
+                            <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">Columns</p>
+                            <div className="space-y-1">
+                                {(
+                                    [
+                                        ['status', 'Status'],
+                                        ['reason', 'Flagged Reason'],
+                                        ['created_at', 'Flagged Date'],
+                                        ['actions', 'Actions'],
+                                    ] as Array<[keyof ColumnVisibility, string]>
+                                ).map(([key, label]) => (
+                                    <label key={key} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-background-tertiary cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="h-3.5 w-3.5 rounded border-default bg-background-tertiary text-accent-primary focus:ring-0"
+                                            checked={visibleColumns[key]}
+                                            onChange={() => toggleColumnVisibility(key)}
+                                        />
+                                        <span className="text-[13px] text-foreground-tertiary">{label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 
     if (error) {
         return (
-            <Card className="border border-rose-500/40 bg-rose-500/10 text-rose-100">
-                <CardContent className="p-6 text-sm">
-                    Failed to load moderation queue: {error}
-                </CardContent>
-            </Card>
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-rose-100">
+                <div>
+                    <strong className="block text-sm font-semibold">Error</strong>
+                    <p className="text-sm">Failed to load moderation queue: {error}</p>
+                </div>
+            </div>
         );
     }
 
     return (
-        <>
-            <div className="space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default/60 bg-background-main/60 px-4 py-3">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs uppercase tracking-wide text-foreground-muted">View</span>
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                            onClick={() => updateQuery({ view: 'table' })}
-                            aria-pressed={viewMode === 'table'}
-                        >
-                            Table
-                        </Button>
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
-                            onClick={() => updateQuery({ view: 'cards' })}
-                            aria-pressed={viewMode === 'cards'}
-                        >
-                            Cards
-                        </Button>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-foreground-tertiary">
-                        {selectedRows.length > 0 && <span>{selectedRows.length} selected</span>}
-                        <span>Total backlog: {data.length}</span>
-                    </div>
-                </div>
-
-                {viewMode === 'table' ? (
-                    <AdminDataTable
-                        columns={columns}
-                        rows={paginatedItems}
-                        getRowId={(item) => item.id}
-                        sortKey="created_at"
-                        sortDirection="desc"
-                        onSortChange={() => {
-                            // sorting not yet implemented - rely on API sort when available
-                        }}
-                        isLoading={actionLoading && paginatedItems.length === 0}
-                        selectable
-                        selectedRowIds={selectedRows}
-                        onSelectionChange={setSelectedRows}
-                        bulkActions={bulkActions}
-                        page={currentPage}
-                        pageSize={pageSizeParam}
-                        total={totalItems}
-                        onPageChange={(nextPage) => updateQuery({ page: nextPage })}
-                        onPageSizeChange={(size) => updateQuery({ pageSize: size, page: 1 })}
-                        toolbar={tableToolbar}
-                    />
-                ) : (
-                    <div className="space-y-4">
-                        {paginatedItems.length === 0 ? (
-                            <Card className="border border-default/60 bg-background-main/60">
-                                <CardContent className="p-6 text-center text-sm text-foreground-tertiary">
-                                    No events match the current filters.
-                                </CardContent>
-                            </Card>
-                        ) : (
-                            paginatedItems.map((item) => {
-                                const event = item.events;
-                                const source = item.source_events?.raw_payload?.record;
-                                const title = event?.title ?? source?.title ?? 'Untitled Event';
-                                const organizer = event?.organizer?.name ?? source?.organizer ?? 'Unknown organizer';
-                                const quality = item.ingestion_quality_score.toFixed(0);
-                                const qualityComponents = event?.ingestion_provenance?.quality_components;
-                                return (
-                                    <Card key={item.id} className="border border-default/60 bg-background-main/70 text-foreground-secondary">
-                                        <CardHeader className="flex flex-wrap items-start justify-between gap-3">
-                                        <div className="space-y-2">
-                                            <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-                                            <div className="flex flex-wrap items-center gap-2 text-xs text-foreground-tertiary">
-                                                <span>{organizer}</span>
-                                                <Badge className="bg-amber-500/20 px-2 py-0.5 text-[11px] uppercase tracking-wide text-amber-200">
-                                                    {item.status.replace(/_/g, ' ')}
-                                                </Badge>
-                                                <span className="inline-flex items-center gap-1 rounded border border-default/60 bg-background-secondary/60 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                                                    <MaterialIcon name="dashboard" size={12} />
-                                                    Quality {quality}
-                                                </span>
-                                                <span>ID: {item.source_event_id}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="secondary"
-                                                disabled={actionLoading}
-                                                onClick={() => handleSingleAction(item, 'approve')}
-                                            >
-                                                Approve
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="destructive"
-                                                disabled={actionLoading}
-                                                onClick={() => handleSingleAction(item, 'reject')}
-                                            >
-                                                Reject
-                                            </Button>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="grid gap-3 text-xs text-foreground-tertiary md:grid-cols-3">
-                                            <div>
-                                                <div className="text-foreground-muted">Flagged</div>
-                                                <div>{format(new Date(item.created_at), 'MMM d, yyyy HH:mm')}</div>
-                                                <div className="text-foreground-muted">
-                                                    {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="text-foreground-muted">Event time</div>
-                                                <div>{event?.start_time ? format(new Date(event.start_time), 'PPP p') : source?.startTime ? format(new Date(source.startTime), 'PPP p') : 'N/A'}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-foreground-muted">Location</div>
-                                                <div>{event?.location ?? source?.location ?? 'N/A'}</div>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <div className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
-                                                Reason codes
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {item.reason_codes.length === 0 ? (
-                                                    <span className="text-xs text-foreground-muted">No reason captured</span>
-                                                ) : (
-                                                    item.reason_codes.map((code) => (
-                                                        <Badge key={code} variant="outline" className="bg-background-secondary/50 text-[10px] uppercase">
-                                                            {code.replace(/_/g, ' ')}
-                                                        </Badge>
-                                                    ))
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {qualityComponents && (
-                                            <div className="grid gap-3 text-xs text-foreground-tertiary md:grid-cols-4">
-                                                <QualityMetric label="Source trust" value={qualityComponents.source_trust} />
-                                                <QualityMetric label="Metadata" value={qualityComponents.metadata_completeness} />
-                                                <QualityMetric label="Speakers" value={qualityComponents.speaker_verification} />
-                                                <QualityMetric label="History" value={qualityComponents.historical_performance} />
-                                            </div>
-                                        )}
-
-                                        {item.recommended_tags && item.recommended_tags.length > 0 && (
-                                            <div className="space-y-2">
-                                                <div className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
-                                                    Recommended tags
-                                                </div>
-                                                <div className="flex flex-wrap gap-2 text-xs">
-                                                    {item.recommended_tags.map((tag) => (
-                                                        <Badge key={tag} variant="outline" className="bg-background-secondary/60">
-                                                            {tag}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="space-y-2">
-                                            <div className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">Feedback</div>
-                                            <textarea
-                                                className="min-h-[80px] w-full rounded-md border border-default/60 bg-background-main/60 p-3 text-sm text-foreground-primary focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-600/40"
-                                                placeholder="Leave review guidance for future automations (optional)"
-                                                value={feedback[item.id] ?? ''}
-                                                onChange={(event) =>
-                                                    setFeedback((prev) => ({ ...prev, [item.id]: event.target.value }))
-                                                }
-                                            />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                            })
-                        )}
-                    </div>
-                )}
-            </div>
+        <div className="space-y-4">
+            <AdminDataTable
+                columns={columns}
+                rows={paginatedItems}
+                getRowId={(item) => item.id}
+                sortKey="created_at"
+                sortDirection="desc"
+                onSortChange={() => {
+                    // sorting not yet implemented - rely on API sort when available
+                }}
+                isLoading={actionLoading && paginatedItems.length === 0}
+                selectable
+                selectedRowIds={selectedRows}
+                onSelectionChange={setSelectedRows}
+                bulkActions={bulkActions}
+                page={currentPage}
+                pageSize={pageSizeParam}
+                total={totalItems}
+                onPageChange={(nextPage) => updateQuery({ page: nextPage })}
+                onPageSizeChange={(size) => updateQuery({ pageSize: size, page: 1 })}
+                toolbar={tableToolbar}
+            />
             {shortcutsOpen && <ModerationShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
-        </>
-    );
-}
-
-function QualityMetric({ label, value }: { label: string; value?: number }) {
-    return (
-        <div className="rounded-md border border-default/50 bg-background-secondary/60 px-3 py-2">
-            <div className="text-[11px] uppercase tracking-wide text-foreground-muted">{label}</div>
-            <div className="text-sm font-semibold text-foreground-primary">{value !== undefined ? `${value.toFixed(0)}%` : '—'}</div>
         </div>
     );
 }
@@ -698,4 +685,3 @@ function ModerationShortcutsOverlay({ onClose }: { onClose: () => void }) {
         </div>
     );
 }
-

@@ -28,7 +28,8 @@ export const WeekHeader: React.FC<WeekHeaderProps> = ({
                 position: 'sticky',
                 top: 0,
                 zIndex: 20,
-                minWidth: '1200px'
+                minWidth: '1200px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' // Shadow-md added
             }}
         >
             {/* Time column header */}

@@ -14,10 +14,15 @@ import EnrichmentEditorClient, { type EventWithRelationships, type AgendaItemWit
 
 export default async function EnrichmentEditorPage({
     params,
+    searchParams,
 }: {
     params: Promise<{ eventId: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     const { eventId } = await params;
+    const resolvedSearchParams = await searchParams;
+    const from = resolvedSearchParams.from === 'events' ? 'events' : 'enrichment';
+    const backUrl = from === 'events' ? '/admin/events' : '/admin/ingestion/enrichment';
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -132,6 +137,7 @@ export default async function EnrichmentEditorPage({
                 event={event as EventWithRelationships}
                 initialAgendaItems={(agendaItems || []) as AgendaItemWithSpeakers[]}
                 lookupData={lookupData}
+                backUrl={backUrl}
             />
         </div>
     );

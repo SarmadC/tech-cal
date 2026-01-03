@@ -263,26 +263,32 @@
    3. WEEK VIEW SPECIFIC EVENT CARD STYLES
    =================================== */
 
-/* Week View Event Card Base Styles */
+/* Week View Event Card Base Styles - Refined Linear/Notion Style */
 .tech-calendar-week-view .event-card {
-    height: 100% !important; /* Essential for proper grid positioning */
+    height: var(--event-height, 100%) !important; /* Essential for proper grid positioning */
     width: 100% !important; /* Ensure full width within grid cell */
     /* Bind to base card padding for consistent x/y anchors */
     --card-pad: var(--space-lg);
-    padding: var(--card-pad) !important;
+    padding: 10px 12px !important; /* Uniform padding */
     gap: 0 !important; /* Remove gap to prevent content shifting */
     min-height: 20px !important;
     margin: 0 !important; /* Remove margins that might affect grid positioning */
-    border-radius: var(--v8-radius-lg) !important;
-    /* Remove borders for cleaner look in week view */
-    border: none !important;
-    box-shadow: none !important;
-    /* Allow inline background styling to work for category colors */
+    border-radius: 4px !important; /* Tighter radius for technical feel */
+    /* Prevent bleed-through: increased opacity + blur */
+    background: rgba(30, 30, 30, 0.85) !important; /* Increased opacity to hide grid lines */
+    backdrop-filter: blur(4px) !important; /* Blur grid lines behind card */
+    -webkit-backdrop-filter: blur(4px) !important; /* Safari support */
+    /* Crisp border definition */
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    /* Elegant 2px left accent border */
+    border-left-width: 2px !important;
+    /* Subtle top highlight for physical depth */
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
     cursor: pointer !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.15s ease-out !important; /* Snappy Linear-style transitions */
     overflow: visible !important;
     position: relative !important;
-    align-items: stretch !important; /* Ensure content stretches to full width */
+    align-items: flex-start !important; /* Align content to top-left */
     justify-content: flex-start !important; /* Align content to start */
     display: flex !important; /* Ensure flex layout */
     flex-direction: column !important; /* Ensure column layout */
@@ -291,14 +297,41 @@
     grid-row: auto !important;
 }
 
+/* Theme-aware borders for refined glass polish */
+/* Dark mode borders - prevent bleed-through */
+.dark .tech-calendar-week-view .event-card {
+    /* Prevent bleed-through with blur and increased opacity */
+    background: rgba(30, 30, 30, 0.85) !important;
+    backdrop-filter: blur(4px) !important; /* Blur grid lines behind card */
+    -webkit-backdrop-filter: blur(4px) !important; /* Safari support */
+    /* Crisp border definition */
+    border-top-color: rgba(255, 255, 255, 0.08) !important;
+    border-right-color: rgba(255, 255, 255, 0.08) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    /* Elegant 2px left accent border */
+    border-left-width: 2px !important;
+    /* Subtle top highlight */
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Light mode borders */
+.light .tech-calendar-week-view .event-card {
+    /* Prevent bleed-through for light mode */
+    background: rgba(250, 250, 250, 0.85) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    /* Crisp border definition for light mode */
+    border-top-color: rgba(0, 0, 0, 0.08) !important;
+    border-right-color: rgba(0, 0, 0, 0.08) !important;
+    border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+    /* Elegant 2px left accent border */
+    border-left-width: 2px !important;
+    /* Subtle top highlight for light mode */
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
+}
+
 /* Override glass-card effects specifically for week view */
 /* Light mode: no additional glass background for week view event cards */
-
-/* In dark mode, disable glass blur so pastel backgrounds show */
-.dark .tech-calendar-week-view .event-card {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
 
 /* Dark mode: ensure hover/glass does not tint over category pastel */
 .dark .tech-calendar-week-view .event-card.glass-card,
@@ -306,21 +339,17 @@
   background: var(--category-bg) !important;
 }
 
-.dark .tech-calendar-week-view .event-card:hover {
-  background: var(--category-bg) !important;
-}
-
-/* Event content container for week view - consolidated rules */
+/* Event content container for week view - top-left alignment with tight rhythm */
 .tech-calendar-week-view .event-card .event-content {
     position: static !important; /* Ensure corner anchors reference the card, not the inner content */
     display: flex !important;
     flex-direction: column !important;
-    gap: var(--space-xs) !important;
+    gap: 2px !important; /* Tight gap to group title and subtitle as single unit */
     width: 100% !important;
     min-width: 0 !important;
     flex: 1 !important;
-    align-items: stretch !important; /* Ensure content stretches to full width */
-    justify-content: flex-start !important; /* Align content to start */
+    align-items: flex-start !important; /* Align content to left */
+    justify-content: flex-start !important; /* Align content to top (sticky top-left) */
     margin: 0 !important; /* Remove any default margins */
     padding: 0 !important; /* Remove any default padding */
     box-sizing: border-box !important; /* Ensure padding is included in width calculation */
@@ -452,6 +481,151 @@
     max-height: none !important; /* Remove any maximum height */
     background: transparent !important; /* Ensure no background color */
     border: none !important; /* Remove any borders */
+}
+
+/* Ensure high contrast title colors - Pixel-Perfect Professional Style */
+.tech-calendar-week-view .event-card .event-title {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 500 !important; /* Medium weight for punchier feel */
+    color: rgba(255, 255, 255, 0.95) !important; /* Off-white to avoid bloom in dark mode */
+    letter-spacing: -0.01em !important; /* Tighter tracking for professional interface look */
+    padding-top: 1px !important; /* Optical correction for icon alignment */
+    line-height: 1.2 !important; /* Tight line-height */
+}
+
+/* Header Zone: Icon + Title - Clear visual grouping */
+.tech-calendar-week-view .event-card .event-head-section {
+    width: 100% !important;
+    margin-bottom: 0 !important;
+}
+
+.tech-calendar-week-view .event-card .event-title-block {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+}
+
+/* Perfect icon and title micro-alignment - pixel-perfect */
+.tech-calendar-week-view .event-card .event-title-block > div {
+    display: flex !important;
+    align-items: center !important; /* Perfect vertical centering */
+    gap: 8px !important; /* Standardized gap for professional look */
+    width: 100% !important;
+}
+
+.tech-calendar-week-view .event-card .event-organizer-logo-lockup {
+    width: 16px !important;
+    height: 16px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    line-height: 0 !important; /* Remove line-height spacing */
+    vertical-align: middle !important;
+}
+
+.tech-calendar-week-view .event-card .event-organizer-logo-lockup img {
+    display: block !important; /* Remove inline spacing */
+    width: 16px !important;
+    height: 16px !important;
+    vertical-align: middle !important;
+}
+
+/* Ensure title text aligns with icon */
+.tech-calendar-week-view .event-card .event-title {
+    line-height: 1.2 !important;
+    vertical-align: middle !important;
+    display: -webkit-box !important;
+}
+
+/* Event meta block - Clear metadata zone with proper spacing and alignment */
+.tech-calendar-week-view .event-card .event-meta-block {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important; /* Left align all children */
+    gap: 3px !important; /* Clear separation between metadata items */
+    width: 100% !important;
+    margin-top: 4px !important; /* Visual separation from header zone */
+    box-sizing: border-box !important;
+}
+
+/* Metadata text alignment is handled inline based on whether title has icon */
+
+/* Metadata items - Consistent styling with visual hierarchy */
+.tech-calendar-week-view .event-card .meta-item {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important; /* No tracking for metadata */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important; /* Left align content */
+    text-align: left !important; /* Ensure left alignment */
+    width: 100% !important; /* Take full width */
+    min-width: 0 !important; /* Allow truncation */
+}
+
+/* Location - Primary metadata (slightly more prominent) */
+.tech-calendar-week-view .event-card .meta-item.meta-location {
+    color: rgba(255, 255, 255, 0.6) !important; /* Slightly brighter for primary metadata */
+}
+
+/* Organizer - Secondary metadata (more subdued) */
+.tech-calendar-week-view .event-card .meta-item.meta-organizer {
+    color: rgba(255, 255, 255, 0.5) !important; /* More muted for secondary metadata */
+}
+
+/* Metadata icons - Aligned with title logo (16px container for 12px icon) */
+.tech-calendar-week-view .event-card .meta-item .meta-icon-wrapper {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    line-height: 0 !important;
+    vertical-align: middle !important;
+    width: 16px !important; /* Match logo width for vertical alignment */
+    height: 16px !important; /* Match logo height for vertical alignment */
+}
+
+/* Center the 12px icon within the 16px container */
+.tech-calendar-week-view .event-card .meta-item .meta-icon-wrapper svg,
+.tech-calendar-week-view .event-card .meta-item .meta-icon-wrapper .material-icon {
+    flex-shrink: 0 !important;
+    width: 12px !important;
+    height: 12px !important;
+    opacity: 0.7 !important; /* Subtle icon opacity */
+    display: block !important;
+    vertical-align: middle !important;
+    margin: auto !important; /* Center within 16px container */
+}
+
+/* Ensure text in meta-item aligns with icon */
+.tech-calendar-week-view .event-card .meta-item .truncate {
+    line-height: 1.2 !important;
+    vertical-align: middle !important;
+    display: inline-block !important;
+}
+
+/* Ensure truncate spans are left-aligned */
+.tech-calendar-week-view .event-card .meta-item .truncate {
+    text-align: left !important;
+    display: inline-block !important; /* Inline-block for proper alignment */
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    max-width: 100% !important;
+    vertical-align: middle !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 0 1 auto !important; /* Don't grow, but can shrink */
+    min-width: 0 !important; /* Allow shrinking below content size */
+}
+
+/* Force left alignment on all meta-item children */
+.tech-calendar-week-view .event-card .meta-item > * {
+    text-align: left !important;
 }
 
 /* Event title section - no longer needs flex layout */
@@ -690,11 +864,25 @@
     margin-top: 0 !important;
 }
 
-/* Hover effects */
+/* Hover effects - Linear-style lift with border brightening */
 .tech-calendar-week-view .event-card:hover {
     transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
     z-index: 15 !important;
+}
+
+/* Brighten borders on hover - dark mode */
+.dark .tech-calendar-week-view .event-card:hover {
+    border-top-color: rgba(255, 255, 255, 0.15) !important;
+    border-right-color: rgba(255, 255, 255, 0.15) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Brighten borders on hover - light mode */
+.light .tech-calendar-week-view .event-card:hover {
+    border-top-color: rgba(0, 0, 0, 0.12) !important;
+    border-right-color: rgba(0, 0, 0, 0.12) !important;
+    border-bottom-color: rgba(0, 0, 0, 0.12) !important;
 }
 
 /* ===================================

@@ -1,0 +1,240 @@
+/* ===================================
+   STACKED CARDS - VERTICAL STRAIGHT STACK
+   
+   Design: A vertical "file tab" stack.
+   Main card is on top. Stacked cards stick out the BOTTOM only.
+   NO horizontal shift.
+   
+   Interaction: Hovering the bottom tab brings that card to front.
+   =================================== */
+
+/* ===================================
+   CONTAINER
+   =================================== */
+
+.stacked-event-container {
+    position: relative;
+    height: 100%;
+    width: 100% !important;
+    overflow: visible !important;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.stacked-cards-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+}
+
+/* ===================================
+   MAIN CARD (Front)
+   =================================== */
+
+.main-card-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease;
+    /* Clean shadow separating it from the stack below */
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.08));
+}
+
+.main-card-wrapper.pushed-back {
+    opacity: 0.4;
+    z-index: 1; /* Move behind */
+    pointer-events: none;
+}
+
+/* Premium Card Styling - Unified with Stacked Tabs */
+/* Premium Card Styling - Unified with Stacked Tabs */
+.main-stacked-card.event-card {
+    height: 100% !important;
+    width: 100% !important;
+    /* Use the same solid color as the stacked tabs */
+    background: var(--category-bg) !important; 
+    /* Use category-specific darker border for separation */
+    border: 1px solid var(--category-title-color) !important;
+    border-radius: 6px !important;
+}
+
+.dark .main-stacked-card.event-card {
+    /* Use the same solid color as the stacked tabs */
+    background: var(--category-bg) !important;
+    /* Maintain category border in dark mode for consistency */
+    border: 1px solid var(--category-title-color) !important;
+}
+
+/* ===================================
+   STACKED LAYERS (Vertical Tabs)
+   =================================== */
+
+.stacked-card-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    border-radius: 6px;
+    cursor: pointer;
+    /* Remove background - let the EventCard inside handle all visual styling */
+    /* This prevents the duplicate "stack behind" visual effect */
+    background: transparent;
+    
+    /* Smooth transition for pop-up */
+    transition: 
+        transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+        height 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+        top 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+        box-shadow 0.2s ease;
+        
+    pointer-events: auto;
+}
+
+/* 
+   VERTICAL OFFSETS ONLY
+   Shift cards straight down to create "bottom tabs".
+   Using 24px increments to allow "logo" or header color to show.
+*/
+
+/* Card 1 (Bottom tab 1) */
+.stacked-card-bar:nth-child(1) {
+    z-index: 5;
+    top: 0;
+}
+
+/* Card 2 (Bottom tab 2) */
+.stacked-card-bar:nth-child(2) {
+    z-index: 4;
+    top: 0;
+}
+
+/* Card 3+ */
+.stacked-card-bar:nth-child(n+3) {
+    z-index: 3;
+    top: 0;
+}
+
+/* Styling the "Tab" */
+.stacked-hidden-card.event-card {
+    background: var(--bar-color) !important;
+    /* Top border distinct to show separation */
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    /* Inner highlight on top edge for that "file folder" look */
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+    
+    border-radius: 6px;
+    opacity: 1; /* Keep fully opaque to read text/icon if visible */
+    
+    /* RESET: Remove the 'left accent' padding from the main event card styles */
+    padding: 0 !important;
+    padding-left: 0 !important;
+    
+    /* RESET: Ensure no conflicting left borders or accents */
+    border-left: 1px solid rgba(0,0,0,0.08) !important;
+    border-radius: 6px !important;
+}
+
+/* Hide any internal accent bars (often done via pseudo-elements) */
+.stacked-hidden-card.event-card::before,
+.stacked-hidden-card.event-card::after {
+    display: none !important;
+}
+
+.dark .stacked-hidden-card.event-card {
+    border: 1px solid rgba(0,0,0,0.4) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+/* OPTIONAL: Show Logo/Header in the strip? */
+/* We'll allow the header content to be visible but clipped to the top 28px */
+.stacked-hidden-card .event-content,
+.stacked-hidden-card .event-meta {
+    opacity: 0; /* Hide body text */
+}
+
+.stacked-hidden-card .event-title,
+.stacked-hidden-card .event-header {
+    /* Reveal title/icon for the "logo" effect requested */
+    opacity: 1; 
+    transition: opacity 0.1s;
+    /* Color fix: make sure text on bold background is readable? 
+       Usually event cards handle this, but let's be safe */
+    color: rgba(0,0,0,0.7); 
+    font-size: 11px;
+    padding-top: 4px; /* Adjust padding for the tab look */
+}
+
+.dark .stacked-hidden-card .event-title {
+    color: rgba(255,255,255,0.9);
+}
+
+/* ===================================
+   EXPANDED STATE (Pop Up)
+   =================================== */
+
+.stacked-card-bar.expanded {
+    z-index: 1000 !important;
+    
+    /* Pop to full size */
+    transform: scale(1.02) !important;
+    height: 100% !important;
+    top: 0 !important;
+    
+    box-shadow: 
+        0 10px 30px -5px rgba(0, 0, 0, 0.15),
+        0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Hit Area Buffer - Extend DOWN to where the card was */
+.stacked-card-bar.expanded::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 150%; /* Extend way down to catch the tab mouse-out */
+    z-index: -1;
+    background: transparent;
+}
+
+/* Content Reveal */
+.stacked-card-bar.expanded .stacked-hidden-card.event-card {
+    background: linear-gradient(to bottom, #ffffff, #fafafa) !important;
+    padding: 10px !important;
+    padding-left: 14px !important;
+    opacity: 1;
+    border: 1px solid rgba(75, 85, 99, 0.1) !important;
+}
+
+.dark .stacked-card-bar.expanded .stacked-hidden-card.event-card {
+    background: linear-gradient(to bottom, #2C2C2C, #252525) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.stacked-card-bar.expanded .stacked-hidden-card .event-content,
+.stacked-card-bar.expanded .stacked-hidden-card .event-title,
+.stacked-card-bar.expanded .stacked-hidden-card .event-meta {
+    opacity: 1 !important;
+    pointer-events: auto;
+    transition: opacity 0.15s ease 0.05s;
+    
+    /* Reset text styles from the "tab" look */
+    color: inherit;
+    font-size: inherit;
+    padding-top: 0;
+}
+
+/* Utility */
+.stacked-event-container .overlap-indicator-badge.hidden-events-badge {
+    display: none;
+}
+
+

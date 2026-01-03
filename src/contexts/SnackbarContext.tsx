@@ -99,7 +99,8 @@ function ThemedDialog({ children, theme }: { children: React.ReactNode, theme: s
 }
 
 export function SnackbarProvider({ children }: { children: React.ReactNode }) {
-  const { theme } = useNextTheme();
+  const themeContext = useNextTheme();
+  const theme = themeContext?.theme ?? undefined;
   const [snackbar, setSnackbar] = useState<SnackbarMessage | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [confirmation, setConfirmation] = useState<ConfirmationDialog>({

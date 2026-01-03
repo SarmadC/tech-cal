@@ -49,7 +49,7 @@ export async function GET() {
         
         const [
             updateQueueResult,
-            moderationResult,
+            moderationQueueItems,
             enrichmentResult,
             fieldProtectionResult,
         ] = await Promise.all([
@@ -59,10 +59,10 @@ export async function GET() {
                 .select('id', { count: 'exact', head: true })
                 .eq('status', 'pending'),
             
-            // Pending moderation items
+            // Pending moderation items (need to fetch with events to filter out enriched)
             serviceClient
                 .from('event_moderation_queue')
-                .select('id', { count: 'exact', head: true })
+                .select('id, events:event_id(enrichment_status)')
                 .eq('status', 'pending'),
             
             // Events needing enrichment (pending status)
@@ -79,9 +79,17 @@ export async function GET() {
                 .eq('protection_mode', 'review_required'),
         ]);
 
+        // Filter out enriched events from moderation count (enriched events should be reviewed in update queue)
+        const moderationCount = moderationQueueItems?.error
+            ? 0 // Return 0 on error (will be logged by outer catch)
+            : (moderationQueueItems?.data ?? []).filter((item: any) => {
+                  const enrichmentStatus = item.events?.enrichment_status;
+                  return enrichmentStatus !== 'enriched';
+              }).length;
+
         const counts: QueueCountsResponse = {
             updateQueue: updateQueueResult.count ?? 0,
-            moderation: moderationResult.count ?? 0,
+            moderation: moderationCount,
             enrichment: enrichmentResult.count ?? 0,
             fieldProtection: fieldProtectionResult.count ?? 0,
         };

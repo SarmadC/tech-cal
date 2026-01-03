@@ -17,25 +17,69 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
     const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
     return (
-        <div className="mb-6 filter-section">
+        <div className="filter-section filter-section-with-margin">
+            <div className="filter-section-divider"></div>
             <button
-                className="flex items-center justify-between w-full mb-3 pb-2 border-b border-border group text-foreground"
+                className="flex items-center justify-between w-full mb-3 pb-2 border-b border-[#1F1F1F] group text-[#E5E5E5]"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <h3 className="font-medium text-xs uppercase tracking-[0.16em] text-muted-foreground/80">{title}</h3>
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#737373]">{title}</h3>
                 {isOpen ? (
-                    <CaretUp size={16} className="text-muted-foreground group-hover:text-foreground" />
+                    <CaretUp size={12} className="text-[#525252] group-hover:text-[#737373]" />
                 ) : (
-                    <CaretDown size={16} className="text-muted-foreground group-hover:text-foreground" />
+                    <CaretDown size={12} className="text-[#525252] group-hover:text-[#737373]" />
                 )}
             </button>
 
             {isOpen && (
-                <div className="space-y-2 animate-in slide-in-from-top-1 duration-200">
+                <div className="space-y-0.5 animate-in slide-in-from-top-1 duration-200">
                     {children}
                 </div>
             )}
         </div>
+    );
+};
+
+interface RadioButtonOptionProps {
+    label: string;
+    count?: number;
+    checked: boolean;
+    onChange: () => void;
+}
+
+const RadioButtonOption: React.FC<RadioButtonOptionProps> = ({ label, count, checked, onChange }) => {
+    return (
+        <label className={`filter-option flex items-center justify-between h-7 px-2 rounded-md cursor-pointer group transition-all duration-150 ease-in-out ${
+            checked 
+                ? 'text-[#FFFFFF]' 
+                : 'text-[#A1A1AA] hover:bg-white/8 hover:text-[#D4D4D4]'
+        }`}>
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={`
+                    w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
+                    ${checked
+                        ? 'border-[#EDEDED] bg-[#EDEDED]'
+                        : 'border-[#404040] bg-transparent group-hover:border-[#525252]'
+                    }
+                `}>
+                    {checked && (
+                        <div className="w-[8px] h-[8px] rounded-full bg-[#0F0F0F]" />
+                    )}
+                </div>
+                <input
+                    type="radio"
+                    className="hidden"
+                    checked={checked}
+                    onChange={onChange}
+                />
+                <span className="text-sm truncate">
+                    {label}
+                </span>
+            </div>
+            {count !== undefined && (
+                <span className="text-xs tabular-nums text-[#525252] ml-2 flex-shrink-0">{count}</span>
+            )}
+        </label>
     );
 };
 
@@ -48,29 +92,37 @@ interface CheckboxOptionProps {
 
 const CheckboxOption: React.FC<CheckboxOptionProps> = ({ label, count, checked, onChange }) => {
     return (
-        <label className="filter-option flex items-center gap-3 cursor-pointer group text-sm text-muted-foreground rounded-lg px-2 py-2 hover:bg-muted transition-colors">
-            <div className={`
-        w-5 h-5 rounded-full border flex items-center justify-center transition-all duration-200
-        ${checked
-                    ? 'border-transparent bg-primary text-primary-foreground'
-                    : 'border-border bg-transparent group-hover:border-foreground/50'
-                }
-      `}>
-                {checked && (
-                    <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                )}
+        <label className={`filter-option flex items-center justify-between h-7 px-2 rounded-md cursor-pointer group transition-all duration-150 ease-in-out ${
+            checked 
+                ? 'text-[#FFFFFF]' 
+                : 'text-[#A1A1AA] hover:bg-white/8 hover:text-[#D4D4D4]'
+        }`}>
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={`
+                    w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
+                    ${checked
+                        ? 'border-[#EDEDED] bg-[#EDEDED]'
+                        : 'border-[#404040] bg-transparent group-hover:border-[#525252]'
+                    }
+                `}>
+                    {checked && (
+                        <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 6L5 9L10 3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    )}
+                </div>
+                <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={checked}
+                    onChange={onChange}
+                />
+                <span className="text-sm truncate">
+                    {label}
+                </span>
             </div>
-            <input
-                type="checkbox"
-                className="hidden"
-                checked={checked}
-                onChange={onChange}
-            />
-            <span className={`text-sm ${checked ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
-                {label}
-            </span>
             {count !== undefined && (
-                <span className="ml-auto text-xs text-muted-foreground/70">({count})</span>
+                <span className="text-xs tabular-nums text-[#525252] ml-2 flex-shrink-0">{count}</span>
             )}
         </label>
     );
@@ -125,9 +177,9 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
 
     return (
         <div className={`discovery-sidebar ${mobileMode ? 'w-full block' : 'hidden lg:block w-72 flex-shrink-0 pr-8'}`}>
-            <div className={mobileMode ? "" : "discovery-sidebar-panel sticky top-6 rounded-3xl border border-border/60 bg-card/80 dark:bg-card/20 p-6 shadow-lg backdrop-blur"}>
+            <div className={mobileMode ? "" : "discovery-sidebar-panel sticky top-6 rounded-xl border border-[#1F1F1F] bg-[#0A0A0A] p-6 shadow-sm"}>
                 <div className="mb-8">
-                    <h2 className="text-2xl font-semibold text-foreground">Filters</h2>
+                    <h2 className="text-[15px] font-medium text-[#EDEDED]">Filters</h2>
                 </div>
 
                 <FilterSection title="Event Format">
@@ -157,18 +209,18 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
                 </FilterSection>
 
                 <FilterSection title="Cost">
-                    <CheckboxOption
+                    <RadioButtonOption
                         label="Any"
                         checked={filters.cost === 'all'}
                         onChange={() => onUpdateFilter('cost', 'all')}
                     />
-                    <CheckboxOption
+                    <RadioButtonOption
                         label="Free"
                         checked={filters.cost === 'free'}
                         onChange={() => onUpdateFilter('cost', 'free')}
                         count={counts.cost?.free}
                     />
-                    <CheckboxOption
+                    <RadioButtonOption
                         label="Paid"
                         checked={filters.cost === 'paid'}
                         onChange={() => onUpdateFilter('cost', 'paid')}

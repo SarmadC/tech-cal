@@ -116,7 +116,9 @@ export class EventEnrichmentService {
                 .select('id, title, start_time, end_time')
                 .eq('event_id', eventId);
 
-            // Insert new agenda items
+            // Ensure unique sort_order per day_number
+            // Group items by day_number and assign sequential sort_order within each group
+            const dayCounters = new Map<number, number>();
             const agendaInserts = items.map((item, index) => {
                 const parseMinutes = (time: string | null | undefined): number | null => {
                     if (!time) return null;
@@ -149,6 +151,12 @@ export class EventEnrichmentService {
                     return diff;
                 })();
 
+                const dayNumber = item.dayNumber || 1;
+                // Get the current counter for this day, or start at 0
+                const currentSortOrder = dayCounters.get(dayNumber) ?? 0;
+                // Increment the counter for this day
+                dayCounters.set(dayNumber, currentSortOrder + 1);
+
                 return {
                     event_id: eventId,
                     title: item.title,
@@ -157,9 +165,9 @@ export class EventEnrichmentService {
                     agenda_type: item.type || 'other',
                     description: item.description || null,
                     location: item.location || null,
-                    day_number: item.dayNumber || 1,
+                    day_number: dayNumber,
                     track: item.track || null,
-                    sort_order: item.sortOrder ?? index,
+                    sort_order: currentSortOrder,
                     duration_minutes:
                         derivedDuration !== null && derivedDuration !== undefined ? derivedDuration : null,
                     capacity: item.capacity ?? null,

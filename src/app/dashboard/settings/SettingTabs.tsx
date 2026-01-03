@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'; // Standard, top-level import
 import ProfileSettingsForm from './ProfileSettingsForm';
 import CareerProfileManager from '@/components/profile/CareerProfileManager';
 import CalendarIntegrationSettings from '@/components/dashboard/CalendarIntegrationSettings';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { ThemeSelector } from '@/components/ui/theme-selector';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { AppProfile } from '@/types';
 
@@ -35,21 +35,9 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                         <div>
                             <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--foreground-primary)' }}>Theme</h3>
                             <p className="text-sm mb-4" style={{ color: 'var(--foreground-secondary)' }}>
-                                Choose between light and dark themes or let the system decide.
+                                Choose your interface appearance.
                             </p>
-                            <div 
-                                className="flex items-center justify-between p-4 border rounded-lg"
-                                style={{ 
-                                    borderColor: 'var(--border-default)',
-                                    backgroundColor: 'var(--background-main)'
-                                }}
-                            >
-                                <div>
-                                    <p className="text-sm font-medium" style={{ color: 'var(--foreground-primary)' }}>Dark mode</p>
-                                    <p className="text-xs" style={{ color: 'var(--foreground-tertiary)' }}>Toggle between light and dark themes</p>
-                                </div>
-                                <ThemeToggle />
-                            </div>
+                            <ThemeSelector />
                         </div>
                     </div>
                 );
@@ -199,37 +187,22 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
             </div>
 
             {/* Desktop Sidebar */}
-            <aside className="hidden lg:block lg:w-56">
+            <aside className="hidden lg:block lg:w-64 lg:flex-shrink-0 lg:border-r lg:border-white/5 lg:pr-8">
                 <nav className="sticky top-8 space-y-1">
                     {tabs.map(tab => (
                         <Link
                             key={tab.id}
                             href={`/dashboard/settings?tab=${tab.id}`}
-                            className="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors group"
-                            style={{
-                                backgroundColor: activeTab === tab.id ? 'var(--accent-primary-light)' : 'transparent',
-                                color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--foreground-secondary)'
-                            }}
-                            onMouseEnter={(e) => {
-                                if (activeTab !== tab.id) {
-                                    e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
-                                    e.currentTarget.style.color = 'var(--foreground-primary)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (activeTab !== tab.id) {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                    e.currentTarget.style.color = 'var(--foreground-secondary)';
-                                }
-                            }}
+                            className={`flex items-center px-4 py-3 rounded-lg text-sm transition-colors relative ${
+                                activeTab === tab.id 
+                                    ? 'bg-white/5 text-white font-medium' 
+                                    : 'text-zinc-500 font-normal'
+                            } hover:bg-white/5 hover:text-white`}
                         >
-                            <span className="truncate">{tab.label}</span>
                             {activeTab === tab.id && (
-                                <div 
-                                    className="ml-auto w-2 h-2 rounded-full" 
-                                    style={{ backgroundColor: 'var(--accent-primary)' }}
-                                />
+                                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white rounded-r" />
                             )}
+                            <span className="truncate">{tab.label}</span>
                         </Link>
                     ))}
                 </nav>
@@ -237,16 +210,8 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
 
             {/* Main Content */}
             <main className="flex-1">
-                <div 
-                    className="rounded-2xl overflow-hidden"
-                    style={{ 
-                        backgroundColor: 'var(--background-secondary)',
-                        border: '1px solid var(--border-default)'
-                    }}
-                >
-                    <div className="p-6 lg:p-8">
+                <div className="p-6 lg:p-8">
                     {renderContent()}
-                    </div>
                 </div>
             </main>
         </div>

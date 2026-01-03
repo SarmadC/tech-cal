@@ -165,6 +165,12 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
 
   // Handle cancel action
   const handleCancel = () => {
+    if (isDirty) {
+      const confirmed = window.confirm('You have unsaved changes. Are you sure you want to discard them?');
+      if (!confirmed) {
+        return;
+      }
+    }
     onClose();
   };
 
@@ -193,43 +199,36 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
       aria-labelledby="quick-edit-modal-title"
     >
       <div 
-        className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl transition-transform duration-300"
-        style={{ backgroundColor: 'var(--background-elevated)' }}
+        className="w-full max-w-[500px] max-h-[90vh] overflow-hidden rounded-xl border border-white/5 bg-zinc-900 shadow-2xl transition-transform duration-300"
         role="document"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b px-6 py-6">
-          <div>
+        <div className="flex items-center justify-between border-b border-white/5 px-6 py-5">
+          <div className="flex items-center gap-3">
             <h2 
               id="quick-edit-modal-title" 
-              className="text-2xl font-bold mb-1"
+              className="text-lg font-medium text-zinc-100"
             >
               Edit {SECTION_TITLES[section]}
             </h2>
-            <p className="text-sm opacity-80">
-              Update your profile information
-            </p>
+            {isDirty && (
+              <span className="text-xs text-zinc-500 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                Unsaved changes
+              </span>
+            )}
           </div>
           <button
             onClick={handleCancel}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-transparent opacity-60 transition-all duration-200 hover:opacity-100 hover:border-opacity-30 focus:outline-none focus:ring-2 focus:ring-offset-2"
-            style={{
-              backgroundColor: 'transparent'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--accent-primary-light)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
+            className="text-zinc-500 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded"
             aria-label="Close"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
 
         {/* Modal Content */}
-        <div className="max-h-[calc(90vh-6rem)] overflow-y-auto px-6 py-6">
+        <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-6 py-6">
           <Editor 
             profile={draft} 
             onUpdate={updateDraft} 
@@ -237,11 +236,11 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end gap-3 border-t px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-white/5 px-6 py-4">
           {/* Error Message */}
           {saveError && (
             <div 
-              className="mr-auto text-sm text-red-600 flex items-center gap-2" 
+              className="mr-auto text-sm text-red-400 flex items-center gap-2" 
               role="alert"
             >
               <span>{saveError}</span>
@@ -251,7 +250,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
           {/* Cancel Button */}
           <button
             onClick={handleCancel}
-            className="px-4 py-2 rounded-lg font-medium transition-colors hover:bg-white/10 border"
+            className="text-sm text-zinc-400 hover:text-white transition-colors focus:outline-none"
           >
             Cancel
           </button>
@@ -261,20 +260,20 @@ const QuickEditModal: React.FC<QuickEditModalProps> = React.memo(({
             onClick={handleSave}
             disabled={!isDirty || isSaving}
             className={`
-              flex items-center px-6 py-2 rounded-lg font-medium transition-all
+              text-sm font-medium px-4 py-1.5 rounded-md transition-all
               ${isDirty && !isSaving
-                ? 'shadow-sm'
-                : 'opacity-50 cursor-not-allowed'
+                ? 'bg-white text-black hover:bg-zinc-100'
+                : 'opacity-50 cursor-not-allowed bg-zinc-800 text-zinc-500'
               }
             `}
           >
             {isSaving ? (
               <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current opacity-30 border-t-current"></div>
+                <span className="inline-block mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
                 Saving…
               </>
             ) : (
-              'Save Changes'
+              'Save'
             )}
           </button>
         </div>

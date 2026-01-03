@@ -13,7 +13,7 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { CheckCircle, Timer, User, X } from '@phosphor-icons/react';
+import { CheckCircle, Timer, User, X, PencilSimple } from '@phosphor-icons/react';
 import { GreenBadge } from '@/components/onboarding/shared/FormField';
 import { AnalyticsService } from '@/services/analyticsService';
 
@@ -56,6 +56,75 @@ const OPTIONAL_QUICK_EDIT_MAP: Record<keyof CareerOptionalSectionStatus, QuickEd
 const formatGoalLabel = (goal: string): string => {
   const normalized = goal.replace(/-/g, ' ').toLowerCase();
   return normalized.replace(/\b\w/g, char => char.toUpperCase());
+};
+
+// Helper to format learning style labels
+const formatLearningStyle = (style: string): string => {
+  const labels: Record<string, string> = {
+    'hands-on': 'Hands-on Workshops',
+    'theoretical': 'Lectures & Presentations',
+    'interactive': 'Discussions & Q&A',
+    'networking': 'Networking & Meeting People',
+    'case-studies': 'Real-world Examples',
+    'peer-learning': 'Learning from Peers'
+  };
+  return labels[style] || style.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+};
+
+// Helper to format available time
+const formatAvailableTime = (time: string): string => {
+  const labels: Record<string, string> = {
+    'very-limited': 'Very Limited (< 2 hrs/month)',
+    'limited': 'Limited (2-8 hrs/month)',
+    'moderate': 'Moderate (8-20 hrs/month)',
+    'flexible': 'Flexible (20+ hrs/month)',
+    'dedicated': 'Dedicated (can take time off)'
+  };
+  return labels[time] || time;
+};
+
+// Helper to format budget
+const formatBudget = (budget: string): string => {
+  const labels: Record<string, string> = {
+    'free-only': 'Free events only',
+    'low': 'Low ($1-100/month)',
+    'moderate': 'Moderate ($100-500/month)',
+    'high': 'High ($500-2000/month)',
+    'unlimited': 'No budget constraints'
+  };
+  return labels[budget] || budget;
+};
+
+// Helper to format networking goals
+const formatNetworkingGoal = (goal: string): string => {
+  const labels: Record<string, string> = {
+    'find-mentors': 'Connect with mentors',
+    'find-mentees': 'Support mentees',
+    'find-peers': 'Meet peers at my level',
+    'find-collaborators': 'Find collaborators',
+    'find-employers': 'Explore job opportunities',
+    'industry-insights': 'Learn industry trends',
+    'thought-leadership': 'Establish expertise'
+  };
+  return labels[goal] || goal.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+};
+
+// Helper to format event types
+const formatEventType = (type: string): string => {
+  return type.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+};
+
+// Helper to format company size
+const formatCompanySize = (size: string): string => {
+  const labels: Record<string, string> = {
+    'startup': 'Startup (< 50)',
+    'small': 'Small (50-200)',
+    'medium': 'Medium (200-1000)',
+    'large': 'Large (1000-10000)',
+    'enterprise': 'Enterprise (10000+)',
+    'freelance': 'Freelance/Independent'
+  };
+  return labels[size] || size;
 };
 
 export interface CareerProfileManagerProps {
@@ -421,18 +490,30 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
 
   if (isEditing) {
     return (
-      <div className={`career-profile-manager editing ${className}`}>
+      <div 
+        className={`career-profile-manager editing ${className}`}
+        style={{ backgroundColor: 'var(--background-main)' }}
+      >
         <div className="relative">
           {isSubmitting && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
-              <div className="text-center">
-                <div
-                  className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2"
-                  style={{ borderColor: 'var(--accent-primary)' }}
-                ></div>
-                <p className="text-sm" style={{ color: 'var(--foreground-secondary)' }}>
-                  Updating your career profile...
-                </p>
+            <div className="absolute inset-0 z-10 rounded-xl">
+              <div 
+                className="absolute inset-0 backdrop-blur-sm"
+                style={{ 
+                  backgroundColor: 'var(--background-main)',
+                  opacity: 0.9
+                }}
+              />
+              <div className="relative flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div
+                    className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2"
+                    style={{ borderColor: 'var(--accent-primary)' }}
+                  ></div>
+                  <p className="text-sm" style={{ color: 'var(--foreground-secondary)' }}>
+                    Updating your career profile...
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -440,7 +521,34 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
           <CareerOnboarding
             onComplete={handleComplete}
             onSkip={handleCancel}
-            className="bg-white"
+            preserveDataOnSkip={true}
+            initialData={currentCareerProfile ? {
+              step1_role: {
+                currentRole: currentCareerProfile.currentRole || '',
+                seniority: currentCareerProfile.seniority || 'mid-level',
+                industry: currentCareerProfile.industry || '',
+                companySize: currentCareerProfile.companySize || 'medium'
+              },
+              step2_skills: {
+                primarySkills: currentCareerProfile.primarySkills || [],
+                skillsToLearn: currentCareerProfile.skillsToLearn || [],
+                interests: currentCareerProfile.interests || [],
+                skillTags: currentCareerProfile.skillTags || []
+              },
+              step3_goals: {
+                careerGoals: currentCareerProfile.careerGoals || [],
+                timeframe: currentCareerProfile.timeframe || 'medium-term'
+              },
+              step4_preferences: {
+                learningStyle: currentCareerProfile.learningStyle || [],
+                availableTime: currentCareerProfile.availableTime || 'moderate',
+                budget: currentCareerProfile.budget || 'moderate'
+              },
+              step5_networking: {
+                networkingGoals: currentCareerProfile.networkingGoals || [],
+                preferredEventTypes: currentCareerProfile.preferredEventTypes || []
+              }
+            } : undefined}
           />
         </div>
       </div>
@@ -513,50 +621,22 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   return (
     <>
       <div key={`profile-${lastUpdate}`} className={`career-profile-manager completed ${className}`}>
-        <div className="space-y-6">
-          {/* Primary Focus: Career Snapshot with Enhanced Typography */}
-          <section
-            className="rounded-xl transition-shadow"
-            style={{
-              backgroundColor: 'var(--background-elevated)',
-              color: 'var(--foreground-primary)'
-            }}
-          >
-            <div className="p-6 space-y-6">
-              {/* Header with Large Typography */}
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-8">
+          {/* Page Header - Clean Linear Style */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
                 <div>
-                  <h1
-                    className="text-3xl font-bold leading-tight sm:text-4xl"
-                    style={{ color: 'var(--foreground-primary)' }}
-                  >
+                <h1 className="text-2xl font-medium text-zinc-100">
                     {currentCareerProfile.currentRole}
                   </h1>
+                <p className="text-sm text-zinc-500 mt-1">
+                  Manage your role, skills, and goals.
+                </p>
                 </div>
                 <button
                   onClick={handleEdit}
-                  className="px-6 py-3 rounded-xl font-semibold text-base transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-opacity-30 shadow-md border-2"
-                  style={{
-                    backgroundColor: 'var(--accent-primary)',
-                    color: 'var(--background-main)',
-                    borderColor: 'var(--accent-primary)',
-                    boxShadow: '0 4px 14px 0 rgba(0, 0, 0, 0.15)'
-                  }}
-                  aria-label="Edit profile - open full profile editing wizard"
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--accent-primary-dark)';
-                    e.currentTarget.style.borderColor = 'var(--accent-primary-dark)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
-                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 0 4px var(--accent-primary-light)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.boxShadow = '0 4px 14px 0 rgba(0, 0, 0, 0.15)';
-                  }}
+                className="border border-white/10 hover:bg-white/5 px-3 py-1.5 rounded-md text-sm text-zinc-300 hover:text-zinc-200 transition-colors"
+                aria-label="Edit profile"
                 >
                   Edit profile
                 </button>
@@ -565,141 +645,38 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
               {/* Inline Save Feedback */}
               {saveFeedback && (
                 <div className="animate-in fade-in slide-in-from-top-2">
-                  <div 
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--success-light)',
-                      color: 'var(--success)',
-                      border: '1px solid var(--success)'
-                    }}
-                  >
-                    <CheckCircle size={18} weight="fill" />
-                    <span className="text-sm font-medium">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 text-xs">
+                  <CheckCircle size={14} weight="fill" />
+                  <span>
                       {saveFeedback.section} saved • {saveFeedback.timestamp.toLocaleTimeString()}
                     </span>
                   </div>
                 </div>
               )}
-
-              {/* Progress Bar Section - Promoted as Primary KPI */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-sm font-bold uppercase tracking-wide"
-                    style={{ color: 'var(--foreground-primary)' }}
-                  >
-                    Profile completion
-                  </span>
-                  <span
-                    className="text-2xl font-bold"
-                    style={{ color: 'var(--foreground-primary)' }}
-                  >
-                    {optionalCompletionPercent}%
-                  </span>
                 </div>
-                <div
-                  className="h-3 w-full overflow-hidden rounded-full"
-                  style={{ backgroundColor: 'var(--background-tertiary)' }}
-                >
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${optionalCompletionPercent}%`,
-                      backgroundColor: 'var(--success)'
-                    }}
-                  />
+
+          {/* Bento Grid Layout - 3 Columns on Desktop */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* Column 1: Role & Stats */}
+            <div className="space-y-4">
+              {/* Role Card */}
+              <div
+                className="group relative bg-zinc-900/50 border border-white/5 rounded-xl p-6 hover:bg-zinc-900 transition-colors cursor-pointer"
+                onClick={() => !isQuickEditDisabled && handleQuickEdit('role')}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-sm font-medium text-zinc-400">Current Role</h3>
+                  <PencilSimple size={14} className="text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-              </div>
-
-              {/* Contextual Badges */}
-              <div className="flex flex-wrap gap-2">
-                {currentCareerProfile.seniority && (
-                  <Badge
-                    variant="secondary"
-                    className="border px-3 py-1 text-xs font-medium uppercase tracking-wide"
-                    style={{
-                      borderColor: 'var(--border-default)',
-                      backgroundColor: 'var(--background-secondary)',
-                      color: 'var(--foreground-secondary)'
-                    }}
-                  >
-                    {currentCareerProfile.seniority.replace('-', ' ')}
-                  </Badge>
-                )}
-                <Badge
-                  variant="secondary"
-                  className="border px-3 py-1 text-xs font-medium uppercase tracking-wide"
-                  style={{
-                    borderColor: 'var(--border-default)',
-                    backgroundColor: 'var(--background-secondary)',
-                    color: 'var(--foreground-secondary)'
-                  }}
-                >
-                  {timeframeDetails.label}
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  className="border px-3 py-1 text-xs font-medium uppercase tracking-wide"
-                  style={{
-                    borderColor: 'var(--border-default)',
-                    backgroundColor: 'var(--background-secondary)',
-                    color: 'var(--foreground-tertiary)'
-                  }}
-                >
-                  {timeframeDetails.window}
-                </Badge>
-              </div>
-            </div>
-          </section>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card
-              className="rounded-xl"
-              style={{
-                backgroundColor: 'var(--background-elevated)'
-              }}
-            >
-              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-4">
                 <div>
-                  <CardTitle className="text-lg font-semibold" style={{ color: 'var(--foreground-primary)' }}>
-                    Role overview
-                  </CardTitle>
-                  <CardDescription style={{ color: 'var(--foreground-secondary)' }}>
-                    Your current position, industry, and workplace details.
-                  </CardDescription>
-                </div>
-                <button
-                  onClick={() => handleQuickEdit('role')}
-                  disabled={isQuickEditDisabled}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:opacity-80 active:opacity-60 focus:outline-none focus:ring-2 focus:ring-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap rounded-lg border"
-                  style={{
-                    color: 'var(--accent-primary)',
-                    borderColor: 'var(--border-default)',
-                    backgroundColor: 'var(--background-secondary)'
-                  }}
-                  aria-label="Quick edit - open quick edit modal for this section"
-                  >
-                    Quick edit
-                  </button>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <section>
-                  <dl className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide opacity-70">Current role</dt>
-                      <dd className="text-base font-semibold">
                       {inlineEditing?.field === 'currentRole' ? (
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={inlineEditing.value}
                             onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
-                            className="px-2 py-1 text-base font-semibold border rounded focus:outline-none focus:ring-2 focus:ring-opacity-30"
-                            style={{
-                              backgroundColor: 'var(--background-elevated)',
-                              borderColor: 'var(--border-default)',
-                              color: 'var(--foreground-primary)'
-                            }}
+                          className="flex-1 px-2 py-1 text-base font-medium text-zinc-100 bg-zinc-800 border border-white/5 rounded focus:outline-none focus:ring-1 focus:ring-white/20"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
@@ -708,52 +685,47 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                                 handleInlineCancel();
                               }
                             }}
+                          onClick={(e) => e.stopPropagation()}
                           />
                           <button
-                            onClick={() => handleInlineSave('currentRole', inlineEditing.value)}
-                            className="p-1 text-green-600 hover:text-green-700 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); handleInlineSave('currentRole', inlineEditing.value); }}
+                          className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors"
                             aria-label="Save"
                           >
                             <CheckCircle size={16} weight="fill" />
                           </button>
                           <button
-                            onClick={handleInlineCancel}
-                            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); handleInlineCancel(); }}
+                          className="p-1 text-zinc-500 hover:text-zinc-400 transition-colors"
                             aria-label="Cancel"
                           >
                             <X size={16} />
                           </button>
                         </div>
                       ) : (
-                        <button
-                          onClick={(e) => handleInlineEdit('currentRole', currentCareerProfile.currentRole, e.currentTarget)}
-                          className="group flex items-center hover:opacity-80 transition-opacity text-left"
-                          aria-label="Edit current role"
-                        >
+                      <p className="text-base font-medium text-zinc-100">
                           {currentCareerProfile.currentRole}
-                        </button>
+                      </p>
                       )}
-                      </dd>
+                    <p className="text-xs text-zinc-500 mt-1 capitalize">{currentCareerProfile.seniority.replace('-', ' ')}</p>
                     </div>
-                    <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide opacity-70">Experience level</dt>
-                      <dd className="text-base font-semibold capitalize">{currentCareerProfile.seniority.replace('-', ' ')}</dd>
                     </div>
-                    <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide opacity-70">Industry</dt>
-                      <dd className="text-base font-semibold">
+              </div>
+
+              {/* Stats Card */}
+              <div className="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                <h3 className="text-sm font-medium text-zinc-400 mb-4">Workplace</h3>
+                <div className="space-y-4">
+                  <div>
+                    <dt className="text-xs text-zinc-500 uppercase font-semibold mb-1">Industry</dt>
+                    <dd className="text-sm text-zinc-200">
                       {inlineEditing?.field === 'industry' ? (
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={inlineEditing.value}
                             onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
-                            className="px-2 py-1 text-base font-semibold border rounded focus:outline-none focus:ring-2 focus:ring-opacity-30"
-                            style={{
-                              backgroundColor: 'var(--background-elevated)',
-                              borderColor: 'var(--border-default)',
-                              color: 'var(--foreground-primary)'
-                            }}
+                            className="px-2 py-1 text-sm text-zinc-200 bg-zinc-800 border border-white/5 rounded focus:outline-none focus:ring-1 focus:ring-white/20"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
@@ -765,23 +737,23 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                           />
                           <button
                             onClick={() => handleInlineSave('industry', inlineEditing.value)}
-                            className="p-1 text-green-600 hover:text-green-700 transition-colors"
+                            className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors"
                             aria-label="Save"
                           >
-                            <CheckCircle size={16} weight="fill" />
+                            <CheckCircle size={14} weight="fill" />
                           </button>
                           <button
                             onClick={handleInlineCancel}
-                            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                            className="p-1 text-zinc-500 hover:text-zinc-400 transition-colors"
                             aria-label="Cancel"
                           >
-                            <X size={16} />
+                            <X size={14} />
                           </button>
                         </div>
                       ) : (
                         <button
-                          onClick={(e) => handleInlineEdit('industry', currentCareerProfile.industry, e.currentTarget)}
-                          className="group flex items-center hover:opacity-80 transition-opacity text-left"
+                          onClick={(e) => { e.stopPropagation(); handleInlineEdit('industry', currentCareerProfile.industry, e.currentTarget); }}
+                          className="hover:text-zinc-100 transition-colors text-left"
                           aria-label="Edit industry"
                         >
                           {currentCareerProfile.industry}
@@ -789,21 +761,16 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                       )}
                       </dd>
                     </div>
-                    <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide opacity-70">Company size</dt>
-                      <dd className="text-base font-semibold capitalize">
+                  <div>
+                    <dt className="text-xs text-zinc-500 uppercase font-semibold mb-1">Company Size</dt>
+                    <dd className="text-sm text-zinc-200">
                       {inlineEditing?.field === 'companySize' ? (
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={inlineEditing.value}
                             onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
-                            className="px-2 py-1 text-base font-semibold border rounded focus:outline-none focus:ring-2 focus:ring-opacity-30"
-                            style={{
-                              backgroundColor: 'var(--background-elevated)',
-                              borderColor: 'var(--border-default)',
-                              color: 'var(--foreground-primary)'
-                            }}
+                            className="px-2 py-1 text-sm text-zinc-200 bg-zinc-800 border border-white/5 rounded focus:outline-none focus:ring-1 focus:ring-white/20"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
@@ -815,324 +782,245 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                           />
                           <button
                             onClick={() => handleInlineSave('companySize', inlineEditing.value)}
-                            className="p-1 text-green-600 hover:text-green-700 transition-colors"
+                            className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors"
                             aria-label="Save"
                           >
-                            <CheckCircle size={16} weight="fill" />
+                            <CheckCircle size={14} weight="fill" />
                           </button>
                           <button
                             onClick={handleInlineCancel}
-                            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                            className="p-1 text-zinc-500 hover:text-zinc-400 transition-colors"
                             aria-label="Cancel"
                           >
-                            <X size={16} />
+                            <X size={14} />
                           </button>
                         </div>
                       ) : (
                         <button
-                          onClick={(e) => handleInlineEdit('companySize', currentCareerProfile.companySize, e.currentTarget)}
-                          className="group flex items-center hover:opacity-80 transition-opacity text-left"
+                          onClick={(e) => { e.stopPropagation(); handleInlineEdit('companySize', currentCareerProfile.companySize, e.currentTarget); }}
+                          className="hover:text-zinc-100 transition-colors text-left"
                           aria-label="Edit company size"
                         >
-                          {currentCareerProfile.companySize}
+                          {formatCompanySize(currentCareerProfile.companySize)}
                         </button>
                       )}
                       </dd>
                     </div>
-                    </dl>
-                  </section>
-              </CardContent>
-            </Card>
+                </div>
+              </div>
+            </div>
 
-            <Card
-              className="rounded-xl"
-              style={{
-                backgroundColor: 'var(--background-elevated)'
-              }}
-            >
-              <CardHeader className="pb-4 pt-6">
-                <CardTitle className="text-base font-semibold" style={{ color: 'var(--foreground-primary)' }}>
-                  Optional preferences
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {pendingPrompts.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-sm font-semibold" style={{ color: 'var(--foreground-primary)' }}>
-                      Recommended next steps
-                    </p>
-                    <div className="space-y-3">
-                      {pendingPrompts.map(prompt => (
-                        <div
-                          key={prompt.id}
-                          className="flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                          style={{
-                            backgroundColor: 'var(--background-secondary)',
-                            borderColor: 'var(--border-default)'
-                          }}
-                        >
-                          <div>
-                            <p className="text-sm font-semibold" style={{ color: 'var(--foreground-primary)' }}>
-                              {prompt.title}
-                            </p>
-                            <p className="text-xs" style={{ color: 'var(--foreground-secondary)' }}>
-                              {prompt.description}
-                            </p>
+            {/* Column 2: Skills & Preferences */}
+            <div className="space-y-4">
+              {/* Skills Card */}
+              <div
+                className="group relative bg-zinc-900/50 border border-white/5 rounded-xl p-6 hover:bg-zinc-900 transition-colors cursor-pointer"
+                onClick={() => !isQuickEditDisabled && handleQuickEdit('skills')}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-sm font-medium text-zinc-400">Skills & Interests</h3>
+                  <PencilSimple size={14} className="text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
-                          <div className="flex items-center gap-2">
+                <div className="space-y-4">
+                  {currentCareerProfile.primarySkills.length > 0 && (
+                    <div>
+                      <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">Core skills</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(showAllCurrentSkills ? currentCareerProfile.primarySkills : currentCareerProfile.primarySkills.slice(0, 8)).map((skill, index) => (
+                          <span
+                            key={`${skill}-${index}`}
+                            className="bg-zinc-800 text-zinc-300 text-xs px-2 py-1 rounded-md"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                        {currentCareerProfile.primarySkills.length > 8 && !showAllCurrentSkills && (
                             <button
-                              onClick={() => handlePromptComplete(prompt.quickEdit)}
-                              className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                              style={{
-                                backgroundColor: 'var(--accent-primary)',
-                                color: 'var(--accent-primary-foreground)'
-                              }}
+                            onClick={(e) => { e.stopPropagation(); setShowAllCurrentSkills(true); }}
+                            className="text-xs text-zinc-500 hover:text-zinc-400 px-2 py-1"
                             >
-                              Fix now
+                            +{currentCareerProfile.primarySkills.length - 8}
                             </button>
-                            <button
-                              onClick={() => handlePromptSnooze(prompt.id)}
-                              className="text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                              style={{ color: 'var(--accent-primary)' }}
-                            >
-                              Remind later
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        )}
                     </div>
                   </div>
                 )}
-
-                <div className="space-y-3">
-                  {optionalSectionEntries.map(([sectionId, isComplete]) => {
-                    const SectionIcon = isComplete ? CheckCircle : Timer;
-                    const copy = OPTIONAL_SECTION_COPY[sectionId];
-                    const quickEditKey = OPTIONAL_QUICK_EDIT_MAP[sectionId];
-                    return (
-                      <div
-                        key={sectionId}
-                        className="flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                        style={{
-                          backgroundColor: 'var(--background-secondary)',
-                          borderColor: 'var(--border-default)'
-                        }}
-                      >
-                        <div className="flex flex-1 items-start gap-3">
-                          <SectionIcon
-                            size={18}
-                            weight={isComplete ? 'fill' : 'regular'}
-                            className={isComplete ? 'text-emerald-600' : 'text-amber-500'}
-                          />
+                  {currentCareerProfile.skillsToLearn.length > 0 && (
                           <div>
-                            <p className="text-sm font-semibold" style={{ color: 'var(--foreground-primary)' }}>
-                              {copy.label}
-                            </p>
-                            <p className="text-xs" style={{ color: 'var(--foreground-secondary)' }}>
-                              {copy.helper}
-                            </p>
-                          </div>
-                        </div>
-                        {quickEditKey && (
-                          <button
-                            type="button"
-                            onClick={() => handleQuickEdit(quickEditKey)}
-                            disabled={isQuickEditDisabled}
-                            className="px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:opacity-80 active:opacity-60 focus:outline-none focus:ring-2 focus:ring-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                            style={{
-                              color: 'var(--accent-primary)'
-                            }}
-                            aria-label={`${isComplete ? 'Edit' : 'Update'} ${copy.label}`}
+                      <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">Learning goals</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(showAllLearningGoals ? currentCareerProfile.skillsToLearn : currentCareerProfile.skillsToLearn.slice(0, 8)).map((skill, index) => (
+                          <span
+                            key={`${skill}-${index}`}
+                            className="bg-emerald-500/10 text-emerald-400 text-xs px-2 py-1 rounded-md"
                           >
-                            {isComplete ? 'Edit' : 'Update'}
+                            {skill}
+                          </span>
+                        ))}
+                        {currentCareerProfile.skillsToLearn.length > 8 && !showAllLearningGoals && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowAllLearningGoals(true); }}
+                            className="text-xs text-zinc-500 hover:text-zinc-400 px-2 py-1"
+                          >
+                            +{currentCareerProfile.skillsToLearn.length - 8}
                           </button>
                         )}
                       </div>
-                    );
-                  })}
                 </div>
-              </CardContent>
-            </Card>
+                )}
+                </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card
-              className="rounded-xl"
-              style={{
-                backgroundColor: 'var(--background-elevated)'
-              }}
-            >
-              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              {/* Preferences Card */}
+              <div className="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                <h3 className="text-sm font-medium text-zinc-400 mb-4">Preferences</h3>
+                <div className="space-y-5">
+                  {/* Learning Preferences */}
+                  {optionalStatus.learningPreferences && currentCareerProfile.learningStyle && currentCareerProfile.learningStyle.length > 0 && (
                 <div>
-                  <CardTitle className="text-lg font-semibold" style={{ color: 'var(--foreground-primary)' }}>
-                    Skills & interests
-                  </CardTitle>
-                  <CardDescription style={{ color: 'var(--foreground-secondary)' }}>
-                    Showcase the strengths you have today and the capabilities you want to build next.
-                  </CardDescription>
+                      <div className="flex items-center gap-2 mb-2">
+                        <MaterialIcon name="code" size={14} className="text-zinc-500 flex-shrink-0" />
+                        <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Learning</span>
                 </div>
-                <button
-                  onClick={() => handleQuickEdit('skills')}
-                  disabled={isQuickEditDisabled}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:opacity-80 active:opacity-60 focus:outline-none focus:ring-2 focus:ring-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap rounded-lg border"
-                  style={{
-                    color: 'var(--accent-primary)',
-                    borderColor: 'var(--border-default)',
-                    backgroundColor: 'var(--background-secondary)'
-                  }}
-                  aria-label="Quick edit - open quick edit modal for this section"
-                  >
-                    Quick edit
-                  </button>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {currentCareerProfile.primarySkills.length > 0 && (
-                  <section>
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Core skills</span>
-                      {currentCareerProfile.primarySkills.length > 6 && (
-                        <button
-                          onClick={() => setShowAllCurrentSkills(!showAllCurrentSkills)}
-                          className="text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                          style={{ color: 'var(--accent-primary)' }}
-                        >
-                          {showAllCurrentSkills ? 'Show fewer' : `View all (${currentCareerProfile.primarySkills.length})`}
-                        </button>
-                      )}
+                      <ul className="space-y-1.5">
+                        {currentCareerProfile.learningStyle.slice(0, 4).map((style, index) => (
+                          <li key={`${style}-${index}`} className="flex items-center gap-2 text-sm text-zinc-300">
+                            <span className="w-1 h-1 rounded-full bg-zinc-600 flex-shrink-0" />
+                            <span>{formatLearningStyle(style)}</span>
+                          </li>
+                        ))}
+                        {currentCareerProfile.availableTime && (
+                          <li className="flex items-center gap-2 text-sm text-zinc-300">
+                            <span className="w-1 h-1 rounded-full bg-zinc-600 flex-shrink-0" />
+                            <span>{formatAvailableTime(currentCareerProfile.availableTime)}</span>
+                          </li>
+                        )}
+                      </ul>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {(showAllCurrentSkills ? currentCareerProfile.primarySkills : currentCareerProfile.primarySkills.slice(0, 6)).map((skill, index) => (
-                        <span
-                          key={`${skill}-${index}`}
-                          className="rounded-full border px-3 py-1.5 text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-md"
-                          style={{
-                            backgroundColor: 'var(--background-elevated)',
-                            borderColor: 'var(--border-default)',
-                            color: 'var(--foreground-primary)',
-                            boxShadow: 'var(--shadow-xs)'
-                          }}
+                  )}
+
+                  {/* Networking Preferences */}
+                  {optionalStatus.networkingPreferences && currentCareerProfile.networkingGoals && currentCareerProfile.networkingGoals.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <MaterialIcon name="people" size={14} className="text-zinc-500 flex-shrink-0" />
+                        <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Networking</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentCareerProfile.networkingGoals.slice(0, 4).map((goal, index) => (
+                          <li key={`${goal}-${index}`} className="flex items-center gap-2 text-sm text-zinc-300">
+                            <span className="w-1 h-1 rounded-full bg-zinc-600 flex-shrink-0" />
+                            <span>{formatNetworkingGoal(goal)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Event Formats */}
+                  {optionalStatus.teamPreferences && currentCareerProfile.preferredEventTypes && currentCareerProfile.preferredEventTypes.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <MaterialIcon name="event" size={14} className="text-zinc-500 flex-shrink-0" />
+                        <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Event Formats</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentCareerProfile.preferredEventTypes.slice(0, 4).map((type, index) => (
+                          <li key={`${type}-${index}`} className="flex items-center gap-2 text-sm text-zinc-300">
+                            <span className="w-1 h-1 rounded-full bg-zinc-600 flex-shrink-0" />
+                            <span>{formatEventType(type)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Show prompts if any incomplete */}
+                  {pendingPrompts.length > 0 && (
+                    <div className="pt-3 border-t border-white/5">
+                      {pendingPrompts.slice(0, 2).map(prompt => (
+                        <button
+                          key={prompt.id}
+                          onClick={() => handlePromptComplete(prompt.quickEdit)}
+                          className="text-xs text-zinc-400 hover:text-zinc-300 transition-colors block mb-1.5"
                         >
-                          {skill}
-                        </span>
+                          + Add {prompt.title.toLowerCase()}
+                        </button>
                       ))}
                     </div>
-                  </section>
-                )}
-
-                {currentCareerProfile.skillsToLearn.length > 0 && (
-                  <section>
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Learning goals</span>
-                      {currentCareerProfile.skillsToLearn.length > 6 && (
-                        <button
-                          onClick={() => setShowAllLearningGoals(!showAllLearningGoals)}
-                          className="text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                          style={{ color: 'var(--accent-primary)' }}
-                        >
-                          {showAllLearningGoals ? 'Show fewer' : `View all (${currentCareerProfile.skillsToLearn.length})`}
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {(showAllLearningGoals ? currentCareerProfile.skillsToLearn : currentCareerProfile.skillsToLearn.slice(0, 6)).map((skill, index) => (
-                        <GreenBadge key={`${skill}-${index}`}>
-                          {skill}
-                        </GreenBadge>
-                      ))}
-                    </div>
-                  </section>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card
-              className="rounded-xl"
-              style={{
-                backgroundColor: 'var(--background-elevated)'
-              }}
-            >
-              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <CardTitle className="text-lg font-semibold" style={{ color: 'var(--foreground-primary)' }}>
-                    Career goals
-                  </CardTitle>
-                  <CardDescription style={{ color: 'var(--foreground-secondary)' }}>
-                    Clarify what you are driving toward so we can track progress alongside you.
-                  </CardDescription>
+                  )}
                 </div>
-                <button
-                  onClick={() => handleQuickEdit('goals')}
-                  disabled={isQuickEditDisabled}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:opacity-80 active:opacity-60 focus:outline-none focus:ring-2 focus:ring-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap rounded-lg border"
-                  style={{
-                    color: 'var(--accent-primary)',
-                    borderColor: 'var(--border-default)',
-                    backgroundColor: 'var(--background-secondary)'
-                  }}
-                  aria-label="Quick edit - open quick edit modal for this section"
-                  >
-                    Quick edit
-                  </button>
-              </CardHeader>
-              <CardContent className="space-y-6">
+              </div>
+            </div>
+
+            {/* Column 3: Goals & Progress */}
+            <div className="space-y-4">
+              {/* Goals Card */}
+              <div
+                className="group relative bg-zinc-900/50 border border-white/5 rounded-xl p-6 hover:bg-zinc-900 transition-colors cursor-pointer"
+                onClick={() => !isQuickEditDisabled && handleQuickEdit('goals')}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-sm font-medium text-zinc-400">Career Goals</h3>
+                  <PencilSimple size={14} className="text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="space-y-4">
                 <div>
-                  <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Focus areas</span>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">Focus areas</span>
+                    <div className="flex flex-wrap gap-1.5">
                     {currentCareerProfile.careerGoals.length > 0 ? (
-                      currentCareerProfile.careerGoals.slice(0, 4).map((goal, index) => (
+                        currentCareerProfile.careerGoals.slice(0, 6).map((goal, index) => (
                         <span
                           key={`${goal}-${index}`}
-                          className="rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm"
-                          style={{
-                            backgroundColor: 'var(--accent-primary-light)',
-                            borderColor: 'var(--accent-border)',
-                            color: 'var(--accent-primary)'
-                          }}
+                            className="bg-blue-500/10 text-blue-400 text-xs px-2 py-1 rounded-md"
                         >
                           {formatGoalLabel(goal)}
                         </span>
                       ))
                     ) : (
-                      <p className="text-sm" style={{ color: 'var(--foreground-tertiary)' }}>
+                        <p className="text-xs text-zinc-500">
                         Add the outcomes you are aiming for next.
                       </p>
-                    )}
-                    {currentCareerProfile.careerGoals.length > 4 && (
-                      <span
-                        className="rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm"
-                        style={{
-                          backgroundColor: 'var(--background-secondary)',
-                          borderColor: 'var(--border-default)',
-                          color: 'var(--foreground-secondary)'
-                        }}
-                      >
-                        +{currentCareerProfile.careerGoals.length - 4} more
-                      </span>
                     )}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Timeline</span>
-                  <div
-                    className="mt-3 inline-flex items-center gap-3 rounded-xl border px-4 py-3 shadow-sm"
-                    style={{
-                      backgroundColor: 'var(--background-secondary)',
-                      borderColor: 'var(--border-default)'
-                    }}
-                  >
-                    <span style={{ color: 'var(--accent-primary)' }}><MaterialIcon name="time" size={18} /></span>
+                    <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">Timeline</span>
+                    <div className="flex items-center gap-2">
+                      <MaterialIcon name="time" size={14} className="text-zinc-500 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: 'var(--foreground-primary)' }}>
+                        <p className="text-sm font-medium text-zinc-100">
                         {timeframeDetails.label}
                       </p>
-                      <p className="text-xs" style={{ color: 'var(--foreground-tertiary)' }}>
+                        <p className="text-xs text-zinc-500">
                         {timeframeDetails.window}
                       </p>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                </div>
+              </div>
+
+              {/* Progress Card */}
+              <div className="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                <h3 className="text-sm font-medium text-zinc-400 mb-3">Profile Strength</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-medium text-zinc-100">{optionalCompletionPercent}%</span>
+                    <span className="text-xs text-zinc-500">Complete</span>
+                  </div>
+                  <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                      style={{ width: `${optionalCompletionPercent}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    {optionalCompletionPercent === 100 ? 'All sections ready.' : 'Complete remaining sections to improve recommendations.'}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -3,9 +3,14 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { AnimatedEventCard } from './AnimatedEventCard';
-import { useThreeScene, useCardPositions, useScrollAnimation, DomCache } from './useChaosAnimation';
+// Duplicate import removed
+
+import { useCardPositions, useScrollAnimation, DomCache } from './useChaosAnimation';
 import { debounce } from '@/utils/debounce';
 import '@/app/styles/ChaosToOrder.css';
+import dynamic from 'next/dynamic';
+
+const ChaosCanvas = dynamic(() => import('./ChaosCanvas'), { ssr: false });
 
 const animationEventsData = [
     { company: 'Meta', date: 'May 1', title: 'Meta Con', type: 'Framework Conference' },
@@ -22,7 +27,7 @@ const animationEventsData = [
 export function ChaosToOrderSection() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    // canvasRef moved to ChaosCanvas
     const scrollProgressRef = useRef(0);
     const { isMobile, isTablet } = useDeviceDetection();
     const domCacheRef = useRef<DomCache>({
@@ -31,9 +36,9 @@ export function ChaosToOrderSection() {
 
     // --- HOOKS ---
     const [cardPositions, calculateCardPositions] = useCardPositions(animationEventsData);
-    
+
     // Always call hooks in the same order - hooks handle mobile detection internally
-    useThreeScene(canvasRef, scrollProgressRef);
+    // useThreeScene moved to ChaosCanvas
     useScrollAnimation(sectionRef, containerRef, domCacheRef, cardPositions, scrollProgressRef);
 
     // --- MEMOIZED CALCULATIONS ---
@@ -73,7 +78,7 @@ export function ChaosToOrderSection() {
         // 1. Cache all DOM nodes
         const cards = container.querySelectorAll<HTMLElement>('.event-card-animated');
         console.log('DOM caching - found cards:', cards.length);
-        
+
         domCacheRef.current = {
             cards,
             chaosTitle: section.querySelector<HTMLElement>('.chaos-title'),
@@ -85,7 +90,7 @@ export function ChaosToOrderSection() {
         // 2. Set up a debounced resize handler for position recalculations
         let resizeTimeoutId: NodeJS.Timeout;
         const cardTimeoutIds: NodeJS.Timeout[] = [];
-        
+
         const handleResize = () => {
             // Clear any existing timeout
             if (resizeTimeoutId) {
@@ -140,7 +145,7 @@ export function ChaosToOrderSection() {
             <div className="sticky-container">
                 {/* Only render Three.js canvas on desktop for better mobile performance */}
                 {!isMobile && !isTablet && (
-                    <canvas ref={canvasRef} className="three-canvas" />
+                    <ChaosCanvas scrollProgressRef={scrollProgressRef} className="three-canvas" />
                 )}
 
                 <div ref={containerRef} className={`cards-container ${isMobile ? 'mobile-optimized' : ''}`}>

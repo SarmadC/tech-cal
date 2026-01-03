@@ -1,5 +1,5 @@
 /* ==========================================================================
-   QUICK DATE PICKER (extracted from legacy calendar-sidebar.css)
+   QUICK DATE PICKER (Premium/Linear Style)
    ========================================================================== */
 
 .quick-date-picker-overlay {
@@ -8,18 +8,14 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
     z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    animation: quickDatePickerFadeIn 0.3s ease-out;
-}
-
-.light .quick-date-picker-overlay {
-    background: rgba(0, 0, 0, 0.3);
+    animation: quickDatePickerFadeIn 0.2s ease-out;
 }
 
 @keyframes quickDatePickerFadeIn {
@@ -28,54 +24,51 @@
 }
 
 .quick-date-picker {
-    background: var(--background-main);
-    border-radius: 16px;
+    /* Premium Dark Theme Base */
+    --qdp-bg: #181818;
+    --qdp-border: rgba(255, 255, 255, 0.08); /* Ultra subtle */
+    --qdp-text-primary: #EEEEEE;
+    --qdp-text-secondary: #888888;
+    --qdp-hover-bg: rgba(255, 255, 255, 0.05);
+    --qdp-accent: #5E6AD2; /* Linear Violet */
+    --qdp-accent-glow: rgba(94, 106, 210, 0.3);
+
+    background: var(--qdp-bg);
+    border-radius: 8px; /* Tighter corners */
     box-shadow:
-        0 20px 25px -5px rgba(0, 0, 0, 0.1),
-        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        0 0 0 1px var(--qdp-border),
+        0 24px 48px -12px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(0, 0, 0, 0.2); /* Outer darkness ring */
     width: 100%;
-    max-width: 720px;
+    max-width: 680px; /* Slightly more compact */
     max-height: 80vh;
     overflow: hidden;
-    animation: quickDatePickerSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: quickDatePickerSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
-    border: 1px solid var(--border-default);
     display: flex;
     flex-direction: column;
-}
-
-.light .quick-date-picker {
-    box-shadow:
-        0 20px 25px -5px rgba(0, 0, 0, 0.1),
-        0 10px 10px -5px rgba(0, 0, 0, 0.04),
-        0 0 0 1px rgba(0, 0, 0, 0.05);
+    color: var(--qdp-text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @keyframes quickDatePickerSlideIn {
-    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
-.quick-date-picker.animating { overflow: hidden; }
-.quick-date-picker.slide-prev .current-date-display { animation: slideOutRight 0.3s ease-in-out; }
-.quick-date-picker.slide-next .current-date-display { animation: slideOutLeft 0.3s ease-in-out; }
-
-@keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-@keyframes slideOutLeft  { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
 
 .quick-date-picker-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 1.5rem 1.5rem 1rem;
-    border-bottom: 1px solid var(--border-subtle);
+    justify-content: space-between; /* Adjusted to allow center title if needed, or close button placement */
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid transparent; /* Removed divider */
 }
 
 .quick-date-picker-close {
-    padding: 0.5rem;
-    color: var(--foreground-secondary);
-    border-radius: 0.5rem;
-    transition: all 0.2s ease-in-out;
+    padding: 0.25rem;
+    color: var(--qdp-text-secondary);
+    border-radius: 4px;
+    transition: all 0.1s ease;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -85,187 +78,200 @@
 }
 
 .quick-date-picker-close:hover {
-    color: var(--foreground-primary);
-    background: var(--background-tertiary);
+    color: var(--qdp-text-primary);
+    background: var(--qdp-hover-bg);
 }
 
 .quick-date-picker-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--foreground-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--qdp-text-secondary);
     margin: 0;
+    letter-spacing: 0.01em;
 }
 
 .quick-date-content {
+    /* Increased top padding for breathing room */
+    padding: 1.5rem 1.25rem 1rem 1.25rem;
     display: grid;
-    grid-template-columns: 240px 1fr;
-    gap: 1rem;
-    padding: 1rem 1.5rem;
+    grid-template-columns: 200px 1fr;
+    gap: 2rem; /* Clean whitespace separation */
+    min-height: 0;
     flex: 1;
     overflow-y: auto;
-    min-height: 0;
 }
 
-.quick-date-left { 
-    border-right: 1px solid var(--border-subtle); 
-    padding-right: 1rem; 
+.quick-date-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-right: 0;
+    border-right: none;
 }
 
-.quick-date-manual { display: flex; flex-direction: column; gap: 0.5rem; }
+.quick-date-manual {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
 
+/* Input Polish */
 .quick-date-input {
     width: 100%;
-    height: 44px;
-    background: var(--background-tertiary);
-    border: 1px solid var(--border-default);
-    color: var(--foreground-primary);
-    border-radius: 12px;
-    padding: 0 12px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #333; /* Explicit visibility as requested */
+    color: var(--qdp-text-primary);
+    border-radius: 0;
+    padding: 0 0 4px 0;
     outline: none;
-    transition: all 0.2s ease-in-out;
+    transition: border-color 0.2s ease;
+    font-size: 0.9rem;
+    font-family: inherit;
 }
 
 .quick-date-input:focus {
-    border-color: var(--accent-border);
-    box-shadow: 0 0 0 3px var(--accent-primary-light);
-    background: var(--background-elevated);
+    border-color: var(--qdp-accent);
 }
 
-.quick-date-input::placeholder { color: transparent; }
-
-.quick-date-hint { 
-    font-size: 0.8rem; 
-    color: var(--foreground-tertiary); 
-}
-.quick-date-hint.valid { 
-    color: var(--foreground-secondary); 
-}
-.quick-date-hint.invalid { 
-    color: var(--error); 
+.quick-date-input::placeholder {
+    color: var(--qdp-text-secondary);
+    opacity: 0.4;
 }
 
-.quick-date-options { padding: 0.5rem 0 0; max-height: 360px; overflow-y: auto; }
+.quick-date-hint {
+    font-size: 0.75rem;
+    color: var(--qdp-text-secondary);
+    margin-top: 4px;
+    min-height: 1.2em;
+}
+.quick-date-hint.valid { color: var(--qdp-accent); }
+.quick-date-hint.invalid { color: #d37373; }
+
+.quick-date-options {
+    flex: 1;
+    overflow-y: auto;
+}
+
 .quick-date-section-title {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: var(--foreground-secondary);
-    margin: 0 0 1rem 0;
+    color: var(--qdp-text-secondary);
+    margin: 0 0 0.75rem 0; /* Slightly more space below title */
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
 }
 
-.quick-date-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.quick-date-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
 
 .quick-date-option {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.75rem 0.75rem;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    text-align: left;
+    display: block;
     width: 100%;
+    /* Taller touch targets ~36px */
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--qdp-text-secondary);
+    font-weight: 400;
 }
 
 .quick-date-option:hover,
-.quick-date-option:focus-visible,
+.quick-date-option:focus-visible {
+    background: var(--qdp-hover-bg);
+    color: var(--qdp-text-primary);
+}
+
 .quick-date-option[aria-selected="true"] {
-    background: var(--accent-primary-light);
-    border-color: var(--accent-border);
+    background: var(--qdp-hover-bg);
+    color: var(--qdp-accent);
+    font-weight: 500;
 }
 
-.quick-date-option.today {
-    background: var(--accent-primary-light);
-    border-color: var(--accent-primary);
-    color: var(--accent-primary);
+.quick-date-option-content {
+    /* Flattened structure */
+}
+/* .quick-date-option-label {} */
+.quick-date-option-date { display: none; } /* Hide raw date for cleaner look */
+
+.quick-date-right {
+    padding-left: 0.5rem; /* Slight shift to align visually */
+    display: flex;
+    flex-direction: column;
+    padding-top: 2px; /* Micro adjustment for baseline alignment if possible, but mainly relying on grid gap */
 }
 
-.quick-date-option-content { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 0.25rem; 
-}
-.quick-date-option-label { 
-    font-weight: 500; 
-    color: var(--foreground-primary); 
-}
-.quick-date-option-date { 
-    font-size: 0.875rem; 
-    color: var(--foreground-tertiary); 
-}
-.quick-date-option.today .quick-date-option-date { 
-    color: var(--accent-primary); 
+.quick-date-calendar {
+    width: 100%;
 }
 
+/* Footer Actions */
+/* Actions Container - Align Right, Compact */
 .quick-date-picker-actions {
     display: flex;
+    justify-content: flex-end; /* Push to right */
+    align-items: center;
     gap: 0.75rem;
-    padding: 1rem 1.5rem 1.25rem;
-    border-top: 1px solid var(--border-subtle);
-    background: var(--background-main);
+    padding: 1rem 1.25rem;
+    border-top: none;
+    background: transparent;
     flex-shrink: 0;
-    position: sticky;
-    bottom: 0;
-    z-index: 10;
 }
 
 .quick-date-picker-cancel {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    background: var(--background-tertiary);
-    border: 1px solid var(--border-default);
-    border-radius: 0.5rem;
-    color: var(--foreground-secondary);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-.quick-date-picker-cancel:hover {
-    background: var(--background-elevated);
-    border-color: var(--border-strong);
-    color: var(--foreground-primary);
+    display: none; /* Hidden as per request */
 }
 
 .quick-date-picker-confirm {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    background: var(--accent-primary);
+    flex: 0 0 auto; /* Do not expand */
+    min-width: 80px;
+    padding: 6px 16px;
+    background: var(--qdp-accent);
     border: none;
-    border-radius: 0.5rem;
-    color: var(--accent-primary-foreground);
+    border-radius: 6px; /* Slightly smoother */
+    color: #fff;
+    font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .quick-date-picker-confirm:hover:not(:disabled) {
-    background: var(--accent-primary-hover);
+    background: #4c58b5; 
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--shadow-md);
 }
 
 .quick-date-picker-confirm:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    background: var(--qdp-hover-bg);
+    color: var(--qdp-text-secondary);
+    box-shadow: none;
+    transform: none;
 }
 
-.quick-date-right { padding-left: 0.5rem; display: flex; align-items: center; justify-content: center; }
-.quick-date-calendar { width: 100%; }
+
+/* Calendar Heatmap Overrides for consistency inside Picker */
+.quick-date-picker .calendar-heatmap {
+    --ch-text-primary: var(--qdp-text-primary);
+    --ch-text-secondary: var(--qdp-text-secondary);
+    --ch-accent: var(--qdp-accent);
+}
 
 @media (max-width: 640px) {
-    .quick-date-content { grid-template-columns: 1fr; }
-    .quick-date-left { border-right: none; padding-right: 0; }
+    .quick-date-content { grid-template-columns: 1fr; gap: 1.5rem; }
+    .quick-date-left { padding-right: 0; border-bottom: 1px solid var(--qdp-border); padding-bottom: 1rem; }
+    .quick-date-picker-actions { justify-content: stretch; }
+    .quick-date-picker-confirm { flex: 1; }
 }
-
-@media (max-width: 480px) {
-    .quick-date-picker-overlay { padding: 0.5rem; }
-    .quick-date-picker { max-height: 85vh; }
-    .quick-date-picker-header { padding: 1rem 1rem 0.75rem; }
-    .quick-date-picker-actions { padding: 1rem; flex-direction: column; }
-    .quick-date-picker-cancel,
-    .quick-date-picker-confirm { flex: none; }
-}
-
-

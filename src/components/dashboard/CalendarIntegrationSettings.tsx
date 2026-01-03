@@ -56,11 +56,11 @@ export default function CalendarIntegrationSettings() {
         try {
             // Custom OAuth flow - bypass Supabase OAuth
             const redirectUri = `${window.location.origin}/api/calendar/google/callback`;
-            
+
             console.log('DEBUG: OAuth redirect URI:', redirectUri);
             console.log('DEBUG: window.location.origin:', window.location.origin);
             console.log('DEBUG: window.location.href:', window.location.href);
-            
+
             const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
             authUrl.searchParams.set('client_id', process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!);
             authUrl.searchParams.set('redirect_uri', redirectUri);
@@ -70,9 +70,9 @@ export default function CalendarIntegrationSettings() {
             authUrl.searchParams.set('access_type', 'offline');
             authUrl.searchParams.set('prompt', 'consent');
             authUrl.searchParams.set('state', 'calendar_connect');
-            
+
             console.log('DEBUG: Full OAuth URL:', authUrl.toString());
-            
+
             // Redirect to Google OAuth
             window.location.href = authUrl.toString();
         } catch (error: unknown) {
@@ -119,15 +119,27 @@ export default function CalendarIntegrationSettings() {
         setBulkSyncing(true);
         try {
             const response = await fetch('/api/calendar/bulk-sync', {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             });
 
             if (!response.ok) {
-                throw new Error('Failed to sync events');
+                // Try to extract error message from response
+                let errorMessage = 'Failed to sync events';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorData.details || errorMessage;
+                } catch {
+                    // If response is not JSON, use status text
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();
-            
+
             if (result.success) {
                 showSuccess(`Synced ${result.synced} of ${result.total} events to your calendar`);
                 fetchStatus(); // Refresh status
@@ -135,8 +147,15 @@ export default function CalendarIntegrationSettings() {
                 throw new Error(result.error || 'Sync failed');
             }
         } catch (error: unknown) {
-            console.error('Error syncing events:', getErrorMessage(error));
-            showError(getErrorMessage(error) || 'Failed to sync events');
+            const errorMessage = getErrorMessage(error);
+            console.error('Error syncing events:', errorMessage, error);
+
+            // Provide more user-friendly error messages
+            if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+                showError('Unable to connect to the server. Please check your connection and try again.');
+            } else {
+                showError(errorMessage || 'Failed to sync events. Please try again.');
+            }
         } finally {
             setBulkSyncing(false);
         }
@@ -144,7 +163,33 @@ export default function CalendarIntegrationSettings() {
 
     const formatDate = (dateString: string | null) => {
         if (!dateString) return 'Never';
-        return new Date(dateString).toLocaleString();
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return date.toLocaleDateString();
+    };
+
+    const getConnectionError = (status: CalendarStatus): string | null => {
+        if (!status.hasRefreshToken) {
+            return 'Connection expired';
+        }
+        if (status.lastSyncStatus === 'failed' && status.lastSyncError) {
+            // Convert developer-friendly error to user-friendly message
+            if (status.lastSyncError.toLowerCase().includes('token') ||
+                status.lastSyncError.toLowerCase().includes('refresh')) {
+                return 'Connection expired';
+            }
+            return 'Sync error';
+        }
+        return null;
     };
 
     if (loading) {
@@ -166,9 +211,9 @@ export default function CalendarIntegrationSettings() {
                         Connect your Google Calendar to automatically sync tracked events.
                     </p>
 
-                    <div 
+                    <div
                         className="border rounded-lg p-6"
-                        style={{ 
+                        style={{
                             backgroundColor: 'var(--background-main)',
                             borderColor: 'var(--border-default)'
                         }}
@@ -193,9 +238,9 @@ export default function CalendarIntegrationSettings() {
                             </ul>
                         </div>
 
-                        <div 
+                        <div
                             className="p-4 rounded-lg mb-6"
-                            style={{ 
+                            style={{
                                 backgroundColor: 'var(--warning-light)',
                                 borderLeft: '4px solid var(--warning)'
                             }}
@@ -242,156 +287,165 @@ export default function CalendarIntegrationSettings() {
     }
 
     // Connected state
+    const connectionError = status ? getConnectionError(status) : null;
+    const isHealthy = status?.isActive && status?.hasRefreshToken && status?.lastSyncStatus !== 'failed';
+    const needsReconnect = !status?.hasRefreshToken || connectionError;
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div>
-                <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--foreground-primary)' }}>
-                    Google Calendar Integration
+                <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--foreground-primary)' }}>
+                    Google Calendar
                 </h3>
-                <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)' }}>
-                    Your calendar is connected and syncing automatically.
+                <p className="text-sm" style={{ color: 'var(--foreground-secondary)' }}>
+                    Sync your events automatically.
                 </p>
+            </div>
 
-                {/* Connection Status Card */}
-                <div 
-                    className="border rounded-lg p-6 mb-4"
-                    style={{ 
-                        backgroundColor: 'var(--background-main)',
-                        borderColor: 'var(--border-default)'
-                    }}
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <MaterialIcon name="calendar" size={20} color="var(--success)" />
-                            <span className="font-medium" style={{ color: 'var(--foreground-primary)' }}>
-                                Connected to Google Calendar
+            {/* Integration Row - Compact List Item Style */}
+            <div className="w-full">
+                <div className="flex items-start justify-between py-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}>
+                    {/* Left: Icon + Title + Status */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-1">
+                            <MaterialIcon
+                                name="calendar"
+                                size={20}
+                                className="text-foreground-primary"
+                            />
+                            <span
+                                className="text-sm font-medium"
+                                style={{ color: 'var(--foreground-primary)' }}
+                            >
+                                Google Calendar
                             </span>
+                            {/* Dot indicator */}
+                            <span
+                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{
+                                    backgroundColor: isHealthy ? '#10b981' : '#ef4444'
+                                }}
+                            />
                         </div>
-                        <span 
-                            className="px-3 py-1 text-xs font-medium rounded-full"
-                            style={{ 
-                                backgroundColor: 'var(--success-light)',
-                                color: 'var(--success)'
-                            }}
-                        >
-                            Active
-                        </span>
+
+                        {/* Error message - inline, subtle */}
+                        {connectionError && (
+                            <p
+                                className="text-xs mt-1.5 ml-8"
+                                style={{ color: '#f87171' }}
+                            >
+                                {connectionError}. Please reconnect to resume sync.
+                            </p>
+                        )}
+
+                        {/* Success state - last sync info */}
+                        {!connectionError && status?.lastSyncStatus === 'success' && status?.lastSyncAt && (
+                            <p
+                                className="text-xs mt-1.5 ml-8"
+                                style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+                            >
+                                Last synced {formatDate(status.lastSyncAt)}
+                            </p>
+                        )}
                     </div>
 
-                    {/* Refresh Token Warning */}
-                    {!status.hasRefreshToken && (
-                        <div 
-                            className="p-4 rounded-lg mb-4"
-                            style={{ 
-                                backgroundColor: 'var(--warning-light)',
-                                border: '1px solid var(--warning)'
+                    {/* Right: Action Button */}
+                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                        {needsReconnect ? (
+                            <button
+                                onClick={handleConnect}
+                                disabled={connecting}
+                                className="h-8 px-3 rounded-md text-xs font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                                style={{
+                                    backgroundColor: 'white',
+                                    color: 'black'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!connecting) {
+                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!connecting) {
+                                        e.currentTarget.style.backgroundColor = 'white';
+                                    }
+                                }}
+                            >
+                                {connecting ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-black"></div>
+                                        <span>Connecting...</span>
+                                    </>
+                                ) : (
+                                    'Reconnect'
+                                )}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleBulkSync}
+                                disabled={bulkSyncing}
+                                className="h-8 px-3 rounded-md text-xs font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                                style={{
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    color: 'rgba(255, 255, 255, 0.9)'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!bulkSyncing) {
+                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!bulkSyncing) {
+                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                    }
+                                }}
+                            >
+                                {bulkSyncing ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                                        <span>Syncing...</span>
+                                    </>
+                                ) : (
+                                    'Sync Now'
+                                )}
+                            </button>
+                        )}
+
+                        {/* Disconnect - subtle ghost button */}
+                        <button
+                            onClick={handleDisconnect}
+                            disabled={disconnecting}
+                            className="h-8 px-3 rounded-md text-xs font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                            style={{
+                                backgroundColor: 'transparent',
+                                color: 'rgba(255, 255, 255, 0.5)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!disconnecting) {
+                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!disconnecting) {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                }
                             }}
                         >
-                            <div className="flex items-start gap-2">
-                                <MaterialIcon name="warning" size={16} color="var(--warning)" className="mt-0.5" />
-                                <div>
-                                    <p className="text-sm font-medium" style={{ color: 'var(--foreground-primary)' }}>
-                                        Reconnection Required
-                                    </p>
-                                    <p className="text-xs mt-1" style={{ color: 'var(--foreground-secondary)' }}>
-                                        Your refresh token is missing. Please reconnect to enable automatic sync.
-                                    </p>
-                                    <button
-                                        onClick={handleConnect}
-                                        className="mt-2 px-3 py-1 text-xs font-medium rounded"
-                                        style={{
-                                            backgroundColor: 'var(--warning)',
-                                            color: 'white'
-                                        }}
-                                    >
-                                        Reconnect Now
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Sync Status */}
-                    <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                            <span style={{ color: 'var(--foreground-secondary)' }}>Last sync:</span>
-                            <span style={{ color: 'var(--foreground-primary)' }}>{formatDate(status.lastSyncAt)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span style={{ color: 'var(--foreground-secondary)' }}>Status:</span>
-                            <span 
-                                style={{ 
-                                    color: status.lastSyncStatus === 'success' 
-                                        ? 'var(--success)' 
-                                        : status.lastSyncStatus === 'failed' 
-                                        ? 'var(--error)' 
-                                        : 'var(--foreground-primary)'
-                                }}
-                            >
-                                {status.lastSyncStatus || 'No syncs yet'}
-                            </span>
-                        </div>
-                        {status.lastSyncError && (
-                            <div 
-                                className="p-3 rounded mt-2"
-                                style={{ 
-                                    backgroundColor: 'var(--error-light)',
-                                    color: 'var(--error)'
-                                }}
-                            >
-                                <p className="text-xs">{status.lastSyncError}</p>
-                            </div>
-                        )}
+                            {disconnecting ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                                    <span>Disconnecting...</span>
+                                </>
+                            ) : (
+                                'Disconnect'
+                            )}
+                        </button>
                     </div>
-                </div>
-
-                {/* Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button
-                        onClick={handleBulkSync}
-                        disabled={bulkSyncing}
-                        className="px-4 py-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                        style={{
-                            backgroundColor: 'var(--accent-secondary)',
-                            color: 'var(--accent-secondary-foreground)',
-                            border: '1px solid var(--border-default)'
-                        }}
-                    >
-                        {bulkSyncing ? (
-                            <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                                <span>Syncing...</span>
-                            </>
-                        ) : (
-                            <>
-                                <MaterialIcon name="refresh" size={16} />
-                                <span>Sync Existing Events</span>
-                            </>
-                        )}
-                    </button>
-
-                    <button
-                        onClick={handleDisconnect}
-                        disabled={disconnecting}
-                        className="px-4 py-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                        style={{
-                            backgroundColor: 'var(--error-light)',
-                            color: 'var(--error)',
-                            border: '1px solid var(--error)'
-                        }}
-                    >
-                        {disconnecting ? (
-                            <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                                <span>Disconnecting...</span>
-                            </>
-                        ) : (
-                            <>
-                                <MaterialIcon name="cancel" size={16} />
-                                <span>Disconnect Calendar</span>
-                            </>
-                        )}
-                    </button>
                 </div>
             </div>
         </div>

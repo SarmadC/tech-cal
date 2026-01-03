@@ -48,8 +48,8 @@
     /* Default background will be adjusted per theme below */
     background: var(--category-bg, #f1f5f9);
     color: var(--text-on-pastel);
-    border-radius: 6px;
-    transition: all var(--transition-normal);
+    border-radius: 4px; /* Tighter radius for technical feel (Linear/Notion style) */
+    transition: all 0.15s ease-out; /* Snappy Linear-style transitions */
     padding: var(--card-pad);
     margin: 12px;
     display: flex;
@@ -727,6 +727,15 @@ div.event-detail-glass-sidebar {
     line-height: 1.3; /* Optimal line height */
     display: flex;
     align-items: center; /* Ensure proper vertical alignment */
+}
+
+/* Monospace time styling for Linear/Notion aesthetic (week view) */
+.tech-calendar-week-view .event-card .event-time {
+    font-family: var(--font-mono) !important; /* Monospace font for data feel */
+    font-size: 10px !important; /* Smaller size for data */
+    opacity: 0.6 !important; /* Lower opacity to signal "data" vs "content" */
+    font-weight: 500 !important; /* Medium weight */
+    letter-spacing: 0.02em !important; /* Slightly more spacing for monospace */
 }
 
 .event-card .event-duration {

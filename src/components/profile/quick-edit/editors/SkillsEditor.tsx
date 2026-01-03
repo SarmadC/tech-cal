@@ -34,42 +34,45 @@ const SkillsEditor: React.FC<SkillsEditorProps> = React.memo(({ profile, onUpdat
   };
 
   return (
-    <div className="space-y-6">
-      {/* Current Skills */}
-      <FormField 
-        label="Current Skills" 
-        description="Add 3–5 of your strongest skills"
-      >
+    <div className="space-y-8">
+      {/* Core Skills */}
+      <div className="pb-6 border-b border-white/5">
+        <label className="text-[11px] uppercase tracking-widest text-zinc-500 font-semibold mb-1 block">
+          Core Skills
+        </label>
+        <p className="text-xs text-zinc-500 mb-3">What you can do now</p>
         <SkillsDropdown
           selectedSkills={formData.primarySkills}
           onSkillsChange={handlePrimarySkillsChange}
-          placeholder="Type to search or select from suggestions..."
+          placeholder="Type to add..."
         />
-      </FormField>
+      </div>
 
-      {/* Skills to Learn */}
-      <FormField 
-        label="Skills You Want to Learn" 
-        description="What's next on your roadmap? Add 2–3 skills"
-      >
+      {/* Learning Goals */}
+      <div className="pb-6 border-b border-white/5">
+        <label className="text-[11px] uppercase tracking-widest text-zinc-500 font-semibold mb-1 block">
+          Learning Goals
+        </label>
+        <p className="text-xs text-zinc-500 mb-3">What you're actively learning</p>
         <SkillsDropdown
           selectedSkills={formData.skillsToLearn}
           onSkillsChange={handleSkillsToLearnChange}
-          placeholder="Type to search or select..."
+          placeholder="Type to add..."
         />
-      </FormField>
+      </div>
 
-      {/* Areas of Interest */}
-      <FormField 
-        label="Areas of Interest" 
-        description="Broader topics you're curious about"
-      >
+      {/* Interests */}
+      <div>
+        <label className="text-[11px] uppercase tracking-widest text-zinc-500 font-semibold mb-1 block">
+          Interests
+        </label>
+        <p className="text-xs text-zinc-500 mb-3">Broader topics you're curious about</p>
         <SkillsDropdown
           selectedSkills={formData.interests}
           onSkillsChange={handleInterestsChange}
-          placeholder="Type to search or add custom topics..."
+          placeholder="Type to add..."
         />
-      </FormField>
+      </div>
     </div>
   );
 });

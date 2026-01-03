@@ -29,6 +29,13 @@ export interface EventCardProps {
     isOverlapping?: boolean;
     showCareerImpact?: boolean;
     isCompressed?: boolean;
+    isSummary?: boolean;
+    /** Number of overlapping events in this time slot (for badge display) */
+    overlapCount?: number;
+    /** Hidden events for "+N more" badge display */
+    hiddenEvents?: (Event | MultiDayEventInstance)[];
+    /** Callback when badge is clicked */
+    onBadgeClick?: (e: React.MouseEvent) => void;
 }
 
 export const EventCard: React.FC<EventCardProps> = ({
@@ -42,15 +49,20 @@ export const EventCard: React.FC<EventCardProps> = ({
     style = {},
     isOverlapping = false,
     showCareerImpact = true,
-    isCompressed = false
+    isCompressed = false,
+    isSummary = false,
+    overlapCount = 0,
+    hiddenEvents = [],
+    onBadgeClick
 }) => {
 
     const live = isEventLive(event.startTime, event.endTime);
     const isPast = isEventPast(event.startTime, event.endTime);
 
-    // Week view specific content display - DYNAMIC based on card size
+    // Unified card size logic
     const cardSize = visualInfo?.span || 1;
-    const isWeekView = viewType === 'week';
+    // We treat all views as "week view" style for consistency
+    const isWeekView = true;
     const isDayView = viewType === 'day';
 
 
@@ -75,6 +87,18 @@ export const EventCard: React.FC<EventCardProps> = ({
     const categoryColor = getCategoryColor(event);
     const titleColor = getPillColor(categoryColor, 0.5);
 
+    // Helper to convert hex to rgba for the semi-transparent background
+    // Uses color-mix for better compatibility with CSS variables
+    const getTransparentColor = (color: string, opacity: number) => {
+        if (!color) return 'rgba(59, 130, 246, 0.2)';
+
+        // Use modern CSS color-mix
+        const transparencyPercent = Math.round((1 - opacity) * 100);
+        return `color-mix(in srgb, ${color}, transparent ${transparencyPercent}%)`;
+    };
+
+    const bgColor = getTransparentColor(categoryColor, 0.15); // 15% opacity for background
+
     // Get appropriate location icon based on venue type
     const getLocationIcon = (location: string) => {
         const loc = location.toLowerCase();
@@ -82,21 +106,21 @@ export const EventCard: React.FC<EventCardProps> = ({
 
         // Virtual/Remote events
         if (loc.includes('remote') || loc.includes('virtual') || loc.includes('online')) {
-            return <MaterialIcon name="devices" size={10} color={iconColor} />;
+            return <MaterialIcon name="devices" size={12} color={iconColor} />;
         }
 
         // VR/AR/Metaverse events
         if (loc.includes('vr') || loc.includes('ar') || loc.includes('metaverse') || loc.includes('virtual reality')) {
-            return <MaterialIcon name="event" size={10} color={iconColor} />;
+            return <MaterialIcon name="event" size={12} color={iconColor} />;
         }
 
         // Global/worldwide events (no specific location)
         if (loc.includes('worldwide') || loc.includes('global') || loc.includes('international')) {
-            return <MaterialIcon name="location" size={10} color={iconColor} />;
+            return <MaterialIcon name="location" size={12} color={iconColor} />;
         }
 
         // Default to map pin for all physical locations (including conference centers, venues, etc.)
-        return <MaterialIcon name="location" size={10} color={iconColor} />;
+        return <MaterialIcon name="location" size={12} color={iconColor} />;
     };
 
     // Multi-day dots helper
@@ -155,7 +179,8 @@ export const EventCard: React.FC<EventCardProps> = ({
         ...style,
         '--category-title-color': titleColor,
         '--text-on-pastel': titleColor,
-        '--text-secondary-on-pastel': titleColor
+        '--text-secondary-on-pastel': titleColor,
+        '--category-bg': bgColor
     } as React.CSSProperties;
 
 
@@ -173,11 +198,15 @@ export const EventCard: React.FC<EventCardProps> = ({
 
     const showTimelineRail = isDayView && cardSize >= 8;
 
-    // Time displays for tall cards
-    const showStartTime = (isDayView || isWeekView) && cardSize >= 8;
-    const showEndTime = (isDayView || isWeekView) && cardSize >= 12;
-    const startTimeFormatted = showStartTime ? formatTime(event.startTime) : '';
-    const endTimeFormatted = showEndTime && event.endTime ? formatTime(event.endTime) : '';
+    // Time displays - Linear/Notion style: remove redundant time text
+    // Unified: grid position already communicates time, so hide time text completely generally
+    // Only show for very specific large day contexts if absolutely needed, but for "Weekly UI" unification we hide it
+    // to match the clean "Weekly" look.
+    const isNarrowEvent = isCompressed || cardSize <= 2;
+    const showStartTime = false; // Unified: reliance on grid position
+    const showEndTime = false;
+    const startTimeFormatted = '';
+    const endTimeFormatted = '';
 
 
 
@@ -189,18 +218,35 @@ export const EventCard: React.FC<EventCardProps> = ({
     const showDayOrganizer = isDayView && event.organizer && cardSize >= 6;
     const showDayDescription = isDayView && event.description && cardSize >= 10;
 
-    // Small cards: Basic info only
-    // Show location for medium and larger cards (span > 4)
-    const showWeekLocation = !isCompressed && viewType === 'week' && cardSize > 4;
-    const showWeekOrganizer = !isCompressed && viewType === 'week' && cardSize >= 5;
+    // Unified content display - Progressive disclosure based on card size
+    // Small cards (span 1-2): Title only
+    // Medium cards (span 3-4): Title + Location
+    // Large cards (span 5+): Title + Location + Organizer
+    const showLocation = !isCompressed && cardSize > 2;
+    const showOrganizer = !isCompressed && cardSize > 4;
 
     // Medium cards: Add progress indicators
-    const showWeekProgress = !isCompressed && viewType === 'week' && cardSize >= 3;
+    const showProgress = !isCompressed && cardSize >= 3;
 
+
+    // Refined Linear/Notion-style background - prevent bleed-through with blur and opacity
+    const glassBackground = 'rgba(30, 30, 30, 0.85)'; // Increased opacity to hide grid lines
 
     return (
         <div
-            style={cardStyle}
+            style={{
+                ...cardStyle,
+                background: glassBackground,
+                backdropFilter: 'blur(4px)', // Blur grid lines behind card
+                WebkitBackdropFilter: 'blur(4px)', // Safari support
+                borderLeft: `2px solid ${categoryColor}`, // Elegant 2px accent border
+                borderTop: '1px solid rgba(255,255,255,0.08)', // Base border (crisp definition)
+                borderRight: '1px solid rgba(255,255,255,0.08)',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)', // Subtle top highlight
+                padding: '10px 12px', // Uniform padding
+                borderRadius: '4px' // Tighter radius for technical feel
+            }}
             className={`${cardClasses} ${isCompact ? 'compact' : ''} ${isDense ? 'dense' : ''}`}
             onClick={onClick}
             onKeyDown={(e) => {
@@ -223,322 +269,176 @@ export const EventCard: React.FC<EventCardProps> = ({
             data-span-gt-12={cardSize > 12 || undefined}
         >
 
-            {/* Left timeline rail */}
-            {showTimelineRail && (
-                <div className={`event-left-rail ${live ? 'live' : ''}`} aria-hidden="true">
-                    <div className="rail-track">
-                        <div className="rail-fill" style={{ height: `${progressPercent}%` }} />
-                        {live && <div className="rail-dot" style={{ bottom: `${100 - progressPercent}%` }} />}
-                    </div>
-                </div>
-            )}
+            {/* Left timeline rail - Removed for Weekly UI consistency as requested */}
 
-            <div className="event-content">
-                {/* Enhanced Content Tiers */}
-                {/* Tier 1: Basic Info (Always Visible) */}
-                <div className="event-card-basic-info">
-                    {/* Top section: No longer needed since logo moved to bottom-left corner */}
+            <div className="event-content" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'flex-start', alignItems: 'flex-start', position: 'relative' }}>
 
-                    {/* Main title section */}
-                    <div className="event-title-section">
-                        <div className="flex items-start justify-between">
-                            <h3 className="event-title flex-1">{event.title}</h3>
-                            {/* Career Impact Display */}
-                            {showCareerImpact && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
-                                <div className="flex-shrink-0 ml-2">
-                                    <div className="flex items-center gap-1">
-                                        <div className={`
-                                        w-2 h-2 rounded-full
-                                        ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
-                                                (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
-                                                    (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
-                                    `} />
-                                        {cardSize >= 4 && (
-                                            <span className="text-xs font-medium text-muted-foreground">
-                                                {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}%
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+
+
+                {/* HEAD: Title & Badges */}
+                <div className="event-head-section">
+                    {/* Summary state (Collapsed stack item) */}
+                    {isSummary ? (
+                        <div className="event-card-summary">
+                            {/* Simple minimal summary */}
+                            <h3 className="event-title text-sm font-semibold truncate">{event.title}</h3>
                         </div>
-                    </div>
-
-
-                    {/* Day view specific content - Time, Duration, Location */}
-                    {isDayView && (
-                        <div className="event-day-meta">
-                            {/* Event Tags - show only for medium+ cards (span 5+) in day view */}
-                            {cardSize >= 5 && event.tags && event.tags.length > 0 && (
-                                <div className="event-tags-section">
-                                    <div className="event-tags-row">
-                                        {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
-                                        {event.tags
-                                            .filter((tag, index, self) =>
-                                                index === self.findIndex(t => t.name === tag.name)
-                                            )
-                                            .slice(0, 2) // Limit to 2 tags for day view
-                                            .map((tag, index) => (
-                                                <React.Fragment key={index}>
-                                                    {/* Tag Name */}
-                                                    <span
-                                                        className="event-session-type"
-                                                        style={{
-                                                            backgroundColor: getPillColor(categoryColor, 0.3),
-                                                            color: 'white'
-                                                        }}
-                                                    >
-                                                        {tag.name}
-                                                    </span>
-                                                </React.Fragment>
-                                            ))}
-                                        {/* Add +n indicator if there are more than 2 tags */}
-                                        {event.tags.filter((tag, index, self) =>
-                                            index === self.findIndex(t => t.name === tag.name)
-                                        ).length > 2 && (
-                                                <span
-                                                    className="event-session-type"
-                                                    style={{
-                                                        backgroundColor: getPillColor(categoryColor, 0.3),
-                                                        color: 'white'
-                                                    }}
-                                                >
-                                                    +{event.tags.filter((tag, index, self) =>
-                                                        index === self.findIndex(t => t.name === tag.name)
-                                                    ).length - 2}
-                                                </span>
-                                            )}
+                    ) : (
+                        /* Normal Full State */
+                        <div className="event-title-block">
+                            {/* Primary Title - Scaled Up */}
+                            {/* Primary Title Block with Icon Lockup - Pixel-Perfect Optical Alignment */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0px' }}>
+                                {/* Organizer Logo - Perfectly aligned to text cap-height */}
+                                {event.organization?.logo && (
+                                    <div className="event-organizer-logo-lockup" style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '16px',
+                                        height: '16px', // Match text cap-height exactly
+                                        flexShrink: 0,
+                                        lineHeight: 0 // Remove any line-height spacing
+                                    }}>
+                                        <Image
+                                            src={event.organization.logo}
+                                            alt={`${event.organization.name} logo`}
+                                            width={16}
+                                            height={16}
+                                            className="organizer-logo-image rounded-sm"
+                                            style={{ objectFit: 'contain', display: 'block' }}
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                            }}
+                                        />
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* Location and Organizer */}
-                            {(showDayLocation || showDayOrganizer) && (
-                                <div className="event-location-organizer">
-                                    {showDayLocation && (
-                                        <span className="event-location">
-                                            {getLocationIcon(event.location)}
-                                            {event.location}
-                                        </span>
-                                    )}
-                                    {showDayOrganizer && (
-                                        <span className="event-organizer">
-                                            <MaterialIcon name="building" size={10} color={titleColor} />
-                                            {event.organizer}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Description for very tall cards */}
-                            {showDayDescription && (
-                                <div className="event-description" style={{
-                                    marginTop: '12px',
-                                    fontSize: '0.85rem',
-                                    color: 'var(--text-on-pastel)',
-                                    opacity: 0.9,
-                                    lineHeight: 1.4,
-                                    maxHeight: '4.2em',
-                                    overflow: 'hidden',
+                                <h3 className="event-title" style={{
+                                    fontSize: '14px',
+                                    fontWeight: 500, // Medium weight for punchier feel
+                                    lineHeight: '1.2',
+                                    color: 'rgba(255, 255, 255, 0.95)', // Off-white to avoid bloom
+                                    letterSpacing: '-0.01em', // Tighter tracking for professional look
+                                    paddingTop: '1px', // Optical correction for icon alignment
                                     display: '-webkit-box',
-                                    WebkitLineClamp: 3,
-                                    WebkitBoxOrient: 'vertical'
+                                    WebkitLineClamp: isCompact ? 1 : 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    margin: 0,
+                                    paddingLeft: 0,
+                                    paddingRight: 0,
+                                    paddingBottom: 0,
+                                    alignSelf: 'center' // Ensure perfect vertical alignment
                                 }}>
-                                    {event.description}
+                                    {event.title}
+                                </h3>
+                            </div>
+
+                            {/* Metadata Zone: Essential Event Information */}
+                            {/* Clear visual hierarchy: Location first, then Organizer */}
+                            {/* Icons aligned: logo (16px) and location icon (12px) should be vertically aligned */}
+                            {(showLocation || showOrganizer) && (
+                                <div className="event-meta-block" style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-start',
+                                    gap: '3px',
+                                    width: '100%',
+                                    marginTop: '4px'
+                                }}>
+                                    {/* Location - Primary Metadata */}
+                                    {showLocation && event.location && (
+                                        <div className="meta-item meta-location" style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'flex-start',
+                                            gap: '6px',
+                                            fontSize: '12px',
+                                            color: 'rgba(255, 255, 255, 0.6)',
+                                            fontWeight: 400,
+                                            textAlign: 'left',
+                                            width: '100%',
+                                            minWidth: 0,
+                                            lineHeight: '1.2',
+                                            paddingLeft: '0px' // Icons align, text will be offset
+                                        }}>
+                                            <span className="meta-icon-wrapper" style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                                lineHeight: 0,
+                                                verticalAlign: 'middle',
+                                                width: '16px', // Match logo width for alignment
+                                                height: '16px',
+                                                marginLeft: '0px'
+                                            }}>
+                                                {getLocationIcon(event.location)}
+                                            </span>
+                                            <span className="truncate" style={{
+                                                textAlign: 'left',
+                                                display: 'inline-block',
+                                                width: '100%',
+                                                minWidth: 0,
+                                                flex: '1 1 auto',
+                                                lineHeight: '1.2',
+                                                verticalAlign: 'middle'
+                                            }}>{event.location}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Organizer - Secondary Metadata */}
+                                    {showOrganizer && event.organizer && event.organizer !== 'Unknown' && (
+                                        <div className="meta-item meta-organizer" style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'flex-start',
+                                            gap: '6px',
+                                            fontSize: '12px',
+                                            color: 'rgba(255, 255, 255, 0.5)',
+                                            fontWeight: 400,
+                                            textAlign: 'left',
+                                            width: '100%',
+                                            minWidth: 0,
+                                            lineHeight: '1.2',
+                                            paddingLeft: '0px'
+                                        }}>
+                                            <span className="meta-icon-wrapper" style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                                lineHeight: 0,
+                                                verticalAlign: 'middle',
+                                                width: '16px', // Match logo width for alignment
+                                                height: '16px'
+                                            }}>
+                                                <MaterialIcon name="person" size={12} color="rgba(255, 255, 255, 0.5)" />
+                                            </span>
+                                            <span className="truncate" style={{
+                                                textAlign: 'left',
+                                                display: 'inline-block',
+                                                width: '100%',
+                                                minWidth: 0,
+                                                flex: '1 1 auto',
+                                                lineHeight: '1.2',
+                                                verticalAlign: 'middle'
+                                            }}>{event.organizer}</span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
                     )}
+                </div>
 
-                    {/* Start time for tall cards */}
-                    {showStartTime && (
-                        <div className="event-start-time" style={{
-                            marginTop: cardSize >= 12 ? '16px' : '12px',
-                            padding: '6px 10px',
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            color: 'var(--text-on-pastel)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                        }}>
-                            <MaterialIcon name="time" size={14} color={titleColor} />
-                            Starts: {startTimeFormatted}
-                        </div>
-                    )}
-
-                    {/* End time for ultra tall cards (shown at bottom) */}
-                    {showEndTime && (
-                        <div className="event-end-time" style={{
-                            marginTop: 'auto',
-                            padding: '6px 10px',
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            color: 'var(--text-on-pastel)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                        }}>
-                            <MaterialIcon name="time" size={14} color={titleColor} />
-                            Ends: {endTimeFormatted}
-                        </div>
-                    )}
-
-                    {/* Multi-day day indicator - subtle dots - only show for multi-day events */}
-                    {'dayInfo' in event && event.dayInfo && event.dayInfo.totalDays > 1 && (
-                        <div className="event-day-dots">
-                            {Array.from({ length: event.dayInfo.totalDays }, (_, i) => (
-                                <div
-                                    key={i}
-                                    className={`day-dot ${i + 1 === event.dayInfo!.currentDay ? 'active' : ''}`}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Organizer logo in bottom-left corner */}
-                    {event.organization?.logo && (
-                        <div className="event-organizer-logo-corner">
-                            <Image
-                                src={event.organization.logo}
-                                alt={`${event.organization.name} logo`}
-                                width={18}
-                                height={18}
-                                className="organizer-logo-corner-image"
-                                onError={(e) => {
-                                    // Silently handle logo loading errors without console spam
-                                    e.currentTarget.style.display = 'none';
-                                }}
-                                onLoad={(e) => {
-                                    // Ensure logo is visible when it loads successfully
-                                    e.currentTarget.style.display = 'block';
-                                }}
-                            />
-                        </div>
-                    )}
-
-
-                    {/* Event Tags Display - only for week view */}
-                    {viewType === 'week' && !isCompressed && cardSize >= 3 && event.tags && event.tags.length > 0 && (
-                        <div className="event-tags-section">
-                            <div className="event-tags-row">
-                                {/* Deduplicate tags by name to avoid showing the same tag multiple times */}
-                                {event.tags
-                                    .filter((tag, index, self) =>
-                                        index === self.findIndex(t => t.name === tag.name)
-                                    )
-                                    .slice(0, (sizeBucket === 'small' ? 1 : 2))
-                                    .map((tag) => (
-                                        <span
-                                            key={tag.id}
-                                            className="event-session-type"
-                                            style={{
-                                                backgroundColor: getPillColor(categoryColor, 0.3),
-                                                color: 'white'
-                                            }}
-                                        >
-                                            {tag.name}
-                                        </span>
-                                    ))}
-                                {/* Add +n indicator if there are more than 2 tags */}
-                                {(() => {
-                                    const uniqueCount = event.tags.filter((tag, index, self) => index === self.findIndex(t => t.name === tag.name)).length;
-                                    const limit = sizeBucket === 'small' ? 1 : 2;
-                                    return uniqueCount > limit;
-                                })() && (
-                                        <span
-                                            className="event-session-type"
-                                            style={{
-                                                backgroundColor: getPillColor(categoryColor, 0.3),
-                                                color: 'white'
-                                            }}
-                                        >
-                                            +{(() => {
-                                                const uniqueCount = event.tags.filter((tag, index, self) => index === self.findIndex(t => t.name === tag.name)).length;
-                                                const limit = sizeBucket === 'small' ? 1 : 2;
-                                                return uniqueCount - limit;
-                                            })()}
-                                        </span>
-                                    )}
-                            </div>
-                        </div>
-                    )}
-
-
-
-                    {/* Basic location and organizer */}
-                    <div className="event-info">
-                        {showWeekLocation && !isCompressed && event.location && (
-                            <span className="event-location-text">
-                                {getLocationIcon(event.location)}
-                                {event.location}
-                            </span>
-                        )}
-                        {showWeekOrganizer && event.organizer && (
-                            <span className="event-organizer-text">
-                                <MaterialIcon name="building" size={10} color={titleColor} />
-                                {event.organizer}
-                            </span>
-                        )}
+                {/* FOOT: Tags, Logos, or Extra Info (Fills the bottom vacuum) */}
+                {!isSummary && !isCompact && cardSize > 3 && (
+                    <div className="event-foot-section" style={{ marginTop: 'auto', paddingTop: '4px' }}>
+                        {/* Optional tags can go here */}
                     </div>
-                </div>
-
-                {/* Tier 2: Extended Info (2+ hour events) - Multi-day progress only */}
-                <div className="event-card-extended-info">
-                    {showWeekProgress && ('isMultiDay' in event && event.isMultiDay && event.multiDaySpan && event.multiDaySpan > 1) && (
-                        <div className="multi-day-progress">
-                            <div className="progress-bar">
-                                <div className="progress-fill" style={{ width: '20%' }} />
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Tier 3: Rich Content (4+ hour events) */}
-                <div className="event-card-rich-content">
-                    {/* Career Impact Explanation for Extra Large Cards */}
-                    {showCareerImpact && isExtraLarge && (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite && (
-                        <div className="career-impact-explanation">
-                            <div className="flex items-center gap-2 mb-2">
-                                <MaterialIcon name="trending-up" size={12} color="var(--foreground-secondary)" />
-                                <span className="text-xs font-medium text-gray-600">Career Impact</span>
-                            </div>
-                            <div className="career-impact-details">
-                                <div className="flex items-center justify-between mb-1">
-                                    <div className="flex items-center gap-2 px-2 py-1 bg-gray-100 rounded-md">
-                                        <div className={`
-                                        w-2 h-2 rounded-full
-                                        ${(event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 80 ? 'bg-green-400' :
-                                                (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 50 ? 'bg-blue-400' :
-                                                    (event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall >= 20 ? 'bg-yellow-400' : 'bg-gray-400'}
-                                    `} />
-                                        <span className="text-xs font-medium">
-                                            {Math.round((event as Event & { careerImpactLite?: CareerImpactScoreLite }).careerImpactLite!.overall)}% Match
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="career-impact-reasons text-xs text-gray-600 mt-1">
-                                    <div className="flex items-start gap-1">
-                                        <span className="text-green-500 mt-0.5">•</span>
-                                        <span>High relevance to your career goals</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Tier 4: Premium Content (6+ hour events) - only show if we have rich data */}
-                <div className="event-card-premium-content">
-                    {/* Additional premium content can go here */}
-                </div>
-
-
-                {/* Day view content - time removed since calendar grid already shows time slots */}
+                )}
             </div>
 
             {/* Multi-day dots */}

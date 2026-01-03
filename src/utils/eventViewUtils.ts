@@ -1,6 +1,18 @@
 // src/utils/eventViewUtils.ts
 
-import { QuestionIcon, UsersIcon, GlobeIcon, MonitorIcon, MapPinIcon } from '@phosphor-icons/react';
+import { 
+    Question as QuestionIcon, 
+    Users as UsersIcon, 
+    Globe as GlobeIcon, 
+    Monitor as MonitorIcon, 
+    MapPin as MapPinIcon,
+    Code as CodeIcon,
+    ChalkboardSimple as ChalkboardSimpleIcon,
+    Presentation as PresentationIcon,
+    Storefront as StorefrontIcon,
+    Rocket as RocketIcon,
+    SquaresFour as SquaresFourIcon
+} from '@phosphor-icons/react';
 import { Event, MultiDayEventInstance, EventType } from '@/types';
 import { formatTime } from '@/utils/dateUtils';
 
@@ -13,11 +25,75 @@ import { formatTime } from '@/utils/dateUtils';
 // ============================================
 
 export const getIconForCategory = (categoryName: string) => {
-    const name = (categoryName || '').toLowerCase();
-    if (name.includes('conference')) return UsersIcon;
-    if (name.includes('workshop') || name.includes('training')) return MonitorIcon;
-    if (name.includes('webinar')) return GlobeIcon;
-    if (name.includes('networking') || name.includes('meetup')) return MapPinIcon;
+    const name = (categoryName || '').toLowerCase().trim();
+    
+    // Hackathon and coding events (check most specific terms first)
+    if (name.includes('hackathon') || name.includes('buildathon') || 
+        name.includes('codeathon') || name.includes('datathon') || 
+        name.includes('ideathon') || name.includes('coding challenge') || 
+        name.includes('code jam') || name.includes('hack')) {
+        return CodeIcon;
+    }
+    
+    // Product, Product Launch, Release, Announcement (check before other generic terms)
+    if (name === 'product' || name.includes('product launch') || name.includes('demo day') || 
+        name.includes('release') || name.includes('announcement') || 
+        name.includes('unveil')) {
+        return RocketIcon;
+    }
+    
+    // Trade Show, Expo, Exhibition (check before generic "show")
+    if (name.includes('trade show') || name.includes('tradeshow') || 
+        name.includes('expo') || name.includes('exhibition') || 
+        name.includes('showcase') || name.includes('fair')) {
+        return StorefrontIcon;
+    }
+    
+    // Summit, Forum, Symposium (high-level discussions)
+    if (name.includes('summit') || name.includes('forum') || 
+        name.includes('symposium') || name.includes('congress')) {
+        return PresentationIcon;
+    }
+    
+    // Training, Bootcamp, Course (educational intensive learning)
+    // Check bootcamp before training to avoid conflicts
+    if (name.includes('bootcamp') || name.includes('training') || 
+        name.includes('course') || name.includes('tutorial') || 
+        name.includes('masterclass') || name.includes('certification')) {
+        return ChalkboardSimpleIcon;
+    }
+    
+    // Workshop (hands-on sessions, distinguish from training)
+    // Check after training to prioritize training for "training workshop"
+    if (name.includes('workshop') || name.includes('hands-on')) {
+        return MonitorIcon;
+    }
+    
+    // Conference (check after more specific terms)
+    if (name.includes('conference') || name.includes('convention')) {
+        return UsersIcon;
+    }
+    
+    // Webinar (online events)
+    if (name.includes('webinar') || name.includes('online event') || 
+        name.includes('virtual session')) {
+        return GlobeIcon;
+    }
+    
+    // Networking, Meetup (community events)
+    if (name.includes('networking') || name.includes('meetup') || 
+        name.includes('mixer') || name.includes('social') || 
+        name.includes('community')) {
+        return MapPinIcon;
+    }
+    
+    // Other / Miscellaneous (catch-all category)
+    if (name === 'other' || name.includes('misc') || name.includes('miscellaneous') ||
+        name.includes('general') || name.includes('uncategorized')) {
+        return SquaresFourIcon;
+    }
+    
+    // Default fallback
     return QuestionIcon;
 };
 
@@ -237,7 +313,13 @@ export const generateTimeSlots = (startHour: number = 0, endHour: number = 23, i
     const slots = [];
     for (let hour = startHour; hour <= endHour; hour += interval) {
         const time24 = `${hour.toString().padStart(2, '0')}:00`;
-        const time12 = formatTime(`2000-01-01T${time24}:00`);
+        
+        // Use simpler manual formatting to avoid timezone issues with date parsing
+        // We want the grid to explicitly show "5 AM", "6 AM" etc. regardless of UTC/Local conversions
+        const ampm = hour >= 12 && hour < 24 ? 'PM' : 'AM';
+        const displayHour = hour > 12 ? (hour % 12) : (hour === 0 || hour === 24 ? 12 : hour);
+        const time12 = `${displayHour}:00 ${ampm}`;
+        
         slots.push({ 
             hour,
             time24,
@@ -371,7 +453,8 @@ export interface EventLayoutInfo {
 
 /**
  * Calculate column layout for overlapping events within a single day
- * Uses a greedy column assignment algorithm to position events side-by-side
+ * Uses a time-sweep algorithm to find maximum simultaneous overlaps and assigns columns
+ * Implements the "Cluster & Split" algorithm for proper width distribution
  */
 export function calculateOverlapLayout(
     events: (Event | MultiDayEventInstance)[]
@@ -380,89 +463,152 @@ export function calculateOverlapLayout(
     
     if (events.length === 0) return layoutMap;
     
-    // Sort events by start time, then by duration (longer events first for better layout)
-    const sortedEvents = [...events].sort((a, b) => {
-        const startA = new Date(a.startTime).getTime();
-        const startB = new Date(b.startTime).getTime();
-        if (startA !== startB) return startA - startB;
+    // Convert events to time-based format for easier processing
+    // CRITICAL: Use the same ID that TimeSlotGrid uses for lookups
+    // For multi-day instances, this is originalEventId, otherwise event.id
+    const eventTimes = events.map(event => {
+        const start = new Date(event.startTime).getTime();
+        const end = event.endTime 
+            ? new Date(event.endTime).getTime() 
+            : start + 3600000; // Default 1 hour if no end time
         
-        // For same start time, prefer longer events
-        const endA = a.endTime ? new Date(a.endTime).getTime() : startA + 3600000;
-        const endB = b.endTime ? new Date(b.endTime).getTime() : startB + 3600000;
-        return (endB - startB) - (endA - startA);
+        // Match the ID logic in TimeSlotGrid.tsx line 217
+        const eventId = 'originalEventId' in event ? (event as any).originalEventId : event.id;
+        
+        return {
+            event,
+            start,
+            end,
+            id: eventId
+        };
     });
     
-    // Track columns - each column tracks when it becomes free (end time)
-    const columns: number[] = [];
+    // Build overlapping clusters using transitive closure
+    // If A overlaps B and B overlaps C, all three are in the same cluster
+    const clusters: typeof eventTimes[] = [];
+    const eventToCluster = new Map<string, number>();
     
-    // Assign each event to the first available column
-    const eventColumns: Map<string, number> = new Map();
-    
-    for (const event of sortedEvents) {
-        const eventStart = new Date(event.startTime).getTime();
-        const eventEnd = event.endTime 
-            ? new Date(event.endTime).getTime() 
-            : eventStart + 3600000;
+    for (const eventTime of eventTimes) {
+        // Find all clusters that this event overlaps with
+        const overlappingClusterIndices = new Set<number>();
         
-        // Find the first column where this event fits (no overlap)
-        let assignedColumn = -1;
-        for (let i = 0; i < columns.length; i++) {
-            if (columns[i] <= eventStart) {
-                assignedColumn = i;
-                columns[i] = eventEnd;
-                break;
-            }
-        }
-        
-        // If no existing column fits, create a new one
-        if (assignedColumn === -1) {
-            assignedColumn = columns.length;
-            columns.push(eventEnd);
-        }
-        
-        eventColumns.set(event.id, assignedColumn);
-    }
-    
-    // Group events into overlapping clusters to determine column counts
-    const clusters: (Event | MultiDayEventInstance)[][] = [];
-    
-    for (const event of sortedEvents) {
-        const eventStart = new Date(event.startTime).getTime();
-        const eventEnd = event.endTime 
-            ? new Date(event.endTime).getTime() 
-            : eventStart + 3600000;
-        
-        // Find if this event overlaps with any existing cluster
-        let addedToCluster = false;
-        for (const cluster of clusters) {
-            const overlapsWithCluster = cluster.some(clusterEvent => {
-                const cStart = new Date(clusterEvent.startTime).getTime();
-                const cEnd = clusterEvent.endTime 
-                    ? new Date(clusterEvent.endTime).getTime() 
-                    : cStart + 3600000;
-                return eventStart < cEnd && cStart < eventEnd;
+        for (let i = 0; i < clusters.length; i++) {
+            const cluster = clusters[i];
+            const overlapsWithCluster = cluster.some(clusterEventTime => {
+                return eventTime.start < clusterEventTime.end && clusterEventTime.start < eventTime.end;
             });
             
             if (overlapsWithCluster) {
-                cluster.push(event);
-                addedToCluster = true;
-                break;
+                overlappingClusterIndices.add(i);
             }
         }
         
-        if (!addedToCluster) {
-            clusters.push([event]);
+        if (overlappingClusterIndices.size === 0) {
+            // Create new cluster
+            const newClusterIndex = clusters.length;
+            clusters.push([eventTime]);
+            eventToCluster.set(eventTime.id, newClusterIndex);
+        } else {
+            // Merge all overlapping clusters into the first one
+            const clusterIndices = Array.from(overlappingClusterIndices).sort((a, b) => a - b);
+            const targetClusterIndex = clusterIndices[0];
+            const targetCluster = clusters[targetClusterIndex];
+            
+            // Add this event to the target cluster
+            targetCluster.push(eventTime);
+            eventToCluster.set(eventTime.id, targetClusterIndex);
+            
+            // Merge other overlapping clusters into the target
+            for (let i = clusterIndices.length - 1; i > 0; i--) {
+                const clusterIndex = clusterIndices[i];
+                const clusterToMerge = clusters[clusterIndex];
+                
+                // Move all events from this cluster to target
+                for (const eventTimeToMerge of clusterToMerge) {
+                    targetCluster.push(eventTimeToMerge);
+                    eventToCluster.set(eventTimeToMerge.id, targetClusterIndex);
+                }
+                
+                // Remove the merged cluster
+                clusters.splice(clusterIndex, 1);
+                
+                // Update cluster indices for events that were in clusters after the removed one
+                for (const [eventId, clusterIdx] of eventToCluster.entries()) {
+                    if (clusterIdx > clusterIndex) {
+                        eventToCluster.set(eventId, clusterIdx - 1);
+                    }
+                }
+            }
         }
     }
     
-    // For each cluster, determine the max column count
+    // For each cluster, calculate maximum simultaneous overlaps using time-sweep
     for (const cluster of clusters) {
-        const maxColumn = Math.max(...cluster.map(e => eventColumns.get(e.id) || 0));
-        const totalColumns = maxColumn + 1;
+        // Create time points for sweep line algorithm
+        const timePoints: Array<{ time: number; type: 'start' | 'end'; eventId: string }> = [];
         
-        for (const event of cluster) {
-            layoutMap.set(event.id, {
-                columnIndex: eventColumns.get(event.id) || 0,
+        for (const eventTime of cluster) {
+            timePoints.push({ time: eventTime.start, type: 'start', eventId: eventTime.id });
+            timePoints.push({ time: eventTime.end, type: 'end', eventId: eventTime.id });
+        }
+        
+        // Sort by time, with starts before ends at the same time
+        timePoints.sort((a, b) => {
+            if (a.time !== b.time) return a.time - b.time;
+            // If times are equal, process starts before ends
+            if (a.type !== b.type) return a.type === 'start' ? -1 : 1;
+            return 0;
+        });
+        
+        // Sweep through time to find maximum simultaneous overlaps
+        let currentOverlaps = 0;
+        let maxSimultaneousOverlaps = 0;
+        
+        for (const point of timePoints) {
+            if (point.type === 'start') {
+                currentOverlaps++;
+                maxSimultaneousOverlaps = Math.max(maxSimultaneousOverlaps, currentOverlaps);
+            } else {
+                currentOverlaps--;
+            }
+        }
+        
+        const totalColumns = maxSimultaneousOverlaps;
+        
+        // Assign columns using greedy algorithm (first available column)
+        const eventColumns = new Map<string, number>();
+        const columns: number[] = []; // Track when each column becomes free (end time)
+        
+        // Sort cluster events by start time, then by duration (longer first)
+        const sortedCluster = [...cluster].sort((a, b) => {
+            if (a.start !== b.start) return a.start - b.start;
+            return (b.end - b.start) - (a.end - a.start);
+        });
+        
+        for (const eventTime of sortedCluster) {
+            // Find first available column
+            let assignedColumn = -1;
+            for (let i = 0; i < columns.length; i++) {
+                if (columns[i] <= eventTime.start) {
+                    assignedColumn = i;
+                    columns[i] = eventTime.end;
+                    break;
+                }
+            }
+            
+            // If no column available, create new one
+            if (assignedColumn === -1) {
+                assignedColumn = columns.length;
+                columns.push(eventTime.end);
+            }
+            
+            eventColumns.set(eventTime.id, assignedColumn);
+        }
+        
+        // Set layout info for all events in this cluster
+        for (const eventTime of cluster) {
+            layoutMap.set(eventTime.id, {
+                columnIndex: eventColumns.get(eventTime.id) || 0,
                 totalColumns
             });
         }

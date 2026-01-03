@@ -69,7 +69,7 @@ export const WeekEventRenderer: React.FC<WeekEventRendererProps> = ({
                             showCareerImpact={true}
                             style={{
                                 height: '100%',
-                                margin: '1px 2px',
+                                margin: 0, // Remove margin for flush left border
                                 '--category-title-color': titleColor,
                                 '--text-on-pastel': titleColor
                             } as React.CSSProperties}

@@ -57,22 +57,22 @@ const reverseGeocode = async (latitude: number, longitude: number): Promise<stri
         const response = await fetch(
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
         );
-        
+
         if (!response.ok) {
             console.warn('[NearMe] Reverse geocoding API error:', response.status);
             return null;
         }
-        
+
         const data = await response.json();
-        
+
         // Try to get the city name from various fields
         const city = data.city || data.locality || data.principalSubdivision || null;
-        
+
         if (city) {
             console.log('[NearMe] Detected location:', city, data.countryName);
             return city;
         }
-        
+
         return null;
     } catch (error) {
         console.warn('[NearMe] Reverse geocoding failed:', error);
@@ -89,23 +89,23 @@ const getLocationFromIP = async (): Promise<string | null> => {
         console.log('[NearMe] Trying IP-based geolocation...');
         // Using BigDataCloud client-info - free, no API key required, HTTPS, returns city from IP
         const response = await fetch('https://api.bigdatacloud.net/data/client-info');
-        
+
         if (!response.ok) {
             console.warn('[NearMe] IP geolocation API error:', response.status);
             return null;
         }
-        
+
         const data = await response.json();
         console.log('[NearMe] IP geolocation response:', data);
-        
+
         // BigDataCloud client-info returns location info based on IP
         const city = data.city || data.locality || data.location?.city || data.location?.locality || data.principalSubdivision || null;
-        
+
         if (city) {
             console.log('[NearMe] IP-based location detected:', city, data.countryName || data.country);
             return city;
         }
-        
+
         console.log('[NearMe] IP geolocation returned no city data');
         return null;
     } catch (error) {
@@ -207,7 +207,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
         setIsAutocompleteOpen(false);
         onSearch();
     }, [onSuggestionSelect, onSearchChange, onSearch]);
-    
+
     // Handle "Near Me" button click - detect user location
     const handleNearMeClick = useCallback(async () => {
         // If parent provides handler, use it
@@ -215,10 +215,10 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
             onNearMeClick();
             return;
         }
-        
+
         // Otherwise, detect location locally
         setIsLocalDetecting(true);
-        
+
         try {
             // 1. Try browser geolocation with reverse geocoding (most accurate)
             if ('geolocation' in navigator) {
@@ -230,25 +230,25 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                             { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
                         );
                     });
-                    
+
                     const { latitude, longitude } = position.coords;
                     console.log('[NearMe] Got coordinates:', latitude, longitude);
-                    
+
                     // Try reverse geocoding to get actual city name
                     const city = await reverseGeocode(latitude, longitude);
-                    
+
                     if (city) {
                         onLocationChange(city);
                         return;
                     }
-                    
+
                     console.log('[NearMe] Reverse geocoding returned no city, trying IP geolocation');
                 } catch (error) {
                     console.warn('[NearMe] Geolocation failed:', error);
                     // Fall through to IP-based detection
                 }
             }
-            
+
             // 2. Try IP-based geolocation (works when traveling, more accurate than timezone)
             try {
                 const ipCity = await getLocationFromIP();
@@ -259,12 +259,12 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
             } catch (error) {
                 console.warn('[NearMe] IP geolocation failed:', error);
             }
-            
+
             // 3. Final fallback: use timezone to guess location
             console.log('[NearMe] Falling back to timezone detection');
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             const locationData = timezoneToLocation[timezone];
-            
+
             if (locationData) {
                 onLocationChange(locationData.city);
             } else {
@@ -279,19 +279,19 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
             setIsLocalDetecting(false);
         }
     }, [onNearMeClick, onLocationChange]);
-    
+
     const isLoading = isDetectingLocation || isLocalDetecting;
     return (
-        <div className={`bg-card/80 dark:bg-card/20 rounded-2xl p-4 border border-border/60 backdrop-blur mb-8 transition-colors ${isAutocompleteOpen ? 'relative z-[102]' : ''}`}>
+        <div className={`bg-card/80 dark:bg-card/20 lg:bg-[#0F0F0F] rounded-2xl lg:rounded-xl p-4 border border-border/60 lg:border-[#262626] backdrop-blur mb-8 transition-colors ${isAutocompleteOpen ? 'relative z-[102]' : ''}`}>
             <div className="flex flex-col lg:flex-row items-center gap-4">
 
                 {/* Search Input */}
-                <div className={`flex-1 w-full relative group ${isAutocompleteOpen ? 'z-[102]' : ''}`}>
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors z-10">
+                <div className={`flex-1 w-full relative group lg:rounded-[99px] lg:hover:bg-[#1A1A1A] transition-colors ${isAutocompleteOpen ? 'z-[102]' : ''}`}>
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#5A5A5A] lg:text-[#999999] group-focus-within:text-[#E5E5E5] transition-colors z-10 flex items-center">
                         {isSearching ? (
-                            <SpinnerGap size={20} className="animate-spin" />
+                            <SpinnerGap size={18} className="animate-spin" />
                         ) : (
-                            <MagnifyingGlass size={20} />
+                            <MagnifyingGlass size={18} weight="regular" />
                         )}
                     </div>
                     <input
@@ -299,7 +299,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         type="text"
                         placeholder="Search events..."
                         maxLength={200}
-                        className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 focus:border-white/40 focus:bg-white/[0.08] transition-all outline-none text-foreground placeholder:text-muted-foreground"
+                        className="w-full pl-12 pr-4 py-3.5 lg:leading-none rounded-xl lg:rounded-[99px] border border-[#2A2A2A] lg:border-0 bg-[#1A1A1A] lg:bg-transparent focus:border-[#3A3A3A] lg:focus:border-0 focus:bg-[#1A1A1A] lg:focus:bg-transparent transition-all outline-none text-[#E5E5E5] placeholder:text-[#5A5A5A] lg:placeholder:text-[#A1A1AA]"
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
                         onFocus={() => hasAutocompleteContent && searchTerm.length >= 2 && setIsAutocompleteOpen(true)}
@@ -331,18 +331,18 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 </div>
 
                 {/* Divider */}
-                <div className="hidden lg:block w-px h-10 bg-border/60"></div>
+                <div className="hidden lg:flex w-px h-[24px] bg-[#333333] self-center"></div>
 
                 {/* Location Input with Near Me Button */}
-                <div className="flex-1 w-full relative group">
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors">
-                        <MapPin size={20} />
+                <div className="flex-1 w-full relative group lg:rounded-[99px] lg:hover:bg-[#1A1A1A] transition-colors">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#5A5A5A] lg:text-[#999999] group-focus-within:text-[#E5E5E5] transition-colors flex items-center">
+                        <MapPin size={18} weight="regular" />
                     </div>
                     <input
                         type="text"
                         placeholder="Location (e.g. San Francisco)"
                         maxLength={100}
-                        className="w-full pl-12 pr-14 py-3.5 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 focus:border-white/40 focus:bg-white/[0.08] transition-all outline-none text-foreground placeholder:text-muted-foreground"
+                        className="w-full pl-12 pr-14 py-3.5 lg:leading-none rounded-xl lg:rounded-[99px] border border-[#2A2A2A] lg:border-0 bg-[#1A1A1A] lg:bg-transparent focus:border-[#3A3A3A] lg:focus:border-0 focus:bg-[#1A1A1A] lg:focus:bg-transparent transition-all outline-none text-[#E5E5E5] placeholder:text-[#5A5A5A] lg:placeholder:text-[#A1A1AA]"
                         value={location}
                         onChange={(e) => onLocationChange(e.target.value)}
                         onBlur={(e) => onLocationChange(e.target.value.trim())}
@@ -364,17 +364,17 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 </div>
 
                 {/* Divider */}
-                <div className="hidden lg:block w-px h-10 bg-border/60"></div>
+                <div className="hidden lg:flex w-px h-[24px] bg-[#333333] self-center"></div>
 
                 {/* Date Range Filter */}
-                <div className="flex-1 w-full relative group">
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors">
-                        <Calendar size={20} />
+                <div className="flex-1 w-full relative group lg:rounded-[99px] lg:hover:bg-[#1A1A1A] transition-colors">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#5A5A5A] lg:text-[#999999] group-focus-within:text-[#E5E5E5] transition-colors flex items-center">
+                        <Calendar size={18} weight="regular" />
                     </div>
                     <button
                         type="button"
                         onClick={() => setIsDatePickerOpen(true)}
-                        className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 focus:border-white/40 focus:bg-white/[0.08] transition-all outline-none text-foreground text-left cursor-pointer hover:bg-white/8"
+                        className="w-full pl-12 pr-4 py-3.5 lg:leading-none rounded-xl lg:rounded-[99px] border border-[#2A2A2A] lg:border-0 bg-[#1A1A1A] lg:bg-transparent focus:border-[#3A3A3A] lg:focus:border-0 focus:bg-[#1A1A1A] lg:focus:bg-transparent transition-all outline-none text-[#E5E5E5] text-left cursor-pointer hover:bg-[#222222] lg:hover:bg-transparent"
                     >
                         {formatDateRange(dateRange)}
                     </button>
@@ -411,7 +411,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
                 {/* Search Button */}
                 <button
-                    className="w-full lg:w-auto px-8 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors active:scale-95 transform duration-100"
+                    className="w-full lg:w-auto lg:mr-1 px-8 py-3 lg:py-2 lg:bg-[#E5E5E5] lg:text-[#0F0F0F] bg-primary text-primary-foreground font-medium rounded-xl lg:rounded-lg hover:bg-primary/90 lg:hover:bg-[#D5D5D5] transition-colors active:scale-95 transform duration-100"
                     onClick={onSearch}
                 >
                     Search

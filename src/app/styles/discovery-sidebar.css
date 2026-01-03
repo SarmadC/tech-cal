@@ -19,14 +19,51 @@
 }
 
 .discovery-sidebar-panel .filter-section:not(:last-child) {
-    margin-bottom: 1.75rem;
+    margin-bottom: 0;
+}
+
+/* Add 24px margin-top to all filter sections except the first one */
+.discovery-sidebar-panel .filter-section-with-margin:not(:first-child) {
+    margin-top: 24px;
+}
+
+/* Subtle divider between filter sections */
+.discovery-sidebar-panel .filter-section-divider {
+    border-top: 1px solid #262626;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+/* Hide divider on first section */
+.discovery-sidebar-panel .filter-section:first-child .filter-section-divider {
+    display: none;
+}
+
+/* Ensure proper spacing for section headers */
+.discovery-sidebar-panel .filter-section button {
+    margin-top: 0;
+    padding-top: 4px;
 }
 
 .discovery-sidebar-panel .filter-option + .filter-option {
-    margin-top: 0.35rem;
+    margin-top: 0;
 }
 
 .discovery-sidebar-panel .filter-section .filter-option:first-of-type {
-    margin-top: 0.4rem; /* space between section title and first option */
+    margin-top: 0;
+}
+
+/* Ensure native inputs are hidden */
+.discovery-sidebar-panel .filter-option input[type="checkbox"],
+.discovery-sidebar-panel .filter-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Ensure consistent row height for all filter options including "All" and "Any" */
+.discovery-sidebar-panel .filter-option {
+    min-height: 28px;
+    height: 28px;
 }
 

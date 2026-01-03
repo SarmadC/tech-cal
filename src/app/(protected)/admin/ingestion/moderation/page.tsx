@@ -45,14 +45,21 @@ export default async function ModerationPage() {
                 location,
                 organizer:organizers(name),
                 ingestion_quality_score,
-                ingestion_provenance
+                ingestion_provenance,
+                enrichment_status
             )
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(100);
 
-    const normalizedQueueItems = (queueItems ?? []).map((item) => ({
+    // Filter out events that have been enriched (enriched events should be reviewed in update queue)
+    const filteredQueueItems = (queueItems ?? []).filter((item) => {
+        const enrichmentStatus = item.events?.enrichment_status;
+        return enrichmentStatus !== 'enriched';
+    });
+
+    const normalizedQueueItems = filteredQueueItems.map((item) => ({
         ...item,
         reason_codes: item.reason_codes ?? [],
         recommended_tags: item.recommended_tags ?? [],

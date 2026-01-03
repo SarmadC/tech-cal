@@ -18,6 +18,7 @@ interface RoleAutocompleteProps {
     ariaDescribedBy?: string;
     className?: string; // Added className prop
     placeholder?: string;
+    showSuccess?: boolean; // Show success state with green border
 }
 
 export function RoleAutocomplete({
@@ -30,7 +31,8 @@ export function RoleAutocomplete({
     required = false,
     ariaDescribedBy,
     className,
-    placeholder = "Search for your role..."
+    placeholder = "Search for your role...",
+    showSuccess = false
 }: RoleAutocompleteProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -138,7 +140,8 @@ export function RoleAutocomplete({
                         isOpen
                             ? "border-border ring-1 ring-border/50 shadow-lg"
                             : "border-border/50 hover:border-border",
-                        error ? "border-red-500/50 hover:border-red-500" : ""
+                        error ? "border-red-500/50 hover:border-red-500" : "",
+                        showSuccess && !error ? "border-emerald-500/50 ring-2 ring-emerald-500/20" : ""
                     )}
                 >
                     <div className="flex items-center">

@@ -189,10 +189,9 @@ export default function DiscoverClientView({
                             <Navbar />
                         </div>
                         <div className="flex-1 overflow-auto">
-                            {/* Glassmorphic Discovery with gradient background */}
-                            <div className="min-h-screen glass-bg-gradient relative">
-                                {/* Subtle atmospheric overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
+                            {/* Main background - Notion/Linear dark theme */}
+                            <div className="min-h-screen bg-[#0F0F0F] relative">
+                                {/* Subtle noise or grain could be added here if desired, but keeping it clean for now */}
 
                                 <div className="relative max-w-[1600px] mx-auto px-0 py-0 md:px-6 md:py-8 space-y-6">
                                     {/* Header */}

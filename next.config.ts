@@ -110,6 +110,22 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'icon.horse',
       },
+      {
+        protocol: 'http',
+        hostname: 'static1.squarespace.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'static1.squarespace.com',
+      },
+      {
+        protocol: 'http',
+        hostname: 'reactsummit.us',
+      },
+      {
+        protocol: 'https',
+        hostname: 'reactsummit.us',
+      },
     ],
   },
   experimental: {

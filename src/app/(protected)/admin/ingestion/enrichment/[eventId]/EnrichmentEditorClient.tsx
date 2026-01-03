@@ -51,12 +51,14 @@ interface EnrichmentEditorClientProps {
     event: EventWithRelationships;
     initialAgendaItems: AgendaItemWithSpeakers[];
     lookupData: LookupData;
+    backUrl?: string;
 }
 
 export default function EnrichmentEditorClient({
     event,
     initialAgendaItems,
     lookupData,
+    backUrl = '/admin/ingestion/enrichment',
 }: EnrichmentEditorClientProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -699,12 +701,12 @@ export default function EnrichmentEditorClient({
                         Save Changes
                     </Button>
                     <Button
-                        onClick={() => router.push('/admin/ingestion/enrichment')}
+                        onClick={() => router.push(backUrl)}
                         variant="ghost"
                         className="w-full justify-start text-foreground-tertiary hover:text-foreground-primary"
                     >
                         <MaterialIcon name="arrow_back" size={16} className="mr-2" />
-                        Back to Dashboard
+                        {backUrl === '/admin/events' ? 'Back to All Events' : 'Back to Dashboard'}
                     </Button>
 
                     <div className="pt-4 border-t border-white/5">
@@ -726,7 +728,7 @@ export default function EnrichmentEditorClient({
                                     }
 
                                     showSuccess('Event deleted successfully');
-                                    router.push('/admin/ingestion/enrichment');
+                                    router.push(backUrl);
                                 } catch (err) {
                                     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
                                     showError(errorMessage);

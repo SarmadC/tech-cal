@@ -58,6 +58,17 @@ export default function AdminSidebar() {
                 ],
             },
             {
+                label: 'Events',
+                items: [
+                    {
+                        title: 'All Events',
+                        href: `${BASE_PATH}/events`,
+                        icon: <MaterialIcon name="calendar" size={16} />,
+                        hotkey: 'G A',
+                    },
+                ],
+            },
+            {
                 label: 'Ingestion',
                 items: [
                     {
