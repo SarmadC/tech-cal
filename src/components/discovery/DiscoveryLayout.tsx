@@ -22,7 +22,7 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
     onSidebarClose
 }) => {
     return (
-        <div className="min-h-screen bg-transparent p-4 lg:p-8 transition-colors">
+        <div className="min-h-screen bg-transparent p-4 lg:p-6 transition-colors">
             <div className="max-w-[1600px] mx-auto">
 
                 {/* Header Section */}
@@ -33,7 +33,7 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
                     {header}
                 </div>
 
-                <div className="flex flex-col gap-8 lg:flex-row">
+                <div className="flex flex-col gap-6 lg:flex-row">
                     {/* Sidebar - Desktop */}
                     <div className="hidden lg:block">
                         {sidebar}
@@ -66,10 +66,10 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
                     )}
 
                     {/* Main Content */}
-                    <div className="flex-1 px-5 md:px-0 pb-6 lg:pb-7 pt-5 lg:pt-0 transition-colors">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-                            <h2 className="text-xl font-semibold text-foreground">
-                                Events Found <span className="text-muted-foreground font-normal">({resultCount || 0})</span>
+                    <div className="flex-1 px-1 md:px-0 pb-6 lg:pb-7 pt-2 lg:pt-0 transition-colors">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+                            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                Events <span className="text-muted-foreground/60">({resultCount || 0})</span>
                             </h2>
 
                             {sortOption && (
@@ -79,7 +79,7 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-7 xl:gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {children}
                         </div>
                     </div>

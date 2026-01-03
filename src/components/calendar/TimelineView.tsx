@@ -17,30 +17,6 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     // Get agenda from event
     const agenda = event.agenda || [];
 
-    // Initialize with all days collapsed by default
-    const [collapsedDays, setCollapsedDays] = useState<Set<number>>(() => {
-        const allDays = new Set<number>();
-        agenda.forEach(item => {
-            if (item.dayNumber) {
-                allDays.add(item.dayNumber);
-            }
-        });
-        return allDays;
-    });
-
-    // Toggle day collapse state
-    const toggleDayCollapse = (day: number) => {
-        setCollapsedDays(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(day)) {
-                newSet.delete(day);
-            } else {
-                newSet.add(day);
-            }
-            return newSet;
-        });
-    };
-
     if (agenda.length === 0) {
         const emptyState = getEmptyState(theme.isDark);
         return (
@@ -132,77 +108,52 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
 
     // renderEventCard has been refactored into TimelineEventCard component
 
+    // renderEventCard has been refactored into TimelineEventCard component
+
     return (
-        <div className="space-y-6">
-            <h3 className={`text-lg font-semibold ${theme.textPrimary}`}>
-                Event Timeline
-            </h3>
+        <div className="relative pb-12">
+            {/* Main Container with Continuous Spine */}
+            <div className="ml-[100px] border-l-2 border-zinc-800 pl-6 relative min-h-[200px]">
 
-            {Object.entries(timelineClusters)
-                .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                .map(([day, clusters]) => {
-                    const dayNumber = parseInt(day);
-                    const isCollapsed = collapsedDays.has(dayNumber);
-                    const totalEvents = clusters.reduce((sum, cluster) => sum + cluster.items.length, 0);
-
-                    return (
-                        <div key={day} className="space-y-4">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => toggleDayCollapse(dayNumber)}
-                                    className={`flex items-center gap-2 ${theme.textPrimary} hover:${theme.textSecondary} transition-colors group`}
-                                >
-                                    <div className={`transform transition-transform duration-200 ease-in-out ${isCollapsed ? 'rotate-0' : 'rotate-90'
-                                        }`}>
-                                        <CaretRightIcon className="w-4 h-4" />
+                {Object.entries(timelineClusters)
+                    .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                    .map(([day, clusters]) => {
+                        return (
+                            <div key={day} className="relative">
+                                {/* Sticky Day Header - In the left margin */}
+                                <div className={`sticky top-0 z-20 -ml-6 mb-8 pt-4 pb-2 backdrop-blur-md ${theme.isDark ? 'bg-[#121212]/80' : 'bg-white/80'}`}>
+                                    <div className="absolute -left-[100px] top-4 w-[80px] text-right pr-2">
+                                        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                                            Day {day}
+                                        </div>
                                     </div>
-                                    <h4 className="text-md font-medium">
-                                        Day {day}
-                                    </h4>
-                                    <span className={`text-xs px-2 py-1 rounded-full transition-all duration-200 ${theme.bgMuted} ${theme.textMuted} group-hover:scale-105`}>
-                                        {totalEvents} event{totalEvents !== 1 ? 's' : ''}
-                                    </span>
-                                </button>
-                                <div className={`flex-1 h-px ${theme.timelineLine}`}></div>
-                            </div>
+                                    {/* Optional: Add a visual separator or keep it clean */}
+                                </div>
 
-                            {/* Collapsible content with smooth animation */}
-                            <div
-                                className={`grid transition-all duration-300 ease-in-out ${isCollapsed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
-                                    }`}
-                            >
-                                <div className="overflow-hidden">
-                                    <div className="space-y-6">
-                                        {clusters.map((cluster, clusterIndex) => (
-                                            <div key={clusterIndex} className="flex gap-4">
-                                                {/* Timeline connector */}
-                                                <div className="flex flex-col items-center">
-                                                    <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${theme.timelineConnector}`}></div>
-                                                    {clusterIndex < clusters.length - 1 && (
-                                                        <div className={`w-px flex-1 mt-2 mb-2 ${theme.timelineLine}`} style={{ minHeight: '40px' }}></div>
-                                                    )}
+                                <div className="space-y-8">
+                                    {clusters.map((cluster, clusterIndex) => {
+                                        return (
+                                            <div key={clusterIndex} className="relative">
+                                                {/* Time Display - In the left margin */}
+                                                <div className="absolute -left-[116px] top-0 w-[90px] text-right">
+                                                    <span className="font-mono text-[11px] text-zinc-500 block">
+                                                        {cluster.timeSlot.split(' - ')[0]}
+                                                    </span>
                                                 </div>
 
-                                                {/* Content */}
-                                                <div className="flex-1 pb-6">
-                                                    {/* Time slot header */}
-                                                    <div className={`flex items-center gap-2 text-sm mb-3 ${theme.textMuted}`}>
-                                                        <ClockIcon className="w-4 h-4" />
-                                                        <span>{cluster.timeSlot}</span>
-                                                        {cluster.items.length > 1 && (
-                                                            <span className={`px-2 py-0.5 text-xs rounded ${theme.isDark
-                                                                ? 'bg-orange-500/20 text-orange-300'
-                                                                : 'bg-orange-100 text-orange-700'
-                                                                }`}>
-                                                                {cluster.items.length} parallel events
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                {/* Timeline Node - Anchored to spine */}
+                                                {/* Calculated: pl-6 (24px) + border (2px) = 26px to left edge. 
+                                                    Dot is 10px. Center is 5px. 
+                                                    To center on border (1px width effectively), we need center at -1px relative to content?
+                                                    Let's try -left-[29px] (24px padding + 5px for half dot) */}
+                                                <div className="absolute -left-[29px] top-[2px] w-2.5 h-2.5 rounded-full bg-[#18181B] border-2 border-zinc-600 z-10 box-content" />
 
+                                                {/* Content Area */}
+                                                <div>
                                                     {/* Parallel events layout */}
                                                     {cluster.items.length === 1 ? (
                                                         /* Single event */
-                                                        <div className={`relative rounded-lg p-4 transition-all duration-200 hover:shadow-md ${theme.bgCard} ${theme.borderCard}`}>
+                                                        <div className="relative group">
                                                             <TimelineEventCard
                                                                 item={cluster.items[0]}
                                                                 showIndividualTime={false}
@@ -210,35 +161,37 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                                                             />
                                                         </div>
                                                     ) : (
-                                                        /* Multiple parallel events */
-                                                        <div className="space-y-3">
+                                                        /* Multiple parallel events - Stacked Effect */
+                                                        <div className="relative">
                                                             {cluster.items.map((item, itemIndex) => (
-                                                                <div key={item.id || itemIndex} className="relative animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${itemIndex * 50}ms` }}>
-                                                                    {/* Branch connector for parallel events */}
-                                                                    {itemIndex > 0 && (
-                                                                        <div className={`absolute -left-8 top-6 w-6 h-px ${theme.timelineLine}`}></div>
-                                                                    )}
-                                                                    <div className={`relative rounded-lg p-4 ml-4 transition-all duration-200 hover:shadow-md ${theme.bgCard} ${theme.borderCard} border-l-2 ${theme.borderLight}`}>
-                                                                        {/* Render item with individual time */}
-                                                                        <TimelineEventCard
-                                                                            item={item}
-                                                                            showIndividualTime={true}
-                                                                            eventTimezone={eventTimezone}
-                                                                        />
-                                                                    </div>
+                                                                <div
+                                                                    key={item.id || itemIndex}
+                                                                    className="relative mb-2 last:mb-0 transition-transform hover:-translate-y-1"
+                                                                    style={{
+                                                                        zIndex: cluster.items.length - itemIndex
+                                                                    }}
+                                                                >
+                                                                    <TimelineEventCard
+                                                                        item={item}
+                                                                        showIndividualTime={false}
+                                                                        eventTimezone={eventTimezone}
+                                                                    />
                                                                 </div>
                                                             ))}
+                                                            <div className="mt-1 text-[10px] text-zinc-500 text-right">
+                                                                {cluster.items.length} concurrent sessions
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+            </div>
         </div>
     );
 };

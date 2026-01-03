@@ -97,50 +97,30 @@ const TagCloud: React.FC<TagCloudProps> = ({
 
     return (
         <div className={`space-y-3 ${className}`}>
-            <ul className="space-y-1.5">
+            <div className="flex flex-wrap gap-2">
                 {tagCounts.map(tag => {
                     const isSelected = selectedTags.includes(tag.value);
                     return (
-                        <li key={tag.value}>
-                            <button
-                                onClick={() => onTagClick(tag.value)}
-                                className={`
-                                    w-full px-1 py-1 flex items-center gap-3 text-left
-                                    rounded-md transition-colors duration-150
-                                    focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
-                                    ${isSelected
-                                        ? 'text-foreground bg-muted/40 hover:bg-muted/50'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-                                    }
-                                `}
-                                title={`${tag.displayName} (${tag.count} event${tag.count === 1 ? '' : 's'})`}
-                            >
-                                <span className={`
-                                    w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 transition-all duration-200
-                                    ${isSelected
-                                        ? 'border-transparent bg-primary text-primary-foreground'
-                                        : 'border-border bg-transparent'
-                                    }
-                                `}>
-                                    {isSelected && (
-                                        <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                                    )}
-                                </span>
-                                <span className={`text-sm ${isSelected ? 'font-medium' : 'font-medium'}`}>
-                                    {tag.displayName}
-                                </span>
-                                <span className="ml-auto text-xs text-muted-foreground">
-                                    ({tag.count})
-                                </span>
-                            </button>
-                        </li>
+                        <button
+                            key={tag.value}
+                            onClick={() => onTagClick(tag.value)}
+                            className={`
+                                px-2.5 py-1 text-[11px] font-medium rounded-md transition-all duration-200 border
+                                ${isSelected
+                                    ? 'bg-white text-black border-white shadow-sm'
+                                    : 'bg-transparent text-muted-foreground border-white/10 hover:border-white/20 hover:text-foreground hover:bg-white/5'
+                                }
+                            `}
+                            title={`${tag.displayName} (${tag.count} event${tag.count === 1 ? '' : 's'})`}
+                        >
+                            {tag.displayName}
+                            <span className={`ml-1.5 opacity-50 ${isSelected ? 'text-black/60' : 'text-muted-foreground'}`}>
+                                {tag.count}
+                            </span>
+                        </button>
                     );
                 })}
-            </ul>
-
-            <p className="text-xs text-muted-foreground">
-                Click a tag to filter events
-            </p>
+            </div>
         </div>
     );
 };

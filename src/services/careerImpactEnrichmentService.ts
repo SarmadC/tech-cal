@@ -9,6 +9,7 @@
  * - Supports feature flag for scoring strategy selection
  * - Adds telemetry for monitoring and debugging
  * - Returns full breakdown data for UI transparency
+ * - Caches scores in Redis to optimize performance
  */
 
 import { Event, EventWithCareerImpact, SupabaseClientType } from '@/types';
@@ -18,6 +19,7 @@ import { EnhancedScoringService } from './enhancedScoringService';
 import { rerankWithBehavioral } from '@/services/recommendations/behavioralReranker';
 import { LocationScoringService, UserLocation } from './locationScoringService';
 import * as Sentry from '@sentry/nextjs';
+import { kv } from '@vercel/kv';
 
 /**
  * Scoring strategy configuration
@@ -54,11 +56,26 @@ interface ScoringTelemetry {
   avgScore: number;
   avgReasonCount: number;
   processingTimeMs: number;
+  cacheHitCount: number;
+  cacheMissCount: number;
   scoreDistribution: {
     high: number; // 80+
     moderate: number; // 50-79
     low: number; // <50
   };
+}
+
+/**
+ * Cache configuration
+ */
+const CACHE_TTL_SECONDS = 3600; // 1 hour
+const CACHE_PREFIX = 'career-impact:v1';
+
+/**
+ * Generate cache key for a user-event pair
+ */
+function getCacheKey(userId: string, eventId: string): string {
+  return `${CACHE_PREFIX}:${userId}:${eventId}`;
 }
 
 /**
@@ -89,11 +106,58 @@ export async function enrichEventsWithCareerImpact(
   const strategy = getScoringStrategy();
   const rerank = getRerankStrategy();
   const isColdStart = !careerProfile;
+  
+  // Track cache stats
+  let cacheHitCount = 0;
+  let cacheMissCount = 0;
 
   try {
-    // Server scoring (DRY base scorer)
-    // baseScorer now handles null profiles with cold start scoring
-    const enrichedEvents: EventWithCareerImpact[] = events.map(event => {
+    // 1. Try to fetch from cache first if we have a userId
+    const enrichedEventsMap = new Map<string, EventWithCareerImpact>();
+    const eventsToCalculate: Event[] = [];
+
+    if (userId && !isColdStart) {
+      try {
+        const cacheKeys = events.map(e => getCacheKey(userId, e.id));
+        
+        // Batch fetch from Redis
+        // kv.mget returns (T | null)[]
+        const cachedScores = await kv.mget<EventWithCareerImpact['careerImpact'][]>(...cacheKeys);
+        
+        events.forEach((event, index) => {
+          const cachedScore = cachedScores[index];
+          if (cachedScore) {
+            enrichedEventsMap.set(event.id, {
+              ...event,
+              careerImpact: cachedScore,
+              isCareerScored: true
+            });
+            cacheHitCount++;
+          } else {
+            eventsToCalculate.push(event);
+            cacheMissCount++;
+          }
+        });
+      } catch (cacheError) {
+        console.warn('[Enrichment] Cache read failed, falling back to calculation:', cacheError);
+        // Fallback: calculate all
+        eventsToCalculate.push(...events);
+        enrichedEventsMap.clear();
+        cacheHitCount = 0;
+        cacheMissCount = events.length;
+      }
+    } else {
+      // No user ID or cold start -> always calculate
+      eventsToCalculate.push(...events);
+      cacheMissCount = events.length;
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Enrichment] Cache stats: ${cacheHitCount} hits, ${cacheMissCount} misses`);
+    }
+
+    // 2. Calculate scores for misses
+    const newlyEnrichedEvents: EventWithCareerImpact[] = eventsToCalculate.map(event => {
       try {
         const alignment = calculateBaseScore(event, careerProfile);
         
@@ -174,9 +238,37 @@ export async function enrichEventsWithCareerImpact(
       }
     });
 
+    // 3. Cache new scores (if we have a userId and not cold start)
+    if (userId && !isColdStart && newlyEnrichedEvents.length > 0) {
+      try {
+        const pipeline = kv.pipeline();
+        newlyEnrichedEvents.forEach(event => {
+          if (event.careerImpact) {
+            pipeline.set(getCacheKey(userId, event.id), event.careerImpact, { ex: CACHE_TTL_SECONDS });
+          }
+        });
+        await pipeline.exec();
+      } catch (cacheWriteError) {
+        console.warn('[Enrichment] Failed to cache scores:', cacheWriteError);
+      }
+    }
+
+    // 4. Merge results maintaining original order
+    const finalEnrichedEvents = events.map(originalEvent => {
+      // It's either in the map (cache hit) or in the newly calculated list
+      if (enrichedEventsMap.has(originalEvent.id)) {
+        return enrichedEventsMap.get(originalEvent.id)!;
+      }
+      // Find in newly enriched list
+      return newlyEnrichedEvents.find(e => e.id === originalEvent.id) || {
+        ...originalEvent,
+        isCareerScored: false
+      } as EventWithCareerImpact;
+    });
+
     // Telemetry (sampled)
     if (shouldSampleTelemetry()) {
-      const telemetry = computeTelemetry(enrichedEvents, strategy, Date.now() - startTime);
+      const telemetry = computeTelemetry(finalEnrichedEvents, strategy, Date.now() - startTime, cacheHitCount, cacheMissCount);
       logTelemetry(telemetry, userId);
     }
 
@@ -195,7 +287,7 @@ export async function enrichEventsWithCareerImpact(
 
         // Build maps for quick lookup
         const coreMap = new Map<string, number>(
-          enrichedEvents.slice(0, sampleSize).map(e => [e.id, e.careerImpact?.overall ?? 0])
+          finalEnrichedEvents.slice(0, sampleSize).map(e => [e.id, e.careerImpact?.overall ?? 0])
         );
         const legacyMap = new Map<string, number>(
           (legacyEnriched as unknown as EventWithCareerImpact[]).map(e => [e.id, e.careerImpact?.overall ?? 0])
@@ -252,7 +344,7 @@ export async function enrichEventsWithCareerImpact(
     try {
       if (rerank === 'advanced' && !isColdStart) {
         const reranked = await rerankWithBehavioral(
-          enrichedEvents,
+          finalEnrichedEvents,
           careerProfile!,
           _supabaseClient,
           { topK: 50, userId }
@@ -264,16 +356,16 @@ export async function enrichEventsWithCareerImpact(
         // Compute advanced order but return original order; log deltas
         const startShadow = Date.now();
         const reranked = await rerankWithBehavioral(
-          enrichedEvents,
+          finalEnrichedEvents,
           careerProfile,
           _supabaseClient,
           { topK: 50, userId }
         );
 
         // Build rank maps
-        const idToOriginalRank = new Map<string, number>(enrichedEvents.map((e, i) => [e.id, i]));
+        const idToOriginalRank = new Map<string, number>(finalEnrichedEvents.map((e, i) => [e.id, i]));
         const idToRerank = new Map<string, number>(reranked.map((e, i) => [e.id, i]));
-        const deltas = enrichedEvents.slice(0, Math.min(20, enrichedEvents.length)).map((e) => ({
+        const deltas = finalEnrichedEvents.slice(0, Math.min(20, finalEnrichedEvents.length)).map((e) => ({
           id: e.id,
           from: idToOriginalRank.get(e.id) ?? -1,
           to: idToRerank.get(e.id) ?? -1,
@@ -297,7 +389,7 @@ export async function enrichEventsWithCareerImpact(
       console.warn('[Rerank] Advanced rerank failed; using core order', rerankError);
     }
 
-    return enrichedEvents;
+    return finalEnrichedEvents;
 
   } catch (error) {
     console.error('Error enriching events with career impact:', error);
@@ -318,7 +410,9 @@ export async function enrichEventsWithCareerImpact(
 function computeTelemetry(
   events: EventWithCareerImpact[],
   strategy: ScoringStrategy,
-  processingTimeMs: number
+  processingTimeMs: number,
+  cacheHitCount: number,
+  cacheMissCount: number
 ): ScoringTelemetry {
   const scores = events
     .filter(e => e.careerImpact?.overall !== undefined)
@@ -344,6 +438,8 @@ function computeTelemetry(
     avgScore,
     avgReasonCount,
     processingTimeMs,
+    cacheHitCount,
+    cacheMissCount,
     scoreDistribution
   };
 }
@@ -393,4 +489,6 @@ export class CareerImpactEnrichmentService {
     );
   }
 }
+
+
 

@@ -190,6 +190,19 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
         }
     }, [searchTerm, hasAutocompleteContent]);
 
+    // Handle keyboard shortcuts (Cmd+K / Ctrl+K)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     // Handle suggestion selection
     const handleSuggestionSelect = useCallback((suggestion: SearchSuggestion | SearchHistoryItem) => {
         if (onSuggestionSelect) {
@@ -282,12 +295,13 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
     const isLoading = isDetectingLocation || isLocalDetecting;
     return (
-        <div className={`bg-card/80 dark:bg-card/20 lg:bg-[#0F0F0F] rounded-2xl lg:rounded-xl p-4 border border-border/60 lg:border-[#262626] backdrop-blur mb-8 transition-colors ${isAutocompleteOpen ? 'relative z-[102]' : ''}`}>
-            <div className="flex flex-col lg:flex-row items-center gap-4">
+        <div className={`relative z-[102] mb-8 transition-colors`}>
+            {/* Glass strip container */}
+            <div className="flex flex-col lg:flex-row items-center gap-3 p-2 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20">
 
-                {/* Search Input */}
-                <div className={`flex-1 w-full relative group lg:rounded-[99px] lg:hover:bg-[#1A1A1A] transition-colors ${isAutocompleteOpen ? 'z-[102]' : ''}`}>
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#5A5A5A] lg:text-[#999999] group-focus-within:text-[#E5E5E5] transition-colors z-10 flex items-center">
+                {/* Search Input - Command Palette Style */}
+                <div className={`flex-[2] w-full relative group transition-colors ${isAutocompleteOpen ? 'z-[102]' : ''}`}>
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors z-10 flex items-center">
                         {isSearching ? (
                             <SpinnerGap size={18} className="animate-spin" />
                         ) : (
@@ -299,13 +313,12 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         type="text"
                         placeholder="Search events..."
                         maxLength={200}
-                        className="w-full pl-12 pr-4 py-3.5 lg:leading-none rounded-xl lg:rounded-[99px] border border-[#2A2A2A] lg:border-0 bg-[#1A1A1A] lg:bg-transparent focus:border-[#3A3A3A] lg:focus:border-0 focus:bg-[#1A1A1A] lg:focus:bg-transparent transition-all outline-none text-[#E5E5E5] placeholder:text-[#5A5A5A] lg:placeholder:text-[#A1A1AA]"
+                        className="w-full pl-11 pr-16 py-2.5 bg-black/20 focus:bg-transparent border border-transparent focus:border-white/10 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none"
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
                         onFocus={() => hasAutocompleteContent && searchTerm.length >= 2 && setIsAutocompleteOpen(true)}
                         onBlur={(e) => {
                             onSearchChange(e.target.value.trim());
-                            // Delay closing to allow click on autocomplete items
                             setTimeout(() => setIsAutocompleteOpen(false), 200);
                         }}
                         onKeyDown={(e) => {
@@ -317,6 +330,11 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                             }
                         }}
                     />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden md:block">
+                        <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-white/20 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-50">
+                            <span className="text-xs">⌘</span>K
+                        </kbd>
+                    </div>
                     {/* Search Autocomplete Dropdown */}
                     {hasAutocompleteContent && (
                         <SearchAutocomplete
@@ -331,18 +349,18 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 </div>
 
                 {/* Divider */}
-                <div className="hidden lg:flex w-px h-[24px] bg-[#333333] self-center"></div>
+                <div className="hidden lg:block w-px h-6 bg-white/10"></div>
 
-                {/* Location Input with Near Me Button */}
-                <div className="flex-1 w-full relative group lg:rounded-[99px] lg:hover:bg-[#1A1A1A] transition-colors">
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#5A5A5A] lg:text-[#999999] group-focus-within:text-[#E5E5E5] transition-colors flex items-center">
-                        <MapPin size={18} weight="regular" />
+                {/* Location Input */}
+                <div className="flex-1 w-full relative group transition-colors">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors flex items-center">
+                        <MapPin size={16} weight="regular" />
                     </div>
                     <input
                         type="text"
-                        placeholder="Location (e.g. San Francisco)"
+                        placeholder="Location"
                         maxLength={100}
-                        className="w-full pl-12 pr-14 py-3.5 lg:leading-none rounded-xl lg:rounded-[99px] border border-[#2A2A2A] lg:border-0 bg-[#1A1A1A] lg:bg-transparent focus:border-[#3A3A3A] lg:focus:border-0 focus:bg-[#1A1A1A] lg:focus:bg-transparent transition-all outline-none text-[#E5E5E5] placeholder:text-[#5A5A5A] lg:placeholder:text-[#A1A1AA]"
+                        className="w-full pl-9 pr-10 py-2.5 bg-transparent border-none focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none"
                         value={location}
                         onChange={(e) => onLocationChange(e.target.value)}
                         onBlur={(e) => onLocationChange(e.target.value.trim())}
@@ -351,81 +369,77 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         type="button"
                         onClick={handleNearMeClick}
                         disabled={isLoading}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-lg transition-all text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md transition-all text-muted-foreground hover:text-primary hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title="Find events near me"
-                        aria-label="Detect my location"
                     >
                         {isLoading ? (
-                            <SpinnerGap size={18} className="animate-spin" />
+                            <SpinnerGap size={14} className="animate-spin" />
                         ) : (
-                            <NavigationArrow size={18} />
+                            <NavigationArrow size={14} />
                         )}
                     </button>
                 </div>
 
                 {/* Divider */}
-                <div className="hidden lg:flex w-px h-[24px] bg-[#333333] self-center"></div>
+                <div className="hidden lg:block w-px h-6 bg-white/10"></div>
 
                 {/* Date Range Filter */}
-                <div className="flex-1 w-full relative group lg:rounded-[99px] lg:hover:bg-[#1A1A1A] transition-colors">
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#5A5A5A] lg:text-[#999999] group-focus-within:text-[#E5E5E5] transition-colors flex items-center">
-                        <Calendar size={18} weight="regular" />
+                <div className="flex-1 w-full relative group transition-colors">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors flex items-center">
+                        <Calendar size={16} weight="regular" />
                     </div>
                     <button
                         type="button"
                         onClick={() => setIsDatePickerOpen(true)}
-                        className="w-full pl-12 pr-4 py-3.5 lg:leading-none rounded-xl lg:rounded-[99px] border border-[#2A2A2A] lg:border-0 bg-[#1A1A1A] lg:bg-transparent focus:border-[#3A3A3A] lg:focus:border-0 focus:bg-[#1A1A1A] lg:focus:bg-transparent transition-all outline-none text-[#E5E5E5] text-left cursor-pointer hover:bg-[#222222] lg:hover:bg-transparent"
+                        className="w-full pl-9 pr-4 py-2.5 bg-transparent border-none text-sm text-foreground text-left cursor-pointer hover:bg-white/5 rounded-lg transition-colors truncate"
                     >
                         {formatDateRange(dateRange)}
                     </button>
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none">
-                        <SlidersHorizontal size={16} />
-                    </div>
                 </div>
 
-                {/* Date Range Picker */}
-                <QuickDatePicker
-                    currentDate={dateRange.start || new Date()}
-                    onDateChange={() => { }} // Not used in range mode
-                    view="month"
-                    isOpen={isDatePickerOpen}
-                    onClose={() => setIsDatePickerOpen(false)}
-                    mode="range"
-                    dateRange={dateRange}
-                    onDateRangeChange={(range) => {
-                        onDateRangeChange(range);
-                    }}
-                />
+                {/* Actions */}
+                <div className="flex items-center gap-2 pl-2">
+                    {activeFilterCount > 0 && (
+                        <button
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg transition-colors"
+                            onClick={onResetFilters}
+                            aria-label="Clear all filters"
+                            title="Clear all filters"
+                        >
+                            <ArrowCounterClockwise size={18} />
+                        </button>
+                    )}
 
-                {/* Clear All Filters Button */}
-                {activeFilterCount > 0 && (
                     <button
-                        className="w-full lg:w-auto px-6 py-3 border border-border/60 bg-transparent text-foreground font-semibold rounded-xl hover:bg-muted/60 hover:border-foreground/40 transition-colors active:scale-95 transform duration-100 flex items-center gap-2"
-                        onClick={onResetFilters}
-                        aria-label="Clear all filters"
+                        className="hidden lg:flex px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg transition-colors text-sm font-medium"
+                        onClick={onSearch}
                     >
-                        <ArrowCounterClockwise size={18} />
-                        <span>Clear All</span>
+                        Search
                     </button>
-                )}
 
-                {/* Search Button */}
-                <button
-                    className="w-full lg:w-auto lg:mr-1 px-8 py-3 lg:py-2 lg:bg-[#E5E5E5] lg:text-[#0F0F0F] bg-primary text-primary-foreground font-medium rounded-xl lg:rounded-lg hover:bg-primary/90 lg:hover:bg-[#D5D5D5] transition-colors active:scale-95 transform duration-100"
-                    onClick={onSearch}
-                >
-                    Search
-                </button>
-
-                {/* Mobile Filters Button */}
-                <button
-                    className="lg:hidden w-full px-6 py-3 border border-border/60 bg-card text-foreground font-semibold rounded-xl hover:bg-muted/60 transition-colors flex items-center justify-center gap-2"
-                    onClick={onFilterClick}
-                >
-                    <SlidersHorizontal size={18} />
-                    <span>Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}</span>
-                </button>
+                    {/* Mobile Filters Button */}
+                    <button
+                        className="lg:hidden p-2 text-foreground hover:bg-white/5 rounded-lg transition-colors"
+                        onClick={onFilterClick}
+                    >
+                        <SlidersHorizontal size={20} />
+                    </button>
+                </div>
             </div>
+
+            {/* Date Range Picker */}
+            <QuickDatePicker
+                currentDate={dateRange.start || new Date()}
+                onDateChange={() => { }} // Not used in range mode
+                view="month"
+                isOpen={isDatePickerOpen}
+                onClose={() => setIsDatePickerOpen(false)}
+                mode="range"
+                dateRange={dateRange}
+                onDateRangeChange={(range) => {
+                    onDateRangeChange(range);
+                }}
+            />
         </div>
     );
 }, (prevProps, nextProps) => {

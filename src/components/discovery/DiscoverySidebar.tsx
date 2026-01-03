@@ -18,16 +18,16 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
 
     return (
         <div className="filter-section filter-section-with-margin">
-            <div className="filter-section-divider"></div>
+            {/* Divider removed for cleaner look */}
             <button
-                className="flex items-center justify-between w-full mb-3 pb-2 border-b border-[#1F1F1F] group text-[#E5E5E5]"
+                className="flex items-center justify-between w-full mb-2 py-1 group text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#737373]">{title}</h3>
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 group-hover:text-muted-foreground transition-colors">{title}</h3>
                 {isOpen ? (
-                    <CaretUp size={12} className="text-[#525252] group-hover:text-[#737373]" />
+                    <CaretUp size={12} className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
                 ) : (
-                    <CaretDown size={12} className="text-[#525252] group-hover:text-[#737373]" />
+                    <CaretDown size={12} className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
                 )}
             </button>
 
@@ -49,11 +49,10 @@ interface RadioButtonOptionProps {
 
 const RadioButtonOption: React.FC<RadioButtonOptionProps> = ({ label, count, checked, onChange }) => {
     return (
-        <label className={`filter-option flex items-center justify-between h-7 px-2 rounded-md cursor-pointer group transition-all duration-150 ease-in-out ${
-            checked 
-                ? 'text-[#FFFFFF]' 
-                : 'text-[#A1A1AA] hover:bg-white/8 hover:text-[#D4D4D4]'
-        }`}>
+        <label className={`filter-option flex items-center justify-between h-7 px-2 rounded-md cursor-pointer group transition-all duration-150 ease-in-out ${checked
+            ? 'text-[#FFFFFF]'
+            : 'text-[#A1A1AA] hover:bg-white/8 hover:text-[#D4D4D4]'
+            }`}>
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className={`
                     w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
@@ -92,11 +91,10 @@ interface CheckboxOptionProps {
 
 const CheckboxOption: React.FC<CheckboxOptionProps> = ({ label, count, checked, onChange }) => {
     return (
-        <label className={`filter-option flex items-center justify-between h-7 px-2 rounded-md cursor-pointer group transition-all duration-150 ease-in-out ${
-            checked 
-                ? 'text-[#FFFFFF]' 
-                : 'text-[#A1A1AA] hover:bg-white/8 hover:text-[#D4D4D4]'
-        }`}>
+        <label className={`filter-option flex items-center justify-between h-7 px-2 rounded-md cursor-pointer group transition-all duration-150 ease-in-out ${checked
+            ? 'text-[#FFFFFF]'
+            : 'text-[#A1A1AA] hover:bg-white/8 hover:text-[#D4D4D4]'
+            }`}>
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className={`
                     w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
@@ -107,7 +105,7 @@ const CheckboxOption: React.FC<CheckboxOptionProps> = ({ label, count, checked, 
                 `}>
                     {checked && (
                         <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 6L5 9L10 3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M2 6L5 9L10 3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                     )}
                 </div>
@@ -176,11 +174,9 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
     };
 
     return (
-        <div className={`discovery-sidebar ${mobileMode ? 'w-full block' : 'hidden lg:block w-72 flex-shrink-0 pr-8'}`}>
-            <div className={mobileMode ? "" : "discovery-sidebar-panel sticky top-6 rounded-xl border border-[#1F1F1F] bg-[#0A0A0A] p-6 shadow-sm"}>
-                <div className="mb-8">
-                    <h2 className="text-[15px] font-medium text-[#EDEDED]">Filters</h2>
-                </div>
+        <div className={`discovery-sidebar ${mobileMode ? 'w-full block' : 'hidden lg:block w-64 flex-shrink-0 pr-6'}`}>
+            <div className={mobileMode ? "" : "discovery-sidebar-panel sticky top-6"}>
+                {/* Header removed for cleaner look */}
 
                 <FilterSection title="Event Format">
                     <CheckboxOption

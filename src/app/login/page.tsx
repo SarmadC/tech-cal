@@ -28,7 +28,7 @@ function LoginPageContent() {
         if (initialized && user && !hasRedirected && !loading) {
             const redirectTo = searchParams.get('redirect') || '/discover';
             setHasRedirected(true);
-            
+
             // Small delay to ensure auth state has fully settled
             setTimeout(() => {
                 router.push(redirectTo);
@@ -37,21 +37,21 @@ function LoginPageContent() {
     }, [initialized, user, router, searchParams, hasRedirected, loading]);
 
     useEffect(() => {
-        
+
         const error = searchParams.get('error');
         const message = searchParams.get('message');
-        
+
         if (error) {
             console.error('[LoginPage] Authentication error:', { error, message });
-            
+
             // Clear OAuth loading state on error
             setIsOAuthLoading(false);
             setOauthStartTime(null);
             setPendingProvider(null);
-            
+
             let errorTitle = "Authentication Failed";
             const errorDescription = message || "There was a problem signing you in. Please try again.";
-            
+
             switch (error) {
                 case 'oauth-failed':
                     // Don't show error if it's just NEXT_REDIRECT (which is normal)
@@ -80,9 +80,9 @@ function LoginPageContent() {
                     errorTitle = "Authentication Callback Error";
                     break;
             }
-            
+
             showError(`${errorTitle}: ${errorDescription}`);
-            
+
             // Clean up URL
             router.replace('/login', { scroll: false });
         }
@@ -95,11 +95,11 @@ function LoginPageContent() {
         const timeoutId = setTimeout(() => {
             const elapsed = Date.now() - oauthStartTime;
             console.warn('[LoginPage] OAuth timeout after', elapsed, 'ms');
-            
+
             setIsOAuthLoading(false);
             setOauthStartTime(null);
             setPendingProvider(null);
-            
+
             showError("Sign-in Timeout: The sign-in process is taking longer than expected. Please try again.");
         }, 30000); // 30 second timeout
 
@@ -121,16 +121,23 @@ function LoginPageContent() {
         setIsOAuthLoading(true);
         setOauthStartTime(Date.now());
         setPendingProvider(provider);
-        
+
         // Show info message for OAuth redirect
         showInfo(`Redirecting to ${provider === 'google' ? 'Google' : 'GitHub'}...`);
 
         try {
-            const intendedNext = searchParams.get('redirect') || '/discover';
+            let intendedNext = searchParams.get('redirect') || '/discover';
+
+            // Fix: If redirect is set to root (landing page), force it to discover
+            // This prevents the issue where users are redirected back to landing page after login
+            if (intendedNext === '/' || intendedNext === '') {
+                intendedNext = '/discover';
+            }
+
             // Use route handler instead of server action for proper cookie handling
             const oauthUrl = new URL(`/api/auth/oauth/${provider}`, window.location.origin);
             oauthUrl.searchParams.set('next', intendedNext);
-            
+
             // Navigate to route handler which will handle OAuth initiation and redirect
             window.location.href = oauthUrl.toString();
         } catch (error) {
@@ -172,11 +179,11 @@ function LoginPageContent() {
                     <p className="mt-2 text-sm text-foreground-secondary">Sign in to your account to continue</p>
                 </div>
 
-                <AuthProviders 
-                    onSelectProvider={handleOAuthSignIn} 
-                    isPending={isOAuthLoading} 
+                <AuthProviders
+                    onSelectProvider={handleOAuthSignIn}
+                    isPending={isOAuthLoading}
                     pendingProvider={pendingProvider}
-                    actionText="Continue" 
+                    actionText="Continue"
                 />
 
                 <div className="relative my-6">
@@ -190,13 +197,13 @@ function LoginPageContent() {
                             {/* Email Field */}
                             <div className="space-y-2">
                                 <label htmlFor="email" className="block text-sm font-medium text-foreground-primary">Email address</label>
-                                <input 
-                                    id="email" 
-                                    name="email" 
-                                    type="email" 
-                                    autoComplete="email" 
-                                    required 
-                                    className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent" 
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    required
+                                    className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
                                     placeholder="you@example.com"
                                     aria-describedby={state.errors?.email ? "email-error" : undefined}
                                     aria-invalid={state.errors?.email ? "true" : "false"}
@@ -211,13 +218,13 @@ function LoginPageContent() {
                             {/* Password Field */}
                             <div className="space-y-2">
                                 <label htmlFor="password" className="block text-sm font-medium text-foreground-primary">Password</label>
-                                <input 
-                                    id="password" 
-                                    name="password" 
-                                    type="password" 
-                                    autoComplete="current-password" 
-                                    required 
-                                    className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent" 
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    required
+                                    className="w-full px-3 py-2 border border-border-default rounded-md bg-background-secondary text-foreground-primary placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
                                     placeholder="••••••••"
                                     aria-describedby={state.errors?.password ? "password-error" : undefined}
                                     aria-invalid={state.errors?.password ? "true" : "false"}

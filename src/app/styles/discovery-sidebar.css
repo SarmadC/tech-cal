@@ -3,19 +3,19 @@
 }
 
 .discovery-sidebar-panel {
-    --sidebar-pad: 1.25rem; /* base padding */
+    --sidebar-pad: 0; /* No padding for borderless look */
     padding: var(--sidebar-pad);
     gap: 0;
 }
 
 @media (min-width: 1280px) {
     .discovery-sidebar-panel {
-        --sidebar-pad: 1.5rem; /* slightly more room on xl screens */
+        --sidebar-pad: 0;
     }
 }
 
 .discovery-sidebar-panel h2 {
-    letter-spacing: -0.01em;
+    letter-spacing: 0.05em;
 }
 
 .discovery-sidebar-panel .filter-section:not(:last-child) {
@@ -27,11 +27,9 @@
     margin-top: 24px;
 }
 
-/* Subtle divider between filter sections */
+/* Divider removed */
 .discovery-sidebar-panel .filter-section-divider {
-    border-top: 1px solid #262626;
-    margin-top: 16px;
-    margin-bottom: 16px;
+    display: none;
 }
 
 /* Hide divider on first section */

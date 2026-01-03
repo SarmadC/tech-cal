@@ -84,94 +84,94 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
 
     return (
         <div
-            className={`rounded-xl p-6 transition-all duration-300 cursor-pointer group relative border border-[#262626] bg-[#1A1A1A] hover:bg-[#1F1F1F] hover:-translate-y-1 text-[#E5E5E5] shadow-[0_2px_8px_rgba(0,0,0,0.12),0_0_2px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_16px_rgba(0,0,0,0.12),0_2px_4px_rgba(0,0,0,0.08)] focus-visible:ring-2 focus-visible:ring-offset-0 ${accentClass}`}
+            className={`flex flex-col rounded-[6px] p-5 transition-all duration-200 cursor-pointer group relative border border-white/10 bg-transparent hover:bg-white/[0.02] hover:border-white/20 text-[#E5E5E5] ${accentClass}`}
             onClick={onClick}
         >
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-md bg-white border border-border/20 flex items-center justify-center overflow-hidden shadow-sm">
+                    <div className="w-10 h-10 rounded-[6px] bg-white border border-border/20 flex items-center justify-center overflow-hidden shadow-sm">
                         {activeLogoSrc ? (
                             <Image
                                 src={activeLogoSrc}
                                 alt={logoAltText}
-                                width={48}
-                                height={48}
+                                width={40}
+                                height={40}
                                 className="w-full h-full object-contain"
                                 onError={handleLogoError}
                             />
                         ) : (
-                            <div className="text-xl font-bold text-gray-400">
+                            <div className="text-lg font-bold text-gray-400">
                                 {event.title.charAt(0)}
                             </div>
                         )}
                     </div>
+                    <div className="flex flex-col">
+                        <h3 className="text-[15px] font-medium text-[#E5E5E5] leading-tight group-hover:text-white transition-colors" title={event.title}>
+                            {event.title}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground/60">
+                            <span>{dateLabel}</span>
+                            <span>·</span>
+                            <span>{timeLabel}</span>
+                        </div>
+                    </div>
                 </div>
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onBookmark?.(event);
-                    }}
-                    className={`transition-colors ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground hover:text-foreground'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    aria-pressed={isBookmarked}
-                    aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
-                    disabled={isBookmarking}
-                    aria-busy={isBookmarking}
-                >
-                    <BookmarkSimple size={24} weight={isBookmarked ? 'fill' : 'regular'} />
-                </button>
+
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onBookmark?.(event);
+                        }}
+                        className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-white/5'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        aria-pressed={isBookmarked}
+                        aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
+                        disabled={isBookmarking}
+                        aria-busy={isBookmarking}
+                    >
+                        <BookmarkSimple
+                            size={16}
+                            weight={isBookmarked ? 'fill' : 'regular'}
+                            className="transition-all duration-200"
+                        />
+                    </button>
+
+                    <button
+                        type="button"
+                        className="p-1.5 text-muted-foreground/40 hover:text-foreground hover:bg-white/5 rounded-md transition-all"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            const targetUrl = event.registrationUrl || event.sourceUrl;
+                            if (targetUrl) {
+                                window.open(targetUrl, '_blank');
+                            }
+                        }}
+                        title="Register"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256"><path fill="currentColor" d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"></path></svg>
+                    </button>
+                </div>
             </div>
 
-            <h3 className="text-xl font-medium text-[#E5E5E5] mb-2 leading-7 tracking-tight" title={event.title}>
-                {event.title}
-            </h3>
-
-            <p className="text-sm text-[#A3A3A3] mb-4 line-clamp-3 leading-6">
+            <p className="text-[13px] text-muted-foreground/80 mb-4 line-clamp-2 leading-relaxed">
                 {event.description || 'No description available for this event.'}
             </p>
 
-            <div className="space-y-2 text-sm text-[#999999] mb-4 font-normal leading-5">
-                <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-[#8A8A8A]" />
-                    <span>{dateLabel} · {timeLabel}</span>
+            <div className="mt-auto flex items-center justify-between pt-3 border-t border-white/5">
+                <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground/60">
+                    <MapPin size={12} weight="fill" className="text-muted-foreground/40" />
+                    <span className="truncate max-w-[120px]">{event.location || 'Location TBA'}</span>
                 </div>
+
                 <div className="flex items-center gap-2">
-                    <MapPin size={16} className="text-[#8A8A8A]" />
-                    <span className="truncate">{event.location || 'Location TBA'}</span>
+                    <span className="px-1.5 py-0.5 rounded-[4px] border border-white/10 text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider">
+                        {formatDisplay}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded-[4px] border border-white/10 text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider">
+                        {priceDisplay}
+                    </span>
                 </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-6">
-                <span className="px-3 py-1 rounded-[6px] bg-[#262626] text-xs font-medium text-[#D4D4D4] border border-[#333333] tracking-wide">
-                    {formatDisplay}
-                </span>
-                <span className="px-3 py-1 rounded-[6px] bg-[#262626] text-xs font-medium text-[#D4D4D4] border border-[#333333] tracking-wide">
-                    {priceDisplay}
-                </span>
-            </div>
-
-            <div className="flex gap-3 mt-auto">
-                <button
-                    className="flex-1 py-2.5 px-4 rounded-full bg-[#2A2A2A] text-foreground text-sm font-medium hover:bg-[#333333] transition-colors border border-transparent"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onClick?.();
-                    }}
-                >
-                    Details
-                </button>
-                <button
-                    className="flex-1 py-2.5 px-4 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.1)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.15)]"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        const targetUrl = event.registrationUrl || event.sourceUrl;
-                        if (targetUrl) {
-                            window.open(targetUrl, '_blank');
-                        }
-                    }}
-                >
-                    Register
-                </button>
             </div>
         </div>
     );

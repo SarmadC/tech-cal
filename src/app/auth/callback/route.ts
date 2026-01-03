@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
                 next = rawNext
             }
         }
+
+        // Fix: If next is root (landing page), force it to discover
+        if (next === '/' || next === '') {
+            next = '/discover';
+        }
     } catch (_) {
         next = '/discover'
     }

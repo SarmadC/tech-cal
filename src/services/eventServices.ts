@@ -1511,13 +1511,13 @@ export class EventService {
         if (filters.format && filters.format !== 'all') {
             switch (filters.format) {
                 case 'virtual':
-                    query = query.or('event_format.eq.Remote,livestream_url.is.not.null').and('venue_id.is.null');
+                    query = query.or('event_format.eq.Remote,livestream_url.is.not.null').is('venue_id', null);
                     break;
                 case 'in-person':
-                    query = query.or('event_format.eq.In-person,venue_id.is.not.null').and('livestream_url.is.null');
+                    query = query.or('event_format.eq.In-person,venue_id.is.not.null').is('livestream_url', null);
                     break;
                 case 'hybrid':
-                    query = query.and('livestream_url.is.not.null,venue_id.is.not.null');
+                    query = query.not('livestream_url', 'is', null).not('venue_id', 'is', null);
                     break;
             }
         }
@@ -1532,13 +1532,13 @@ export class EventService {
                     query = query.or('price_min.is.null,price_min.eq.0');
                     break;
                 case 'low':
-                    query = query.and('price_min.is.not.null').lte('price_min', 100);
+                    query = query.not('price_min', 'is', null).lte('price_min', 100);
                     break;
                 case 'moderate':
-                    query = query.and('price_min.is.not.null').lte('price_min', 500);
+                    query = query.not('price_min', 'is', null).lte('price_min', 500);
                     break;
                 case 'high':
-                    query = query.and('price_min.is.not.null').lte('price_min', 2000);
+                    query = query.not('price_min', 'is', null).lte('price_min', 2000);
                     break;
                 case 'unlimited':
                 default:
@@ -1553,7 +1553,7 @@ export class EventService {
                     query = query.or('price_min.is.null,price_min.eq.0');
                     break;
                 case 'paid':
-                    query = query.and('price_min.is.not.null,price_min.gt.0');
+                    query = query.not('price_min', 'is', null).gt('price_min', 0);
                     break;
             }
         }
@@ -1577,13 +1577,13 @@ export class EventService {
         if (filters.duration && filters.duration !== 'all') {
             switch (filters.duration) {
                 case 'short':
-                    query = query.and('is_multi_day.eq.false').filter('end_time', 'lte', 'start_time + interval \'2 hours\'');
+                    query = query.eq('is_multi_day', false).filter('end_time', 'lte', 'start_time + interval \'2 hours\'');
                     break;
                 case 'medium':
-                    query = query.and('is_multi_day.eq.false').filter('end_time', 'lte', 'start_time + interval \'6 hours\'');
+                    query = query.eq('is_multi_day', false).filter('end_time', 'lte', 'start_time + interval \'6 hours\'');
                     break;
                 case 'long':
-                    query = query.and('is_multi_day.eq.false').filter('end_time', 'gt', 'start_time + interval \'6 hours\'');
+                    query = query.eq('is_multi_day', false).filter('end_time', 'gt', 'start_time + interval \'6 hours\'');
                     break;
                 case 'multi-day':
                     query = query.eq('is_multi_day', true);

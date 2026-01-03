@@ -190,13 +190,13 @@ export default function DiscoverClientView({
                         </div>
                         <div className="flex-1 overflow-auto">
                             {/* Main background - Notion/Linear dark theme */}
-                            <div className="min-h-screen bg-[#0F0F0F] relative">
+                            <div className="min-h-screen bg-[#121212] relative font-sans">
                                 {/* Subtle noise or grain could be added here if desired, but keeping it clean for now */}
 
                                 <div className="relative max-w-[1600px] mx-auto px-0 py-0 md:px-6 md:py-8 space-y-6">
                                     {/* Header */}
                                     <div className="mb-8 hidden md:block">
-                                        <h1 className="text-3xl font-bold text-glass-primary mb-2">
+                                        <h1 className="text-3xl font-medium text-[#E5E5E5] mb-2 tracking-tight">
                                             Discover
                                         </h1>
                                     </div>
@@ -276,12 +276,12 @@ export default function DiscoverClientView({
                                 />
                             ) : (
                                 <div
-                                    className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'
+                                    className={`fixed inset-0 z-[140] bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'
                                         }`}
                                     onClick={handleCloseEventDetail}
                                 >
                                     <div
-                                        className={`fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform duration-300 ease-out ${isClosing
+                                        className={`fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-[150] transform duration-300 ease-out ${isClosing
                                             ? 'animate-out slide-out-to-right'
                                             : 'animate-in slide-in-from-right'
                                             }`}

@@ -18,38 +18,38 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
     const theme = useTimelineTheme();
 
     return (
-        <>
-            {/* Tag positioned absolutely in top-right */}
+        <div className={`relative p-4 rounded-md border transition-all duration-200 group-hover:border-zinc-700 ${theme.isDark
+                ? 'bg-[#18181B] border-white/5 shadow-sm'
+                : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
+            }`}>
+            {/* Tag positioned absolutely in top-right - Subtle Style */}
             <div className="absolute top-3 right-3">
-                <span className={`px-2 py-1 text-xs font-medium rounded-md border ${getTypeColor(item.type, theme.isDark).className}`}>
+                <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded border ${theme.isDark
+                        ? 'bg-transparent border-white/10 text-zinc-400'
+                        : 'bg-gray-50 border-gray-200 text-gray-500'
+                    }`}>
                     {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                 </span>
             </div>
 
-            {/* Title and individual time */}
-            <div className="pr-20">
-                <h5 className={`font-medium mb-1 whitespace-normal break-words ${theme.textPrimary}`}>
+            {/* Title - No individual time here anymore */}
+            <div className="pr-16">
+                <h5 className={`text-[14px] font-semibold mb-1 leading-snug ${theme.isDark ? 'text-white' : 'text-gray-900'}`}>
                     {item.title}
                 </h5>
-                {showIndividualTime && (
-                    <div className={`flex items-center gap-1 text-xs ${theme.textMuted} mb-2`}>
-                        <ClockIcon className="w-3 h-3" />
-                        <span>{formatEventTimeRange(item.startTime, item.endTime, eventTimezone)}</span>
-                    </div>
-                )}
             </div>
 
             {/* Description */}
             {item.description && (
-                <p className={`text-sm mb-3 ${theme.textSecondary}`}>
+                <p className={`text-[13px] leading-relaxed mb-3 line-clamp-2 ${theme.isDark ? 'text-zinc-400' : 'text-gray-600'}`}>
                     {item.description}
                 </p>
             )}
 
             {/* Location */}
             {item.location && (
-                <div className={`flex items-center gap-2 text-sm mb-2 ${theme.textMuted}`}>
-                    <MapPinIcon className="w-4 h-4" />
+                <div className={`flex items-center gap-1.5 text-[12px] mb-3 ${theme.textMuted}`}>
+                    <MapPinIcon className="w-3.5 h-3.5" />
                     <span>{item.location}</span>
                 </div>
             )}
@@ -63,82 +63,61 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
                     return null; // Don't render anything if no speakers
                 }
 
-                const speakerCount = hasMultipleSpeakers ? item.speakers!.length : 1;
-
                 return (
-                    <div className="mb-3">
-                        <div className={`flex items-center gap-2 text-xs font-medium mb-2 ${theme.textMuted}`}>
-                            {speakerCount > 1 ? (
-                                <UsersIcon className="w-3.5 h-3.5" />
-                            ) : (
-                                <UserIcon className="w-3.5 h-3.5" />
-                            )}
-                            <span>Speaker{speakerCount > 1 ? 's' : ''}</span>
-                        </div>
-
+                    <div className="mt-3 pt-3 border-t border-dashed border-zinc-800">
                         <div className="space-y-2">
                             {hasMultipleSpeakers ? (
-                                item.speakers!.map((speaker, index) => {
+                                item.speakers?.map((speaker, index) => {
                                     const hasLinkedIn = Boolean(speaker.socialLinks?.linkedin);
                                     return (
                                         <div
                                             key={speaker.id || index}
-                                            className={`flex items-center gap-3 p-2 rounded-lg border ${theme.bgCard} ${theme.borderCard} ${hasLinkedIn ? `${theme.hoverCard} ${theme.hoverBorder} cursor-pointer transition-colors` : ''}`}
-                                            onClick={() => {
+                                            className={`flex items-center gap-2 ${hasLinkedIn ? 'cursor-pointer hover:opacity-80' : ''}`}
+                                            onClick={(e) => {
                                                 if (hasLinkedIn) {
+                                                    e.stopPropagation();
                                                     window.open(speaker.socialLinks!.linkedin, '_blank', 'noopener,noreferrer');
                                                 }
                                             }}
                                             title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
                                         >
-                                            <div className={`relative w-8 h-8 rounded-full border ${theme.borderLight} overflow-hidden flex-shrink-0`}>
+                                            <div className={`relative w-5 h-5 rounded-full border ${theme.borderLight} overflow-hidden flex-shrink-0`}>
                                                 <Image
                                                     src={getSpeakerAvatarUrl(speaker, 32)}
                                                     alt={speaker.name}
                                                     fill
                                                     className="object-cover"
-                                                    sizes="32px"
+                                                    sizes="20px"
                                                 />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className={`font-medium text-sm truncate ${theme.textPrimary}`}>{speaker.name}</div>
-                                                {speaker.title && (
-                                                    <div className={`text-xs truncate ${theme.textSecondary}`}>{speaker.title}</div>
-                                                )}
-                                                {speaker.company && (
-                                                    <div className={`text-xs truncate ${theme.textMuted}`}>{speaker.company}</div>
-                                                )}
+                                                <div className={`text-[12px] font-medium truncate ${theme.textPrimary}`}>{speaker.name}</div>
                                             </div>
                                         </div>
                                     );
                                 })
                             ) : (
                                 <div
-                                    className={`flex items-center gap-3 p-2 rounded-lg border ${theme.bgCard} ${theme.borderCard} ${item.speaker!.socialLinks?.linkedin ? `${theme.hoverCard} ${theme.hoverBorder} cursor-pointer transition-colors` : ''}`}
-                                    onClick={() => {
+                                    className={`flex items-center gap-2 ${item.speaker?.socialLinks?.linkedin ? 'cursor-pointer hover:opacity-80' : ''}`}
+                                    onClick={(e) => {
                                         if (item.speaker?.socialLinks?.linkedin) {
+                                            e.stopPropagation();
                                             window.open(item.speaker.socialLinks.linkedin, '_blank', 'noopener,noreferrer');
                                         }
                                     }}
-                                    title={item.speaker!.socialLinks?.linkedin ? `View ${item.speaker!.name}'s LinkedIn profile` : item.speaker!.name}
+                                    title={item.speaker?.socialLinks?.linkedin ? `View ${item.speaker!.name}'s LinkedIn profile` : item.speaker?.name}
                                 >
-                                    <div className={`relative w-8 h-8 rounded-full border ${theme.borderLight} overflow-hidden flex-shrink-0`}>
+                                    <div className={`relative w-5 h-5 rounded-full border ${theme.borderLight} overflow-hidden flex-shrink-0`}>
                                         <Image
                                             src={getSpeakerAvatarUrl(item.speaker!, 32)}
                                             alt={item.speaker!.name}
                                             fill
                                             className="object-cover"
-                                            sizes="32px"
+                                            sizes="20px"
                                         />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className={`font-medium text-sm truncate ${theme.textPrimary}`}>{item.speaker!.name}</div>
-                                        {item.speaker!.title && (
-                                            <div className={`text-xs truncate ${theme.textSecondary}`}>{item.speaker!.title}</div>
-                                        )}
-                                        {item.speaker!.company && (
-                                            <div className={`text-xs truncate ${theme.textMuted}`}>{item.speaker!.company}</div>
-                                        )}
+                                        <div className={`text-[12px] font-medium truncate ${theme.textPrimary}`}>{item.speaker!.name}</div>
                                     </div>
                                 </div>
                             )}
@@ -146,6 +125,6 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
                     </div>
                 );
             })()}
-        </>
+        </div>
     );
 };
