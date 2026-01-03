@@ -167,6 +167,11 @@ export class EventService {
 
         return counts;
     }
+    /**
+     * @deprecated This method is no longer used. Event types are now fetched via Supabase relational joins
+     * in the main queries (e.g., `.select('*, event_type:event_type_id(*)')`).
+     * The extractEventTags utility handles tag extraction from the joined data.
+     */
     // Helper function to fetch and attach event types to events
     private static async attachEventTypesToEvents(
         events: Event[],
@@ -208,6 +213,11 @@ export class EventService {
         }));
     }
 
+    /**
+     * @deprecated This method is no longer used. Tags are now fetched via Supabase relational joins
+     * in the main queries (e.g., `.select('*, event_tag_relations(event_tags(*))')`).
+     * The extractEventTags utility handles tag extraction from the joined data.
+     */
     // Helper function to fetch and attach tags to events
     private static async attachTagsToEvents<T extends Record<string, unknown>>(
         events: T[],
@@ -270,7 +280,7 @@ export class EventService {
                 .from('events')
                 .select(`
                     *,
-                    event_type (
+                    event_type:event_type_id (
                         id,
                         name,
                         color,
@@ -281,6 +291,13 @@ export class EventService {
                         name,
                         logo_url,
                         website_url
+                    ),
+                    event_tag_relations (
+                        event_tags (
+                            id,
+                            event_tag,
+                            category
+                        )
                     )
                 `)
                 .range(from, to);
@@ -307,14 +324,12 @@ export class EventService {
             if (error) throw error;
 
             // Transform events using enhanced transformer to include multi-day data
+            // Tags are now included in the query via relational join, so extractEventTags will handle them
             const transformedEvents = (data || []).map((eventData: Record<string, unknown>) => {
                 return enhancedEventTransformer.toApp(eventData as never);
             });
 
-            // Attach tags to events - cast to unknown first to avoid type conflicts
-            const eventsWithTags = await this.attachTagsToEvents(transformedEvents as unknown as Parameters<typeof this.attachTagsToEvents>[0], supabaseClient);
-
-            return eventsWithTags as unknown as (Event | MultiDayEvent)[];
+            return transformedEvents as (Event | MultiDayEvent)[];
         } catch (error) {
             console.error('Error fetching events with multi-day support:', error);
             Sentry.captureException(error, {
@@ -357,6 +372,13 @@ export class EventService {
                         name,
                         logo_url,
                         website_url
+                    ),
+                    event_tag_relations (
+                        event_tags (
+                            id,
+                            event_tag,
+                            category
+                        )
                     )
                 `)
                 .order('start_time', { ascending: true })
@@ -370,9 +392,8 @@ export class EventService {
 
             if (error) throw error;
 
-            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
-
-            return eventsWithTags.map(enhancedEventTransformer.toApp);
+            // Tags are now included in the query via relational join, so extractEventTags will handle them
+            return (data || []).map(enhancedEventTransformer.toApp);
         } catch (error) {
             console.error('Error fetching calendar events:', error);
             Sentry.captureException(error, {
@@ -422,11 +443,10 @@ export class EventService {
                 throw error;
             }
 
-            // Transform events and attach event types
+            // Transform events - events_detailed view already includes event_type and tags
             const transformedEvents = (data || []).map(eventDetailedTransformer.toApp);
-            const eventsWithTypes = await this.attachEventTypesToEvents(transformedEvents, supabaseClient);
             
-            return eventsWithTypes;
+            return transformedEvents;
         } catch (error) {
             console.error('Error fetching events:', error);
             Sentry.captureException(error, {
@@ -852,7 +872,14 @@ export class EventService {
                 .select(`
                 *,
                 event_type:event_type_id(*),
-                organizer:organizers (id, name, logo_url)
+                organizer:organizers (id, name, logo_url),
+                event_tag_relations (
+                    event_tags (
+                        id,
+                        event_tag,
+                        category
+                    )
+                )
             `);
 
             if (filters.startDate && filters.endDate) {
@@ -889,10 +916,8 @@ export class EventService {
             if (error) throw error;
             if (!data) return [];
 
-            // Fetch tags for all events with multi-day support
-            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
-
-            return eventsWithTags.map(enhancedEventTransformer.toApp);
+            // Tags are now included in the query via relational join, so extractEventTags will handle them
+            return (data || []).map(enhancedEventTransformer.toApp);
         } catch (error) {
             console.error('Error fetching events with multi-day support:', error);
             Sentry.captureException(error, {
@@ -925,7 +950,14 @@ export class EventService {
                 .select(`
                     *, 
                     event_type:event_type_id (*), 
-                    organizer:organizers (id, name, logo_url)
+                    organizer:organizers (id, name, logo_url),
+                    event_tag_relations (
+                        event_tags (
+                            id,
+                            event_tag,
+                            category
+                        )
+                    )
                 `)
                 .in('event_type_id', categoryIds)
                 .gte('start_time', new Date().toISOString())
@@ -938,10 +970,8 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            // Fetch tags for all live events
-            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
-
-            return (eventsWithTags as SupabaseEventWithDetails[] || []).map((item) => {
+            // Tags are now included in the query via relational join, so extractEventTags will handle them
+            return ((data || []) as SupabaseEventWithDetails[]).map((item) => {
                 const baseEvent = eventTransformer.toApp(item);
                 const eventType = item.event_type ? eventTypeTransformer.toApp(item.event_type) : undefined;
                 return enrichEvent(baseEvent, { eventType });
@@ -967,6 +997,13 @@ export class EventService {
                     *, 
                     event_type:event_type_id (*), 
                     organizer:organizers (id, name, logo_url),
+                    event_tag_relations (
+                        event_tags (
+                            id,
+                            event_tag,
+                            category
+                        )
+                    ),
                     event_agenda!left (
                         id,
                         day_number,
@@ -1000,9 +1037,8 @@ export class EventService {
             if (error) throw error;
             if (!data) throw new Error('Event not found');
 
-            // Fetch tags for this event
-            const eventsWithTags = await this.attachTagsToEvents([data], supabaseClient);
-            const eventWithTags = eventsWithTags[0];
+            // Tags are now included in the query via relational join, so extractEventTags will handle them
+            const eventWithTags = data;
 
             const item = eventWithTags as SupabaseEventWithDetails;
             const baseEvent = eventTransformer.toApp(item);
@@ -1151,6 +1187,13 @@ export class EventService {
                     *, 
                     event_type:event_type_id (*), 
                     organizer:organizers (id, name, logo_url),
+                    event_tag_relations (
+                        event_tags (
+                            id,
+                            event_tag,
+                            category
+                        )
+                    ),
                     event_agenda!left (
                         id,
                         day_number,
@@ -1191,10 +1234,8 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            // Fetch tags for all events
-            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
-
-            const events: (Event & { agenda?: AgendaItem[] })[] = eventsWithTags.map((item) => {
+            // Tags are now included in the query via relational join, so extractEventTags will handle them
+            const events: (Event & { agenda?: AgendaItem[] })[] = (data || []).map((item) => {
                 const typedItem = item as SupabaseEventWithDetails;
                 const baseEvent = eventTransformer.toApp(typedItem);
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
@@ -1356,7 +1397,14 @@ export class EventService {
                 .select(`
                     *, 
                     event_type:event_type_id (*), 
-                    organizer:organizers (id, name, logo_url)
+                    organizer:organizers (id, name, logo_url),
+                    event_tag_relations (
+                        event_tags (
+                            id,
+                            event_tag,
+                            category
+                        )
+                    )
                 `)
                 .order('start_time', { ascending: true })
                 .range(from, to);
@@ -1390,10 +1438,8 @@ export class EventService {
             const { data, error } = await query;
             if (error) throw error;
 
-            // Fetch tags for all events
-            const eventsWithTags = await this.attachTagsToEvents(data || [], supabaseClient);
-
-            const events: MultiDayEvent[] = eventsWithTags.map((item) => {
+            // Tags are now included in the query via relational join, so extractEventTags will handle them
+            const events: MultiDayEvent[] = (data || []).map((item) => {
                 const typedItem = item as SupabaseEventWithDetails;
                 const baseEvent = eventTransformer.toApp(typedItem);
                 const eventType = typedItem.event_type ? eventTypeTransformer.toApp(typedItem.event_type) : undefined;
@@ -1759,9 +1805,8 @@ export class EventService {
 
             if (error) throw error;
 
-            // Transform and attach tags
-            const transformedEvents = await this.attachTagsToEvents(events || [], supabaseClient);
-            return transformedEvents.map(event => eventTransformer.toApp(event));
+            // Tags are now included in the query via relational join, so extractEventTags will handle them
+            return (events || []).map(event => eventTransformer.toApp(event));
 
         } catch (error) {
             console.error('Error searching events by tags:', error);
@@ -1998,11 +2043,11 @@ export class EventService {
 
             if (error) throw error;
 
-            const transformedEvents = await this.attachTagsToEvents(events || [], supabaseClient);
-            const appEvents = transformedEvents.map(event => eventTransformer.toApp(event as any)); // eslint-disable-line @typescript-eslint/no-explicit-any
+            // events_detailed view already includes tags, so extractEventTags will handle them
+            const appEvents = (events || []).map((event: Record<string, unknown>) => eventDetailedTransformer.toApp(event as any)); // eslint-disable-line @typescript-eslint/no-explicit-any
 
             if (telemetry?.hasConsent && telemetry.userId) {
-                const topEventIds = appEvents.slice(0, 5).map(event => event.id);
+                const topEventIds = appEvents.slice(0, 5).map((event: Event) => event.id);
 
                 await logTelemetryEvent(supabaseClient, {
                     eventType: 'cold_start_popular_fallback_generated',
@@ -2047,12 +2092,12 @@ export class EventService {
     private static async transformEventsWithLookalikeMetadata(
         events: any[], // eslint-disable-line @typescript-eslint/no-explicit-any
         lookalikeRecommendations: any[], // eslint-disable-line @typescript-eslint/no-explicit-any
-        supabaseClient: SupabaseClientType
+        _supabaseClient: SupabaseClientType
     ): Promise<Event[]> {
-        // Attach tags to events
-        const transformedEvents = await this.attachTagsToEvents(events, supabaseClient);
+        // Events from LookalikeUserService and TagBasedMatchingService already include tags via relational joins
+        // extractEventTags utility will handle tags from both events_detailed view and event_tag_relations structure
         
-        return transformedEvents.map(event => {
+        return events.map(event => {
             const appEvent = eventTransformer.toApp(event as any); // eslint-disable-line @typescript-eslint/no-explicit-any
             
             // Find matching recommendation - LookalikeUserService already adds recommendationMetadata
