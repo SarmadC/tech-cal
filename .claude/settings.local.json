@@ -65,7 +65,11 @@
       "Bash(wc:*)",
       "Bash(xargs:*)",
       "Bash(npx supabase:*)",
-      "mcp__playwright__browser_run_code"
+      "mcp__playwright__browser_run_code",
+      "Bash(ANALYZE=true npm run build:*)",
+      "Bash(ANALYZE=true npx next build:*)",
+      "Bash(du -sh:*)",
+      "Bash(open:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,7 +1,7 @@
 // src/components/calendar/shared/EventCard.tsx
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Event, MultiDayEventInstance, isEventTracked } from '@/types';
@@ -38,7 +38,7 @@ export interface EventCardProps {
     onBadgeClick?: (e: React.MouseEvent) => void;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({
+const EventCardComponent: React.FC<EventCardProps> = ({
     event,
     onClick,
     onHover,
@@ -446,3 +446,19 @@ export const EventCard: React.FC<EventCardProps> = ({
         </div>
     );
 };
+
+// Memoize to prevent unnecessary re-renders when parent calendar updates
+export const EventCard = memo(EventCardComponent, (prevProps, nextProps) => {
+    return (
+        prevProps.event.id === nextProps.event.id &&
+        prevProps.event.title === nextProps.event.title &&
+        prevProps.viewType === nextProps.viewType &&
+        prevProps.visualInfo?.span === nextProps.visualInfo?.span &&
+        prevProps.isOverlapping === nextProps.isOverlapping &&
+        prevProps.isCompressed === nextProps.isCompressed &&
+        prevProps.isSummary === nextProps.isSummary &&
+        prevProps.className === nextProps.className
+    );
+});
+
+EventCard.displayName = 'EventCard';

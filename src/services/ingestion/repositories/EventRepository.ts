@@ -110,73 +110,117 @@ export class EventRepository {
         return insertedAgenda.map((agenda) => agenda.id);
     }
 
+    /**
+     * Batch upsert speakers - optimized to reduce N+1 queries
+     * Uses batch operations instead of individual queries per speaker
+     */
     static async upsertSpeakers(
         supabaseClient: SupabaseClientType,
         speakers: SpeakerUpsertInput[]
     ): Promise<string[]> {
-        const speakerIds: string[] = [];
+        if (speakers.length === 0) {
+            return [];
+        }
 
-        for (const speaker of speakers) {
-            let speakerId: string | null = null;
+        // Step 1: Batch fetch all existing speakers by LinkedIn URLs
+        const linkedInUrls = speakers
+            .map(s => s.linkedinUrl)
+            .filter((url): url is string => !!url);
 
-            if (speaker.linkedinUrl) {
-                const { data: existingLinkedIn } = await supabaseClient
-                    .from('speakers')
-                    .select('id')
-                    .eq('linkedin_url', speaker.linkedinUrl)
-                    .maybeSingle();
+        const existingSpeakersMap = new Map<string, string>(); // linkedInUrl -> speakerId
 
-                if (existingLinkedIn) {
-                    speakerId = existingLinkedIn.id;
-                    const updateData: Record<string, unknown> = {
-                        name: speaker.name,
-                    };
+        if (linkedInUrls.length > 0) {
+            const { data: existingSpeakers } = await supabaseClient
+                .from('speakers')
+                .select('id, linkedin_url')
+                .in('linkedin_url', linkedInUrls);
 
-                    if (speaker.title !== undefined) updateData.title = speaker.title || null;
-                    if (speaker.company !== undefined) updateData.company = speaker.company || null;
-                    if (speaker.bio !== undefined) updateData.bio = speaker.bio || null;
-                    if (speaker.photoUrl !== undefined) updateData.photo_url = speaker.photoUrl || null;
-                    if (speaker.twitterUrl !== undefined) updateData.twitter_url = speaker.twitterUrl || null;
-                    if (speaker.websiteUrl !== undefined) updateData.website_url = speaker.websiteUrl || null;
-
-                    const { error: updateError } = await supabaseClient
-                        .from('speakers')
-                        .update(updateData)
-                        .eq('id', speakerId);
-
-                    if (updateError) {
-                        throw updateError;
+            if (existingSpeakers) {
+                for (const speaker of existingSpeakers) {
+                    if (speaker.linkedin_url) {
+                        existingSpeakersMap.set(speaker.linkedin_url, speaker.id);
                     }
                 }
             }
-
-            if (!speakerId) {
-                const { data: newSpeaker, error: insertError } = await supabaseClient
-                    .from('speakers')
-                    .insert({
-                        name: speaker.name,
-                        linkedin_url: speaker.linkedinUrl || null,
-                        title: speaker.title || null,
-                        company: speaker.company || null,
-                        bio: speaker.bio || null,
-                        photo_url: speaker.photoUrl || null,
-                        twitter_url: speaker.twitterUrl || null,
-                        website_url: speaker.websiteUrl || null,
-                    })
-                    .select('id')
-                    .single();
-
-                if (insertError || !newSpeaker) {
-                    throw insertError || new Error(`Failed to insert speaker ${speaker.name}`);
-                }
-
-                speakerId = newSpeaker.id;
-            }
-
-            speakerIds.push(speakerId);
         }
 
-        return speakerIds;
+        // Step 2: Separate speakers into update vs insert groups
+        const speakersToUpdate: Array<{ id: string; input: SpeakerUpsertInput }> = [];
+        const speakersToInsert: SpeakerUpsertInput[] = [];
+        const resultOrder: Array<{ linkedinUrl?: string; insertIndex?: number }> = [];
+
+        let insertIndex = 0;
+        for (const speaker of speakers) {
+            if (speaker.linkedinUrl && existingSpeakersMap.has(speaker.linkedinUrl)) {
+                const existingId = existingSpeakersMap.get(speaker.linkedinUrl)!;
+                speakersToUpdate.push({ id: existingId, input: speaker });
+                resultOrder.push({ linkedinUrl: speaker.linkedinUrl });
+            } else {
+                speakersToInsert.push(speaker);
+                resultOrder.push({ insertIndex });
+                insertIndex++;
+            }
+        }
+
+        // Step 3: Batch update existing speakers (parallel updates)
+        if (speakersToUpdate.length > 0) {
+            await Promise.all(
+                speakersToUpdate.map(async ({ id, input }) => {
+                    const updateData: Record<string, unknown> = {
+                        name: input.name,
+                    };
+                    if (input.title !== undefined) updateData.title = input.title || null;
+                    if (input.company !== undefined) updateData.company = input.company || null;
+                    if (input.bio !== undefined) updateData.bio = input.bio || null;
+                    if (input.photoUrl !== undefined) updateData.photo_url = input.photoUrl || null;
+                    if (input.twitterUrl !== undefined) updateData.twitter_url = input.twitterUrl || null;
+                    if (input.websiteUrl !== undefined) updateData.website_url = input.websiteUrl || null;
+
+                    const { error } = await supabaseClient
+                        .from('speakers')
+                        .update(updateData)
+                        .eq('id', id);
+
+                    if (error) throw error;
+                })
+            );
+        }
+
+        // Step 4: Batch insert new speakers (single insert for all)
+        const insertedSpeakerIds: string[] = [];
+        if (speakersToInsert.length > 0) {
+            const insertPayload = speakersToInsert.map(speaker => ({
+                name: speaker.name,
+                linkedin_url: speaker.linkedinUrl || null,
+                title: speaker.title || null,
+                company: speaker.company || null,
+                bio: speaker.bio || null,
+                photo_url: speaker.photoUrl || null,
+                twitter_url: speaker.twitterUrl || null,
+                website_url: speaker.websiteUrl || null,
+            }));
+
+            const { data: insertedSpeakers, error: insertError } = await supabaseClient
+                .from('speakers')
+                .insert(insertPayload)
+                .select('id');
+
+            if (insertError || !insertedSpeakers) {
+                throw insertError || new Error('Failed to batch insert speakers');
+            }
+
+            insertedSpeakerIds.push(...insertedSpeakers.map(s => s.id));
+        }
+
+        // Step 5: Build result array in original order
+        return resultOrder.map(item => {
+            if (item.linkedinUrl) {
+                return existingSpeakersMap.get(item.linkedinUrl)!;
+            } else if (item.insertIndex !== undefined) {
+                return insertedSpeakerIds[item.insertIndex];
+            }
+            throw new Error('Invalid result order item');
+        });
     }
 }
 

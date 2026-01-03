@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useTheme as useNextTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -186,14 +186,17 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo,
+    showConfirmation
+  }), [showSuccess, showError, showWarning, showInfo, showConfirmation]);
+
   return (
-    <SnackbarContext.Provider value={{
-      showSuccess,
-      showError,
-      showWarning,
-      showInfo,
-      showConfirmation
-    }}>
+    <SnackbarContext.Provider value={contextValue}>
       {children}
 
       {/* Snackbar: mount only when a message exists to defer MUI loading */}

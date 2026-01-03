@@ -26,6 +26,7 @@ export interface DuplicateCheckResult {
 export class EventDeduplicationService {
     /**
      * Check if an event is a duplicate before normalization
+     * Optimized to run fast checks in parallel, then slower checks if needed
      */
     static async checkDuplicate(
         record: EventSourceRecord,
@@ -33,12 +34,13 @@ export class EventDeduplicationService {
         supabaseClient: SupabaseClientType
     ): Promise<DuplicateCheckResult> {
         try {
-            // Step 1: Check for exact checksum match (fastest)
-            const checksumMatch = await this.checkChecksumDuplicate(
-                record.provenance.raw_hash,
-                supabaseClient
-            );
+            // Phase 1: Run fast checks in parallel (checksum and canonical URL)
+            const [checksumMatch, canonicalUrlMatch] = await Promise.all([
+                this.checkChecksumDuplicate(record.provenance.raw_hash, supabaseClient),
+                this.checkCanonicalUrlDuplicate(record, supabaseClient),
+            ]);
 
+            // Return checksum match first (highest confidence)
             if (checksumMatch) {
                 return {
                     isDuplicate: true,
@@ -48,12 +50,7 @@ export class EventDeduplicationService {
                 };
             }
 
-            // Step 1.5: Check for canonical URL match (high confidence for multi-source duplicates)
-            const canonicalUrlMatch = await this.checkCanonicalUrlDuplicate(
-                record,
-                supabaseClient
-            );
-
+            // Return canonical URL match second
             if (canonicalUrlMatch) {
                 return {
                     isDuplicate: true,
@@ -63,12 +60,14 @@ export class EventDeduplicationService {
                 };
             }
 
-            // Step 2: Check for similar title + start_time + organizer (fuzzy match)
-            const fuzzyMatch = await this.checkFuzzyDuplicate(
-                record,
-                supabaseClient
-            );
+            // Phase 2: If fast checks didn't find duplicates, run slower fuzzy checks
+            // Run fuzzy and series checks in parallel for efficiency
+            const [fuzzyMatch, seriesMatch] = await Promise.all([
+                this.checkFuzzyDuplicate(record, supabaseClient),
+                this.checkSeriesDuplicate(record, supabaseClient),
+            ]);
 
+            // Prefer fuzzy match (more specific) over series match
             if (fuzzyMatch) {
                 return {
                     isDuplicate: true,
@@ -77,12 +76,6 @@ export class EventDeduplicationService {
                     matchReason: 'fuzzy_title',
                 };
             }
-
-            // Step 3: Check for recurring series match
-            const seriesMatch = await this.checkSeriesDuplicate(
-                record,
-                supabaseClient
-            );
 
             if (seriesMatch) {
                 return {

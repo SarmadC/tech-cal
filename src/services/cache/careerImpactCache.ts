@@ -43,9 +43,19 @@ export class CareerImpactCache {
 
   /**
    * Generate cache key from event ID and profile hash
+   * Format: career_impact:{eventId}:{profileHash}
+   * Note: For user-specific invalidation, use generateUserCacheKey instead
    */
   private static generateCacheKey(eventId: string, profileHash: string): string {
     return `${this.CACHE_PREFIX}${eventId}:${profileHash}`;
+  }
+
+  /**
+   * Generate cache key with userId for user-specific operations
+   * Format: career_impact:user:{userId}:{eventId}:{profileHash}
+   */
+  private static generateUserCacheKey(userId: string, eventId: string, profileHash: string): string {
+    return `${this.CACHE_PREFIX}user:${userId}:${eventId}:${profileHash}`;
   }
 
   /**
@@ -79,12 +89,16 @@ export class CareerImpactCache {
 
   /**
    * Get cached career impact score with sliding window TTL refresh
+   * @param userId Optional - when provided, uses user-scoped cache key for granular invalidation
    */
-  static async get(eventId: string, profileHash: string): Promise<CareerImpactScoreLite | null> {
+  static async get(eventId: string, profileHash: string, userId?: string): Promise<CareerImpactScoreLite | null> {
     this.stats.totalRequests++;
-    
+
     try {
-      const key = this.generateCacheKey(eventId, profileHash);
+      // Use user-scoped key if userId provided, otherwise fall back to global key
+      const key = userId
+        ? this.generateUserCacheKey(userId, eventId, profileHash)
+        : this.generateCacheKey(eventId, profileHash);
       const cached = await kv.get<CacheEntry>(key);
       
       if (!cached) {
@@ -136,12 +150,18 @@ export class CareerImpactCache {
 
   /**
    * Get multiple cached career impact scores with sliding window TTL refresh
+   * @param userId Optional - when provided, uses user-scoped cache keys for granular invalidation
    */
-  static async mget(eventIds: string[], profileHash: string): Promise<Map<string, CareerImpactScoreLite>> {
+  static async mget(eventIds: string[], profileHash: string, userId?: string): Promise<Map<string, CareerImpactScoreLite>> {
     const results = new Map<string, CareerImpactScoreLite>();
-    
+
     try {
-      const keys = eventIds.map(eventId => this.generateCacheKey(eventId, profileHash));
+      // Use user-scoped keys if userId provided
+      const keys = eventIds.map(eventId =>
+        userId
+          ? this.generateUserCacheKey(userId, eventId, profileHash)
+          : this.generateCacheKey(eventId, profileHash)
+      );
       const cachedEntries = await kv.mget(...keys) as (CacheEntry | null)[];
       
       const now = Date.now();
@@ -205,15 +225,20 @@ export class CareerImpactCache {
 
   /**
    * Set career impact score in cache
+   * @param userId Optional - when provided, uses user-scoped cache key for granular invalidation
    */
   static async set(
-    eventId: string, 
-    profileHash: string, 
+    eventId: string,
+    profileHash: string,
     score: CareerImpactScoreLite,
-    ttl: number = this.DEFAULT_TTL
+    ttl: number = this.DEFAULT_TTL,
+    userId?: string
   ): Promise<void> {
     try {
-      const key = this.generateCacheKey(eventId, profileHash);
+      // Use user-scoped key if userId provided
+      const key = userId
+        ? this.generateUserCacheKey(userId, eventId, profileHash)
+        : this.generateCacheKey(eventId, profileHash);
       const entry: CacheEntry = {
         data: score,
         timestamp: Date.now(),
@@ -229,18 +254,23 @@ export class CareerImpactCache {
   /**
    * Set multiple career impact scores in cache
    * Accepts both Map<string, CareerImpactScoreLite> and Map<string, { score: CareerImpactScoreLite, eventId: string }>
+   * @param userId Optional - when provided, uses user-scoped cache keys for granular invalidation
    */
   static async mset(
-    scores: Map<string, CareerImpactScoreLite | { score: CareerImpactScoreLite; eventId: string }>, 
+    scores: Map<string, CareerImpactScoreLite | { score: CareerImpactScoreLite; eventId: string }>,
     profileHash: string,
-    ttl: number = this.DEFAULT_TTL
+    ttl: number = this.DEFAULT_TTL,
+    userId?: string
   ): Promise<void> {
     try {
       const pipeline = kv.pipeline();
       const timestamp = Date.now();
-      
+
       for (const [eventId, scoreData] of scores) {
-        const key = this.generateCacheKey(eventId, profileHash);
+        // Use user-scoped key if userId provided
+        const key = userId
+          ? this.generateUserCacheKey(userId, eventId, profileHash)
+          : this.generateCacheKey(eventId, profileHash);
         
         // Handle both data structures
         const score = 'score' in scoreData ? scoreData.score : scoreData;
@@ -289,13 +319,29 @@ export class CareerImpactCache {
   }
 
   /**
-   * Invalidate all cache entries for a user (more efficient than invalidateAll)
-   * This method will be enhanced when we have user-specific cache keys
+   * Invalidate all cache entries for a specific user
+   * Uses user-scoped cache key pattern: career_impact:user:{userId}:*
    */
-  static async invalidateUser(_userId: string): Promise<number> {
-    // For now, we'll invalidate all cache since we don't store userId in cache keys
-    // This can be optimized later by including userId in cache key structure
-    return await this.invalidateAll();
+  static async invalidateUser(userId: string): Promise<number> {
+    try {
+      // Match user-scoped cache keys: career_impact:user:{userId}:*
+      const pattern = `${this.CACHE_PREFIX}user:${userId}:*`;
+      const keys = await kv.keys(pattern);
+
+      if (keys.length > 0) {
+        // Process in batches to avoid overwhelming Redis
+        const batchSize = 100;
+        for (let i = 0; i < keys.length; i += batchSize) {
+          const batch = keys.slice(i, i + batchSize);
+          await kv.del(...batch);
+        }
+      }
+
+      return keys.length;
+    } catch (error) {
+      console.warn('Cache invalidateUser error for user', userId + ':', error);
+      return 0;
+    }
   }
 
   /**

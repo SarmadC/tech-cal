@@ -158,8 +158,8 @@ export const eventTransformer = {
         const organizerLogo = getLogoUrl(rawLogoUrl, organizerName);
         
         // Transform event tags from database format to app format
-        // Tags are now directly attached to the event object
-        const eventTags: EventTag[] = (supabaseEvent as SupabaseEventWithDetails).tags || [];
+        // Use extractEventTags utility to properly extract tags from event_tag_relations structure
+        const eventTags: EventTag[] = extractEventTags(supabaseEvent);
 
         // Extract event_type data if present (from joins)
         const eventType = (supabaseEvent as SupabaseEventWithDetails).event_type;

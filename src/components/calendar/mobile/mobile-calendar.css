@@ -2369,10 +2369,7 @@
     animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+/* Note: @keyframes spin is defined earlier in this file */
 
 .mobile-search-suggestion {
     display: flex;
@@ -4243,16 +4240,7 @@
   }
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.2);
-  }
-}
+/* Note: @keyframes pulse is defined earlier in this file */
 
 /* ========== RESPONSIVE ADJUSTMENTS ========== */
 

@@ -1,7 +1,7 @@
 // src/components/providers/SupabaseProvider.tsx
 'use client';
 
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect, useMemo } from 'react';
 import { createClient, type SupabaseClient } from '@/utils/supabase/client';
 
 // Consolidated error messages for consistency
@@ -41,8 +41,11 @@ export function SupabaseProvider({ children }: SupabaseProviderProps) {
     }
   }, []);
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({ supabase, isReady }), [supabase, isReady]);
+
   return (
-    <SupabaseContext.Provider value={{ supabase, isReady }}>
+    <SupabaseContext.Provider value={contextValue}>
       {children}
     </SupabaseContext.Provider>
   );
