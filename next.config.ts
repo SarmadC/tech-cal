@@ -49,6 +49,10 @@ const securityHeaders = [
 
 
 const nextConfig: NextConfig = {
+  // Set the workspace root to silence the multiple lockfiles warning
+  turbopack: {
+    root: process.cwd(),
+  },
   // 2. Add the async headers function to your Next.js config.
   async headers() {
     return [

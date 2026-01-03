@@ -1,12 +1,14 @@
 'use client';
 
 import { FC, useState } from 'react';
-import { ClockIcon, CalendarIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { ClockIcon, CalendarIcon, CaretRightIcon, CaretDownIcon } from '@phosphor-icons/react';
 import { Event, AgendaItem } from '@/types';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 import { formatTimeRange as formatEventTimeRange } from '@/utils/dateUtils';
 import { getEmptyState, eventsOverlap } from '@/utils/timelineUtils';
+
 import { TimelineEventCard } from './TimelineEventCard';
+import { TimelineDetailPanel } from './TimelineDetailPanel';
 
 interface TimelineViewProps {
     event: Event;
@@ -16,6 +18,33 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     const theme = useTimelineTheme();
     // Get agenda from event
     const agenda = event.agenda || [];
+
+    // State for expanded days (default closed)
+    const [expandedDays, setExpandedDays] = useState<Record<number, boolean>>({});
+
+    // State for selected event (Master-Detail view)
+    const [selectedEvent, setSelectedEvent] = useState<AgendaItem | null>(null);
+
+    // Initialize selected event with the first event of the first day
+    if (!selectedEvent && agenda.length > 0) {
+        // Find the first event (sorted by day and time)
+        const sortedAgenda = [...agenda].sort((a, b) => {
+            if ((a.dayNumber || 1) !== (b.dayNumber || 1)) {
+                return (a.dayNumber || 1) - (b.dayNumber || 1);
+            }
+            return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+        });
+        if (sortedAgenda.length > 0) {
+            setSelectedEvent(sortedAgenda[0]);
+        }
+    }
+
+    const toggleDay = (day: number) => {
+        setExpandedDays(prev => ({
+            ...prev,
+            [day]: !prev[day]
+        }));
+    };
 
     if (agenda.length === 0) {
         const emptyState = getEmptyState(theme.isDark);
@@ -108,89 +137,110 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
 
     // renderEventCard has been refactored into TimelineEventCard component
 
-    // renderEventCard has been refactored into TimelineEventCard component
-
     return (
-        <div className="relative pb-12">
-            {/* Main Container with Continuous Spine */}
-            <div className="ml-[100px] border-l-2 border-zinc-800 pl-6 relative min-h-[200px]">
+        <div className="relative pb-12 flex h-[calc(100vh-200px)]">
+            {/* Left Panel (Timeline List) - 40% Width */}
+            <div className="w-[40%] overflow-y-auto pr-4 border-r border-zinc-800">
+                {/* Main Container with Continuous Spine */}
+                <div className="ml-6 border-l-2 border-zinc-800 pl-6 relative min-h-[200px]">
 
-                {Object.entries(timelineClusters)
-                    .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                    .map(([day, clusters]) => {
-                        return (
-                            <div key={day} className="relative">
-                                {/* Sticky Day Header - In the left margin */}
-                                <div className={`sticky top-0 z-20 -ml-6 mb-8 pt-4 pb-2 backdrop-blur-md ${theme.isDark ? 'bg-[#121212]/80' : 'bg-white/80'}`}>
-                                    <div className="absolute -left-[100px] top-4 w-[80px] text-right pr-2">
-                                        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                    {Object.entries(timelineClusters)
+                        .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                        .map(([dayStr, clusters]) => {
+                            const day = parseInt(dayStr);
+                            const isExpanded = expandedDays[day];
+
+                            return (
+                                <div key={day} className="relative mb-8">
+                                    {/* Accordion Header - Anchored to spine */}
+                                    <div
+                                        className="relative -ml-[33px] mb-4 flex items-center cursor-pointer group"
+                                        onClick={() => toggleDay(day)}
+                                    >
+                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors z-20 ${theme.isDark
+                                            ? 'bg-[#18181B] border-zinc-600 group-hover:border-zinc-400'
+                                            : 'bg-white border-gray-300 group-hover:border-gray-400'
+                                            }`}>
+                                            {isExpanded ? (
+                                                <CaretDownIcon className={`w-2.5 h-2.5 ${theme.isDark ? 'text-zinc-400' : 'text-gray-500'}`} />
+                                            ) : (
+                                                <CaretRightIcon className={`w-2.5 h-2.5 ${theme.isDark ? 'text-zinc-400' : 'text-gray-500'}`} />
+                                            )}
+                                        </div>
+                                        <div className={`ml-4 text-xs font-bold uppercase tracking-wider ${theme.isDark ? 'text-zinc-400 group-hover:text-zinc-300' : 'text-gray-600 group-hover:text-gray-800'}`}>
                                             Day {day}
                                         </div>
                                     </div>
-                                    {/* Optional: Add a visual separator or keep it clean */}
-                                </div>
 
-                                <div className="space-y-8">
-                                    {clusters.map((cluster, clusterIndex) => {
-                                        return (
-                                            <div key={clusterIndex} className="relative">
-                                                {/* Time Display - In the left margin */}
-                                                <div className="absolute -left-[116px] top-0 w-[90px] text-right">
-                                                    <span className="font-mono text-[11px] text-zinc-500 block">
-                                                        {cluster.timeSlot.split(' - ')[0]}
-                                                    </span>
-                                                </div>
+                                    {/* Content - Collapsible */}
+                                    <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'block opacity-100' : 'hidden opacity-0'}`}>
+                                        <div className="space-y-4">
+                                            {clusters.map((cluster, clusterIndex) => {
+                                                return (
+                                                    <div key={clusterIndex} className="relative">
+                                                        {/* Timeline Node - Anchored to spine */}
+                                                        <div className="absolute -left-[32px] top-[18px] w-2.5 h-2.5 rounded-full bg-[#18181B] border-2 border-zinc-600 z-10 box-content" />
 
-                                                {/* Timeline Node - Anchored to spine */}
-                                                {/* Calculated: pl-6 (24px) + border (2px) = 26px to left edge. 
-                                                    Dot is 10px. Center is 5px. 
-                                                    To center on border (1px width effectively), we need center at -1px relative to content?
-                                                    Let's try -left-[29px] (24px padding + 5px for half dot) */}
-                                                <div className="absolute -left-[29px] top-[2px] w-2.5 h-2.5 rounded-full bg-[#18181B] border-2 border-zinc-600 z-10 box-content" />
-
-                                                {/* Content Area */}
-                                                <div>
-                                                    {/* Parallel events layout */}
-                                                    {cluster.items.length === 1 ? (
-                                                        /* Single event */
-                                                        <div className="relative group">
-                                                            <TimelineEventCard
-                                                                item={cluster.items[0]}
-                                                                showIndividualTime={false}
-                                                                eventTimezone={eventTimezone}
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        /* Multiple parallel events - Stacked Effect */
-                                                        <div className="relative">
-                                                            {cluster.items.map((item, itemIndex) => (
-                                                                <div
-                                                                    key={item.id || itemIndex}
-                                                                    className="relative mb-2 last:mb-0 transition-transform hover:-translate-y-1"
-                                                                    style={{
-                                                                        zIndex: cluster.items.length - itemIndex
-                                                                    }}
-                                                                >
+                                                        {/* Content Area */}
+                                                        <div>
+                                                            {/* Parallel events layout */}
+                                                            {cluster.items.length === 1 ? (
+                                                                /* Single event */
+                                                                <div className="relative group">
                                                                     <TimelineEventCard
-                                                                        item={item}
-                                                                        showIndividualTime={false}
+                                                                        item={cluster.items[0]}
+                                                                        showIndividualTime={true}
                                                                         eventTimezone={eventTimezone}
+                                                                        isSelected={selectedEvent?.id === cluster.items[0].id}
+                                                                        onClick={() => setSelectedEvent(cluster.items[0])}
                                                                     />
                                                                 </div>
-                                                            ))}
-                                                            <div className="mt-1 text-[10px] text-zinc-500 text-right">
-                                                                {cluster.items.length} concurrent sessions
-                                                            </div>
+                                                            ) : (
+                                                                /* Multiple parallel events - Stacked Effect */
+                                                                <div className="relative">
+                                                                    {cluster.items.map((item, itemIndex) => (
+                                                                        <div
+                                                                            key={item.id || itemIndex}
+                                                                            className="relative mb-2 last:mb-0 transition-transform hover:-translate-y-1"
+                                                                            style={{
+                                                                                zIndex: cluster.items.length - itemIndex
+                                                                            }}
+                                                                        >
+                                                                            <TimelineEventCard
+                                                                                item={item}
+                                                                                showIndividualTime={true}
+                                                                                eventTimezone={eventTimezone}
+                                                                                isSelected={selectedEvent?.id === item.id}
+                                                                                onClick={() => setSelectedEvent(item)}
+                                                                            />
+                                                                        </div>
+                                                                    ))}
+                                                                    <div className="mt-1 text-[10px] text-zinc-500 text-right">
+                                                                        {cluster.items.length} concurrent sessions
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                </div>
+            </div>
+
+            {/* Right Panel (Detail View) - 60% Width */}
+            <div className="w-[60%] pl-6 border-l border-zinc-800/50">
+                {selectedEvent ? (
+                    <TimelineDetailPanel event={selectedEvent} eventTimezone={eventTimezone} />
+                ) : (
+                    <div className="h-full flex items-center justify-center text-zinc-500">
+                        Select an event to view details
+                    </div>
+                )}
             </div>
         </div>
     );

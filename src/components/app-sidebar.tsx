@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +19,7 @@ import { MaterialIcon } from '@/components/ui/Icon';
 import { ListBullets } from '@phosphor-icons/react';
 
 const items = [
-        { title: 'Discover', url: '/discover', icon: () => <MaterialIcon name="compass" size={18} /> },
+  { title: 'Discover', url: '/discover', icon: () => <MaterialIcon name="compass" size={18} /> },
   { title: 'Calendar', url: '/calendar?view=month', icon: () => <MaterialIcon name="calendar" size={18} /> },
   { title: 'Events List', url: '/events', icon: () => <ListBullets size={18} /> },
   { title: 'Dashboard', url: '/dashboard', icon: () => <MaterialIcon name="bar-chart" size={18} /> },
@@ -28,6 +29,14 @@ const items = [
 
 export function AppSidebar() {
   const { open, toggle } = useSidebar();
+  const pathname = usePathname();
+
+  const isActive = (url: string) => {
+    if (url === '/' && pathname === '/') return true;
+    if (url !== '/' && pathname?.startsWith(url.split('?')[0])) return true;
+    return false;
+  };
+
   return (
     <Sidebar>
       {/* Expanded state */}
@@ -53,7 +62,11 @@ export function AppSidebar() {
                 {items.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <Link href={item.url} title={item.title} className="flex items-center gap-3 justify-start">
+                      <Link
+                        href={item.url}
+                        title={item.title}
+                        className={`flex items-center gap-3 justify-start ${isActive(item.url) ? 'text-[var(--brand-primary)]' : ''}`}
+                      >
                         {item.icon()}
                         <span>{item.title}</span>
                       </Link>
@@ -68,7 +81,7 @@ export function AppSidebar() {
           <div className="text-xs text-foreground-tertiary">v1.0</div>
         </SidebarFooter>
       </div>
-      
+
       {/* Collapsed state */}
       <div className={`flex flex-col h-full absolute inset-0 transition-opacity duration-200 ease-in-out ${!open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <SidebarContent className="flex h-full items-start justify-start">
@@ -86,7 +99,11 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <Link href={item.url} title={item.title} className="flex items-center justify-center">
+                    <Link
+                      href={item.url}
+                      title={item.title}
+                      className={`flex items-center justify-center ${isActive(item.url) ? 'text-[var(--brand-primary)]' : ''}`}
+                    >
                       {item.icon()}
                     </Link>
                   </SidebarMenuButton>

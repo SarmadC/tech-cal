@@ -40,12 +40,33 @@ export function normalizeEventFormat(
 }
 
 /**
- * Determine if an event is free based on price_min column
- * Returns true if price_min is null or 0, false otherwise
+ * Determine if an event is free based on price_min and priceRange
+ * Defaults to paid (false) when uncertain, as most conferences/events are paid
  */
 export function isEventFree(event: Event): boolean {
-    // If priceMin is null or 0, event is free
-    return event.priceMin === null || event.priceMin === undefined || event.priceMin === 0;
+    // If priceMin > 0, it's definitely not free
+    if (event.priceMin !== null && event.priceMin !== undefined && event.priceMin > 0) {
+        return false;
+    }
+    
+    // If priceRange exists, check it for explicit indicators
+    if (event.priceRange) {
+        const priceRangeLower = event.priceRange.toLowerCase().trim();
+        // If priceRange explicitly says "free", it's free
+        if (priceRangeLower === 'free') {
+            return true;
+        }
+        // If priceRange contains "paid", "$", or numbers, it's not free
+        if (priceRangeLower.includes('paid') || 
+            priceRangeLower.includes('$') || 
+            /\d/.test(priceRangeLower)) {
+            return false;
+        }
+    }
+    
+    // Default to paid (false) when uncertain - most events are paid
+    // Only return true if priceMin is explicitly 0 (not null/undefined)
+    return event.priceMin === 0;
 }
 
 /**

@@ -84,12 +84,12 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
 
     return (
         <div
-            className={`flex flex-col rounded-[6px] p-5 transition-all duration-200 cursor-pointer group relative border border-white/10 bg-transparent hover:bg-white/[0.02] hover:border-white/20 text-[#E5E5E5] ${accentClass}`}
+            className={`flex flex-col rounded-[6px] p-5 transition-all duration-200 cursor-pointer group relative border border-border dark:border-border bg-card dark:bg-transparent hover:shadow-md dark:hover:shadow-none hover:bg-accent/10 hover:border-border-strong text-foreground ${accentClass}`}
             onClick={onClick}
         >
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-[6px] bg-white border border-border/20 flex items-center justify-center overflow-hidden shadow-sm">
+                    <div className="w-10 h-10 rounded-[6px] bg-card border border-border flex items-center justify-center overflow-hidden shadow-sm">
                         {activeLogoSrc ? (
                             <Image
                                 src={activeLogoSrc}
@@ -106,10 +106,10 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
                         )}
                     </div>
                     <div className="flex flex-col">
-                        <h3 className="text-[15px] font-medium text-[#E5E5E5] leading-tight group-hover:text-white transition-colors" title={event.title}>
+                        <h3 className="text-[15px] font-medium text-foreground leading-tight group-hover:text-foreground transition-colors" title={event.title}>
                             {event.title}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground/60">
+                        <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60">
                             <span>{dateLabel}</span>
                             <span>·</span>
                             <span>{timeLabel}</span>
@@ -124,7 +124,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
                             e.stopPropagation();
                             onBookmark?.(event);
                         }}
-                        className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-white/5'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`p-1.5 rounded-md transition-all duration-200 ${isBookmarked ? 'text-amber-400 hover:text-amber-300' : 'text-muted-foreground/40 hover:text-foreground hover:bg-accent/10'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
                         aria-pressed={isBookmarked}
                         aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
                         disabled={isBookmarking}
@@ -139,7 +139,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
 
                     <button
                         type="button"
-                        className="p-1.5 text-muted-foreground/40 hover:text-foreground hover:bg-white/5 rounded-md transition-all"
+                        className="p-1.5 text-muted-foreground/40 hover:text-foreground hover:bg-accent/10 rounded-md transition-all"
                         onClick={(e) => {
                             e.stopPropagation();
                             const targetUrl = event.registrationUrl || event.sourceUrl;
@@ -158,17 +158,20 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
                 {event.description || 'No description available for this event.'}
             </p>
 
-            <div className="mt-auto flex items-center justify-between pt-3 border-t border-white/5">
-                <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground/60">
-                    <MapPin size={12} weight="fill" className="text-muted-foreground/40" />
+            <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50">
+                <div className="flex items-center gap-2 text-[11px] font-mono text-gray-500 dark:text-muted-foreground/60">
+                    <MapPin size={12} weight="fill" className="text-gray-400 dark:text-muted-foreground/40" />
                     <span className="truncate max-w-[120px]">{event.location || 'Location TBA'}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 rounded-[4px] border border-white/10 text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider">
+                    <span className="px-1.5 py-0.5 rounded-[4px] bg-blue-50 dark:bg-blue-500/10 text-[10px] font-mono text-blue-700 dark:text-blue-400 uppercase tracking-wider">
                         {formatDisplay}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded-[4px] border border-white/10 text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider">
+                    <span className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-mono uppercase tracking-wider ${isFree
+                            ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-muted-foreground'
+                        }`}>
                         {priceDisplay}
                     </span>
                 </div>

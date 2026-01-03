@@ -297,7 +297,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
     return (
         <div className={`relative z-[102] mb-8 transition-colors`}>
             {/* Glass strip container */}
-            <div className="flex flex-col lg:flex-row items-center gap-3 p-2 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20">
+            <div className="flex flex-col lg:flex-row items-center gap-3 p-2 rounded-2xl bg-background/40 backdrop-blur-xl border border-border/50 shadow-2xl shadow-black/20">
 
                 {/* Search Input - Command Palette Style */}
                 <div className={`flex-[2] w-full relative group transition-colors ${isAutocompleteOpen ? 'z-[102]' : ''}`}>
@@ -313,7 +313,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         type="text"
                         placeholder="Search events..."
                         maxLength={200}
-                        className="w-full pl-11 pr-16 py-2.5 bg-black/20 focus:bg-transparent border border-transparent focus:border-white/10 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none"
+                        className="w-full pl-11 pr-16 py-2.5 bg-muted/50 focus:bg-transparent border border-transparent focus:border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/70 transition-all outline-none"
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
                         onFocus={() => hasAutocompleteContent && searchTerm.length >= 2 && setIsAutocompleteOpen(true)}
@@ -331,7 +331,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         }}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden md:block">
-                        <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-white/20 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-50">
+                        <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border/50 bg-accent/50 px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-50">
                             <span className="text-xs">⌘</span>K
                         </kbd>
                     </div>
@@ -349,7 +349,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 </div>
 
                 {/* Divider */}
-                <div className="hidden lg:block w-px h-6 bg-white/10"></div>
+                <div className="hidden lg:block w-px h-6 bg-border"></div>
 
                 {/* Location Input */}
                 <div className="flex-1 w-full relative group transition-colors">
@@ -369,7 +369,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                         type="button"
                         onClick={handleNearMeClick}
                         disabled={isLoading}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md transition-all text-muted-foreground hover:text-primary hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md transition-all text-muted-foreground hover:text-primary hover:bg-accent/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         title="Find events near me"
                     >
                         {isLoading ? (
@@ -381,7 +381,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 </div>
 
                 {/* Divider */}
-                <div className="hidden lg:block w-px h-6 bg-white/10"></div>
+                <div className="hidden lg:block w-px h-6 bg-border"></div>
 
                 {/* Date Range Filter */}
                 <div className="flex-1 w-full relative group transition-colors">
@@ -391,7 +391,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     <button
                         type="button"
                         onClick={() => setIsDatePickerOpen(true)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-transparent border-none text-sm text-foreground text-left cursor-pointer hover:bg-white/5 rounded-lg transition-colors truncate"
+                        className="w-full pl-9 pr-4 py-2.5 bg-transparent border-none text-sm text-foreground text-left cursor-pointer hover:bg-accent/50 rounded-lg transition-colors truncate"
                     >
                         {formatDateRange(dateRange)}
                     </button>
@@ -401,7 +401,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                 <div className="flex items-center gap-2 pl-2">
                     {activeFilterCount > 0 && (
                         <button
-                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg transition-colors"
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-lg transition-colors"
                             onClick={onResetFilters}
                             aria-label="Clear all filters"
                             title="Clear all filters"
@@ -411,7 +411,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
                     )}
 
                     <button
-                        className="hidden lg:flex px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg transition-colors text-sm font-medium"
+                        className="hidden lg:flex px-4 py-2 bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] rounded-lg transition-colors text-sm font-semibold"
                         onClick={onSearch}
                     >
                         Search
@@ -419,7 +419,7 @@ const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = React.memo(({
 
                     {/* Mobile Filters Button */}
                     <button
-                        className="lg:hidden p-2 text-foreground hover:bg-white/5 rounded-lg transition-colors"
+                        className="lg:hidden p-2 text-foreground hover:bg-accent/50 rounded-lg transition-colors"
                         onClick={onFilterClick}
                     >
                         <SlidersHorizontal size={20} />

@@ -154,7 +154,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
                         value={filters.sortBy}
                         onValueChange={(value) => onUpdateFilter('sortBy', value as UnifiedFilterOptions['sortBy'])}
                     >
-                        <SelectTrigger className="text-sm font-medium text-[#E5E5E5] bg-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#333333] hover:border-[#555555] transition-colors w-auto min-w-[160px] h-auto">
+                        <SelectTrigger className="text-sm font-medium text-foreground bg-background-secondary px-3 py-1.5 rounded-lg border border-border hover:border-border-strong transition-colors w-auto min-w-[160px] h-auto">
                             <SelectValue placeholder="Recommended" />
                         </SelectTrigger>
                         <SelectContent>

@@ -50,19 +50,19 @@ interface RadioButtonOptionProps {
 const RadioButtonOption: React.FC<RadioButtonOptionProps> = ({ label, count, checked, onChange }) => {
     return (
         <label className={`filter-option flex items-center justify-between h-7 px-2 rounded-md cursor-pointer group transition-all duration-150 ease-in-out ${checked
-            ? 'text-[#FFFFFF]'
-            : 'text-[#A1A1AA] hover:bg-white/8 hover:text-[#D4D4D4]'
+            ? 'text-foreground'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
             }`}>
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className={`
                     w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
                     ${checked
-                        ? 'border-[#EDEDED] bg-[#EDEDED]'
-                        : 'border-[#404040] bg-transparent group-hover:border-[#525252]'
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]'
+                        : 'border-border bg-transparent group-hover:border-border-strong'
                     }
                 `}>
                     {checked && (
-                        <div className="w-[8px] h-[8px] rounded-full bg-[#0F0F0F]" />
+                        <div className="w-[8px] h-[8px] rounded-full bg-[var(--brand-primary-foreground)]" />
                     )}
                 </div>
                 <input
@@ -92,20 +92,20 @@ interface CheckboxOptionProps {
 const CheckboxOption: React.FC<CheckboxOptionProps> = ({ label, count, checked, onChange }) => {
     return (
         <label className={`filter-option flex items-center justify-between h-7 px-2 rounded-md cursor-pointer group transition-all duration-150 ease-in-out ${checked
-            ? 'text-[#FFFFFF]'
-            : 'text-[#A1A1AA] hover:bg-white/8 hover:text-[#D4D4D4]'
+            ? 'text-foreground'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
             }`}>
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className={`
                     w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all duration-150 flex-shrink-0
                     ${checked
-                        ? 'border-[#EDEDED] bg-[#EDEDED]'
-                        : 'border-[#404040] bg-transparent group-hover:border-[#525252]'
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]'
+                        : 'border-border bg-transparent group-hover:border-border-strong'
                     }
                 `}>
                     {checked && (
                         <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 6L5 9L10 3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M2 6L5 9L10 3" stroke="currentColor" className="text-[var(--brand-primary-foreground)]" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                     )}
                 </div>

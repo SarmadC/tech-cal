@@ -98,7 +98,8 @@ export class EventService {
 
         try {
             // Helper to build a filtered query
-            const buildFilteredQuery = (selectFields: string) => {
+            // excludeFormatFilter: when true, format filter is excluded (for format count calculation)
+            const buildFilteredQuery = (selectFields: string, excludeFormatFilter = false) => {
                 let query = supabaseClient.from('events').select(selectFields);
 
                 if (filters.categories?.length) {
@@ -123,15 +124,23 @@ export class EventService {
                 if (filters.eventIds?.length) {
                     query = query.in('id', filters.eventIds);
                 }
-                return this.applyEnhancedFilters(query, filters);
+                
+                // Apply enhanced filters, excluding format filter if requested
+                if (excludeFormatFilter) {
+                    // Create a copy of filters without the format filter
+                    const filtersWithoutFormat = { ...filters, format: undefined };
+                    return this.applyEnhancedFilters(query, filtersWithoutFormat);
+                } else {
+                    return this.applyEnhancedFilters(query, filters);
+                }
             };
 
             // Run count queries in parallel for better performance
             const [formatResult, categoryResult] = await Promise.all([
-                // Format and cost counts query
-                buildFilteredQuery('event_format, price_min').limit(10000),
-                // Category counts query
-                buildFilteredQuery('event_type_id').not('event_type_id', 'is', null).limit(10000),
+                // Format and cost counts query - exclude format filter so users can see all format options
+                buildFilteredQuery('event_format, price_min', true).limit(10000),
+                // Category counts query - include format filter so counts reflect current selection
+                buildFilteredQuery('event_type_id', false).not('event_type_id', 'is', null).limit(10000),
             ]);
 
             // Process format and cost counts
@@ -1508,16 +1517,17 @@ export class EventService {
         filters: EventFilters
     ): EventQueryBuilder {
         // Format filtering (virtual, in-person, hybrid) - using event_format column
+        // Database enum values: "Online" | "In-person" | "Hybrid"
         if (filters.format && filters.format !== 'all') {
             switch (filters.format) {
                 case 'virtual':
-                    query = query.or('event_format.eq.Remote,livestream_url.is.not.null').is('venue_id', null);
+                    query = query.eq('event_format', 'Online');
                     break;
                 case 'in-person':
-                    query = query.or('event_format.eq.In-person,venue_id.is.not.null').is('livestream_url', null);
+                    query = query.eq('event_format', 'In-person');
                     break;
                 case 'hybrid':
-                    query = query.not('livestream_url', 'is', null).not('venue_id', 'is', null);
+                    query = query.eq('event_format', 'Hybrid');
                     break;
             }
         }
@@ -1546,14 +1556,18 @@ export class EventService {
             }
         }
 
-        // Cost filtering (legacy free/paid) - using price_min
+        // Cost filtering (legacy free/paid) - using price_min and price_max
+        // Default assumption: events are paid unless explicitly marked as free
         if (filters.cost && filters.cost !== 'all') {
             switch (filters.cost) {
                 case 'free':
-                    query = query.or('price_min.is.null,price_min.eq.0');
+                    // Free: price_min must be explicitly 0 (not null, as null defaults to paid)
+                    query = query.eq('price_min', 0);
                     break;
                 case 'paid':
-                    query = query.not('price_min', 'is', null).gt('price_min', 0);
+                    // Paid: price_min > 0 OR price_max > 0 OR price_min is null (defaults to paid)
+                    // This covers: explicit prices, or null (which we treat as paid by default)
+                    query = query.or('price_min.gt.0,price_max.gt.0,price_min.is.null');
                     break;
             }
         }

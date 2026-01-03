@@ -190,13 +190,13 @@ export default function DiscoverClientView({
                         </div>
                         <div className="flex-1 overflow-auto">
                             {/* Main background - Notion/Linear dark theme */}
-                            <div className="min-h-screen bg-[#121212] relative font-sans">
+                            <div className="min-h-screen bg-background relative font-sans">
                                 {/* Subtle noise or grain could be added here if desired, but keeping it clean for now */}
 
                                 <div className="relative max-w-[1600px] mx-auto px-0 py-0 md:px-6 md:py-8 space-y-6">
                                     {/* Header */}
                                     <div className="mb-8 hidden md:block">
-                                        <h1 className="text-3xl font-medium text-[#E5E5E5] mb-2 tracking-tight">
+                                        <h1 className="text-3xl font-medium text-foreground mb-2 tracking-tight">
                                             Discover
                                         </h1>
                                     </div>
