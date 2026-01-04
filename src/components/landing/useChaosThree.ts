@@ -76,6 +76,8 @@ export function useThreeScene(
         return () => {
             window.removeEventListener('resize', debouncedHandleResize);
             cancelAnimationFrame(animationFrameId);
+            particlesGeometry.dispose();
+            particlesMaterial.dispose();
             renderer.dispose();
         };
     }, [canvasRef, scrollProgressRef]);
