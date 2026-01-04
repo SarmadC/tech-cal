@@ -68,7 +68,7 @@ function HackathonCard({
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Get available teams (excluding user's own team)
-  const availableTeams = useMemo(() => 
+  const availableTeams = useMemo(() =>
     (hackathon.teams || []).filter(team => team.createdBy !== userId),
     [hackathon.teams, userId]
   );
@@ -110,7 +110,7 @@ function HackathonCard({
             {hackathon.description}
           </p>
         </div>
-        
+
         {/* Collapse/Expand Button */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -118,7 +118,7 @@ function HackathonCard({
           aria-label={isCollapsed ? 'Expand hackathon details' : 'Collapse hackathon details'}
         >
           <MaterialIcon
-            name="expand-more" 
+            name="expand-more"
             size={24}
             className={`transition-transform duration-200 ${isCollapsed ? 'rotate-0' : 'rotate-180'}`}
           />
@@ -126,7 +126,7 @@ function HackathonCard({
       </div>
 
       {/* Collapsible Content */}
-      <div 
+      <div
         ref={contentRef}
         className="overflow-hidden transition-all duration-500 ease-in-out"
         style={{
@@ -134,267 +134,263 @@ function HackathonCard({
           opacity: isCollapsed ? 0 : 1,
         }}
       >
-      {/* Event Details */}
-      <div className={`rounded-lg p-4 mb-4 transition-all duration-300 border border-white/10 ${
-        isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
-      }`}>
-        <h4 className="text-sm font-semibold text-glass-primary mb-3">
-          Event Details
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-glass-secondary">
-            <MaterialIcon name="calendar" size={16} />
-            <span>{getDateRange(hackathon)}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-glass-secondary">
-            <MaterialIcon name="time" size={16} />
-            <span>
-              {formatTime(hackathon.startDate)}
-              {hackathon.endDate && ` - ${formatTime(hackathon.endDate)}`}
-            </span>
-          </div>
-          {hackathon.location && (
-            <div className="flex items-center gap-2 text-sm text-glass-secondary">
-              <MaterialIcon name="location" size={16} />
-              <span className="truncate">{hackathon.location}</span>
+        {/* Event Details */}
+        <div className={`rounded-lg p-4 mb-4 transition-all duration-300 border border-white/10 ${isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+          }`}>
+          <h4 className="text-sm font-semibold text-glass-primary mb-3">
+            Event Details
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-glass-secondary">
+                <MaterialIcon name="calendar" size={16} />
+                <span>{getDateRange(hackathon)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-glass-secondary">
+                <MaterialIcon name="time" size={16} />
+                <span>
+                  {formatTime(hackathon.startDate)}
+                  {hackathon.endDate && ` - ${formatTime(hackathon.endDate)}`}
+                </span>
+              </div>
+              {hackathon.location && (
+                <div className="flex items-center gap-2 text-sm text-glass-secondary">
+                  <MaterialIcon name="location" size={16} />
+                  <span className="truncate">{hackathon.location}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm text-glass-secondary">
+                <MaterialIcon name="people" size={16} />
+                <span>{hackathon.totalParticipants} participants</span>
+              </div>
             </div>
-          )}
-          <div className="flex items-center gap-2 text-sm text-glass-secondary">
-            <MaterialIcon name="people" size={16} />
-            <span>{hackathon.totalParticipants} participants</span>
-          </div>
-        </div>
-          <div className="space-y-2">
-            {hackathon.organizerName && (
-              <div className="flex items-center gap-2 text-sm text-glass-secondary">
-                <MaterialIcon name="building" size={16} />
-                <span>{hackathon.organizerName}</span>
-              </div>
-            )}
-            {/* Debug: Show organizer info even if name is empty */}
-            {hackathon.organizerId && !hackathon.organizerName && (
-              <div className="flex items-center gap-2 text-sm text-glass-secondary">
-                <span>Organizer ID: {hackathon.organizerId}</span>
-      </div>
-            )}
-            {hackathon.registrationDeadline && (
-              <div>
-                <span className="text-glass-secondary">Registration Deadline:</span>
-                <span className="ml-1 font-medium text-glass-primary">
-                  {formatDate(hackathon.registrationDeadline)}
-                </span>
-              </div>
-            )}
-            {hackathon.submissionDeadline && (
-              <div>
-                <span className="text-glass-secondary">Submission Deadline:</span>
-                <span className="ml-1 font-medium text-glass-primary">
-                  {formatDate(hackathon.submissionDeadline)}
-                </span>
-              </div>
-            )}
+            <div className="space-y-2">
+              {hackathon.organizerName && (
+                <div className="flex items-center gap-2 text-sm text-glass-secondary">
+                  <MaterialIcon name="building" size={16} />
+                  <span>{hackathon.organizerName}</span>
+                </div>
+              )}
+              {/* Debug: Show organizer info even if name is empty */}
+              {hackathon.organizerId && !hackathon.organizerName && (
+                <div className="flex items-center gap-2 text-sm text-glass-secondary">
+                  <span>Organizer ID: {hackathon.organizerId}</span>
+                </div>
+              )}
+              {hackathon.registrationDeadline && (
+                <div>
+                  <span className="text-glass-secondary">Registration Deadline:</span>
+                  <span className="ml-1 font-medium text-glass-primary">
+                    {formatDate(hackathon.registrationDeadline)}
+                  </span>
+                </div>
+              )}
+              {hackathon.submissionDeadline && (
+                <div>
+                  <span className="text-glass-secondary">Submission Deadline:</span>
+                  <span className="ml-1 font-medium text-glass-primary">
+                    {formatDate(hackathon.submissionDeadline)}
+                  </span>
+                </div>
+              )}
               <div>
                 <span className="text-glass-secondary">Max Team Size:</span>
                 <span className="ml-1 font-medium text-glass-primary">
-                {hackathon.maxTeamSize} {hackathon.maxTeamSize === 1 ? 'member' : 'members'}
-              </span>
+                  {hackathon.maxTeamSize} {hackathon.maxTeamSize === 1 ? 'member' : 'members'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Teams Section - Only show if hackathon allows teams */}
-      {hackathon.maxTeamSize > 1 && (
-        <div className={`rounded-lg p-4 mb-4 transition-all duration-300 delay-100 border border-white/10 ${
-          isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
-        }`}>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-semibold text-glass-primary">
-              Teams ({hackathon.teams?.length || 0})
-            </h4>
-            {(() => {
-              const canCreate = canUserCreateTeam(hackathon, userId);
-              const userCreatedTeam = getUserCreatedTeam(hackathon, userId);
-              
-              if (userCreatedTeam) {
-                return (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-glass-secondary">
-                      Your team: {userCreatedTeam.name}
-                    </span>
+        {/* Teams Section - Only show if hackathon allows teams */}
+        {hackathon.maxTeamSize > 1 && (
+          <div className={`rounded-lg p-4 mb-4 transition-all duration-300 delay-100 border border-white/10 ${isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+            }`}>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-semibold text-glass-primary">
+                Teams ({hackathon.teams?.length || 0})
+              </h4>
+              {(() => {
+                const canCreate = canUserCreateTeam(hackathon, userId);
+                const userCreatedTeam = getUserCreatedTeam(hackathon, userId);
+
+                if (userCreatedTeam) {
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-glass-secondary">
+                        Your team: {userCreatedTeam.name}
+                      </span>
+                      <button
+                        onClick={() => onDeleteTeam(userCreatedTeam.id, userCreatedTeam.name)}
+                        className="px-3 py-1 text-xs font-medium text-red-400 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors border border-red-500/30"
+                      >
+                        Delete Team
+                      </button>
+                    </div>
+                  );
+                } else if (!hasTeam && !hasEnded && canCreate.canCreate) {
+                  return (
                     <button
-                      onClick={() => onDeleteTeam(userCreatedTeam.id, userCreatedTeam.name)}
-                      className="px-3 py-1 text-xs font-medium text-red-400 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors border border-red-500/30"
+                      onClick={() => onCreateTeam(hackathon.id)}
+                      className="px-3 py-1 text-xs font-medium text-green-400 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors border border-green-500/30"
                     >
-                      Delete Team
+                      Create Team
                     </button>
-                  </div>
-                );
-              } else if (!hasTeam && !hasEnded && canCreate.canCreate) {
-                return (
-                  <button
-                    onClick={() => onCreateTeam(hackathon.id)}
-                    className="px-3 py-1 text-xs font-medium text-green-400 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors border border-green-500/30"
-                  >
-                    Create Team
-                    </button>
-                );
-              } else if (!canCreate.canCreate) {
-                return (
-                  <span className="text-xs text-glass-tertiary">
-                    {canCreate.reason}
-                  </span>
-                );
-              }
-              return null;
-            })()}
-          </div>
-          
-          {hackathon.teams && hackathon.teams.length > 0 ? (
-            <div className="space-y-4">
-              {/* Search and Filter */}
-              <TeamSearchFilter
-                teams={availableTeams}
-                onFilteredTeams={setFilteredTeams}
-                maxTeamSize={hackathon.maxTeamSize}
-              />
-              
-              {/* Team Cards */}
-              <div className="grid gap-3">
-                {filteredTeams.slice(0, 6).map(team => (
-                  <EnhancedTeamCard
-                    key={team.id}
-                    team={team}
-                    maxTeamSize={hackathon.maxTeamSize}
-                    onJoin={onJoinTeamById}
-                    isJoining={joiningTeamId === team.id}
-                    canJoin={!hasTeam && !hasEnded}
-                    userId={userId}
+                  );
+                } else if (!canCreate.canCreate) {
+                  return (
+                    <span className="text-xs text-glass-tertiary">
+                      {canCreate.reason}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+
+            {hackathon.teams && hackathon.teams.length > 0 ? (
+              <div className="space-y-4">
+                {/* Search and Filter */}
+                <TeamSearchFilter
+                  teams={availableTeams}
+                  onFilteredTeams={setFilteredTeams}
+                  maxTeamSize={hackathon.maxTeamSize}
+                />
+
+                {/* Team Cards */}
+                <div className="grid gap-3">
+                  {filteredTeams.slice(0, 6).map(team => (
+                    <EnhancedTeamCard
+                      key={team.id}
+                      team={team}
+                      maxTeamSize={hackathon.maxTeamSize}
+                      onJoin={onJoinTeamById}
+                      isJoining={joiningTeamId === team.id}
+                      canJoin={!hasTeam && !hasEnded}
+                      userId={userId}
                     // Optional: Add simple compatibility scoring
                     // compatibilityScore={85}
                     // suggestedRole="frontend-developer"
                     // missingSkills={["React", "TypeScript"]}
-                  />
-                ))}
-                
-                {filteredTeams.length > 6 && (
-                  <div className="text-center py-2">
-                    <span className="text-xs text-glass-tertiary">
-                      +{filteredTeams.length - 6} more teams
-                </span>
-              </div>
-            )}
-                
-                {filteredTeams.length === 0 && (
-                  <div className="text-center py-4">
-                    <MaterialIcon name="search" size={32} className="text-glass-tertiary mx-auto mb-2" />
-                    <div className="text-sm text-glass-tertiary">
-                      No teams match your search criteria
+                    />
+                  ))}
+
+                  {filteredTeams.length > 6 && (
+                    <div className="text-center py-2">
+                      <span className="text-xs text-glass-tertiary">
+                        +{filteredTeams.length - 6} more teams
+                      </span>
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <MaterialIcon name="people" size={32} className="text-glass-tertiary mx-auto mb-2" />
-              <div className="text-sm text-glass-tertiary mb-2">
-                No teams available to join
-              </div>
-              {!hasTeam && !hasEnded && (
-                <button
-                  onClick={() => onCreateTeam(hackathon.id)}
-                  className="px-4 py-2 text-sm font-medium text-green-400 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors border border-green-500/30"
-                >
-                  Create First Team
-                </button>
-            )}
-          </div>
-          )}
-        </div>
-      )}
+                  )}
 
-      {/* Progress bar for running hackathons */}
-      {isRunning && hackathon.endDate && (
-        <div className={`mb-4 transition-all duration-300 delay-200 ${
-          isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
-        }`}>
-          <div className="flex items-center justify-between text-xs text-glass-secondary mb-2">
-            <span>Progress</span>
-            <span>{formatProgress(hackathon)}</span>
-          </div>
-          <div className="w-full bg-white/10 rounded-full h-2">
-            <div
-              className="bg-orange-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${calculateProgress(hackathon)}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className={`flex flex-wrap gap-3 transition-all duration-300 delay-300 ${
-        isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
-      }`}>
-        {!isRegistered && !hasEnded ? (
-          <>
-            {/* External Registration Button */}
-            {hackathon.registrationUrl && (
-              <a
-                href={hackathon.registrationUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              >
-                Register on Platform
-              </a>
-            )}
-            
-          </>
-        ) : (
-          <>
-            {!hasTeam && !hasEnded ? (
-                <button
-                  onClick={() => onJoinTeam(hackathon.id)}
-                className="px-4 py-2 text-sm font-medium text-purple-400 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors border border-purple-500/30"
-                >
-                Find a Team
-                </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <div className="px-4 py-2 text-sm font-medium text-green-400 bg-green-500/20 rounded-lg border border-green-500/30">
-                  {hasTeam ? (
-                    `Team: ${hackathon.userParticipation?.team?.name || 'Team Member'}`
-                  ) : (
-                    'Registered'
+                  {filteredTeams.length === 0 && (
+                    <div className="text-center py-4">
+                      <MaterialIcon name="search" size={32} className="text-glass-tertiary mx-auto mb-2" />
+                      <div className="text-sm text-glass-tertiary">
+                        No teams match your search criteria
+                      </div>
+                    </div>
                   )}
                 </div>
-                
-                {/* Show external registration link if available and user hasn't registered externally */}
-                {hackathon.registrationUrl && (
-                  <a
-                    href={hackathon.registrationUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1 text-xs font-medium text-blue-400 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors border border-blue-500/30"
-                  >
-                    Register Externally
-                  </a>
-                )}
-                
-                {hasTeam && !hasEnded && (
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <MaterialIcon name="people" size={32} className="text-glass-tertiary mx-auto mb-2" />
+                <div className="text-sm text-glass-tertiary mb-2">
+                  No teams available to join
+                </div>
+                {!hasTeam && !hasEnded && (
                   <button
-                    onClick={() => onLeaveTeam(hackathon.id)}
-                    className="px-3 py-1 text-xs font-medium text-red-400 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors border border-red-500/30"
+                    onClick={() => onCreateTeam(hackathon.id)}
+                    className="px-4 py-2 text-sm font-medium text-green-400 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors border border-green-500/30"
                   >
-                    Leave Team
+                    Create First Team
                   </button>
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
+
+        {/* Progress bar for running hackathons */}
+        {isRunning && hackathon.endDate && (
+          <div className={`mb-4 transition-all duration-300 delay-200 ${isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+            }`}>
+            <div className="flex items-center justify-between text-xs text-glass-secondary mb-2">
+              <span>Progress</span>
+              <span>{formatProgress(hackathon)}</span>
+            </div>
+            <div className="w-full bg-white/10 rounded-full h-2">
+              <div
+                className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${calculateProgress(hackathon)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className={`flex flex-wrap gap-3 transition-all duration-300 delay-300 ${isCollapsed ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+          }`}>
+          {!isRegistered && !hasEnded ? (
+            <>
+              {/* External Registration Button */}
+              {hackathon.registrationUrl && (
+                <a
+                  href={hackathon.registrationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  Register on Platform
+                </a>
+              )}
+
+            </>
+          ) : (
+            <>
+              {!hasTeam && !hasEnded ? (
+                <button
+                  onClick={() => onJoinTeam(hackathon.id)}
+                  className="px-4 py-2 text-sm font-medium text-purple-400 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors border border-purple-500/30"
+                >
+                  Find a Team
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="px-4 py-2 text-sm font-medium text-green-400 bg-green-500/20 rounded-lg border border-green-500/30">
+                    {hasTeam ? (
+                      `Team: ${hackathon.userParticipation?.team?.name || 'Team Member'}`
+                    ) : (
+                      'Registered'
+                    )}
+                  </div>
+
+                  {/* Show external registration link if available and user hasn't registered externally */}
+                  {hackathon.registrationUrl && (
+                    <a
+                      href={hackathon.registrationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 text-xs font-medium text-blue-400 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors border border-blue-500/30"
+                    >
+                      Register Externally
+                    </a>
+                  )}
+
+                  {hasTeam && !hasEnded && (
+                    <button
+                      onClick={() => onLeaveTeam(hackathon.id)}
+                      className="px-3 py-1 text-xs font-medium text-red-400 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors border border-red-500/30"
+                    >
+                      Leave Team
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
         </div>
       </div>
@@ -438,7 +434,8 @@ export default function HackathonClientView({
     queryFn: () => supabase ? HackathonService.getHackathonEvents(supabase, userId) : [],
     initialData: initialHackathons,
     enabled: !!supabase,
-    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+    // Disable polling in development to reduce memory usage
+    refetchInterval: process.env.NODE_ENV === 'development' ? false : 5 * 60 * 1000,
   });
 
   // Filter hackathons by status and duration
@@ -493,9 +490,9 @@ export default function HackathonClientView({
 
   const handleCreateTeamSubmit = async (teamData: { name: string; description: string; lookingForMembers: boolean }) => {
     if (!actions) return;
-    
+
     setTeamCreation(prev => ({ ...prev, isCreating: true }));
-    
+
     try {
       await actions.createTeam(teamCreation.hackathonId, teamData.name, teamData.description, teamData.lookingForMembers);
       setTeamCreation(prev => ({ ...prev, open: false, isCreating: false }));
@@ -527,10 +524,10 @@ export default function HackathonClientView({
         hackathonId,
         teams: availableTeams
       });
-  } catch (_error) {
-    console.error('Error loading teams:', _error);
-    const errorMessage = _error instanceof Error ? _error.message : 'Unknown error occurred';
-    showError(`Failed to load available teams: ${errorMessage}`);
+    } catch (_error) {
+      console.error('Error loading teams:', _error);
+      const errorMessage = _error instanceof Error ? _error.message : 'Unknown error occurred';
+      showError(`Failed to load available teams: ${errorMessage}`);
     }
   };
 
@@ -606,7 +603,7 @@ export default function HackathonClientView({
   if (isLoading && !initialHackathons.length) {
     return (
       <SidebarProvider>
-        <UnifiedMobileNavbar 
+        <UnifiedMobileNavbar
           navItems={[
             { name: 'Discover', href: '/discover' },
             { name: 'Calendar', href: '/calendar' },
@@ -643,7 +640,7 @@ export default function HackathonClientView({
 
   return (
     <SidebarProvider>
-      <UnifiedMobileNavbar 
+      <UnifiedMobileNavbar
         navItems={[
           { name: 'Discover', href: '/discover' },
           { name: 'Calendar', href: '/calendar' },
@@ -661,7 +658,7 @@ export default function HackathonClientView({
             <div className="min-h-screen glass-bg-gradient relative">
               {/* Subtle atmospheric overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/10 dark:from-black/0 dark:via-white/5 dark:to-white/10 pointer-events-none" />
-              
+
               <div className="relative max-w-[1600px] mx-auto px-6 py-8 space-y-6">
                 {/* Header */}
                 <div className="mb-8">
@@ -680,11 +677,10 @@ export default function HackathonClientView({
                       <button
                         key={filterOption}
                         onClick={() => setFilter(filterOption)}
-                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                          filter === filterOption
+                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${filter === filterOption
                             ? 'bg-white/10 text-glass-primary shadow-sm'
                             : 'text-glass-tertiary hover:text-glass-secondary'
-                        }`}
+                          }`}
                       >
                         {filterOption.charAt(0).toUpperCase() + filterOption.slice(1)}
                         <span className="ml-1 text-xs">({getFilterCount(filterOption)})</span>
@@ -694,11 +690,10 @@ export default function HackathonClientView({
 
                   <button
                     onClick={() => setShowShort(!showShort)}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors glass-card ${
-                      showShort
+                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors glass-card ${showShort
                         ? 'text-glass-primary'
                         : 'text-glass-tertiary'
-                    }`}
+                      }`}
                   >
                     <MaterialIcon name="filter" size={16} />
                     Short Hackathons
@@ -742,7 +737,7 @@ export default function HackathonClientView({
                       const hasTeam = !!hackathon.userParticipation?.teamId;
                       const isRunning = isHackathonRunning(hackathon);
                       const hasEnded = isHackathonEnded(hackathon);
-                      
+
                       return (
                         <HackathonCard
                           key={hackathon.id}
