@@ -1,8 +1,7 @@
 'use client';
 
-import { FC, useState, useEffect, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { XIcon, ArrowSquareOutIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon, Bookmark } from '@phosphor-icons/react';
+import { FC, useState, useEffect, useMemo } from 'react';
+import { XIcon, ArrowSquareOutIcon, Bookmark } from '@phosphor-icons/react';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
@@ -12,7 +11,6 @@ import { createClient } from '@/utils/supabase/client';
 import EventInfo from './EventInfo';
 import AdaptiveTimeline from './AdaptiveTimeline';
 import TrackAgendaView, { groupAgendaByTrack } from './TrackAgendaView';
-import { useEventActions } from '@/hooks/useEventActions';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useAuth } from '@/contexts';
 import { generateEventSlug } from '@/utils/slugUtils';
@@ -30,11 +28,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const category = categories.find(c => c.id === event.eventTypeId);
     const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] }>(event);
     const [isLoading, setIsLoading] = useState(true);
-    const [showMoreMenu, setShowMoreMenu] = useState(false);
-    const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
-    const moreMenuRef = useRef<HTMLDivElement>(null);
-    const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
     const [agendaView, setAgendaView] = useState<'timeline' | 'tracks'>('timeline');
 
     // Add bookmark functionality
@@ -59,8 +52,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         }
     }, [hasTrackAgenda, agendaView]);
 
-    // Event actions hook - use displayEvent to ensure it updates with new events
-    const { handleShare, handleIcsDownload } = useEventActions(displayEvent);
 
     // Debug: Log the agendaUrl to see if it's populated
     console.log('EventDetailPanel - displayEvent.agendaUrl:', displayEvent.agendaUrl);
@@ -146,61 +137,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
         };
     }, [event.id, event]);
 
-    // Calculate dropdown position when menu opens
-    useEffect(() => {
-        if (showMoreMenu && moreMenuButtonRef.current) {
-            const buttonRect = moreMenuButtonRef.current.getBoundingClientRect();
-            // Approximate dropdown height: 2 items * ~46px each = ~92px
-            const dropdownHeight = 92;
-            const spacing = 8; // mb-2 spacing
-            // Position dropdown above the button, aligned to left
-            setDropdownPosition({
-                top: buttonRect.top - dropdownHeight - spacing,
-                left: buttonRect.left,
-            });
-        } else {
-            setDropdownPosition(null);
-        }
-    }, [showMoreMenu]);
-
-    // Close more menu when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Node;
-            const clickedInsideMenu = moreMenuRef.current?.contains(target);
-            const clickedInsideDropdown = dropdownRef.current?.contains(target);
-            if (!clickedInsideMenu && !clickedInsideDropdown) {
-                setShowMoreMenu(false);
-            }
-        };
-
-        if (showMoreMenu) {
-            document.addEventListener('mousedown', handleClickOutside);
-            // Also recalculate position on scroll/resize
-            const handleReposition = () => {
-                if (moreMenuButtonRef.current) {
-                    const buttonRect = moreMenuButtonRef.current.getBoundingClientRect();
-                    const dropdownHeight = 92;
-                    const spacing = 8;
-                    setDropdownPosition({
-                        top: buttonRect.top - dropdownHeight - spacing,
-                        left: buttonRect.left,
-                    });
-                }
-            };
-            window.addEventListener('scroll', handleReposition, true);
-            window.addEventListener('resize', handleReposition);
-            return () => {
-                document.removeEventListener('mousedown', handleClickOutside);
-                window.removeEventListener('scroll', handleReposition, true);
-                window.removeEventListener('resize', handleReposition);
-            };
-        }
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [showMoreMenu]);
 
     // Conditional styling based on variant with glassmorphism
     const containerClasses = variant === 'modal'
@@ -311,90 +247,43 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                         )
                     ) : null}
                 </div>
-            </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-300 dark:border-white/10">
-                {/* All actions in a container */}
-                <div className="p-4 flex justify-end">
-                    {/* More menu */}
-                    <div className="relative flex-shrink-0" ref={moreMenuRef}>
-                        <button
-                            ref={moreMenuButtonRef}
-                            onClick={() => setShowMoreMenu(!showMoreMenu)}
-                            className="flex items-center justify-center px-3 py-3 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-lg transition-colors backdrop-blur-sm border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-offset-white"
-                            title="More actions"
-                            aria-expanded={showMoreMenu}
-                            aria-haspopup="true"
-                        >
-                            <DotsThreeVerticalIcon className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" />
-                        </button>
-
-                        {/* More menu dropdown - rendered via portal to avoid overflow clipping */}
-                        {showMoreMenu && dropdownPosition && typeof document !== 'undefined' && createPortal(
-                            <div
-                                ref={dropdownRef}
-                                className="fixed w-48 event-preview-glass-section rounded-lg shadow-lg z-[9999] border border-gray-300 dark:border-white/10 backdrop-blur-md bg-white dark:bg-gray-800"
-                                style={{
-                                    top: `${dropdownPosition.top}px`,
-                                    left: `${dropdownPosition.left}px`,
-                                }}
-                                role="menu"
-                                aria-orientation="vertical"
-                            >
-                                {/* Share option - first item */}
-                                <button
-                                    onClick={() => {
-                                        handleShare();
-                                        setShowMoreMenu(false);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-t-lg transition-colors focus:outline-none border-b border-gray-200 dark:border-white/10"
-                                    role="menuitem"
-                                >
-                                    <ShareNetworkIcon className="w-4 h-4" />
-                                    <span>Share</span>
-                                </button>
-
-                                {displayEvent.agendaUrl ? (
-                                    <a
-                                        href={displayEvent.agendaUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={() => setShowMoreMenu(false)}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors focus:outline-none border-b border-gray-200 dark:border-white/10"
-                                        role="menuitem"
-                                    >
-                                        <ArrowSquareOutIcon className="w-4 h-4" />
-                                        <span>View full agenda</span>
-                                    </a>
-                                ) : (
-                                    <a
-                                        href={displayEvent.sourceUrl || `/events/${generateEventSlug(displayEvent.title, displayEvent.id)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={() => setShowMoreMenu(false)}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors focus:outline-none border-b border-gray-200 dark:border-white/10"
-                                        role="menuitem"
-                                    >
-                                        <ArrowSquareOutIcon className="w-4 h-4" />
-                                        <span>View full page</span>
-                                    </a>
-                                )}
-                                <button
-                                    onClick={() => {
-                                        handleIcsDownload();
-                                        setShowMoreMenu(false);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-b-lg transition-colors focus:outline-none"
-                                    role="menuitem"
-                                >
-                                    <DownloadSimpleIcon className="w-4 h-4" />
-                                    <span>Download .ics</span>
-                                </button>
-                            </div>,
-                            document.body
-                        )}
+                {/* Speakers Section */}
+                {displayEvent.speakerLineup && displayEvent.speakerLineup.length > 0 && (
+                    <div className="mt-8 pt-6 border-t border-white/10" style={{ borderTopColor: 'rgba(255,255,255,0.08)' }}>
+                        <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em] mb-4">
+                            Speakers
+                        </div>
+                        <div className="flex flex-wrap gap-4">
+                            {displayEvent.speakerLineup.map((speaker) => (
+                                <div key={speaker.id} className="flex items-center gap-3 min-w-[140px]">
+                                    {speaker.photoUrl ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                            src={speaker.photoUrl}
+                                            alt={speaker.name}
+                                            className="w-8 h-8 rounded-full object-cover bg-white/10"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-medium text-white/50">
+                                            {speaker.name.charAt(0)}
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col">
+                                        <span className="text-[13px] font-medium text-[#E6E6E6] leading-none mb-1">
+                                            {speaker.name}
+                                        </span>
+                                        {(speaker.title || speaker.company) && (
+                                            <span className="text-[11px] text-[#757575] leading-none truncate max-w-[120px]" title={`${speaker.title || ''}${speaker.title && speaker.company ? ' at ' : ''}${speaker.company || ''}`}>
+                                                {speaker.title || speaker.company}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

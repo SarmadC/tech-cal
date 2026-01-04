@@ -120,6 +120,79 @@ export default async function EnrichmentEditorPage({
         .order('day_number', { ascending: true })
         .order('sort_order', { ascending: true });
 
+    // Fetch all speakers linked to this event (via agenda_speakers)
+    const { data: linkedSpeakers } = await supabase
+        .from('agenda_speakers')
+        .select('speaker_id, speakers(*)')
+        .eq('event_id', eventId);
+
+    // Extract speakers from agenda_speakers
+    type SpeakerFromDB = {
+        id: string;
+        name: string;
+        title?: string | null;
+        company?: string | null;
+        linkedin_url?: string | null;
+        twitter_url?: string | null;
+        website_url?: string | null;
+        photo_url?: string | null;
+        bio?: string | null;
+    };
+    
+    const speakersFromAgenda = (linkedSpeakers || [])
+        .map((ls: { speakers: unknown }) => ls.speakers)
+        .filter((s): s is SpeakerFromDB => Boolean(s) && typeof s === 'object' && s !== null && 'id' in s && 'name' in s)
+        .map((s) => ({
+            id: s.id,
+            name: s.name,
+            title: s.title || undefined,
+            company: s.company || undefined,
+            linkedinUrl: s.linkedin_url || undefined,
+            twitterUrl: s.twitter_url || undefined,
+            websiteUrl: s.website_url || undefined,
+            photoUrl: s.photo_url || undefined,
+            bio: s.bio || undefined,
+        }));
+
+    // Also fetch speakers from speaker_lineup and match with speakers table
+    const speakerLineup = event.speaker_lineup as Array<{ name: string; linkedinUrl?: string; title?: string; company?: string }> | null;
+    const speakersFromLineup: Array<{ id: string; name: string; title?: string; company?: string; linkedinUrl?: string; twitterUrl?: string; websiteUrl?: string; photoUrl?: string; bio?: string }> = [];
+
+    if (speakerLineup && Array.isArray(speakerLineup) && speakerLineup.length > 0) {
+        // Extract LinkedIn URLs from speaker_lineup
+        const linkedInUrls = speakerLineup
+            .map(s => s.linkedinUrl)
+            .filter((url): url is string => !!url);
+
+        if (linkedInUrls.length > 0) {
+            // Fetch speakers from speakers table by LinkedIn URL
+            const { data: speakersFromDb } = await supabase
+                .from('speakers')
+                .select('*')
+                .in('linkedin_url', linkedInUrls);
+
+            if (speakersFromDb) {
+                speakersFromLineup.push(...speakersFromDb.map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                    title: s.title || undefined,
+                    company: s.company || undefined,
+                    linkedinUrl: s.linkedin_url || undefined,
+                    twitterUrl: s.twitter_url || undefined,
+                    websiteUrl: s.website_url || undefined,
+                    photoUrl: s.photo_url || undefined,
+                    bio: s.bio || undefined,
+                })));
+            }
+        }
+    }
+
+    // Combine both sources and remove duplicates by ID
+    const allSpeakers = [...speakersFromAgenda, ...speakersFromLineup];
+    const uniqueSpeakers = Array.from(
+        new Map(allSpeakers.map(s => [s.id, s])).values()
+    );
+
     // Fetch all lookup data in parallel
     const { EventEnrichmentService } = await import('@/services/ingestion/EventEnrichmentService');
     const lookupData = await EventEnrichmentService.getEnrichmentLookupData(supabase);
@@ -136,6 +209,7 @@ export default async function EnrichmentEditorPage({
             <EnrichmentEditorClient
                 event={event as EventWithRelationships}
                 initialAgendaItems={(agendaItems || []) as AgendaItemWithSpeakers[]}
+                initialAvailableSpeakers={uniqueSpeakers}
                 lookupData={lookupData}
                 backUrl={backUrl}
             />

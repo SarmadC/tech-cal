@@ -2,9 +2,9 @@
 
 import { FC } from 'react';
 import Image from 'next/image';
-import { ClockIcon, MapPinIcon, UserIcon, UsersIcon } from '@phosphor-icons/react';
+import { MapPinIcon } from '@phosphor-icons/react';
 import { AgendaItem } from '@/types';
-import { getTypeColor, getSpeakerAvatarUrl } from '@/utils/timelineUtils';
+import { getSpeakerAvatarUrl } from '@/utils/timelineUtils';
 import { formatTimeRange as formatEventTimeRange } from '@/utils/dateUtils';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 
@@ -70,7 +70,7 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
                 </div>
             )}
 
-            {/* Speaker(s) - Only show if there are actual speakers */}
+            {/* Speaker(s) - Avatar stack only for scanning */}
             {(() => {
                 const hasMultipleSpeakers = Array.isArray(item.speakers) && item.speakers.length > 0;
                 const hasSingleSpeaker = item.speaker && item.speaker.name;
@@ -79,62 +79,43 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
                     return null; // Don't render anything if no speakers
                 }
 
+                // Collect all speakers
+                const allSpeakers = hasMultipleSpeakers 
+                    ? item.speakers || []
+                    : item.speaker 
+                        ? [item.speaker]
+                        : [];
+
+                // Show up to 4 avatars, with overflow indicator
+                const visibleSpeakers = allSpeakers.slice(0, 4);
+                const overflowCount = Math.max(0, allSpeakers.length - 4);
+
                 return (
                     <div className="mt-3 pt-3 border-t border-dashed border-zinc-800">
-                        <div className="space-y-2">
-                            {hasMultipleSpeakers ? (
-                                item.speakers?.map((speaker, index) => {
-                                    const hasLinkedIn = Boolean(speaker.socialLinks?.linkedin);
-                                    return (
-                                        <div
-                                            key={speaker.id || index}
-                                            className={`flex items-center gap-2 ${hasLinkedIn ? 'cursor-pointer hover:opacity-80' : ''}`}
-                                            onClick={(e) => {
-                                                if (hasLinkedIn) {
-                                                    e.stopPropagation();
-                                                    window.open(speaker.socialLinks!.linkedin, '_blank', 'noopener,noreferrer');
-                                                }
-                                            }}
-                                            title={hasLinkedIn ? `View ${speaker.name}'s LinkedIn profile` : speaker.name}
-                                        >
-                                            <div className={`relative w-5 h-5 rounded-full border ${theme.borderLight} overflow-hidden flex-shrink-0`}>
-                                                <Image
-                                                    src={getSpeakerAvatarUrl(speaker, 32)}
-                                                    alt={speaker.name}
-                                                    fill
-                                                    className="object-cover"
-                                                    sizes="20px"
-                                                />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className={`text-[12px] font-medium truncate ${theme.textPrimary}`}>{speaker.name}</div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            ) : (
-                                <div
-                                    className={`flex items-center gap-2 ${item.speaker?.socialLinks?.linkedin ? 'cursor-pointer hover:opacity-80' : ''}`}
-                                    onClick={(e) => {
-                                        if (item.speaker?.socialLinks?.linkedin) {
-                                            e.stopPropagation();
-                                            window.open(item.speaker.socialLinks.linkedin, '_blank', 'noopener,noreferrer');
-                                        }
-                                    }}
-                                    title={item.speaker?.socialLinks?.linkedin ? `View ${item.speaker!.name}'s LinkedIn profile` : item.speaker?.name}
-                                >
-                                    <div className={`relative w-5 h-5 rounded-full border ${theme.borderLight} overflow-hidden flex-shrink-0`}>
+                        <div className="flex items-center -space-x-2">
+                            {visibleSpeakers.map((speaker, index) => {
+                                return (
+                                    <div
+                                        key={speaker.id || index}
+                                        className={`relative w-6 h-6 rounded-full border-2 ${theme.isDark ? 'border-[#18181B]' : 'border-white'} overflow-hidden flex-shrink-0`}
+                                        title={speaker.name}
+                                    >
                                         <Image
-                                            src={getSpeakerAvatarUrl(item.speaker!, 32)}
-                                            alt={item.speaker!.name}
+                                            src={getSpeakerAvatarUrl(speaker, 24)}
+                                            alt={speaker.name}
                                             fill
                                             className="object-cover"
-                                            sizes="20px"
+                                            sizes="24px"
                                         />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className={`text-[12px] font-medium truncate ${theme.textPrimary}`}>{item.speaker!.name}</div>
-                                    </div>
+                                );
+                            })}
+                            {overflowCount > 0 && (
+                                <div 
+                                    className={`relative w-6 h-6 rounded-full border-2 ${theme.isDark ? 'border-[#18181B] bg-zinc-700' : 'border-white bg-gray-200'} flex items-center justify-center text-[10px] font-medium flex-shrink-0 ${theme.isDark ? 'text-zinc-300' : 'text-gray-600'}`}
+                                    title={`+${overflowCount} more speaker${overflowCount !== 1 ? 's' : ''}`}
+                                >
+                                    +{overflowCount}
                                 </div>
                             )}
                         </div>

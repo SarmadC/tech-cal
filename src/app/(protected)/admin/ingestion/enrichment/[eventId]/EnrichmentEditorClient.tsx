@@ -50,6 +50,7 @@ export type { EventWithRelationships, AgendaItemWithSpeakers };
 interface EnrichmentEditorClientProps {
     event: EventWithRelationships;
     initialAgendaItems: AgendaItemWithSpeakers[];
+    initialAvailableSpeakers?: Speaker[];
     lookupData: LookupData;
     backUrl?: string;
 }
@@ -57,6 +58,7 @@ interface EnrichmentEditorClientProps {
 export default function EnrichmentEditorClient({
     event,
     initialAgendaItems,
+    initialAvailableSpeakers = [],
     lookupData,
     backUrl = '/admin/ingestion/enrichment',
 }: EnrichmentEditorClientProps) {
@@ -64,6 +66,7 @@ export default function EnrichmentEditorClient({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [showBackToTop, setShowBackToTop] = useState(false);
     const { showSuccess, showError } = useSnackbar();
 
 
@@ -143,23 +146,38 @@ export default function EnrichmentEditorClient({
         }
     }, [isDescriptionExpanded]);
 
+    // Available speakers state (speakers with IDs from database)
+    const [availableSpeakers, setAvailableSpeakers] = useState<Speaker[]>(initialAvailableSpeakers);
+
     // Agenda state (with enhanced metadata)
     const [agendaItems, setAgendaItems] = useState<AgendaItemInput[]>(
-        initialAgendaItems.map(item => ({
-            title: item.title,
-            startTime: item.start_time,
-            endTime: item.end_time || item.start_time,
-            type: item.agenda_type || 'other',
-            description: item.description || '',
-            location: item.location || '',
-            dayNumber: item.day_number,
-            track: item.track || '',
-            sortOrder: item.sort_order ?? 0,
-            capacity: item.capacity ?? null,
-            difficultyLevel: item.difficulty_level || null,
-            prerequisites: item.prerequisites || null,
-            isRequired: item.is_required ?? null,
-        }))
+        initialAgendaItems.map(item => {
+            // Extract speaker IDs from agenda_speakers relation
+            const speakerIds: string[] = [];
+            if (item.agenda_speakers && Array.isArray(item.agenda_speakers)) {
+                for (const agSp of item.agenda_speakers) {
+                    if (agSp.speaker_id) {
+                        speakerIds.push(agSp.speaker_id);
+                    }
+                }
+            }
+            return {
+                title: item.title,
+                startTime: item.start_time,
+                endTime: item.end_time || item.start_time,
+                type: item.agenda_type || 'other',
+                description: item.description || '',
+                location: item.location || '',
+                dayNumber: item.day_number,
+                track: item.track || '',
+                sortOrder: item.sort_order ?? 0,
+                capacity: item.capacity ?? null,
+                difficultyLevel: item.difficulty_level || null,
+                prerequisites: item.prerequisites || null,
+                isRequired: item.is_required ?? null,
+                speakerIds: speakerIds.length > 0 ? speakerIds : undefined,
+            };
+        })
     );
 
     // Speakers state
@@ -290,6 +308,15 @@ export default function EnrichmentEditorClient({
 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to save speakers');
+            }
+
+            // Fetch the updated speakers list to get generated IDs and sync state
+            const refreshResponse = await fetch(`/api/admin/ingestion/enrichment/speakers?eventId=${event.id}`);
+            const refreshData = await refreshResponse.json();
+
+            if (refreshResponse.ok && refreshData.speakers) {
+                setAvailableSpeakers(refreshData.speakers);
+                setSpeakers(refreshData.speakers);
             }
 
             setSuccess(true);
@@ -651,6 +678,17 @@ export default function EnrichmentEditorClient({
         }
     };
 
+    // Track scroll position to show/hide back to top button
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollY = window.scrollY || document.documentElement.scrollTop;
+            setShowBackToTop(scrollY > 300); // Show button after scrolling 300px
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
 
 
     const sections = [
@@ -670,7 +708,7 @@ export default function EnrichmentEditorClient({
     return (
         <div className="flex gap-8 items-start">
             {/* Sidebar Navigation */}
-            <div className="w-64 shrink-0 sticky top-6 space-y-6">
+            <div className="w-64 shrink-0 sticky top-6 h-[calc(100vh-3rem)] overflow-y-auto pb-6 space-y-6 scrollbar-hide">
                 <div className="space-y-1">
                     <div className="px-3 py-2">
                         <h2 className="font-semibold text-foreground-primary">{event.title}</h2>
@@ -895,6 +933,7 @@ export default function EnrichmentEditorClient({
                 <div id="agenda" className="scroll-mt-6">
                     <AgendaSection
                         agendaItems={agendaItems}
+                        availableSpeakers={availableSpeakers}
                         onAdd={handleAddAgendaItem}
                         onUpdate={handleUpdateAgendaItem}
                         onRemove={handleRemoveAgendaItem}
@@ -1175,6 +1214,19 @@ export default function EnrichmentEditorClient({
                     </div>
                 )
             }
+
+            {/* Floating Back to Top Button */}
+            {showBackToTop && (
+                <Button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    variant="secondary"
+                    size="icon"
+                    className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg h-12 w-12"
+                    aria-label="Back to top"
+                >
+                    <MaterialIcon name="arrow-up" size={20} />
+                </Button>
+            )}
         </div >
     );
 }

@@ -33,28 +33,56 @@ const EventInfo: FC<EventInfoProps> = ({ event, category: _category, hideDescrip
 
     return (
         <div className="space-y-6">
-            {/* Notion-style Property Grid - Polished */}
-            <div className="grid grid-cols-[120px_1fr] gap-y-3 text-[13px]">
+            {/* Property Grid - Linear Style */}
+            <div className="grid grid-cols-[100px_1fr] gap-y-3 items-baseline">
                 {/* Date Property */}
-                <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.05em] pt-0.5">
+                <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em]">
                     Date
                 </div>
-                <div className="text-zinc-100 font-medium">
+                <div className="text-[13px] text-[#E6E6E6] font-medium leading-tight">
                     {formatDateTime(event.startTime, event.timezone)}
                 </div>
 
                 {/* Location Property */}
-                <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.05em] pt-0.5">
+                <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em]">
                     Location
                 </div>
-                <div className="text-zinc-100 font-medium">
+                <div className="text-[13px] text-[#E6E6E6] font-medium leading-tight flex items-center gap-1">
                     {event.location || 'Online'}
+                    {event.location && <span className="text-[#757575]" aria-hidden="true">↗</span>}
                 </div>
 
-                {/* Tags Property - No Label, just values */}
+                {/* Host Property */}
+                <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em]">
+                    Host
+                </div>
+                <div className="text-[13px] text-[#E6E6E6] font-medium leading-tight flex items-center gap-2">
+                    {event.organization?.logo && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src={event.organization.logo}
+                            alt=""
+                            className="w-4 h-4 rounded-full object-cover bg-white/10"
+                        />
+                    )}
+                    <span>{event.organization?.name || event.organizer || 'Unknown Host'}</span>
+                </div>
+
+                {/* Capacity Property */}
+                <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em]">
+                    Capacity
+                </div>
+                <div className="text-[13px] text-[#E6E6E6] font-medium leading-tight">
+                    {event.attendeeCount || 0} / {event.capacity || 'Uncapped'}
+                </div>
+
+                {/* Tags Property */}
                 {allTags.length > 0 && (
                     <>
-                        <div className="col-start-2 flex flex-wrap gap-1.5 pt-1">
+                        <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em] pt-1.5 self-start">
+                            Tags
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
                             {displayedTags.map((tag) => (
                                 <div
                                     key={tag.id}
@@ -77,8 +105,11 @@ const EventInfo: FC<EventInfoProps> = ({ event, category: _category, hideDescrip
                 )}
             </div>
 
-            {!hideDescription && (
-                <div className={`text-sm leading-relaxed ${timelineTheme.textSecondary} border-t border-gray-200 dark:border-white/10 pt-4 mt-4`}>
+            {!hideDescription && event.description && (
+                <div
+                    className={`text-[13px] leading-[1.6] text-[#B0B0B0] border-t border-white/10 pt-6 mt-6`}
+                    style={{ borderTopColor: 'rgba(255,255,255,0.08)' }}
+                >
                     {event.description}
                 </div>
             )}

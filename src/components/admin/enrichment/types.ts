@@ -196,6 +196,7 @@ export interface SocialVirtualSectionProps extends SectionProps {
 
 export interface AgendaSectionProps {
     agendaItems: AgendaItemInput[];
+    availableSpeakers: Speaker[];
     onAdd: () => void;
     onUpdate: (index: number, updates: Partial<AgendaItemInput>) => void;
     onRemove: (index: number) => void;

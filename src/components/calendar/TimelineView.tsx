@@ -140,9 +140,11 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     return (
         <div className="relative pb-12 flex h-[calc(100vh-200px)]">
             {/* Left Panel (Timeline List) - 40% Width */}
-            <div className="w-[40%] overflow-y-auto pr-4 border-r border-zinc-800">
+            <div className="w-[40%] overflow-y-auto pr-4 border-r border-zinc-800 pt-8">
                 {/* Main Container with Continuous Spine */}
-                <div className="ml-6 border-l-2 border-zinc-800 pl-6 relative min-h-[200px]">
+                <div className="ml-6 pl-6 relative min-h-[200px]">
+                    {/* Continuous Vertical Line */}
+                    <div className="absolute left-[0px] top-4 bottom-0 w-[2px] bg-zinc-800 z-0" />
 
                     {Object.entries(timelineClusters)
                         .sort(([a], [b]) => parseInt(a) - parseInt(b))
@@ -151,7 +153,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
                             const isExpanded = expandedDays[day];
 
                             return (
-                                <div key={day} className="relative mb-8">
+                                <div key={day} className="relative mb-8 z-10">
                                     {/* Accordion Header - Anchored to spine */}
                                     <div
                                         className="relative -ml-[33px] mb-4 flex items-center cursor-pointer group"
@@ -233,7 +235,7 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
             </div>
 
             {/* Right Panel (Detail View) - 60% Width */}
-            <div className="w-[60%] pl-6 border-l border-zinc-800/50">
+            <div className="w-[60%] pl-6 border-l border-zinc-800/50 h-full overflow-hidden relative">
                 {selectedEvent ? (
                     <TimelineDetailPanel event={selectedEvent} eventTimezone={eventTimezone} />
                 ) : (

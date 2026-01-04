@@ -48,6 +48,7 @@ import {
     CompassIcon,
     ImageIcon,
     CopyIcon,
+    ArrowUpIcon,
 } from '@phosphor-icons/react';
 
 export type IconName =
@@ -98,7 +99,8 @@ export type IconName =
     | 'arrow-up-right'
     | 'compass'
     | 'image'
-    | 'copy';
+    | 'copy'
+    | 'arrow-up';
 
 interface IconProps {
     name: IconName;
@@ -156,6 +158,7 @@ const iconMap = {
     'compass': CompassIcon,
     'image': ImageIcon,
     'copy': CopyIcon,
+    'arrow-up': ArrowUpIcon,
 } as const;
 
 export const MaterialIcon: React.FC<IconProps> = ({
