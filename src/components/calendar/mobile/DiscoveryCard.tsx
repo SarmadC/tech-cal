@@ -3,26 +3,23 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import {
-    Calendar,
     MapPin,
-    Users,
     Clock,
-    BookmarkSimple
+    BookmarkSimple,
+    Calendar
 } from '@phosphor-icons/react';
 import { Event, CareerImpactScore } from '@/types';
 import { CareerImpactScoreLite } from '@/types/careerImpact';
 import { cn } from '@/lib/utils';
-import ShinyText from '../shared/ShinyText';
-import '../shared/ShinyText.css';
 import { formatDate, formatTime } from '@/utils/dateUtils';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
+import { getImpactBucketLabel } from '@/config/recommendationThresholds';
 
 export interface DiscoveryCardProps {
     event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore };
     onClick?: () => void;
     onView?: () => void;
-    onDetailsClick?: () => void;
     onLearnMore?: () => void;
     className?: string;
     variant?: 'default' | 'featured' | 'compact';
@@ -35,7 +32,6 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     event,
     onClick,
     onView,
-    onDetailsClick,
     onLearnMore,
     className = '',
     variant = 'default',
@@ -86,34 +82,19 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         }
     };
 
-    // Card Colors & category logic
-    const getCategoryColor = () => {
-        if (event.category?.color) return event.category.color;
-        // Fallbacks
-        return '#f1f5f9';
-    };
-    const categoryColor = getCategoryColor();
-
     const displayScore = React.useMemo(() => {
         const v = event.careerImpact?.overall ?? event.careerImpactLite?.overall ?? 0;
         return Math.min(100, Math.max(0, v <= 1 ? v * 100 : v));
     }, [event]);
 
-    // Format price
-    const isFree = isEventFree(event);
-    const priceDisplay = isFree
-        ? 'Free'
-        : typeof event.priceMin === 'number'
-            ? `$${event.priceMin}`
-            : event.priceRange || 'Paid';
+    // Get color scheme based on score
+    const scoreColors = React.useMemo(() => {
+        return getImpactBucketLabel(displayScore);
+    }, [displayScore]);
 
-    // Format format (Virtual/In-Person)
+    // Format helpers
+    const isFree = isEventFree(event);
     const eventFormat = getEventFormat(event);
-    const formatDisplay = eventFormat === 'virtual'
-        ? 'Remote'
-        : eventFormat === 'hybrid'
-            ? 'Hybrid'
-            : 'On-Site';
 
     return (
         <div
@@ -124,128 +105,109 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                 className
             )}
         >
-            {/* Standard Glass Card Structure (matching original aesthetics) */}
-            <div className="glass-card rounded-[24px] p-5 relative overflow-hidden bg-card/80 dark:bg-[#212023] border border-border/60 backdrop-blur shadow-sm">
+            <div className="rounded-[12px] p-4 relative overflow-hidden bg-transparent border border-white/[0.08] active:bg-white/[0.02] transition-colors group">
 
-                {/* Header Row: Logo | Title | Bookmark */}
-                <div className="flex items-start gap-4 mb-3">
-                    {/* Logo Box - Prominent Top Left */}
-                    <div className="flex-shrink-0 relative">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-muted/30 border border-border/20 shadow-inner p-2">
-                            {(() => {
-                                const logoSizes = 40;
-                                // Prioritize organization logo for the "logo box" feel, or event image if no logo
-                                const imageSrc = event.organization?.logo || event.eventImageUrl;
-
-                                if (imageSrc) {
-                                    return (
-                                        <Image
-                                            src={imageSrc}
-                                            alt={event.title}
-                                            width={56}
-                                            height={56}
-                                            className="w-full h-full object-contain"
-                                            onError={(e) => {
-                                                e.currentTarget.style.display = 'none';
-                                                // Fallback color handled by parent bg
-                                                const parent = e.currentTarget.parentElement;
-                                                if (parent) parent.style.backgroundColor = categoryColor;
-                                            }}
-                                        />
-                                    );
-                                } else {
-                                    return (
-                                        <div
-                                            className="w-full h-full flex items-center justify-center font-bold text-lg text-foreground/50"
-                                            style={{ backgroundColor: categoryColor }}
-                                        >
-                                            {event.title.charAt(0)}
-                                        </div>
-                                    );
-                                }
-                            })()}
-                        </div>
+                {/* Header Row: Avatar + Title + Bookmark */}
+                <div className="flex items-start gap-3">
+                    {/* Avatar */}
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden bg-white/5 border border-white/5 flex items-center justify-center">
+                        {(() => {
+                            const imageSrc = event.organization?.logo || event.eventImageUrl;
+                            if (imageSrc) {
+                                return (
+                                    <Image
+                                        src={imageSrc}
+                                        alt={event.title}
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            const parent = e.currentTarget.parentElement;
+                                            if (parent) parent.style.backgroundColor = '#27272A';
+                                        }}
+                                    />
+                                );
+                            } else {
+                                return (
+                                    <div
+                                        className="w-full h-full flex items-center justify-center font-bold text-xs text-white/40"
+                                        style={{ backgroundColor: '#27272A' }}
+                                    >
+                                        {event.title.charAt(0)}
+                                    </div>
+                                );
+                            }
+                        })()}
                     </div>
 
-                    {/* Title & Organization */}
+                    {/* Title */}
                     <div className="flex-1 min-w-0 pt-0.5">
-                        <h3 className="text-[17px] font-bold text-foreground leading-snug mb-1 line-clamp-2">
+                        <h3 className="text-[16px] font-semibold text-[#F4F4F5] leading-snug line-clamp-2">
                             {event.title}
                         </h3>
-                        {/* Match score badge inline or below title if meaningful */}
-                        {showCareerImpact && displayScore > 0 && (
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted/50 border border-border/10">
-                                <div className={cn(
-                                    "w-1.5 h-1.5 rounded-full",
-                                    displayScore >= 80 ? "bg-emerald-500" :
-                                        displayScore >= 60 ? "bg-blue-500" :
-                                            "bg-amber-500"
-                                )} />
-                                <span className="text-[10px] font-medium text-muted-foreground">{Math.round(displayScore)}% Match</span>
-                            </div>
-                        )}
                     </div>
 
-                    {/* Bookmark - Absolute top right or flex */}
+                    {/* Bookmark */}
                     <button
                         onClick={handleBookmark}
-                        className="flex-shrink-0 -mr-2 -mt-2 p-3 text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex-shrink-0 -mt-1 -mr-2 p-2 text-[#71717A] hover:text-white transition-colors"
                     >
-                        <BookmarkSimple weight={isBookmarkedValue ? 'fill' : 'bold'} className={isBookmarkedValue ? 'text-green-500 dark:text-[#fdfdfd]' : 'text-muted-foreground'} size={22} />
+                        <BookmarkSimple weight={isBookmarkedValue ? 'fill' : 'bold'} className={isBookmarkedValue ? 'text-white' : 'text-[#71717A]'} size={18} />
                     </button>
                 </div>
 
                 {/* Description */}
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
+                <p className="mt-2 text-[13px] text-[#A1A1AA] leading-relaxed line-clamp-2 font-normal">
                     {event.description || "No description available."}
                 </p>
 
-                {/* Metadata Grid */}
-                <div className="space-y-2 mb-5">
-                    <div className="flex items-center gap-2 text-sm text-foreground/80">
-                        <Clock size={16} className="text-muted-foreground flex-shrink-0" />
-                        <span className="truncate">{formatDate(event.startTime, event.timezone)} · {formatTime(event.startTime, event.timezone)}</span>
+                {/* Meta Row: Date & Location Inline */}
+                <div className="mt-3 flex items-center gap-3 text-[12px] text-[#71717A] font-mono whitespace-nowrap overflow-hidden">
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <Calendar size={14} weight="regular" className="text-[#A1A1AA]" />
+                        <span>{formatDate(event.startTime, event.timezone)}</span>
                     </div>
                     {event.location && (
-                        <div className="flex items-center gap-2 text-sm text-foreground/80">
-                            <MapPin size={16} className="text-muted-foreground flex-shrink-0" />
-                            <span className="truncate">{event.location}</span>
-                        </div>
+                        <>
+                            <span className="text-white/10">•</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <MapPin size={14} weight="regular" className="text-[#A1A1AA] flex-shrink-0" />
+                                <span className="truncate">{event.location}</span>
+                            </div>
+                        </>
                     )}
                 </div>
 
-                {/* Tags Row */}
-                <div className="flex flex-wrap gap-2 mb-5">
-                    <span className="px-3 py-1 rounded-full bg-muted/50 border border-border/40 text-xs font-medium text-foreground">
-                        {formatDisplay}
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-muted/50 border border-border/40 text-xs font-medium text-foreground">
-                        {priceDisplay}
-                    </span>
-                    {badges}
-                </div>
+                {/* Signals Row */}
+                <div className="mt-3 flex items-center gap-2">
+                    {/* Match Score */}
+                    {showCareerImpact && displayScore > 0 && (
+                        <div className={cn("flex items-center gap-1.5 px-1.5 py-0.5 rounded", scoreColors.bgColor, scoreColors.borderColor, "border")}>
+                            <span className={cn("text-[11px] font-medium", scoreColors.color)}>
+                                {Math.round(displayScore)}%
+                            </span>
+                        </div>
+                    )}
 
-                {/* Actions - Split Buttons */}
-                <div className="grid grid-cols-2 gap-3">
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDetailsClick?.();
-                        }}
-                        className="flex items-center justify-center py-3 rounded-xl border border-input bg-background/50 text-foreground font-semibold text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                        Details
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            const url = event.registrationUrl || event.sourceUrl;
-                            if (url) window.open(url, '_blank');
-                        }}
-                        className="flex items-center justify-center py-3 rounded-xl bg-black text-white font-semibold text-sm hover:bg-black/90 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90 transition-colors shadow-md shadow-black/10 dark:shadow-[#fdfdfd]/10"
-                    >
-                        Register
-                    </button>
+                    {/* Format Pill */}
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.05]">
+                        <div className={cn("w-1 h-1 rounded-full",
+                            eventFormat === 'virtual' ? 'bg-blue-500' :
+                                eventFormat === 'hybrid' ? 'bg-purple-500' : 'bg-orange-500'
+                        )} />
+                        <span className="text-[11px] text-[#A1A1AA]">
+                            {eventFormat === 'virtual' ? 'Remote' : eventFormat === 'hybrid' ? 'Hybrid' : 'In-Person'}
+                        </span>
+                    </div>
+
+                    {/* Cost Pill */}
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.05]">
+                        <div className={cn("w-1 h-1 rounded-full", isFree ? 'bg-green-500' : 'bg-white')} />
+                        <span className="text-[11px] text-[#A1A1AA]">
+                            {isFree ? 'Free' : 'Paid'}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>

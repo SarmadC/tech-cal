@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Target, ArrowRight, X, Info } from '@phosphor-icons/react';
@@ -8,9 +9,9 @@ import type { CareerProfile, Event, EventType } from '@/types';
 import { calculateEventAlignment, EventCareerAlignment, getMatchQuality, getMatchColor } from '@/utils/uiScoringAdapter';
 import dynamic from 'next/dynamic';
 
-// Dynamically import DashboardEventDetailModal to avoid SSR issues
-const DashboardEventDetailModal = dynamic(
-  () => import('@/components/dashboard/DashboardEventDetailModal'),
+// Dynamically import EventDetailPanel to avoid SSR issues
+const EventDetailPanel = dynamic(
+  () => import('@/components/calendar/EventDetailPanel'),
   { ssr: false }
 );
 
@@ -30,6 +31,28 @@ export function CareerAlignedEventsCard({
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'perfect' | 'strong' | 'good' | 'fair'>('all');
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+
+  // Handle escape key press and body scroll lock
+  const isEventModalOpen = selectedEvent !== null;
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isEventModalOpen) {
+        setSelectedEvent(null);
+      }
+    };
+
+    if (isEventModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', handleEscape);
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isEventModalOpen]);
 
   // Function to calculate alignment for any event (memoized to prevent useMemo warnings)
   const calculateEventAlignmentCallback = useCallback((event: Event): EventCareerAlignment => {
@@ -358,12 +381,32 @@ export function CareerAlignedEventsCard({
       </CardContent>
       
       {/* EventDetailPanel Modal */}
-      <DashboardEventDetailModal
-        isOpen={selectedEvent !== null}
-        event={selectedEvent}
-        onClose={() => setSelectedEvent(null)}
-        categories={eventTypes}
-      />
+      {selectedEvent && createPortal(
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-in fade-in-0 duration-300"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/70 dark:bg-black/70 light:bg-black/50 backdrop-blur-lg transition-opacity duration-300"
+            onClick={() => setSelectedEvent(null)}
+            aria-hidden="true"
+          />
+          
+          {/* Modal Content */}
+          <div className="relative w-full max-w-2xl max-h-[90vh] animate-in zoom-in-95 fade-in-0 duration-300 ease-out drop-shadow-2xl">
+            <EventDetailPanel
+              event={selectedEvent}
+              onClose={() => setSelectedEvent(null)}
+              categories={eventTypes}
+              variant="modal"
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </Card>
   );
 }

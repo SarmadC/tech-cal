@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { CalendarBlank, FunnelSimple, Repeat, CaretDown } from '@phosphor-icons/react';
+import { FunnelSimple, Repeat, SlidersHorizontal, Tag, MapPin, X } from '@phosphor-icons/react';
+import { useTheme } from 'next-themes';
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
+import MobileBottomNav from '@/components/common/MobileBottomNav';
 import { Button } from '@/components/ui/button';
 import MultiSelectDropdown, { MultiSelectOption } from '@/components/ui/MultiSelectDropdown';
 import { AdminDataTable, AdminDataTableColumn } from '@/components/admin/AdminDataTable';
@@ -19,6 +21,13 @@ import { generateEventSlug } from '@/utils/slugUtils';
 import Loading from '@/components/Loading';
 import { useIsMobile } from '@/hooks/useDeviceDetection';
 import MobileEventListCard from './MobileEventListCard';
+import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
+import { calculateFilterCounts } from '@/utils/filterCountUtils';
+import { cn } from '@/lib/utils';
+import '@/app/styles/discovery-sidebar.css';
+import DiscoveryHeader from '@/components/discovery/DiscoveryHeader';
+import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 interface EventListViewProps {
     initialCategories: EventType[];
@@ -58,11 +67,70 @@ const MobileEventDetailPanelDynamic = dynamic(
 );
 
 export default function EventListView({ initialCategories, profile, locationOptions }: EventListViewProps) {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
     const startOfToday = useMemo(() => {
         const date = new Date();
         date.setHours(0, 0, 0, 0);
         return date;
     }, []);
+
+    // Helper function to get theme-aware category badge styles
+    const getCategoryBadgeStyles = useCallback((categoryColor: string | undefined) => {
+        // Convert hex to RGB for opacity manipulation
+        const hexToRgb = (hex: string): [number, number, number] | null => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? [
+                parseInt(result[1], 16),
+                parseInt(result[2], 16),
+                parseInt(result[3], 16)
+            ] : null;
+        };
+
+        if (!categoryColor) {
+            // Fallback to accent color - use CSS variable with opacity
+            return {
+                backgroundColor: isDark ? 'var(--accent-primary-light)' : 'rgba(0, 0, 0, 0.08)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+                color: 'var(--accent-primary)',
+            };
+        }
+
+        const rgb = hexToRgb(categoryColor);
+        if (!rgb) {
+            // If color parsing fails, use fallback
+            return {
+                backgroundColor: isDark ? 'var(--accent-primary-light)' : 'rgba(0, 0, 0, 0.08)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+                color: 'var(--accent-primary)',
+            };
+        }
+
+        if (isDark) {
+            // Dark mode: lighter backgrounds with higher opacity, lighter text
+            return {
+                backgroundColor: `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.15)`,
+                borderColor: `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3)`,
+                color: categoryColor,
+            };
+        } else {
+            // Light mode: darker backgrounds with lower opacity, darker text for contrast
+            // Use a darker version of the color for text
+            const darkenColor = (r: number, g: number, b: number, factor: number = 0.4): string => {
+                const newR = Math.max(0, Math.floor(r * (1 - factor)));
+                const newG = Math.max(0, Math.floor(g * (1 - factor)));
+                const newB = Math.max(0, Math.floor(b * (1 - factor)));
+                return `rgb(${newR}, ${newG}, ${newB})`;
+            };
+            
+            return {
+                backgroundColor: `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.12)`,
+                borderColor: `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.25)`,
+                color: darkenColor(rgb[0], rgb[1], rgb[2], 0.4), // Darker text for better contrast
+            };
+        }
+    }, [isDark]);
 
     const initialFilters = useMemo(() => ({
         sortBy: 'date' as const,
@@ -92,12 +160,54 @@ export default function EventListView({ initialCategories, profile, locationOpti
         refetch,
         pagination,
         totalCount,
+        counts: countsFromServer,
+        isDetectingLocation,
+        isBackgroundRefetch,
     } = useUnifiedServerFiltering(profile, initialFilters, { surface: 'discover' });
 
     const [selectedEvent, setSelectedEvent] = useState<TrackedEvent | null>(null);
     const [isClosing, setIsClosing] = useState(false);
-    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const isMobile = useIsMobile();
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to top when page changes
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [pagination.page]);
+
+    // Calculate filter counts - use server counts if available, otherwise calculate from filtered events
+    const filterCounts = useMemo(() => {
+        return countsFromServer ?? calculateFilterCounts(filteredEvents, initialCategories);
+    }, [countsFromServer, filteredEvents, initialCategories]);
+
+    // Hook up search suggestions and history for DiscoveryHeader - NOW positioned correctly
+    const { suggestions, isLoading: isSuggestionsLoading } = useSearchSuggestions({
+        searchTerm: filters.searchTerm,
+        events: filteredEvents, // Use filtered events for suggestions or empty if preferred
+        categories: initialCategories,
+        maxSuggestions: 6
+    });
+
+    const { history: searchHistory, addSearch } = useSearchHistory({
+        respectAnalyticsConsent: true
+    });
+
+    const handleSearchWithHistory = useCallback(() => {
+        if (filters.searchTerm || filters.locations[0]) {
+            addSearch(
+                filters.searchTerm,
+                filters.locations[0] || '',
+                filters.dateRange
+            );
+        }
+        refetch();
+    }, [filters.searchTerm, filters.locations, filters.dateRange, addSearch, refetch]);
+
 
     const rows: EventRow[] = useMemo(() => filteredEvents.map((event: TrackedEvent) => {
         const startDisplay = formatDate(event.startTime, event.timezone);
@@ -140,57 +250,61 @@ export default function EventListView({ initialCategories, profile, locationOpti
             header: 'Event',
             sortable: true,
             render: (row) => (
-                <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-foreground-primary">{row.title}</span>
-                    <span className="text-xs text-foreground-secondary">{row.organizer}</span>
+                <div className="flex flex-col py-1 pl-2">
+                    <span className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">{row.title}</span>
+                    {row.organizer && row.organizer !== 'Unknown' && (
+                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{row.organizer}</span>
+                    )}
                 </div>
             ),
-            width: '35%',
+            width: '50%',
+            align: 'left'
         },
         {
             key: 'startDisplay',
             header: 'Start',
             sortable: true,
-            render: (row) => (
-                <div className="flex flex-col">
-                    <span className="text-sm text-foreground-primary">{row.startDisplay}</span>
-                    {row.endDisplay && (
-                        <span className="text-xs text-foreground-secondary">Ends {row.endDisplay}</span>
-                    )}
-                </div>
-            ),
-            width: '25%',
+            render: (row) => {
+                const parts = row.startDisplay.split(' · ');
+                return (
+                    <div className="flex items-center gap-1.5 align-middle h-full">
+                        <span className="text-[13px] text-zinc-900 dark:text-zinc-100 tabular-nums whitespace-nowrap">{parts[0]}</span>
+                        <span className="text-[13px] text-zinc-400 dark:text-zinc-600">·</span>
+                        <span className="text-[13px] text-zinc-500 dark:text-zinc-500 tabular-nums whitespace-nowrap">{parts[1]}</span>
+                    </div>
+                );
+            },
+            width: '20%',
         },
         {
             key: 'location',
             header: 'Location',
             sortable: true,
             render: (row) => (
-                <span className="text-sm text-foreground-primary">{row.location}</span>
+                <span className="text-[13px] text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                    {/* <MapPin size={12} className="opacity-70" /> */}
+                    {row.location}
+                </span>
             ),
-            width: '20%',
+            width: '15%',
         },
         {
             key: 'category',
             header: 'Category',
+            align: 'right',
             render: (row) => (
                 row.categoryLabel ? (
-                    <Badge
-                        style={{
-                            backgroundColor: `${row.categoryColor ?? 'var(--accent-primary)'}33`,
-                            color: row.categoryColor ?? 'var(--accent-primary)',
-                        }}
-                        className="rounded-full text-xs font-medium px-2 py-1"
+                    <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border"
+                        style={getCategoryBadgeStyles(row.categoryColor)}
                     >
                         {row.categoryLabel}
-                    </Badge>
-                ) : (
-                    <span className="text-sm text-foreground-secondary">—</span>
-                )
+                    </span>
+                ) : null
             ),
-            width: '20%',
+            width: '15%',
         },
-    ], []);
+    ], [getCategoryBadgeStyles]);
 
     const handleSortChange = (key: string, direction: 'asc' | 'desc') => {
         switch (key) {
@@ -272,124 +386,157 @@ export default function EventListView({ initialCategories, profile, locationOpti
                     { name: 'Settings', href: '/dashboard/settings' }
                 ]}
                 fixed={true}
-                className="bg-white/80 dark:bg-[#08090a]/80 backdrop-blur-md border-b border-border/40"
+                className="bg-white/95 dark:bg-[#08090a]/95 backdrop-blur-xl border-b border-border/40"
             />
+            {isMobile && <MobileBottomNav />}
             <div className="flex h-screen bg-white dark:bg-[#08090a]">
                 {!isMobile && <AppSidebar />}
                 <main className="flex-1 flex flex-col overflow-hidden">
                     {!isMobile && <Navbar />}
-                    <div className="flex-1 overflow-auto">
+                    <div ref={scrollContainerRef} className="flex-1 overflow-auto">
                         <div className="min-h-screen relative bg-white dark:bg-[#08090a]">
 
                             {/* Mobile View */}
                             {isMobile ? (
-                                <div className="relative px-4 pt-20 pb-24 space-y-4">
+                                <div className="relative pt-20 pb-40">
                                     {/* Mobile Header */}
-                                    <header className="flex items-center gap-3">
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
-                                            <CalendarBlank weight="bold" size={18} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h1 className="text-xl font-semibold text-foreground-primary">Event Listings</h1>
-                                            <p className="text-xs text-foreground-secondary truncate">
-                                                {totalCount} events available
-                                            </p>
+                                    <header className="px-4 pb-3 border-b border-white/10">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <div>
+                                                <h1 className="text-2xl font-bold text-foreground-primary">Events</h1>
+                                                <p className="text-sm text-foreground-secondary mt-1">
+                                                    {totalCount} events
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => setIsFilterOpen(true)}
+                                                className="p-2 rounded-lg transition-colors text-foreground-secondary hover:text-foreground-primary hover:bg-white/5"
+                                                aria-label="Open filters"
+                                            >
+                                                <SlidersHorizontal size={20} weight="regular" />
+                                            </button>
                                         </div>
                                     </header>
 
-                                    {/* Mobile Collapsible Filters */}
-                                    <section className="glass-card border border-white/10 rounded-xl overflow-hidden">
-                                        <button
-                                            type="button"
-                                            onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-                                            className="w-full flex items-center justify-between p-4 text-left"
-                                            aria-expanded={mobileFiltersOpen}
-                                            aria-controls="mobile-filters-content"
-                                        >
-                                            <div className="flex items-center gap-2 text-sm text-foreground-secondary">
-                                                <FunnelSimple size={16} />
-                                                <span>{appliedFiltersLabel}</span>
-                                            </div>
-                                            <CaretDown
-                                                size={16}
-                                                className={`text-foreground-tertiary transition-transform duration-200 ${mobileFiltersOpen ? 'rotate-180' : ''}`}
+                                    {/* Filter Drawer */}
+                                    {isFilterOpen && (
+                                        <div className="fixed inset-0 z-[100] flex flex-col justify-end isolate">
+                                            {/* Backdrop */}
+                                            <div
+                                                className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+                                                onClick={() => setIsFilterOpen(false)}
                                             />
-                                        </button>
 
-                                        {mobileFiltersOpen && (
-                                            <div id="mobile-filters-content" className="px-4 pb-4 space-y-4 border-t border-white/10 pt-4">
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="flex flex-col gap-1.5">
-                                                        <label htmlFor="mobile-start-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">Start</label>
-                                                        <input
-                                                            id="mobile-start-date"
-                                                            type="date"
-                                                            value={toInputValue(filters.dateRange.start)}
-                                                            onChange={(event) => {
-                                                                const value = event.target.value ? new Date(`${event.target.value}T00:00:00`) : null;
-                                                                updateFilter('dateRange', { start: value, end: filters.dateRange.end });
-                                                                updateFilter('page', 1);
-                                                            }}
-                                                            className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 transition-colors"
-                                                        />
-                                                    </div>
-                                                    <div className="flex flex-col gap-1.5">
-                                                        <label htmlFor="mobile-end-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">End</label>
-                                                        <input
-                                                            id="mobile-end-date"
-                                                            type="date"
-                                                            value={toInputValue(filters.dateRange.end)}
-                                                            onChange={(event) => {
-                                                                const value = event.target.value ? new Date(`${event.target.value}T23:59:59`) : null;
-                                                                updateFilter('dateRange', { start: filters.dateRange.start, end: value });
-                                                                updateFilter('page', 1);
-                                                            }}
-                                                            className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 transition-colors"
-                                                        />
-                                                    </div>
+                                            {/* Content */}
+                                            <div className="relative w-full h-[85vh] bg-card rounded-t-[24px] border-t border-border flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300">
+                                                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                                                    <h2 className="text-xl font-semibold text-foreground">Filters</h2>
+                                                    <button
+                                                        onClick={() => setIsFilterOpen(false)}
+                                                        className="p-2 -mr-2 text-muted-foreground hover:text-foreground"
+                                                    >
+                                                        <span className="sr-only">Close</span>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
-                                                <MultiSelectDropdown
-                                                    label="Categories"
-                                                    options={categoryOptions}
-                                                    selectedValues={filters.categories}
-                                                    onChange={(values) => {
-                                                        updateFilter('categories', values);
-                                                        updateFilter('page', 1);
-                                                    }}
-                                                    placeholder="Select categories"
-                                                />
-                                                <MultiSelectDropdown
-                                                    label="Locations"
-                                                    options={locationSelectOptions}
-                                                    selectedValues={filters.locations}
-                                                    onChange={(values) => {
-                                                        updateFilter('locations', values);
-                                                        updateFilter('page', 1);
-                                                    }}
-                                                    placeholder="Select locations"
-                                                />
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => resetFilters()}
-                                                    className="w-full"
-                                                >
-                                                    <Repeat size={14} className="mr-2" />
-                                                    Reset Filters
-                                                </Button>
+
+                                                <div className="flex-1 overflow-y-auto px-6 py-4">
+                                                    {/* Date Range Section */}
+                                                    <div className="filter-section filter-section-with-margin mb-4">
+                                                        <div className="flex items-center justify-between w-full mb-2 py-1">
+                                                            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Date Range</h3>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <label htmlFor="drawer-start-date" className="text-xs text-muted-foreground">Start</label>
+                                                                <input
+                                                                    id="drawer-start-date"
+                                                                    type="date"
+                                                                    value={toInputValue(filters.dateRange.start)}
+                                                                    onChange={(event) => {
+                                                                        const value = event.target.value ? new Date(`${event.target.value}T00:00:00`) : null;
+                                                                        updateFilter('dateRange', { start: value, end: filters.dateRange.end });
+                                                                        updateFilter('page', 1);
+                                                                    }}
+                                                                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent-primary/60 transition-colors"
+                                                                />
+                                                            </div>
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <label htmlFor="drawer-end-date" className="text-xs text-muted-foreground">End</label>
+                                                                <input
+                                                                    id="drawer-end-date"
+                                                                    type="date"
+                                                                    value={toInputValue(filters.dateRange.end)}
+                                                                    onChange={(event) => {
+                                                                        const value = event.target.value ? new Date(`${event.target.value}T23:59:59`) : null;
+                                                                        updateFilter('dateRange', { start: filters.dateRange.start, end: value });
+                                                                        updateFilter('page', 1);
+                                                                    }}
+                                                                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent-primary/60 transition-colors"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Locations Section */}
+                                                    <div className="filter-section filter-section-with-margin mb-4">
+                                                        <div className="flex items-center justify-between w-full mb-2 py-1">
+                                                            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Locations</h3>
+                                                        </div>
+                                                        <MultiSelectDropdown
+                                                            label=""
+                                                            options={locationSelectOptions}
+                                                            selectedValues={filters.locations}
+                                                            onChange={(values) => {
+                                                                updateFilter('locations', values);
+                                                                updateFilter('page', 1);
+                                                            }}
+                                                            placeholder="Select locations"
+                                                        />
+                                                    </div>
+
+                                                    {/* Discovery Sidebar for Format, Cost, Categories, Tags */}
+                                                    <DiscoverySidebar
+                                                        filters={{
+                                                            format: filters.format,
+                                                            cost: filters.cost,
+                                                            categories: filters.categories,
+                                                            tags: filters.tags
+                                                        }}
+                                                        onUpdateFilter={updateFilter}
+                                                        categories={initialCategories}
+                                                        events={filteredEvents.map(e => ({
+                                                            id: e.id,
+                                                            tags: e.tags
+                                                        }))}
+                                                        counts={filterCounts}
+                                                        mobileMode={true}
+                                                    />
+                                                </div>
+
+                                                <div className="p-4 border-t border-border bg-card pb-8 flex gap-3">
+                                                    <button
+                                                        onClick={() => {
+                                                            resetFilters();
+                                                        }}
+                                                        className="flex-1 py-3 rounded-xl border border-border text-foreground font-medium hover:bg-muted transition-colors"
+                                                    >
+                                                        Reset
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setIsFilterOpen(false)}
+                                                        className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90 shadow-lg shadow-green-900/20 dark:shadow-[#fdfdfd]/20 transition-colors"
+                                                    >
+                                                        Show Results
+                                                    </button>
+                                                </div>
                                             </div>
-                                        )}
-                                    </section>
+                                        </div>
+                                    )}
 
-                                    {/* Mobile Sort Info */}
-                                    <div className="flex items-center justify-between text-xs text-foreground-secondary">
-                                        <span>Showing {rangeStart}-{rangeEnd} of {totalCount}</span>
-                                        <Badge variant="outline" className="border-border-color/40 bg-background-secondary/40 text-foreground-tertiary text-[10px]">
-                                            {sortLabel}
-                                        </Badge>
-                                    </div>
-
-                                    {/* Mobile Event Cards */}
+                                    {/* Mobile Event List */}
                                     {isLoading ? (
                                         <div className="flex items-center justify-center py-12">
                                             <Loading />
@@ -405,7 +552,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                             </Button>
                                         </div>
                                     ) : (
-                                        <div className="space-y-3">
+                                        <div className="mt-2">
                                             {rows.map((row) => (
                                                 <MobileEventListCard
                                                     key={row.id}
@@ -417,29 +564,37 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                         </div>
                                     )}
 
-                                    {/* Mobile Pagination */}
-                                    {!isLoading && rows.length > 0 && pagination.totalPages > 1 && (
-                                        <div className="flex items-center justify-center gap-2 pt-4">
+                                    {/* Mobile Pagination - Fixed Footer above Bottom Nav */}
+                                    {isMobile && !isLoading && rows.length > 0 && pagination.totalPages > 1 && (
+                                        <div
+                                            className="fixed left-0 right-0 z-40 flex items-center justify-between px-4 py-2 border-t border-zinc-100 dark:border-white/5 bg-white/95 dark:bg-[#0F0F0F]/95 backdrop-blur-md min-h-[48px]"
+                                            style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}
+                                        >
+                                            {/* Previous Button - Anchored Left */}
                                             <Button
-                                                variant="outline"
+                                                variant="ghost"
                                                 size="sm"
                                                 onClick={() => handlePageChange(pagination.page - 1)}
                                                 disabled={pagination.page <= 1}
-                                                className="text-xs"
+                                                className="text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 pl-2 pr-3 disabled:opacity-30"
                                             >
-                                                Previous
+                                                <span className="mr-1">‹</span> Previous
                                             </Button>
-                                            <span className="text-sm text-foreground-secondary">
+
+                                            {/* Page Counter - Absolute Center */}
+                                            <span className="absolute left-1/2 -translate-x-1/2 text-[13px] font-mono font-medium text-zinc-500 dark:text-[#A1A1AA] tabular-nums tracking-wide">
                                                 {pagination.page} / {pagination.totalPages}
                                             </span>
+
+                                            {/* Next Button - Anchored Right */}
                                             <Button
-                                                variant="outline"
+                                                variant="ghost"
                                                 size="sm"
                                                 onClick={() => handlePageChange(pagination.page + 1)}
                                                 disabled={pagination.page >= pagination.totalPages}
-                                                className="text-xs"
+                                                className="text-sm font-medium text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/5 pl-3 pr-2 disabled:opacity-30"
                                             >
-                                                Next
+                                                Next <span className="ml-1">›</span>
                                             </Button>
                                         </div>
                                     )}
@@ -456,9 +611,6 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                 <div className="relative max-w-[1600px] mx-auto px-6 pt-16 pb-8 space-y-6">
                                     <header className="flex flex-col gap-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
-                                                <CalendarBlank weight="bold" size={20} />
-                                            </div>
                                             <div>
                                                 <h1 className="text-3xl font-semibold text-foreground-primary">Event Listings</h1>
                                                 <p className="text-sm text-foreground-secondary">
@@ -468,83 +620,31 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                         </div>
                                     </header>
 
-                                    <section
-                                        className="glass-card border border-white/10 p-6 shadow-2xl space-y-4"
-                                        aria-labelledby="event-filters"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-sm text-foreground-secondary">
-                                                <FunnelSimple size={16} />
-                                                <span id="event-filters">{appliedFiltersLabel}</span>
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                    resetFilters();
-                                                }}
-                                            >
-                                                <Repeat size={16} className="mr-2" />
-                                                Reset
-                                            </Button>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                                            <div className="flex flex-col gap-2">
-                                                <label htmlFor="start-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">Start Date</label>
-                                                <input
-                                                    id="start-date"
-                                                    type="date"
-                                                    value={toInputValue(filters.dateRange.start)}
-                                                    onChange={(event) => {
-                                                        const value = event.target.value ? new Date(`${event.target.value}T00:00:00`) : null;
-                                                        updateFilter('dateRange', { start: value, end: filters.dateRange.end });
-                                                        updateFilter('page', 1);
-                                                    }}
-                                                    className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary placeholder:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 focus:border-accent-primary/60 transition-colors"
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-2">
-                                                <label htmlFor="end-date" className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">End Date</label>
-                                                <input
-                                                    id="end-date"
-                                                    type="date"
-                                                    value={toInputValue(filters.dateRange.end)}
-                                                    onChange={(event) => {
-                                                        const value = event.target.value ? new Date(`${event.target.value}T23:59:59`) : null;
-                                                        updateFilter('dateRange', { start: filters.dateRange.start, end: value });
-                                                        updateFilter('page', 1);
-                                                    }}
-                                                    className="rounded-lg border border-border-color/60 bg-background-secondary/70 px-3 py-2 text-sm text-foreground-primary placeholder:text-foreground-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary/60 focus:border-accent-primary/60 transition-colors"
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-2">
-                                                <MultiSelectDropdown
-                                                    label="Categories"
-                                                    options={categoryOptions}
-                                                    selectedValues={filters.categories}
-                                                    onChange={(values) => {
-                                                        updateFilter('categories', values);
-                                                        updateFilter('page', 1);
-                                                    }}
-                                                    placeholder="Select categories"
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-2">
-                                                <MultiSelectDropdown
-                                                    label="Locations"
-                                                    options={locationSelectOptions}
-                                                    selectedValues={filters.locations}
-                                                    onChange={(values) => {
-                                                        updateFilter('locations', values);
-                                                        updateFilter('page', 1);
-                                                    }}
-                                                    placeholder="Select locations"
-                                                    className="bg-transparent"
-                                                />
-                                            </div>
-                                        </div>
-                                    </section>
+                                    {/* Minimal Toolbar Filters */}
+                                    {/* Reuse Discovery Header for Search/Location/Date */}
+                                    <div className="mb-6">
+                                        <DiscoveryHeader
+                                            searchTerm={filters.searchTerm}
+                                            onSearchChange={(val) => updateFilter('searchTerm', val)}
+                                            location={filters.locations[0] || ''}
+                                            onLocationChange={(val) => updateFilter('locations', val ? [val] : [])}
+                                            dateRange={filters.dateRange}
+                                            onDateRangeChange={(range) => {
+                                                updateFilter('dateRange', range);
+                                                updateFilter('page', 1);
+                                            }}
+                                            onSearch={handleSearchWithHistory}
+                                            onResetFilters={() => resetFilters()}
+                                            activeFilterCount={activeFilterCount}
+                                            // onFilterClick={() => setIsSidebarOpen(true)} // No sidebar here
+                                            // onNearMeClick={onNearMeClick} // Unified hook doesn't expose logic directly but we can fix later if needed
+                                            isDetectingLocation={isDetectingLocation}
+                                            isSearching={isBackgroundRefetch}
+                                            suggestions={suggestions}
+                                            searchHistory={searchHistory}
+                                            isAutocompletLoading={isSuggestionsLoading}
+                                        />
+                                    </div>
 
                                     <section className="space-y-4">
                                         <div className="flex items-center justify-between">
@@ -577,13 +677,13 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                 onSortChange={handleSortChange}
                                                 isLoading={isLoading}
                                                 onRowClick={(row) => handleOpenDetails(row.event)}
-                                                className="glass-card border border-white/10 px-6 py-6 text-foreground-primary backdrop-blur-xl"
-                                                containerClassName="glass-card border border-white/10 bg-white/[0.04] backdrop-blur-xl [&_thead]:bg-white/[0.08] [&_tbody_tr]:border-white/[0.05] [&_tbody_tr:hover]:bg-white/[0.06]"
-                                                footerClassName="glass-card border border-white/10 bg-white/[0.04] text-foreground-secondary"
-                                                tableClassName="text-foreground-primary"
-                                                headerClassName="bg-transparent text-foreground-secondary"
-                                                headerRowClassName="border-white/[0.06]"
-                                                bodyRowClassName="border-white/[0.04] hover:bg-white/[0.06] text-foreground-primary"
+                                                className="w-full"
+                                                containerClassName="rounded-none shadow-none border-none bg-transparent"
+                                                footerClassName="bg-transparent text-zinc-500 mt-0 px-0 py-4"
+                                                tableClassName="text-zinc-900 dark:text-zinc-100"
+                                                headerClassName="bg-transparent text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-500 pl-4"
+                                                headerRowClassName="border-b border-zinc-200 dark:border-zinc-800 h-9 hover:bg-transparent"
+                                                bodyRowClassName="border-b border-zinc-100 dark:border-zinc-800/50 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors h-[52px] cursor-pointer group"
                                                 pageSize={pagination.pageSize}
                                                 pageSizeOptions={pageSizeOptions}
                                                 onPageSizeChange={handlePageSizeChange}
@@ -591,14 +691,14 @@ export default function EventListView({ initialCategories, profile, locationOpti
                                                 onPageChange={handlePageChange}
                                                 total={totalCount}
                                                 emptyState={(
-                                                    <div className="py-12 text-center">
-                                                        <h3 className="text-lg font-semibold text-foreground-primary mb-2">No events match the current filters</h3>
-                                                        <p className="text-sm text-foreground-secondary mb-4">
-                                                            Adjust your date range, categories, or locations to discover more events.
+                                                    <div className="py-20 text-center">
+                                                        <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">No events found</h3>
+                                                        <p className="text-xs text-zinc-500 mb-4">
+                                                            Try adjusting your filters.
                                                         </p>
-                                                        <Button size="sm" onClick={() => { resetFilters(); }}>
-                                                            Reset filters
-                                                        </Button>
+                                                        <button onClick={() => resetFilters()} className="text-xs font-medium text-accent-primary hover:underline">
+                                                            Clear filters
+                                                        </button>
                                                     </div>
                                                 )}
                                             />
@@ -628,8 +728,8 @@ export default function EventListView({ initialCategories, profile, locationOpti
                             >
                                 <div
                                     className={`h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] transform translate-x-0 duration-300 ease-out ${isClosing
-                                            ? 'animate-out slide-out-to-right'
-                                            : 'animate-in slide-in-from-right'
+                                        ? 'animate-out slide-out-to-right'
+                                        : 'animate-in slide-in-from-right'
                                         }`}
                                     onClick={(event) => event.stopPropagation()}
                                     role="dialog"

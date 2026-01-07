@@ -68,14 +68,6 @@ const EventInfo: FC<EventInfoProps> = ({ event, category: _category, hideDescrip
                     <span>{event.organization?.name || event.organizer || 'Unknown Host'}</span>
                 </div>
 
-                {/* Capacity Property */}
-                <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em]">
-                    Capacity
-                </div>
-                <div className="text-[13px] text-[#E6E6E6] font-medium leading-tight">
-                    {event.attendeeCount || 0} / {event.capacity || 'Uncapped'}
-                </div>
-
                 {/* Tags Property */}
                 {allTags.length > 0 && (
                     <>

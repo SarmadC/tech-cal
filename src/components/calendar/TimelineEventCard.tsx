@@ -23,12 +23,12 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
         <div
             onClick={onClick}
             className={`relative p-4 rounded-md border transition-all duration-200 cursor-pointer group ${isSelected
-                    ? theme.isDark
-                        ? 'bg-white/10 border-zinc-500 shadow-md'
-                        : 'bg-blue-50 border-blue-300 shadow-md'
-                    : theme.isDark
-                        ? 'bg-[#18181B] border-white/5 hover:border-zinc-700'
-                        : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                ? theme.isDark
+                    ? 'bg-white/10 border-zinc-500 shadow-md'
+                    : 'bg-blue-50 border-blue-300 shadow-md'
+                : theme.isDark
+                    ? 'bg-[#18181B] border-white/5 hover:border-zinc-700'
+                    : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
                 }`}
         >
             {/* Tag positioned absolutely in top-right - Subtle Style */}
@@ -80,9 +80,9 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
                 }
 
                 // Collect all speakers
-                const allSpeakers = hasMultipleSpeakers 
+                const allSpeakers = hasMultipleSpeakers
                     ? item.speakers || []
-                    : item.speaker 
+                    : item.speaker
                         ? [item.speaker]
                         : [];
 
@@ -111,7 +111,7 @@ export const TimelineEventCard: FC<TimelineEventCardProps> = ({ item, showIndivi
                                 );
                             })}
                             {overflowCount > 0 && (
-                                <div 
+                                <div
                                     className={`relative w-6 h-6 rounded-full border-2 ${theme.isDark ? 'border-[#18181B] bg-zinc-700' : 'border-white bg-gray-200'} flex items-center justify-center text-[10px] font-medium flex-shrink-0 ${theme.isDark ? 'text-zinc-300' : 'text-gray-600'}`}
                                     title={`+${overflowCount} more speaker${overflowCount !== 1 ? 's' : ''}`}
                                 >

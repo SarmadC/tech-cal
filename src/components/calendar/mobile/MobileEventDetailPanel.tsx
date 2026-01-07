@@ -2,11 +2,25 @@
 
 import { FC, useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { XIcon, ArrowSquareOutIcon, CalendarPlusIcon, ShareNetworkIcon, DotsThreeVerticalIcon, DownloadSimpleIcon, BookmarkSimple, UserCheckIcon, CheckIcon, CircleNotchIcon } from '@phosphor-icons/react';
+import { format } from 'date-fns';
+import {
+    XIcon,
+    ArrowSquareOutIcon,
+    CalendarPlusIcon,
+    ShareNetworkIcon,
+    DotsThreeVerticalIcon,
+    DownloadSimpleIcon,
+    BookmarkSimple,
+    UserCheckIcon,
+    CheckIcon,
+    CircleNotchIcon,
+    MapPinIcon,
+    UsersIcon,
+    TagIcon
+} from '@phosphor-icons/react';
 import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';
 import { EventService } from '@/services/eventServices';
 import { createClient } from '@/utils/supabase/client';
-import EventInfo from '../EventInfo';
 import { useEventActions } from '@/hooks/useEventActions';
 import { useTrackedEventsUnified } from '@/hooks/useTrackedEventsUnified';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
@@ -25,23 +39,23 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [showFullDescription, setShowFullDescription] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
-    
+
     // Add tracking functionality
     const { user } = useAuth();
     const { trackedEventIds, trackEvent, untrackEvent, isLoading: isTrackingLoading } = useTrackedEventsUnified();
     const { getAttendanceStatus, setAttendanceStatus, isLoading: isAttendanceLoading } = useEventEngagement();
-    
+
     // Update eventWithAgenda when event prop changes
     useEffect(() => {
         setEventWithAgenda(event);
     }, [event]);
-    
+
     // Get the display event (with agenda if available)
     const displayEvent = eventWithAgenda;
-    
+
     // Event actions hook - use displayEvent to ensure it updates with new events
     const { handleShare, googleCalendarLink, handleIcsDownload } = useEventActions(displayEvent);
-    
+
     // Check if event is tracked
     const isTracked = trackedEventIds?.has(displayEvent.id) ?? false;
 
@@ -49,7 +63,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
         if (!user) {
             return;
         }
-        
+
         if (isTracked) {
             await untrackEvent(displayEvent.id);
         } else {
@@ -60,7 +74,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
     // Attendance functionality
     const trackingEventId = ('originalEventId' in displayEvent ? (displayEvent as MultiDayEventInstance).originalEventId : null) || displayEvent.id;
     const attendanceStatus = getAttendanceStatus(trackingEventId);
-    
+
     const getAttendanceState = () => {
         if (!attendanceStatus || attendanceStatus === null) {
             return { state: 'none', label: 'Attending', nextAction: 'attending' };
@@ -78,7 +92,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
 
     const handleAttendanceToggle = async () => {
         if (!user) return;
-        
+
         let newStatus: EventStatus | null = null;
         if (attendanceState.nextAction === 'attending') {
             newStatus = 'attending';
@@ -87,7 +101,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
         } else {
             newStatus = null; // Remove attendance
         }
-        
+
         await setAttendanceStatus(trackingEventId, newStatus);
     };
 
@@ -105,25 +119,25 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
     useEffect(() => {
         let isMounted = true;
         let timeoutId: NodeJS.Timeout;
-        
+
         const fetchEventWithAgenda = async () => {
             if (event.agenda && event.agenda.length > 0) {
                 return;
             }
-            
+
             try {
                 timeoutId = setTimeout(() => {
                     if (isMounted) {
                     }
                 }, 10000);
-                
+
                 const supabase = createClient();
                 const fetchEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
-                
+
                 const fullEvent = await EventService.getEventWithAgenda(fetchEventId, supabase);
-                
+
                 clearTimeout(timeoutId);
-                
+
                 if (isMounted) {
                     if (fullEvent.agenda && fullEvent.agenda.length > 0) {
                         setEventWithAgenda(prev => ({
@@ -131,7 +145,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                             agenda: fullEvent.agenda
                         }));
                     }
-                    
+
                     await new Promise(resolve => setTimeout(resolve, 300));
                 }
             } catch (error) {
@@ -144,7 +158,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
         };
 
         fetchEventWithAgenda();
-        
+
         return () => {
             isMounted = false;
             if (timeoutId) {
@@ -170,8 +184,7 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
         };
     }, [showMoreMenu]);
 
-    // Mobile-optimized container classes
-    const containerClasses = `fixed inset-0 z-50 bg-white dark:bg-[#08090a] overflow-y-auto`;
+    const containerClasses = `fixed inset-0 z-50 bg-[#161618] overflow-y-auto`;
 
     const toggleDescription = () => {
         setShowFullDescription(!showFullDescription);
@@ -182,106 +195,187 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
         return description.substring(0, maxLength) + '...';
     };
 
+    // Helper to render property row
+    const PropertyRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
+        <>
+            <div className="text-[11px] font-medium uppercase tracking-wider text-[#71717A] py-1">{label}</div>
+            <div className="text-[14px] font-normal text-[#F4F4F5] py-1 min-w-0">{children}</div>
+        </>
+    );
+
     return (
         <div className={containerClasses}>
-            {/* Mobile Header - Fixed */}
-            <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#08090a]/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+            {/* Mobile Header - Minimal */}
+            <div className="sticky top-0 z-10 bg-[#161618]/95 backdrop-blur-md">
                 <div className="flex items-center justify-between px-4 py-3">
-                    <div className="flex-1 min-w-0">
-                        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                    <div className="flex-1 min-w-0 pr-4">
+                        <h1 className="text-[16px] font-bold text-[#F4F4F5] truncate leading-tight">
                             {displayEvent.title}
                         </h1>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="flex-shrink-0 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ml-2"
-                        aria-label="Close"
-                    >
-                        <XIcon size={24} className="text-gray-600 dark:text-gray-400" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        {/* More Menu - Moved to Header */}
+                        <div className="relative" ref={moreMenuRef}>
+                            <button
+                                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                                className="p-2 rounded-md hover:bg-white/10 text-[#A1A1AA] transition-colors"
+                                aria-label="More options"
+                            >
+                                <DotsThreeVerticalIcon size={20} weight="bold" />
+                            </button>
+
+                            {/* More Menu Dropdown */}
+                            {showMoreMenu && (
+                                <div className="absolute top-full right-0 mt-2 w-56 bg-[#1E1E20] rounded-xl shadow-2xl border border-[#27272A] py-1 overflow-hidden z-50">
+                                    <button
+                                        onClick={() => {
+                                            handleShare();
+                                            setShowMoreMenu(false);
+                                        }}
+                                        className="flex items-center gap-3 px-4 py-2.5 text-[14px] text-[#E4E4E7] hover:bg-white/5 w-full text-left"
+                                    >
+                                        <ShareNetworkIcon size={16} />
+                                        Share Event
+                                    </button>
+                                    <a
+                                        href={googleCalendarLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 px-4 py-2.5 text-[14px] text-[#E4E4E7] hover:bg-white/5"
+                                        onClick={() => setShowMoreMenu(false)}
+                                    >
+                                        <CalendarPlusIcon size={16} />
+                                        Add to Google Calendar
+                                    </a>
+                                    <button
+                                        onClick={() => {
+                                            handleIcsDownload();
+                                            setShowMoreMenu(false);
+                                        }}
+                                        className="flex items-center gap-3 px-4 py-2.5 text-[14px] text-[#E4E4E7] hover:bg-white/5 w-full text-left"
+                                    >
+                                        <DownloadSimpleIcon size={16} />
+                                        Download ICS
+                                    </button>
+                                    {(displayEvent.registrationUrl || displayEvent.sourceUrl) && (
+                                        <button
+                                            onClick={() => {
+                                                const url = displayEvent.registrationUrl || displayEvent.sourceUrl;
+                                                if (url) {
+                                                    window.open(url, '_blank', 'noopener,noreferrer');
+                                                }
+                                                setShowMoreMenu(false);
+                                            }}
+                                            className="flex items-center gap-3 px-4 py-2.5 text-[14px] text-[#E4E4E7] hover:bg-white/5 w-full text-left"
+                                        >
+                                            <ArrowSquareOutIcon size={16} />
+                                            Visit Event Page
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-md hover:bg-white/10 text-[#A1A1AA] transition-colors"
+                            aria-label="Close"
+                        >
+                            <XIcon size={20} weight="bold" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Mobile Content - Scrollable */}
-                    <div className="p-4 space-y-6">
-                {/* Prominent Logo/Organizer Section */}
-                <div className="flex flex-col items-center space-y-4 py-6">
-                    {/* Event/Organization Logo */}
-                    <div className="relative">
-                        <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center shadow-lg">
-                            {displayEvent.eventImageUrl ? (
-                                <Image
-                                    src={displayEvent.eventImageUrl}
-                                    alt={`${displayEvent.title} event image`}
-                                    width={96}
-                                    height={96}
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : displayEvent.organization?.logo ? (
-                                <Image
-                                    src={displayEvent.organization.logo}
-                                    alt={`${displayEvent.organization.name} logo`}
-                                    width={64}
-                                    height={64}
-                                    className="w-16 h-16 object-contain"
-                                />
+            {/* Content - Scrollable */}
+            <div className="px-5 pb-32 pt-2">
+                {/* Property Grid */}
+                <div className="grid grid-cols-[90px_1fr] gap-x-4 gap-y-3 my-6 items-center">
+                    {/* Date */}
+                    <PropertyRow label="DATE">
+                        {format(new Date(displayEvent.startTime), "MMM d, yyyy 'at' h:mm a")}
+                    </PropertyRow>
+
+                    {/* Location */}
+                    <PropertyRow label="LOCATION">
+                        <div className="flex items-center gap-1.5 group cursor-pointer hover:text-white transition-colors">
+                            <span className="truncate">
+                                {displayEvent.location || 'TBA'}
+                            </span>
+                            {displayEvent.location && (
+                                <ArrowSquareOutIcon size={14} className="text-[#71717A] group-hover:text-white transition-colors" />
+                            )}
+                        </div>
+                    </PropertyRow>
+
+                    {/* Host */}
+                    <PropertyRow label="HOST">
+                        <div className="flex items-center gap-2">
+                            {displayEvent.organization?.logo || displayEvent.eventImageUrl ? (
+                                <div className="w-6 h-6 rounded-full overflow-hidden bg-[#27272A] flex-shrink-0">
+                                    <Image
+                                        src={displayEvent.organization?.logo || displayEvent.eventImageUrl || ''}
+                                        alt="Host"
+                                        width={24}
+                                        height={24}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
                             ) : (
-                                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                    <span className="text-2xl font-bold text-white">
-                                        {displayEvent.title.charAt(0).toUpperCase()}
+                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-[10px] font-bold text-white">
+                                        {(displayEvent.organization?.name || displayEvent.title).charAt(0).toUpperCase()}
                                     </span>
                                 </div>
                             )}
+                            <span className="truncate">{displayEvent.organization?.name || 'Organizer'}</span>
                         </div>
-                        {/* Glow effect */}
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-400/20 to-purple-400/20 blur-xl -z-10" />
-                    </div>
-                    
-                    {/* Organization Name */}
-                    {displayEvent.organization?.name && (
-                        <div className="text-center">
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Organized by</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                {displayEvent.organization.name}
-                            </p>
-                                </div>
-                            )}
-                        </div>
+                    </PropertyRow>
 
-                        {/* Event Info */}
-                        <div className="space-y-4">
-                    <EventInfo 
-                        event={displayEvent} 
-                        category={category}
-                        hideDescription={true}
-                        useSingleTagColor={true}
-                    />
+                    {/* Tags */}
+                    {displayEvent.tags && displayEvent.tags.length > 0 && (
+                        <PropertyRow label="TAGS">
+                            <div className="flex flex-wrap gap-1.5">
+                                {displayEvent.tags.slice(0, 5).map((tag) => (
+                                    <span
+                                        key={tag.id}
+                                        className="inline-flex items-center px-1.5 py-[2px] rounded text-[11px] bg-[#27272A] text-[#A1A1AA] border border-[#3F3F46]"
+                                    >
+                                        {tag.name}
+                                    </span>
+                                ))}
+                                {displayEvent.tags.length > 5 && (
+                                    <span className="inline-flex items-center px-1.5 py-[2px] rounded text-[11px] bg-[#27272A] text-[#A1A1AA] border border-[#3F3F46] hover:bg-[#3F3F46] hover:text-white transition-colors cursor-pointer">
+                                        +{displayEvent.tags.length - 5} more
+                                    </span>
+                                )}
+                            </div>
+                        </PropertyRow>
+                    )}
                 </div>
 
-                {/* Event Description - Mobile Optimized */}
+                {/* Description Divider & Content */}
                 {displayEvent.description && (
-                    <div className="space-y-3">
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                            Description
-                        </h3>
-                        <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <div className="border-t border-[#27272A] pt-7">
+                        <div className="text-[14px] font-semibold text-[#EDEDED] mb-2">Description</div>
+                        <div className="text-[14px] text-[#A1A1AA] leading-relaxed whitespace-pre-wrap">
                             {showFullDescription ? (
                                 <div>
                                     {displayEvent.description}
                                     <button
                                         onClick={toggleDescription}
-                                        className="block mt-2 text-blue-600 dark:text-blue-400 hover:underline"
+                                        className="block mt-2 text-[#E4E4E7] hover:underline font-medium"
                                     >
                                         Show less
                                     </button>
                                 </div>
                             ) : (
-                                    <div>
-                                    {getDescriptionPreview(displayEvent.description)}
+                                <div>
+                                    <span className="text-[#A1A1AA]">{getDescriptionPreview(displayEvent.description)}</span>
                                     {displayEvent.description.length > 150 && (
                                         <button
                                             onClick={toggleDescription}
-                                            className="block mt-2 text-blue-600 dark:text-blue-400 hover:underline"
+                                            className="inline ml-1 text-blue-400 hover:text-blue-300 font-medium hover:underline"
                                         >
                                             Read more
                                         </button>
@@ -289,107 +383,51 @@ const MobileEventDetailPanel: FC<MobileEventDetailPanelProps> = ({ event, onClos
                                 </div>
                             )}
                         </div>
-                            </div>
-                        )}
+                    </div>
+                )}
+            </div>
 
-                                        </div>
-                                        
-            {/* Mobile Action Bar - Fixed Bottom */}
-            <div className="sticky bottom-0 bg-white/95 dark:bg-[#08090a]/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 p-4">
-                <div className="flex items-center gap-3">
-                    {/* Bookmark Event Button */}
+            {/* Footer Action Bar */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#161618] via-[#161618] to-transparent z-20">
+                <div className="flex flex-col gap-3">
+                    {/* Primary Action - Register */}
                     <button
-                        onClick={handleTrackEvent}
-                        disabled={isTrackingLoading}
-                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                            isTracked
-                                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        } disabled:opacity-50`}
+                        onClick={() => {
+                            const url = displayEvent.registrationUrl || displayEvent.sourceUrl;
+                            if (url) {
+                                window.open(url, '_blank', 'noopener,noreferrer');
+                                // Auto-mark as 'attending' when they register (if not already set)
+                                if (user && attendanceState.state === 'none') {
+                                    setAttendanceStatus(trackingEventId, 'attending');
+                                }
+                            } else {
+                                // Fallback: Add to calendar if no registration URL
+                                window.open(googleCalendarLink, '_blank');
+                            }
+                        }}
+                        disabled={!user && !(displayEvent.registrationUrl || displayEvent.sourceUrl)}
+                        className="w-full flex items-center justify-center gap-2 h-12 rounded-lg font-medium text-[15px] transition-all duration-200 shadow-lg bg-white text-black hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <BookmarkSimple size={18} weight={isTracked ? 'fill' : 'regular'} />
-                        {isTracked ? 'Bookmarked' : 'Bookmark'}
+                        <ArrowSquareOutIcon size={18} />
+                        <span>
+                            {displayEvent.registrationUrl || displayEvent.sourceUrl
+                                ? 'Register'
+                                : 'Add to Calendar'}
+                        </span>
                     </button>
 
-                    {/* Attendance Button */}
-                    {user && (
-                        <button
-                            onClick={handleAttendanceToggle}
-                            disabled={isAttendanceLoading}
-                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                                attendanceState.state === 'attending'
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                    : attendanceState.state === 'attended'
-                                        ? 'bg-green-600 text-white hover:bg-green-700 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                            } disabled:opacity-50`}
-                        >
-                            {getAttendanceIcon()}
-                            <span>{attendanceState.label}</span>
-                        </button>
-                    )}
-
-                    {/* More Options */}
-                    <div className="relative" ref={moreMenuRef}>
-                        <button
-                            onClick={() => setShowMoreMenu(!showMoreMenu)}
-                            className="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                            aria-label="More options"
-                        >
-                            <DotsThreeVerticalIcon size={18} />
-                        </button>
-
-                        {/* More Menu Dropdown */}
-                        {showMoreMenu && (
-                            <div className="absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
-                                <button
-                                    onClick={() => {
-                                        handleShare();
-                                        setShowMoreMenu(false);
-                                    }}
-                                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
-                                >
-                                    <ShareNetworkIcon size={16} />
-                                    Share Event
-                                </button>
-                                <a
-                                    href={googleCalendarLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                    onClick={() => setShowMoreMenu(false)}
-                                >
-                                    <CalendarPlusIcon size={16} />
-                                    Add to Google Calendar
-                                </a>
-                                <button
-                                    onClick={() => {
-                                        handleIcsDownload();
-                                        setShowMoreMenu(false);
-                                    }}
-                                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
-                                >
-                                    <DownloadSimpleIcon size={16} />
-                                    Download ICS
-                                </button>
-                                {(displayEvent.registrationUrl || displayEvent.sourceUrl) && (
-                                    <button
-                                        onClick={() => {
-                                            const url = displayEvent.registrationUrl || displayEvent.sourceUrl;
-                                            if (url) {
-                                                window.open(url, '_blank', 'noopener,noreferrer');
-                                            }
-                                            setShowMoreMenu(false);
-                                        }}
-                                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
-                                    >
-                                        <ArrowSquareOutIcon size={16} />
-                                        Visit Event Page
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                    {/* Secondary Action - Bookmark */}
+                    <button
+                        onClick={handleTrackEvent}
+                        disabled={isTrackingLoading || !user}
+                        className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg font-medium text-[14px] transition-colors ${isTracked
+                            ? 'text-blue-400 hover:text-blue-300'
+                            : 'text-[#A1A1AA] hover:text-white'
+                            }`}
+                    >
+                        <BookmarkSimple size={16} weight={isTracked ? 'fill' : 'regular'} />
+                        {isTracked ? 'Saved to Bookmarks' : 'Bookmark this event'}
+                    </button>
                 </div>
             </div>
         </div>

@@ -50,8 +50,11 @@ export default function Navbar() {
     const shouldShowBackground = isScrolled || isProtectedPage;
 
     return (
-        <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${shouldShowBackground ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md shadow-sm' : 'bg-transparent'
-            }`}>
+        <nav 
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-0 border-none ${shouldShowBackground ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md' : 'bg-transparent'
+            }`}
+            style={{ border: 'none', borderWidth: 0, borderColor: 'transparent' }}
+        >
             <div className="max-w-[1600px] mx-auto px-6">
                 <div className="relative flex items-center h-16">
                     {/* Logo - Left */}

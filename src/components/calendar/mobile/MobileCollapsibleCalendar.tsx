@@ -122,7 +122,7 @@ const MobileCollapsibleCalendar: React.FC<MobileCollapsibleCalendarProps> = ({
                         onClick={handlePreviousMonth}
                         aria-label="Previous month"
                     >
-                        <CaretLeft size={16} />
+                        <CaretLeft size={14} />
                     </button>
                     
                     <div className="month-title-modern">
@@ -134,7 +134,7 @@ const MobileCollapsibleCalendar: React.FC<MobileCollapsibleCalendarProps> = ({
                         onClick={handleNextMonth}
                         aria-label="Next month"
                     >
-                        <CaretRight size={16} />
+                        <CaretRight size={14} />
                     </button>
                 </div>
 
@@ -159,7 +159,7 @@ const MobileCollapsibleCalendar: React.FC<MobileCollapsibleCalendarProps> = ({
                         >
                             <div className="day-number-modern">{day.dayNumber}</div>
 
-                            {/* Event indicator - Multiple color-coded dots */}
+                            {/* Event indicator - Multiple color-coded dots (max 3) */}
                             {day.hasEvents && (
                                 <div className="event-indicator-multiple">
                                     {day.events.slice(0, 3).map((event, eventIndex) => {
@@ -178,14 +178,6 @@ const MobileCollapsibleCalendar: React.FC<MobileCollapsibleCalendarProps> = ({
                                             />
                                         );
                                     })}
-                                    {day.events.length > 3 && (
-                                        <div 
-                                            className="event-count-badge" 
-                                            title={`${day.events.length} total events`}
-                                        >
-                                            +{day.events.length - 3}
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>

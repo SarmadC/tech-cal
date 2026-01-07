@@ -84,7 +84,13 @@ export interface GoalProgress {
   goal: string;
   eventCount: number;
   impactTotal: number; // Sum of impact scores for events matching this goal
-  progress: number; // 0-100
+  progress: number; // 0-100 based on event count toward target
+  targetEventCount: number; // Target from goal config
+  matchedEvents: Array<{ // Which events matched this goal
+    id: string;
+    title: string;
+    attendedDate: string;
+  }>;
   suggestedAction?: string; // Placeholder for now - will be computed once targets validated
 }
 
@@ -300,9 +306,16 @@ export function useDashboardMetrics({
   }, [upcomingEvents, getOrComputeAlignment]);
   
   // Pre-compute attended events (used by multiple metrics)
+  // Only include events that have ACTUALLY occurred (event date is in the past)
   const attendedEvents = useMemo(() => {
+    const now = new Date();
     return trackedEvents
-      .filter(te => te.status === 'attended' && te.event)
+      .filter(te => {
+        if (te.status !== 'attended' || !te.event) return false;
+        // Only include if event end date (or start date if no end) has passed
+        const eventEndDate = new Date(te.event.endTime || te.event.startTime);
+        return eventEndDate < now;
+      })
       .sort((a, b) => new Date(b.trackedAt).getTime() - new Date(a.trackedAt).getTime());
   }, [trackedEvents]);
   
@@ -406,16 +419,24 @@ export function useDashboardMetrics({
         });
         
         const target = getGoalTarget(goal);
-        // Progress based on impact total vs target (max points = target * 100)
-        // e.g., if target is 10 events, max points = 1000 (10 events × 100 points each)
-        const maxPoints = target * 100;
-        const progress = maxPoints > 0 ? Math.min(Math.round((impactTotal / maxPoints) * 100), 100) : 0;
+        // Progress based on event count toward target (simple, intuitive calculation)
+        // e.g., 1 of 12 events = ~8%, 6 of 12 = 50%
+        const progress = target > 0 ? Math.min(Math.round((goalEvents.length / target) * 100), 100) : 0;
+        
+        // Track which events contributed to this goal
+        const matchedEvents = goalEvents.map(te => ({
+          id: te.event!.id,
+          title: te.event!.title,
+          attendedDate: te.event!.startTime,
+        }));
         
         goalProgress.push({
           goal,
           eventCount: goalEvents.length,
           impactTotal: Math.round(impactTotal),
           progress,
+          targetEventCount: target,
+          matchedEvents,
         });
       });
     }

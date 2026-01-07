@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, useState, useEffect, useMemo } from 'react';
-import { XIcon, ArrowSquareOutIcon, Bookmark } from '@phosphor-icons/react';
+import { XIcon, ArrowSquareOutIcon, Bookmark, Star, ChatText } from '@phosphor-icons/react';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
@@ -11,6 +11,7 @@ import { createClient } from '@/utils/supabase/client';
 import EventInfo from './EventInfo';
 import AdaptiveTimeline from './AdaptiveTimeline';
 import TrackAgendaView, { groupAgendaByTrack } from './TrackAgendaView';
+import { EventFeedbackForm } from '@/components/events/EventFeedbackForm';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useAuth } from '@/contexts';
 import { generateEventSlug } from '@/utils/slugUtils';
@@ -32,7 +33,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
 
     // Add bookmark functionality
     const { user } = useAuth();
-    const { isBookmarked, toggleBookmark, isLoading: isBookmarkLoading } = useEventEngagement();
+    const { isBookmarked, toggleBookmark, getAttendanceStatus, isLoading: isBookmarkLoading } = useEventEngagement();
 
     // Get the display event (with agenda if available)
     const displayEvent = eventWithAgenda;
@@ -282,6 +283,16 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {/* Feedback for attended events (attendance managed from dashboard) */}
+                {user && getAttendanceStatus(displayEvent.id) === 'attended' && (
+                    <div className="mt-8 pt-6 border-t border-white/10" style={{ borderTopColor: 'rgba(255,255,255,0.08)' }}>
+                        <div className="text-[11px] font-medium text-[#757575] uppercase tracking-[0.05em] mb-4">
+                            Your Feedback
+                        </div>
+                        <EventFeedbackForm event={displayEvent} compact />
                     </div>
                 )}
             </div>

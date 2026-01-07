@@ -277,10 +277,13 @@ export default function MultiSelectDropdown({
                     ref={triggerRef}
                     onClick={() => { if (!isOpen) handleToggle(); searchRef.current?.focus(); }}
                     className={clsx(
-                        "w-full min-h-[42px] px-3 py-2 rounded-xl border transition-all duration-200 bg-[hsl(var(--background))] flex flex-wrap gap-2 items-center cursor-text",
+                        "w-full min-h-[42px] px-3 py-2 rounded-xl border transition-all duration-200 flex flex-wrap gap-2 items-center cursor-text",
+                        variant === 'minimal'
+                            ? "bg-transparent border-transparent hover:bg-secondary/50"
+                            : "bg-[hsl(var(--background))]",
                         isOpen
-                            ? "border-border ring-1 ring-border/50 shadow-lg"
-                            : "border-border/50 hover:border-border hover:bg-secondary/30"
+                            ? (variant === 'minimal' ? "bg-secondary/50" : "border-border ring-1 ring-border/50 shadow-lg")
+                            : (variant === 'minimal' ? "" : "border-border/50 hover:border-border hover:bg-secondary/30")
                     )}
                 >
                     <MagnifyingGlass size={16} className={clsx("text-muted-foreground transition-colors", isOpen ? "text-foreground" : "")} />
@@ -428,6 +431,6 @@ export default function MultiSelectDropdown({
                     document.body
                 )}
             </div>
-        </div>
+        </div >
     );
 }

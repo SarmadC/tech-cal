@@ -130,6 +130,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'reactsummit.us',
       },
+      {
+        protocol: 'http',
+        hostname: 'www.swetugg.se',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.swetugg.se',
+      },
     ],
   },
   experimental: {

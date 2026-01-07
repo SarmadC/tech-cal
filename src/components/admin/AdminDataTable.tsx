@@ -176,7 +176,7 @@ export function AdminDataTable<T>({
         if (!sortable) return null;
         const isActive = sortKey === columnKey;
         return (
-            <span className={cn('ml-1 inline-flex h-5 w-5 items-center justify-center rounded transition', isActive ? 'text-foreground-secondary' : 'text-foreground-muted')}>
+            <span className={cn('ml-1 inline-flex h-5 w-5 items-center justify-center rounded transition', isActive ? 'text-foreground-secondary' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-400')}>
                 <MaterialIcon
                     name="expand-more"
                     size={14}
@@ -326,7 +326,7 @@ export function AdminDataTable<T>({
                                                             type="checkbox"
                                                             className="h-3.5 w-3.5 rounded border-default bg-background-tertiary text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-0"
                                                             checked={isSelected}
-                                                            onChange={() => {}} // Handled by label onClick
+                                                            onChange={() => { }} // Handled by label onClick
                                                             aria-label={`Select ${rowId}`}
                                                         />
                                                     </label>

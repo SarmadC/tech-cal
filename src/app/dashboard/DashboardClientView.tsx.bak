@@ -71,7 +71,7 @@ export default function DashboardClientView({
     if (!isReady || isLoading) {
         return (
             <SidebarProvider>
-                <div className="flex h-screen bg-gray-50 dark:bg-[#0A0A0A]">
+                <div className="flex h-screen" style={{ background: 'hsl(var(--background))' }}>
                     <AppSidebar />
                     <main className="flex-1 flex flex-col overflow-hidden">
                         <div className="flex-1 overflow-auto">
@@ -93,7 +93,7 @@ export default function DashboardClientView({
     if (hasCriticalErrors) {
         return (
             <SidebarProvider>
-                <div className="flex h-screen bg-gray-50 dark:bg-[#0A0A0A]">
+                <div className="flex h-screen" style={{ background: 'hsl(var(--background))' }}>
                     <AppSidebar />
                     <main className="flex-1 flex flex-col overflow-hidden">
                         <div className="flex-1 overflow-auto">
@@ -136,9 +136,9 @@ export default function DashboardClientView({
                     <div className="flex-1 overflow-auto">
                         <PageErrorBoundary name="Dashboard">
                             {/* Detailed Grid Dashboard with flat background */}
-                            <div className="min-h-screen bg-gray-50 dark:bg-[#0A0A0A] relative">
+                            <div className="min-h-screen bg-[#0A0A0A] relative">
                                 {/* Subtle noise texture or grid could go here, keeping it clean for now */}
-                                <div className="absolute inset-0 bg-black/[0.02] dark:bg-white/[0.02] pointer-events-none" />
+                                <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
 
                                 <div className={`relative max-w-[1600px] mx-auto px-6 space-y-6 ${isMobile ? 'pt-20 pb-24' : 'py-8'}`}>
                                     {/* Breadcrumbs - Hidden on mobile */}

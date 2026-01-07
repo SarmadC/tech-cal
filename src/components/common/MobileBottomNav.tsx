@@ -23,11 +23,11 @@ const MobileBottomNav = () => {
     ];
 
     return (
-        <div 
+        <div
             className="fixed bottom-0 left-0 right-0 z-50 pb-safe md:hidden"
             style={{
-                backgroundColor: 'var(--mono-bg-main)',
-                borderTop: '1px solid var(--mono-border-default)',
+                backgroundColor: '#0A0A0A',
+                borderTop: '1px solid rgba(255,255,255,0.08)',
             }}
         >
             <div className="flex justify-around items-center h-[60px] px-2">
@@ -38,22 +38,22 @@ const MobileBottomNav = () => {
                         <button
                             key={item.name}
                             onClick={() => router.push(item.href)}
-                            className="flex flex-col items-center justify-center w-full h-full gap-1"
+                            className="flex flex-col items-center justify-center w-full h-full gap-1 group"
                         >
                             <div className={cn(
                                 "flex items-center justify-center transition-colors duration-200",
-                                isActive 
-                                    ? "text-[var(--mono-text-primary)]" 
-                                    : "text-[var(--mono-text-secondary)] hover:text-[var(--mono-text-primary)]"
+                                isActive
+                                    ? "text-orange-500"
+                                    : "text-[#71717A] group-hover:text-[#A1A1AA]"
                             )}>
-                                <item.icon size={24} weight={isActive ? "bold" : "regular"} />
+                                <item.icon size={24} weight={isActive ? "fill" : "regular"} />
                             </div>
-                            <span 
+                            <span
                                 className={cn(
                                     "text-[10px] font-medium transition-colors duration-200",
-                                    isActive 
-                                        ? "text-[var(--mono-text-primary)]" 
-                                        : "text-[var(--mono-text-secondary)]"
+                                    isActive
+                                        ? "text-orange-500"
+                                        : "text-[#71717A] group-hover:text-[#A1A1AA]"
                                 )}
                             >
                                 {item.name}

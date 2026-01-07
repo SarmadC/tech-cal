@@ -15,225 +15,225 @@ import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 
 export interface MobileCalendarAppProps {
-  events: Event[];
-  currentDate: Date;
-  categories: EventType[];
-  profile: AppProfile | null;
-  trackedEvents?: TrackedEvent[];
-  onEventSelect?: (event: Event) => void;
-  onEventTrack?: (event: Event) => Promise<void>;
-  onDateChange?: (date: Date) => void;
-  className?: string;
+    events: Event[];
+    currentDate: Date;
+    categories: EventType[];
+    profile: AppProfile | null;
+    trackedEvents?: TrackedEvent[];
+    onEventSelect?: (event: Event) => void;
+    onEventTrack?: (event: Event) => Promise<void>;
+    onDateChange?: (date: Date) => void;
+    className?: string;
 }
 
 const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
-  events,
-  currentDate,
-  categories,
-  profile,
-  trackedEvents = [],
-  onEventSelect,
-  onEventTrack: _onEventTrack,
-  onDateChange,
-  className = ''
+    events,
+    currentDate,
+    categories,
+    profile,
+    trackedEvents = [],
+    onEventSelect,
+    onEventTrack: _onEventTrack,
+    onDateChange,
+    className = ''
 }) => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  
-  // Use events as TrackedEvent[] if they're already enriched, otherwise convert
-  const enrichedEvents: TrackedEvent[] = React.useMemo(() => {
-    // Check if events are already TrackedEvent objects
-    if (events.length > 0 && 'isTracked' in events[0]) {
-      return events as TrackedEvent[];
-    }
-    // Otherwise, convert to TrackedEvent format
-    const trackedSet = new Set(trackedEvents.map(te => te.id));
-    return events.map(event => enrichWithTracking(event, trackedSet.has(event.id)));
-  }, [events, trackedEvents]);
-  
-  // Smart filters integration
-  const {
-    filters,
-    filteredEvents,
-    updateFilter,
-    resetFilters,
-    applyQuickFilter,
-    activeFilterCount
-  } = useSmartFilters(enrichedEvents, profile);
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
-  // Default to month view only
-  const [isCalendarCollapsed, setIsCalendarCollapsed] = useState(true);
+    // Use events as TrackedEvent[] if they're already enriched, otherwise convert
+    const enrichedEvents: TrackedEvent[] = React.useMemo(() => {
+        // Check if events are already TrackedEvent objects
+        if (events.length > 0 && 'isTracked' in events[0]) {
+            return events as TrackedEvent[];
+        }
+        // Otherwise, convert to TrackedEvent format
+        const trackedSet = new Set(trackedEvents.map(te => te.id));
+        return events.map(event => enrichWithTracking(event, trackedSet.has(event.id)));
+    }, [events, trackedEvents]);
 
-  // Debug logging
-  // Mobile calendar app state logged
-  const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
-  const [localCurrentDate, setLocalCurrentDate] = useState(currentDate);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(currentDate);
+    // Smart filters integration
+    const {
+        filters,
+        filteredEvents,
+        updateFilter,
+        resetFilters,
+        applyQuickFilter,
+        activeFilterCount
+    } = useSmartFilters(enrichedEvents, profile);
 
-  // No view switching needed - always month view
+    // Default to month view only
+    const [isCalendarCollapsed, setIsCalendarCollapsed] = useState(true);
 
-  // Sync local date with prop changes
-  useEffect(() => {
-    setLocalCurrentDate(currentDate);
-    setSelectedDate(currentDate);
-  }, [currentDate]);
+    // Debug logging
+    // Mobile calendar app state logged
+    const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
+    const [localCurrentDate, setLocalCurrentDate] = useState(currentDate);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(currentDate);
 
-  const handleToggleCalendarCollapse = () => {
-    setIsCalendarCollapsed(!isCalendarCollapsed);
-  };
+    // No view switching needed - always month view
 
-  const handleToggleSearchFilter = () => {
-    setIsSearchFilterOpen(!isSearchFilterOpen);
-  };
+    // Sync local date with prop changes
+    useEffect(() => {
+        setLocalCurrentDate(currentDate);
+        setSelectedDate(currentDate);
+    }, [currentDate]);
 
-  // Navigation handlers
-  const handleDateChange = useCallback((date: Date, fromSearch = false) => {
-    console.log('MobileCalendarApp: Date change requested:', date, 'fromSearch:', fromSearch);
-    setLocalCurrentDate(date);
-    setSelectedDate(date);
-    onDateChange?.(date);
+    const handleToggleCalendarCollapse = () => {
+        setIsCalendarCollapsed(!isCalendarCollapsed);
+    };
 
-    // Update URL with selected date
-    if (fromSearch) {
-      const params = new URLSearchParams(searchParams.toString());
-      const dateParam = date.toISOString().split('T')[0];
-      params.set('date', dateParam);
-      router.push(`/calendar?${params.toString()}`, { scroll: false });
-    }
-  }, [onDateChange, searchParams, router]);
+    const handleToggleSearchFilter = () => {
+        setIsSearchFilterOpen(!isSearchFilterOpen);
+    };
 
-  const handleNavigate = useCallback((direction: 'prev' | 'next') => {
-    const newDate = new Date(localCurrentDate);
-    // Always navigate by months in month view
-    newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
-    handleDateChange(newDate);
-  }, [localCurrentDate, handleDateChange]);
+    // Navigation handlers
+    const handleDateChange = useCallback((date: Date, fromSearch = false) => {
+        console.log('MobileCalendarApp: Date change requested:', date, 'fromSearch:', fromSearch);
+        setLocalCurrentDate(date);
+        setSelectedDate(date);
+        onDateChange?.(date);
 
-  const handleGoToToday = useCallback(() => {
-    const today = new Date();
-    handleDateChange(today);
-  }, [handleDateChange]);
+        // Update URL with selected date
+        if (fromSearch) {
+            const params = new URLSearchParams(searchParams.toString());
+            const dateParam = date.toISOString().split('T')[0];
+            params.set('date', dateParam);
+            router.push(`/calendar?${params.toString()}`, { scroll: false });
+        }
+    }, [onDateChange, searchParams, router]);
 
-  // Swipe gestures configuration
-  const swipeConfig = {
-    onSwipeLeft: () => handleNavigate('next'),
-    onSwipeRight: () => handleNavigate('prev'),
-    threshold: 50,
-    preventScroll: false,
-    enableMomentum: true,
-  };
+    const handleNavigate = useCallback((direction: 'prev' | 'next') => {
+        const newDate = new Date(localCurrentDate);
+        // Always navigate by months in month view
+        newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
+        handleDateChange(newDate);
+    }, [localCurrentDate, handleDateChange]);
 
-  const { swipeHandlers: _swipeHandlers } = useSwipeGestures(swipeConfig);
+    const handleGoToToday = useCallback(() => {
+        const today = new Date();
+        handleDateChange(today);
+    }, [handleDateChange]);
+
+    // Swipe gestures configuration
+    const swipeConfig = {
+        onSwipeLeft: () => handleNavigate('next'),
+        onSwipeRight: () => handleNavigate('prev'),
+        threshold: 50,
+        preventScroll: false,
+        enableMomentum: true,
+    };
+
+    const { swipeHandlers: _swipeHandlers } = useSwipeGestures(swipeConfig);
 
 
-  return (
-    <div className={`mobile-calendar-app ${className}`}>
-      {/* Unified Mobile Navbar */}
-      <UnifiedMobileNavbar 
-        navItems={[
-          { name: 'Discover', href: '/discover' },
-          { name: 'Calendar', href: '/calendar' },
-          { name: 'Dashboard', href: '/dashboard' },
-          { name: 'Hackathons', href: '/hackathons' },
-          { name: 'Settings', href: '/dashboard/settings' }
-        ]}
-        fixed={false}
-        className="static"
-      />
+    return (
+        <div className={`mobile-calendar-app ${className}`}>
+            {/* Unified Mobile Navbar */}
+            <UnifiedMobileNavbar
+                navItems={[
+                    { name: 'Discover', href: '/discover' },
+                    { name: 'Calendar', href: '/calendar' },
+                    { name: 'Dashboard', href: '/dashboard' },
+                    { name: 'Hackathons', href: '/hackathons' },
+                    { name: 'Settings', href: '/dashboard/settings' }
+                ]}
+                fixed={false}
+                className="static"
+            />
 
-      {/* Calendar Controls Bar */}
-      <MobileCalendarControls
-        currentDate={localCurrentDate}
-        onToggleSearchFilter={handleToggleSearchFilter}
-        onToggleCalendarCollapse={handleToggleCalendarCollapse}
-        onDateChange={handleDateChange}
-        isCalendarCollapsed={isCalendarCollapsed}
-        activeFilterCount={activeFilterCount}
-      />
+            {/* Calendar Controls Bar */}
+            <MobileCalendarControls
+                currentDate={localCurrentDate}
+                onToggleSearchFilter={handleToggleSearchFilter}
+                onToggleCalendarCollapse={handleToggleCalendarCollapse}
+                onDateChange={handleDateChange}
+                isCalendarCollapsed={isCalendarCollapsed}
+                activeFilterCount={activeFilterCount}
+            />
 
-      {/* Collapsible Calendar Grid */}
-      <MobileCollapsibleCalendar
-        events={filteredEvents}
-        currentDate={localCurrentDate}
-        categories={categories}
-        selectedDate={selectedDate}
-        isCalendarCollapsed={isCalendarCollapsed}
-        onDateClick={(date) => handleDateChange(date, false)}
-        onDateChange={(date) => handleDateChange(date, false)}
-      />
-      
-      <MobileAdvancedGestures
-        onSwipeLeft={() => handleNavigate('next')}
-        onSwipeRight={() => handleNavigate('prev')}
-        onDoubleTap={() => {
-          // Double tap to go to today
-          handleGoToToday();
-        }}
-        // Disabled long press to prevent accidental filter opening during scrolling
-        // onLongPress={() => {
-        //   // Long press to open search filters
-        //   handleToggleSearchFilter();
-        // }}
-        onPullToRefresh={() => {
-          // Pull to refresh events
-          // Refreshing events...
-        }}
-        enablePullToRefresh={true}
-        enableDoubleTap={true}
-        enableLongPress={false}
-        className="mobile-calendar-content"
-      >
-        <div 
-          id="mobile-calendar-content"
-          role="main"
-          aria-label="Mobile calendar month view"
-        >
-          {/* Main Content - Month View Only */}
-          <MobileCalendarMonthView
-            events={filteredEvents}
-            initialDate={localCurrentDate}
-            categories={categories}
-            profile={profile}
-            onEventSelect={onEventSelect}
-            onDateChange={(date) => handleDateChange(date, false)}
-            isCalendarCollapsed={isCalendarCollapsed}
-          />
+            {/* Collapsible Calendar Grid */}
+            <MobileCollapsibleCalendar
+                events={filteredEvents}
+                currentDate={localCurrentDate}
+                categories={categories}
+                selectedDate={selectedDate}
+                isCalendarCollapsed={isCalendarCollapsed}
+                onDateClick={(date) => handleDateChange(date, false)}
+                onDateChange={(date) => handleDateChange(date, false)}
+            />
+
+            <MobileAdvancedGestures
+                onSwipeLeft={() => handleNavigate('next')}
+                onSwipeRight={() => handleNavigate('prev')}
+                onDoubleTap={() => {
+                    // Double tap to go to today
+                    handleGoToToday();
+                }}
+                // Disabled long press to prevent accidental filter opening during scrolling
+                // onLongPress={() => {
+                //   // Long press to open search filters
+                //   handleToggleSearchFilter();
+                // }}
+                onPullToRefresh={() => {
+                    // Pull to refresh events
+                    // Refreshing events...
+                }}
+                enablePullToRefresh={true}
+                enableDoubleTap={true}
+                enableLongPress={false}
+                className="mobile-calendar-content"
+            >
+                <div
+                    id="mobile-calendar-content"
+                    role="main"
+                    aria-label="Mobile calendar month view"
+                >
+                    {/* Main Content - Month View Only */}
+                    <MobileCalendarMonthView
+                        events={filteredEvents}
+                        initialDate={localCurrentDate}
+                        categories={categories}
+                        profile={profile}
+                        onEventSelect={onEventSelect}
+                        onDateChange={(date) => handleDateChange(date, false)}
+                        isCalendarCollapsed={isCalendarCollapsed}
+                    />
+                </div>
+            </MobileAdvancedGestures>
+
+            {/* Mobile Search Filter Overlay */}
+            <MobileSearchFilter
+                filters={filters}
+                onUpdateFilter={updateFilter}
+                onResetFilters={resetFilters}
+                onApplyQuickFilter={applyQuickFilter}
+                activeFilterCount={activeFilterCount}
+                isOpen={isSearchFilterOpen}
+                onClose={() => setIsSearchFilterOpen(false)}
+                events={events.map(event => ({
+                    id: event.id,
+                    title: event.title,
+                    organizer: event.organizer,
+                    eventTypeId: event.eventTypeId,
+                    startTime: event.startTime,
+                    endTime: event.endTime || undefined
+                }))}
+                categories={categories.map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    color: cat.color
+                }))}
+                onSearchSuggestionSelect={(_suggestion) => {
+                    // Handle suggestion selection - could filter events or navigate
+                    // Selected suggestion handled
+                }}
+                onDateChange={(date) => handleDateChange(date, true)}
+            />
+
+            {/* Mobile Bottom Navigation */}
+            <MobileBottomNav />
         </div>
-      </MobileAdvancedGestures>
-
-      {/* Mobile Search Filter Overlay */}
-      <MobileSearchFilter
-        filters={filters}
-        onUpdateFilter={updateFilter}
-        onResetFilters={resetFilters}
-        onApplyQuickFilter={applyQuickFilter}
-        activeFilterCount={activeFilterCount}
-        isOpen={isSearchFilterOpen}
-        onClose={() => setIsSearchFilterOpen(false)}
-        events={events.map(event => ({
-          id: event.id,
-          title: event.title,
-          organizer: event.organizer,
-          eventTypeId: event.eventTypeId,
-          startTime: event.startTime,
-          endTime: event.endTime || undefined
-        }))}
-        categories={categories.map(cat => ({
-          id: cat.id,
-          name: cat.name,
-          color: cat.color
-        }))}
-        onSearchSuggestionSelect={(_suggestion) => {
-          // Handle suggestion selection - could filter events or navigate
-          // Selected suggestion handled
-        }}
-        onDateChange={(date) => handleDateChange(date, true)}
-      />
-
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
-    </div>
-  );
+    );
 };
 
 export default MobileCalendarApp;

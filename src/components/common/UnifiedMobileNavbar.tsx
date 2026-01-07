@@ -74,7 +74,7 @@ export default function UnifiedMobileNavbar({
     };
 
     const navbarContent = (
-        <Navbar className={cn(fixed && "!absolute !top-0", !fixed && className)}>
+        <Navbar className={cn(fixed && "!relative !top-0 w-full", !fixed && className)}>
             <MobileNav>
                 <MobileNavHeader>
                     {showLogo && <NavbarLogo />}

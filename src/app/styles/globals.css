@@ -156,6 +156,24 @@ textarea:not([class*="fc-"]):focus {
   --space-8: 32px;
   --space-12: 48px;
   --space-16: 64px;
+
+  /* Calendar Selection Colors - Dark Mode */
+  --calendar-selection-blue: #3B82F6;
+  /* bright blue for dark backgrounds */
+  --calendar-selection-blue-hover: #2563eb;
+  /* darker blue on hover */
+  --calendar-selection-blue-light: rgba(59, 130, 246, 0.1);
+  /* light blue background */
+  --calendar-selection-blue-medium: rgba(37, 99, 235, 0.12);
+  /* medium blue background */
+  --calendar-selection-blue-strong: rgba(37, 99, 235, 0.18);
+  /* stronger blue background */
+  --calendar-selection-text: #ffffff;
+  /* white text on blue circles */
+  --calendar-weekday-text: var(--foreground-tertiary);
+  /* weekday headers */
+  --calendar-divider: var(--border-subtle);
+  /* week dividers */
 }
 
 /* --- Light Theme Override --- */
@@ -210,6 +228,24 @@ textarea:not([class*="fc-"]):focus {
   --chart-3-explicit: hsl(30, 80%, 55%);
   --chart-4-explicit: hsl(280, 65%, 60%);
   --chart-5-explicit: hsl(340, 75%, 55%);
+
+  /* Calendar Selection Colors - Light Mode */
+  --calendar-selection-blue: #2563eb;
+  /* darker blue for better contrast on light backgrounds */
+  --calendar-selection-blue-hover: #1d4ed8;
+  /* darker hover state */
+  --calendar-selection-blue-light: rgba(37, 99, 235, 0.1);
+  /* adjusted opacity for light mode */
+  --calendar-selection-blue-medium: rgba(37, 99, 235, 0.12);
+  /* medium blue background */
+  --calendar-selection-blue-strong: rgba(37, 99, 235, 0.18);
+  /* stronger blue background */
+  --calendar-selection-text: #ffffff;
+  /* white text remains for contrast */
+  --calendar-weekday-text: var(--foreground-tertiary);
+  /* automatically adapts */
+  --calendar-divider: var(--border-subtle);
+  /* automatically adapts */
 }
 
 /* ============================================== */
@@ -260,22 +296,20 @@ textarea:not([class*="fc-"]):focus {
 @layer utilities {
 
   /* Base glass card effect - Enhanced with premium depth */
+  /* Base glass card effect - Linear/Notion Style (Ghost Card) */
   .glass-card {
     position: relative;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.8),
-      0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px; /* rounded-md */
+    box-shadow: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-card:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    transform: none;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   /* Light mode glass variant - Enhanced with depth */
@@ -321,6 +355,7 @@ textarea:not([class*="fc-"]):focus {
     padding: 1px;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -337,7 +372,8 @@ textarea:not([class*="fc-"]):focus {
   }
 
   .glass-glow:hover {
-    box-shadow: 0 0 32px rgba(255, 255, 255, 0.15), 0 20px 60px -15px rgba(0, 0, 0, 0.9);
+    box-shadow: none;
+    border-color: rgba(255, 255, 255, 0.15);
   }
 
   .light .glass-glow:hover {
@@ -346,19 +382,11 @@ textarea:not([class*="fc-"]):focus {
 
   /* Gradient background for dashboard - Enhanced for glass effect */
   .glass-bg-gradient {
-    background:
-      radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
-      radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 70%),
-      linear-gradient(180deg, var(--background-main) 0%, rgba(30, 30, 30, 0.95) 100%);
+    background: #0A0A0A;
   }
 
   .dark .glass-bg-gradient {
-    background:
-      radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
-      radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 70%),
-      linear-gradient(180deg, #08090a 0%, rgba(8, 9, 10, 0.95) 100%);
+    background: #0A0A0A;
   }
 
   .light .glass-bg-gradient {

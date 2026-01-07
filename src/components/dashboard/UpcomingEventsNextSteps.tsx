@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, memo, useCallback } from 'react';
+import React, { useMemo, useState, memo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   CalendarPlus, 
@@ -17,9 +17,9 @@ import type { TrackedEventRecord, Event, EventType } from '@/types';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 
-// Dynamically import DashboardEventDetailModal to avoid SSR issues
-const DashboardEventDetailModal = dynamic(
-  () => import('@/components/dashboard/DashboardEventDetailModal'),
+// Dynamically import EventDetailPanel to avoid SSR issues
+const EventDetailPanel = dynamic(
+  () => import('@/components/calendar/EventDetailPanel'),
   { ssr: false }
 );
 
@@ -249,7 +249,7 @@ const EventRow = memo(({
       {/* Date Token */}
       <div className="flex-shrink-0 flex items-center">
         <div className="w-11 h-11 glass-card flex flex-col items-center justify-center">
-          <span className="text-[9px] font-medium text-white/60 uppercase leading-tight">
+          <span className="text-[9px] font-medium text-white/60 leading-tight">
             {format(eventDate, 'MMM')}
           </span>
           <span className="text-base font-bold text-white/95 leading-none mt-0.5">
@@ -339,6 +339,27 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, eventTy
     setIsModalOpen(false);
     setSelectedEvent(null);
   }, []);
+
+  // Handle escape key press and body scroll lock
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        handleModalClose();
+      }
+    };
+
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', handleEscape);
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isModalOpen, handleModalClose]);
 
   // Memoize likelihood predictions per event to prevent expensive re-computations
   const eventLikelihoodMap = useMemo(() => {
@@ -457,7 +478,7 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, eventTy
       {/* Next Best Action - Elevated with Accent */}
         {data.nextBestAction && (
         <div className="mb-6">
-          <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-3">
+          <p className="text-[10px] font-bold text-white/50 tracking-wider mb-3">
             Next Best Step
             </p>
             <div
@@ -510,7 +531,7 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, eventTy
       {/* Tracked Events List */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">
+          <p className="text-[10px] font-bold text-white/50 tracking-wider">
             Upcoming Events
           </p>
           {data.nextTracked.length >= CONFIG.maxVisibleEvents && (
@@ -563,12 +584,32 @@ export function UpcomingEventsNextSteps({ trackedEvents, upcomingEvents, eventTy
       </div>
 
       {/* EventDetailPanel Modal */}
-      <DashboardEventDetailModal
-        isOpen={isModalOpen}
-        event={selectedEvent}
-        onClose={handleModalClose}
-        categories={eventTypes}
-      />
+      {isModalOpen && selectedEvent && createPortal(
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-in fade-in-0 duration-300"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/70 dark:bg-black/70 light:bg-black/50 backdrop-blur-lg transition-opacity duration-300"
+            onClick={handleModalClose}
+            aria-hidden="true"
+          />
+          
+          {/* Modal Content */}
+          <div className="relative w-full max-w-2xl max-h-[90vh] animate-in zoom-in-95 fade-in-0 duration-300 ease-out drop-shadow-2xl">
+            <EventDetailPanel
+              event={selectedEvent}
+              onClose={handleModalClose}
+              categories={eventTypes}
+              variant="modal"
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
