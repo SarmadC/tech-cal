@@ -12,7 +12,6 @@ export { ActivityFeed } from './ActivityFeed';
 export { ProgressBar } from './ProgressBar';
 export { EventHeatMap } from './EventHeatMap';
 export { QuickStatsCard } from './QuickStatsCard';
-export { ActivityTrendCard } from './ActivityTrendCard';
 export { EventDistributionCard } from './EventDistributionCard';
 
 // New refactored components

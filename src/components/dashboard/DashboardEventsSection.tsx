@@ -12,48 +12,48 @@ import type { BaseEventAndTrackedProps } from '@/types/componentProps';
 type DashboardEventsSectionProps = BaseEventAndTrackedProps;
 
 export function DashboardEventsSection({ events, trackedEvents }: DashboardEventsSectionProps) {
-  const router = useRouter();
-  
-  const nextTrackedEvents = useMemo(() => {
-    if (!trackedEvents || !events) return [];
-    return trackedEvents
-      .map(te => events.find(e => e.id === te.eventId))
-      .filter((event): event is Event => event !== undefined)
-      .slice(0, 5);
-  }, [trackedEvents, events]);
+    const router = useRouter();
 
-  const handleEventClick = useCallback((event: Event | TrackedEventRecord) => {
-    const eventData = 'event' in event ? event.event : event;
-    if (eventData) {
-      router.push(NavigationUtils.goToEvent(eventData.id, eventData.title));
-    }
-  }, [router]);
+    const nextTrackedEvents = useMemo(() => {
+        if (!trackedEvents || !events) return [];
+        return trackedEvents
+            .map(te => events.find(e => e.id === te.eventId))
+            .filter((event): event is Event => event !== undefined)
+            .slice(0, 5);
+    }, [trackedEvents, events]);
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2">
-        <SectionErrorBoundary name="DashboardSection">
-          <EventList
-            events={nextTrackedEvents}
-            title="Your Upcoming Events"
-            description="Events you are tracking."
-            emptyTitle="No upcoming events"
-            emptyDescription="Start tracking events to see them here."
-            emptyActionText="Browse Events"
-            emptyActionHref="/calendar"
-            variant="compact"
-            onEventClick={handleEventClick}
-          />
-        </SectionErrorBoundary>
-      </div>
-      <div className="lg:col-span-1">
-        <SectionErrorBoundary name="DashboardSection">
-          <ActivityFeed
-            events={events}
-            trackedEvents={trackedEvents}
-          />
-        </SectionErrorBoundary>
-      </div>
-    </div>
-  );
+    const handleEventClick = useCallback((event: Event | TrackedEventRecord) => {
+        const eventData = 'event' in event ? event.event : event;
+        if (eventData) {
+            router.push(NavigationUtils.goToEvent(eventData.id, eventData.title));
+        }
+    }, [router]);
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+                <SectionErrorBoundary name="DashboardSection">
+                    <EventList
+                        events={nextTrackedEvents}
+                        title="Your Upcoming Events"
+                        description="Events you are tracking."
+                        emptyTitle="No upcoming events"
+                        emptyDescription="Start tracking events to see them here."
+                        emptyActionText="Browse Events"
+                        emptyActionHref="/calendar"
+                        variant="compact"
+                        onEventClick={handleEventClick}
+                    />
+                </SectionErrorBoundary>
+            </div>
+            <div className="lg:col-span-1">
+                <SectionErrorBoundary name="DashboardSection">
+                    <ActivityFeed
+                        events={events}
+                        trackedEvents={trackedEvents}
+                    />
+                </SectionErrorBoundary>
+            </div>
+        </div>
+    );
 }

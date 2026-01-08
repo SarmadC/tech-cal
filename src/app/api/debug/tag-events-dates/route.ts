@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
  * Debug endpoint to check dates of events tagged with "data"
  * GET /api/debug/tag-events-dates
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 

@@ -2,7 +2,6 @@
 
 import { SectionErrorBoundary } from '@/components/common/ErrorBoundary';
 import { QuickStatsCard } from '@/components/dashboard/QuickStatsCard';
-import { ActivityTrendCard } from '@/components/dashboard/ActivityTrendCard';
 import { EventHeatMap } from '@/components/dashboard/EventHeatMap';
 import { EventDistributionCard } from '@/components/dashboard/EventDistributionCard';
 import { ActiveHackathonsCard } from '@/components/dashboard/ActiveHackathonsCard';
@@ -11,116 +10,99 @@ import type { BaseEventAndTrackedProps } from '@/types/componentProps';
 import type { HackathonEvent } from '@/types/hackathon';
 
 interface DashboardStatsGridProps extends BaseEventAndTrackedProps {
-  hackathons?: HackathonEvent[];
-  hackathonsLoading?: boolean;
+    hackathons?: HackathonEvent[];
+    hackathonsLoading?: boolean;
 }
 
 export function DashboardStatsGrid({
-  events,
-  trackedEvents,
-  hackathons = [],
-  hackathonsLoading = false
+    events,
+    trackedEvents,
+    hackathons = [],
+    hackathonsLoading = false
 }: DashboardStatsGridProps) {
-  // Validate data before rendering
-  if (!events || !trackedEvents) {
-    return (
-      <DashboardErrorState
-        title="Data not available"
-        message="Unable to load dashboard statistics. Please try refreshing the page."
-        showRefresh={true}
-      />
-    );
-  }
-
-  return (
-    <>
-      {/* Dashboard Analytics */}
-      <SectionErrorBoundary 
-        name="QuickStatsCard"
-        fallback={
-          <DashboardErrorState
-            title="Failed to load statistics"
-            message="Unable to load your dashboard overview. Please try again."
-            onRetry={() => window.location.reload()}
-          />
-        }
-      >
-        <QuickStatsCard
-          events={events}
-          trackedEvents={trackedEvents}
-        />
-      </SectionErrorBoundary>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        <SectionErrorBoundary
-          name="ActivityTrendCard"
-          fallback={
-            <div className="col-span-1">
-              <DashboardErrorState
-                title="Activity trend unavailable"
-                message="Unable to load your activity trends."
-                onRetry={() => window.location.reload()}
-              />
-            </div>
-          }
-        >
-          <ActivityTrendCard
-            trackedEvents={trackedEvents}
-          />
-        </SectionErrorBoundary>
-
-        <SectionErrorBoundary
-          name="EventHeatMap"
-          fallback={
-            <div className="col-span-1">
-              <DashboardErrorState
-                title="Event heatmap unavailable"
-                message="Unable to load the event heatmap."
-                onRetry={() => window.location.reload()}
-              />
-            </div>
-          }
-        >
-        <EventHeatMap
-          events={events}
-        />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary
-        name="EventDistributionCard"
-        fallback={
-          <div className="col-span-1">
+    // Validate data before rendering
+    if (!events || !trackedEvents) {
+        return (
             <DashboardErrorState
-              title="Event distribution unavailable"
-              message="Unable to load event distribution data."
-              onRetry={() => window.location.reload()}
+                title="Data not available"
+                message="Unable to load dashboard statistics. Please try refreshing the page."
+                showRefresh={true}
             />
-          </div>
-        }
-      >
-        <EventDistributionCard
-          events={events}
-        />
-        </SectionErrorBoundary>
+        );
+    }
 
-        <SectionErrorBoundary
-          name="ActiveHackathonsCard"
-          fallback={
-            <div className="col-span-1">
-              <DashboardErrorState
-                title="Hackathons unavailable"
-                message="Unable to load hackathon data."
-                onRetry={() => window.location.reload()}
-              />
+    return (
+        <>
+            {/* Dashboard Analytics */}
+            <SectionErrorBoundary
+                name="QuickStatsCard"
+                fallback={
+                    <DashboardErrorState
+                        title="Failed to load statistics"
+                        message="Unable to load your dashboard overview. Please try again."
+                        onRetry={() => window.location.reload()}
+                    />
+                }
+            >
+                <QuickStatsCard
+                    events={events}
+                    trackedEvents={trackedEvents}
+                />
+            </SectionErrorBoundary>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                <SectionErrorBoundary
+                    name="EventHeatMap"
+                    fallback={
+                        <div className="col-span-1">
+                            <DashboardErrorState
+                                title="Event heatmap unavailable"
+                                message="Unable to load the event heatmap."
+                                onRetry={() => window.location.reload()}
+                            />
+                        </div>
+                    }
+                >
+                    <EventHeatMap
+                        events={events}
+                    />
+                </SectionErrorBoundary>
+
+                <SectionErrorBoundary
+                    name="EventDistributionCard"
+                    fallback={
+                        <div className="col-span-1">
+                            <DashboardErrorState
+                                title="Event distribution unavailable"
+                                message="Unable to load event distribution data."
+                                onRetry={() => window.location.reload()}
+                            />
+                        </div>
+                    }
+                >
+                    <EventDistributionCard
+                        events={events}
+                    />
+                </SectionErrorBoundary>
+
+                <SectionErrorBoundary
+                    name="ActiveHackathonsCard"
+                    fallback={
+                        <div className="col-span-1">
+                            <DashboardErrorState
+                                title="Hackathons unavailable"
+                                message="Unable to load hackathon data."
+                                onRetry={() => window.location.reload()}
+                            />
+                        </div>
+                    }
+                >
+                    <ActiveHackathonsCard
+                        hackathons={hackathons}
+                        isLoading={hackathonsLoading}
+                    />
+                </SectionErrorBoundary>
             </div>
-          }
-        >
-          <ActiveHackathonsCard
-            hackathons={hackathons}
-            isLoading={hackathonsLoading}
-          />
-        </SectionErrorBoundary>
-      </div>
-    </>
-  );
+        </>
+    );
 }

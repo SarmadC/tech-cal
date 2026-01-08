@@ -139,7 +139,6 @@ async function backfillEventTags() {
           if (DRY_RUN) {
             // In dry run, just show what would be processed
             const title = event.title.substring(0, 50);
-            const hasAgenda = agenda.length > 0;
             console.log(`  [DRY RUN] Would enrich: "${title}..." (agenda items: ${agenda.length})`);
             successCount++;
           } else {

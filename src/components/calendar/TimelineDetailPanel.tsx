@@ -11,7 +11,7 @@ interface TimelineDetailPanelProps {
 
 export const TimelineDetailPanel: FC<TimelineDetailPanelProps> = ({ event, eventTimezone = 'UTC', onClose }) => {
     return (
-        <div className="h-full bg-zinc-900/50 backdrop-blur-md border-l border-white/10 p-6 flex flex-col">
+        <div className="h-full timeline-detail-glass-panel p-6 flex flex-col">
             <div className="flex justify-between items-start mb-6">
                 <div>
                     <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">

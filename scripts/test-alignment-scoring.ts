@@ -219,7 +219,7 @@ function testScoreRanges() {
   const reactEvent = results[1]; // Should be high (primary skill)
   const pythonEvent = results[2]; // Should be low (beginner, unrelated)
   const mlEvent = results[3]; // Should be moderate-high (interest + leadership goal)
-  const meetupEvent = results[4]; // Should be moderate (networking goal)
+  const _meetupEvent = results[4]; // Should be moderate (networking goal)
   
   console.log('\n');
   logTest(

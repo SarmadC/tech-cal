@@ -52,16 +52,10 @@ const STATIC_FILTERS = {
   searchTerm: ['searchTerm'], // Full-text search (1 input)
 };
 
-interface FilterCounts {
-  categories: number;
-  tags: number;
-  locations: number;
-  staticFilters: Record<string, number>;
-  total: number;
-}
+// Removed unused interface FilterCounts
 
 async function countCategories(): Promise<number> {
-  const { data, error, count } = await supabase
+  const { error, count } = await supabase
     .from('event_type')
     .select('id', { count: 'exact', head: true });
 
@@ -74,7 +68,7 @@ async function countCategories(): Promise<number> {
 }
 
 async function countTags(): Promise<number> {
-  const { data, error, count } = await supabase
+  const { error, count } = await supabase
     .from('event_tags')
     .select('id', { count: 'exact', head: true });
 

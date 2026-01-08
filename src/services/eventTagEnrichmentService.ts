@@ -136,7 +136,7 @@ export class EventTagEnrichmentService {
       const trimmed = name.trim();
       if (!trimmed) return false;
       const lower = trimmed.toLowerCase();
-      const isJsonLike = trimmed.startsWith('{') || trimmed.endsWith('}') || lower.includes('\"key\"') || lower.includes('\"value\"') || lower.includes('\":');
+      const isJsonLike = trimmed.startsWith('{') || trimmed.endsWith('}') || lower.includes('"key"') || lower.includes('"value"') || lower.includes('":');
       const hasKeyValueDelimiter = trimmed.includes(':');
       if (isJsonLike || hasKeyValueDelimiter) return false;
 

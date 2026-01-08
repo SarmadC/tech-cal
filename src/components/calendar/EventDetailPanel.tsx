@@ -147,12 +147,6 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     return (
         <div
             className={containerClasses}
-            style={{
-                background: theme.isDark ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px) saturate(120%)',
-                WebkitBackdropFilter: 'blur(20px) saturate(120%)',
-                border: theme.isDark ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.1)'
-            }}
         >
             <div className="absolute top-4 right-6 flex items-center gap-2 z-10">
                 {/* Open Full Page Action */}

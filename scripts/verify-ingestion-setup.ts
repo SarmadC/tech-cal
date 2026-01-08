@@ -164,7 +164,7 @@ async function verifySetup() {
 
     // Check 5: Verify events table extensions
     console.log('\n5️⃣ Checking events table extensions...');
-    const { data: eventColumns, error: eventError } = await supabase
+    const { error: eventError } = await supabase
         .from('events')
         .select('ingestion_quality_score, ingestion_source_id, ingestion_provenance, ingestion_confidence')
         .limit(1);
@@ -178,7 +178,7 @@ async function verifySetup() {
 
     // Check 6: Verify organizers table extensions
     console.log('\n6️⃣ Checking organizers table extensions...');
-    const { data: organizerColumns, error: orgError } = await supabase
+    const { error: orgError } = await supabase
         .from('organizers')
         .select('domain, trust_score, auto_discovered')
         .limit(1);

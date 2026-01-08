@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { AdminDataTable, type AdminDataTableColumn } from '@/components/admin/AdminDataTable';
 import { MaterialIcon } from '@/components/ui/Icon';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAdminToolbar } from '@/contexts/AdminToolbarContext';
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -70,15 +69,7 @@ interface EnrichmentDashboardClientProps {
     initialEvents: EnrichmentEvent[];
 }
 
-const statusBadgeStyles: Record<string, string> = {
-    pending: 'bg-amber-500/20 text-amber-100',
-    processing: 'bg-blue-500/20 text-blue-100',
-    enriched: 'bg-emerald-500/20 text-emerald-100',
-    failed: 'bg-rose-500/20 text-rose-100',
-    approved: 'bg-emerald-600/20 text-emerald-50',
-    rejected: 'bg-rose-600/20 text-rose-50',
-    skipped: 'bg-background-tertiary text-foreground-primary',
-};
+// Removed unused statusBadgeStyles
 
 export default function EnrichmentDashboardClient({ initialEvents }: EnrichmentDashboardClientProps) {
     const router = useRouter();

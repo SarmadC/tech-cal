@@ -408,7 +408,7 @@ export async function POST(request: NextRequest) {
         scoredImages.sort((a, b) => b.score - a.score);
 
         // Return top results
-        const topImages = scoredImages.slice(0, 20).map(({ score, ...img }) => img);
+        const topImages = scoredImages.slice(0, 20).map(({ score: _score, ...img }) => img);
 
         return NextResponse.json({
             success: true,

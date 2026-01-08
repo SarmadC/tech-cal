@@ -20,13 +20,9 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
     const agenda = event.agenda || [];
 
     // State for expanded days (default closed)
-    const [expandedDays, setExpandedDays] = useState<Record<number, boolean>>({});
-
-    // State for selected event (Master-Detail view)
-    const [selectedEvent, setSelectedEvent] = useState<AgendaItem | null>(null);
-
-    // Initialize selected event with the first event of the first day
-    if (!selectedEvent && agenda.length > 0) {
+    // Initialize state with lazy initializers to avoid render-cycle issues
+    const [selectedEvent, setSelectedEvent] = useState<AgendaItem | null>(() => {
+        if (!agenda.length) return null;
         // Find the first event (sorted by day and time)
         const sortedAgenda = [...agenda].sort((a, b) => {
             if ((a.dayNumber || 1) !== (b.dayNumber || 1)) {
@@ -34,10 +30,16 @@ const TimelineView: FC<TimelineViewProps> = ({ event }) => {
             }
             return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
         });
-        if (sortedAgenda.length > 0) {
-            setSelectedEvent(sortedAgenda[0]);
-        }
-    }
+        return sortedAgenda.length > 0 ? sortedAgenda[0] : null;
+    });
+
+    const [expandedDays, setExpandedDays] = useState<Record<number, boolean>>(() => {
+        // Expand the first day by default
+        if (!agenda.length) return {};
+        const days = agenda.map(item => item.dayNumber || 1);
+        const firstDay = Math.min(...days);
+        return { [firstDay]: true };
+    });
 
     const toggleDay = (day: number) => {
         setExpandedDays(prev => ({

@@ -495,6 +495,29 @@ div.event-detail-glass-sidebar {
     --background: rgba(255, 255, 255, 0.95) !important;
 }
 
+/* Firefox specific fallback - reduce transparency */
+@-moz-document url-prefix() {
+    .event-detail-glass-modal {
+        background: rgba(255, 255, 255, 0.90) !important;
+    }
+    .dark .event-detail-glass-modal {
+        background: rgba(30, 30, 30, 0.90) !important;
+    }
+    
+    /* Nested glass panel fix for Firefox */
+    .timeline-detail-glass-panel {
+        background: rgba(24, 24, 27, 0.95) !important; /* zinc-900 almost opaque */
+        backdrop-filter: none !important;
+    }
+}
+
+/* Timeline Detail Panel Glass Style */
+.timeline-detail-glass-panel {
+    background: rgba(24, 24, 27, 0.5); /* zinc-900/50 */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
 .dark .event-detail-glass-modal {
     background: rgba(30, 30, 30, 0.95) !important;
     backdrop-filter: blur(24px) saturate(120%) !important;

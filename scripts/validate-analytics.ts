@@ -97,7 +97,7 @@ class AnalyticsValidator {
     
     try {
       // Test getting consent (should not throw)
-      const consent = await BehavioralAnalyticsService.getAnalyticsConsent(this.testUserId, this.supabase);
+      await BehavioralAnalyticsService.getAnalyticsConsent(this.testUserId, this.supabase);
       
       // Test updating consent
       await BehavioralAnalyticsService.setAnalyticsConsent(this.testUserId, true, this.supabase);
@@ -235,7 +235,7 @@ class AnalyticsValidator {
     const successful = this.results.filter(r => r.success).length;
     const total = this.results.length;
     
-    this.results.forEach((result, index) => {
+    this.results.forEach((result) => {
       const icon = result.success ? '✅' : '❌';
       console.log(`${icon} ${result.test}`);
     });

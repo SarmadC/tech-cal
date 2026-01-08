@@ -36,7 +36,7 @@ function normalizeCanonicalUrl(url: string | null | undefined): string | null {
         const urlObj = new URL(url.trim());
         
         // Normalize hostname (case-insensitive)
-        let hostname = urlObj.hostname.toLowerCase();
+        const hostname = urlObj.hostname.toLowerCase();
         
         // Collapse default ports
         if (urlObj.port === '80' && urlObj.protocol === 'http:') {

@@ -1151,8 +1151,8 @@ export class EventService {
                         track: (item.track as string) || undefined,
                         };
                     });
-                } catch (e) {
-                    console.warn('Failed to parse daily_schedule JSON:', e);
+                } catch (error) {
+                    console.warn('Failed to parse daily_schedule JSON:', error);
                     return [];
                 }
             })();

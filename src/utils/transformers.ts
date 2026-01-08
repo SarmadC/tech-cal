@@ -242,11 +242,11 @@ export const profileTransformer: ProfileTransformer = {
         updatedAt: supabaseProfile.updated_at,
     }),
     toSupabase: (appProfile: Partial<AppProfile>): Partial<SupabaseProfile> => ({
-        ...(appProfile.hasOwnProperty('id') && { id: appProfile.id }),
-        ...(appProfile.hasOwnProperty('fullName') && { full_name: appProfile.fullName }),
-        ...(appProfile.hasOwnProperty('avatarUrl') && { avatar_url: appProfile.avatarUrl }),
-        ...(appProfile.hasOwnProperty('timezone') && { timezone: appProfile.timezone }),
-        ...(appProfile.hasOwnProperty('preferences') && { preferences: appProfile.preferences }),
+        ...(Object.prototype.hasOwnProperty.call(appProfile, 'id') && { id: appProfile.id }),
+        ...(Object.prototype.hasOwnProperty.call(appProfile, 'fullName') && { full_name: appProfile.fullName }),
+        ...(Object.prototype.hasOwnProperty.call(appProfile, 'avatarUrl') && { avatar_url: appProfile.avatarUrl }),
+        ...(Object.prototype.hasOwnProperty.call(appProfile, 'timezone') && { timezone: appProfile.timezone }),
+        ...(Object.prototype.hasOwnProperty.call(appProfile, 'preferences') && { preferences: appProfile.preferences }),
     })
 };
 

@@ -60,8 +60,8 @@ export async function subscribeToAction(
             status: 'success',
         };
 
-    } catch (e) {
-        console.error('Subscription error:', e);
+    } catch (error) {
+        console.error('Subscription error:', error);
         return {
             message: 'Something went wrong. Please try again later.',
             status: 'error',

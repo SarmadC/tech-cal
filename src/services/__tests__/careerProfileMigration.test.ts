@@ -273,24 +273,27 @@ describe('CareerProfileService Migration', () => {
       await CareerProfileService.saveCareerProfile(userId, mockCareerProfile, mockSupabaseClient);
 
       expect(fromMock).toHaveBeenCalledWith('career_profiles');
-      expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
-        user_id: userId,
-        current_role: mockCareerProfile.currentRole,
-        seniority: mockCareerProfile.seniority,
-        industry: mockCareerProfile.industry,
-        company_size: mockCareerProfile.companySize,
-        primary_skills: mockCareerProfile.primarySkills,
-        skills_to_learn: mockCareerProfile.skillsToLearn,
-        interests: mockCareerProfile.interests,
-        skill_tags: mockCareerProfile.skillTags,
-        career_goals: mockCareerProfile.careerGoals,
-        timeframe: mockCareerProfile.timeframe,
-        learning_style: mockCareerProfile.learningStyle,
-        available_time: mockCareerProfile.availableTime,
-        budget: mockCareerProfile.budget,
-        networking_goals: mockCareerProfile.networkingGoals,
-        preferred_event_types: mockCareerProfile.preferredEventTypes
-      }));
+      expect(upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: userId,
+          current_role: mockCareerProfile.currentRole,
+          seniority: mockCareerProfile.seniority,
+          industry: mockCareerProfile.industry,
+          company_size: mockCareerProfile.companySize,
+          primary_skills: mockCareerProfile.primarySkills,
+          skills_to_learn: mockCareerProfile.skillsToLearn,
+          interests: mockCareerProfile.interests,
+          skill_tags: mockCareerProfile.skillTags,
+          career_goals: mockCareerProfile.careerGoals,
+          timeframe: mockCareerProfile.timeframe,
+          learning_style: mockCareerProfile.learningStyle,
+          available_time: mockCareerProfile.availableTime,
+          budget: mockCareerProfile.budget,
+          networking_goals: mockCareerProfile.networkingGoals,
+          preferred_event_types: mockCareerProfile.preferredEventTypes
+        }),
+        { onConflict: 'user_id' }
+      );
     });
 
     it('should handle save errors', async () => {

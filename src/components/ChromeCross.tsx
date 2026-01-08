@@ -13,10 +13,10 @@ export default function ChromeCross() {
 
     // Wait for hydration to avoid hydration mismatch on theme
     useEffect(() => {
-        setMounted(true);
+        setTimeout(() => setMounted(true), 0);
     }, []);
 
-    const isDarkMode = mounted && (theme === 'dark' || resolvedTheme === 'dark');
+    // Removed unused isDarkMode variable
 
     // Update scene background when theme changes (without recreating the scene)
     useEffect(() => {
@@ -140,8 +140,8 @@ export default function ChromeCross() {
             };
             return cleanup;
 
-        } catch (e) {
-            console.error("ChromeCross simplified init error:", e);
+        } catch (error) {
+            console.error("ChromeCross simplified init error:", error);
             resources.forEach(r => r.dispose());
         }
 

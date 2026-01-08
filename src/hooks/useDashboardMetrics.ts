@@ -387,12 +387,29 @@ export function useDashboardMetrics({
           }
         : null;
     
-    // 2. Upcoming commitments (events with status 'attending')
-    const upcomingCommitments = trackedEvents.filter(
-      te => te.status === 'attending' && te.event
-    ).length;
+    // 2. Follow-up reminders (RSVP'd but not yet attended, sorted by urgency)
+    const followUpReminders = trackedEvents
+      .filter(te => {
+        if (!te.event || te.status !== 'attending') return false;
+        // Only show events that haven't occurred yet
+        const eventDate = new Date(te.event.startTime);
+        const now = new Date();
+        return eventDate > now;
+      })
+      .map(te => {
+        const eventDate = new Date(te.event!.startTime);
+        return {
+          event: te.event!,
+          daysUntil: Math.max(0, differenceInDays(eventDate, new Date())),
+          trackingId: te.trackingId,
+        };
+      })
+      .sort((a, b) => a.daysUntil - b.daysUntil);
+
+    // 3. Upcoming commitments count (derived from reminders)
+    const upcomingCommitments = followUpReminders.length;
     
-    // 3. Last impact score (most recent attended event)
+    // 4. Last impact score (most recent attended event)
     const lastAttended = attendedEvents[0];
     const lastImpactScore = lastAttended?.event
       ? {
@@ -401,7 +418,7 @@ export function useDashboardMetrics({
         }
       : null;
     
-    // 4. Goal progress (for Career Progress Card)
+    // 5. Goal progress (for Career Progress Card)
     const goalProgress: GoalProgress[] = [];
     
     if (careerProfile && careerProfile.careerGoals.length > 0) {
@@ -471,24 +488,8 @@ export function useDashboardMetrics({
           score: item.score,
           reason: item.reason,
         })),
-      // Follow-up reminders (RSVP'd but not yet attended, sorted by urgency)
-      followUpReminders: trackedEvents
-        .filter(te => {
-          if (!te.event || te.status !== 'attending') return false;
-          // Only show events that haven't occurred yet
-          const eventDate = new Date(te.event.startTime);
-          const now = new Date();
-          return eventDate > now;
-        })
-        .map(te => {
-          const eventDate = new Date(te.event!.startTime);
-          return {
-            event: te.event!,
-            daysUntil: Math.max(0, differenceInDays(eventDate, new Date())),
-            trackingId: te.trackingId,
-          };
-        })
-        .sort((a, b) => a.daysUntil - b.daysUntil),
+      followUpReminders,
+      // Recent Wins (last 10 attended events)
       // Recent Wins (last 10 attended events)
       recentWins: attendedEvents.slice(0, 10).map(te => {
         const event = te.event!;

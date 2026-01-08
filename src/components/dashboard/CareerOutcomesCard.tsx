@@ -2,10 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Rocket, Star, Users, Lightbulb, ChartLineUp, ArrowRight, CheckCircle } from '@phosphor-icons/react';
+import { createPortal } from 'react-dom';
+import { Rocket, Star, Users, Lightbulb, ChartLineUp, ArrowRight, CheckCircle, Lock } from '@phosphor-icons/react';
 import { useEventFeedback, type FeedbackAggregates } from '@/hooks/useEventFeedback';
 import { DashboardCard } from '@/components/dashboard/DashboardCard';
-import type { TrackedEventRecord } from '@/types';
+import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
+import type { TrackedEventRecord, Event } from '@/types';
+import dynamic from 'next/dynamic';
+
+const EventFeedbackForm = dynamic(
+    () => import('@/components/events/EventFeedbackForm').then(mod => ({ default: mod.EventFeedbackForm })),
+    { ssr: false }
+);
 
 interface CareerOutcomesCardProps {
     trackedEvents: TrackedEventRecord[];
@@ -19,10 +27,22 @@ const MATURE_THRESHOLD = 5; // events with feedback to show full insights
 
 export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: CareerOutcomesCardProps) {
     const { data: feedbackData, isLoading } = useEventFeedback(userId);
+    const [feedbackEvent, setFeedbackEvent] = React.useState<Event | null>(null);
+
+    const handleRateClick = (event: Event) => {
+        setFeedbackEvent(event);
+    };
+
+    const handleFeedbackClose = () => {
+        setFeedbackEvent(null);
+    };
 
     // Count attended events from tracked events
     const attendedCount = trackedEvents.filter(e => e.status === 'attended').length;
-    const upcomingCount = trackedEvents.filter(e => e.status === 'attending').length;
+    const upcomingCount = trackedEvents.filter(e => {
+        if (e.status !== 'attending' || !e.event) return false;
+        return new Date(e.event.startTime) > new Date();
+    }).length;
 
     // Get feedback aggregates
     const aggregates: FeedbackAggregates | null = feedbackData?.aggregates ?? null;
@@ -75,62 +95,119 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
         );
     }
 
+    // Get feedback data specifically
+    const feedbackList = feedbackData?.feedback ?? [];
+
+    // Identify unrated events: Attended but not in feedback list
+    const attendedEvents = trackedEvents.filter(e => e.status === 'attended' && e.event);
+    const unratedEvents = attendedEvents.filter(e =>
+        e.event && !feedbackList.some(f => f.eventId === e.event!.id)
+    );
+
     // Early state - some activity but not enough feedback
     if (isEarlyState) {
-        const eventsUntilInsights = Math.max(0, EARLY_THRESHOLD - attendedCount);
-        const feedbackNeeded = Math.max(0, MATURE_THRESHOLD - feedbackCount);
+        const nextEventToRate = unratedEvents[0]?.event;
 
         return (
-            <DashboardCard title="" className={`p-5 flex flex-col ${className}`}>
-                {/* Progress toward insights */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="flex-1">
-                            <div className="flex justify-between items-center mb-1.5">
-                                <span className="text-xs text-zinc-500">Progress to insights</span>
-                                <span className="text-xs text-zinc-400 font-medium">
-                                    {feedbackCount}/{MATURE_THRESHOLD}
-                                </span>
-                            </div>
-                            <div className="h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, (feedbackCount / MATURE_THRESHOLD) * 100)}%` }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Activity summary */}
-                <div className="space-y-3 mb-4">
-                    <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5">
-                        <div className="flex items-center gap-2.5">
-                            <CheckCircle className="w-4 h-4 text-emerald-500" weight="fill" />
-                            <span className="text-sm text-zinc-700 dark:text-zinc-300">Events Attended</span>
-                        </div>
-                        <span className="text-lg font-semibold text-zinc-900 dark:text-white">{attendedCount}</span>
-                    </div>
-
-                    {upcomingCount > 0 && (
-                        <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-white/5">
-                            <div className="flex items-center gap-2.5">
-                                <ChartLineUp className="w-4 h-4 text-indigo-500 dark:text-indigo-400" weight="fill" />
-                                <span className="text-sm text-zinc-700 dark:text-zinc-300">Upcoming</span>
-                            </div>
-                            <span className="text-lg font-semibold text-zinc-900 dark:text-white">{upcomingCount}</span>
+            <DashboardCard title="" className={`w-full flex flex-col ${className}`}>
+                {/* Header */}
+                <DashboardSectionHeader
+                    icon={Lock}
+                    title="Unlock Your Personal Insights"
+                    subtitle={`Rate ${MATURE_THRESHOLD} events to reveal skills & impact`}
+                    action={(
+                        <div className="px-2.5 py-1 rounded-md bg-white/[0.08] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium">
+                            {feedbackCount}/{MATURE_THRESHOLD}
                         </div>
                     )}
-                </div>
+                />
 
-                {/* CTA for feedback */}
-                {feedbackNeeded > 0 && attendedCount > 0 && (
-                    <div className="pt-3 border-t border-zinc-100 dark:border-white/5">
-                        <p className="text-xs text-zinc-500 text-center">
-                            Rate {feedbackNeeded} more event{feedbackNeeded > 1 ? 's' : ''} to unlock full insights
-                        </p>
+                <div className="flex flex-col h-full px-5 pb-5">
+                    {/* Segmented Progress Bar - Moved below title */}
+                    <div className="flex gap-0.5 mb-2 mt-1">
+                        {Array.from({ length: MATURE_THRESHOLD }).map((_, headingIndex) => {
+                            const isCompleted = headingIndex < feedbackCount;
+                            const isActive = headingIndex === feedbackCount;
+
+                            return (
+                                <div
+                                    key={headingIndex}
+                                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${isCompleted
+                                        ? 'bg-indigo-500'
+                                        : isActive
+                                            ? 'bg-zinc-200 dark:bg-zinc-700'
+                                            : 'bg-zinc-100 dark:bg-zinc-800'
+                                        }`}
+                                />
+                            );
+                        })}
                     </div>
-                )}
+
+                    {/* Locked Content Preview (The Tease) - Expanded */}
+                    <div className="relative flex-1 rounded-lg overflow-hidden border border-zinc-200/50 dark:border-white/5 bg-zinc-50 dark:bg-white/[0.02] mt-4 min-h-[160px]">
+                        {/* Blur Filter Overlay */}
+                        <div className="absolute inset-0 z-10 backdrop-blur-[4px] bg-white/60 dark:bg-zinc-900/60 flex flex-col items-center justify-center p-4 text-center">
+
+                            {/* Primary Action Button - Dead Center */}
+                            {nextEventToRate && (
+                                <button
+                                    onClick={() => handleRateClick(nextEventToRate)}
+                                    className="h-8 pl-3 pr-4 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow-lg flex items-center gap-2 group"
+                                >
+                                    <div className="w-5 h-5 rounded-full bg-white/20 dark:bg-black/10 flex items-center justify-center">
+                                        <Lock className="w-3 h-3 text-white dark:text-zinc-900" weight="fill" />
+                                    </div>
+                                    <span className="text-xs font-medium">Unlock with {nextEventToRate.title}</span>
+                                    <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5 ml-1" weight="bold" />
+                                </button>
+                            )}
+
+                            {!nextEventToRate && (
+                                <div className="flex flex-col items-center">
+                                    <div className="w-8 h-8 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center mb-3 shadow-sm border border-zinc-200 dark:border-white/10">
+                                        <Lock className="w-4 h-4 text-amber-500 dark:text-amber-400" weight="fill" />
+                                    </div>
+                                    <span className="text-[10px] font-semibold text-zinc-900 dark:text-white uppercase tracking-wide">
+                                        Unlock Insights
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Dummy Blurred Content - Full width/height */}
+                        <div className="p-4 grid grid-cols-2 gap-4 opacity-30 select-none grayscale h-full">
+                            {/* Dummy Rating */}
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-1.5">
+                                    <Star className="w-3 h-3 text-zinc-400" weight="fill" />
+                                    <div className="h-2 w-12 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+                                </div>
+                                <div className="h-6 w-16 bg-zinc-200 dark:bg-zinc-600 rounded" />
+                            </div>
+                            {/* Dummy Skills */}
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-1.5">
+                                    <Lightbulb className="w-3 h-3 text-zinc-400" weight="fill" />
+                                    <div className="h-2 w-8 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+                                </div>
+                                <div className="h-6 w-8 bg-zinc-200 dark:bg-zinc-600 rounded" />
+                            </div>
+                            {/* Dummy Impact */}
+                            <div className="col-span-2 pt-2 border-t border-zinc-200 dark:border-white/10">
+                                <div className="flex justify-between items-center">
+                                    <div className="h-2 w-24 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+                                    <div className="h-2 w-16 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+                                </div>
+                                <div className="mt-2 h-2 w-32 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+                            </div>
+                            {/* Extra filler content to fill space */}
+                            <div className="col-span-2 space-y-2 mt-2">
+                                <div className="h-2 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+                                <div className="h-2 w-2/3 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </DashboardCard>
         );
     }
@@ -200,6 +277,31 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
                         </span>
                     </div>
                 </div>
+            )}
+            {/* Feedback Modal */}
+            {feedbackEvent && createPortal(
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-in fade-in-0 duration-200"
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div
+                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                        onClick={handleFeedbackClose}
+                    />
+                    <div className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-lg p-6 animate-in zoom-in-95 duration-200">
+                        <div className="mb-4">
+                            <h4 className="text-sm text-zinc-400 mb-1">Rate your experience at</h4>
+                            <h3 className="text-lg font-medium text-white">{feedbackEvent.title}</h3>
+                        </div>
+                        <EventFeedbackForm
+                            event={feedbackEvent}
+                            onClose={handleFeedbackClose}
+                            onSuccess={handleFeedbackClose}
+                        />
+                    </div>
+                </div>,
+                document.body
             )}
         </DashboardCard>
     );

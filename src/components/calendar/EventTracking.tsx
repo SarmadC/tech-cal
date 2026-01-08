@@ -21,7 +21,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
 
     // Use originalEventId for multi-day event instances, otherwise use the regular id
     const trackingEventId = ('originalEventId' in event ? (event as MultiDayEventInstance).originalEventId : null) || event.id;
-    
+
     const { getAttendanceStatus, setAttendanceStatus, isLoading, error } = useEventEngagement();
 
     // Get current attendance status (check optimistic first, then actual status)
@@ -83,15 +83,26 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
         if (!currentStatus || currentStatus === null) {
             return { state: 'none', label: 'Not attending', nextAction: 'attending' };
         }
-        
+
         if (currentStatus === 'attending') {
+            // Check if potential future event
+            const eventDate = new Date(event.startTime);
+            const now = new Date();
+            const isFutureEvent = eventDate > now;
+
+            // If event is in future, we cannot mark as attended yet
+            // So simpler toggle: Attending -> None
+            if (isFutureEvent) {
+                return { state: 'attending', label: 'Attending', nextAction: null };
+            }
+
             return { state: 'attending', label: 'Attending', nextAction: 'attended' };
         }
-        
+
         if (currentStatus === 'attended') {
             return { state: 'attended', label: 'Attended', nextAction: null };
         }
-        
+
         // For cancelled or any other status, show as not attending with option to set attending
         return { state: 'none', label: 'Not attending', nextAction: 'attending' };
     };
@@ -113,7 +124,7 @@ const EventTracking: FC<EventTrackingProps> = ({ event }) => {
 
     const getToggleIcon = () => {
         if (isLoading) return <CircleNotchIcon className="w-4 h-4 animate-spin" />;
-        
+
         switch (attendanceState.state) {
             case 'attending':
                 return <UserCheckIcon className="w-4 h-4" />;

@@ -78,7 +78,7 @@ export default function DesignMockupPage() {
 
     return (
         <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-[#C86BFF]/30 overflow-x-hidden">
-            <style jsx global>{`
+            <style>{`
                 @keyframes fadeInUp {
                     from {
                         opacity: 0;

@@ -139,7 +139,7 @@ export function calculateFilterCounts(
         }
 
         // Count categories
-        if (event.eventTypeId && counts.categories.hasOwnProperty(event.eventTypeId)) {
+        if (event.eventTypeId && Object.prototype.hasOwnProperty.call(counts.categories, event.eventTypeId)) {
             counts.categories[event.eventTypeId]++;
         }
     });

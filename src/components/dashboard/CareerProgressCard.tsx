@@ -99,8 +99,9 @@ export function CareerProgressCard({
         return (
             <DashboardCard title="" className="w-full h-full min-h-[200px] flex flex-col">
                 <DashboardSectionHeader
+                    icon={Target}
                     title="Goals & Impact"
-                    subtitle="Your Career Goals"
+                    subtitle="Track your development progress"
                 />
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
                     <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center mb-4">
@@ -132,10 +133,13 @@ export function CareerProgressCard({
         <DashboardCard title="" className="w-full flex flex-col">
             {/* Header */}
             <DashboardSectionHeader
+                icon={Target}
                 title="Goals & Impact"
+                subtitle="Track your development progress"
                 action={(
                     <div className="flex flex-col items-end gap-1">
-                        <div className="px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
+                        {/* Unified filled pill badge */}
+                        <div className="px-2.5 py-1 rounded-md bg-white/[0.08] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium">
                             {totalGoalEvents} {totalGoalEvents === 1 ? 'Event' : 'Events'} Matched
                         </div>
                         {/* Show note if events attended but none matched any goals */}
@@ -148,9 +152,9 @@ export function CareerProgressCard({
                 )}
             />
 
-            {/* Goals Grid (Key Value Layout) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 md:gap-y-0">
-                {metrics.goalProgress.map((goalData, index) => {
+            {/* Goals Grid - Each goal in its own sub-card */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {metrics.goalProgress.map((goalData) => {
                     const config = GOAL_CONFIG[goalData.goal as keyof typeof GOAL_CONFIG] || {
                         label: goalData.goal,
                         icon: Target,
@@ -171,23 +175,16 @@ export function CareerProgressCard({
                     const avgImpact = getAverageImpact(goalData);
                     const suggestedAction = getSuggestedAction(goalData, goalData.goal);
 
-                    // Add border-r to the first item (left column) in desktop view
-                    const isLeftColumn = index % 2 === 0;
-                    const isTopRow = index < 2;
-
                     return (
                         <div
                             key={goalData.goal}
-                            className={`flex flex-col ${isLeftColumn
-                                ? 'md:border-r md:border-zinc-100 dark:md:border-white/5 md:pr-6'
-                                : 'md:pl-6'
-                                } ${!isTopRow ? 'md:pt-6 md:border-t md:border-zinc-100 dark:md:border-white/5' : ''}`}
+                            className="flex flex-col p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-white/5"
                         >
                             {/* Top Row: Icon/Title + Status Badge */}
                             <div className="flex justify-between items-center mb-3">
                                 <div className="flex items-center gap-2">
                                     <Icon className="w-4 h-4 text-zinc-400 dark:text-zinc-500" weight="regular" />
-                                    <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{config.label}</span>
+                                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{config.label}</span>
                                 </div>
                                 <div className={`flex items-center gap-1 text-[10px] font-medium ${status.color}`}>
                                     <StatusIcon className="w-3 h-3" weight="fill" />
@@ -214,7 +211,7 @@ export function CareerProgressCard({
                                         key={i}
                                         className={`flex-1 rounded-[1px] transition-all duration-300 ${i < filledSegments
                                             ? `${config.color} shadow-[0_0_8px_rgba(255,255,255,0.15)]`
-                                            : 'bg-zinc-200 dark:bg-zinc-800'
+                                            : 'bg-zinc-200 dark:bg-zinc-700'
                                             }`}
                                     />
                                 ))}
@@ -251,3 +248,4 @@ export function CareerProgressCard({
         </DashboardCard>
     );
 }
+

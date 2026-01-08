@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
 import ImageExtractorModal from '@/components/admin/ImageExtractorModal';
-import { cn } from '@/lib/utils';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -188,7 +187,6 @@ export default function EnrichmentEditorClient({
     // Logo upload state
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoUploading, setLogoUploading] = useState(false);
-    const [logoUploadMode, setLogoUploadMode] = useState<'manual' | 'extract'>('manual');
     const [logoExtractorOpen, setLogoExtractorOpen] = useState(false);
     const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(
         getLogoUrlFromInput(event.organizer?.logo_url || null, event.organizer?.name) || null
@@ -411,7 +409,7 @@ export default function EnrichmentEditorClient({
             let binaryString: string;
             try {
                 binaryString = atob(fetchData.imageData);
-            } catch (err) {
+            } catch {
                 throw new Error('Failed to decode base64 image data');
             }
 
@@ -528,7 +526,7 @@ export default function EnrichmentEditorClient({
             let binaryString: string;
             try {
                 binaryString = atob(fetchData.imageData);
-            } catch (err) {
+            } catch {
                 throw new Error('Failed to decode base64 image data');
             }
 
@@ -1152,7 +1150,7 @@ export default function EnrichmentEditorClient({
                         } else {
                             setError(data.error || 'Failed to upload image');
                         }
-                    } catch (err) {
+                    } catch {
                         setError('Failed to upload image');
                     }
                     setEventImageExtractorOpen(false);

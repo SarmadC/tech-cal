@@ -12,7 +12,6 @@ import { createClient } from '@/utils/supabase/server';
 import { EventService } from '@/services/eventServices';
 import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsService';
 import { ScoringStrategyFactory } from '@/services/scoring';
-import { CareerProfileService } from '@/services/careerProfileService';
 import type { Event as TechEvent, CareerProfile } from '@/types';
 
 // Environment variables that should be set
@@ -97,7 +96,7 @@ class ProductionVerifier {
     console.log('🗄️  Verifying Database Connection...');
     
     try {
-      const { data, error } = await this.supabase
+      const { error } = await this.supabase
         .from('events')
         .select('count')
         .limit(1);
@@ -157,11 +156,11 @@ class ProductionVerifier {
       const testUserId = 'test-user-verification';
       
       // Test consent management
-      const consent = await BehavioralAnalyticsService.getAnalyticsConsent(testUserId, this.supabase);
+      await BehavioralAnalyticsService.getAnalyticsConsent(testUserId, this.supabase);
       this.addResult(true, 'Analytics consent management working');
       
       // Test interaction tracking (mock)
-      const testInteraction = {
+      const _testInteraction = {
         userId: testUserId,
         eventId: 'test-event',
         interactionType: 'click' as const,
@@ -257,7 +256,7 @@ class ProductionVerifier {
     const successful = this.results.filter(r => r.success).length;
     const total = this.results.length;
     
-    this.results.forEach((result, index) => {
+    this.results.forEach((result) => {
       const icon = result.success ? '✅' : '❌';
       console.log(`${icon} ${result.message}`);
       

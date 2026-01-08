@@ -172,7 +172,8 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
     // Reset dirty state after successful save
     useEffect(() => {
         if (state.success) {
-            setIsDirty(false);
+            // Use setTimeout to avoid synchronous setState in effect
+            setTimeout(() => setIsDirty(false), 0);
         }
     }, [state.success]);
 
@@ -206,7 +207,7 @@ export default function ProfileSettingsForm({ profile }: ProfileSettingsFormProp
             } else {
                 showError(`Unable to find matching timezone for ${detectedTimezone}`);
             }
-        } catch (error) {
+        } catch {
             showError('Unable to detect timezone');
         }
     };

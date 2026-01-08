@@ -9,7 +9,7 @@ import type { TrackedEventRecord, Event, CareerProfile, EventType } from '@/type
 import { getCanonicalSkillMeta, mapSkillsToCanonical } from '@/utils/skillTaxonomy';
 import dynamic from 'next/dynamic';
 import { DashboardCard } from '@/components/dashboard/DashboardCard';
-import { cn } from '@/lib/utils';
+import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
 
 // Dynamically import event detail panel
 const EventDetailPanel = dynamic(
@@ -230,40 +230,30 @@ export function LearningProgressCard({
 
     return (
         <DashboardCard title="" className="w-full flex flex-col">
-            {/* Header with Streak */}
-            <div className="flex justify-between items-start mb-5">
-                <div className="flex flex-col gap-1">
+            {/* Header with Streak - using DashboardSectionHeader for consistency */}
+            <DashboardSectionHeader
+                icon={GraduationCap}
+                title="Learning Path"
+                subtitle={
+                    streakData.currentStreak > 0
+                        ? `${streakData.currentStreak} month streak`
+                        : "Start your learning streak this month"
+                }
+                action={(
                     <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-medium text-zinc-900 dark:text-white leading-none">Learning Path</h3>
-                        {/* Streak indicator inline with title or just below? Let's keep it below or next to it? 
-                            Design preference: consistent headers. 
-                            If I put it next to title it might be cluttered. 
-                            Let's put it below like a status line.
-                        */}
-                    </div>
-                    {/* Streak indicator */}
-                    {streakData.currentStreak > 0 ? (
-                        <div className="flex items-center gap-2 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                                <Fire className="w-3.5 h-3.5 text-orange-500 dark:text-orange-400" weight="fill" />
-                                <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                                    {streakData.currentStreak} month streak
-                                </span>
-                            </div>
+                        {/* Trend indicator */}
+                        {streakData.currentStreak > 0 && (
                             <div className={`flex items-center gap-0.5 ${trendColor}`}>
                                 <TrendIcon className="w-3 h-3" weight="bold" />
                             </div>
-                        </div>
-                    ) : (
-                        <p className="text-[10px] text-zinc-500 mt-1.5">
-                            Start your learning streak this month
-                        </p>
-                    )}
-                </div>
-                <span className="text-xs font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-200 dark:border-white/5">
-                    {progress.covered}/{progress.total} Skills
-                </span>
-            </div>
+                        )}
+                        {/* Unified filled pill badge */}
+                        <span className="px-2.5 py-1 rounded-md bg-white/[0.08] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium">
+                            {progress.covered}/{progress.total} Skills
+                        </span>
+                    </div>
+                )}
+            />
 
             {/* Main Body: 2 Columns */}
             <div className="flex gap-6">

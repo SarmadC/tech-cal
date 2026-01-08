@@ -44,7 +44,7 @@ export class ProfileService {
             if (Object.keys(errorDetails).every(k => !errorDetails[k as keyof typeof errorDetails])) {
                  try {
                     console.error('Error fetching profile (JSON):', JSON.stringify(error, null, 2));
-                 } catch (e) {
+                 } catch (error) {
                     console.error('Error fetching profile (non-serializable):', String(error));
                  }
             }

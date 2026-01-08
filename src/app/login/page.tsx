@@ -27,10 +27,9 @@ function LoginPageContent() {
     useEffect(() => {
         if (initialized && user && !hasRedirected && !loading) {
             const redirectTo = searchParams.get('redirect') || '/discover';
-            setHasRedirected(true);
-
-            // Small delay to ensure auth state has fully settled
+            // Use setTimeout to avoid synchronous setState in effect
             setTimeout(() => {
+                setHasRedirected(true);
                 router.push(redirectTo);
             }, 50);
         }
@@ -45,9 +44,11 @@ function LoginPageContent() {
             console.error('[LoginPage] Authentication error:', { error, message });
 
             // Clear OAuth loading state on error
-            setIsOAuthLoading(false);
-            setOauthStartTime(null);
-            setPendingProvider(null);
+            setTimeout(() => {
+                setIsOAuthLoading(false);
+                setOauthStartTime(null);
+                setPendingProvider(null);
+            }, 0);
 
             let errorTitle = "Authentication Failed";
             const errorDescription = message || "There was a problem signing you in. Please try again.";
@@ -109,9 +110,11 @@ function LoginPageContent() {
     // Monitor auth state changes to clear OAuth loading
     useEffect(() => {
         if (isOAuthLoading && (user || (!loading && initialized))) {
-            setIsOAuthLoading(false);
-            setOauthStartTime(null);
-            setPendingProvider(null);
+            setTimeout(() => {
+                setIsOAuthLoading(false);
+                setOauthStartTime(null);
+                setPendingProvider(null);
+            }, 0);
         }
     }, [user, loading, initialized, isOAuthLoading]);
 
