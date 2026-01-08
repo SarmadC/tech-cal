@@ -10,7 +10,7 @@ import { formatDateForURL } from '@/utils/dateUtils';
 import { CalendarLayout, type CalendarLayoutContext } from './CalendarLayout';
 import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import Loading from '@/components/Loading';
-import SmartFilterPanel from '@/components/calendar/SmartFilterPanel';
+import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import AdaptiveCalendarRenderer from '@/components/calendar/adaptive/AdaptiveCalendarRenderer';
 
 import { useUnifiedServerFiltering } from '@/hooks/useUnifiedServerFiltering';
@@ -37,7 +37,7 @@ interface CalendarUIState {
     isSidebarOpen: boolean;
 }
 
-type CalendarUIAction = 
+type CalendarUIAction =
     | { type: 'SELECT_EVENT'; event: Event | null }
     | { type: 'SELECT_DATE'; date: Date | null }
     | { type: 'TOGGLE_FILTER_PANEL' }
@@ -70,7 +70,7 @@ function useCalendarUIState() {
         isFilterPanelOpen: false,
         isSidebarOpen: false, // Start with sidebar closed to prevent mobile intrusion
     });
-    
+
     // Sidebar starts closed by default - no auto-open behavior
     // useEffect(() => {
     //     if (typeof window === 'undefined') return;
@@ -118,7 +118,8 @@ function useEventData(profile: AppProfile | null) {
         activeFilterCount,
         isFilterPanelOpen,
         setIsFilterPanelOpen,
-        refetch
+        refetch,
+        counts
     } = useUnifiedServerFiltering(
         profile,
         {},
@@ -137,7 +138,8 @@ function useEventData(profile: AppProfile | null) {
         activeFilterCount,
         isFilterPanelOpen,
         setIsFilterPanelOpen,
-        refetch
+        refetch,
+        counts
     };
 }
 
@@ -172,7 +174,7 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
                 const eventStart = new Date(trackedEvent.startTime);
                 const eventEnd = trackedEvent.endTime ? new Date(trackedEvent.endTime) : eventStart;
                 const inRange = eventStart <= dayEnd && eventEnd >= dayStart;
-                
+
                 // Debug each event's date range - simplified
                 if (trackedEvent.title.includes('Microsoft') || trackedEvent.title.includes('Ignite')) {
                     console.log('Microsoft Ignite event check:', {
@@ -187,10 +189,10 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
                         isMultiDay: 'isMultiDay' in trackedEvent ? trackedEvent.isMultiDay : false
                     });
                 }
-                
+
                 return inRange;
             });
-        
+
         console.log('Day events filtered:', {
             totalTrackedEvents: enrichedEvents.length,
             filteredCount: filtered.length,
@@ -199,7 +201,7 @@ function useViewEvents(enrichedEvents: TrackedEvent[], searchParams: URLSearchPa
             dayEnd: dayEnd.toISOString(),
             filteredEvents: filtered.map(e => ({ title: e.title, startTime: e.startTime }))
         });
-        
+
         return filtered as unknown as MultiDayEvent[];
     }, [enrichedEvents, searchParams]);
 
@@ -290,7 +292,7 @@ export default function CalendarClientView({
         // Event selection handled
         actions.selectEvent(event);
     }, [actions]);
-    
+
     const handleDateSelect = useCallback((date: Date) => {
         actions.selectDate(date);
         const params = new URLSearchParams(searchParams.toString());
@@ -298,7 +300,7 @@ export default function CalendarClientView({
         router.push(`/calendar?${params.toString()}`, { scroll: false });
     }, [searchParams, router, actions]);
 
-    
+
     const renderCalendarContent = (context: CalendarLayoutContext) => {
         // Show loading state (only on initial load)
         if (eventData.isLoading) {
@@ -359,107 +361,104 @@ export default function CalendarClientView({
             <CalendarProvider
                 selectedDate={state.selectedDate}
                 currentDate={currentDate}
-            events={eventData.enrichedEvents}
-            categories={initialCategories}
-            profile={profile}
-            onDateSelect={handleDateSelect}
-            onEventSelect={handleSelectEvent}
-            onCloseEventDetail={actions.closeEventDetail}
-        >
-            <CalendarLayout
-                onNavigate={(_direction) => {
-                    // Handle navigation if needed
-                }}
-                onDateChange={handleDateSelect}
-                onToggleFilters={() => eventData.setIsFilterPanelOpen(!eventData.isFilterPanelOpen)}
-                isFilterPanelOpen={eventData.isFilterPanelOpen}
-                activeFilterCount={eventData.activeFilterCount}
-                calendarRef={calendarRef}
-                isSidebarOpen={state.isSidebarOpen}
-                onToggleSidebar={actions.toggleSidebar}
-                onEventSelect={handleSelectEvent}
-                onAddEvent={(_date, _hour) => {
-                    // Handle add event - could open a modal or navigate to create event page
-                    // Add event functionality handled
-                }}
                 events={eventData.enrichedEvents}
                 categories={initialCategories}
                 profile={profile}
-                renderContent={(context) => (
-                    <div className="flex h-full relative">
-                        <div className="flex-1 relative">
-                            {renderCalendarContent(context)}
-                        </div>
-                        {eventData.isFilterPanelOpen && (
-                            <div 
-                                className="fixed inset-0 z-40 bg-black bg-opacity-50"
-                                onClick={() => eventData.setIsFilterPanelOpen(false)}
-                            >
-                                <div 
-                                    className="absolute right-0 top-0 h-full w-80 transform transition-transform duration-300 ease-in-out"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <SmartFilterPanel 
-                                        filters={{
-                                            searchTerm: eventData.filters.searchTerm,
-                                            categories: eventData.filters.categories,
-                                            dateRange: eventData.filters.dateRange,
-                                            format: eventData.filters.format,
-                                            cost: eventData.filters.cost,
-                                            difficulty: eventData.filters.difficulty,
-                                            availability: eventData.filters.availability,
-                                            popularity: eventData.filters.popularity,
-                                            duration: eventData.filters.duration,
-                                            sortBy: eventData.filters.sortBy,
-                                            myTracked: eventData.filters.myTracked,
-                                            myNetwork: eventData.filters.myNetwork,
-                                            recommended: eventData.filters.recommended
-                                        }} 
-                                        onUpdateFilter={(key: string, value: unknown) => {
-                                            // Handle pagination fields separately
-                                            if (key === 'page' || key === 'pageSize') return;
-                                            eventData.updateFilter(key as keyof typeof eventData.filters, value as never);
-                                        }} 
-                                        onResetFilters={eventData.resetFilters} 
-                                        onApplyQuickFilter={eventData.applyQuickFilter} 
-                                        activeFilterCount={eventData.activeFilterCount} 
-                                        isOpen={eventData.isFilterPanelOpen} 
-                                        onClose={() => eventData.setIsFilterPanelOpen(false)} 
-                                    />
-                                </div>
+                onDateSelect={handleDateSelect}
+                onEventSelect={handleSelectEvent}
+                onCloseEventDetail={actions.closeEventDetail}
+            >
+                <CalendarLayout
+                    onNavigate={(_direction) => {
+                        // Handle navigation if needed
+                    }}
+                    onDateChange={handleDateSelect}
+                    onToggleFilters={() => eventData.setIsFilterPanelOpen(!eventData.isFilterPanelOpen)}
+                    isFilterPanelOpen={eventData.isFilterPanelOpen}
+                    activeFilterCount={eventData.activeFilterCount}
+                    calendarRef={calendarRef}
+                    isSidebarOpen={state.isSidebarOpen}
+                    onToggleSidebar={actions.toggleSidebar}
+                    onEventSelect={handleSelectEvent}
+                    onAddEvent={(_date, _hour) => {
+                        // Handle add event - could open a modal or navigate to create event page
+                        // Add event functionality handled
+                    }}
+                    events={eventData.enrichedEvents}
+                    categories={initialCategories}
+                    profile={profile}
+                    renderContent={(context) => (
+                        <div className="flex h-full relative">
+                            <div className="flex-1 relative">
+                                {renderCalendarContent(context)}
                             </div>
-                        )}
-                        {state.selectedEvent && (
-                            <>
-                                {isMobile ? (
-                                    <MobileEventDetailPanelDynamic
-                                        event={state.selectedEvent}
-                                        onClose={actions.closeEventDetail}
-                                        categories={initialCategories}
-                                    />
-                                ) : (
-                                    <div 
-                                        className="fixed inset-0 z-40"
-                                        onClick={actions.closeEventDetail}
+                            {eventData.isFilterPanelOpen && (
+                                <div
+                                    className="fixed inset-0 z-40 bg-black bg-opacity-50"
+                                    onClick={() => eventData.setIsFilterPanelOpen(false)}
+                                >
+                                    <div
+                                        className="fixed right-0 top-0 h-full w-80 bg-background-elevated border-l border-border-default shadow-xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col pt-20 pb-4 overflow-y-auto"
+                                        onClick={(e) => e.stopPropagation()}
                                     >
-                                        <div 
-                                            className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <EventDetailPanelDynamic
-                                                event={state.selectedEvent}
-                                                onClose={actions.closeEventDetail}
+                                        <div className="px-4 pb-4">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="font-semibold text-foreground-primary">Filters</h3>
+                                                <button
+                                                    onClick={eventData.resetFilters}
+                                                    className="text-xs text-accent-primary hover:underline"
+                                                >
+                                                    Reset all
+                                                </button>
+                                            </div>
+                                            <DiscoverySidebar
+                                                filters={{
+                                                    format: eventData.filters.format,
+                                                    cost: eventData.filters.cost,
+                                                    categories: eventData.filters.categories,
+                                                    tags: eventData.filters.tags
+                                                }}
+                                                onUpdateFilter={eventData.updateFilter}
                                                 categories={initialCategories}
+                                                events={eventData.enrichedEvents}
+                                                counts={eventData.counts || {}}
+                                                mobileMode={true}
                                             />
                                         </div>
                                     </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                )}
-            />
-        </CalendarProvider>
+                                </div>
+                            )}
+                            {state.selectedEvent && (
+                                <>
+                                    {isMobile ? (
+                                        <MobileEventDetailPanelDynamic
+                                            event={state.selectedEvent}
+                                            onClose={actions.closeEventDetail}
+                                            categories={initialCategories}
+                                        />
+                                    ) : (
+                                        <div
+                                            className="fixed inset-0 z-40"
+                                            onClick={actions.closeEventDetail}
+                                        >
+                                            <div
+                                                className="fixed right-0 top-0 h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] z-50 transform transition-transform duration-300 ease-in-out"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <EventDetailPanelDynamic
+                                                    event={state.selectedEvent}
+                                                    onClose={actions.closeEventDetail}
+                                                    categories={initialCategories}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+                />
+            </CalendarProvider>
         </PageErrorBoundary>
     );
 }

@@ -57,15 +57,24 @@ export async function GET(
         )
 
         // Initiate OAuth flow - this will set the PKCE code verifier cookie
+        const oauthOptions: {
+            redirectTo: string;
+            queryParams?: Record<string, string>;
+        } = {
+            redirectTo,
+        };
+
+        // Google-specific query parameters
+        if (provider === 'google') {
+            oauthOptions.queryParams = {
+                access_type: 'offline',
+                prompt: 'consent',
+            };
+        }
+
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: provider as OAuthProvider,
-            options: {
-                redirectTo,
-                queryParams: {
-                    access_type: 'offline',
-                    prompt: 'consent',
-                }
-            },
+            options: oauthOptions,
         })
 
         if (error) {

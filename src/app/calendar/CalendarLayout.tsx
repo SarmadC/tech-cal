@@ -81,10 +81,9 @@ const HeaderWithSidebarToggle: React.FC<{
 const MainContentWithSidebarOffset: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { open } = useSidebar();
     return (
-        <div 
-            className={`flex-1 flex flex-col transition-[margin] duration-200 ease-in-out ${
-                open ? 'md:ml-64' : 'md:ml-16'
-            } ml-0`}
+        <div
+            className={`flex-1 flex flex-col transition-[margin] duration-200 ease-in-out ${open ? 'md:ml-64' : 'md:ml-16'
+                } ml-0`}
         >
             {children}
         </div>
@@ -112,18 +111,18 @@ export function CalendarLayout({
     const { currentDate } = useCalendar();
     const router = useRouter();
     const searchParams = useSearchParams();
-    
+
     // Check if we should use the new mobile views - use React state for client-side detection
     const [useNewMobileViews, setUseNewMobileViews] = React.useState(false);
-    
+
     React.useEffect(() => {
         const checkMobile = () => {
             setUseNewMobileViews(window.innerWidth < 768);
         };
-        
+
         // Check initially
         checkMobile();
-        
+
         // Listen for resize events
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
@@ -287,77 +286,77 @@ export function CalendarLayout({
 
     return (
         <SidebarProvider>
-        <div className="flex h-screen calendar-page">
-            {/* Legacy overlay sidebar removed in favor of AppSidebar */}
+            <div className="flex h-screen calendar-page">
+                {/* Legacy overlay sidebar removed in favor of AppSidebar */}
 
-            <AppSidebar />
-            <MainContentWithSidebarOffset>
-                {/* Desktop Header */}
-                <div className="hidden md:block">
-                    <HeaderWithSidebarToggle
-                        currentDate={localDate}
-                        onNavigate={handleNavigation}
-                        onToggleFilters={handleToggleFilters}
-                        isFilterPanelOpen={isFilterPanelOpen}
-                        activeFilterCount={activeFilterCount}
-                        events={events}
-                        fallbackToggle={onToggleSidebar}
-                        fallbackOpen={isSidebarOpen}
-                    />
-                </div>
+                <AppSidebar />
+                <MainContentWithSidebarOffset>
+                    {/* Desktop Header */}
+                    <div className="hidden md:block">
+                        <HeaderWithSidebarToggle
+                            currentDate={localDate}
+                            onNavigate={handleNavigation}
+                            onToggleFilters={handleToggleFilters}
+                            isFilterPanelOpen={isFilterPanelOpen}
+                            activeFilterCount={activeFilterCount}
+                            events={events}
+                            fallbackToggle={onToggleSidebar}
+                            fallbackOpen={isSidebarOpen}
+                        />
+                    </div>
 
-                {/* Mobile Navigation - Bottom Tab Style - Only show when NOT using new mobile views */}
-                {!useNewMobileViews && (
-                <div className="md:hidden">
-                    <MobileBottomTabNavigation
-                        currentView={view as 'month' | 'week' | 'day'}
-                        onViewChange={handleViewChange}
-                        onToggleSidebar={onToggleSidebar || (() => {})}
-                        onToggleFilters={handleToggleFilters}
-                        onDateChange={handleDateChange}
-                        activeFilterCount={activeFilterCount}
-                        isSidebarOpen={isSidebarOpen}
-                        currentDate={localDate}
-                        filters={{
-                            searchTerm: '',
-                            format: 'all',
-                            cost: 'all',
-                            difficulty: 'all',
-                            myTracked: false,
-                            myNetwork: false,
-                            recommended: false,
-                            categories: [],
-                            dateRange: { start: null, end: null },
-                            availability: 'all',
-                            popularity: 'all',
-                            duration: 'all',
-                            sortBy: 'default'
-                        }}
-                        onUpdateFilter={(_key, _value) => {
-                            // TODO: Implement filter updates for mobile
-                            // Mobile filter update handled
-                        }}
-                        onResetFilters={() => {
-                            // TODO: Implement filter reset for mobile
-                            // Mobile filter reset handled
-                        }}
-                        onApplyQuickFilter={(_filterType) => {
-                            // TODO: Implement quick filter application for mobile
-                            // Mobile quick filter handled
-                        }}
-                        searchSuggestions={[]}
-                        onSearchSuggestionSelect={() => {}}
-                    />
-                </div>
-                )}
+                    {/* Mobile Navigation - Bottom Tab Style - Only show when NOT using new mobile views */}
+                    {!useNewMobileViews && (
+                        <div className="md:hidden">
+                            <MobileBottomTabNavigation
+                                currentView={view as 'month' | 'week' | 'day'}
+                                onViewChange={handleViewChange}
+                                onToggleSidebar={onToggleSidebar || (() => { })}
+                                onToggleFilters={handleToggleFilters}
+                                onDateChange={handleDateChange}
+                                activeFilterCount={activeFilterCount}
+                                isSidebarOpen={isSidebarOpen}
+                                currentDate={localDate}
+                                filters={{
+                                    searchTerm: '',
+                                    format: 'all',
+                                    cost: 'all',
+                                    difficulty: 'all',
+                                    myTracked: false,
+                                    myNetwork: false,
+                                    recommended: false,
+                                    categories: [],
+                                    dateRange: { start: null, end: null },
+                                    availability: 'all',
+                                    popularity: 'all',
+                                    duration: 'all',
+                                    sortBy: 'default'
+                                }}
+                                onUpdateFilter={(_key, _value) => {
+                                    // TODO: Implement filter updates for mobile
+                                    // Mobile filter update handled
+                                }}
+                                onResetFilters={() => {
+                                    // TODO: Implement filter reset for mobile
+                                    // Mobile filter reset handled
+                                }}
+                                onApplyQuickFilter={(_filterType) => {
+                                    // TODO: Implement quick filter application for mobile
+                                    // Mobile quick filter handled
+                                }}
+                                searchSuggestions={[]}
+                                onSearchSuggestionSelect={() => { }}
+                            />
+                        </div>
+                    )}
 
-                <div ref={containerRef} className="flex-1 flex flex-col calendar-content-with-bottom-tabs">
-                    <CalendarTransitionWrapper view={view} date={localDate}>
-                        {content}
-                    </CalendarTransitionWrapper>
-                </div>
-            </MainContentWithSidebarOffset>
-        </div>
+                    <div ref={containerRef} className="flex-1 flex flex-col calendar-content-with-bottom-tabs">
+                        <CalendarTransitionWrapper view={view} date={localDate}>
+                            {content}
+                        </CalendarTransitionWrapper>
+                    </div>
+                </MainContentWithSidebarOffset>
+            </div>
         </SidebarProvider>
     );
 }

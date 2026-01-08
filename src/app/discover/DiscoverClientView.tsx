@@ -193,14 +193,7 @@ export default function DiscoverClientView({
                             <div className="min-h-screen bg-background relative font-sans">
                                 {/* Subtle noise or grain could be added here if desired, but keeping it clean for now */}
 
-                                <div className="relative max-w-[1600px] mx-auto px-0 py-0 md:px-6 md:py-8 space-y-6">
-                                    {/* Header */}
-                                    <div className="mb-8 hidden md:block">
-                                        <h1 className="text-3xl font-medium text-foreground mb-2 tracking-tight">
-                                            Discover
-                                        </h1>
-                                    </div>
-
+                                <div className="relative max-w-[1600px] mx-auto px-0 pt-20 pb-0 md:px-6 md:pt-24 md:pb-8 space-y-6">
                                     {/* Main Content */}
                                     <div className="flex-1 flex flex-col" data-view="discovery">
                                         <SmartLoader

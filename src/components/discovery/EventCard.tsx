@@ -84,7 +84,7 @@ const EventCard: React.FC<EventCardProps> = React.memo(({ event, onClick, onBook
 
     return (
         <div
-            className={`flex flex-col rounded-[6px] p-5 transition-all duration-200 cursor-pointer group relative border border-border dark:border-border bg-card dark:bg-transparent hover:shadow-md dark:hover:shadow-none hover:bg-accent/10 hover:border-border-strong text-foreground ${accentClass}`}
+            className={`flex flex-col rounded-[6px] p-5 transition-all duration-200 cursor-pointer group relative border border-border dark:border-border bg-card dark:bg-[#0a0a0a] hover:shadow-md dark:hover:shadow-none hover:bg-accent/10 hover:border-border-strong text-foreground ${accentClass}`}
             onClick={onClick}
         >
             <div className="flex items-start justify-between mb-4">

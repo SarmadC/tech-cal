@@ -73,7 +73,7 @@ export default function ProductDemoSection() {
             const eventTags = (event.tags || []).map(tag => tag.name?.toLowerCase().trim()).filter(Boolean);
             const filterTags = filters.tags.map(tag => tag.toLowerCase().trim());
             // Event must have at least one of the selected tags
-            const hasMatchingTag = filterTags.some(filterTag => 
+            const hasMatchingTag = filterTags.some(filterTag =>
                 eventTags.some(eventTag => eventTag === filterTag)
             );
             if (!hasMatchingTag) {
@@ -145,6 +145,7 @@ export default function ProductDemoSection() {
                     {/* Reusing the Actual App Components */}
                     <div className="p-2 md:p-4 lg:p-6 opacity-95 hover:opacity-100 transition-opacity">
                         <DiscoveryLayout
+                            className="min-h-0" // Prevent forced full viewport height
                             isSidebarOpen={isSidebarOpen}
                             onSidebarClose={() => setIsSidebarOpen(false)}
                             sidebar={

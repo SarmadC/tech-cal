@@ -294,16 +294,24 @@ export async function oauthSignInAction(provider: OAuthProvider, nextPath: strin
     const supabase = await createClient();
 
     try {
-        // I've also updated this line for consistency and security
+        const oauthOptions: {
+            redirectTo: string;
+            queryParams?: Record<string, string>;
+        } = {
+            redirectTo,
+        };
+
+        // Google-specific query parameters
+        if (provider === 'google') {
+            oauthOptions.queryParams = {
+                access_type: 'offline',
+                prompt: 'consent',
+            };
+        }
+
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider,
-            options: {
-                redirectTo,
-                queryParams: {
-                    access_type: 'offline',
-                    prompt: 'consent',
-                }
-            },
+            options: oauthOptions,
         });
         
         if (error) {

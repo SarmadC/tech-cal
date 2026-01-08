@@ -10,6 +10,7 @@ interface DiscoveryLayoutProps {
     sortOption?: React.ReactNode;
     isSidebarOpen?: boolean;
     onSidebarClose?: () => void;
+    className?: string; // Add className prop
 }
 
 const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
@@ -19,10 +20,11 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
     resultCount,
     sortOption,
     isSidebarOpen,
-    onSidebarClose
+    onSidebarClose,
+    className = '' // swift-default
 }) => {
     return (
-        <div className="min-h-screen bg-transparent p-4 lg:p-6 transition-colors">
+        <div className={`min-h-screen bg-transparent p-4 lg:p-6 transition-colors ${className}`}>
             <div className="max-w-[1600px] mx-auto">
 
                 {/* Header Section */}

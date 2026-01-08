@@ -75,7 +75,7 @@
 /* Mobile discovery cards - single solid background in dark mode */
 .dark .glass-card.mobile-discovery-card,
 .dark .mobile-discovery-view .glass-card {
-  background: #212023 !important;
+  background: #0a0a0a !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
@@ -164,7 +164,7 @@
 /* Mobile discovery cards - override with single solid background in dark mode */
 .dark .mobile-discovery-view .mobile-event-card.event-card-enhanced-depth,
 .dark .mobile-discovery-view .discovery-card-glass.event-card-enhanced-depth {
-  background: #212023 !important;
+  background: #0a0a0a !important;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.3),

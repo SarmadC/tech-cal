@@ -127,9 +127,9 @@ export default function UserMenu() {
             {isOpen && (
                 <>
                     {/* Anchor Triangle */}
-                    <div className="absolute right-[14px] mt-[10px] w-3 h-3 bg-white dark:bg-gray-900 border-t border-l border-border-color transform rotate-45 z-[111] animate-in fade-in zoom-in-95 duration-200"></div>
+                    <div className="absolute right-[14px] mt-[10px] w-3 h-3 bg-white dark:bg-gray-900 border-t border-l border-border-color transform rotate-45 z-[150] animate-in fade-in zoom-in-95 duration-200"></div>
 
-                    <div className="absolute right-0 mt-3 w-72 bg-white dark:bg-gray-900 border border-border-color rounded-xl shadow-xl shadow-black/5 z-[110] overflow-hidden ring-1 ring-black/5 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                    <div className="absolute right-0 mt-3 w-72 bg-white dark:bg-gray-900 border border-border-color rounded-xl shadow-xl shadow-black/5 z-[150] overflow-hidden ring-1 ring-black/5 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
 
                         {/* Account Card Header */}
                         <div className="p-2">
