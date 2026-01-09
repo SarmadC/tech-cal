@@ -14,7 +14,7 @@ export function FeaturesGrid() {
                     <h2 className="features-title">Stop Scrolling, Start Growing</h2>
                     <p className="features-subtitle">
                         Powered by advanced aggregation, smart filtering, and real-time processing
-                        to deliver curated tech events at scale—no noise, just signal.
+                        to deliver curated tech events at scale. No noise, just signal.
                     </p>
                 </div>
                 <div className="features-right">

@@ -389,30 +389,28 @@ html.light .hero-subtext {
   max-width: 320px;
 }
 
-/* Soft colored glow behind the card - accent color */
+/* Soft subtle glow behind the card */
 .hero-floating-card::before {
   content: '';
   position: absolute;
-  inset: -30px;
+  inset: -20px;
   background: radial-gradient(ellipse 100% 100% at 50% 50%,
-      rgba(249, 115, 22, 0.15) 0%,
-      rgba(249, 115, 22, 0.08) 30%,
-      rgba(255, 255, 255, 0.04) 50%,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.03) 40%,
       transparent 70%);
-  border-radius: 40px;
+  border-radius: 32px;
   z-index: -1;
-  filter: blur(25px);
+  filter: blur(20px);
   pointer-events: none;
 }
 
-/* Light mode glow - softer */
+/* Light mode glow */
 :root:not(.dark) .hero-floating-card::before,
 .light .hero-floating-card::before,
 html.light .hero-floating-card::before {
   background: radial-gradient(ellipse 100% 100% at 50% 50%,
-      rgba(249, 115, 22, 0.12) 0%,
-      rgba(249, 115, 22, 0.06) 30%,
-      rgba(0, 0, 0, 0.03) 50%,
+      rgba(0, 0, 0, 0.04) 0%,
+      rgba(0, 0, 0, 0.02) 40%,
       transparent 70%);
 }
 
@@ -1484,9 +1482,94 @@ html.dark .mobile-chaos-to-order {
   box-sizing: border-box;
 }
 
-/* Performant frosted glass effect - theme adaptive */
+/* Premium Calendar Chassis - Solid Dark Container */
+.mobile-calendar-grid.calendar-chassis {
+  background: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform: translateZ(0);
+  will-change: auto;
+}
+
+/* Light mode chassis */
+:root:not(.dark) .mobile-calendar-grid.calendar-chassis {
+  background: #fafafa;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Calendar Month Header */
+.calendar-month-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:root:not(.dark) .calendar-month-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.calendar-month-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+:root:not(.dark) .calendar-month-label {
+  color: #18181b;
+}
+
+.calendar-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.calendar-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.calendar-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+:root:not(.dark) .calendar-nav-btn {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+:root:not(.dark) .calendar-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.calendar-today-btn {
+  width: auto;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Legacy frosted glass (keeping for backwards compat) */
 .mobile-calendar-grid.frosted-calendar {
-  /* Light theme - subtle frosted white */
   background: linear-gradient(135deg,
       rgba(255, 255, 255, 0.72) 0%,
       rgba(248, 250, 252, 0.68) 100%);
@@ -1494,15 +1577,12 @@ html.dark .mobile-chaos-to-order {
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  /* Minimal blur for performance - only on supported devices */
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  /* GPU acceleration */
   transform: translateZ(0);
   will-change: auto;
 }
 
-/* Dark theme frosted glass */
 .dark .mobile-calendar-grid.frosted-calendar {
   background: linear-gradient(135deg,
       rgba(30, 30, 35, 0.75) 0%,
@@ -1620,10 +1700,17 @@ html.dark .mobile-chaos-to-order {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 12px;
-  /* locked grid gap */
   position: relative;
-  /* Ensure cells maintain aspect ratio */
   grid-auto-rows: 1fr;
+  /* Premium grid border styling */
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+/* Light mode grid border */
+:root:not(.dark) .calendar-dates {
+  border-color: rgba(0, 0, 0, 0.04);
 }
 
 .calendar-date {
@@ -1634,7 +1721,87 @@ html.dark .mobile-chaos-to-order {
   justify-content: center;
   position: relative;
   border-radius: 4px;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.3s ease;
+}
+
+/* Weekend columns muted - using class instead of nth-child for accuracy */
+.calendar-date.weekend {
+  opacity: 0.5;
+}
+
+/* Other month dates dimmed */
+.calendar-date.other-month {
+  opacity: 0.3;
+}
+
+/* Today indicator - accent circle */
+.calendar-date.is-today {
+  position: relative;
+}
+
+.calendar-date.is-today::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: #3b82f6;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.calendar-date.is-today .date-number {
+  position: relative;
+  z-index: 1;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+:root:not(.dark) .calendar-date.is-today::before {
+  background: #2563eb;
+}
+
+/* Vertical grid dividers */
+.calendar-date:not(:nth-child(7n))::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 10%;
+  bottom: 10%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+:root:not(.dark) .calendar-date:not(:nth-child(7n))::after {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Cell landing flash animation */
+.calendar-date.flash {
+  animation: cellFlash 0.4s ease-out;
+}
+
+@keyframes cellFlash {
+  0% {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  100% {
+    background: transparent;
+  }
+}
+
+:root:not(.dark) .calendar-date.flash {
+  animation-name: cellFlashLight;
+}
+
+@keyframes cellFlashLight {
+  0% {
+    background: rgba(0, 0, 0, 0.08);
+  }
+
+  100% {
+    background: transparent;
+  }
 }
 
 /* Staging rail under weekday bar */
@@ -1679,7 +1846,11 @@ html.dark .mobile-chaos-to-order {
 }
 
 .calendar-date.has-event {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+:root:not(.dark) .calendar-date.has-event {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .date-number {
@@ -1716,7 +1887,7 @@ html.dark .mobile-chaos-to-order {
   box-shadow: 0 0 0 3px rgba(76, 111, 255, 0.18), 0 0 10px rgba(76, 111, 255, 0.4);
 }
 
-/* Event Cards */
+/* Event Cards - Logo Chip Design */
 .mobile-event-cards {
   position: absolute;
   top: 0;
@@ -1724,111 +1895,219 @@ html.dark .mobile-chaos-to-order {
   right: 0;
   bottom: 0;
   pointer-events: none;
-  /* allow events only on cards */
 }
 
-.mobile-chaos-to-order .mobile-event-card {
+/* Logo Chip Event Card - Fits within calendar cells */
+.mobile-chaos-to-order .mobile-event-card.logo-chip {
   position: absolute;
-  /* Dynamic perfect squares matching calendar cells */
-  width: var(--tile-size) !important;
-  height: var(--tile-size) !important;
+  /* Small square that fits in cell */
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px;
+  max-width: 28px;
+  min-height: 28px;
+  max-height: 28px;
   aspect-ratio: 1;
-  /* Clean minimal styling - white background to match logo colors */
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: clamp(4px, 0.5vw, 8px);
-  padding: 4px;
-  color: var(--foreground-primary);
-  font-size: 0.75rem;
-  /* Optimized shadow for mobile performance */
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
-  /* Simplified transition for better performance */
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+
+  /* Chip Styling */
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+
+  /* Center content */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Premium shadow - subtle for small size */
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+
+  /* Animation */
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease, filter 0.3s ease;
   opacity: 0;
-  /* GPU acceleration - always enabled for smooth animations */
-  transform: scale(0.85) translateZ(0);
+  transform: translateZ(0);
+
+  /* GPU acceleration */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  perspective: 1000px;
   z-index: 10;
   pointer-events: auto;
-  /* Keep will-change during animations */
   will-change: transform;
-  /* Force square override */
-  min-width: var(--tile-size);
-  max-width: var(--tile-size);
-  min-height: var(--tile-size);
-  max-height: var(--tile-size);
-  /* Prevent text selection for better touch performance */
-  -moz-user-select: none;
-  user-select: none;
-  -webkit-user-select: none;
-  /* Hardware acceleration hint */
   contain: layout style paint;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-/* Dark theme: white background to match logo colors */
-.dark .mobile-chaos-to-order .mobile-event-card {
-  background: #ffffff;
-  border-color: rgba(0, 0, 0, 0.10);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
+/* Light mode logo chip */
+:root:not(.dark) .mobile-chaos-to-order .mobile-event-card.logo-chip {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
-/* Light theme: white tile cards for logos */
-:root:not(.dark) .mobile-chaos-to-order .mobile-event-card {
-  background: #ffffff;
-  /* pure white to match logo colors */
-  border-color: rgba(0, 0, 0, 0.10);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
+/* Logo container - ensure content is centered */
+.mobile-event-card.logo-chip .chip-logo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Next.js Image wrapper fix */
+.mobile-event-card.logo-chip .chip-logo>span,
+.mobile-event-card.logo-chip .chip-logo>div {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-event-card.logo-chip .chip-logo img {
+  width: 20px !important;
+  height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+  object-fit: contain;
+  display: block;
+}
+
+.mobile-event-card.logo-chip .logo-fallback {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+:root:not(.dark) .mobile-event-card.logo-chip .logo-fallback {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+/* Accent border on left edge */
+.mobile-event-card.glass-chip .chip-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--company-color, #4285F4);
+  border-radius: 3px 0 0 3px;
+}
+
+/* Chip content layout */
+.mobile-event-card.glass-chip .chip-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 10px;
+  height: 100%;
+}
+
+/* Logo wrapper */
+.mobile-event-card.glass-chip .logo-wrapper {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.mobile-event-card.glass-chip .logo-wrapper img {
+  width: 14px !important;
+  height: 14px !important;
+  object-fit: contain;
+}
+
+.mobile-event-card.glass-chip .logo-placeholder {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Time display */
+.mobile-event-card.glass-chip .chip-time {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* Light mode glass chip */
+:root:not(.dark) .mobile-chaos-to-order .mobile-event-card.glass-chip {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+:root:not(.dark) .mobile-event-card.glass-chip .logo-wrapper {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+:root:not(.dark) .mobile-event-card.glass-chip .logo-placeholder {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+:root:not(.dark) .mobile-event-card.glass-chip .chip-time {
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .mobile-chaos-to-order .mobile-event-card.chaos {
-  opacity: 1 !important;
-  transform: scale(1) !important;
+  opacity: 0.85 !important;
+  filter: blur(1px);
+  transform: scale(1.1) !important;
   /* Chaos positions - scattered randomly */
 }
 
 .mobile-chaos-to-order .mobile-event-card.chaos:nth-child(1) {
-  --chaos-rotation: -6deg;
+  --chaos-rotation: -12deg;
   top: clamp(60px, 12vh, 100px);
   left: clamp(24px, 6vw, 60px);
-  transform: scale(1) rotate(-6deg);
+  transform: scale(1.1) rotate(-12deg);
   animation: chaosFloat 3s ease-in-out infinite;
   animation-delay: 0s;
 }
 
 .mobile-chaos-to-order .mobile-event-card.chaos:nth-child(2) {
-  --chaos-rotation: 4deg;
+  --chaos-rotation: 8deg;
   top: clamp(140px, 26vh, 180px);
   right: clamp(28px, 7vw, 64px);
-  transform: scale(1) rotate(4deg);
+  transform: scale(1.1) rotate(8deg);
   animation: chaosFloat 3s ease-in-out infinite;
   animation-delay: 0.5s;
 }
 
 .mobile-chaos-to-order .mobile-event-card.chaos:nth-child(3) {
-  --chaos-rotation: -2deg;
+  --chaos-rotation: -6deg;
   top: clamp(220px, 40vh, 260px);
   left: clamp(48px, 12vw, 80px);
-  transform: scale(1) rotate(-2deg);
+  transform: scale(1.1) rotate(-6deg);
   animation: chaosFloat 3s ease-in-out infinite;
   animation-delay: 1.0s;
 }
 
 .mobile-chaos-to-order .mobile-event-card.chaos:nth-child(4) {
-  --chaos-rotation: 5deg;
+  --chaos-rotation: 10deg;
   top: clamp(300px, 54vh, 340px);
   right: clamp(32px, 8vw, 56px);
-  transform: scale(1) rotate(5deg);
+  transform: scale(1.1) rotate(10deg);
   animation: chaosFloat 3s ease-in-out infinite;
   animation-delay: 1.5s;
 }
 
 .mobile-chaos-to-order .mobile-event-card.chaos:nth-child(5) {
-  --chaos-rotation: -3deg;
+  --chaos-rotation: -8deg;
   top: clamp(380px, 68vh, 420px);
   left: clamp(64px, 16vw, 96px);
-  transform: scale(1) rotate(-3deg);
+  transform: scale(1.1) rotate(-8deg);
   animation: chaosFloat 3s ease-in-out infinite;
   animation-delay: 2.0s;
 }
@@ -3102,5 +3381,237 @@ html.dark .mobile-footer {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* ============================================== */
+/* BENTO GRID FEATURE CARDS                       */
+/* ============================================== */
+
+.mobile-features-bento {
+  padding: 48px 16px 64px;
+  background: #08090a;
+}
+
+:root:not(.dark) .mobile-features-bento {
+  background: #fafafa;
+}
+
+/* Section Header */
+.bento-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.bento-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+:root:not(.dark) .bento-title {
+  color: #18181b;
+}
+
+.bento-subtitle {
+  font-size: 0.9375rem;
+  color: #A1A1AA;
+  line-height: 1.6;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+/* Bento Grid Layout */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Glass Card Base */
+.bento-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 24px;
+
+  /* Glass Effect */
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+    0 4px 24px rgba(0, 0, 0, 0.2);
+
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bento-card:hover,
+.bento-card:focus-within {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(99, 102, 241, 0.15);
+}
+
+/* Light mode glass */
+:root:not(.dark) .bento-card {
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.7) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
+    0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Card Sizes */
+.bento-card--wide {
+  grid-column: span 2;
+  min-height: 140px;
+}
+
+.bento-card--square {
+  grid-column: span 1;
+  min-height: 160px;
+}
+
+/* Watermark Icon - Visible Etched Style */
+.bento-card-watermark {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  opacity: 0.1;
+  pointer-events: none;
+  color: #ffffff;
+}
+
+.bento-card-watermark svg {
+  width: 56px;
+  height: 56px;
+}
+
+/* Wide cards get larger watermark */
+.bento-card--wide .bento-card-watermark svg {
+  width: 64px;
+  height: 64px;
+}
+
+:root:not(.dark) .bento-card-watermark {
+  opacity: 0.08;
+  color: #000000;
+}
+
+/* Card Content */
+.bento-card-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.bento-card-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+}
+
+:root:not(.dark) .bento-card-title {
+  color: #18181b;
+}
+
+.bento-card-description {
+  font-size: 0.75rem;
+  color: #71717A;
+  line-height: 1.65;
+}
+
+/* Action Link */
+.bento-card-action {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6366f1;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.bento-card-action:hover {
+  color: #818cf8;
+}
+
+:root:not(.dark) .bento-card-action {
+  color: #4f46e5;
+}
+
+:root:not(.dark) .bento-card-action:hover {
+  color: #6366f1;
+}
+
+/* Pulse Dot for Real-time */
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+}
+
+/* Responsive: Larger phones */
+@media (min-width: 390px) {
+  .bento-grid {
+    gap: 14px;
+  }
+
+  .bento-card {
+    padding: 24px;
+  }
+
+  .bento-card--wide {
+    min-height: 150px;
+  }
+}
+
+/* Responsive: Small phones */
+@media (max-width: 340px) {
+  .bento-grid {
+    gap: 10px;
+  }
+
+  .bento-card {
+    padding: 16px;
+  }
+
+  .bento-card-title {
+    font-size: 0.9375rem;
+  }
+
+  .bento-card-description {
+    font-size: 0.75rem;
   }
 }

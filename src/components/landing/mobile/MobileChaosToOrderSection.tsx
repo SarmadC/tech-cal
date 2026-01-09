@@ -12,6 +12,7 @@ type Vec2 = { x: number; y: number };
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const VERTICAL_OFFSET = 3; // Offset to move cards slightly lower in calendar slots
+const CHIP_SIZE = 28; // Fixed chip size for logo-only design
 
 type Measurement = {
   railY: number;
@@ -50,11 +51,11 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
 
   const eventData = useMemo(
     () => [
-      { company: 'Meta', date: 'May 1', title: 'Meta Con' },
-      { company: 'Google', date: 'May 7', title: 'Google I/O' },
-      { company: 'Docker', date: 'May 11', title: 'DockerCon' },
-      { company: 'Microsoft', date: 'May 13', title: 'Build' },
-      { company: 'Nvidia', date: 'May 15', title: 'GTC' },
+      { company: 'Meta', date: 'May 1', title: 'Meta Con', time: '9:00 AM', color: '#0668E1' },
+      { company: 'Google', date: 'May 7', title: 'Google I/O', time: '10:00 AM', color: '#4285F4' },
+      { company: 'Docker', date: 'May 11', title: 'DockerCon', time: '11:00 AM', color: '#2496ED' },
+      { company: 'Microsoft', date: 'May 13', title: 'Build', time: '9:30 AM', color: '#00A4EF' },
+      { company: 'Nvidia', date: 'May 15', title: 'GTC', time: '10:30 AM', color: '#76B900' },
     ],
     []
   );
@@ -70,7 +71,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
   const daysInMonth = new Date(YEAR, MONTH_INDEX + 1, 0).getDate();
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  
+
   // Get logo sources for each company with fallback chain
   const logoSourcesMap = useMemo(
     () => eventData.reduce((acc, e) => {
@@ -106,13 +107,13 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
   const handleLogoError = useCallback((company: string) => {
     const sources = logoSourcesMap[company];
     if (!sources) return;
-    
+
     const currentSrc = activeLogoSources[company];
     const currentIndex = currentSrc ? sources.indexOf(currentSrc) : -1;
-    const nextSrc = currentIndex >= 0 && currentIndex < sources.length - 1 
-      ? sources[currentIndex + 1] 
+    const nextSrc = currentIndex >= 0 && currentIndex < sources.length - 1
+      ? sources[currentIndex + 1]
       : undefined;
-    
+
     if (nextSrc) {
       setActiveLogoSources((prev) => ({
         ...prev,
@@ -193,9 +194,8 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
           const center = measurement.centers[day];
           if (!center) return;
           card.style.opacity = '1';
-          card.style.transform = `translate3d(${center.x - measurement.tile / 2}px, ${
-            center.y - measurement.tile / 2 + VERTICAL_OFFSET
-          }px, 0)`;
+          card.style.transform = `translate3d(${center.x - CHIP_SIZE / 2}px, ${center.y - CHIP_SIZE / 2 + VERTICAL_OFFSET
+            }px, 0)`;
           card.style.willChange = 'auto';
         });
         finalizedRef.current = true;
@@ -228,8 +228,8 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
       const center = centers[day];
       if (!center) return;
 
-      const spawnT = `translate3d(${spawn[i].x - tile / 2}px, ${spawn[i].y - tile / 2}px, 0)`;
-      const finalT = `translate3d(${center.x - tile / 2}px, ${center.y - tile / 2 + VERTICAL_OFFSET}px, 0)`;
+      const spawnT = `translate3d(${spawn[i].x - CHIP_SIZE / 2}px, ${spawn[i].y - CHIP_SIZE / 2}px, 0)`;
+      const finalT = `translate3d(${center.x - CHIP_SIZE / 2}px, ${center.y - CHIP_SIZE / 2 + VERTICAL_OFFSET}px, 0)`;
 
       // Force GPU layer creation
       card.style.opacity = '1';
@@ -322,7 +322,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
         rafRef.current = window.requestAnimationFrame(() => {
           const m = measure(true);
           if (!m) return;
-          const { centers, tile } = m;
+          const { centers } = m;
 
           // Batch all transform updates
           cardRefs.current.forEach((card, i) => {
@@ -330,7 +330,7 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
             const day = eventDays[i];
             const c = centers[day];
             if (!c) return;
-            card.style.transform = `translate3d(${c.x - tile / 2}px, ${c.y - tile / 2 + VERTICAL_OFFSET}px, 0)`;
+            card.style.transform = `translate3d(${c.x - CHIP_SIZE / 2}px, ${c.y - CHIP_SIZE / 2 + VERTICAL_OFFSET}px, 0)`;
           });
         });
       }, 150); // Debounce 150ms
@@ -362,13 +362,32 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
     <section ref={sectionRef} className={`mobile-chaos-to-order ${className}`}>
       <div className="mobile-chaos-container">
         <div className="mobile-chaos-header">
-          <h2 className="mobile-chaos-title">From Chaos to Order</h2>
-          <p className="mobile-chaos-subtitle">Watch events transform from scattered chaos into your organized calendar</p>
+          <h2 className="mobile-chaos-title">Turn Noise Into a Schedule.</h2>
         </div>
 
         <div ref={containerRef} className="mobile-animation-container">
-          {/* Lightweight frosted glass replacement - theme adaptive */}
-          <div className="mobile-calendar-grid frosted-calendar">
+          {/* Premium Calendar Container */}
+          <div className="mobile-calendar-grid calendar-chassis">
+            {/* Month Header with Navigation */}
+            <div className="calendar-month-header">
+              <span className="calendar-month-label">May 2025</span>
+              <div className="calendar-nav-buttons">
+                <button className="calendar-nav-btn" aria-label="Previous month">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                <button className="calendar-nav-btn calendar-today-btn" aria-label="Today">
+                  Today
+                </button>
+                <button className="calendar-nav-btn" aria-label="Next month">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            {/* Weekday Headers */}
             <div className="calendar-header">
               <div ref={daysBarRef} className="calendar-days">
                 <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
@@ -380,13 +399,19 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
               {Array.from({ length: 42 }, (_, i) => {
                 const day = i - firstDayOffset + 1;
                 const hasEvent = eventData.some((e) => Number(e.date.split(' ')[1]) === day);
+                const isPastMonth = day <= 0;
+                const isNextMonth = day > daysInMonth;
+                const isWeekend = i % 7 === 0 || i % 7 === 6;
+
                 return (
-                  <div key={i} className={`calendar-date ${hasEvent ? 'has-event' : ''}`} data-day={day > 0 && day <= daysInMonth ? day : undefined}>
-                    {day > 0 && day <= daysInMonth && (
-                      <>
-                        <span className="date-number">{day}</span>
-                        {hasEvent && <div className="event-dot" />}
-                      </>
+                  <div
+                    key={i}
+                    className={`calendar-date ${hasEvent ? 'has-event' : ''} ${isPastMonth || isNextMonth ? 'other-month' : ''} ${isWeekend ? 'weekend' : ''}`}
+                    data-day={day > 0 && day <= daysInMonth ? day : undefined}
+                  >
+                    {/* Only show date number if no event (chip will replace it) */}
+                    {day > 0 && day <= daysInMonth && !hasEvent && (
+                      <span className="date-number">{day}</span>
                     )}
                   </div>
                 );
@@ -399,28 +424,31 @@ const MobileChaosToOrderSection: React.FC<MobileChaosToOrderSectionProps> = ({ c
               <div
                 key={i}
                 ref={(el) => { cardRefs.current[i] = el; }}
-                className="mobile-event-card"
+                className="mobile-event-card logo-chip"
                 role="button"
                 aria-label={`${e.company} — ${e.title} on ${e.date}`}
                 onClick={() => setSelectedIndex(i)}
-                style={{ opacity: 0 }}
+                style={{
+                  opacity: 0,
+                  '--company-color': e.color
+                } as React.CSSProperties}
               >
-                <div className="logo-wrapper" aria-hidden="true">
+                <div className="chip-logo">
                   {activeLogoSources[e.company] ? (
                     <Image
                       src={activeLogoSources[e.company]}
                       alt=""
-                      width={22}
-                      height={22}
+                      width={20}
+                      height={20}
                       loading="lazy"
-                      sizes="32px"
+                      sizes="24px"
                       style={{ objectFit: 'contain' }}
                       onError={() => handleLogoError(e.company)}
                     />
                   ) : (
-                    <div className="logo-placeholder" style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
+                    <span className="logo-fallback">
                       {e.company.charAt(0)}
-                    </div>
+                    </span>
                   )}
                 </div>
               </div>
