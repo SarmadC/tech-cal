@@ -10,6 +10,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClientType } from '@/types';
+import { encryptToken, decryptToken } from '@/utils/tokenEncryption';
 
 export interface CalendarConnection {
     id: string;
@@ -47,14 +48,18 @@ export class CalendarConnectionService {
         supabase: SupabaseClientType
     ): Promise<CalendarConnection> {
         try {
+            // Encrypt tokens before storage
+            const encryptedAccessToken = encryptToken(accessToken);
+            const encryptedRefreshToken = refreshToken ? encryptToken(refreshToken) : null;
+
             // Store connection record with encrypted tokens
             const { data, error } = await supabase
                 .from('calendar_connections')
                 .insert({
                     user_id: userId,
                     provider,
-                    access_token: accessToken,
-                    refresh_token: refreshToken,
+                    access_token: encryptedAccessToken,
+                    refresh_token: encryptedRefreshToken,
                     token_expiry: tokenExpiry.toISOString(),
                     calendar_id: calendarId,
                     is_active: true,
@@ -140,16 +145,19 @@ export class CalendarConnectionService {
                 return null;
             }
 
-            // Get tokens directly from the connection record (no Vault needed)
-            // TODO: In production, decrypt these tokens using proper encryption
-            const accessToken = 'access_token' in connection ? connection.access_token as string : null;
-            const refreshToken = connection.has_refresh_token && 'refresh_token' in connection
+            // Get encrypted tokens from the connection record
+            const encryptedAccessToken = 'access_token' in connection ? connection.access_token as string : null;
+            const encryptedRefreshToken = connection.has_refresh_token && 'refresh_token' in connection
                 ? connection.refresh_token as string
                 : null;
 
-            if (!accessToken) {
+            if (!encryptedAccessToken) {
                 throw new Error('No access token found in calendar connection');
             }
+
+            // Decrypt tokens before returning
+            const accessToken = decryptToken(encryptedAccessToken);
+            const refreshToken = encryptedRefreshToken ? decryptToken(encryptedRefreshToken) : null;
 
             return {
                 ...connection,
@@ -183,12 +191,13 @@ export class CalendarConnectionService {
                 throw new Error('Connection not found');
             }
 
-            // Update access token directly in the database (no Vault needed)
-            // TODO: In production, encrypt the new access token before storing
+            // Encrypt new access token before storage
+            const encryptedAccessToken = encryptToken(newAccessToken);
+
             const { error } = await supabase
                 .from('calendar_connections')
                 .update({
-                    access_token: newAccessToken, // Store directly in access_token column
+                    access_token: encryptedAccessToken,
                     token_expiry: newTokenExpiry.toISOString(),
                     updated_at: new Date().toISOString()
                 })

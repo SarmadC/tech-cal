@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { OptimizedAnalyticsService } from '@/services/optimizedAnalyticsService';
@@ -248,7 +249,7 @@ export async function POST(request: NextRequest) {
 
     // Debug logging (only in development)
     if (process.env.NODE_ENV === 'development') {
-      console.log('Analytics API - User profile data:', {
+      logger.debug('Analytics API - User profile data:', {
         userId: user.id,
         hasPreferences: !!profileData.preferences,
         preferencesKeys: profileData.preferences ? Object.keys(profileData.preferences) : [],

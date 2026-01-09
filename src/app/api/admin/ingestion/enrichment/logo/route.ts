@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 /**
  * API Route: Organizer Logo Upload
  * 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Log file properties for debugging
-        console.log('Uploading logo:', {
+        logger.debug('Uploading logo:', {
             organizerId,
             fileName: file.name,
             fileSize: file.size,
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
                 console.error('Failed to update organizer logo_url with service client:', updateError);
                 // Still return success since file was uploaded, but log the error
             } else {
-                console.log('Successfully updated organizer logo_url:', fileName);
+                logger.debug('Successfully updated organizer logo_url:', fileName);
             }
         }
 

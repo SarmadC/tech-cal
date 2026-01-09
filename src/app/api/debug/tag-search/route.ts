@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
 
     // 1. Check if tag exists
-    console.log('[DEBUG API] Searching for tags matching:', term);
+    logger.debug('[DEBUG API] Searching for tags matching:', term);
     const { data: tags, error: tagError } = await supabase
       .from('event_tags')
       .select('id, event_tag, category')
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Tag query failed', details: tagError }, { status: 500 });
     }
 
-    console.log('[DEBUG API] Found tags:', tags?.length || 0);
+    logger.debug('[DEBUG API] Found tags:', tags?.length || 0);
 
     // 2. Check event_tag_relations with the same query as getEventIdsByTagSearch
     const { data: relations, error: relError } = await supabase
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Relations query failed', details: relError }, { status: 500 });
     }
 
-    console.log('[DEBUG API] Found relations:', relations?.length || 0);
+    logger.debug('[DEBUG API] Found relations:', relations?.length || 0);
 
     // 3. Count total tags and relations
     const { count: totalTags } = await supabase

@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 /**
  * API Route: Update Review Queue
  * 
@@ -273,7 +274,7 @@ export async function DELETE(_request: NextRequest) {
             throw new Error(`Failed to delete queue fields: ${fieldsError.message}`);
         }
 
-        console.log(`Deleted ${deletedFields?.length ?? 0} field records`);
+        logger.debug(`Deleted ${deletedFields?.length ?? 0} field records`);
 
         // Delete queue items
         const { data: deletedItems, error: queueDeleteError } = await tableClient
@@ -288,7 +289,7 @@ export async function DELETE(_request: NextRequest) {
         }
 
         const actuallyDeleted = deletedItems?.length ?? 0;
-        console.log(`Deleted ${actuallyDeleted} of ${pendingIds.length} queue items`);
+        logger.debug(`Deleted ${actuallyDeleted} of ${pendingIds.length} queue items`);
 
         if (actuallyDeleted === 0 && pendingIds.length > 0) {
             console.warn('No items were deleted - check RLS policies on event_update_queue table');

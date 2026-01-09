@@ -9,6 +9,7 @@ import { createHash, randomUUID } from 'crypto';
 import { requireOnboardedApi } from '@/utils/onboarding';
 import { UserLocation } from '@/services/locationScoringService';
 import { FilterCounts } from '@/utils/filterCountUtils';
+import { logger } from '@/utils/logger';
 
 /**
  * Extract city from a location string (e.g., "San Francisco, CA, USA" -> "San Francisco")
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
   const requestTimestamp = request.headers.get('X-Request-Timestamp');
   const requestId = request.headers.get('X-Request-Id') || randomUUID();
   
-  console.log('[API] Starting filtered events request', {
+  logger.debug('[API] Starting filtered events request', {
     requestId,
     requestTimestamp: requestTimestamp || 'not provided',
     serverTime: new Date().toISOString()
@@ -116,14 +117,14 @@ export async function POST(request: NextRequest) {
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.log('[API] Authentication failed:', authError);
+      logger.debug('[API] Authentication failed:', authError);
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    console.log('[API] User authenticated:', user.id);
+    logger.debug('[API] User authenticated:', user.id);
 
     // Optional onboarding requirement for filtered events
     const onboardingGuard = await requireOnboardedApi(supabase, user.id);
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
     try {
       const { success: rateLimitSuccess } = await ratelimit.limit(user.id);
       if (!rateLimitSuccess) {
-        console.log('[API] Rate limit exceeded for user:', user.id);
+        logger.debug('[API] Rate limit exceeded for user:', user.id);
         return NextResponse.json(
           { success: false, error: 'Too many requests. Please try again later.' },
           { status: 429 }
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
     } catch (rateLimitError) {
       // Skip rate limiting if KV is not configured (development mode)
       const errorMessage = rateLimitError instanceof Error ? rateLimitError.message : 'Unknown rate limit error';
-      console.log('[API] Rate limiting skipped (KV not configured):', errorMessage);
+      logger.debug('[API] Rate limiting skipped (KV not configured):', errorMessage);
     }
 
     // Parse and validate request
@@ -241,7 +242,7 @@ export async function POST(request: NextRequest) {
         return res;
       }
     } catch (cacheErr) {
-      console.log('[API] Filtered events cache unavailable/disabled:', cacheErr instanceof Error ? cacheErr.message : 'unknown');
+      logger.debug('[API] Filtered events cache unavailable/disabled:', cacheErr instanceof Error ? cacheErr.message : 'unknown');
     }
 
     // Build comprehensive server-side filters
@@ -297,7 +298,7 @@ export async function POST(request: NextRequest) {
       careerProfile = await CareerProfileService.getCareerProfile(user.id, supabase);
     } catch (error) {
       // Profile might not exist for new users - this is fine
-      console.log('No career profile found for user, skipping career impact scoring:', error);
+      logger.debug('No career profile found for user, skipping career impact scoring:', error);
     }
     
     // Extract user location for location-based scoring
@@ -321,7 +322,7 @@ export async function POST(request: NextRequest) {
         };
       }
     } catch (error) {
-      console.log('[API] Failed to extract user location for scoring:', error);
+      logger.debug('[API] Failed to extract user location for scoring:', error);
     }
 
     // For career-impact sorting, we need to fetch a larger window to ensure pagination correctness
@@ -336,10 +337,10 @@ export async function POST(request: NextRequest) {
     // Apply tag filtering if tags are specified
     if (tags.length > 0) {
       try {
-        console.log('[DEBUG] Filtering by tags:', tags);
+        logger.debug('[DEBUG] Filtering by tags:', tags);
         // Get event IDs that match any of the selected tags (exact match, case-insensitive)
         const tagFilteredEventIds = await EventService.getEventIdsByTags(tags, supabase, eventFilters);
-        console.log('[DEBUG] Tag filter results:', tagFilteredEventIds.length, 'events');
+        logger.debug('[DEBUG] Tag filter results:', tagFilteredEventIds.length, 'events');
         
         // If we have tag-filtered IDs, add them to eventFilters to restrict the main query
         if (tagFilteredEventIds.length > 0) {
@@ -413,7 +414,7 @@ export async function POST(request: NextRequest) {
             : allExpandedTerms;
 
           // Performance logging for query expansion
-          console.log('[PERF] Query expansion:', {
+          logger.debug('[PERF] Query expansion:', {
             original: trimmedSearchTerm,
             expanded: expandedSearchTerms,
             totalExpanded: allExpandedTerms.length,
@@ -424,7 +425,7 @@ export async function POST(request: NextRequest) {
         } else {
           // For short queries, use original term only (no expansion)
           expandedSearchTerms = [trimmedSearchTerm.toLowerCase()];
-          console.log('[PERF] Query expansion skipped (short query):', {
+          logger.debug('[PERF] Query expansion skipped (short query):', {
             original: trimmedSearchTerm,
             length: trimmedSearchTerm.length
           });
@@ -515,7 +516,7 @@ export async function POST(request: NextRequest) {
 
         // Performance metrics for multi-query optimization
         const avgQueryTime = totalQueries > 0 ? Math.round(parallelSearchTime / totalQueries) : 0;
-        console.log('[PERF] Multi-query optimization:', {
+        logger.debug('[PERF] Multi-query optimization:', {
           searchTerm,
           queryLength,
           strategy: queryLength < 3 ? 'FTS-only' : queryLength <= 10 ? 'FTS+tags' : 'FTS+tags+organizer',
@@ -548,14 +549,14 @@ export async function POST(request: NextRequest) {
     ];
 
     // Debug logging for event ID merging
-    console.log('[DEBUG Merge] Additional event IDs:', additionalEventIds.length);
+    logger.debug('[DEBUG Merge] Additional event IDs:', additionalEventIds.length);
 
     // Add matched event IDs to filters to include them in results
     if (additionalEventIds.length > 0) {
       // Merge with existing eventIds filter if present
       const existingIds = eventFilters.eventIds || [];
       eventFilters.eventIds = [...new Set([...existingIds, ...additionalEventIds])];
-      console.log('[DEBUG Merge] Final eventIds filter:', eventFilters.eventIds.length, 'IDs:', eventFilters.eventIds.slice(0, 5));
+      logger.debug('[DEBUG Merge] Final eventIds filter:', eventFilters.eventIds.length, 'IDs:', eventFilters.eventIds.slice(0, 5));
     }
 
     // Get events using EventService (includes cold start & telemetry)
@@ -624,7 +625,7 @@ export async function POST(request: NextRequest) {
       if (!shouldEnrich) {
         enrichedEvents = filteredEvents;
         if (process.env.NODE_ENV !== 'production') {
-          console.log('[API] Skipping enrichment - shouldEnrich:', shouldEnrich, 'page:', page, 'ENRICH_MAX_PAGE:', ENRICH_MAX_PAGE);
+          logger.debug('[API] Skipping enrichment - shouldEnrich:', shouldEnrich, 'page:', page, 'ENRICH_MAX_PAGE:', ENRICH_MAX_PAGE);
         }
       } else {
         // Always enrich - enrichment service handles cold start internally
@@ -636,7 +637,7 @@ export async function POST(request: NextRequest) {
         
         if (needsEnrichment) {
           if (process.env.NODE_ENV !== 'production') {
-            console.log('[API] Enriching events:', {
+            logger.debug('[API] Enriching events:', {
               count: filteredEvents.length,
               isCareerImpactSort,
               recommended,
@@ -666,7 +667,7 @@ export async function POST(request: NextRequest) {
               return score === 0;
             });
             
-            console.log('[API] Enrichment complete:', {
+            logger.debug('[API] Enrichment complete:', {
               totalEvents: enrichedEvents.length,
               eventsWithScores: eventsWithScores.length,
               eventsWithoutScores: eventsWithoutScores.length,
@@ -687,7 +688,7 @@ export async function POST(request: NextRequest) {
           // Events already enriched (e.g., from lookalike recommendations)
           enrichedEvents = filteredEvents;
           if (process.env.NODE_ENV !== 'production') {
-            console.log('[API] Events already enriched, skipping');
+            logger.debug('[API] Events already enriched, skipping');
           }
         }
       }
@@ -788,7 +789,7 @@ export async function POST(request: NextRequest) {
     const processingTime = Date.now() - startTime;
 
     // Log overall performance summary
-    console.log('[PERF] Request summary:', {
+    logger.debug('[PERF] Request summary:', {
       requestId,
       processingTimeMs: processingTime,
       fastSearch,
@@ -844,7 +845,7 @@ export async function POST(request: NextRequest) {
     try {
       await kv.set(cacheKey, response, { ex: cacheTTL });
     } catch (cacheSetErr) {
-      console.log('[API] Failed to set filtered events cache:', cacheSetErr instanceof Error ? cacheSetErr.message : 'unknown');
+      logger.debug('[API] Failed to set filtered events cache:', cacheSetErr instanceof Error ? cacheSetErr.message : 'unknown');
     }
 
     const res = NextResponse.json(response);

@@ -2,9 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-
-const ChromeCross = dynamic(() => import('@/components/ChromeCross'), { ssr: false });
+import HeroEventCard from './HeroEventCard';
 
 export interface MobileHeroSectionProps {
     isIOS?: boolean;
@@ -12,51 +10,68 @@ export interface MobileHeroSectionProps {
     className?: string;
 }
 
+/**
+ * MobileHeroSection - "Product Immersion" Layout
+ * 
+ * A product-first hero design that proves value instantly with:
+ * - Sharp, left-aligned headline
+ * - Floating event card preview (tilted 15°)
+ * - Sticky bottom CTA bar
+ * - Deep charcoal background with subtle grid pattern
+ */
 const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({
     isIOS: _isIOS = false,
     isAndroid: _isAndroid = false,
     className = ''
 }) => {
     return (
-        <section className={`mobile-hero ${className}`}>
-            {/* Full-screen ChromeCross animation background */}
-            <div className="mobile-hero-background-animation">
-                <ChromeCross />
-            </div>
+        <section className={`mobile-hero-immersion ${className}`}>
+            {/* Subtle grid pattern background */}
+            <div className="hero-grid-pattern" aria-hidden="true" />
 
-            {/* Overlay gradient for text readability */}
-            <div className="mobile-hero-overlay-gradient" />
-
-            {/* Mobile Hero Content - Overlaid on image */}
-            <div className="mobile-hero-content">
-                {/* Text Content Section */}
-                <div className="mobile-hero-text-section">
-                    {/* Hero Title */}
-                    <h1 className="mobile-hero-title">
-                        All-in-One<br />
-                        <span className="highlight-text">Tech Events Calendar</span>
+            {/* Main content area */}
+            <div className="hero-content-wrapper">
+                {/* Left-aligned text block */}
+                <div className="hero-text-block">
+                    <h1 className="hero-headline">
+                        Your Calendar,<br />
+                        <span className="hero-headline-accent">Reimagined.</span>
                     </h1>
+                    <p className="hero-subtext">
+                        Discover, track, and attend tech events that move your career forward.
+                    </p>
+                </div>
 
-                    {/* Hero Subtitle */}
-                    <div className="mobile-hero-subtitle">
-                        <div className="subtitle-content">
-                            <p className="subtitle-main">
-                                Effortless Event Discovery for Everyone
-                            </p>
-                            <p className="subtitle-secondary">
-                                Never miss important tech events again.<br />
-                                Find, track, and attend events that matter to your career.
-                            </p>
-                        </div>
+                {/* Floating event card - tilted 15° */}
+                <div className="hero-floating-card-wrapper">
+                    <div className="hero-floating-card">
+                        <HeroEventCard />
                     </div>
                 </div>
+            </div>
 
-                {/* CTA Button Section */}
-                <div className="mobile-hero-cta-section">
-                    <Link href="/discover" className="mobile-hero-cta-button">
-                        <span>Discover Events</span>
-                    </Link>
-                </div>
+            {/* Sticky bottom CTA bar */}
+            <div className="hero-sticky-cta-bar">
+                <Link href="/discover" className="hero-cta-button">
+                    <span className="hero-cta-text">Discover Events</span>
+                    <span className="hero-cta-arrow-chip" aria-hidden="true">
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 14 14"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </span>
+                </Link>
             </div>
         </section>
     );

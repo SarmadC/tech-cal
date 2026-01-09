@@ -1,10 +1,12 @@
+import { logger } from '@/utils/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { GoogleCalendarService } from '@/services/googleCalendarService';
+import { encryptToken } from '@/utils/tokenEncryption';
 
 async function handleCallback(request: NextRequest) {
     try {
-        console.log('[CALENDAR CALLBACK] Request received:', request.url);
+        logger.debug('[CALENDAR CALLBACK] Request received:', request.url);
         const { searchParams, origin } = new URL(request.url);
         const code = searchParams.get('code');
         const state = searchParams.get('state');
@@ -43,7 +45,7 @@ async function handleCallback(request: NextRequest) {
         }
 
         const tokens = await tokenResponse.json();
-        console.log('[CALENDAR CALLBACK] Tokens received:', tokens);
+        logger.debug('[CALENDAR CALLBACK] Tokens received:', tokens);
         const { access_token, refresh_token } = tokens;
 
         if (!access_token || !refresh_token) {
@@ -64,7 +66,6 @@ async function handleCallback(request: NextRequest) {
         }
 
         // Store connection in database
-        // For production, these tokens should be encrypted before storage
         const { data: existing } = await supabase
             .from('calendar_connections')
             .select('id')
@@ -72,14 +73,18 @@ async function handleCallback(request: NextRequest) {
             .eq('provider', 'google')
             .single();
 
+        // Encrypt tokens before storage for security
+        const encryptedAccessToken = encryptToken(access_token);
+        const encryptedRefreshToken = encryptToken(refresh_token);
+
         if (existing) {
             // Update existing connection
             const { error } = await supabase
                 .from('calendar_connections')
                 .update({
                     calendar_id: calendarId,
-                    access_token: access_token,  // TODO: Encrypt in production
-                    refresh_token: refresh_token,  // TODO: Encrypt in production
+                    access_token: encryptedAccessToken,
+                    refresh_token: encryptedRefreshToken,
                     token_expiry: new Date(Date.now() + 3599 * 1000).toISOString(),
                     last_sync_at: new Date().toISOString(),
                     last_sync_status: 'success',
@@ -95,15 +100,15 @@ async function handleCallback(request: NextRequest) {
                 throw error;
             }
         } else {
-            // Create new connection
+            // Create new connection with encrypted tokens
             const { error } = await supabase
                 .from('calendar_connections')
                 .insert({
                     user_id: user.id,
                     provider: 'google',
                     calendar_id: calendarId,
-                    access_token: access_token,  // TODO: Encrypt in production
-                    refresh_token: refresh_token,  // TODO: Encrypt in production
+                    access_token: encryptedAccessToken,
+                    refresh_token: encryptedRefreshToken,
                     token_expiry: new Date(Date.now() + 3599 * 1000).toISOString(),
                     is_active: true,
                     has_refresh_token: true,
@@ -120,7 +125,7 @@ async function handleCallback(request: NextRequest) {
             }
         }
 
-        console.log('[CALENDAR CALLBACK] Calendar connection created/updated successfully');
+        logger.debug('[CALENDAR CALLBACK] Calendar connection created/updated successfully');
 
         // Redirect back to settings with success
         return NextResponse.redirect(`${origin}/dashboard/settings?tab=integrations&connected=true`);

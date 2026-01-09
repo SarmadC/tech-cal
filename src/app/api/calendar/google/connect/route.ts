@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 /**
  * POST /api/calendar/google/connect
  * 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
         // CRITICAL: This must run immediately after OAuth redirect
         const { data: { session } } = await supabase.auth.getSession();
 
-        console.log('DEBUG: Session data:', {
+        logger.debug('DEBUG: Session data:', {
             hasSession: !!session,
             hasProviderToken: !!session?.provider_token,
             hasProviderRefreshToken: !!session?.provider_refresh_token,
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
 
         if (existingConnection) {
             // Update existing connection with new tokens
-            console.log('Updating existing calendar connection');
+            logger.debug('Updating existing calendar connection');
             
             // Get primary calendar ID
             const calendarId = await GoogleCalendarService.getPrimaryCalendar(
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create new connection
-        console.log('Creating new calendar connection');
+        logger.debug('Creating new calendar connection');
 
         // Get primary calendar ID
         const calendarId = await GoogleCalendarService.getPrimaryCalendar(

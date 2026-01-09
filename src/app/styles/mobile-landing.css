@@ -65,7 +65,7 @@ html.dark .mobile-landing-container {
   width: 24px !important;
   height: 24px !important;
   -o-object-fit: contain;
-     object-fit: contain;
+  object-fit: contain;
 }
 
 .mobile-nav-logo .logo-text {
@@ -212,12 +212,14 @@ html.dark .mobile-nav-menu {
 }
 
 /* ============================================== */
-/* 3. MOBILE HERO SECTION                        */
+/* 3. MOBILE HERO SECTION - PRODUCT IMMERSION    */
 /* ============================================== */
 
+/* Legacy .mobile-hero class for backward compatibility */
 .mobile-hero {
   position: relative;
-  height: calc(100dvh - 80px); /* Account for fixed navbar padding */
+  height: calc(100dvh - 80px);
+  /* Account for fixed navbar padding */
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -225,6 +227,493 @@ html.dark .mobile-nav-menu {
   overflow-y: auto;
   color: var(--foreground-primary);
   background: var(--background-main);
+}
+
+/* ========================================
+   PRODUCT IMMERSION HERO LAYOUT
+   ======================================== */
+
+.mobile-hero-immersion {
+  position: relative;
+  min-height: calc(100dvh - 80px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  color: #ffffff;
+  background: #09090b;
+}
+
+/* Light mode variant */
+:root:not(.dark) .mobile-hero-immersion,
+.light .mobile-hero-immersion,
+html.light .mobile-hero-immersion {
+  background: #ffffff;
+  color: var(--foreground-primary);
+}
+
+/* Subtle Grid Pattern Background - Stronger near card */
+.hero-grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0);
+  background-size: 20px 20px;
+  /* Focus grid visibility on the card area (bottom-right) */
+  mask-image: radial-gradient(ellipse 70% 80% at 75% 55%, black 20%, rgba(0, 0, 0, 0.4) 50%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 75% 55%, black 20%, rgba(0, 0, 0, 0.4) 50%, transparent 80%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Light mode grid pattern */
+:root:not(.dark) .hero-grid-pattern,
+.light .hero-grid-pattern,
+html.light .hero-grid-pattern {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.06) 1px, transparent 0);
+}
+
+/* Main Content Wrapper */
+.hero-content-wrapper {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6) var(--space-4);
+  padding-bottom: 100px;
+  /* Space for sticky CTA */
+  gap: var(--space-8);
+}
+
+/* Text Block - Left Aligned */
+.hero-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  text-align: left;
+  max-width: 85%;
+  animation: heroFadeInUp 0.6s ease-out;
+}
+
+@keyframes heroFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Headline Styling */
+.hero-headline {
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-family: var(--font-sans);
+  color: #ffffff;
+  margin: 0;
+}
+
+/* Light mode headline */
+:root:not(.dark) .hero-headline,
+.light .hero-headline,
+html.light .hero-headline {
+  color: var(--foreground-primary);
+}
+
+.hero-headline-accent {
+  display: inline;
+  color: #ffffff;
+}
+
+:root:not(.dark) .hero-headline-accent,
+.light .hero-headline-accent,
+html.light .hero-headline-accent {
+  color: var(--foreground-primary);
+}
+
+/* Subtext Styling - Zinc-400 */
+.hero-subtext {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #A1A1AA;
+  margin: 0;
+  font-weight: 400;
+  max-width: 90%;
+}
+
+:root:not(.dark) .hero-subtext,
+.light .hero-subtext,
+html.light .hero-subtext {
+  color: #71717A;
+}
+
+/* Floating Card Wrapper - More vertical breathing room */
+.hero-floating-card-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 0;
+  margin-right: -24px;
+  margin-top: 12px;
+  /* Extra space from text block */
+  /* Extend beyond container edge */
+  animation: heroCardFloat 0.8s ease-out 0.3s both;
+}
+
+@keyframes heroCardFloat {
+  from {
+    opacity: 0;
+    transform: translateX(40px) rotate(15deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) rotate(15deg);
+  }
+}
+
+/* Floating Event Card Container - with glow effect */
+.hero-floating-card {
+  position: relative;
+  transform: rotate(15deg);
+  transform-origin: center center;
+  width: 85%;
+  max-width: 320px;
+}
+
+/* Soft colored glow behind the card - accent color */
+.hero-floating-card::before {
+  content: '';
+  position: absolute;
+  inset: -30px;
+  background: radial-gradient(ellipse 100% 100% at 50% 50%,
+      rgba(249, 115, 22, 0.15) 0%,
+      rgba(249, 115, 22, 0.08) 30%,
+      rgba(255, 255, 255, 0.04) 50%,
+      transparent 70%);
+  border-radius: 40px;
+  z-index: -1;
+  filter: blur(25px);
+  pointer-events: none;
+}
+
+/* Light mode glow - softer */
+:root:not(.dark) .hero-floating-card::before,
+.light .hero-floating-card::before,
+html.light .hero-floating-card::before {
+  background: radial-gradient(ellipse 100% 100% at 50% 50%,
+      rgba(249, 115, 22, 0.12) 0%,
+      rgba(249, 115, 22, 0.06) 30%,
+      rgba(0, 0, 0, 0.03) 50%,
+      transparent 70%);
+}
+
+/* HeroEventCard Styles - Brighter Glassmorphism */
+.hero-event-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  padding: var(--space-4);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.35),
+    0 12px 24px rgba(0, 0, 0, 0.25),
+    0 0 80px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Light mode card */
+:root:not(.dark) .hero-event-card,
+.light .hero-event-card,
+html.light .hero-event-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.15),
+    0 12px 24px rgba(0, 0, 0, 0.1),
+    0 0 60px rgba(0, 0, 0, 0.05);
+}
+
+/* Card Header */
+.hero-event-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.hero-event-card-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+:root:not(.dark) .hero-event-card-logo,
+.light .hero-event-card-logo,
+html.light .hero-event-card-logo {
+  background: #f4f4f5;
+}
+
+.hero-event-card-logo-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.hero-event-card-logo-placeholder {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+:root:not(.dark) .hero-event-card-logo-placeholder,
+.light .hero-event-card-logo-placeholder,
+html.light .hero-event-card-logo-placeholder {
+  color: var(--foreground-primary);
+}
+
+.hero-event-card-company {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+:root:not(.dark) .hero-event-card-company,
+.light .hero-event-card-company,
+html.light .hero-event-card-company {
+  color: var(--foreground-secondary);
+}
+
+/* Card Title */
+.hero-event-card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 var(--space-3) 0;
+  line-height: 1.3;
+}
+
+:root:not(.dark) .hero-event-card-title,
+.light .hero-event-card-title,
+html.light .hero-event-card-title {
+  color: var(--foreground-primary);
+}
+
+/* Card Meta Info */
+.hero-event-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.hero-event-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:root:not(.dark) .hero-event-card-meta-item,
+.light .hero-event-card-meta-item,
+html.light .hero-event-card-meta-item {
+  color: var(--foreground-tertiary);
+}
+
+.hero-event-card-meta-item svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+/* Card Badge */
+.hero-event-card-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+:root:not(.dark) .hero-event-card-badge,
+.light .hero-event-card-badge,
+html.light .hero-event-card-badge {
+  background: #f4f4f5;
+  color: var(--foreground-secondary);
+}
+
+/* ========================================
+   STICKY BOTTOM CTA BAR
+   ======================================== */
+
+.hero-sticky-cta-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  background: rgba(9, 9, 11, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Light mode sticky bar */
+:root:not(.dark) .hero-sticky-cta-bar,
+.light .hero-sticky-cta-bar,
+html.light .hero-sticky-cta-bar {
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Friction reducer label above CTA */
+.hero-cta-label {
+  display: block;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.02em;
+}
+
+:root:not(.dark) .hero-cta-label,
+.light .hero-cta-label,
+html.light .hero-cta-label {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* CTA Button - Premium Elevated Pill */
+.hero-cta-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 14px 14px 24px;
+  background: #ffffff;
+  color: #09090b;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  /* Full pill shape */
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Premium elevated shadow */
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.hero-cta-button:hover {
+  background: #f8f8f8;
+  transform: translateY(-2px);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.5),
+    0 6px 16px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.hero-cta-button:active {
+  transform: translateY(0);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Light mode CTA button */
+:root:not(.dark) .hero-cta-button,
+.light .hero-cta-button,
+html.light .hero-cta-button {
+  background: #09090b;
+  color: #ffffff;
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.25),
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+:root:not(.dark) .hero-cta-button:hover,
+.light .hero-cta-button:hover,
+html.light .hero-cta-button:hover {
+  background: #18181b;
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.3),
+    0 6px 16px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* CTA Text */
+.hero-cta-text {
+  letter-spacing: -0.01em;
+}
+
+/* CTA Arrow Chip - Circular button with accent border */
+.hero-cta-arrow-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #09090b;
+  color: #ffffff;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Accent border echo */
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.4);
+}
+
+.hero-cta-button:hover .hero-cta-arrow-chip {
+  transform: translateX(2px);
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.6);
+}
+
+/* Light mode arrow chip */
+:root:not(.dark) .hero-cta-arrow-chip,
+.light .hero-cta-arrow-chip,
+html.light .hero-cta-arrow-chip {
+  background: #ffffff;
+  color: #09090b;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.35);
+}
+
+:root:not(.dark) .hero-cta-button:hover .hero-cta-arrow-chip,
+.light .hero-cta-button:hover .hero-cta-arrow-chip,
+html.light .hero-cta-button:hover .hero-cta-arrow-chip {
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.5);
+}
+
+/* Legacy CTA Arrow (for backwards compatibility) */
+.hero-cta-arrow {
+  transition: transform 0.2s ease;
+}
+
+.hero-cta-button:hover .hero-cta-arrow {
+  transform: translateX(3px);
 }
 
 /* Dark mode background - match landing page */
@@ -244,7 +733,8 @@ html.light .mobile-hero {
 
 /* Mobile navbar spacing - add top padding to account for fixed navbar */
 .mobile-landing-main {
-  padding-top: 80px; /* Space for fixed navbar */
+  padding-top: 80px;
+  /* Space for fixed navbar */
 }
 
 /* Transparent navbar logo styling - theme-aware colors */
@@ -255,7 +745,7 @@ html.light .mobile-hero {
   z-index: 1;
 }
 
-.mobile-navbar-logo-wrapper > div,
+.mobile-navbar-logo-wrapper>div,
 .mobile-navbar-logo-wrapper svg {
   display: block;
   opacity: 0.95;
@@ -263,7 +753,7 @@ html.light .mobile-hero {
 }
 
 /* Light mode: dark logo, Dark mode: white logo */
-.mobile-navbar-logo-wrapper svg > rect:first-child {
+.mobile-navbar-logo-wrapper svg>rect:first-child {
   fill: transparent !important;
 }
 
@@ -285,24 +775,29 @@ html.light .mobile-hero {
   min-height: 300px;
   z-index: 0;
   overflow: hidden;
-  pointer-events: none; /* Allow clicks to pass through to navbar */
-  margin-top: -40px; /* Move cross higher in viewport */
+  pointer-events: none;
+  /* Allow clicks to pass through to navbar */
+  margin-top: -40px;
+  /* Move cross higher in viewport */
 }
 
 /* Ensure ChromeCross fills the container */
-.mobile-hero-background-animation > div {
+.mobile-hero-background-animation>div {
   width: 100%;
   height: 100%;
-  pointer-events: none; /* Ensure animation doesn't block clicks */
+  pointer-events: none;
+  /* Ensure animation doesn't block clicks */
 }
 
 .mobile-hero-background-animation canvas {
-  pointer-events: none !important; /* Force canvas to not block clicks */
+  pointer-events: none !important;
+  /* Force canvas to not block clicks */
 }
 
 /* Overlay gradient removed to reveal ChromeCross animation */
 .mobile-hero-overlay-gradient {
-  display: none; /* No longer needed with new layout */
+  display: none;
+  /* No longer needed with new layout */
 }
 
 .mobile-hero-content {
@@ -328,7 +823,8 @@ html.light .mobile-hero {
   text-align: left;
   max-width: 90%;
   animation: fadeInUp 0.6s ease-out;
-  margin-top: -20px; /* Move text section slightly higher */
+  margin-top: -20px;
+  /* Move text section slightly higher */
 }
 
 /* CTA Section */
@@ -337,8 +833,10 @@ html.light .mobile-hero {
   flex-direction: column;
   align-items: flex-start;
   width: 100%;
-  max-width: 90%; /* Align with text section */
-  margin-bottom: 80px; /* Move CTA button higher */
+  max-width: 90%;
+  /* Align with text section */
+  margin-bottom: 80px;
+  /* Move CTA button higher */
 }
 
 /* Hero CTA Button - Oval shape with border (matching reference design) */
@@ -352,7 +850,8 @@ html.light .mobile-hero {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 9999px; /* Fully rounded for oval shape */
+  border-radius: 9999px;
+  /* Fully rounded for oval shape */
   color: #ffffff;
   font-size: 1rem;
   font-weight: 600;
@@ -670,14 +1169,15 @@ html.light .subtitle-secondary {
   letter-spacing: 0.02em;
   width: 100%;
   padding: 1rem var(--space-6);
-  min-height: 48px; /* Ensure proper touch target */
+  min-height: 48px;
+  /* Ensure proper touch target */
   border: none;
   outline: none;
 }
 
-.mobile-primary-cta-liquid:hover { 
-  color: #000000; 
-  text-decoration: none; 
+.mobile-primary-cta-liquid:hover {
+  color: #000000;
+  text-decoration: none;
 }
 
 .mobile-primary-cta-liquid:active {
@@ -685,8 +1185,8 @@ html.light .subtitle-secondary {
 }
 
 /* Dark mode primary CTA liquid - black text on white button */
-.dark .mobile-primary-cta-liquid { 
-  color: #000000; 
+.dark .mobile-primary-cta-liquid {
+  color: #000000;
 }
 
 .dark .mobile-primary-cta-liquid:hover {
@@ -698,12 +1198,12 @@ html.light .subtitle-secondary {
 }
 
 /* Light mode primary CTA liquid */
-:root:not(.dark) .mobile-primary-cta-liquid { 
-  color: #000000; 
+:root:not(.dark) .mobile-primary-cta-liquid {
+  color: #000000;
 }
 
-:root:not(.dark) .mobile-primary-cta-liquid:hover { 
-  color: #000000; 
+:root:not(.dark) .mobile-primary-cta-liquid:hover {
+  color: #000000;
 }
 
 :root:not(.dark) .mobile-primary-cta-liquid:active {
@@ -784,7 +1284,7 @@ html.dark .mobile-features {
   padding: var(--space-6);
   position: relative;
   margin-top: calc(var(--space-6) * -1);
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.08),
     0 1px 3px rgba(0, 0, 0, 0.04);
   will-change: transform;
@@ -830,7 +1330,7 @@ html.dark .mobile-features {
 /* Hover effects for stacked cards */
 /* Disable hover lift during stacking to avoid transform conflicts */
 .mobile-feature-card:hover {
-  box-shadow: 
+  box-shadow:
     0 8px 25px rgba(0, 0, 0, 0.12),
     0 3px 10px rgba(0, 0, 0, 0.08);
 }
@@ -893,8 +1393,10 @@ html.dark .mobile-features {
   position: relative;
   overflow: hidden;
   /* Dynamic square sizing based on viewport and calendar cells */
-  --tile-size: 34px; /* locked default for 341–420px devices */
-  --logo-scale: 0.78; /* slightly larger logos for readability */
+  --tile-size: 34px;
+  /* locked default for 341–420px devices */
+  --logo-scale: 0.78;
+  /* slightly larger logos for readability */
 }
 
 /* Dark mode background - match landing page */
@@ -935,7 +1437,8 @@ html.dark .mobile-chaos-to-order {
   /* Viewport-scaled height ensuring square cells */
   height: min(46vh, 360px);
   margin: 2rem 0;
-  background: transparent; /* background handled by GlassSurface */
+  background: transparent;
+  /* background handled by GlassSurface */
   border: none;
   border-radius: 16px;
   overflow: hidden;
@@ -984,11 +1487,9 @@ html.dark .mobile-chaos-to-order {
 /* Performant frosted glass effect - theme adaptive */
 .mobile-calendar-grid.frosted-calendar {
   /* Light theme - subtle frosted white */
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.72) 0%,
-    rgba(248, 250, 252, 0.68) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.72) 0%,
+      rgba(248, 250, 252, 0.68) 100%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.08),
@@ -1003,11 +1504,9 @@ html.dark .mobile-chaos-to-order {
 
 /* Dark theme frosted glass */
 .dark .mobile-calendar-grid.frosted-calendar {
-  background: linear-gradient(
-    135deg,
-    rgba(30, 30, 35, 0.75) 0%,
-    rgba(20, 20, 25, 0.72) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(30, 30, 35, 0.75) 0%,
+      rgba(20, 20, 25, 0.72) 100%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
@@ -1029,6 +1528,7 @@ html.dark .mobile-chaos-to-order {
 
 /* Additional mobile performance optimizations */
 @media (max-width: 768px) {
+
   /* Reduce blur on mobile for better performance */
   .mobile-calendar-grid.frosted-calendar {
     backdrop-filter: blur(4px);
@@ -1047,6 +1547,7 @@ html.dark .mobile-chaos-to-order {
 
 /* Ultra-low-end mobile performance mode */
 @media (max-width: 480px) and (prefers-reduced-motion: no-preference) {
+
   /* Further reduce blur on small devices */
   .mobile-calendar-grid.frosted-calendar {
     backdrop-filter: blur(3px);
@@ -1065,41 +1566,61 @@ html.dark .mobile-chaos-to-order {
   grid-template-columns: repeat(7, 1fr);
   align-items: center;
   margin-bottom: 0.5rem;
-  height: 42px; /* 40–44px target */
-  padding: 0; /* let content edge-align inside GlassSurface content padding */
+  height: 42px;
+  /* 40–44px target */
+  padding: 0;
+  /* let content edge-align inside GlassSurface content padding */
   width: 100%;
-  background: transparent !important; /* remove header background */
+  background: transparent !important;
+  /* remove header background */
   background-image: none !important;
   color: var(--foreground-primary);
   border-radius: 0;
   border: 0;
   box-shadow: none;
   -moz-column-gap: 12px;
-       column-gap: 12px; /* match dates grid gap exactly */
+  column-gap: 12px;
+  /* match dates grid gap exactly */
 }
 
 /* Dark theme: no background, keep high-contrast text */
-.dark .calendar-days { background: transparent !important; background-image: none !important; color: rgba(255, 255, 255, 0.95); border: 0; box-shadow: none; border-radius: 0; }
+.dark .calendar-days {
+  background: transparent !important;
+  background-image: none !important;
+  color: rgba(255, 255, 255, 0.95);
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
 
 /* Explicit light theme text color to avoid white-on-white */
-:root:not(.dark) .calendar-days { color: rgba(24, 24, 27, 0.9); }
+:root:not(.dark) .calendar-days {
+  color: rgba(24, 24, 27, 0.9);
+}
 
 .calendar-days span {
   text-align: center;
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.02em; /* tighter letterspacing */
+  letter-spacing: 0.02em;
+  /* tighter letterspacing */
   color: inherit;
 }
 
 /* Ensure weekday letters are theme-adaptive */
-:root:not(.dark) .calendar-days span { color: rgba(24, 24, 27, 0.9); }
-.dark .calendar-days span { color: rgba(255, 255, 255, 0.95); }
+:root:not(.dark) .calendar-days span {
+  color: rgba(24, 24, 27, 0.9);
+}
+
+.dark .calendar-days span {
+  color: rgba(255, 255, 255, 0.95);
+}
 
 .calendar-dates {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 12px; /* locked grid gap */
+  gap: 12px;
+  /* locked grid gap */
   position: relative;
   /* Ensure cells maintain aspect ratio */
   grid-auto-rows: 1fr;
@@ -1143,13 +1664,18 @@ html.dark .mobile-chaos-to-order {
   position: absolute;
   inset: 3px;
   border-radius: 6px;
-  box-shadow: 0 0 0 0 rgba(255,255,255,0.22);
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.22);
   animation: cellPulse 0.45s ease-out 2;
 }
 
 @keyframes cellPulse {
-  0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.22); }
-  100% { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.22);
+  }
+
+  100% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
 }
 
 .calendar-date.has-event {
@@ -1158,7 +1684,8 @@ html.dark .mobile-chaos-to-order {
 
 .date-number {
   font-size: 0.875rem;
-  color: rgba(24, 24, 27, 0.85); /* light mode default (near-black) */
+  color: rgba(24, 24, 27, 0.85);
+  /* light mode default (near-black) */
   font-weight: 500;
 }
 
@@ -1186,7 +1713,7 @@ html.dark .mobile-chaos-to-order {
   width: 10px;
   height: 10px;
   bottom: 4px;
-  box-shadow: 0 0 0 3px rgba(76,111,255,0.18), 0 0 10px rgba(76,111,255,0.4);
+  box-shadow: 0 0 0 3px rgba(76, 111, 255, 0.18), 0 0 10px rgba(76, 111, 255, 0.4);
 }
 
 /* Event Cards */
@@ -1196,7 +1723,8 @@ html.dark .mobile-chaos-to-order {
   left: 0;
   right: 0;
   bottom: 0;
-  pointer-events: none; /* allow events only on cards */
+  pointer-events: none;
+  /* allow events only on cards */
 }
 
 .mobile-chaos-to-order .mobile-event-card {
@@ -1233,7 +1761,7 @@ html.dark .mobile-chaos-to-order {
   max-height: var(--tile-size);
   /* Prevent text selection for better touch performance */
   -moz-user-select: none;
-       user-select: none;
+  user-select: none;
   -webkit-user-select: none;
   /* Hardware acceleration hint */
   contain: layout style paint;
@@ -1248,7 +1776,8 @@ html.dark .mobile-chaos-to-order {
 
 /* Light theme: white tile cards for logos */
 :root:not(.dark) .mobile-chaos-to-order .mobile-event-card {
-  background: #ffffff; /* pure white to match logo colors */
+  background: #ffffff;
+  /* pure white to match logo colors */
   border-color: rgba(0, 0, 0, 0.10);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -1306,9 +1835,12 @@ html.dark .mobile-chaos-to-order {
 
 /* Optimized chaos float with GPU acceleration */
 @keyframes chaosFloat {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1) rotate(var(--chaos-rotation)) translate3d(0, 0, 0);
   }
+
   50% {
     transform: scale(1) rotate(var(--chaos-rotation)) translate3d(0, -4px, 0);
   }
@@ -1324,14 +1856,16 @@ html.dark .mobile-chaos-to-order {
 .mobile-chaos-to-order .mobile-event-card.organizing {
   opacity: 1;
   transform: scale(1) rotate(0deg);
-  animation: none; /* Stop floating animation */
+  animation: none;
+  /* Stop floating animation */
   transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .mobile-chaos-to-order .mobile-event-card.ordered {
   opacity: 1 !important;
   transform: scale(1) rotate(0deg) !important;
-  animation: none; /* Stop floating animation */
+  animation: none;
+  /* Stop floating animation */
   /* Maintain perfect square ratio */
   width: var(--tile-size) !important;
   height: var(--tile-size) !important;
@@ -1351,7 +1885,7 @@ html.dark .mobile-chaos-to-order {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.95);
+  color: rgba(255, 255, 255, 0.95);
   /* Ensure logo doesn't overflow */
   overflow: hidden;
 }
@@ -1365,18 +1899,21 @@ html.dark .mobile-chaos-to-order {
   max-width: 100%;
   max-height: 100%;
   -o-object-fit: contain;
-     object-fit: contain;
+  object-fit: contain;
   /* Ensure crisp rendering at small sizes */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   /* Remove default inline spacing that affects centering */
   display: block;
-  margin: 0 auto; /* Add auto margins for additional centering support */
+  margin: 0 auto;
+  /* Add auto margins for additional centering support */
   /* Let flexbox handle centering properly */
 }
 
 .mobile-event-card.ordered .card-header,
-.mobile-event-card.ordered .card-title { display: none; }
+.mobile-event-card.ordered .card-title {
+  display: none;
+}
 
 /* Explicit ordered positions removed; positions are computed in JS to center on cells */
 
@@ -1444,7 +1981,7 @@ html.dark .mobile-chaos-to-order {
 .mobile-event-preview {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1455,11 +1992,11 @@ html.dark .mobile-chaos-to-order {
   width: 90%;
   margin: 0 0 24px 0;
   background: var(--background-main);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   padding: 16px;
   color: white;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .preview-title {
@@ -1468,14 +2005,14 @@ html.dark .mobile-chaos-to-order {
 }
 
 .preview-meta {
-  color: rgba(255,255,255,0.7);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.875rem;
 }
 
 .preview-hint {
   margin-top: 10px;
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* ============================================== */
@@ -1625,6 +2162,7 @@ html.light .mobile-use-case-card {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1634,6 +2172,7 @@ html.light .mobile-use-case-card {
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
@@ -1644,6 +2183,7 @@ html.light .mobile-use-case-card {
     opacity: 0;
     transform: translateY(100%);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1655,6 +2195,7 @@ html.light .mobile-use-case-card {
     opacity: 1;
     transform: translateY(0);
   }
+
   to {
     opacity: 0;
     transform: translateY(100%);
@@ -2013,6 +2554,7 @@ html.dark .mobile-faq {
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2080,8 +2622,8 @@ html.dark .mobile-footer {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  background: rgba(0,0,0,0.05);
-  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 12px;
   padding: 0.75rem var(--footer-content-inset);
   margin-bottom: 1.25rem;
@@ -2089,8 +2631,8 @@ html.dark .mobile-footer {
 
 /* Dark mode CTA strip */
 .dark .mobile-footer-cta-strip {
-  background: rgba(255,255,255,0.05);
-  border-color: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .cta-strip-text {
@@ -2177,8 +2719,8 @@ html.dark .mobile-footer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.05);
-  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 10px;
   color: var(--foreground-primary);
   text-decoration: none;
@@ -2186,20 +2728,20 @@ html.dark .mobile-footer {
 }
 
 .mobile-footer-social-row .social-icon:hover {
-  background: rgba(0,0,0,0.1);
-  border-color: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.2);
 }
 
 /* Dark mode social icons */
 .dark .mobile-footer-social-row .social-icon {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.14);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
   color: white;
 }
 
 .dark .mobile-footer-social-row .social-icon:hover {
-  background: rgba(255,255,255,0.15);
-  border-color: rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .mobile-footer-cta {
@@ -2361,7 +2903,7 @@ html.dark .mobile-footer {
   .mobile-hero-title {
     font-size: 2rem;
   }
-  
+
   .mobile-hero-subtitle {
     font-size: 1rem;
   }
@@ -2371,18 +2913,18 @@ html.dark .mobile-footer {
     min-height: 260px;
     max-height: 300px;
   }
-  
+
   .mobile-features-title,
   .mobile-chaos-title,
   .mobile-use-cases-title,
   .mobile-faq-title {
     font-size: 1.75rem;
   }
-  
+
   .mobile-feature-card {
     padding: 1.5rem;
   }
-  
+
   .mobile-step {
     padding: 1rem;
   }
@@ -2397,16 +2939,20 @@ html.dark .mobile-footer {
 /* Ultra-compact phones ~320–340px width */
 @media (max-width: 340px) {
   .mobile-chaos-to-order {
-    --tile-size: 30px; /* locked for ultra-compact */
+    --tile-size: 30px;
+    /* locked for ultra-compact */
     --logo-scale: 0.74;
   }
-  .mobile-animation-container { height: min(44vh, 340px); }
-  
+
+  .mobile-animation-container {
+    height: min(44vh, 340px);
+  }
+
   .mobile-nav-logo .logo-image {
     width: 20px !important;
     height: 20px !important;
   }
-  
+
   .mobile-nav-logo .logo-text {
     font-size: 1.125rem;
   }
@@ -2431,11 +2977,15 @@ html.dark .mobile-footer {
 /* Common phones up to ~420px width (iPhone 11–15 base) */
 @media (min-width: 341px) and (max-width: 420px) {
   .mobile-chaos-to-order {
-    --tile-size: 34px; /* locked default */
+    --tile-size: 34px;
+    /* locked default */
     --logo-scale: 0.80;
   }
-  .mobile-animation-container { height: min(46vh, 360px); }
-  
+
+  .mobile-animation-container {
+    height: min(46vh, 360px);
+  }
+
   .mobile-nav-logo .logo-image {
     width: 24px !important;
     height: 24px !important;
@@ -2444,23 +2994,32 @@ html.dark .mobile-footer {
 
 /* If viewport height is tight, prefer shrinking tiles/gap before typography */
 @media (max-height: 780px) {
-  .mobile-chaos-to-order { --tile-size: 32px; }
-  .calendar-dates { gap: 10px; }
+  .mobile-chaos-to-order {
+    --tile-size: 32px;
+  }
+
+  .calendar-dates {
+    gap: 10px;
+  }
 }
 
 /* Larger mobile widths ≥421px (Plus/Max/some Androids) */
 @media (min-width: 421px) {
   .mobile-chaos-to-order {
-    --tile-size: 38px; /* locked for larger phones */
+    --tile-size: 38px;
+    /* locked for larger phones */
     --logo-scale: 0.84;
   }
-  .mobile-animation-container { height: min(48vh, 380px); }
-  
+
+  .mobile-animation-container {
+    height: min(48vh, 380px);
+  }
+
   .mobile-nav-logo .logo-image {
     width: 28px !important;
     height: 28px !important;
   }
-  
+
   .mobile-nav-logo .logo-text {
     font-size: 1.375rem;
   }
@@ -2470,14 +3029,14 @@ html.dark .mobile-footer {
   .mobile-hero {
     padding: 1.5rem 1rem;
   }
-  
+
   .mobile-features,
   .mobile-chaos-to-order,
   .mobile-use-cases,
   .mobile-faq {
     padding: 3rem 1rem;
   }
-  
+
   .mobile-footer {
     padding: 2rem 1rem 1.5rem;
   }
@@ -2499,6 +3058,7 @@ html.dark .mobile-footer {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2526,6 +3086,7 @@ html.dark .mobile-footer {
     opacity: 0;
     transform: translateX(-30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -2537,6 +3098,7 @@ html.dark .mobile-footer {
     opacity: 0;
     transform: translateX(30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
