@@ -98,7 +98,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
             title: event.title,
             description,
             type: 'website',
-            url: `https://kurecal.com/events/${event.slug}`,
+            url: `https://kure-cal.com/events/${event.slug}`,
             images: event.event_image_url ? [{ url: event.event_image_url }] : [],
         },
         twitter: {
@@ -108,7 +108,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
             images: event.event_image_url ? [event.event_image_url] : [],
         },
         alternates: {
-            canonical: `https://kurecal.com/events/${event.slug}`,
+            canonical: `https://kure-cal.com/events/${event.slug}`,
         },
     };
 }
@@ -138,7 +138,7 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 startDate={event.start_time}
                 endDate={event.end_time || undefined}
                 location={event.location ? { name: event.location } : undefined}
-                url={`https://kurecal.com/events/${event.slug}`}
+                url={`https://kure-cal.com/events/${event.slug}`}
                 imageUrl={event.event_image_url || undefined}
                 isOnline={event.event_format === 'Online'}
             />

@@ -18,6 +18,6 @@ export default function robots(): MetadataRoute.Robots {
                 ],
             },
         ],
-        sitemap: 'https://kurecal.com/sitemap.xml',
+        sitemap: 'https://kure-cal.com/sitemap.xml',
     }
 }

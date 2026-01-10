@@ -42,7 +42,7 @@ const dmSans = DM_Sans({
 
 // Refined Metadata for a more professional look
 export const metadata: Metadata = {
-    metadataBase: new URL('https://kurecal.com'),
+    metadataBase: new URL('https://kure-cal.com'),
     title: {
         default: "Kure‑Cal: The All‑in‑One Tech Events Calendar",
         template: "%s | Kure‑Cal",
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
         type: 'website',
         locale: 'en_US',
         siteName: 'Kure-Cal',
-        url: 'https://kurecal.com',
+        url: 'https://kure-cal.com',
     },
     twitter: {
         card: 'summary_large_image',
@@ -77,7 +77,7 @@ export const metadata: Metadata = {
         },
     },
     alternates: {
-        canonical: 'https://kurecal.com',
+        canonical: 'https://kure-cal.com',
     },
     icons: {
         icon: [

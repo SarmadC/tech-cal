@@ -27,8 +27,8 @@ export function OrganizationJsonLd() {
         '@context': 'https://schema.org',
         '@type': 'Organization',
         name: 'Kure-Cal',
-        url: 'https://kurecal.com',
-        logo: 'https://kurecal.com/logo.svg',
+        url: 'https://kure-cal.com',
+        logo: 'https://kure-cal.com/logo.svg',
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
         sameAs: [
             // Add social media URLs when available
@@ -48,13 +48,13 @@ export function WebsiteJsonLd() {
         '@context': 'https://schema.org',
         '@type': 'WebSite',
         name: 'Kure-Cal',
-        url: 'https://kurecal.com',
+        url: 'https://kure-cal.com',
         description: 'All your tech events in one calendar. Conferences, meetups, launches, and livestreams—organized without the information overload.',
         potentialAction: {
             '@type': 'SearchAction',
             target: {
                 '@type': 'EntryPoint',
-                urlTemplate: 'https://kurecal.com/discover?q={search_term_string}',
+                urlTemplate: 'https://kure-cal.com/discover?q={search_term_string}',
             },
             'query-input': 'required name=search_term_string',
         },
@@ -130,12 +130,12 @@ export function ArticleJsonLd({
             name: 'Kure-Cal',
             logo: {
                 '@type': 'ImageObject',
-                url: 'https://kurecal.com/logo.svg',
+                url: 'https://kure-cal.com/logo.svg',
             },
         },
         mainEntityOfPage: {
             '@type': 'WebPage',
-            '@id': `https://kurecal.com/blog/${slug}`,
+            '@id': `https://kure-cal.com/blog/${slug}`,
         },
         ...(imageUrl && {
             image: {
@@ -210,7 +210,7 @@ export function EventJsonLd({
         organizer: {
             '@type': 'Organization',
             name: 'Kure-Cal',
-            url: 'https://kurecal.com',
+            url: 'https://kure-cal.com',
         },
     };
 
