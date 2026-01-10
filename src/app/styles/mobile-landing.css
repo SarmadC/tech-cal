@@ -2380,7 +2380,7 @@ html.dark .mobile-use-cases {
 .mobile-use-case-footer {
   display: flex;
   align-items: center;
-  padding: var(--space-5) var(--space-6);
+  padding: 24px 20px 28px 20px;
   border-top: 1px solid var(--border-default);
 }
 
@@ -2388,9 +2388,9 @@ html.dark .mobile-use-cases {
   font-family: var(--font-sans);
   font-size: 1rem;
   font-weight: 500;
-  color: var(--foreground-primary);
+  color: #A1A1AA;
   letter-spacing: -0.015em;
-  line-height: 1.4;
+  line-height: 1.6;
   margin: 0;
   flex: 1;
   padding-left: var(--space-4);
