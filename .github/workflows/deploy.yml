@@ -42,6 +42,8 @@ jobs:
         env:
           NODE_ENV: production
           NODE_OPTIONS: "--max-old-space-size=4096"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           
       - name: Deploy to Vercel (Staging)
         uses: amondnet/vercel-action@v25
@@ -87,6 +89,8 @@ jobs:
           npx playwright test
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         
       - name: Deploy to Vercel (Production)
         uses: amondnet/vercel-action@v25
