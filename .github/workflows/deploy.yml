@@ -41,6 +41,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          NODE_OPTIONS: "--max-old-space-size=4096"
           
       - name: Deploy to Vercel (Staging)
         uses: amondnet/vercel-action@v25
@@ -84,6 +85,8 @@ jobs:
           npm run build
           npx playwright install --with-deps
           npx playwright test
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
         
       - name: Deploy to Vercel (Production)
         uses: amondnet/vercel-action@v25
