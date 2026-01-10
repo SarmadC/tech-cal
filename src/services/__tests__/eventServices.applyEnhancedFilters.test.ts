@@ -23,6 +23,7 @@ function buildMockQuery() {
     is: (field: string, value: string) => { calls.push({ method: 'is', args: [field, value] }); return self; },
     and: (expr: string) => { calls.push({ method: 'and', args: [expr] }); return self; },
     or: (expr: string) => { calls.push({ method: 'or', args: [expr] }); return self; },
+    not: (field: string, op: string, value: unknown) => { calls.push({ method: 'not', args: [field, op, value] }); return self; },
     filter: (field: string, op: string, value: unknown) => { calls.push({ method: 'filter', args: [field, op, value] }); return self; },
     order: (field: string, opts?: unknown) => { calls.push({ method: 'order', args: [field, opts] }); return self; },
     limit: (count: number) => { calls.push({ method: 'limit', args: [count] }); return self; },
@@ -91,27 +92,28 @@ describe('EventService.applyEnhancedFilters - Budget tier price filters', () => 
   it('applies price_min <= 100 for low budget', () => {
     const filters: EventFilters = { budget: 'low' } as EventFilters;
     (EventService as any).applyEnhancedFilters(mockQuery, filters);
-    const andCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'and');
+    const notCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'not');
     const lteCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'lte');
-    expect(andCalls.some((c: { method: string; args: unknown[] }) => String(c.args[0]).includes('price_min.is.not.null'))).toBe(true);
+    // Implementation uses .not('price_min', 'is', null).lte('price_min', 100)
+    expect(notCalls.some((c: { method: string; args: unknown[] }) => c.args[0] === 'price_min' && c.args[1] === 'is' && c.args[2] === null)).toBe(true);
     expect(lteCalls.some((c: { method: string; args: unknown[] }) => c.args[0] === 'price_min' && c.args[1] === 100)).toBe(true);
   });
 
   it('applies price_min <= 500 for moderate budget', () => {
     const filters: EventFilters = { budget: 'moderate' } as EventFilters;
     (EventService as any).applyEnhancedFilters(mockQuery, filters);
-    const andCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'and');
+    const notCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'not');
     const lteCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'lte');
-    expect(andCalls.some((c: { method: string; args: unknown[] }) => String(c.args[0]).includes('price_min.is.not.null'))).toBe(true);
+    expect(notCalls.some((c: { method: string; args: unknown[] }) => c.args[0] === 'price_min' && c.args[1] === 'is' && c.args[2] === null)).toBe(true);
     expect(lteCalls.some((c: { method: string; args: unknown[] }) => c.args[0] === 'price_min' && c.args[1] === 500)).toBe(true);
   });
 
   it('applies price_min <= 2000 for high budget', () => {
     const filters: EventFilters = { budget: 'high' } as EventFilters;
     (EventService as any).applyEnhancedFilters(mockQuery, filters);
-    const andCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'and');
+    const notCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'not');
     const lteCalls = mockQuery._calls.filter((c: { method: string; args: unknown[] }) => c.method === 'lte');
-    expect(andCalls.some((c: { method: string; args: unknown[] }) => String(c.args[0]).includes('price_min.is.not.null'))).toBe(true);
+    expect(notCalls.some((c: { method: string; args: unknown[] }) => c.args[0] === 'price_min' && c.args[1] === 'is' && c.args[2] === null)).toBe(true);
     expect(lteCalls.some((c: { method: string; args: unknown[] }) => c.args[0] === 'price_min' && c.args[1] === 2000)).toBe(true);
   });
 

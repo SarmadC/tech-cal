@@ -18,6 +18,7 @@ export interface MockQueryBuilder {
   is: (column: string, value: string) => MockQueryBuilder;
   or: (condition: string) => MockQueryBuilder;
   and: (condition: string) => MockQueryBuilder;
+  not: (column: string, operator: string, value: unknown) => MockQueryBuilder;
   filter: (column: string, operator: string, value: unknown) => MockQueryBuilder;
   order: (column: string, options?: { ascending?: boolean }) => MockQueryBuilder;
   limit: (count: number) => MockQueryBuilder;
@@ -100,6 +101,7 @@ export function createMockQueryBuilder(): MockQueryBuilder {
     is: (_column: string, _value: string) => builder,
     or: (_condition: string) => builder,
     and: (_condition: string) => builder,
+    not: (_column: string, _operator: string, _value: unknown) => builder,
     filter: (_column: string, _operator: string, _value: unknown) => builder,
     order: (_column: string, _options?: { ascending?: boolean }) => builder,
     limit: (_count: number) => builder,
