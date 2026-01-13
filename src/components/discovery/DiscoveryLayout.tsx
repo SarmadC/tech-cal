@@ -11,6 +11,7 @@ interface DiscoveryLayoutProps {
     isSidebarOpen?: boolean;
     onSidebarClose?: () => void;
     className?: string; // Add className prop
+    minHeightClassName?: string;
 }
 
 const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
@@ -21,10 +22,11 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
     sortOption,
     isSidebarOpen,
     onSidebarClose,
-    className = '' // swift-default
+    className = '', // swift-default
+    minHeightClassName = 'min-h-screen'
 }) => {
     return (
-        <div className={`min-h-screen bg-transparent p-4 lg:p-6 transition-colors ${className}`}>
+        <div className={`${minHeightClassName} bg-transparent p-4 lg:p-6 transition-colors ${className}`}>
             <div className="max-w-[1600px] mx-auto">
 
                 {/* Header Section */}

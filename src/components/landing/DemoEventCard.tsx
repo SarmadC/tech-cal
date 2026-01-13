@@ -79,11 +79,11 @@ export default function DemoEventCard({
             tabIndex={0}
             role="button"
             aria-label={`Event: ${event.title}`}
-            className="group relative flex flex-col w-full min-h-[400px] rounded-2xl border border-border/70 dark:border-white/10 bg-card/95 dark:bg-[#161616] p-5 shadow-xl transition-all duration-300 hover:border-border dark:hover:border-white/20 hover:bg-card dark:hover:bg-[#1A1A1A] cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background"
+            className="group relative flex flex-col w-full min-h-[320px] sm:min-h-[360px] lg:min-h-[400px] rounded-2xl border border-border/70 dark:border-white/10 bg-card/95 dark:bg-[#161616] p-4 sm:p-5 shadow-xl transition-all duration-300 hover:border-border dark:hover:border-white/20 hover:bg-card dark:hover:bg-[#1A1A1A] cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background"
         >
             {/* Header: Logo + Bookmark */}
-            <div className="flex justify-between items-start">
-                <div className="w-14 h-14 rounded-lg flex items-center justify-center overflow-hidden bg-muted/60 dark:bg-white p-2">
+            <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg flex items-center justify-center overflow-hidden bg-muted/60 dark:bg-white p-2">
                     {activeLogoSrc ? (
                         <Image
                             src={activeLogoSrc}
@@ -120,24 +120,28 @@ export default function DemoEventCard({
             {/* Content Section */}
             <div className="flex flex-col flex-1 mt-6">
                 {/* Title */}
-                <h3 className="text-xl font-bold text-foreground mb-3 line-clamp-1" title={event.title}>
+                <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3 line-clamp-2" title={event.title}>
                     {event.title}
                 </h3>
 
                 {/* Description */}
-                <p className="text-sm text-muted-foreground mb-5 line-clamp-3 leading-relaxed">
+                <p className="text-sm sm:text-base text-muted-foreground mb-5 line-clamp-4 leading-relaxed">
                     {event.description || 'No description available for this event.'}
                 </p>
 
                 {/* Meta Info */}
-                <div className="flex flex-col gap-3 text-sm text-muted-foreground mb-6">
-                    <div className="flex items-center gap-2.5">
+                <div className="flex flex-col gap-3 text-sm sm:text-[15px] text-muted-foreground mb-6">
+                    <div className="flex items-start gap-2.5 text-left">
                         <Clock size={16} className="text-muted-foreground flex-shrink-0" />
-                        <span className="truncate">{dateLabel} · {timeLabel}</span>
+                        <span className="flex-1 min-w-0 text-left break-words">
+                            {dateLabel}
+                            <span aria-hidden="true" className="px-1 text-muted-foreground/70">&bull;</span>
+                            {timeLabel}
+                        </span>
                     </div>
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-start gap-2.5 text-left">
                         <MapPin size={16} className="text-muted-foreground flex-shrink-0" />
-                        <span className="truncate">{event.location || 'Location TBA'}</span>
+                        <span className="flex-1 min-w-0 text-left break-words">{event.location || 'Location TBA'}</span>
                     </div>
                 </div>
 
@@ -152,9 +156,9 @@ export default function DemoEventCard({
                 </div>
 
                 {/* Action Buttons - Always at bottom */}
-                <div className="flex gap-3 mt-auto pt-3">
+                <div className="flex flex-col sm:flex-row gap-3 mt-auto pt-3">
                     <button
-                        className="flex-1 py-2.5 px-4 rounded-full bg-transparent border border-border text-foreground text-sm font-semibold hover:bg-muted/70 dark:border-white/20 dark:text-white dark:hover:bg-white/5 transition-colors"
+                        className="flex-1 w-full py-2.5 px-4 rounded-full bg-transparent border border-border text-foreground text-sm sm:text-base font-semibold hover:bg-muted/70 dark:border-white/20 dark:text-white dark:hover:bg-white/5 transition-colors"
                         onClick={(e) => {
                             e.stopPropagation();
                             onClick?.();
@@ -163,7 +167,7 @@ export default function DemoEventCard({
                         Details
                     </button>
                     <button
-                        className="flex-1 py-2.5 px-4 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/10 dark:shadow-white/5"
+                        className="flex-1 w-full py-2.5 px-4 rounded-full bg-primary text-primary-foreground text-sm sm:text-base font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/10 dark:shadow-white/5"
                         onClick={(e) => {
                             e.stopPropagation();
                             const targetUrl = event.registrationUrl || event.sourceUrl;

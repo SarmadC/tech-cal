@@ -49,7 +49,7 @@ test.describe('Golden Path', () => {
       await page.getByText('Loading events...').waitFor({ state: 'hidden', timeout: 15000 }).catch(() => null);
 
       // Verify calendar is visible by checking for calendar grid content (month view button and events)
-      await expect(page.getByRole('button', { name: 'month' })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('button', { name: 'Next month' }).or(page.getByRole('button', { name: 'Next period' }))).toBeVisible({ timeout: 10000 });
       await expect(page.getByText(/Today/)).toBeVisible({ timeout: 10000 });
     });
 
