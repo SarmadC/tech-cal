@@ -12,6 +12,7 @@ import MobileCalendarMonthView from './MobileCalendarMonthView';
 import MobileSearchFilter from '../MobileSearchFilter';
 import MobileAdvancedGestures from './MobileAdvancedGestures';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
+import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 
 export interface MobileCalendarAppProps {
@@ -130,13 +131,7 @@ const MobileCalendarApp: React.FC<MobileCalendarAppProps> = ({
         <div className={`mobile-calendar-app ${className}`}>
             {/* Unified Mobile Navbar */}
             <UnifiedMobileNavbar
-                navItems={[
-                    { name: 'Discover', href: '/discover' },
-                    { name: 'Calendar', href: '/calendar' },
-                    { name: 'Dashboard', href: '/dashboard' },
-                    { name: 'Hackathons', href: '/hackathons' },
-                    { name: 'Settings', href: '/dashboard/settings' }
-                ]}
+                navItems={APP_MOBILE_NAV_ITEMS}
                 fixed={false}
                 className="static"
             />

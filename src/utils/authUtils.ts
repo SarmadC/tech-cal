@@ -1,6 +1,12 @@
-export function getOAuthRedirectUrl(nextPath: string = '/discover'): string {
+export function getOAuthRedirectUrl(nextPath: string = '/discover', baseUrl?: string): string {
     // Ensure nextPath is a safe, absolute path within the app
     const safeNext = typeof nextPath === 'string' && nextPath.startsWith('/') ? nextPath : '/discover';
+
+    if (baseUrl) {
+        const url = new URL('/auth/callback', baseUrl);
+        url.searchParams.set('next', safeNext);
+        return url.toString();
+    }
 
     if (typeof window !== 'undefined') {
         const url = new URL('/auth/callback', window.location.origin);
@@ -9,8 +15,8 @@ export function getOAuthRedirectUrl(nextPath: string = '/discover'): string {
     }
 
 
-    const baseUrl = getBaseUrl();
-    const url = new URL('/auth/callback', baseUrl);
+    const defaultBaseUrl = getBaseUrl();
+    const url = new URL('/auth/callback', defaultBaseUrl);
     url.searchParams.set('next', safeNext);
     return url.toString();
 }

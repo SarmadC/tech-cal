@@ -20,8 +20,14 @@ export async function GET(
             )
         }
 
+        // Determine the request origin dynamically to handle domain mismatches
+        // This ensures the callback URL matches the domain the user is currently on
+        const origin = request.headers.get('origin') || 
+            (request.headers.get('x-forwarded-host') ? `https://${request.headers.get('x-forwarded-host')}` : null) || 
+            (request.headers.get('host') ? `https://${request.headers.get('host')}` : null);
+
         // Get the redirect URL for the callback
-        const redirectTo = getOAuthRedirectUrl(nextPath)
+        const redirectTo = getOAuthRedirectUrl(nextPath, origin || undefined);
 
         if (!redirectTo || (redirectTo === 'http://localhost:3000/auth/callback' && process.env.NODE_ENV === 'production')) {
             const errorMessage = `Server configuration error: Unable to determine OAuth redirect URL. Got: ${redirectTo}`

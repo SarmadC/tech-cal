@@ -26,6 +26,7 @@ const PastEventAttendancePrompt = dynamic(
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
+import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 import type { EventType, Event, TrackedEventRecord } from '@/types';
@@ -117,13 +118,7 @@ export default function DashboardClientView({
             {/* Conditional Navigation - UnifiedMobileNavbar on mobile, Navbar on desktop */}
             {isMobile ? (
                 <UnifiedMobileNavbar
-                    navItems={[
-                        { name: 'Discover', href: '/discover' },
-                        { name: 'Calendar', href: '/calendar' },
-                        { name: 'Dashboard', href: '/dashboard' },
-                        { name: 'Hackathons', href: '/hackathons' },
-                        { name: 'Settings', href: '/dashboard/settings' }
-                    ]}
+                    navItems={APP_MOBILE_NAV_ITEMS}
                     fixed={false}
                     className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/40"
                 />

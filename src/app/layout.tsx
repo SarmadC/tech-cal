@@ -4,7 +4,7 @@
 // Static routes (landing, pricing, legal, blog) will be statically generated
 
 import type { Metadata } from "next";
-import { Inter, DM_Sans } from "next/font/google";
+import { DM_Sans, Inter } from "next/font/google";
 
 import "./styles/globals.css";
 import './styles/premium-animation.css';
@@ -26,6 +26,7 @@ import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import ClientLayout from "@/components/layout/ClientLayout";
 import IconProvider from '../components/providers/IconProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { AccentProvider } from '@/contexts/AccentContext';
 import { SnackbarProvider } from '@/contexts/SnackbarContext';
 import { OrganizationJsonLd, WebsiteJsonLd } from '@/components/seo';
 
@@ -114,27 +115,29 @@ export default function RootLayout({
                         enableSystem
                         disableTransitionOnChange
                     >
-                        {/* 1. SupabaseProvider is the outermost context provider */}
-                        <SupabaseProvider>
-                            {/* 2. AuthProvider is next, it needs supabase client */}
-                            <AuthProvider>
-                                {/* 3. QueryProvider is next, it might need auth context for queries */}
-                                <QueryProvider>
-                                    <SnackbarProvider>
-                                        {/* 3. UI/UX providers can go inside */}
-                                        {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
-                                        {/* <SmoothScrollProvider> */}
-                                        {/* 4. ClientLayout contains the Navbar, which needs auth context */}
-                                        <IconProvider>
-                                            <ClientLayout>
-                                                {children}
-                                            </ClientLayout>
-                                        </IconProvider>
-                                        {/* </SmoothScrollProvider> */}
-                                    </SnackbarProvider>
-                                </QueryProvider>
-                            </AuthProvider>
-                        </SupabaseProvider>
+                        <AccentProvider>
+                            {/* 1. SupabaseProvider is the outermost context provider */}
+                            <SupabaseProvider>
+                                {/* 2. AuthProvider is next, it needs supabase client */}
+                                <AuthProvider>
+                                    {/* 3. QueryProvider is next, it might need auth context for queries */}
+                                    <QueryProvider>
+                                        <SnackbarProvider>
+                                            {/* 3. UI/UX providers can go inside */}
+                                            {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
+                                            {/* <SmoothScrollProvider> */}
+                                            {/* 4. ClientLayout contains the Navbar, which needs auth context */}
+                                            <IconProvider>
+                                                <ClientLayout>
+                                                    {children}
+                                                </ClientLayout>
+                                            </IconProvider>
+                                            {/* </SmoothScrollProvider> */}
+                                        </SnackbarProvider>
+                                    </QueryProvider>
+                                </AuthProvider>
+                            </SupabaseProvider>
+                        </AccentProvider>
                     </ThemeProvider>
                 </PageErrorBoundary>
             </body>

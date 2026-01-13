@@ -10,6 +10,8 @@ import { MagnifyingGlass, SlidersHorizontal, NavigationArrow, SpinnerGap } from 
 import DiscoverySidebar from '@/components/discovery/DiscoverySidebar';
 import { calculateFilterCounts } from '@/utils/filterCountUtils';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
+import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
+import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 
 import { cn } from '@/lib/utils';
 
@@ -71,8 +73,13 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
 
     return (
         <div className="min-h-screen bg-[#0F0F0F] pb-24 mobile-discovery-view">
+            <UnifiedMobileNavbar
+                navItems={APP_MOBILE_NAV_ITEMS}
+                fixed={false}
+                className="sticky top-0 z-40 bg-[#0F0F0F]/95 backdrop-blur-md border-b border-white/5"
+            />
             {/* Search & Filter Header (Sticky at top) */}
-            <div className="sticky top-0 z-30 bg-[#0F0F0F]/95 backdrop-blur-md border-b border-white/5 pt-4 pb-3 px-4">
+            <div className="sticky top-[57px] z-30 bg-[#0F0F0F]/95 backdrop-blur-md border-b border-white/5 pt-4 pb-3 px-4">
                 <div className="flex items-center gap-3">
                     {/* Search Bar - Full Width with Integrated Filter */}
                     <div className="relative flex-1 group">

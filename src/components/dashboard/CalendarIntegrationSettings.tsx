@@ -192,263 +192,178 @@ export default function CalendarIntegrationSettings() {
         return null;
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
-            </div>
-        );
-    }
-
+    // State 1: Disconnected (Reference: "Sales Card" - Focus on prompt & value)
     if (!status?.connected) {
         return (
             <div className="space-y-6">
-                <div>
-                    <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--foreground-primary)' }}>
-                        Google Calendar Integration
-                    </h3>
-                    <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)' }}>
-                        Connect your Google Calendar to automatically sync tracked events.
-                    </p>
-
-                    <div
-                        className="border rounded-lg p-6"
-                        style={{
-                            backgroundColor: 'var(--background-main)',
-                            borderColor: 'var(--border-default)'
-                        }}
-                    >
-                        <div className="mb-6">
-                            <h4 className="text-base font-medium mb-3" style={{ color: 'var(--foreground-primary)' }}>
-                                How it works
-                            </h4>
-                            <ul className="space-y-2 text-sm" style={{ color: 'var(--foreground-secondary)' }}>
-                                <li className="flex items-start">
-                                    <MaterialIcon name="check-circle" size={16} className="mr-2 mt-0.5" color="var(--success)" />
-                                    <span>When you track an event, it&apos;s automatically added to your Google Calendar</span>
-                                </li>
-                                <li className="flex items-start">
-                                    <MaterialIcon name="check-circle" size={16} className="mr-2 mt-0.5" color="var(--success)" />
-                                    <span>When you untrack an event, it&apos;s removed from your calendar</span>
-                                </li>
-                                <li className="flex items-start">
-                                    <MaterialIcon name="check-circle" size={16} className="mr-2 mt-0.5" color="var(--success)" />
-                                    <span>Your calendar stays in sync with your tracked events</span>
-                                </li>
-                            </ul>
+                <div
+                    className="w-full rounded-lg p-4 sm:p-6 shadow-xl"
+                    style={{
+                        backgroundColor: '#1C1C1C',
+                        border: '1px solid #333'
+                    }}
+                >
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4 sm:gap-0">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-lg bg-white/5 border border-white/10 flex-shrink-0">
+                                <svg viewBox="0 0 24 24" className="w-6 h-6 text-white">
+                                    <path
+                                        fill="currentColor"
+                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                    />
+                                    <path
+                                        fill="currentColor"
+                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                    />
+                                    <path
+                                        fill="currentColor"
+                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                    />
+                                    <path
+                                        fill="currentColor"
+                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                    />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-medium text-white">Google Calendar</h3>
+                                <p className="text-sm text-gray-400">Sync tracked events to your calendar.</p>
+                            </div>
                         </div>
-
-                        <div
-                            className="p-4 rounded-lg mb-6"
-                            style={{
-                                backgroundColor: 'var(--warning-light)',
-                                borderLeft: '4px solid var(--warning)'
-                            }}
-                        >
-                            <p className="text-sm" style={{ color: 'var(--foreground-primary)' }}>
-                                <strong>Privacy Notice:</strong> We&apos;ll request access to add and remove events from your calendar.
-                                We never read your existing calendar events or access any other Google data.
-                            </p>
+                        {/* Status Badge: Disconnected */}
+                        <div className="self-start sm:self-auto px-3 py-1 rounded-full border border-zinc-700/50 bg-zinc-800/30 text-zinc-500 text-xs font-medium flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+                            Disconnected
                         </div>
+                    </div>
 
+                    {/* Value Props / "How it works" - Indented to align with text */}
+                    <div className="pl-0 sm:pl-[60px] grid grid-cols-1 gap-3 mb-8">
+                        <div className="flex items-center gap-3 text-gray-400 text-sm">
+                            <MaterialIcon name="check" size={16} className="text-emerald-500 flex-shrink-0" />
+                            <span>Automatically syncs tracked events</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-gray-400 text-sm">
+                            <MaterialIcon name="check" size={16} className="text-emerald-500 flex-shrink-0" />
+                            <span>Updates when event details change</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-gray-400 text-sm">
+                            <MaterialIcon name="check" size={16} className="text-emerald-500 flex-shrink-0" />
+                            <span>Removes events when you untrack them</span>
+                        </div>
+                    </div>
+
+                    {/* Primary Action */}
+                    <div className="flex justify-end pt-2">
                         <button
                             onClick={handleConnect}
                             disabled={connecting}
-                            className="w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="py-1.5 px-4 rounded font-medium text-sm shadow hover:opacity-90 transition-all flex items-center gap-2"
                             style={{
-                                backgroundColor: 'var(--accent-primary)',
-                                color: 'var(--accent-primary-foreground)'
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!connecting) {
-                                    e.currentTarget.style.backgroundColor = 'var(--accent-primary-hover)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
+                                backgroundColor: 'white',
+                                color: 'black',
                             }}
                         >
                             {connecting ? (
                                 <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-black"></div>
                                     <span>Connecting...</span>
                                 </>
                             ) : (
-                                <>
-                                    <MaterialIcon name="calendar" size={16} />
-                                    <span>Connect Google Calendar</span>
-                                </>
+                                <span>Connect</span>
                             )}
                         </button>
                     </div>
+
+                    {/* Privacy Footer */}
+                    <p className="text-xs text-center text-gray-600 mt-4">
+                        We only access events we create. Your existing data is private.
+                    </p>
                 </div>
             </div>
         );
     }
 
-    // Connected state
-    const connectionError = status ? getConnectionError(status) : null;
+    // State 2: Connected - Compact "Active Row" Design
+    const connectionError = getConnectionError(status);
     const isHealthy = status?.isActive && status?.hasRefreshToken && status?.lastSyncStatus !== 'failed';
-    const needsReconnect = !status?.hasRefreshToken || connectionError;
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--foreground-primary)' }}>
-                    Google Calendar
-                </h3>
-                <p className="text-sm" style={{ color: 'var(--foreground-secondary)' }}>
-                    Sync your events automatically.
-                </p>
-            </div>
+        <div className="space-y-6">
+            <div
+                className="w-full rounded-lg h-[72px] px-6 shadow-xl flex items-center justify-between"
+                style={{
+                    backgroundColor: '#1C1C1C',
+                    border: '1px solid #333'
+                }}
+            >
+                <div className="flex items-center gap-4">
+                    {/* Icon */}
+                    <div className="w-10 h-10 rounded-lg bg-[#252525] border border-[#333] flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 text-white">
+                            <path
+                                fill="currentColor"
+                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            />
+                            <path
+                                fill="currentColor"
+                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            />
+                            <path
+                                fill="currentColor"
+                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                            />
+                            <path
+                                fill="currentColor"
+                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                            />
+                        </svg>
+                    </div>
 
-            {/* Integration Row - Compact List Item Style */}
-            <div className="w-full">
-                <div className="flex items-start justify-between py-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}>
-                    {/* Left: Icon + Title + Status */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                            <MaterialIcon
-                                name="calendar"
-                                size={20}
-                                className="text-foreground-primary"
-                            />
-                            <span
-                                className="text-sm font-medium"
-                                style={{ color: 'var(--foreground-primary)' }}
-                            >
-                                Google Calendar
-                            </span>
-                            {/* Dot indicator */}
-                            <span
-                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                style={{
-                                    backgroundColor: isHealthy ? '#10b981' : '#ef4444'
-                                }}
-                            />
+                    {/* Details */}
+                    <div className="flex flex-col justify-center">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-white">Google Calendar</h3>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5"></span>
                         </div>
-
-                        {/* Error message - inline, subtle */}
-                        {connectionError && (
-                            <p
-                                className="text-xs mt-1.5 ml-8"
-                                style={{ color: '#f87171' }}
-                            >
-                                {connectionError}. Please reconnect to resume sync.
-                            </p>
-                        )}
-
-                        {/* Success state - last sync info */}
-                        {!connectionError && status?.lastSyncStatus === 'success' && status?.lastSyncAt && (
-                            <p
-                                className="text-xs mt-1.5 ml-8"
-                                style={{ color: 'rgba(255, 255, 255, 0.5)' }}
-                            >
-                                Last synced {formatDate(status.lastSyncAt)}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Right: Action Button */}
-                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                        {needsReconnect ? (
-                            <button
-                                onClick={handleConnect}
-                                disabled={connecting}
-                                className="h-8 px-3 rounded-md text-xs font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                                style={{
-                                    backgroundColor: 'white',
-                                    color: 'black'
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!connecting) {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!connecting) {
-                                        e.currentTarget.style.backgroundColor = 'white';
-                                    }
-                                }}
-                            >
-                                {connecting ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-black"></div>
-                                        <span>Connecting...</span>
-                                    </>
-                                ) : (
-                                    'Reconnect'
-                                )}
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleBulkSync}
-                                disabled={bulkSyncing}
-                                className="h-8 px-3 rounded-md text-xs font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                                style={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    color: 'rgba(255, 255, 255, 0.9)'
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!bulkSyncing) {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!bulkSyncing) {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                                    }
-                                }}
-                            >
-                                {bulkSyncing ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                                        <span>Syncing...</span>
-                                    </>
-                                ) : (
-                                    'Sync Now'
-                                )}
-                            </button>
-                        )}
-
-                        {/* Disconnect - subtle ghost button */}
-                        <button
-                            onClick={handleDisconnect}
-                            disabled={disconnecting}
-                            className="h-8 px-3 rounded-md text-xs font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                            style={{
-                                backgroundColor: 'transparent',
-                                color: 'rgba(255, 255, 255, 0.5)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)'
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!disconnecting) {
-                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-                                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!disconnecting) {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
-                                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                                }
-                            }}
-                        >
-                            {disconnecting ? (
+                        <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                            {status?.calendarId || 'Connected'}
+                            {status?.lastSyncAt && (
                                 <>
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                                    <span>Disconnecting...</span>
+                                    <span className="text-[10px]">•</span>
+                                    <span>Synced {formatDate(status.lastSyncAt)}</span>
                                 </>
-                            ) : (
-                                'Disconnect'
                             )}
-                        </button>
+                        </p>
                     </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={handleBulkSync}
+                        disabled={bulkSyncing}
+                        className="text-gray-500 hover:text-white transition-colors"
+                        title="Sync Now"
+                    >
+                        {bulkSyncing ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                            <MaterialIcon name="refresh" size={18} />
+                        )}
+                    </button>
+
+                    <button
+                        onClick={handleDisconnect}
+                        disabled={disconnecting}
+                        className="px-4 py-1.5 rounded text-xs font-medium text-red-500 hover:bg-white/5 transition-colors border border-white/10 hover:border-white/20"
+                    >
+                        {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                    </button>
                 </div>
             </div>
         </div>
     );
-}
 
+}

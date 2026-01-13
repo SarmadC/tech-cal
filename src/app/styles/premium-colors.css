@@ -256,3 +256,74 @@
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
 }
+/* ============================================
+   6. DYNAMIC ACCENT SYSTEM
+   Overrides core monochrome defaults when data-accent is present
+   ============================================ */
+
+/* BLUE (Default/Electric) */
+:root[data-accent="blue"] {
+    --accent-primary: #3b82f6;
+    --accent-primary-hover: #2563eb;
+    --accent-primary-light: rgba(59, 130, 246, 0.12);
+    --accent-primary-foreground: #ffffff;
+    --calendar-selection-blue: #3b82f6;
+}
+
+/* PURPLE */
+:root[data-accent="purple"] {
+    --accent-primary: #8b5cf6;
+    --accent-primary-hover: #7c3aed;
+    --accent-primary-light: rgba(139, 92, 246, 0.12);
+    --accent-primary-foreground: #ffffff;
+    --calendar-selection-blue: #8b5cf6; /* Reusing var name for logic compatibility */
+}
+
+/* ORANGE */
+:root[data-accent="orange"] {
+    --accent-primary: #f97316;
+    --accent-primary-hover: #ea580c;
+    --accent-primary-light: rgba(249, 115, 22, 0.12);
+    --accent-primary-foreground: #ffffff;
+    --calendar-selection-blue: #f97316;
+}
+
+/* TEAL */
+:root[data-accent="teal"] {
+    --accent-primary: #14b8a6;
+    --accent-primary-hover: #0d9488;
+    --accent-primary-light: rgba(20, 184, 166, 0.12);
+    --accent-primary-foreground: #ffffff;
+    --calendar-selection-blue: #14b8a6;
+}
+
+/* EMERALD */
+:root[data-accent="emerald"] {
+    --accent-primary: #10b981;
+    --accent-primary-hover: #059669;
+    --accent-primary-light: rgba(16, 185, 129, 0.12);
+    --accent-primary-foreground: #ffffff;
+    --calendar-selection-blue: #10b981;
+}
+
+/* Ensure Light Mode maintains contrast for these accents */
+.light[data-accent="blue"] {
+    --accent-primary: #2563eb;
+    --accent-primary-hover: #1d4ed8;
+}
+.light[data-accent="purple"] {
+    --accent-primary: #7c3aed;
+    --accent-primary-hover: #6d28d9;
+}
+.light[data-accent="orange"] {
+    --accent-primary: #ea580c;
+    --accent-primary-hover: #c2410c;
+}
+.light[data-accent="teal"] {
+    --accent-primary: #0d9488;
+    --accent-primary-hover: #0f766e;
+}
+.light[data-accent="emerald"] {
+    --accent-primary: #059669;
+    --accent-primary-hover: #047857;
+}

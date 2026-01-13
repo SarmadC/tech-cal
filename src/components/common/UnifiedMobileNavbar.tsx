@@ -3,16 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { SignOut } from '@phosphor-icons/react';
-import {
-    Navbar,
-    MobileNav,
-    MobileNavHeader,
-    MobileNavMenu,
-    MobileNavToggle,
-    NavbarLogo,
-    NavbarButton,
-    NavbarThemeToggle,
-} from "@/components/ui/resizable-navbar";
+import { useTheme } from 'next-themes';
+import { MobileNavMenu } from "@/components/ui/resizable-navbar";
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -31,7 +23,7 @@ interface UnifiedMobileNavbarProps {
     showLogo?: boolean;
     showThemeToggle?: boolean;
     className?: string;
-    fixed?: boolean; // If true, use fixed positioning instead of absolute (for protected pages)
+    fixed?: boolean;
 }
 
 export default function UnifiedMobileNavbar({
@@ -46,6 +38,12 @@ export default function UnifiedMobileNavbar({
     const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { user, signOut } = useAuth();
+    const { theme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Close menu when route changes
     useEffect(() => {
@@ -60,7 +58,6 @@ export default function UnifiedMobileNavbar({
     const handleNavClick = (href: string) => {
         setIsMobileMenuOpen(false);
         if (href.startsWith('#')) {
-            // Handle anchor links - let browser handle navigation
             return;
         }
         router.push(href);
@@ -74,18 +71,68 @@ export default function UnifiedMobileNavbar({
     };
 
     const navbarContent = (
-        <Navbar className={cn(fixed && "!relative !top-0 w-full", !fixed && className)}>
-            <MobileNav>
-                <MobileNavHeader>
-                    {showLogo && <NavbarLogo />}
+        <div className={cn("pointer-events-auto", !fixed && className)}>
+            <div className="relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-0 py-2 lg:hidden">
+                <div className="flex w-full flex-row items-center justify-between">
+                    {/* Logo */}
+                    {showLogo && (
+                        <a href="#" onClick={(e) => { e.preventDefault(); router.push('/'); }} className="navbar-logo relative z-20 flex items-center gap-2 px-3 py-1.5 text-sm font-medium no-underline rounded-full transition-colors m-0">
+                            <svg width="24" height="24" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" className="object-contain">
+                                <rect width="120" height="120" fill="#000000"></rect>
+                                <polygon points="60,60 52,56 28,68 36,72" fill="#FFFFFF" opacity="0.3"></polygon>
+                                <polygon points="36,72 28,68 28,76 36,80" fill="#FFFFFF" opacity="0.3"></polygon>
+                                <polygon points="60,60 36,72 36,80 60,68" fill="#FFFFFF" opacity="0.5"></polygon>
+                                <polygon points="60,60 68,56 92,68 84,72" fill="#FFFFFF" opacity="0.7"></polygon>
+                                <polygon points="84,72 92,68 92,76 84,80" fill="#FFFFFF" opacity="0.5"></polygon>
+                                <polygon points="60,60 84,72 84,80 60,68" fill="#FFFFFF" opacity="0.7"></polygon>
+                                <polygon points="52,64 60,68 60,100 52,96" fill="#FFFFFF" opacity="0.5"></polygon>
+                                <polygon points="68,64 60,68 60,100 68,96" fill="#FFFFFF" opacity="0.3"></polygon>
+                                <polygon points="52,96 60,100 68,96 60,92" fill="#FFFFFF" opacity="0.3"></polygon>
+                                <polygon points="60,60 52,64 28,52 36,48" fill="#FFFFFF" opacity="0.85"></polygon>
+                                <polygon points="36,48 28,52 28,44 36,40" fill="#FFFFFF" opacity="0.7"></polygon>
+                                <polygon points="60,60 36,48 36,40 60,52" fill="#FFFFFF" opacity="0.85"></polygon>
+                                <polygon points="60,60 68,64 92,52 84,48" fill="#FFFFFF" opacity="1"></polygon>
+                                <polygon points="84,48 92,52 92,44 84,40" fill="#FFFFFF" opacity="0.85"></polygon>
+                                <polygon points="60,60 84,48 84,40 60,52" fill="#FFFFFF" opacity="1"></polygon>
+                                <polygon points="52,56 60,52 60,20 52,24" fill="#FFFFFF" opacity="1"></polygon>
+                                <polygon points="68,56 60,52 60,20 68,24" fill="#FFFFFF" opacity="1"></polygon>
+                                <polygon points="52,24 60,20 68,24 60,28" fill="#FFFFFF" opacity="1"></polygon>
+                                <polygon points="52,56 60,52 68,56 60,60" fill="#FFFFFF" opacity="1"></polygon>
+                            </svg>
+                            <span className="navbar-logo-text font-medium m-0 p-0 text-[14px]">Kure-Cal</span>
+                        </a>
+                    )}
+
+                    {/* Controls */}
                     <div className="flex items-center gap-3">
-                        {showThemeToggle && <NavbarThemeToggle />}
-                        <MobileNavToggle
-                            isOpen={isMobileMenuOpen}
+                        {showThemeToggle && mounted && (
+                            <button
+                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                className="navbar-theme-toggle w-9 h-9 p-0 rounded-full transition-all flex items-center justify-center bg-transparent border-none cursor-pointer m-0 text-black dark:text-white"
+                                aria-label="Switch theme"
+                            >
+                                {theme === 'dark' ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"></path></svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"></path></svg>
+                                )}
+                                <span className="sr-only">Toggle theme</span>
+                            </button>
+                        )}
+
+                        {/* Hamburger Menu Toggle */}
+                        <button
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        />
+                            className="text-black dark:text-white w-9 h-9 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                        >
+                            {isMobileMenuOpen ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"></path></svg>
+                            )}
+                        </button>
                     </div>
-                </MobileNavHeader>
+                </div>
 
                 <MobileNavMenu
                     isOpen={isMobileMenuOpen}
@@ -121,13 +168,17 @@ export default function UnifiedMobileNavbar({
                     {/* Primary CTA Button */}
                     {ctaButton && (
                         <div>
-                            <NavbarButton
+                            <button
                                 onClick={handleCtaClick}
-                                variant={ctaButton.variant || 'primary'}
-                                className="w-full py-4 text-lg font-semibold rounded-lg"
+                                className={cn(
+                                    "w-full py-4 text-lg font-semibold rounded-lg transition-all",
+                                    ctaButton.variant === 'secondary'
+                                        ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100"
+                                        : "bg-black text-white hover:bg-zinc-800 dark:bg-white dark:text-black"
+                                )}
                             >
                                 {ctaButton.label}
-                            </NavbarButton>
+                            </button>
                         </div>
                     )}
 
@@ -154,16 +205,14 @@ export default function UnifiedMobileNavbar({
                         </div>
                     )}
                 </MobileNavMenu>
-            </MobileNav>
-        </Navbar>
+            </div>
+        </div>
     );
 
     if (fixed) {
         return (
             <div className={cn("fixed top-0 left-0 right-0 z-50 pointer-events-none", className)}>
-                <div className="pointer-events-auto">
-                    {navbarContent}
-                </div>
+                {navbarContent}
             </div>
         );
     }

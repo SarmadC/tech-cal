@@ -9,6 +9,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import Navbar from '@/components/common/Navbar';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
+import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
 import MobileBottomNav from '@/components/common/MobileBottomNav';
 import { Button } from '@/components/ui/button';
 import MultiSelectDropdown, { MultiSelectOption } from '@/components/ui/MultiSelectDropdown';
@@ -123,7 +124,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
                 const newB = Math.max(0, Math.floor(b * (1 - factor)));
                 return `rgb(${newR}, ${newG}, ${newB})`;
             };
-            
+
             return {
                 backgroundColor: `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.12)`,
                 borderColor: `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.25)`,
@@ -378,13 +379,7 @@ export default function EventListView({ initialCategories, profile, locationOpti
     return (
         <SidebarProvider>
             <UnifiedMobileNavbar
-                navItems={[
-                    { name: 'Discover', href: '/discover' },
-                    { name: 'Calendar', href: '/calendar' },
-                    { name: 'Dashboard', href: '/dashboard' },
-                    { name: 'Hackathons', href: '/hackathons' },
-                    { name: 'Settings', href: '/dashboard/settings' }
-                ]}
+                navItems={APP_MOBILE_NAV_ITEMS}
                 fixed={true}
                 className="bg-white/95 dark:bg-[#08090a]/95 backdrop-blur-xl border-b border-border/40"
             />
