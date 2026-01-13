@@ -110,7 +110,7 @@ export default function ProductDemoSection() {
     };
 
     return (
-        <section id="product-demo" className="product-demo-section relative overflow-hidden bg-background flex flex-col items-center justify-center px-4 py-24 md:py-32">
+        <section id="product-demo" className="product-demo-section relative w-full overflow-hidden bg-background flex flex-col items-center justify-center px-4 sm:px-6 py-20 md:py-32">
             <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(0,0,0,0.05)_1px,transparent_0)] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.08)_1px,transparent_0)] bg-[size:60px_60px]" />
             <div className="absolute h-full w-full bg-background [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none" />
 
@@ -146,6 +146,7 @@ export default function ProductDemoSection() {
                     <div className="p-2 md:p-4 lg:p-6 opacity-95 hover:opacity-100 transition-opacity">
                         <DiscoveryLayout
                             className="min-h-0" // Prevent forced full viewport height
+                            minHeightClassName="min-h-0"
                             isSidebarOpen={isSidebarOpen}
                             onSidebarClose={() => setIsSidebarOpen(false)}
                             sidebar={
@@ -184,7 +185,7 @@ export default function ProductDemoSection() {
                                     value={filters.sortBy}
                                     onValueChange={(value) => handleUpdateFilter('sortBy', value)}
                                 >
-                                    <SelectTrigger className="w-[180px]">
+                                    <SelectTrigger className="w-full sm:w-[180px]">
                                         <SelectValue placeholder="Sort by" />
                                     </SelectTrigger>
                                     <SelectContent>
