@@ -105,12 +105,12 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                 className
             )}
         >
-            <div className="rounded-[12px] p-4 relative overflow-hidden bg-transparent border border-white/[0.08] active:bg-white/[0.02] transition-colors group">
+            <div className="rounded-[12px] p-4 relative overflow-hidden bg-transparent border border-[var(--border-default)] active:bg-[var(--background-elevated)] transition-colors group">
 
                 {/* Header Row: Avatar + Title + Bookmark */}
                 <div className="flex items-start gap-3">
                     {/* Avatar */}
-                    <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden bg-white/5 border border-white/5 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden bg-[var(--background-tertiary)] border border-[var(--border-default)] flex items-center justify-center">
                         {(() => {
                             const imageSrc = event.organization?.logo || event.eventImageUrl;
                             if (imageSrc) {
@@ -131,8 +131,8 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                             } else {
                                 return (
                                     <div
-                                        className="w-full h-full flex items-center justify-center font-bold text-xs text-white/40"
-                                        style={{ backgroundColor: '#27272A' }}
+                                        className="w-full h-full flex items-center justify-center font-bold text-xs text-[var(--foreground-muted)]"
+                                        style={{ backgroundColor: 'var(--background-elevated)' }}
                                     >
                                         {event.title.charAt(0)}
                                     </div>
@@ -143,7 +143,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
 
                     {/* Title */}
                     <div className="flex-1 min-w-0 pt-0.5">
-                        <h3 className="text-[16px] font-semibold text-[#F4F4F5] leading-snug line-clamp-2">
+                        <h3 className="text-[16px] font-semibold text-[var(--foreground-primary)] leading-snug line-clamp-2">
                             {event.title}
                         </h3>
                     </div>
@@ -151,28 +151,28 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                     {/* Bookmark */}
                     <button
                         onClick={handleBookmark}
-                        className="flex-shrink-0 -mt-1 -mr-2 p-2 text-[#71717A] hover:text-white transition-colors"
+                        className="flex-shrink-0 -mt-1 -mr-2 p-2 text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] transition-colors"
                     >
-                        <BookmarkSimple weight={isBookmarkedValue ? 'fill' : 'bold'} className={isBookmarkedValue ? 'text-white' : 'text-[#71717A]'} size={18} />
+                        <BookmarkSimple weight={isBookmarkedValue ? 'fill' : 'bold'} className={isBookmarkedValue ? 'text-[var(--foreground-primary)]' : 'text-[var(--foreground-tertiary)]'} size={18} />
                     </button>
                 </div>
 
                 {/* Description */}
-                <p className="mt-2 text-[13px] text-[#A1A1AA] leading-relaxed line-clamp-2 font-normal">
+                <p className="mt-2 text-[13px] text-[var(--foreground-secondary)] leading-relaxed line-clamp-2 font-normal">
                     {event.description || "No description available."}
                 </p>
 
                 {/* Meta Row: Date & Location Inline */}
-                <div className="mt-3 flex items-center gap-3 text-[12px] text-[#71717A] font-mono whitespace-nowrap overflow-hidden">
+                <div className="mt-3 flex items-center gap-3 text-[12px] text-[var(--foreground-tertiary)] font-mono whitespace-nowrap overflow-hidden">
                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <Calendar size={14} weight="regular" className="text-[#A1A1AA]" />
+                        <Calendar size={14} weight="regular" className="text-[var(--foreground-muted)]" />
                         <span>{formatDate(event.startTime, event.timezone)}</span>
                     </div>
                     {event.location && (
                         <>
-                            <span className="text-white/10">•</span>
+                            <span className="text-[var(--border-strong)]">•</span>
                             <div className="flex items-center gap-1.5 min-w-0">
-                                <MapPin size={14} weight="regular" className="text-[#A1A1AA] flex-shrink-0" />
+                                <MapPin size={14} weight="regular" className="text-[var(--foreground-muted)] flex-shrink-0" />
                                 <span className="truncate">{event.location}</span>
                             </div>
                         </>
@@ -191,20 +191,20 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
                     )}
 
                     {/* Format Pill */}
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.05]">
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--background-tertiary)] border border-[var(--border-subtle)]">
                         <div className={cn("w-1 h-1 rounded-full",
                             eventFormat === 'virtual' ? 'bg-blue-500' :
                                 eventFormat === 'hybrid' ? 'bg-purple-500' : 'bg-orange-500'
                         )} />
-                        <span className="text-[11px] text-[#A1A1AA]">
+                        <span className="text-[11px] text-[var(--foreground-secondary)]">
                             {eventFormat === 'virtual' ? 'Remote' : eventFormat === 'hybrid' ? 'Hybrid' : 'In-Person'}
                         </span>
                     </div>
 
                     {/* Cost Pill */}
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.05]">
-                        <div className={cn("w-1 h-1 rounded-full", isFree ? 'bg-green-500' : 'bg-white')} />
-                        <span className="text-[11px] text-[#A1A1AA]">
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--background-tertiary)] border border-[var(--border-subtle)]">
+                        <div className={cn("w-1 h-1 rounded-full", isFree ? 'bg-green-500' : 'bg-[var(--foreground-primary)]')} />
+                        <span className="text-[11px] text-[var(--foreground-secondary)]">
                             {isFree ? 'Free' : 'Paid'}
                         </span>
                     </div>

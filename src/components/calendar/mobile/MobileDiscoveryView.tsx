@@ -72,19 +72,19 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
     };
 
     return (
-        <div className="min-h-screen bg-[#0F0F0F] pb-24 mobile-discovery-view">
+        <div className="min-h-screen bg-[var(--background-main)] pb-24 mobile-discovery-view">
             <UnifiedMobileNavbar
                 navItems={APP_MOBILE_NAV_ITEMS}
                 fixed={false}
-                className="sticky top-0 z-40 bg-[#0F0F0F]/95 backdrop-blur-md border-b border-white/5"
+                className="sticky top-0 z-40 bg-[var(--background-main)]/95 backdrop-blur-md border-b border-[var(--border-subtle)]"
             />
             {/* Search & Filter Header (Sticky at top) */}
-            <div className="sticky top-[57px] z-30 bg-[#0F0F0F]/95 backdrop-blur-md border-b border-white/5 pt-4 pb-3 px-4">
+            <div className="sticky top-[57px] z-30 bg-[var(--background-main)]/95 backdrop-blur-md border-b border-[var(--border-subtle)] pt-4 pb-3 px-4">
                 <div className="flex items-center gap-3">
                     {/* Search Bar - Full Width with Integrated Filter */}
                     <div className="relative flex-1 group">
                         <MagnifyingGlass
-                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#71717A] group-focus-within:text-white transition-colors"
+                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--foreground-tertiary)] group-focus-within:text-[var(--foreground-primary)] transition-colors"
                             size={18}
                         />
                         <input
@@ -100,7 +100,7 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                     onSearch();
                                 }
                             }}
-                            className="w-full bg-transparent border border-white/10 rounded-xl py-2.5 pl-10 pr-10 text-[15px] text-white placeholder:text-[#52525B] focus:outline-none focus:border-white/20 focus:bg-white/[0.02] transition-all h-[44px]"
+                            className="w-full bg-transparent border border-[var(--border-default)] rounded-xl py-2.5 pl-10 pr-10 text-[15px] text-[var(--foreground-primary)] placeholder:text-[var(--foreground-tertiary)] focus:outline-none focus:border-[var(--border-strong)] focus:bg-[var(--background-elevated)]/[0.02] transition-all h-[44px]"
                         />
 
                         {/* Filter Trigger inside Search Bar */}
@@ -109,8 +109,8 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                             className={cn(
                                 "absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors",
                                 activeFilterCount > 0
-                                    ? "text-orange-500 bg-orange-500/10"
-                                    : "text-[#71717A] hover:text-white hover:bg-white/5"
+                                    ? "text-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
+                                    : "text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] hover:bg-[var(--background-elevated)]"
                             )}
                         >
                             <SlidersHorizontal size={18} weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
@@ -183,14 +183,14 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
             <div className="px-4 py-4 space-y-4">
                 {events.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                            <MagnifyingGlass size={32} className="text-[#71717A]" />
+                        <div className="w-16 h-16 rounded-full bg-[var(--background-elevated)] flex items-center justify-center mb-4">
+                            <MagnifyingGlass size={32} className="text-[var(--foreground-tertiary)]" />
                         </div>
-                        <h3 className="text-lg font-semibold text-white mb-2">No events found</h3>
-                        <p className="text-[#A1A1AA] max-w-xs">Try adjusting your filters or search terms to find what you&apos;re looking for.</p>
+                        <h3 className="text-lg font-semibold text-[var(--foreground-primary)] mb-2">No events found</h3>
+                        <p className="text-[var(--foreground-secondary)] max-w-xs">Try adjusting your filters or search terms to find what you&apos;re looking for.</p>
                         <button
                             onClick={onResetFilters}
-                            className="mt-6 px-6 py-2 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90"
+                            className="mt-6 px-6 py-2 rounded-full bg-[var(--accent-primary)] text-[var(--accent-primary-foreground)] font-semibold text-sm hover:opacity-90"
                         >
                             Clear all filters
                         </button>

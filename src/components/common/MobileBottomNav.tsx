@@ -24,11 +24,7 @@ const MobileBottomNav = () => {
 
     return (
         <div
-            className="fixed bottom-0 left-0 right-0 z-50 pb-safe md:hidden"
-            style={{
-                backgroundColor: '#0A0A0A',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
-            }}
+            className="fixed bottom-0 left-0 right-0 z-50 pb-safe md:hidden bg-[var(--background-main)] border-t border-[var(--border-subtle)]"
         >
             <div className="flex justify-around items-center h-[60px] px-2">
                 {navItems.map((item) => {
@@ -43,8 +39,8 @@ const MobileBottomNav = () => {
                             <div className={cn(
                                 "flex items-center justify-center transition-colors duration-200",
                                 isActive
-                                    ? "text-orange-500"
-                                    : "text-[#71717A] group-hover:text-[#A1A1AA]"
+                                    ? "text-[var(--accent-primary)]"
+                                    : "text-[var(--foreground-tertiary)] group-hover:text-[var(--foreground-secondary)]"
                             )}>
                                 <item.icon size={24} weight={isActive ? "fill" : "regular"} />
                             </div>
@@ -52,8 +48,8 @@ const MobileBottomNav = () => {
                                 className={cn(
                                     "text-[10px] font-medium transition-colors duration-200",
                                     isActive
-                                        ? "text-orange-500"
-                                        : "text-[#71717A] group-hover:text-[#A1A1AA]"
+                                        ? "text-[var(--accent-primary)]"
+                                        : "text-[var(--foreground-tertiary)] group-hover:text-[var(--foreground-secondary)]"
                                 )}
                             >
                                 {item.name}
