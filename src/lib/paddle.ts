@@ -54,7 +54,6 @@ interface PaddleCheckoutOptions {
 interface PaddleInstance {
   Initialize: (options: {
     token: string;
-    environment?: 'sandbox' | 'production';
     eventCallback?: (event: PaddleEvent) => void;
   }) => void;
   Checkout: {
@@ -128,9 +127,13 @@ export async function initPaddle(
     await loadPaddleScript();
 
     if (window.Paddle) {
+      const environment = PADDLE_ENVIRONMENT || 'sandbox';
+
+      // Environment is inferred from the token prefix (test_ or live_)
+      // window.Paddle.Environment?.set(environment); // Removed as it's not part of V2 API
+
       window.Paddle.Initialize({
         token: PADDLE_CLIENT_TOKEN,
-        environment: PADDLE_ENVIRONMENT || 'sandbox',
         eventCallback: eventCallback || defaultEventCallback,
       });
       paddleInitialized = true;
@@ -189,7 +192,7 @@ export async function openCheckout(options: {
       successUrl: options.successUrl,
       cancelUrl: options.cancelUrl,
     },
-    items: [{ priceId: options.priceId }],
+    items: [{ priceId: options.priceId, quantity: 1 }],
     customer: options.userEmail ? { email: options.userEmail } : undefined,
     customData: {
       user_id: options.userId, // Passed to webhook for linking subscription

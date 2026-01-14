@@ -88,3 +88,68 @@ export async function updateUserProfileAction(
         message: "Profile updated successfully!",
     };
 }
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+export async function uploadAvatarAction(
+    prevState: FormState,
+    formData: FormData
+): Promise<FormState> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return {
+            success: false,
+            message: "Authentication error.",
+            errors: { _form: ["You must be logged in to upload an avatar."] },
+        };
+    }
+
+    const file = formData.get('avatar') as File;
+
+    if (!file || file.size === 0) {
+        return {
+            success: false,
+            message: "No file selected.",
+            errors: { _form: ["Please select an image to upload."] },
+        };
+    }
+
+    // Server-side validation
+    if (file.size > MAX_FILE_SIZE) {
+        return {
+            success: false,
+            message: "File too large.",
+            errors: { _form: ["Image size must be less than 2MB."] },
+        };
+    }
+
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        return {
+            success: false,
+            message: "Invalid file type.",
+            errors: { _form: ["Only JPG, PNG, GIF, and WebP images are allowed."] },
+        };
+    }
+
+    try {
+        await ProfileService.updateAvatar(user.id, file, supabase);
+    } catch (error) {
+        console.error("Avatar upload failed:", error);
+        return {
+            success: false,
+            message: error instanceof Error ? `Upload failed: ${error.message}` : "Upload failed.",
+            errors: { _form: ["Failed to upload avatar. Please try again."] },
+        };
+    }
+
+    revalidatePath('/dashboard/settings');
+    revalidatePath('/dashboard');
+
+    return {
+        success: true,
+        message: "Avatar updated successfully!",
+    };
+}

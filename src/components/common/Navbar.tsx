@@ -15,7 +15,7 @@ export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const pathname = usePathname();
-    const { user, loading } = useAuth();
+    const { user, profile, loading } = useAuth();
 
     useScrollListener(() => {
         if (typeof window !== 'undefined') {
@@ -41,18 +41,21 @@ export default function Navbar() {
     const allNavLinks = user ? authenticatedLinks : navLinks;
 
     // Always show background on dashboard and other protected pages
-    const isProtectedPage = pathname?.startsWith('/dashboard') || 
-                           pathname?.startsWith('/calendar') || 
-                           pathname?.startsWith('/discover') ||
-                           pathname?.startsWith('/events') ||
-                           pathname?.startsWith('/hackathons');
-    
+    const isProtectedPage = pathname?.startsWith('/dashboard') ||
+        pathname?.startsWith('/calendar') ||
+        pathname?.startsWith('/discover') ||
+        pathname?.startsWith('/events') ||
+        pathname?.startsWith('/hackathons');
+
     const shouldShowBackground = isScrolled || isProtectedPage;
 
+    const userDisplayName = profile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+    const userAvatarUrl = profile?.avatarUrl || user?.user_metadata?.avatar_url;
+
     return (
-        <nav 
+        <nav
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-0 border-none ${shouldShowBackground ? 'bg-white/80 dark:bg-black/80 backdrop-blur-md' : 'bg-transparent'
-            }`}
+                }`}
             style={{ border: 'none', borderWidth: 0, borderColor: 'transparent' }}
         >
             <div className="max-w-[1600px] mx-auto px-6">
@@ -126,14 +129,18 @@ export default function Navbar() {
                                         <div className="space-y-3">
                                             {/* User Info */}
                                             <div className="flex items-center space-x-3 p-3 bg-background-secondary rounded-lg">
-                                                <div className="w-10 h-10 bg-accent-primary rounded-full flex items-center justify-center">
-                                                    <span className="text-white font-semibold text-sm">
-                                                        {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
-                                                    </span>
+                                                <div className="w-10 h-10 bg-accent-primary rounded-full flex items-center justify-center overflow-hidden">
+                                                    {userAvatarUrl ? (
+                                                        <Image src={userAvatarUrl} width={40} height={40} alt={userDisplayName} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="text-white font-semibold text-sm">
+                                                            {userDisplayName.charAt(0)}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium text-foreground-primary truncate">
-                                                        {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                                                        {userDisplayName}
                                                     </p>
                                                     <p className="text-xs text-foreground-tertiary truncate">
                                                         {user.email}

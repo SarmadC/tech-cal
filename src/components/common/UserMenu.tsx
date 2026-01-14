@@ -13,7 +13,7 @@ export default function UserMenu() {
     const [isOpen, setIsOpen] = useState(false);
     const [emailCopied, setEmailCopied] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const { user, signOut, loading } = useAuth();
+    const { user, profile, signOut, loading } = useAuth();
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -74,8 +74,10 @@ export default function UserMenu() {
         }
     };
 
-    const userDisplayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-    const userInitials = userDisplayName.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+    const userDisplayName = profile?.fullName || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+    const userAvatarUrl = profile?.avatarUrl || user.user_metadata?.avatar_url;
+
+    // const userInitials = userDisplayName.split(' ').map((n: string) => n[0]).join('').toUpperCase();
     const generatedAvatarUrl32 = generateConsistentAvatarUrl(userDisplayName, { size: 32 });
     const generatedAvatarUrl48 = generateConsistentAvatarUrl(userDisplayName, { size: 48 });
 
@@ -91,9 +93,9 @@ export default function UserMenu() {
             >
                 {/* Avatar */}
                 <div className="relative">
-                    {user.user_metadata?.avatar_url ? (
+                    {userAvatarUrl ? (
                         <Image
-                            src={user.user_metadata.avatar_url}
+                            src={userAvatarUrl}
                             alt="Profile"
                             width={32}
                             height={32}
@@ -143,9 +145,9 @@ export default function UserMenu() {
                                 </Link>
 
                                 <div className="flex items-center space-x-3 p-3.5 relative z-10 pointer-events-none">
-                                    {user.user_metadata?.avatar_url ? (
+                                    {userAvatarUrl ? (
                                         <Image
-                                            src={user.user_metadata.avatar_url}
+                                            src={userAvatarUrl}
                                             alt="Profile"
                                             width={48}
                                             height={48}
