@@ -159,6 +159,20 @@ class EnvConfigManager {
   }
 
   /**
+   * Check if KV (Vercel KV) is available
+   */
+  isKvAvailable(): boolean {
+    return !!(this.config.services.kv.url && this.config.services.kv.token);
+  }
+
+  /**
+   * Check if Redis (Upstash) is available
+   */
+  isRedisAvailable(): boolean {
+    return !!(this.config.services.redis.url && this.config.services.redis.token);
+  }
+
+  /**
    * Get environment summary for debugging
    */
   getSummary(): {

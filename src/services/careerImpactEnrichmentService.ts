@@ -19,7 +19,23 @@ import { EnhancedScoringService } from './enhancedScoringService';
 import { rerankWithBehavioral } from '@/services/recommendations/behavioralReranker';
 import { LocationScoringService, UserLocation } from './locationScoringService';
 import * as Sentry from '@sentry/nextjs';
-import { kv } from '@vercel/kv';
+import { envConfig } from '@/utils/envConfig';
+
+// Safe KV client - only initialize if KV is configured
+// @vercel/kv throws an error if env vars are missing, so we need to catch during import
+let kv: typeof import('@vercel/kv').kv | null = null;
+if (envConfig.isKvAvailable()) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    kv = require('@vercel/kv').kv;
+  } catch (error) {
+    // KV not properly configured - this is expected if env vars are missing
+    // Will fall back to calculation without caching
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[Enrichment] KV cache not available:', error instanceof Error ? error.message : 'unknown error');
+    }
+  }
+}
 
 /**
  * Scoring strategy configuration
@@ -116,7 +132,7 @@ export async function enrichEventsWithCareerImpact(
     const enrichedEventsMap = new Map<string, EventWithCareerImpact>();
     const eventsToCalculate: Event[] = [];
 
-    if (userId && !isColdStart) {
+    if (userId && !isColdStart && kv) {
       try {
         const cacheKeys = events.map(e => getCacheKey(userId, e.id));
         
@@ -139,7 +155,11 @@ export async function enrichEventsWithCareerImpact(
           }
         });
       } catch (cacheError) {
-        console.warn('[Enrichment] Cache read failed, falling back to calculation:', cacheError);
+        // Only log if it's not a missing env var error
+        const errorMessage = cacheError instanceof Error ? cacheError.message : String(cacheError);
+        if (!errorMessage.includes('Missing required environment variables')) {
+          console.warn('[Enrichment] Cache read failed, falling back to calculation:', cacheError);
+        }
         // Fallback: calculate all
         eventsToCalculate.push(...events);
         enrichedEventsMap.clear();
@@ -238,8 +258,8 @@ export async function enrichEventsWithCareerImpact(
       }
     });
 
-    // 3. Cache new scores (if we have a userId and not cold start)
-    if (userId && !isColdStart && newlyEnrichedEvents.length > 0) {
+    // 3. Cache new scores (if we have a userId and not cold start and KV is available)
+    if (userId && !isColdStart && newlyEnrichedEvents.length > 0 && kv) {
       try {
         const pipeline = kv.pipeline();
         newlyEnrichedEvents.forEach(event => {
@@ -249,7 +269,11 @@ export async function enrichEventsWithCareerImpact(
         });
         await pipeline.exec();
       } catch (cacheWriteError) {
-        console.warn('[Enrichment] Failed to cache scores:', cacheWriteError);
+        // Only log if it's not a missing env var error
+        const errorMessage = cacheWriteError instanceof Error ? cacheWriteError.message : String(cacheWriteError);
+        if (!errorMessage.includes('Missing required environment variables')) {
+          console.warn('[Enrichment] Failed to cache scores:', cacheWriteError);
+        }
       }
     }
 

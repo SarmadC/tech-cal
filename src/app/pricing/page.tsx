@@ -176,7 +176,13 @@ export default function PricingPage() {
                                     </ul>
 
                                     <Link
-                                        href={plan.name === 'Team' ? '/contact' : '/calendar'}
+                                        href={
+                                            plan.name === 'Team' 
+                                                ? '/contact' 
+                                                : plan.name === 'Pro'
+                                                    ? '/checkout?plan=monthly'
+                                                    : '/signup'
+                                        }
                                         className={`
                     block w-full text-center font-semibold py-3 px-6 rounded-lg transition-all
                     ${plan.highlighted
@@ -225,7 +231,7 @@ export default function PricingPage() {
                             Join thousands of professionals staying ahead with KureCal
                         </p>
                         <Link
-                            href="/calendar"
+                            href="/signup"
                             className="inline-block bg-accent-primary hover:bg-accent-primary-hover text-accent-primary-foreground font-semibold py-4 px-8 rounded-xl transition-all transform hover:scale-105 shadow-lg"
                         >
                             Start Free Today
