@@ -21,6 +21,29 @@ vi.mock('@/contexts/SnackbarContext', () => ({
     })
 }));
 
+vi.mock('@/contexts/SubscriptionContext', () => ({
+    SubscriptionProvider: ({ children }: { children: unknown }) => children,
+    useSubscriptionContext: () => ({
+        subscription: null,
+        isLoading: false,
+        error: null,
+        isPro: false,
+        isTrialing: false,
+        isFree: true,
+        trialDaysLeft: null,
+        canAccessFeature: () => true, // Allow access by default for tests? Or false? Let's say basic access
+        bookmarkLimit: 10,
+        historyDays: 30,
+        maxRecommendations: 5,
+        refreshSubscription: vi.fn(),
+        startTrial: vi.fn(),
+        openUpgrade: vi.fn()
+    }),
+    useCanAccessFeature: () => true,
+    useTrialDaysLeft: () => null,
+    useIsPro: () => false
+}));
+
 // Create a mock AppEvent object for our tests to use
 const mockEvent: Event = {
     id: 'event-abc',
@@ -89,7 +112,7 @@ describe('EventTracking Component', () => {
         // Arrange: Mock getTrackedEvents to return empty array (event not tracked)
         vi.spyOn(UserEventService.UserEventService, 'getTrackedEvents')
             .mockResolvedValue([]);
-        
+
         // Mock setAttendanceStatus
         const setAttendanceStatusSpy = vi.spyOn(UserEventService.UserEventService, 'setAttendanceStatus')
             .mockResolvedValue({ previousStatus: null, newStatus: 'attending', autoBookmarked: true });
@@ -153,7 +176,7 @@ describe('EventTracking Component', () => {
                 trackedAt: new Date().toISOString(),
                 event: null
             }]);
-        
+
         const setAttendanceStatusSpy = vi.spyOn(UserEventService.UserEventService, 'setAttendanceStatus')
             .mockResolvedValue({ previousStatus: 'attended', newStatus: null, autoBookmarked: false });
 
