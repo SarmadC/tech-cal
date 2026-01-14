@@ -22,6 +22,7 @@ import './styles/quick-date-picker.css';
 import QueryProvider from '@/components/providers/QueryProvider';
 import { SupabaseProvider } from '@/components/providers/SupabaseProvider';
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import ClientLayout from "@/components/layout/ClientLayout";
 import IconProvider from '../components/providers/IconProvider';
@@ -120,8 +121,10 @@ export default function RootLayout({
                             <SupabaseProvider>
                                 {/* 2. AuthProvider is next, it needs supabase client */}
                                 <AuthProvider>
-                                    {/* 3. QueryProvider is next, it might need auth context for queries */}
-                                    <QueryProvider>
+                                    {/* 3. SubscriptionProvider depends on AuthProvider for user info */}
+                                    <SubscriptionProvider>
+                                        {/* 4. QueryProvider is next, it might need auth context for queries */}
+                                        <QueryProvider>
                                         <SnackbarProvider>
                                             {/* 3. UI/UX providers can go inside */}
                                             {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
@@ -134,7 +137,8 @@ export default function RootLayout({
                                             </IconProvider>
                                             {/* </SmoothScrollProvider> */}
                                         </SnackbarProvider>
-                                    </QueryProvider>
+                                        </QueryProvider>
+                                    </SubscriptionProvider>
                                 </AuthProvider>
                             </SupabaseProvider>
                         </AccentProvider>

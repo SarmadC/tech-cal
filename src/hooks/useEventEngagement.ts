@@ -9,6 +9,7 @@ import { TrackedEventRecord, EventStatus } from '@/types';
 import { ANALYTICS_CONFIG } from '@/config/analyticsConfig';
 import { extractAlgorithmContext } from '@/utils/analyticsUtils';
 import { useSnackbar } from '@/contexts/SnackbarContext';
+import { useSubscriptionContext } from '@/contexts';
 
 /**
  * Event Engagement Hook - Decoupled bookmark and attendance management
@@ -27,6 +28,12 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 export function useEventEngagement() {
   const { supabase, isReady } = useSupabaseSafe();
   const { user } = useAuth();
+  const {
+    isPro,
+    isTrialing,
+    bookmarkLimit,
+    openUpgrade,
+  } = useSubscriptionContext();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
 
@@ -52,6 +59,10 @@ export function useEventEngagement() {
   // Derived data structures for efficient lookups
   const bookmarkedEventIds = useMemo(() => {
     return new Set(trackedEvents.filter(te => te.isBookmarked).map(te => te.eventId));
+  }, [trackedEvents]);
+
+  const bookmarkedCount = useMemo(() => {
+    return trackedEvents.filter(te => te.isBookmarked).length;
   }, [trackedEvents]);
 
   const attendanceStatusMap = useMemo(() => {
@@ -100,6 +111,24 @@ export function useEventEngagement() {
     if (!user?.id) throw new Error('User not authenticated');
     
     const currentIsBookmarked = isBookmarked(eventId);
+
+    // Enforce free-tier bookmark limit before any writes
+    if (
+      !currentIsBookmarked &&
+      !isPro &&
+      !isTrialing &&
+      Number.isFinite(bookmarkLimit) &&
+      bookmarkedCount >= bookmarkLimit
+    ) {
+      showError(`You've reached the free bookmark limit (${bookmarkLimit}). Upgrade to add more.`);
+      // Open checkout overlay to keep the flow intentional (no auto-trial)
+      try {
+        await openUpgrade();
+      } catch (err) {
+        console.error('Failed to open upgrade checkout', err);
+      }
+      throw new Error('BOOKMARK_LIMIT_REACHED');
+    }
     
     // Optimistic update
     queryClient.setQueryData<TrackedEventRecord[]>(['trackedEvents', user.id], (old = []) => {
@@ -322,4 +351,3 @@ export function useEventEngagement() {
     refetch
   };
 }
-

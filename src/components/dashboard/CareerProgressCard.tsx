@@ -2,8 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Target, TrendUp, Users, Lightning, ArrowRight, Fire, Warning, CheckCircle } from '@phosphor-icons/react';
+import { Target, TrendUp, Users, Lightning, ArrowRight, Fire, Warning, CheckCircle, Lock } from '@phosphor-icons/react';
 import { useDashboardMetrics, type GoalProgress } from '@/hooks/useDashboardMetrics';
+import { useSubscriptionContext } from '@/contexts';
+import { UpgradeModal } from '@/components/ui/UpgradeModal';
 import { DashboardCard } from '@/components/dashboard/DashboardCard';
 import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
 import type { TrackedEventRecord, Event, CareerProfile } from '@/types';
@@ -86,6 +88,10 @@ export function CareerProgressCard({
     upcomingEvents,
     careerProfile,
 }: CareerProgressCardProps) {
+    const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+    const { isPro, isTrialing, startTrial, openUpgrade } = useSubscriptionContext();
+    const hasPremiumAccess = isPro || isTrialing;
+
     const metrics = useDashboardMetrics({
         trackedEvents,
         upcomingEvents,
@@ -129,6 +135,92 @@ export function CareerProgressCard({
     const goalsWithProgress = metrics.goalProgress.filter(g => g.eventCount > 0);
     const totalGoalEvents = metrics.goalProgress.reduce((sum, g) => sum + g.eventCount, 0);
 
+    // Free tier: Show simplified progress overview
+    if (!hasPremiumAccess) {
+        const overallProgress = metrics.goalProgress.length > 0
+            ? Math.round(metrics.goalProgress.reduce((sum, g) => sum + g.progress, 0) / metrics.goalProgress.length)
+            : 0;
+
+        return (
+            <>
+                <DashboardCard title="" className="w-full flex flex-col">
+                    <DashboardSectionHeader
+                        icon={Target}
+                        title="Goals & Impact"
+                        subtitle={`${totalGoalEvents} events matched to goals`}
+                        action={(
+                            <span className="px-2.5 py-1 rounded-md bg-white/[0.08] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium">
+                                {overallProgress}% Overall
+                            </span>
+                        )}
+                    />
+
+                    {/* Simple overall progress bar */}
+                    <div className="mb-4">
+                        <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                            <div
+                                className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                                style={{ width: `${overallProgress}%` }}
+                            />
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-2">
+                            {metrics.goalProgress.length} career goal{metrics.goalProgress.length !== 1 ? 's' : ''} tracked
+                        </p>
+                    </div>
+
+                    {/* Blurred goals grid preview */}
+                    <div className="relative">
+                        <div className="absolute inset-0 z-10 backdrop-blur-[6px] bg-white/40 dark:bg-zinc-900/40 rounded-lg flex flex-col items-center justify-center p-6">
+                            <Lock className="w-6 h-6 text-amber-600 dark:text-amber-400 mb-2" weight="fill" />
+                            <span className="text-sm font-medium text-zinc-900 dark:text-white mb-1">
+                                Unlock Goal Analysis
+                            </span>
+                            <span className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 text-center">
+                                See detailed progress, impact scores & suggestions
+                            </span>
+                            <button
+                                onClick={() => setShowUpgradeModal(true)}
+                                className="px-4 py-2 rounded-full bg-amber-600 text-white text-xs font-medium hover:bg-amber-500 transition-colors"
+                            >
+                                Upgrade to Pro
+                            </button>
+                        </div>
+
+                        {/* Blurred placeholder content */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 opacity-30 select-none pointer-events-none">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/40">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-700 rounded" />
+                                        <div className="h-3 w-16 bg-zinc-200 dark:bg-zinc-700 rounded" />
+                                    </div>
+                                    <div className="h-8 w-16 bg-zinc-300 dark:bg-zinc-600 rounded mb-2" />
+                                    <div className="h-2 w-full bg-zinc-200 dark:bg-zinc-700 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </DashboardCard>
+
+                <UpgradeModal
+                    open={showUpgradeModal}
+                    onClose={() => setShowUpgradeModal(false)}
+                    variant="trialStart"
+                    featureName="Goal Tracking"
+                    onStartTrial={async () => {
+                        await startTrial();
+                        setShowUpgradeModal(false);
+                    }}
+                    onUpgrade={async () => {
+                        await openUpgrade();
+                        setShowUpgradeModal(false);
+                    }}
+                />
+            </>
+        );
+    }
+
+    // Pro tier: Full goals view
     return (
         <DashboardCard title="" className="w-full flex flex-col">
             {/* Header */}

@@ -1,0 +1,270 @@
+/**
+ * Paddle Integration Library
+ *
+ * This module handles Paddle.js integration for subscription checkout and management.
+ * Paddle is our merchant of record, handling taxes and payment processing.
+ *
+ * Usage:
+ * - Initialize Paddle on app load with initPaddle()
+ * - Open checkout overlay with openCheckout()
+ * - Open customer portal with openCustomerPortal()
+ */
+
+import type { Subscription } from '@/types/subscription';
+
+// Paddle environment configuration
+const PADDLE_ENVIRONMENT = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT as
+  | 'sandbox'
+  | 'production';
+const PADDLE_CLIENT_TOKEN = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
+
+// Price IDs (configured in Paddle dashboard)
+export const PADDLE_PRICES = {
+  pro_monthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || '',
+  pro_annual: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_ANNUAL || '',
+} as const;
+
+// Paddle.js types (simplified)
+interface PaddleCheckoutSettings {
+  displayMode?: 'inline' | 'overlay';
+  theme?: 'light' | 'dark';
+  locale?: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  frameTarget?: string;
+  frameInitialHeight?: number;
+  frameStyle?: string;
+}
+
+interface PaddleCheckoutItem {
+  priceId: string;
+  quantity?: number;
+}
+
+interface PaddleCheckoutOptions {
+  settings?: PaddleCheckoutSettings;
+  items: PaddleCheckoutItem[];
+  customer?: {
+    email?: string;
+    id?: string;
+  };
+  customData?: Record<string, string>;
+}
+
+interface PaddleInstance {
+  Initialize: (options: {
+    token: string;
+    environment?: 'sandbox' | 'production';
+    eventCallback?: (event: PaddleEvent) => void;
+  }) => void;
+  Checkout: {
+    open: (options: PaddleCheckoutOptions) => void;
+  };
+  Environment: {
+    set: (env: 'sandbox' | 'production') => void;
+  };
+}
+
+interface PaddleEvent {
+  name: string;
+  data?: unknown;
+}
+
+// Global Paddle instance
+declare global {
+  interface Window {
+    Paddle?: PaddleInstance;
+  }
+}
+
+let paddleInitialized = false;
+
+// Script loading timeout (10 seconds)
+const PADDLE_SCRIPT_TIMEOUT_MS = 10000;
+
+/**
+ * Load Paddle.js script dynamically with timeout
+ */
+function loadPaddleScript(): Promise<void> {
+  const loadPromise = new Promise<void>((resolve, reject) => {
+    if (window.Paddle) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Paddle.js'));
+    document.head.appendChild(script);
+  });
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error('Paddle.js load timed out. Please check your internet connection and try again.'));
+    }, PADDLE_SCRIPT_TIMEOUT_MS);
+  });
+
+  return Promise.race([loadPromise, timeoutPromise]);
+}
+
+/**
+ * Initialize Paddle.js
+ * Call this once on app initialization
+ */
+export async function initPaddle(
+  eventCallback?: (event: PaddleEvent) => void
+): Promise<void> {
+  if (paddleInitialized) return;
+  if (typeof window === 'undefined') return;
+
+  if (!PADDLE_CLIENT_TOKEN) {
+    console.warn('Paddle client token not configured');
+    return;
+  }
+
+  try {
+    await loadPaddleScript();
+
+    if (window.Paddle) {
+      window.Paddle.Initialize({
+        token: PADDLE_CLIENT_TOKEN,
+        environment: PADDLE_ENVIRONMENT || 'sandbox',
+        eventCallback: eventCallback || defaultEventCallback,
+      });
+      paddleInitialized = true;
+    }
+  } catch (error) {
+    console.error('Failed to initialize Paddle:', error);
+    throw error;
+  }
+}
+
+/**
+ * Default event callback for Paddle events
+ */
+function defaultEventCallback(event: PaddleEvent): void {
+  switch (event.name) {
+    case 'checkout.completed':
+      console.log('Checkout completed:', event.data);
+      // Subscription will be created via webhook
+      break;
+    case 'checkout.closed':
+      console.log('Checkout closed');
+      break;
+    case 'checkout.error':
+      console.error('Checkout error:', event.data);
+      break;
+    default:
+      console.log('Paddle event:', event.name, event.data);
+  }
+}
+
+/**
+ * Open Paddle checkout overlay
+ *
+ * @param options Checkout options
+ */
+export async function openCheckout(options: {
+  priceId: string;
+  userEmail?: string;
+  userId: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  theme?: 'light' | 'dark';
+}): Promise<void> {
+  if (!paddleInitialized) {
+    await initPaddle();
+  }
+
+  if (!window.Paddle) {
+    throw new Error('Paddle not initialized');
+  }
+
+  window.Paddle.Checkout.open({
+    settings: {
+      displayMode: 'overlay',
+      theme: options.theme || 'light',
+      successUrl: options.successUrl,
+      cancelUrl: options.cancelUrl,
+    },
+    items: [{ priceId: options.priceId }],
+    customer: options.userEmail ? { email: options.userEmail } : undefined,
+    customData: {
+      user_id: options.userId, // Passed to webhook for linking subscription
+    },
+  });
+}
+
+/**
+ * Open checkout for Pro Monthly subscription
+ */
+export async function openProMonthlyCheckout(
+  userId: string,
+  userEmail?: string
+): Promise<void> {
+  if (!PADDLE_PRICES.pro_monthly) {
+    throw new Error('Pro monthly price not configured');
+  }
+
+  return openCheckout({
+    priceId: PADDLE_PRICES.pro_monthly,
+    userId,
+    userEmail,
+    successUrl: `${window.location.origin}/billing/success`,
+    cancelUrl: `${window.location.origin}/pricing`,
+  });
+}
+
+/**
+ * Open checkout for Pro Annual subscription
+ */
+export async function openProAnnualCheckout(
+  userId: string,
+  userEmail?: string
+): Promise<void> {
+  if (!PADDLE_PRICES.pro_annual) {
+    throw new Error('Pro annual price not configured');
+  }
+
+  return openCheckout({
+    priceId: PADDLE_PRICES.pro_annual,
+    userId,
+    userEmail,
+    successUrl: `${window.location.origin}/billing/success`,
+    cancelUrl: `${window.location.origin}/pricing`,
+  });
+}
+
+/**
+ * Open Paddle customer portal
+ * Users can manage their subscription, update payment method, etc.
+ *
+ * @param subscription User's subscription with paddle_customer_id and paddle_subscription_id
+ */
+export function openCustomerPortal(subscription: Subscription): void {
+  if (!subscription.paddle_customer_id || !subscription.paddle_subscription_id) {
+    console.error('No Paddle customer ID or subscription ID found');
+    return;
+  }
+
+  // Paddle customer portal is hosted by Paddle
+  // The URL format depends on your Paddle configuration
+  const portalUrl = PADDLE_ENVIRONMENT === 'production'
+    ? `https://customer.paddle.com/subscriptions/${subscription.paddle_subscription_id}`
+    : `https://sandbox-customer.paddle.com/subscriptions/${subscription.paddle_subscription_id}`;
+
+  window.open(portalUrl, '_blank');
+}
+
+/**
+ * Check if Paddle is properly configured
+ */
+export function isPaddleConfigured(): boolean {
+  return !!(
+    PADDLE_CLIENT_TOKEN &&
+    PADDLE_PRICES.pro_monthly &&
+    PADDLE_PRICES.pro_annual
+  );
+}

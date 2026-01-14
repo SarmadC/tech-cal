@@ -3,10 +3,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { Rocket, Star, Users, Lightbulb, ChartLineUp, ArrowRight, CheckCircle, Lock } from '@phosphor-icons/react';
+import { Rocket, Star, Users, Lightbulb, ChartLineUp, ArrowRight, CheckCircle, Lock, Sparkle } from '@phosphor-icons/react';
 import { useEventFeedback, type FeedbackAggregates } from '@/hooks/useEventFeedback';
 import { DashboardCard } from '@/components/dashboard/DashboardCard';
 import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
+import { useSubscriptionContext } from '@/contexts';
+import { UpgradeModal } from '@/components/ui/UpgradeModal';
 import type { TrackedEventRecord, Event } from '@/types';
 import dynamic from 'next/dynamic';
 
@@ -28,6 +30,9 @@ const MATURE_THRESHOLD = 5; // events with feedback to show full insights
 export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: CareerOutcomesCardProps) {
     const { data: feedbackData, isLoading } = useEventFeedback(userId);
     const [feedbackEvent, setFeedbackEvent] = React.useState<Event | null>(null);
+    const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+    const { isPro, isTrialing, startTrial, openUpgrade } = useSubscriptionContext();
+    const hasPremiumAccess = isPro || isTrialing;
 
     const handleRateClick = (event: Event) => {
         setFeedbackEvent(event);
@@ -212,7 +217,95 @@ export function CareerOutcomesCard({ trackedEvents, userId, className = '' }: Ca
         );
     }
 
-    // Mature state - full insights
+    // Mature state - full insights (gated by subscription)
+    // Free tier: Show count + one teaser insight
+    // Pro tier: Full metrics grid
+    if (!hasPremiumAccess) {
+        // Free tier: Limited view with teaser
+        const topSkill = aggregates?.uniqueSkills?.[0];
+        const teaserMessage = topSkill
+            ? `You're building expertise in ${topSkill}`
+            : feedbackCount > 0
+                ? `You've rated ${feedbackCount} events`
+                : 'Start tracking your career impact';
+
+        return (
+            <>
+                <DashboardCard title="" className={`p-5 flex flex-col ${className}`}>
+                    <DashboardSectionHeader
+                        icon={ChartLineUp}
+                        title="Career Impact"
+                        subtitle={`${feedbackCount} events with feedback`}
+                    />
+
+                    {/* Teaser insight (the one free nugget) */}
+                    <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/30">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Sparkle className="w-4 h-4 text-indigo-500 dark:text-indigo-400" weight="fill" />
+                            <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">Your Insight</span>
+                        </div>
+                        <p className="text-sm text-indigo-900 dark:text-indigo-100">{teaserMessage}</p>
+                    </div>
+
+                    {/* Blurred preview of full metrics */}
+                    <div className="relative">
+                        <div className="absolute inset-0 z-10 backdrop-blur-[6px] bg-white/40 dark:bg-zinc-900/40 rounded-lg flex flex-col items-center justify-center p-4">
+                            <Lock className="w-6 h-6 text-amber-600 dark:text-amber-400 mb-2" weight="fill" />
+                            <span className="text-sm font-medium text-zinc-900 dark:text-white mb-1">
+                                Unlock Detailed Insights
+                            </span>
+                            <span className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 text-center">
+                                See ratings, skills, connections & more
+                            </span>
+                            <button
+                                onClick={() => setShowUpgradeModal(true)}
+                                className="px-4 py-2 rounded-full bg-amber-600 text-white text-xs font-medium hover:bg-amber-500 transition-colors"
+                            >
+                                Upgrade to Pro
+                            </button>
+                        </div>
+
+                        {/* Blurred dummy content */}
+                        <div className="grid grid-cols-2 gap-4 opacity-30 select-none pointer-events-none">
+                            <div className="p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md">
+                                <div className="h-3 w-12 bg-zinc-200 dark:bg-zinc-700 rounded mb-2" />
+                                <div className="h-6 w-8 bg-zinc-300 dark:bg-zinc-600 rounded" />
+                            </div>
+                            <div className="p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md">
+                                <div className="h-3 w-10 bg-zinc-200 dark:bg-zinc-700 rounded mb-2" />
+                                <div className="h-6 w-6 bg-zinc-300 dark:bg-zinc-600 rounded" />
+                            </div>
+                            <div className="p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md">
+                                <div className="h-3 w-14 bg-zinc-200 dark:bg-zinc-700 rounded mb-2" />
+                                <div className="h-6 w-10 bg-zinc-300 dark:bg-zinc-600 rounded" />
+                            </div>
+                            <div className="p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md">
+                                <div className="h-3 w-12 bg-zinc-200 dark:bg-zinc-700 rounded mb-2" />
+                                <div className="h-6 w-8 bg-zinc-300 dark:bg-zinc-600 rounded" />
+                            </div>
+                        </div>
+                    </div>
+                </DashboardCard>
+
+                <UpgradeModal
+                    open={showUpgradeModal}
+                    onClose={() => setShowUpgradeModal(false)}
+                    variant="trialStart"
+                    featureName="Career Insights"
+                    onStartTrial={async () => {
+                        await startTrial();
+                        setShowUpgradeModal(false);
+                    }}
+                    onUpgrade={async () => {
+                        await openUpgrade();
+                        setShowUpgradeModal(false);
+                    }}
+                />
+            </>
+        );
+    }
+
+    // Pro tier: Full insights
     return (
         <DashboardCard title="" className={`p-5 flex flex-col ${className}`}>
             {/* Main metrics grid */}

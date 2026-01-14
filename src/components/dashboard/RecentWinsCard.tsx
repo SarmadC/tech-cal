@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { TrendUp, ArrowRight, CaretRight, Circle, Star, CheckCircle } from '@phosphor-icons/react';
-import { format } from 'date-fns';
+import { TrendUp, ArrowRight, CaretRight, Circle, Star, CheckCircle, Lock, ClockCounterClockwise } from '@phosphor-icons/react';
+import { format, subDays, isAfter } from 'date-fns';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useEventFeedback } from '@/hooks/useEventFeedback';
-import { useAuth } from '@/contexts';
+import { useAuth, useSubscriptionContext } from '@/contexts';
+import { UpgradeModal } from '@/components/ui/UpgradeModal';
 import { getImpactBucketLabel } from '@/config/recommendationThresholds';
+import { FREE_TIER_LIMITS } from '@/types/subscription';
 import { DashboardCard } from '@/components/dashboard/DashboardCard';
 import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader';
 import type { TrackedEventRecord, Event, CareerProfile, EventType } from '@/types';
@@ -38,6 +40,9 @@ export function RecentWinsCard({
     eventTypes = [],
 }: RecentWinsCardProps) {
     const { user } = useAuth();
+    const { isPro, isTrialing, startTrial, openUpgrade } = useSubscriptionContext();
+    const hasPremiumAccess = isPro || isTrialing;
+
     const metrics = useDashboardMetrics({
         trackedEvents,
         upcomingEvents,
@@ -52,6 +57,22 @@ export function RecentWinsCard({
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [expandedWin, setExpandedWin] = useState<string | null>(null);
     const [feedbackEvent, setFeedbackEvent] = useState<Event | null>(null);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+    // Filter wins by date for free tier (30 days)
+    const { visibleWins, hiddenCount } = useMemo(() => {
+        if (hasPremiumAccess) {
+            return { visibleWins: metrics.recentWins, hiddenCount: 0 };
+        }
+
+        const cutoffDate = subDays(new Date(), FREE_TIER_LIMITS.historyDays);
+        const visible = metrics.recentWins.filter(win =>
+            isAfter(new Date(win.attendedDate), cutoffDate)
+        );
+        const hidden = metrics.recentWins.length - visible.length;
+
+        return { visibleWins: visible, hiddenCount: hidden };
+    }, [metrics.recentWins, hasPremiumAccess]);
 
     const handleEventClick = useCallback((event: Event) => {
         setSelectedEvent(event);
@@ -106,11 +127,11 @@ export function RecentWinsCard({
                 )}
             />
 
-            {metrics.recentWins.length > 0 ? (
+            {visibleWins.length > 0 ? (
                 <div className="relative flex flex-col space-y-0 text-sm">
-                    {metrics.recentWins.map((win, index) => {
+                    {visibleWins.map((win, index) => {
                         const bucket = getImpactBucketLabel(win.score);
-                        const isLast = index === metrics.recentWins.length - 1;
+                        const isLast = index === visibleWins.length - 1 && hiddenCount === 0;
                         const isExpanded = expandedWin === win.event.id;
 
                         return (
@@ -211,6 +232,26 @@ export function RecentWinsCard({
                             </div>
                         );
                     })}
+
+                    {/* Hidden history CTA for free tier */}
+                    {hiddenCount > 0 && (
+                        <div className="relative pl-6 pt-2">
+                            {/* Continuation line */}
+                            <div className="absolute left-[7px] top-0 h-4 w-px bg-zinc-200 dark:bg-zinc-800" />
+                            <div className="absolute left-[3px] top-4 w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700 ring-4 ring-white dark:ring-black" />
+
+                            <button
+                                onClick={() => setShowUpgradeModal(true)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors mt-2"
+                            >
+                                <ClockCounterClockwise className="w-4 h-4" weight="fill" />
+                                <span className="text-xs font-medium">
+                                    +{hiddenCount} more from your full history
+                                </span>
+                                <Lock className="w-3 h-3 ml-auto" />
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 min-h-[100px]">
@@ -273,6 +314,22 @@ export function RecentWinsCard({
                     </div>
                 </div>
             )}
+
+            {/* Upgrade Modal for History */}
+            <UpgradeModal
+                open={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                variant="trialStart"
+                featureName="Full History"
+                onStartTrial={async () => {
+                    await startTrial();
+                    setShowUpgradeModal(false);
+                }}
+                onUpgrade={async () => {
+                    await openUpgrade();
+                    setShowUpgradeModal(false);
+                }}
+            />
         </DashboardCard>
     );
 }

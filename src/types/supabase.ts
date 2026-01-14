@@ -2203,6 +2203,145 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          tier: Database["public"]["Enums"]["subscription_tier"]
+          status: Database["public"]["Enums"]["subscription_status"]
+          paddle_customer_id: string | null
+          paddle_subscription_id: string | null
+          paddle_price_id: string | null
+          trial_started_at: string | null
+          trial_ends_at: string | null
+          plan_type: Database["public"]["Enums"]["plan_type"] | null
+          seats_included: number
+          seats_used: number
+          entitlements: Json
+          created_at: string
+          updated_at: string
+          current_period_start: string | null
+          current_period_end: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          paddle_price_id?: string | null
+          trial_started_at?: string | null
+          trial_ends_at?: string | null
+          plan_type?: Database["public"]["Enums"]["plan_type"] | null
+          seats_included?: number
+          seats_used?: number
+          entitlements?: Json
+          created_at?: string
+          updated_at?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          paddle_price_id?: string | null
+          trial_started_at?: string | null
+          trial_ends_at?: string | null
+          plan_type?: Database["public"]["Enums"]["plan_type"] | null
+          seats_included?: number
+          seats_used?: number
+          entitlements?: Json
+          created_at?: string
+          updated_at?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_events: {
+        Row: {
+          id: string
+          paddle_event_id: string
+          event_type: string
+          payload: Json
+          processed_at: string
+          subscription_id: string | null
+        }
+        Insert: {
+          id?: string
+          paddle_event_id: string
+          event_type: string
+          payload: Json
+          processed_at?: string
+          subscription_id?: string | null
+        }
+        Update: {
+          id?: string
+          paddle_event_id?: string
+          event_type?: string
+          payload?: Json
+          processed_at?: string
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_events_dlq: {
+        Row: {
+          id: string
+          paddle_event_id: string
+          event_type: string
+          payload: Json
+          error_message: string | null
+          error_details: Json | null
+          failed_at: string
+          retry_count: number
+          last_retry_at: string | null
+        }
+        Insert: {
+          id?: string
+          paddle_event_id: string
+          event_type: string
+          payload: Json
+          error_message?: string | null
+          error_details?: Json | null
+          failed_at?: string
+          retry_count?: number
+          last_retry_at?: string | null
+        }
+        Update: {
+          id?: string
+          paddle_event_id?: string
+          event_type?: string
+          payload?: Json
+          error_message?: string | null
+          error_details?: Json | null
+          failed_at?: string
+          retry_count?: number
+          last_retry_at?: string | null
+        }
+        Relationships: []
+      }
       recommendation_batches: {
         Row: {
           algorithm_version: string
@@ -3513,6 +3652,9 @@ export type Database = {
         | "director"
         | "vp"
         | "founder"
+      subscription_tier: "free" | "pro" | "team"
+      subscription_status: "active" | "trialing" | "past_due" | "canceled" | "expired"
+      plan_type: "monthly" | "annual"
     }
     CompositeTypes: {
       [_ in never]: never

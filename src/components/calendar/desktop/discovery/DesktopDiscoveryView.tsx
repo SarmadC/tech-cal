@@ -18,6 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 export interface DesktopDiscoveryViewProps {
     events: Event[];
@@ -57,6 +58,7 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
     countsFromServer
 }) => {
     const { isBookmarked, toggleBookmark } = useEventEngagement();
+    const { showError } = useSnackbar();
     const [pendingBookmarkIds, setPendingBookmarkIds] = useState<Set<string>>(new Set());
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -94,7 +96,11 @@ const DesktopDiscoveryView: React.FC<DesktopDiscoveryViewProps> = ({
         try {
             await toggleBookmark(event.id, event as unknown as Record<string, unknown>);
         } catch (error) {
-            console.error('Failed to toggle bookmark from discovery card:', error);
+            const isLimit = error instanceof Error && error.message === 'BOOKMARK_LIMIT_REACHED';
+            showError(isLimit ? 'Bookmark limit reached. Upgrade to add more.' : 'Failed to save bookmark');
+            if (!isLimit) {
+                console.error('Failed to toggle bookmark from discovery card:', error);
+            }
         } finally {
             setPendingBookmarkIds((prev) => {
                 const next = new Set(prev);

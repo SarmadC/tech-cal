@@ -16,6 +16,7 @@ import { CalendarConnectionService } from '@/services/calendarConnectionService'
 import { GoogleCalendarService } from '@/services/googleCalendarService';
 import * as Sentry from '@sentry/nextjs';
 import { getErrorMessage } from '@/utils/errorHandling';
+import type { SubscriptionStatus } from '@/types/subscription';
 
 export async function POST(request: NextRequest) {
     try {
@@ -27,6 +28,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { error: 'Not authenticated' },
                 { status: 401 }
+            );
+        }
+
+        // Basic entitlement check for calendar sync (Pro or trialing)
+        const { data: subscription } = await supabase
+            .from('subscriptions')
+            .select('status,tier')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        const activeStatuses: SubscriptionStatus[] = ['active', 'trialing', 'past_due'];
+        const canSync = !!subscription && activeStatuses.includes(subscription.status) && subscription.tier === 'pro';
+
+        if (!canSync) {
+            return NextResponse.json(
+                { error: 'Calendar sync is a Pro feature. Upgrade to use this integration.', requiresUpgrade: true },
+                { status: 402 }
             );
         }
 

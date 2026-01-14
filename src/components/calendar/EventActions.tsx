@@ -31,8 +31,11 @@ const EventActions: FC<EventActionsProps> = ({ event }) => {
             await toggleBookmark(event.id, event as unknown as Record<string, unknown>);
             showSuccess(eventIsBookmarked ? 'Event removed from tracking' : 'Event added to tracking');
         } catch (error) {
-            showError('Failed to update event tracking');
-            console.error('Track event error:', error);
+            const isLimit = error instanceof Error && error.message === 'BOOKMARK_LIMIT_REACHED';
+            showError(isLimit ? 'Bookmark limit reached. Upgrade to add more.' : 'Failed to update event tracking');
+            if (!isLimit) {
+                console.error('Track event error:', error);
+            }
         } finally {
             setIsTracking(false);
         }

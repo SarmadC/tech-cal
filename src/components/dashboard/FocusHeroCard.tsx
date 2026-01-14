@@ -49,8 +49,11 @@ export function FocusHeroCard({
         try {
             await toggleBookmark(event.id, event as unknown as Record<string, unknown>);
         } catch (error) {
-            showError('Failed to bookmark event');
-            console.error(error);
+            const isLimit = error instanceof Error && error.message === 'BOOKMARK_LIMIT_REACHED';
+            showError(isLimit ? 'Bookmark limit reached. Upgrade to add more.' : 'Failed to bookmark event');
+            if (!isLimit) {
+                console.error(error);
+            }
         }
     };
 

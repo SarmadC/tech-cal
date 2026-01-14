@@ -3,8 +3,10 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { GraduationCap, ArrowUpRight, Circle, CheckCircle, Fire, TrendUp, TrendDown, Minus, ArrowRight } from '@phosphor-icons/react';
+import { GraduationCap, ArrowUpRight, Circle, CheckCircle, Fire, TrendUp, TrendDown, Minus, ArrowRight, Lock } from '@phosphor-icons/react';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
+import { useSubscriptionContext } from '@/contexts';
+import { UpgradeModal } from '@/components/ui/UpgradeModal';
 import type { TrackedEventRecord, Event, CareerProfile, EventType } from '@/types';
 import { getCanonicalSkillMeta, mapSkillsToCanonical } from '@/utils/skillTaxonomy';
 import dynamic from 'next/dynamic';
@@ -83,6 +85,9 @@ export function LearningProgressCard({
 }: LearningProgressCardProps) {
     const [selectedEvent, setSelectedEvent] = React.useState<Event | null>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+    const { isPro, isTrialing, startTrial, openUpgrade } = useSubscriptionContext();
+    const hasPremiumAccess = isPro || isTrialing;
 
     const metrics = useDashboardMetrics({
         trackedEvents,
@@ -228,6 +233,92 @@ export function LearningProgressCard({
     const trendColor = streakData.trend === 'improving' ? 'text-emerald-600 dark:text-emerald-400' :
         streakData.trend === 'declining' ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-500';
 
+    // Free tier: Show basic count only with blurred details
+    if (!hasPremiumAccess) {
+        return (
+            <>
+                <DashboardCard title="" className="w-full flex flex-col">
+                    <DashboardSectionHeader
+                        icon={GraduationCap}
+                        title="Learning Path"
+                        subtitle={`${progress.covered}/${progress.total} skills covered`}
+                        action={(
+                            <span className="px-2.5 py-1 rounded-md bg-white/[0.08] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 text-xs font-medium">
+                                {progress.percent}% Complete
+                            </span>
+                        )}
+                    />
+
+                    {/* Simple progress bar for free tier */}
+                    <div className="mb-4">
+                        <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                            <div
+                                className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                                style={{ width: `${progress.percent}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Blurred skill matrix preview */}
+                    <div className="relative">
+                        <div className="absolute inset-0 z-10 backdrop-blur-[6px] bg-white/40 dark:bg-zinc-900/40 rounded-lg flex flex-col items-center justify-center p-6">
+                            <Lock className="w-6 h-6 text-amber-600 dark:text-amber-400 mb-2" weight="fill" />
+                            <span className="text-sm font-medium text-zinc-900 dark:text-white mb-1">
+                                Unlock Skill Tracking
+                            </span>
+                            <span className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 text-center">
+                                See detailed progress, trends & recommendations
+                            </span>
+                            <button
+                                onClick={() => setShowUpgradeModal(true)}
+                                className="px-4 py-2 rounded-full bg-amber-600 text-white text-xs font-medium hover:bg-amber-500 transition-colors"
+                            >
+                                Upgrade to Pro
+                            </button>
+                        </div>
+
+                        {/* Blurred placeholder content */}
+                        <div className="flex gap-6 opacity-30 select-none pointer-events-none">
+                            <div className="w-[60%]">
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className="p-2.5 rounded bg-zinc-50 dark:bg-zinc-800/40">
+                                            <div className="h-3 w-20 bg-zinc-200 dark:bg-zinc-700 rounded mb-2" />
+                                            <div className="h-2 w-12 bg-zinc-200 dark:bg-zinc-700 rounded" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="w-[40%] border-l border-zinc-100 dark:border-white/5 pl-6">
+                                <div className="space-y-3">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="h-8 bg-zinc-100 dark:bg-zinc-800 rounded" />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </DashboardCard>
+
+                <UpgradeModal
+                    open={showUpgradeModal}
+                    onClose={() => setShowUpgradeModal(false)}
+                    variant="trialStart"
+                    featureName="Learning Progress"
+                    onStartTrial={async () => {
+                        await startTrial();
+                        setShowUpgradeModal(false);
+                    }}
+                    onUpgrade={async () => {
+                        await openUpgrade();
+                        setShowUpgradeModal(false);
+                    }}
+                />
+            </>
+        );
+    }
+
+    // Pro tier: Full learning path view
     return (
         <DashboardCard title="" className="w-full flex flex-col">
             {/* Header with Streak - using DashboardSectionHeader for consistency */}

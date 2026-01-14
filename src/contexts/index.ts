@@ -20,5 +20,14 @@ export {
     useCalendarState,
 } from './CalendarContext';
 
+// Subscription Context exports
+export {
+    SubscriptionProvider,
+    useSubscriptionContext,
+    useCanAccessFeature,
+    useTrialDaysLeft,
+    useIsPro,
+} from './SubscriptionContext';
+
 // Export types that components might need
 export type { AuthContextType } from './AuthContext';

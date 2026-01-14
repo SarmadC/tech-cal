@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Delete connection and clean up Vault secrets
+        // Allow disconnect even if the user is downgraded, so they can revoke access
         await CalendarConnectionService.deleteConnection(
             user.id,
             'google',

@@ -15,6 +15,7 @@ import { EventFeedbackForm } from '@/components/events/EventFeedbackForm';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { useAuth } from '@/contexts';
 import { generateEventSlug } from '@/utils/slugUtils';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 // 2. UPDATE PROPS: The interface now uses the new types.
 interface EventDetailPanelProps {
@@ -30,6 +31,7 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
     const [eventWithAgenda, setEventWithAgenda] = useState<Event & { agenda?: AgendaItem[] }>(event);
     const [isLoading, setIsLoading] = useState(true);
     const [agendaView, setAgendaView] = useState<'timeline' | 'tracks'>('timeline');
+    const { showError } = useSnackbar();
 
     // Add bookmark functionality
     const { user } = useAuth();
@@ -66,7 +68,12 @@ const EventDetailPanel: FC<EventDetailPanelProps> = ({ event, onClose, categorie
             return;
         }
 
-        await toggleBookmark(displayEvent.id, displayEvent as unknown as Record<string, unknown>);
+        try {
+            await toggleBookmark(displayEvent.id, displayEvent as unknown as Record<string, unknown>);
+        } catch (error) {
+            const isLimit = error instanceof Error && error.message === 'BOOKMARK_LIMIT_REACHED';
+            showError(isLimit ? 'Bookmark limit reached. Upgrade to add more.' : 'Failed to update bookmark');
+        }
     };
 
     // Fetch complete event details with agenda

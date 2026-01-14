@@ -16,15 +16,15 @@ const pricingFaqs = [
     },
     {
         question: 'What payment methods do you accept?',
-        answer: 'We accept all major credit cards (Visa, MasterCard, American Express), as well as PayPal and ACH transfers for Team plans.',
+        answer: 'We accept all major credit cards (Visa, MasterCard, American Express), as well as PayPal. Payments are securely processed by Paddle.',
     },
     {
         question: 'Is there a free trial for Pro plans?',
-        answer: 'Yes! All Pro plans come with a 14-day free trial. No credit card required to start.',
+        answer: 'Yes! Pro comes with a 7-day free trial. Your card will only be charged after the trial ends.',
     },
     {
-        question: 'Do you offer discounts for students or non-profits?',
-        answer: 'We offer 50% off Pro plans for students and verified non-profit organizations. Contact support with proof of eligibility.',
+        question: 'What happens when my trial ends?',
+        answer: 'After your 7-day trial, your subscription will automatically convert to a paid plan. You can cancel anytime during the trial with no charge.',
     },
 ];
 
@@ -33,49 +33,54 @@ const plans = [
         name: 'Free',
         price: '$0',
         period: 'forever',
-        description: 'Perfect for individuals getting started',
+        description: 'Discover events and start your journey',
         features: [
-            'Access to all public tech events',
-            'Basic filtering by category',
-            'Export to calendar (up to 10/month)',
-            'Email notifications',
-            'Mobile-friendly web app'
+            'Full access to all tech events',
+            'All filtering options (format, difficulty, budget)',
+            'Career profile setup',
+            'Save up to 5 events',
+            'Last 30 days of history',
+            'Top 3 personalized recommendations',
+            'Basic career insights',
+            'Email notifications'
         ],
         cta: 'Get Started',
         highlighted: false
     },
     {
         name: 'Pro',
-        price: '$9',
+        price: '$12',
         period: '/month',
-        description: 'For professionals who need more',
+        annualPrice: '$99/year',
+        description: 'Unlock automation and deep insights',
         features: [
-            'Everything in Free',
-            'Unlimited calendar exports',
-            'Advanced filtering & search',
-            'Custom event recommendations',
-            'Priority notifications',
-            'Calendar sync (Google, Outlook)',
-            'No ads'
+            'Everything in Free, plus:',
+            'Google Calendar sync',
+            'Unlimited saved events',
+            'Full learning history',
+            'All personalized recommendations',
+            'Detailed career insights & analytics',
+            'Goal progress tracking',
+            'Skill gap analysis',
+            '7-day free trial'
         ],
-        cta: 'Start Free Trial',
+        cta: 'Start 7-Day Trial',
         highlighted: true
     },
     {
         name: 'Team',
-        price: '$29',
-        period: '/month',
+        price: 'Coming Soon',
+        period: '',
         description: 'For teams and organizations',
         features: [
             'Everything in Pro',
-            'Up to 10 team members',
-            'Shared team calendars',
+            'Team calendars & sharing',
             'Admin dashboard',
-            'Custom integrations',
+            'Usage analytics',
             'Priority support',
-            'SSO authentication'
+            'Custom integrations'
         ],
-        cta: 'Contact Sales',
+        cta: 'Join Waitlist',
         highlighted: false
     }
 ];
@@ -127,7 +132,7 @@ export default function PricingPage() {
                                             }`}>
                                             {plan.name}
                                         </h3>
-                                        <div className="flex items-baseline mb-4">
+                                        <div className="flex items-baseline mb-2">
                                             <span className={`text-4xl font-bold ${plan.highlighted ? 'text-accent-primary-foreground' : 'text-foreground-primary'
                                                 }`}>
                                                 {plan.price}
@@ -137,6 +142,11 @@ export default function PricingPage() {
                                                 {plan.period}
                                             </span>
                                         </div>
+                                        {'annualPrice' in plan && plan.annualPrice && (
+                                            <p className={`text-sm mb-2 ${plan.highlighted ? 'text-accent-primary-foreground opacity-70' : 'text-foreground-tertiary'}`}>
+                                                or {plan.annualPrice} (save 17%)
+                                            </p>
+                                        )}
                                         <p className={
                                             plan.highlighted ? 'text-accent-primary-foreground opacity-80' : 'text-foreground-secondary'
                                         }>
@@ -191,44 +201,16 @@ export default function PricingPage() {
                         </h2>
 
                         <div className="space-y-6">
-                            <div className="bg-background-main rounded-xl p-6 border border-border-color">
-                                <h3 className="text-lg font-semibold text-foreground-primary mb-2">
-                                    Can I change plans anytime?
-                                </h3>
-                                <p className="text-foreground-secondary">
-                                    Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately,
-                                    and we will prorate any payments.
-                                </p>
-                            </div>
-
-                            <div className="bg-background-main rounded-xl p-6 border border-border-color">
-                                <h3 className="text-lg font-semibold text-foreground-primary mb-2">
-                                    What payment methods do you accept?
-                                </h3>
-                                <p className="text-foreground-secondary">
-                                    We accept all major credit cards (Visa, MasterCard, American Express),
-                                    as well as PayPal and ACH transfers for Team plans.
-                                </p>
-                            </div>
-
-                            <div className="bg-background-main rounded-xl p-6 border border-border-color">
-                                <h3 className="text-lg font-semibold text-foreground-primary mb-2">
-                                    Is there a free trial for Pro plans?
-                                </h3>
-                                <p className="text-foreground-secondary">
-                                    Yes! All Pro plans come with a 14-day free trial. No credit card required to start.
-                                </p>
-                            </div>
-
-                            <div className="bg-background-main rounded-xl p-6 border border-border-color">
-                                <h3 className="text-lg font-semibold text-foreground-primary mb-2">
-                                    Do you offer discounts for students or non-profits?
-                                </h3>
-                                <p className="text-foreground-secondary">
-                                    We offer 50% off Pro plans for students and verified non-profit organizations.
-                                    Contact support with proof of eligibility.
-                                </p>
-                            </div>
+                            {pricingFaqs.map((faq, index) => (
+                                <div key={index} className="bg-background-main rounded-xl p-6 border border-border-color">
+                                    <h3 className="text-lg font-semibold text-foreground-primary mb-2">
+                                        {faq.question}
+                                    </h3>
+                                    <p className="text-foreground-secondary">
+                                        {faq.answer}
+                                    </p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>

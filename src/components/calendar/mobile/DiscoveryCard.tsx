@@ -15,6 +15,7 @@ import { formatDate, formatTime } from '@/utils/dateUtils';
 import { useEventEngagement } from '@/hooks/useEventEngagement';
 import { getEventFormat, isEventFree } from '@/utils/filterCountUtils';
 import { getImpactBucketLabel } from '@/config/recommendationThresholds';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 export interface DiscoveryCardProps {
     event: Event & { careerImpactLite?: CareerImpactScoreLite; careerImpact?: CareerImpactScore };
@@ -42,6 +43,7 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
     const [isHovered, setIsHovered] = useState(false);
     const hasTrackedView = React.useRef(false);
     const { isBookmarked, toggleBookmark } = useEventEngagement();
+    const { showError } = useSnackbar();
     const isBookmarkedValue = isBookmarked(event.id);
     const [isBookmarking, setIsBookmarking] = useState(false);
 
@@ -77,6 +79,9 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
         setIsBookmarking(true);
         try {
             await toggleBookmark(event.id, event as any);
+        } catch (error) {
+            const isLimit = error instanceof Error && error.message === 'BOOKMARK_LIMIT_REACHED';
+            showError(isLimit ? 'Bookmark limit reached. Upgrade to add more.' : 'Failed to update bookmark');
         } finally {
             setIsBookmarking(false);
         }
@@ -217,4 +222,3 @@ const DiscoveryCard = React.memo<DiscoveryCardProps>(({
 DiscoveryCard.displayName = 'DiscoveryCard';
 
 export default DiscoveryCard;
-
