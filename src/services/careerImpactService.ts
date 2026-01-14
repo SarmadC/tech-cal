@@ -499,7 +499,7 @@ export class CareerImpactService {
       });
     } catch {
       // Fail silently if Sentry is not available
-      console.error(`[CareerImpactService] ${operation} failed:`, error.message, context);
+      console.error('[CareerImpactService]', operation, 'failed:', error.message, context);
     }
   }
 

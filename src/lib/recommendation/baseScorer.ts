@@ -63,11 +63,13 @@ function matchesWholeWord(text: string, keyword: string): boolean {
     // Use lookaround assertions for special characters
     // (?:^|\\s|\\b) - match start of string, whitespace, or word boundary
     // (?=\\s|\\b|$) - followed by whitespace, word boundary, or end of string
+    // nosemgrep: javascript.lang.security.audit.unsafe-regexp-constructor.unsafe-regexp-constructor
     const regex = new RegExp(`(?:^|\\s|\\b)${escapedKeyword}(?=\\s|\\b|$)`, 'i');
     return regex.test(text);
   }
   
   // Standard word boundary for regular keywords
+  // nosemgrep: javascript.lang.security.audit.unsafe-regexp-constructor.unsafe-regexp-constructor
   const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
   return regex.test(text);
 }

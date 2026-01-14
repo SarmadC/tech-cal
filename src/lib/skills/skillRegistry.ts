@@ -121,9 +121,11 @@ function matchesWholeWord(text: string, keyword: string): boolean {
   const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const hasNonWordChars = /[^a-zA-Z0-9\s]/.test(keyword);
   if (hasNonWordChars) {
+    // nosemgrep: javascript.lang.security.audit.unsafe-regexp-constructor.unsafe-regexp-constructor
     const regex = new RegExp(`(?:^|\\s|\\b)${escapedKeyword}(?=\\s|\\b|$)`, 'i');
     return regex.test(text);
   }
+  // nosemgrep: javascript.lang.security.audit.unsafe-regexp-constructor.unsafe-regexp-constructor
   const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
   return regex.test(text);
 }

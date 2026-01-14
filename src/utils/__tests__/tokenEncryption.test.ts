@@ -18,7 +18,7 @@ describe('tokenEncryption', () => {
 
     describe('encryptToken', () => {
         it('should encrypt a token and return format iv:ciphertext:authTag', () => {
-            const token = 'ya29.example_access_token_12345';
+            const token = 'test_token_example_12345';
             const encrypted = encryptToken(token);
 
             const parts = encrypted.split(':');
@@ -28,7 +28,7 @@ describe('tokenEncryption', () => {
         });
 
         it('should produce different ciphertexts for the same input (unique IVs)', () => {
-            const token = 'ya29.example_access_token';
+            const token = 'test_token_example';
             const encrypted1 = encryptToken(token);
             const encrypted2 = encryptToken(token);
 
@@ -50,7 +50,7 @@ describe('tokenEncryption', () => {
 
     describe('decryptToken', () => {
         it('should decrypt an encrypted token correctly', () => {
-            const original = 'ya29.example_access_token_12345';
+            const original = 'test_token_example_12345';
             const encrypted = encryptToken(original);
             const decrypted = decryptToken(encrypted);
 

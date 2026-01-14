@@ -221,7 +221,7 @@ export default function UpdateReviewClient({ queueId, initialData }: UpdateRevie
             // Redirect to queue list after a short delay
             setTimeout(() => {
                 const queueUrl = '/admin/ingestion/update-queue';
-                window.location.href = queueUrl;
+                router.push(queueUrl);
             }, 1500);
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to delete event' });

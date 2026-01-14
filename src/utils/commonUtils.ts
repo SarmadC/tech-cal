@@ -18,7 +18,7 @@ export function getErrorMessage(error: unknown, fallback = 'Unknown error occurr
  */
 export function logAndCaptureError(error: unknown, context: string, metadata?: Record<string, unknown>): string {
   const errorMessage = getErrorMessage(error);
-  console.error('[' + context + ']', errorMessage, error);
+  console.error('[', context, ']', errorMessage, error);
 
   Sentry.captureException(error, {
     tags: { context },

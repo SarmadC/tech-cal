@@ -30,7 +30,7 @@ const ErrorFallback: React.FC<{
 }> = ({ level, error, name, retryCount, onReset }) => {
     const canRetry = retryCount < 2; // Max 2 retries
     const showDetails = process.env.NODE_ENV === 'development';
-    
+
     if (level === 'page') {
         return (
             <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'hsl(var(--background))' }}>
@@ -48,8 +48,8 @@ const ErrorFallback: React.FC<{
                                     Try Again
                                 </Button>
                             )}
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={() => window.location.href = '/'}
                                 className="w-full"
                             >
@@ -71,7 +71,7 @@ const ErrorFallback: React.FC<{
             </div>
         );
     }
-    
+
     if (level === 'section') {
         return (
             <div className="bg-card border rounded-lg p-4 text-center">
@@ -88,7 +88,7 @@ const ErrorFallback: React.FC<{
             </div>
         );
     }
-    
+
     // Component level (default)
     return (
         <div className="border border-orange-200 bg-orange-50 rounded p-3 text-center">
@@ -97,7 +97,7 @@ const ErrorFallback: React.FC<{
                 {name || 'Component'} error
             </p>
             {canRetry && (
-                <button 
+                <button
                     onClick={onReset}
                     className="text-xs text-orange-600 underline hover:text-orange-800"
                 >
@@ -116,7 +116,7 @@ export class ErrorBoundary extends Component<Props, State> {
     };
 
     public static getDerivedStateFromError(error: Error): State {
-        return { 
+        return {
             hasError: true,
             error,
             retryCount: 0,
@@ -125,20 +125,20 @@ export class ErrorBoundary extends Component<Props, State> {
 
     public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
         const { name, onError } = this.props;
-        
+
         // Ignore scrollTop errors - these are often harmless and related to DOM timing
         if (error.message?.includes('scrollTop') || error.message?.includes('scroll')) {
             const boundaryName = name ? ':' + name : '';
-            console.warn('[ErrorBoundary' + boundaryName + '] Ignoring scroll-related error:', error.message);
+            console.warn('[ErrorBoundary]', boundaryName, 'Ignoring scroll-related error:', error.message);
             // Reset error state silently for scroll errors
             this.setState({ hasError: false, error: null, retryCount: 0 });
             return;
         }
-        
+
         // Log error
         const boundaryName = name ? ':' + name : '';
-        console.error('[ErrorBoundary' + boundaryName + ']', error, errorInfo);
-        
+        console.error('[ErrorBoundary]', boundaryName, error, errorInfo);
+
         // Report to Sentry
         Sentry.withScope((scope) => {
             if (name) scope.setTag('component', name);
@@ -169,7 +169,7 @@ export class ErrorBoundary extends Component<Props, State> {
             }
 
             return (
-                <ErrorFallback 
+                <ErrorFallback
                     level={level}
                     error={this.state.error}
                     name={name}

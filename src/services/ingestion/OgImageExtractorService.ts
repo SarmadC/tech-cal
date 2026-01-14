@@ -22,7 +22,7 @@ export class OgImageExtractorService {
             const domain = urlObj.hostname.replace('www.', '');
 
             if (OG_IMAGE_CONFIG.SKIP_DOMAINS.some(skipDomain => domain.includes(skipDomain))) {
-                console.debug(`Skipping og:image extraction for platform domain: ${domain}`);
+                console.debug('Skipping og:image extraction for platform domain:', domain);
                 return null;
             }
         } catch {
@@ -44,7 +44,7 @@ export class OgImageExtractorService {
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                console.debug(`Failed to fetch ${url}: ${response.status}`);
+                console.debug('Failed to fetch:', url, response.status);
                 return null;
             }
 
@@ -52,9 +52,9 @@ export class OgImageExtractorService {
             return this.extractOgImageFromHtml(html, url);
         } catch (error) {
             if (error instanceof Error && error.name === 'AbortError') {
-                console.debug(`Timeout fetching og:image from ${url}`);
+                console.debug('Timeout fetching og:image from', url);
             } else {
-                console.debug(`Error fetching og:image from ${url}:`, error);
+                console.debug('Error fetching og:image from:', url, error);
             }
             return null;
         }

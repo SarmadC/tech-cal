@@ -78,7 +78,7 @@ export class PlaywrightScraper {
             if (!useFetchFallback) {
                 throw error;
             }
-            console.warn(`Playwright scrape failed for ${url}, falling back to fetch:`, error instanceof Error ? error.message : 'Unknown error');
+            console.warn('Playwright scrape failed for', url, 'falling back to fetch:', error instanceof Error ? error.message : 'Unknown error');
             const fallback = await this.fetchFallback(url, options.fetchTimeoutMs ?? timeoutMs, userAgent);
             return { ...fallback, usedPlaywright: false };
         } finally {

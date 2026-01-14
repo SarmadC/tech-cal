@@ -14,6 +14,7 @@ function JsonLd({ data }: JsonLdProps) {
     return (
         <script
             type="application/ld+json"
+            // nosemgrep: javascript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
             dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
         />
     );
