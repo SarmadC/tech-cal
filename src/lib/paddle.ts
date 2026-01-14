@@ -211,6 +211,25 @@ export async function openCheckout(options: {
   });
 }
 
+// Production domain approved by Paddle (without www)
+const PADDLE_APPROVED_DOMAIN = 'https://kure-cal.com';
+
+/**
+ * Get the base URL for checkout redirects.
+ * Uses the Paddle-approved domain in production, or localhost in development.
+ */
+function getCheckoutBaseUrl(): string {
+  if (typeof window === 'undefined') return PADDLE_APPROVED_DOMAIN;
+  
+  // Use localhost in development
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return window.location.origin;
+  }
+  
+  // Use Paddle-approved domain in production
+  return PADDLE_APPROVED_DOMAIN;
+}
+
 /**
  * Open checkout for Pro Monthly subscription
  */
@@ -222,12 +241,14 @@ export async function openProMonthlyCheckout(
     throw new Error('Pro monthly price not configured');
   }
 
+  const baseUrl = getCheckoutBaseUrl();
+  
   return openCheckout({
     priceId: PADDLE_PRICES.pro_monthly,
     userId,
     userEmail,
-    successUrl: `${window.location.origin}/billing/success`,
-    cancelUrl: `${window.location.origin}/pricing`,
+    successUrl: `${baseUrl}/billing/success`,
+    cancelUrl: `${baseUrl}/pricing`,
   });
 }
 
@@ -242,12 +263,14 @@ export async function openProAnnualCheckout(
     throw new Error('Pro annual price not configured');
   }
 
+  const baseUrl = getCheckoutBaseUrl();
+
   return openCheckout({
     priceId: PADDLE_PRICES.pro_annual,
     userId,
     userEmail,
-    successUrl: `${window.location.origin}/billing/success`,
-    cancelUrl: `${window.location.origin}/pricing`,
+    successUrl: `${baseUrl}/billing/success`,
+    cancelUrl: `${baseUrl}/pricing`,
   });
 }
 
