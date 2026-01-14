@@ -196,13 +196,24 @@ export async function openCheckout(options: {
     throw new Error('Paddle not initialized');
   }
 
+  // Build settings - only include URLs if explicitly needed
+  // Paddle will use the default payment link for redirects
+  const settings: {
+    displayMode: 'overlay' | 'inline';
+    theme: 'light' | 'dark';
+    successUrl?: string;
+  } = {
+    displayMode: 'overlay',
+    theme: options.theme || 'light',
+  };
+
+  // Only add successUrl if provided - let Paddle handle cancel behavior
+  if (options.successUrl) {
+    settings.successUrl = options.successUrl;
+  }
+
   const checkoutOptions = {
-    settings: {
-      displayMode: 'overlay' as const,
-      theme: options.theme || 'light',
-      successUrl: options.successUrl,
-      cancelUrl: options.cancelUrl,
-    },
+    settings,
     items: [{ priceId: options.priceId, quantity: 1 }],
     customer: options.userEmail ? { email: options.userEmail } : undefined,
     customData: {
@@ -212,8 +223,7 @@ export async function openCheckout(options: {
 
   // Debug log
   console.log('Paddle checkout options:', {
-    successUrl: checkoutOptions.settings.successUrl,
-    cancelUrl: checkoutOptions.settings.cancelUrl,
+    settings: checkoutOptions.settings,
     priceId: options.priceId,
     userEmail: options.userEmail,
   });
@@ -251,14 +261,11 @@ export async function openProMonthlyCheckout(
     throw new Error('Pro monthly price not configured');
   }
 
-  const baseUrl = getCheckoutBaseUrl();
-  
+  // Don't pass URLs - let Paddle use the default payment link for redirects
   return openCheckout({
     priceId: PADDLE_PRICES.pro_monthly,
     userId,
     userEmail,
-    successUrl: `${baseUrl}/billing/success`,
-    cancelUrl: `${baseUrl}/pricing`,
   });
 }
 
@@ -273,14 +280,11 @@ export async function openProAnnualCheckout(
     throw new Error('Pro annual price not configured');
   }
 
-  const baseUrl = getCheckoutBaseUrl();
-
+  // Don't pass URLs - let Paddle use the default payment link for redirects
   return openCheckout({
     priceId: PADDLE_PRICES.pro_annual,
     userId,
     userEmail,
-    successUrl: `${baseUrl}/billing/success`,
-    cancelUrl: `${baseUrl}/pricing`,
   });
 }
 
