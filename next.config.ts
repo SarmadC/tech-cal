@@ -34,13 +34,13 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: `
         default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.sentry-cdn.com https://cdn.paddle.com;
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
-        style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.sentry-cdn.com https://cdn.paddle.com https://public.profitwell.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
+        style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.paddle.com;
         img-src 'self' data: blob: https:;
         font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:;
-        connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.bigdatacloud.net https://buy.paddle.com https://sandbox-buy.paddle.com;
-        frame-src 'self' https://buy.paddle.com https://sandbox-buy.paddle.com;
+        connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.bigdatacloud.net https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com;
+        frame-src 'self' https://buy.paddle.com https://sandbox-buy.paddle.com https://*.paddle.com;
         frame-ancestors 'none';
         base-uri 'self';
         form-action 'self';
