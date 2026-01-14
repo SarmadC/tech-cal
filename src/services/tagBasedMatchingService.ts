@@ -282,7 +282,7 @@ export class TagBasedMatchingService {
       const endBoundary = /\w$/.test(term) ? '\\b' : '';
       
       // Flag 'i' for case-insensitive
-      // nosemgrep: javascript.lang.security.audit.unsafe-regexp-constructor.unsafe-regexp-constructor
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
       const regex = new RegExp(`${startBoundary}${escapedTerm}${endBoundary}`, 'i');
       
       if (regex.test(fullText)) {

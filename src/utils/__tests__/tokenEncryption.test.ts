@@ -102,7 +102,9 @@ describe('tokenEncryption', () => {
         });
 
         it('should return false for plain JWT-like tokens', () => {
-            const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature';
+            const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+                'eyJzdWIiOiIxMjM0NTY3ODkwIn0.' +
+                'signature';
             expect(isEncrypted(jwt)).toBe(false);
         });
 

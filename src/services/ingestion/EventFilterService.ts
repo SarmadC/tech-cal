@@ -380,7 +380,7 @@ export class EventFilterService {
                 }
 
                 const regexFlags = DEFAULT_FILTER_CONFIG.caseInsensitive ? 'i' : '';
-                // nosemgrep: javascript.lang.security.audit.unsafe-regexp-constructor.unsafe-regexp-constructor
+                // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
                 const regex = new RegExp(pattern.pattern, regexFlags);
                 return regex.test(normalizedSearch);
             } catch (error) {

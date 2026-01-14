@@ -8,6 +8,14 @@ interface JsonLdProps {
 }
 
 /**
+ * Safely stringify JSON-LD data preventing XSS attacks
+ * Escapes < and > characters to prevent script injection
+ */
+const safeJsonLdStringify = (data: Record<string, unknown>): string => {
+    return JSON.stringify(data).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+};
+
+/**
  * Base component for rendering JSON-LD structured data
  */
 function JsonLd({ data }: JsonLdProps) {
@@ -15,7 +23,7 @@ function JsonLd({ data }: JsonLdProps) {
         <script
             type="application/ld+json"
             // nosemgrep: javascript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+            dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(data) }}
         />
     );
 }
