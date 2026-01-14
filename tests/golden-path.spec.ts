@@ -20,7 +20,7 @@ async function ensureDiscoverReady(page: Page) {
 }
 
 test.describe('Golden Path', () => {
-  test('user can sign in, reach discovery, and navigate core views', async ({ page }) => {
+  test('user can sign in, reach discovery, and navigate core views', async ({ page, isMobile }) => {
     await test.step('Open login page', async () => {
       await page.goto('http://localhost:3000/login');
       await page.waitForLoadState('networkidle');
@@ -48,9 +48,17 @@ test.describe('Golden Path', () => {
       // Wait for calendar content to load (wait for "Loading events..." to disappear)
       await page.getByText('Loading events...').waitFor({ state: 'hidden', timeout: 15000 }).catch(() => null);
 
-      // Verify calendar is visible by checking for calendar grid content (month view button and events)
-      await expect(page.getByRole('button', { name: 'Next month' }).or(page.getByRole('button', { name: 'Next period' }))).toBeVisible({ timeout: 10000 });
-      await expect(page.getByText(/Today/)).toBeVisible({ timeout: 10000 });
+      // Verify calendar is visible by checking for calendar grid content
+      if (isMobile) {
+        // Mobile view verification
+        // Check for month name in the toolbar or header
+        const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+        await expect(page.getByText(currentMonth).first()).toBeVisible({ timeout: 10000 });
+      } else {
+        // Desktop view verification
+        await expect(page.getByRole('button', { name: 'Next month' }).or(page.getByRole('button', { name: 'Next period' }))).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText(/Today/)).toBeVisible({ timeout: 10000 });
+      }
     });
 
     await test.step('Return to discover feed', async () => {

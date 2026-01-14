@@ -21,28 +21,32 @@ vi.mock('@/contexts/SnackbarContext', () => ({
     })
 }));
 
-vi.mock('@/contexts/SubscriptionContext', () => ({
-    SubscriptionProvider: ({ children }: { children: unknown }) => children,
-    useSubscriptionContext: () => ({
-        subscription: null,
-        isLoading: false,
-        error: null,
-        isPro: false,
-        isTrialing: false,
-        isFree: true,
-        trialDaysLeft: null,
-        canAccessFeature: () => true, // Allow access by default for tests? Or false? Let's say basic access
-        bookmarkLimit: 10,
-        historyDays: 30,
-        maxRecommendations: 5,
-        refreshSubscription: vi.fn(),
-        startTrial: vi.fn(),
-        openUpgrade: vi.fn()
-    }),
-    useCanAccessFeature: () => true,
-    useTrialDaysLeft: () => null,
-    useIsPro: () => false
-}));
+vi.mock('@/contexts', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@/contexts')>();
+    return {
+        ...actual,
+        SubscriptionProvider: ({ children }: { children: unknown }) => children,
+        useSubscriptionContext: () => ({
+            subscription: null,
+            isLoading: false,
+            error: null,
+            isPro: false,
+            isTrialing: false,
+            isFree: true,
+            trialDaysLeft: null,
+            canAccessFeature: () => true,
+            bookmarkLimit: 10,
+            historyDays: 30,
+            maxRecommendations: 5,
+            refreshSubscription: vi.fn(),
+            startTrial: vi.fn(),
+            openUpgrade: vi.fn()
+        }),
+        useCanAccessFeature: () => true,
+        useTrialDaysLeft: () => null,
+        useIsPro: () => false
+    };
+});
 
 // Create a mock AppEvent object for our tests to use
 const mockEvent: Event = {
