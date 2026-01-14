@@ -368,7 +368,7 @@ export async function POST(request: NextRequest) {
             if (err instanceof Error) {
                 const errMsg = err.message.toLowerCase();
                 // Log the full error for debugging (server-side only)
-                console.error(`Failed to fetch URL ${url}:`, {
+                console.error('Failed to fetch URL:', url, {
                     message: err.message,
                     name: err.name,
                     stack: err.stack,
