@@ -196,9 +196,9 @@ export async function openCheckout(options: {
     throw new Error('Paddle not initialized');
   }
 
-  window.Paddle.Checkout.open({
+  const checkoutOptions = {
     settings: {
-      displayMode: 'overlay',
+      displayMode: 'overlay' as const,
       theme: options.theme || 'light',
       successUrl: options.successUrl,
       cancelUrl: options.cancelUrl,
@@ -208,7 +208,17 @@ export async function openCheckout(options: {
     customData: {
       user_id: options.userId, // Passed to webhook for linking subscription
     },
+  };
+
+  // Debug log
+  console.log('Paddle checkout options:', {
+    successUrl: checkoutOptions.settings.successUrl,
+    cancelUrl: checkoutOptions.settings.cancelUrl,
+    priceId: options.priceId,
+    userEmail: options.userEmail,
   });
+
+  window.Paddle.Checkout.open(checkoutOptions);
 }
 
 // Production domain approved by Paddle (without www)
