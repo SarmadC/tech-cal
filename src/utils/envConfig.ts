@@ -32,7 +32,7 @@ interface EnvConfig {
   // External services
   services: {
     sentry: {
-      dsn: string;
+      dsn?: string;
       authToken?: string;
     };
     redis: {
@@ -80,7 +80,7 @@ class EnvConfigManager {
       
       services: {
         sentry: {
-          dsn: this.getRequiredEnv('NEXT_PUBLIC_SENTRY_DSN'),
+          dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
           authToken: process.env.SENTRY_AUTH_TOKEN,
         },
         redis: {
@@ -142,7 +142,7 @@ class EnvConfigManager {
     try {
       this.getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL');
       this.getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-      this.getRequiredEnv('NEXT_PUBLIC_SENTRY_DSN');
+      // NEXT_PUBLIC_SENTRY_DSN is optional - Sentry works without it
     } catch (error) {
       if (error instanceof Error) {
         const match = error.message.match(/Required environment variable (\w+) is not set/);
@@ -183,10 +183,10 @@ class EnvConfigManager {
     const requiredVars = [
       'NEXT_PUBLIC_SUPABASE_URL',
       'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-      'NEXT_PUBLIC_SENTRY_DSN',
     ];
     
     const optionalVars = [
+      'NEXT_PUBLIC_SENTRY_DSN',
       'SUPABASE_SERVICE_ROLE_KEY',
       'SENTRY_AUTH_TOKEN',
       'UPSTASH_REDIS_REST_URL',
