@@ -1,195 +1,225 @@
 'use client';
 
 import { useMemo, useState, useEffect, type JSX } from 'react';
-import { X, Sparkle, Lock, RocketLaunch, Hourglass, CalendarCheck, BookmarkSimple, WarningCircle } from '@phosphor-icons/react';
+import { X, Check, ArrowRight, Command } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 type UpgradeVariant = 'trialStart' | 'trialExpired' | 'featureLocked' | 'upgradePrompt';
 
 interface UpgradeModalProps {
-  open: boolean;
-  onClose: () => void;
-  variant: UpgradeVariant;
-  featureName?: string;
-  onStartTrial?: () => Promise<void>;
-  onUpgrade?: () => Promise<void>;
-  ctaLabel?: string;
-  description?: string;
+    open: boolean;
+    onClose: () => void;
+    variant: UpgradeVariant;
+    featureName?: string;
+    onStartTrial?: () => Promise<void>;
+    onUpgrade?: () => Promise<void>;
+    ctaLabel?: string;
+    description?: string;
 }
 
 interface VariantContent {
-  title: string;
-  description: string;
-  primaryLabel: string;
-  icon: JSX.Element;
+    title: string;
+    description: string;
+    primaryLabel: string;
 }
 
 /**
- * Generic upgrade modal with preset variants.
- * - trialStart: Emphasize starting the free trial.
- * - trialExpired: Trial ended, prompt upgrade.
- * - featureLocked: Contextual lock for a specific feature.
- * - upgradePrompt: General upgrade nudge.
+ * Redesigned UpgradeModal with "Spotlight" aesthetic (Linear x Notion).
  */
 export function UpgradeModal({
-  open,
-  onClose,
-  variant,
-  featureName,
-  onStartTrial,
-  onUpgrade,
-  ctaLabel,
-  description,
+    open,
+    onClose,
+    variant,
+    featureName,
+    onStartTrial,
+    onUpgrade,
+    ctaLabel,
+    description,
 }: UpgradeModalProps) {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-  // Clear error when modal closes
-  useEffect(() => {
-    if (!open) {
-      setError(null);
-    }
-  }, [open]);
+    // Clear error when modal closes
+    useEffect(() => {
+        if (!open) {
+            setError(null);
+        }
+    }, [open]);
 
-  const content = useMemo<VariantContent>(() => {
-    switch (variant) {
-      case 'trialStart':
-        return {
-          title: 'Start your 7-day free trial',
-          description:
-            description ??
-            'Unlock calendar sync, full recommendations, and unlimited history with a one-click trial.',
-          primaryLabel: ctaLabel ?? 'Start free trial',
-          icon: <RocketLaunch size={22} weight="fill" className="text-amber-600" />,
+    const content = useMemo<VariantContent>(() => {
+        switch (variant) {
+            case 'trialStart':
+                return {
+                    title: 'Start your 7-day free trial',
+                    description:
+                        description ??
+                        'Unlock calendar sync, full recommendations, and unlimited history.',
+                    primaryLabel: ctaLabel ?? 'Start free trial',
+                };
+            case 'trialExpired':
+                return {
+                    title: 'Your trial ended',
+                    description:
+                        description ??
+                        'Keep calendar sync and insights by upgrading to Pro.',
+                    primaryLabel: ctaLabel ?? 'Upgrade to Pro',
+                };
+            case 'featureLocked':
+                return {
+                    title: `${featureName ?? 'Pro Feature'}`,
+                    description:
+                        description ??
+                        'Unlock this feature plus calendar sync and unlimited history.',
+                    primaryLabel: ctaLabel ?? 'Upgrade to Pro',
+                };
+            default:
+                return {
+                    title: 'Upgrade to Pro',
+                    description:
+                        description ??
+                        'Get calendar sync, full recommendations, and unlimited history.',
+                    primaryLabel: ctaLabel ?? 'Upgrade now',
+                };
+        }
+    }, [variant, featureName, ctaLabel, description]);
+
+    const handlePrimary = async () => {
+        if (isProcessing) return;
+        setIsProcessing(true);
+        setError(null);
+        try {
+            if (variant === 'trialStart' && onStartTrial) {
+                await onStartTrial();
+            } else if (onUpgrade) {
+                await onUpgrade();
+            }
+        } catch (err) {
+            console.error('Upgrade action failed', err);
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : 'Something went wrong. Please try again.'
+            );
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Keyboard shortcut `Enter` to confirm
+    useEffect(() => {
+        if (!open) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handlePrimary();
+            }
         };
-      case 'trialExpired':
-        return {
-          title: 'Your trial ended',
-          description:
-            description ??
-            'Keep calendar sync, full recommendations, and career insights by upgrading to Pro.',
-          primaryLabel: ctaLabel ?? 'Upgrade to Pro',
-          icon: <Hourglass size={22} weight="fill" className="text-amber-600" />,
-        };
-      case 'featureLocked':
-        return {
-          title: `${featureName ?? 'This feature'} is for Pro`,
-          description:
-            description ??
-            'Upgrade to Pro to unlock this feature plus calendar sync, full recommendations, and unlimited history.',
-          primaryLabel: ctaLabel ?? 'Upgrade to Pro',
-          icon: <Lock size={22} weight="fill" className="text-amber-600" />,
-        };
-      default:
-        return {
-          title: 'Upgrade to Pro',
-          description:
-            description ??
-            'Get calendar sync, full recommendations, and unlimited history with Pro.',
-          primaryLabel: ctaLabel ?? 'Upgrade now',
-          icon: <Sparkle size={22} weight="fill" className="text-amber-600" />,
-        };
-    }
-  }, [variant, featureName, ctaLabel, description]);
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, handlePrimary]); // Added handlePrimary to deps
 
-  if (!open) return null;
+    if (!open) return null;
 
-  const handlePrimary = async () => {
-    if (isProcessing) return;
-    setIsProcessing(true);
-    setError(null);
-    try {
-      if (variant === 'trialStart' && onStartTrial) {
-        await onStartTrial();
-      } else if (onUpgrade) {
-        await onUpgrade();
-      }
-    } catch (err) {
-      console.error('Upgrade action failed', err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Something went wrong. Please try again or contact support.'
-      );
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+    const features = [
+        'Calendar sync',
+        'Full recommendations',
+        'Unlimited bookmarks',
+        'Priority support',
+    ];
 
-  const featurePills = [
-    { icon: <CalendarCheck size={14} weight="fill" />, label: 'Calendar sync' },
-    { icon: <Sparkle size={14} weight="fill" />, label: 'Full recommendations' },
-    { icon: <BookmarkSimple size={14} weight="fill" />, label: 'Unlimited bookmarks' },
-  ];
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="upgrade-modal-title"
-    >
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 text-foreground shadow-2xl">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground shadow hover:bg-muted/80"
-          aria-label="Close upgrade dialog"
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            onClick={onClose} // Close on click outside
         >
-          <X size={18} weight="bold" />
-        </button>
-
-        <div className="flex items-start gap-3">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700 ring-8 ring-amber-100/40 dark:bg-amber-900/50 dark:text-amber-100 dark:ring-amber-900/30">
-            {content.icon}
-          </span>
-          <div>
-            <h2 id="upgrade-modal-title" className="text-lg font-semibold">
-              {content.title}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">{content.description}</p>
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {featurePills.map((item) => (
-            <span
-              key={item.label}
-              className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"
+            <div
+                onClick={(e) => e.stopPropagation()} // Prevent close when clicking inside
+                className={cn(
+                    "relative w-full max-w-[440px] overflow-hidden rounded-xl border border-white/10 p-0 shadow-2xl",
+                    "bg-[#0E0E10]" // Deepest grey background
+                )}
             >
-              {item.icon}
-              {item.label}
-            </span>
-          ))}
-        </div>
+                {/* Spotlight Effect */}
+                <div
+                    className="pointer-events-none absolute inset-x-0 top-0 h-[300px] opacity-40 mix-blend-screen"
+                    style={{
+                        background: 'radial-gradient(circle at top, rgba(120, 119, 198, 0.4), transparent 60%)'
+                    }}
+                />
 
-        {error && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200">
-            <WarningCircle size={18} weight="fill" className="mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+                {/* Close Button Removed */}
 
-        <div className="mt-6 flex justify-end gap-3">
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Maybe later
-          </Button>
-          <Button
-            onClick={handlePrimary}
-            className="bg-amber-600 text-white hover:bg-amber-600/90"
-            disabled={isProcessing}
-          >
-            {isProcessing ? 'Opening...' : content.primaryLabel}
-          </Button>
+                <div className="relative z-10 p-8">
+
+                    {/* Header */}
+                    <div className="mb-6">
+                        <h2 className="text-xl font-semibold tracking-tight text-white">
+                            {content.title}
+                        </h2>
+                        <p className="mt-2 text-[15px] leading-relaxed text-zinc-400">
+                            {content.description}
+                        </p>
+                    </div>
+
+                    {/* Feature List (Notion Style) */}
+                    <ul className="mb-8 space-y-2.5 pl-1">
+                        {features.map((feature) => (
+                            <li key={feature} className="flex items-center gap-3 text-sm font-medium text-zinc-300">
+                                <Check size={14} weight="bold" className="text-zinc-500" />
+                                {feature}
+                            </li>
+                        ))}
+                    </ul>
+
+                    {/* Error Message */}
+                    {error && (
+                        <div className="mb-4 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                            {error}
+                        </div>
+                    )}
+
+                    {/* Actions - Command Stack Layout */}
+                    <div className="flex flex-col gap-3 pt-2">
+                        <Button
+                            onClick={handlePrimary}
+                            className={cn(
+                                "group relative flex w-full items-center justify-center gap-2 rounded-lg py-2.5 font-medium transition-all", // Full width, slightly taller
+                                "bg-white text-black hover:bg-zinc-200 hover:opacity-100", // Linear style button
+                                isProcessing && "opacity-70 cursor-not-allowed"
+                            )}
+                            disabled={isProcessing}
+                        >
+                            <span>{isProcessing ? 'Processing...' : content.primaryLabel}</span>
+
+                            {/* Keyboard Hint Visual - Only show if not processing */}
+                            {!isProcessing && (
+                                <div className="hidden items-center gap-0.5 opacity-40 sm:flex">
+                                    <span className="sr-only">Press Enter</span>
+                                </div>
+                            )}
+                            {/* Replaced graphic hint with just text/icon or separate element if strictly needed, 
+                     but 'Enter' hint inside button is common in Linear */}
+                            {!isProcessing && (
+                                <span className="absolute right-3 hidden rounded border border-black/10 bg-black/5 px-1.5 py-0.5 text-[10px] font-bold text-black/60 sm:inline-block">
+                                    ⏎
+                                </span>
+                            )}
+                        </Button>
+
+                        <button
+                            onClick={onClose}
+                            className="w-full text-center text-xs font-medium text-zinc-500/80 transition-colors hover:text-zinc-300"
+                        >
+                            Maybe later
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 export default UpgradeModal;
