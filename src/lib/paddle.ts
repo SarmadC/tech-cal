@@ -129,13 +129,24 @@ export async function initPaddle(
     if (window.Paddle) {
       const environment = PADDLE_ENVIRONMENT || 'sandbox';
 
-      // Environment is inferred from the token prefix (test_ or live_)
-      // window.Paddle.Environment?.set(environment); // Removed as it's not part of V2 API
+      // Set environment if sandbox, otherwise defaults to production
+      if (environment === 'sandbox') {
+        window.Paddle.Environment.set('sandbox');
+      }
 
+      // Initialize Paddle
       window.Paddle.Initialize({
         token: PADDLE_CLIENT_TOKEN,
         eventCallback: eventCallback || defaultEventCallback,
       });
+
+            // Debug log
+      console.log('Paddle initialized:', {
+        environment,
+        token: PADDLE_CLIENT_TOKEN.substring(0, 8) + '...',
+        version: 'v2'
+      });
+      
       paddleInitialized = true;
     }
   } catch (error) {
