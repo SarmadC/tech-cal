@@ -56,8 +56,8 @@ class EnvConfigManager {
   private loadConfig(): EnvConfig {
     return {
       supabase: {
-        url: this.getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL'),
-        anonKey: this.getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+        url: this.ensureValue(process.env.NEXT_PUBLIC_SUPABASE_URL, 'NEXT_PUBLIC_SUPABASE_URL'),
+        anonKey: this.ensureValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, 'NEXT_PUBLIC_SUPABASE_ANON_KEY'),
         serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
       },
       
@@ -95,8 +95,7 @@ class EnvConfigManager {
     };
   }
 
-  private getRequiredEnv(key: string): string {
-    const value = process.env[key];
+  private ensureValue(value: string | undefined, key: string): string {
     if (!value) {
       throw new Error(`Required environment variable ${key} is not set`);
     }
@@ -140,8 +139,8 @@ class EnvConfigManager {
     const missing: string[] = [];
     
     try {
-      this.getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL');
-      this.getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+      this.ensureValue(process.env.NEXT_PUBLIC_SUPABASE_URL, 'NEXT_PUBLIC_SUPABASE_URL');
+      this.ensureValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, 'NEXT_PUBLIC_SUPABASE_ANON_KEY');
       // NEXT_PUBLIC_SENTRY_DSN is optional - Sentry works without it
     } catch (error) {
       if (error instanceof Error) {
