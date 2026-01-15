@@ -94,9 +94,19 @@ export function hasFeatureAccess(
 ): boolean {
   if (!subscription) return false;
 
-  // Check if actively subscribed or trialing
-  const activeStatuses: SubscriptionStatus[] = ['active', 'trialing'];
-  if (!activeStatuses.includes(subscription.status)) return false;
+  // Check if actively subscribed or trialing or past_due
+  const activeStatuses: SubscriptionStatus[] = ['active', 'trialing', 'past_due'];
+  const isActive = activeStatuses.includes(subscription.status);
+
+  // Allow 'canceled' status if within billing period (graceful cancellation)
+  let isCanceledButActive = false;
+  if (subscription.status === 'canceled' && subscription.current_period_end) {
+    if (new Date(subscription.current_period_end).getTime() > Date.now()) {
+        isCanceledButActive = true;
+    }
+  }
+
+  if (!isActive && !isCanceledButActive) return false;
 
   // Trialing users always have full access to all features
   // This is a safety net in case entitlements weren't set correctly in the DB

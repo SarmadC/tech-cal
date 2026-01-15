@@ -31,6 +31,12 @@ export const PADDLE_PRICES = {
   pro_annual: PADDLE_ENVIRONMENT === 'sandbox'
     ? process.env.NEXT_PUBLIC_PADDLE_PRO_ANNUAL_PRICE_ID_SANDBOX
     : process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_ANNUAL || '',
+  team_monthly: PADDLE_ENVIRONMENT === 'sandbox'
+    ? process.env.NEXT_PUBLIC_PADDLE_TEAM_MONTHLY_PRICE_ID_SANDBOX
+    : process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_MONTHLY || '',
+  team_annual: PADDLE_ENVIRONMENT === 'sandbox'
+    ? process.env.NEXT_PUBLIC_PADDLE_TEAM_ANNUAL_PRICE_ID_SANDBOX
+    : process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_ANNUAL || '',
 } as const;
 
 // Paddle.js types (simplified)

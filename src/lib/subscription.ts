@@ -36,7 +36,7 @@ export async function getSubscription(): Promise<Subscription | null> {
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('[subscription] Failed to fetch subscription:', error.message);
@@ -57,7 +57,7 @@ export async function getSubscriptionByUserId(userId: string): Promise<Subscript
     .from('subscriptions')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('[subscription] Failed to fetch subscription for user:', userId, error.message);
@@ -83,9 +83,15 @@ export async function isPro(userIdOrSubscription?: string | Subscription | null)
 
   if (!subscription) return false;
 
+  const isCanceledButActive = subscription.status === 'canceled' && 
+    subscription.current_period_end && 
+    new Date(subscription.current_period_end).getTime() > Date.now();
+
   return (
-    (subscription.status === 'active' && subscription.tier === 'pro') ||
-    subscription.status === 'trialing'
+    (subscription.status === 'active' && subscription.tier !== 'free') || 
+    subscription.status === 'trialing' ||
+    subscription.status === 'past_due' ||
+    (isCanceledButActive && subscription.tier !== 'free')
   );
 }
 
@@ -125,9 +131,22 @@ export async function canAccessFeature(
 
   if (!subscription) return false;
 
-  // Check if actively subscribed or trialing
-  if (subscription.status !== 'active' && subscription.status !== 'trialing') {
+  // Check if actively subscribed or trialing or past_due (grace period)
+  const isCanceledButActive = subscription.status === 'canceled' && 
+    subscription.current_period_end && 
+    new Date(subscription.current_period_end).getTime() > Date.now();
+
+  if (subscription.status !== 'active' && 
+      subscription.status !== 'trialing' && 
+      subscription.status !== 'past_due' &&
+      !isCanceledButActive
+  ) {
     return false;
+  }
+
+  // Trialing users always have full access
+  if (subscription.status === 'trialing') {
+    return true;
   }
 
   const entitlements = subscription.entitlements as unknown as SubscriptionEntitlements;
@@ -150,7 +169,16 @@ export async function requirePro(): Promise<Subscription> {
   const subscription = await getSubscription();
 
   if (!subscription) {
-    throw new SubscriptionError('Authentication required', 401);
+    // Check if user is authenticated to distinguish between 401 and 403
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new SubscriptionError('Authentication required', 401);
+    }
+    
+    // User is authenticated but has no subscription row -> Free tier
+    throw new SubscriptionError('Upgrade to Pro required', 403);
   }
 
   const hasAccess = await isPro(subscription);
@@ -177,7 +205,16 @@ export async function requireFeature(feature: keyof SubscriptionEntitlements): P
   const subscription = await getSubscription();
 
   if (!subscription) {
-    throw new SubscriptionError('Authentication required', 401);
+    // Check if user is authenticated to distinguish between 401 and 403
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new SubscriptionError('Authentication required', 401);
+    }
+    
+     // User is authenticated but has no subscription row -> Free tier
+    throw new SubscriptionError(`Upgrade to Pro to access ${feature}`, 403);
   }
 
   const hasAccess = await canAccessFeature(feature, subscription);
@@ -196,9 +233,13 @@ export function getFeatureLimits(subscription: Subscription | null): {
   historyDays: number;
   maxRecommendations: number;
 } {
+  const isCanceledButActive = subscription?.status === 'canceled' && 
+    subscription?.current_period_end && 
+    new Date(subscription.current_period_end).getTime() > Date.now();
+
   const hasPro =
     subscription &&
-    (subscription.status === 'active' || subscription.status === 'trialing') &&
+    (subscription.status === 'active' || subscription.status === 'trialing' || subscription.status === 'past_due' || isCanceledButActive) &&
     subscription.tier !== 'free';
 
   return {

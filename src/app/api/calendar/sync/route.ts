@@ -11,6 +11,7 @@ import { createClient } from '@/utils/supabase/server';
 import { CalendarSyncService } from '@/services/calendarSyncService';
 import * as Sentry from '@sentry/nextjs';
 import { getErrorMessage } from '@/utils/errorHandling';
+import { requireFeature } from '@/lib/subscription';
 
 export async function POST(request: NextRequest) {
     try {
@@ -35,6 +36,9 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === 'sync') {
+            // Require calendar_sync entitlement for syncing
+            await requireFeature('calendar_sync');
+
             // Sync event to calendar
             const result = await CalendarSyncService.syncTrackedEvent(
                 user.id,
@@ -107,6 +111,15 @@ export async function POST(request: NextRequest) {
 
     } catch (error: unknown) {
         console.error('Error syncing calendar event:', error);
+
+        // Handle subscription errors explicitly
+        if (error instanceof Error && error.name === 'SubscriptionError') {
+             // @ts-ignore - SubscriptionError has statusCode
+             const status = (error as any).statusCode || 403;
+             return NextResponse.json({
+                error: error.message
+            }, { status });
+        }
         
         Sentry.captureException(error, {
             tags: { api: 'calendar_sync' },

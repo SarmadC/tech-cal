@@ -123,7 +123,7 @@ export function useSubscription(): UseSubscriptionReturn {
         .select('*')
         .eq('user_id', user.id)
         .abortSignal(abortControllerRef.current.signal)
-        .single();
+        .maybeSingle();
 
       // Don't update state if component unmounted or request was aborted
       if (!isMounted.current) return;
@@ -224,7 +224,11 @@ export function useSubscription(): UseSubscriptionReturn {
   }, [loadSubscription]);
 
   // Computed values
-  const isPro = subscription?.status === 'active' && subscription?.tier === 'pro';
+  const isCanceledButActive = subscription?.status === 'canceled' && 
+   subscription?.current_period_end && 
+   new Date(subscription.current_period_end).getTime() > Date.now();
+
+  const isPro = ((subscription?.status === 'active' || subscription?.status === 'past_due' || isCanceledButActive) && subscription?.tier !== 'free');
   const isTrialing = subscription?.status === 'trialing';
   const trialDaysLeft = getTrialDaysLeft(subscription);
 
@@ -236,15 +240,15 @@ export function useSubscription(): UseSubscriptionReturn {
   );
 
   // Feature limits based on tier
-  const bookmarkLimit = isPro || isTrialing
+  const bookmarkLimit = isPro || isTrialing || subscription?.status === 'past_due' || isCanceledButActive
     ? Infinity
     : FREE_TIER_LIMITS.maxBookmarks;
 
-  const historyDays = isPro || isTrialing
+  const historyDays = isPro || isTrialing || subscription?.status === 'past_due' || isCanceledButActive
     ? Infinity
     : FREE_TIER_LIMITS.historyDays;
 
-  const maxRecommendations = isPro || isTrialing
+  const maxRecommendations = isPro || isTrialing || subscription?.status === 'past_due' || isCanceledButActive
     ? Infinity
     : FREE_TIER_LIMITS.maxRecommendations;
 
@@ -286,5 +290,10 @@ export function clearAllSubscriptionCache(): void {
  */
 export function isSubscriptionActive(subscription: Subscription | null): boolean {
   if (!subscription) return false;
-  return subscription.status === 'active' || subscription.status === 'trialing';
+  
+  const isCanceledButActive = subscription.status === 'canceled' && 
+    subscription.current_period_end && 
+    new Date(subscription.current_period_end).getTime() > Date.now();
+
+  return subscription.status === 'active' || subscription.status === 'trialing' || subscription.status === 'past_due' || !!isCanceledButActive;
 }

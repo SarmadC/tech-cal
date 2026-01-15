@@ -34,12 +34,17 @@ export async function POST(request: NextRequest) {
         // Basic entitlement check for calendar sync (Pro or trialing)
         const { data: subscription } = await supabase
             .from('subscriptions')
-            .select('status,tier')
+            .select('status,tier,current_period_end')
             .eq('user_id', user.id)
             .maybeSingle();
 
         const activeStatuses: SubscriptionStatus[] = ['active', 'trialing', 'past_due'];
-        const canSync = !!subscription && activeStatuses.includes(subscription.status) && subscription.tier === 'pro';
+        
+        const isCanceledButActive = subscription?.status === 'canceled' && 
+            subscription?.current_period_end && 
+            new Date(subscription.current_period_end).getTime() > Date.now();
+
+        const canSync = !!subscription && (activeStatuses.includes(subscription.status) || isCanceledButActive) && subscription.tier !== 'free';
 
         if (!canSync) {
             return NextResponse.json(
