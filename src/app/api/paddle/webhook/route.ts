@@ -252,9 +252,14 @@ function mapPaddleStatus(paddleStatus: string): SubscriptionStatus {
 }
 
 /**
- * Determine tier based on price ID
+ * Determine tier based on price ID and status
+ * Trialing users always get pro tier regardless of price ID
  */
-function determineTier(priceId: string | undefined): SubscriptionTier {
+function determineTier(priceId: string | undefined, status?: string): SubscriptionTier {
+  // Trialing users always get pro tier (trials may not have priceId yet)
+  if (status === 'trialing') {
+    return 'pro';
+  }
   // For now, any paid subscription is 'pro'
   // Team tier will be added later with different price IDs
   if (priceId) {
@@ -285,7 +290,7 @@ async function handleSubscriptionCreated(
   }
 
   const status = mapPaddleStatus(data.status);
-  const tier = determineTier(data.items?.[0]?.price?.id);
+  const tier = determineTier(data.items?.[0]?.price?.id, data.status);
   const entitlements = getEntitlementsJson(tier);
 
   // Check if subscription already exists for user
@@ -367,7 +372,7 @@ async function handleSubscriptionUpdated(
   const { data } = event;
 
   const status = mapPaddleStatus(data.status);
-  const tier = determineTier(data.items?.[0]?.price?.id);
+  const tier = determineTier(data.items?.[0]?.price?.id, data.status);
   const entitlements = getEntitlementsJson(tier);
 
   const { data: updated, error } = await supabase
@@ -455,7 +460,8 @@ async function handleSubscriptionActivated(
 ): Promise<{ subscriptionId: string | null; error?: string }> {
   const { data } = event;
 
-  const tier = determineTier(data.items?.[0]?.price?.id);
+  // Activated means trial converted to paid - status will be 'active'
+  const tier = determineTier(data.items?.[0]?.price?.id, data.status);
   const entitlements = getEntitlementsJson(tier);
 
   const { data: updated, error } = await supabase

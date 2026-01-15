@@ -98,6 +98,12 @@ export function hasFeatureAccess(
   const activeStatuses: SubscriptionStatus[] = ['active', 'trialing'];
   if (!activeStatuses.includes(subscription.status)) return false;
 
+  // Trialing users always have full access to all features
+  // This is a safety net in case entitlements weren't set correctly in the DB
+  if (subscription.status === 'trialing') {
+    return true;
+  }
+
   // Check entitlements - safely cast from Json
   const entitlements = subscription.entitlements as unknown as SubscriptionEntitlements;
   return entitlements?.[feature] ?? false;

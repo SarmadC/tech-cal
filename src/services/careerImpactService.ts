@@ -512,7 +512,7 @@ export class CareerImpactService {
     context?: Record<string, unknown>
   ): void {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[CareerImpactService] ${operation}:`, message, context);
+    console.warn('[CareerImpactService]', operation, ':', message, context);
 
     try {
       Sentry.addBreadcrumb({

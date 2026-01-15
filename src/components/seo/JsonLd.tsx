@@ -22,8 +22,7 @@ function JsonLd({ data }: JsonLdProps) {
     return (
         <script
             type="application/ld+json"
-            // nosemgrep: javascript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
-            dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(data) }}
+            dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(data) }} // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
         />
     );
 }

@@ -132,6 +132,15 @@ export async function initPaddle(
       // Environment is inferred from the token prefix (test_ or live_)
       // window.Paddle.Environment?.set(environment); // Removed as it's not part of V2 API
 
+      if (environment === 'production' && window.location.hostname === 'localhost') {
+        console.warn(
+          '[PADDLE] You are running Paddle in production mode on localhost. ' +
+          'Paddle requires a valid domain validation for production. ' +
+          'You may see "Something went wrong" errors. ' +
+          'Please use a tunneling service (like ngrok) and verify the domain in your Paddle dashboard.'
+        );
+      }
+
       window.Paddle.Initialize({
         token: PADDLE_CLIENT_TOKEN,
         eventCallback: eventCallback || defaultEventCallback,
@@ -176,6 +185,19 @@ export async function openCheckout(options: {
   successUrl?: string;
   cancelUrl?: string;
   theme?: 'light' | 'dark';
+  displayMode?: 'inline' | 'overlay';
+  frameTarget?: string;
+  frameInitialHeight?: number;
+} | {
+  priceId: string;
+  userEmail?: string;
+  userId: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  theme?: 'light' | 'dark';
+  displayMode: 'inline';
+  frameTarget: string;
+  frameInitialHeight?: number;
 }): Promise<void> {
   if (!paddleInitialized) {
     await initPaddle();
@@ -187,10 +209,12 @@ export async function openCheckout(options: {
 
   window.Paddle.Checkout.open({
     settings: {
-      displayMode: 'overlay',
+      displayMode: options.displayMode || 'overlay',
       theme: options.theme || 'light',
       successUrl: options.successUrl,
       cancelUrl: options.cancelUrl,
+      frameTarget: options.frameTarget,
+      frameInitialHeight: options.frameInitialHeight || 450,
     },
     items: [{ priceId: options.priceId, quantity: 1 }],
     customer: options.userEmail ? { email: options.userEmail } : undefined,
@@ -205,7 +229,8 @@ export async function openCheckout(options: {
  */
 export async function openProMonthlyCheckout(
   userId: string,
-  userEmail?: string
+  userEmail?: string,
+  frameTarget?: string // Optional for backward compatibility, but needed for inline
 ): Promise<void> {
   if (!PADDLE_PRICES.pro_monthly) {
     throw new Error('Pro monthly price not configured');
@@ -217,6 +242,8 @@ export async function openProMonthlyCheckout(
     userEmail,
     successUrl: `${window.location.origin}/billing/success`,
     cancelUrl: `${window.location.origin}/pricing`,
+    displayMode: frameTarget ? 'inline' : 'overlay',
+    frameTarget,
   });
 }
 
@@ -225,7 +252,8 @@ export async function openProMonthlyCheckout(
  */
 export async function openProAnnualCheckout(
   userId: string,
-  userEmail?: string
+  userEmail?: string,
+  frameTarget?: string
 ): Promise<void> {
   if (!PADDLE_PRICES.pro_annual) {
     throw new Error('Pro annual price not configured');
@@ -237,6 +265,8 @@ export async function openProAnnualCheckout(
     userEmail,
     successUrl: `${window.location.origin}/billing/success`,
     cancelUrl: `${window.location.origin}/pricing`,
+    displayMode: frameTarget ? 'inline' : 'overlay',
+    frameTarget,
   });
 }
 
