@@ -177,8 +177,8 @@ export default function PricingPage() {
 
                                     <Link
                                         href={
-                                            plan.name === 'Team' 
-                                                ? '/contact' 
+                                            plan.name === 'Team'
+                                                ? '/contact'
                                                 : plan.name === 'Pro'
                                                     ? '/checkout?plan=monthly'
                                                     : '/signup'

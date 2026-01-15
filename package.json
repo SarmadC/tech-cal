@@ -39,6 +39,7 @@
     "verify:production": "tsx scripts/verify-production.ts",
     "test:budget": "tsx scripts/test-budget-filtering.ts",
     "validate:analytics": "tsx scripts/validate-analytics.ts",
+    "verify:paddle": "tsx scripts/verify-paddle-setup.ts",
     "verify:all": "npm run verify:production && npm run test:budget && npm run validate:analytics"
   },
   "dependencies": {

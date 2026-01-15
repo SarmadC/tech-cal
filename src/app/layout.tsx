@@ -26,6 +26,8 @@ import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { PageErrorBoundary } from '@/components/common/ErrorBoundary';
 import ClientLayout from "@/components/layout/ClientLayout";
 import IconProvider from '../components/providers/IconProvider';
+import { CheckoutProvider } from "@/contexts/CheckoutContext";
+import { CheckoutOverlay } from "@/components/checkout/CheckoutOverlay";
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AccentProvider } from '@/contexts/AccentContext';
 import { SnackbarProvider } from '@/contexts/SnackbarContext';
@@ -121,24 +123,28 @@ export default function RootLayout({
                             <SupabaseProvider>
                                 {/* 2. AuthProvider is next, it needs supabase client */}
                                 <AuthProvider>
-                                    {/* 3. SubscriptionProvider depends on AuthProvider for user info */}
-                                    <SubscriptionProvider>
-                                        {/* 4. QueryProvider is next, it might need auth context for queries */}
-                                        <QueryProvider>
-                                        <SnackbarProvider>
-                                            {/* 3. UI/UX providers can go inside */}
-                                            {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
-                                            {/* <SmoothScrollProvider> */}
-                                            {/* 4. ClientLayout contains the Navbar, which needs auth context */}
-                                            <IconProvider>
-                                                <ClientLayout>
-                                                    {children}
-                                                </ClientLayout>
-                                            </IconProvider>
-                                            {/* </SmoothScrollProvider> */}
-                                        </SnackbarProvider>
-                                        </QueryProvider>
-                                    </SubscriptionProvider>
+                                    {/* 3. CheckoutProvider needs Auth info but before Subscription */}
+                                    <CheckoutProvider>
+                                        <CheckoutOverlay />
+                                        {/* 4. SubscriptionProvider depends on AuthProvider for user info */}
+                                        <SubscriptionProvider>
+                                            {/* 5. QueryProvider is next, it might need auth context for queries */}
+                                            <QueryProvider>
+                                                <SnackbarProvider>
+                                                    {/* 3. UI/UX providers can go inside */}
+                                                    {/* Temporarily disabled SmoothScrollProvider to fix double scrollbar issue */}
+                                                    {/* <SmoothScrollProvider> */}
+                                                    {/* 4. ClientLayout contains the Navbar, which needs auth context */}
+                                                    <IconProvider>
+                                                        <ClientLayout>
+                                                            {children}
+                                                        </ClientLayout>
+                                                    </IconProvider>
+                                                    {/* </SmoothScrollProvider> */}
+                                                </SnackbarProvider>
+                                            </QueryProvider>
+                                        </SubscriptionProvider>
+                                    </CheckoutProvider>
                                 </AuthProvider>
                             </SupabaseProvider>
                         </AccentProvider>
