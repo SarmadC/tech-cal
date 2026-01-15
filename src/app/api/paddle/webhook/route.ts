@@ -27,7 +27,10 @@ import type { Database, Json } from '@/types/supabase';
 import crypto from 'crypto';
 
 // Environment variables
-const PADDLE_WEBHOOK_SECRET = process.env.PADDLE_WEBHOOK_SECRET;
+const PADDLE_ENVIRONMENT = (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT || 'production') as 'sandbox' | 'production';
+const PADDLE_WEBHOOK_SECRET = PADDLE_ENVIRONMENT === 'sandbox'
+  ? process.env.PADDLE_SANDBOX_WEBHOOK_SECRET
+  : process.env.PADDLE_WEBHOOK_SECRET;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;

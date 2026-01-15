@@ -44,8 +44,11 @@ interface UseSubscriptionReturn {
   openUpgrade: (plan?: 'monthly' | 'annual') => Promise<void>;
 }
 
+import { useCheckout } from '@/contexts/CheckoutContext';
+
 export function useSubscription(): UseSubscriptionReturn {
   const { user } = useAuth();
+  const { openCheckout, setCheckoutUser } = useCheckout();
   const { supabase, isReady } = useSupabaseSafe();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -180,10 +183,14 @@ export function useSubscription(): UseSubscriptionReturn {
       throw new Error('User not authenticated');
     }
 
-    // Dynamically import Paddle to avoid SSR issues
-    const { openProMonthlyCheckout } = await import('@/lib/paddle');
-    await openProMonthlyCheckout(user.id, user.email);
-  }, [user?.id, user?.email]);
+    // Dynamically import Paddle to avoid SSR issues - Still needed for initialization checks if any
+    // const { openProMonthlyCheckout } = await import('@/lib/paddle');
+    // await openProMonthlyCheckout(user.id, user.email);
+    
+    // Set user info for checkout context
+    setCheckoutUser(user.id, user.email);
+    openCheckout('monthly'); // Standard trial start is monthly
+  }, [user?.id, user?.email, openCheckout, setCheckoutUser]);
 
   // Open upgrade checkout
   const openUpgrade = useCallback(async (plan: 'monthly' | 'annual' = 'monthly') => {
@@ -191,13 +198,16 @@ export function useSubscription(): UseSubscriptionReturn {
       throw new Error('User not authenticated');
     }
 
-    const paddle = await import('@/lib/paddle');
+    // const paddle = await import('@/lib/paddle');
+    setCheckoutUser(user.id, user.email);
     if (plan === 'annual') {
-      await paddle.openProAnnualCheckout(user.id, user.email);
+      // await paddle.openProAnnualCheckout(user.id, user.email);
+      openCheckout('annual');
     } else {
-      await paddle.openProMonthlyCheckout(user.id, user.email);
+      // await paddle.openProMonthlyCheckout(user.id, user.email);
+      openCheckout('monthly');
     }
-  }, [user?.id, user?.email]);
+  }, [user?.id, user?.email, openCheckout, setCheckoutUser]);
 
   // Load subscription on mount and when user changes
   useEffect(() => {

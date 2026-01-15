@@ -13,15 +13,24 @@
 import type { Subscription } from '@/types/subscription';
 
 // Paddle environment configuration
-const PADDLE_ENVIRONMENT = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT as
+// Paddle environment configuration
+const PADDLE_ENVIRONMENT = (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT || 'production') as
   | 'sandbox'
   | 'production';
-const PADDLE_CLIENT_TOKEN = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
+
+// Select keys based on environment
+const PADDLE_CLIENT_TOKEN = PADDLE_ENVIRONMENT === 'sandbox'
+  ? process.env.NEXT_PUBLIC_PADDLE_SANDBOX_CLIENT_TOKEN
+  : process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
 
 // Price IDs (configured in Paddle dashboard)
 export const PADDLE_PRICES = {
-  pro_monthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || '',
-  pro_annual: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_ANNUAL || '',
+  pro_monthly: PADDLE_ENVIRONMENT === 'sandbox'
+    ? process.env.NEXT_PUBLIC_PADDLE_PRO_MONTHLY_PRICE_ID_SANDBOX
+    : process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || '',
+  pro_annual: PADDLE_ENVIRONMENT === 'sandbox'
+    ? process.env.NEXT_PUBLIC_PADDLE_PRO_ANNUAL_PRICE_ID_SANDBOX
+    : process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_ANNUAL || '',
 } as const;
 
 // Paddle.js types (simplified)
@@ -55,6 +64,12 @@ interface PaddleInstance {
   Initialize: (options: {
     token: string;
     eventCallback?: (event: PaddleEvent) => void;
+    checkout?: {
+      settings?: {
+        theme?: 'light' | 'dark';
+        displayMode?: 'inline' | 'overlay';
+      };
+    };
   }) => void;
   Checkout: {
     open: (options: PaddleCheckoutOptions) => void;
@@ -138,12 +153,19 @@ export async function initPaddle(
       window.Paddle.Initialize({
         token: PADDLE_CLIENT_TOKEN,
         eventCallback: eventCallback || defaultEventCallback,
+        checkout: {
+          settings: {
+            displayMode: 'inline', // Set default display mode to inline if that helps defaults
+            theme: 'dark', 
+          }
+        }
       });
 
             // Debug log
       console.log('Paddle initialized:', {
         environment,
         token: PADDLE_CLIENT_TOKEN.substring(0, 8) + '...',
+        prices: PADDLE_PRICES,
         version: 'v2'
       });
       
@@ -258,7 +280,10 @@ export async function openProMonthlyCheckout(
   userEmail?: string
 ): Promise<void> {
   if (!PADDLE_PRICES.pro_monthly) {
-    throw new Error('Pro monthly price not configured');
+    const envVar = PADDLE_ENVIRONMENT === 'sandbox' 
+      ? 'NEXT_PUBLIC_PADDLE_PRO_MONTHLY_PRICE_ID_SANDBOX'
+      : 'NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY';
+    throw new Error(`Pro monthly price not configured. Missing env var: ${envVar}`);
   }
 
   // Don't pass URLs - let Paddle use the default payment link for redirects
@@ -318,4 +343,51 @@ export function isPaddleConfigured(): boolean {
     PADDLE_PRICES.pro_monthly &&
     PADDLE_PRICES.pro_annual
   );
+}
+
+/**
+ * Open Paddle inline checkout
+ * 
+ * @param options Checkout options
+ */
+export async function openInlineCheckout(options: {
+  priceId: string;
+  userEmail?: string;
+  userId: string;
+  frameTarget: string; // ID of the container element
+  frameStyle?: string;
+  successUrl?: string;
+}): Promise<void> {
+  if (!paddleInitialized) {
+    await initPaddle();
+  }
+
+  if (!window.Paddle) {
+    throw new Error('Paddle not initialized');
+  }
+
+  const settings: PaddleCheckoutSettings = {
+    displayMode: 'inline',
+    theme: 'light', // Force light theme: we use a CSS filter (invert) on the container to make it dark
+    frameTarget: options.frameTarget,
+    frameInitialHeight: 450, 
+    frameStyle: options.frameStyle || 'width: 100%; min-width: 312px; background-color: transparent; border: none;', // Transparent bg helper
+  };
+  
+  if (options.successUrl) {
+    settings.successUrl = options.successUrl;
+  }
+
+  const checkoutOptions: PaddleCheckoutOptions = {
+    settings,
+    items: [{ priceId: options.priceId, quantity: 1 }],
+    customer: options.userEmail ? { email: options.userEmail } : undefined,
+    customData: {
+      user_id: options.userId,
+    },
+  };
+
+  console.log('Opening inline checkout:', checkoutOptions);
+  
+  window.Paddle.Checkout.open(checkoutOptions);
 }
