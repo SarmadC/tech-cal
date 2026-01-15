@@ -83,9 +83,9 @@ export async function isPro(userIdOrSubscription?: string | Subscription | null)
 
   if (!subscription) return false;
 
-  const isCanceledButActive = subscription.status === 'canceled' && 
+  const isCanceledButActive = !!(subscription.status === 'canceled' && 
     subscription.current_period_end && 
-    new Date(subscription.current_period_end).getTime() > Date.now();
+    new Date(subscription.current_period_end).getTime() > Date.now());
 
   return (
     (subscription.status === 'active' && subscription.tier !== 'free') || 

@@ -224,11 +224,11 @@ export function useSubscription(): UseSubscriptionReturn {
   }, [loadSubscription]);
 
   // Computed values
-  const isCanceledButActive = subscription?.status === 'canceled' && 
+  const isCanceledButActive = !!(subscription?.status === 'canceled' && 
    subscription?.current_period_end && 
-   new Date(subscription.current_period_end).getTime() > Date.now();
+   new Date(subscription.current_period_end).getTime() > Date.now());
 
-  const isPro = ((subscription?.status === 'active' || subscription?.status === 'past_due' || isCanceledButActive) && subscription?.tier !== 'free');
+  const isPro = !!((subscription?.status === 'active' || subscription?.status === 'past_due' || isCanceledButActive) && subscription?.tier !== 'free');
   const isTrialing = subscription?.status === 'trialing';
   const trialDaysLeft = getTrialDaysLeft(subscription);
 
