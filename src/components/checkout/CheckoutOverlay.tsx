@@ -56,6 +56,7 @@ export function CheckoutOverlay() {
                         userId: checkoutOptions.userId,
                         userEmail: checkoutOptions.userEmail,
                         frameTarget: 'paddle-checkout-container', // We still pass ID for now as per Paddle JS requirements, but we ensure DOM is ready via ref
+                        successUrl: `${window.location.origin}/billing/success`,
                     });
 
                     // Add a small delay for the iframe to actually render content

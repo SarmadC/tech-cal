@@ -69,9 +69,14 @@
       "Bash(ANALYZE=true npm run build:*)",
       "Bash(ANALYZE=true npx next build:*)",
       "Bash(du -sh:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

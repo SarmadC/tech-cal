@@ -5,6 +5,7 @@
 // Static generation for pricing page - pure client component with static content
 export const dynamic = 'force-static';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { FAQPageJsonLd } from '@/components/seo';
 
@@ -86,6 +87,8 @@ const plans = [
 ];
 
 export default function PricingPage() {
+    const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+
     return (
         <>
             {/* FAQ JSON-LD for rich snippets */}
@@ -98,9 +101,40 @@ export default function PricingPage() {
                         <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">
                             Simple, Transparent Pricing
                         </h1>
-                        <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
+                        <p className="text-xl text-foreground-secondary max-w-2xl mx-auto mb-8">
                             Choose the plan that fits your needs. Upgrade or downgrade anytime.
                         </p>
+
+                        {/* Billing Toggle */}
+                        <div className="inline-flex items-center gap-3 p-1 bg-background-secondary rounded-full border border-border-color">
+                            <button
+                                onClick={() => setBillingCycle('monthly')}
+                                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                                    billingCycle === 'monthly'
+                                        ? 'bg-accent-primary text-accent-primary-foreground'
+                                        : 'text-foreground-secondary hover:text-foreground-primary'
+                                }`}
+                            >
+                                Monthly
+                            </button>
+                            <button
+                                onClick={() => setBillingCycle('annual')}
+                                className={`px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                                    billingCycle === 'annual'
+                                        ? 'bg-accent-primary text-accent-primary-foreground'
+                                        : 'text-foreground-secondary hover:text-foreground-primary'
+                                }`}
+                            >
+                                Annual
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    billingCycle === 'annual'
+                                        ? 'bg-white/20 text-accent-primary-foreground'
+                                        : 'bg-green-500/10 text-green-500'
+                                }`}>
+                                    Save 17%
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -135,16 +169,27 @@ export default function PricingPage() {
                                         <div className="flex items-baseline mb-2">
                                             <span className={`text-4xl font-bold ${plan.highlighted ? 'text-accent-primary-foreground' : 'text-foreground-primary'
                                                 }`}>
-                                                {plan.price}
+                                                {plan.name === 'Pro'
+                                                    ? (billingCycle === 'annual' ? '$99' : '$12')
+                                                    : plan.price
+                                                }
                                             </span>
                                             <span className={`ml-2 ${plan.highlighted ? 'text-accent-primary-foreground opacity-80' : 'text-foreground-tertiary'
                                                 }`}>
-                                                {plan.period}
+                                                {plan.name === 'Pro'
+                                                    ? (billingCycle === 'annual' ? '/year' : '/month')
+                                                    : plan.period
+                                                }
                                             </span>
                                         </div>
-                                        {'annualPrice' in plan && plan.annualPrice && (
+                                        {plan.name === 'Pro' && billingCycle === 'annual' && (
                                             <p className={`text-sm mb-2 ${plan.highlighted ? 'text-accent-primary-foreground opacity-70' : 'text-foreground-tertiary'}`}>
-                                                or {plan.annualPrice} (save 17%)
+                                                $8.25/month, billed annually
+                                            </p>
+                                        )}
+                                        {plan.name === 'Pro' && billingCycle === 'monthly' && (
+                                            <p className={`text-sm mb-2 ${plan.highlighted ? 'text-accent-primary-foreground opacity-70' : 'text-foreground-tertiary'}`}>
+                                                or $99/year (save 17%)
                                             </p>
                                         )}
                                         <p className={
@@ -180,7 +225,7 @@ export default function PricingPage() {
                                             plan.name === 'Team'
                                                 ? '/contact'
                                                 : plan.name === 'Pro'
-                                                    ? '/checkout?plan=monthly'
+                                                    ? `/checkout?plan=${billingCycle}`
                                                     : '/signup'
                                         }
                                         className={`
