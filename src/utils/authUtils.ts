@@ -51,7 +51,20 @@ export function getBaseUrl(): string {
 
 export function getPasswordResetUrl(): string {
     const baseUrl = getBaseUrl();
-    return `${baseUrl}/auth/reset-password`;
+    // Use callback route which will exchange code and redirect to reset-password page
+    return `${baseUrl}/auth/callback?type=recovery`;
+}
+
+/**
+ * Get the redirect URL for email confirmation after signup.
+ * This uses the /auth/callback route which handles the code exchange.
+ */
+export function getEmailConfirmationUrl(nextPath: string = '/discover'): string {
+    const safeNext = typeof nextPath === 'string' && nextPath.startsWith('/') ? nextPath : '/discover';
+    const baseUrl = getBaseUrl();
+    const url = new URL('/auth/callback', baseUrl);
+    url.searchParams.set('next', safeNext);
+    return url.toString();
 }
 
 

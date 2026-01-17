@@ -4,12 +4,22 @@ import type { Database } from '@/types/supabase'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * Universal auth callback handler for:
+ * - OAuth sign-in (Google, GitHub)
+ * - Email confirmation after signup
+ * - Password reset / recovery
+ * - Magic link sign-in
+ */
 export async function GET(request: NextRequest) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
+    const token_hash = searchParams.get('token_hash')
+    const type = searchParams.get('type') // 'signup', 'recovery', 'magiclink', 'invite', or null for OAuth
     const error = searchParams.get('error')
     const errorDescription = searchParams.get('error_description')
     const rawNext = searchParams.get('next') ?? '/discover'
+
     // Sanitize next to avoid open-redirects; ensure leading slash and strip domain
     let next = '/discover'
     try {
@@ -30,6 +40,12 @@ export async function GET(request: NextRequest) {
         next = '/discover'
     }
 
+    // Determine redirect based on auth type
+    // For password recovery, redirect to reset-password page after session is established
+    if (type === 'recovery') {
+        next = '/auth/reset-password';
+    }
+
     // Handle OAuth provider errors first
     if (error) {
         console.error('[AUTH CALLBACK] OAuth provider error:', { error, errorDescription });
@@ -37,10 +53,58 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}/login?error=oauth-provider-error&message=${errorMessage}`);
     }
 
+    // Handle token_hash flow (older email confirmation method)
+    if (token_hash && type) {
+        try {
+            const cookiesToSet: { name: string; value: string; options: CookieOptions }[] = []
+
+            const supabase = createServerClient<Database>(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                {
+                    cookies: {
+                        get(name: string) {
+                            return request.cookies.get(name)?.value
+                        },
+                        set(name: string, value: string, options: CookieOptions) {
+                            cookiesToSet.push({ name, value, options })
+                        },
+                        remove(name: string, options: CookieOptions) {
+                            cookiesToSet.push({ name, value: '', options: { ...options, maxAge: 0 } })
+                        },
+                    },
+                }
+            )
+
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+                token_hash,
+                type: type as 'signup' | 'recovery' | 'magiclink' | 'invite' | 'email',
+            })
+
+            if (verifyError) {
+                console.error('[AUTH CALLBACK] Token verification error:', verifyError);
+                const errorMessage = encodeURIComponent(`Verification failed: ${verifyError.message}`);
+                return NextResponse.redirect(`${origin}/login?error=verification-failed&message=${errorMessage}`);
+            }
+
+            // Successful verification - redirect to appropriate destination
+            const response = NextResponse.redirect(`${origin}${next}`)
+            for (const cookie of cookiesToSet) {
+                response.cookies.set(cookie.name, cookie.value, cookie.options)
+            }
+            return response
+
+        } catch (error) {
+            console.error('[AUTH CALLBACK] Token verification exception:', error);
+            const errorMessage = encodeURIComponent('An error occurred during verification');
+            return NextResponse.redirect(`${origin}/login?error=verification-exception&message=${errorMessage}`);
+        }
+    }
+
     if (!code) {
         console.warn('[AUTH CALLBACK] No authorization code found in request');
-        const errorMessage = encodeURIComponent('No authorization code received from OAuth provider');
-        return NextResponse.redirect(`${origin}/login?error=oauth-no-code&message=${errorMessage}`);
+        const errorMessage = encodeURIComponent('No authorization code received. The link may have expired.');
+        return NextResponse.redirect(`${origin}/login?error=no-code&message=${errorMessage}`);
     }
 
     try {

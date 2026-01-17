@@ -56,10 +56,17 @@ export class AuthService {
                 return { success: false, error: 'You must accept the terms of service' };
             }
 
+            // Get the email confirmation redirect URL
+            const { getEmailConfirmationUrl } = await import('@/utils/authUtils');
+            const emailRedirectTo = getEmailConfirmationUrl('/discover');
+
             const { data: authData, error } = await supabaseClient.auth.signUp({
                 email: data.email,
                 password: data.password,
-                options: { data: { full_name: data.name } },
+                options: {
+                    data: { full_name: data.name },
+                    emailRedirectTo,
+                },
             });
 
             if (error) {
@@ -245,7 +252,7 @@ export class AuthService {
             'Invalid login credentials': 'Invalid email or password. Please check your credentials and try again.',
             'Email not confirmed': 'Please check your email and click the confirmation link before signing in.',
             'User already registered': 'An account with this email already exists. Try signing in instead.',
-            'Password should be at least 6 characters': 'Password must be at least 6 characters long.',
+            'Password should be at least 6 characters': 'Password must be at least 8 characters long.',
             'User not found': 'No account found with this email address.',
             'Invalid email': 'Please enter a valid email address.',
             'Signup disabled': 'New account registration is currently disabled.',
