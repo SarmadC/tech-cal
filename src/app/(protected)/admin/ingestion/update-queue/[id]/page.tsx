@@ -20,7 +20,7 @@ interface QueueFieldRow {
 
 type UpdateReviewInitialData = NonNullable<Parameters<typeof UpdateReviewClient>[0]['initialData']>;
 
-export default async function UpdateReviewPage({ 
+export default async function UpdateReviewPage({
     params,
 }: {
     params: Promise<{ id: string }>;
@@ -41,9 +41,7 @@ export default async function UpdateReviewPage({
     const queueId = id;
 
     // Fetch queue item with all field diffs directly from Supabase
-    const client = supabase as unknown as {
-        from: (table: string) => ReturnType<typeof supabase.from>;
-    };
+    const client = supabase as any;
 
     const { data: queueItem, error: queueError } = await client
         .from('event_update_queue')

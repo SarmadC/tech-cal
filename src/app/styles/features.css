@@ -88,10 +88,10 @@ html.dark .features-enhanced {
     position: relative;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
     .features-sticky .features-left {
         position: sticky;
-        top: 30vh;
+        top: 24vh;
         align-self: start;
     }
 }
@@ -107,7 +107,7 @@ html.dark .features-enhanced {
 
 .feature-sticky-card {
     position: sticky;
-    top: 30%;
+    top: 24vh;
     margin-bottom: var(--space-6);
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: linear-gradient(135deg, #020202 0%, #0d0d0d 50%, #020202 100%);
@@ -596,6 +596,20 @@ html.light .arrow-container {
     
     .features-subtitle {
         font-size: 1rem;
+    }
+
+    .features-enhanced {
+        min-height: auto;
+    }
+
+    .features-sticky .features-left {
+        position: static;
+        top: auto;
+    }
+
+    .feature-sticky-card {
+        position: static;
+        top: auto;
     }
 }
 

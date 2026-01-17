@@ -184,7 +184,7 @@ export class EventEnrichmentService {
             );
 
             // Link speakers to agenda items
-            const agendaSpeakerLinks: Array<{ agenda_id: string; speaker_id: string }> = [];
+            const agendaSpeakerLinks: Array<{ agenda_id: string; speaker_id: string; event_id: string }> = [];
             insertedAgendaIds.forEach((agendaId, index) => {
                 const itemInput = items[index];
                 if (itemInput.speakerIds && itemInput.speakerIds.length > 0) {
@@ -192,6 +192,7 @@ export class EventEnrichmentService {
                         agendaSpeakerLinks.push({
                             agenda_id: agendaId,
                             speaker_id: speakerId,
+                            event_id: eventId,
                         });
                     });
                 }

@@ -133,22 +133,23 @@ export default function ProductDemoSection() {
             </div>
 
             {/* The Demo Interface Wrapper - Enhanced Glass Effect */}
-            <div className="w-full max-w-[1400px] mx-auto relative group perspective-1000">
+            <div className="product-demo-shell w-full max-w-[1400px] mx-auto relative group perspective-1000">
                 {/* Glow Background */}
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-emerald-500/10 rounded-[35px] blur-xl opacity-30 dark:opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
 
-                <div className="relative rounded-[32px] border border-border/70 dark:border-white/10 shadow-2xl bg-card/95 dark:bg-[#0a0a0a]/80 backdrop-blur-xl overflow-hidden transform transition-all duration-700 hover:scale-[1.01] hover:shadow-[0_0_50px_rgba(0,0,0,0.45)] dark:hover:shadow-[0_0_50px_rgba(0,0,0,0.6)] transition-colors">
+                <div className="product-demo-frame relative rounded-[32px] border border-border/70 dark:border-white/10 shadow-2xl bg-card/95 dark:bg-[#0a0a0a]/80 backdrop-blur-xl overflow-hidden transform transition-all duration-700 hover:scale-[1.01] hover:shadow-[0_0_50px_rgba(0,0,0,0.45)] dark:hover:shadow-[0_0_50px_rgba(0,0,0,0.6)] transition-colors">
 
                     {/* Top Bar Accent */}
                     <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-30 dark:opacity-60" />
 
                     {/* Reusing the Actual App Components */}
-                    <div className="p-2 md:p-4 lg:p-6 opacity-95 hover:opacity-100 transition-opacity">
+                    <div className="product-demo-content p-2 md:p-4 lg:p-6 opacity-95 hover:opacity-100 transition-opacity">
                         <DiscoveryLayout
-                            className="min-h-0" // Prevent forced full viewport height
+                            className="min-h-0 product-demo-layout" // Prevent forced full viewport height
                             minHeightClassName="min-h-0"
                             isSidebarOpen={isSidebarOpen}
                             onSidebarClose={() => setIsSidebarOpen(false)}
+                            gridClassName="product-demo-grid"
                             sidebar={
                                 <DiscoverySidebar
                                     filters={{

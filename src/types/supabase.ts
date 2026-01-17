@@ -18,16 +18,22 @@ export type Database = {
         Row: {
           agenda_id: string
           created_at: string | null
+          event_id: string
+          event_title: string | null
           speaker_id: string
         }
         Insert: {
           agenda_id: string
           created_at?: string | null
+          event_id: string
+          event_title?: string | null
           speaker_id: string
         }
         Update: {
           agenda_id?: string
           created_at?: string | null
+          event_id?: string
+          event_title?: string | null
           speaker_id?: string
         }
         Relationships: [
@@ -37,6 +43,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "event_agenda"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_speaker_id_fkey"
+            columns: ["speaker_id"]
+            isOneToOne: false
+            referencedRelation: "event_speakers_flat"
+            referencedColumns: ["speaker_id"]
           },
           {
             foreignKeyName: "agenda_speakers_speaker_id_fkey"
@@ -83,6 +117,24 @@ export type Database = {
           table_name?: string
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      blog_subscribers: {
+        Row: {
+          email: string
+          id: string
+          subscribed_at: string
+        }
+        Insert: {
+          email: string
+          id?: string
+          subscribed_at?: string
+        }
+        Update: {
+          email?: string
+          id?: string
+          subscribed_at?: string
         }
         Relationships: []
       }
@@ -212,6 +264,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "career_impact_analytics_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "career_impact_analytics_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -335,6 +394,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_impact_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
             referencedColumns: ["id"]
           },
           {
@@ -508,278 +574,6 @@ export type Database = {
           },
         ]
       }
-      event_dedupe_candidates: {
-        Row: {
-          candidate_event_id: string | null
-          confidence: number | null
-          created_at: string
-          id: string
-          ingestion_id: string
-          resolution: Database["public"]["Enums"]["event_dedupe_resolution_enum"]
-          resolution_notes: string | null
-          resolved_at: string | null
-        }
-        Insert: {
-          candidate_event_id?: string | null
-          confidence?: number | null
-          created_at?: string
-          id?: string
-          ingestion_id: string
-          resolution?: Database["public"]["Enums"]["event_dedupe_resolution_enum"]
-          resolution_notes?: string | null
-          resolved_at?: string | null
-        }
-        Update: {
-          candidate_event_id?: string | null
-          confidence?: number | null
-          created_at?: string
-          id?: string
-          ingestion_id?: string
-          resolution?: Database["public"]["Enums"]["event_dedupe_resolution_enum"]
-          resolution_notes?: string | null
-          resolved_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_dedupe_candidates_ingestion_id_fkey"
-            columns: ["ingestion_id"]
-            isOneToOne: false
-            referencedRelation: "event_ingestions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_dedupe_candidates_candidate_event_id_fkey"
-            columns: ["candidate_event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_dedupe_candidates_candidate_event_id_fkey"
-            columns: ["candidate_event_id"]
-            isOneToOne: false
-            referencedRelation: "events_detailed"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      event_ingestions: {
-        Row: {
-          created_at: string
-          dedupe_notes: string | null
-          dedupe_resolution:
-            | Database["public"]["Enums"]["event_dedupe_resolution_enum"]
-            | null
-          external_id: string | null
-          id: string
-          ingested_at: string
-          ingestion_details: Json
-          ingestion_method: Database["public"]["Enums"]["event_ingestion_method_enum"]
-          ingestion_state: Database["public"]["Enums"]["event_ingestion_state_enum"]
-          normalized_hash: string
-          processed_at: string | null
-          quality_score_snapshot: number | null
-          raw_payload_id: string | null
-          raw_start_time: string | null
-          raw_title: string | null
-          source_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          dedupe_notes?: string | null
-          dedupe_resolution?:
-            | Database["public"]["Enums"]["event_dedupe_resolution_enum"]
-            | null
-          external_id?: string | null
-          id?: string
-          ingested_at?: string
-          ingestion_details?: Json
-          ingestion_method?: Database["public"]["Enums"]["event_ingestion_method_enum"]
-          ingestion_state?: Database["public"]["Enums"]["event_ingestion_state_enum"]
-          normalized_hash: string
-          processed_at?: string | null
-          quality_score_snapshot?: number | null
-          raw_payload_id?: string | null
-          raw_start_time?: string | null
-          raw_title?: string | null
-          source_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          dedupe_notes?: string | null
-          dedupe_resolution?:
-            | Database["public"]["Enums"]["event_dedupe_resolution_enum"]
-            | null
-          external_id?: string | null
-          id?: string
-          ingested_at?: string
-          ingestion_details?: Json
-          ingestion_method?: Database["public"]["Enums"]["event_ingestion_method_enum"]
-          ingestion_state?: Database["public"]["Enums"]["event_ingestion_state_enum"]
-          normalized_hash?: string
-          processed_at?: string | null
-          quality_score_snapshot?: number | null
-          raw_payload_id?: string | null
-          raw_start_time?: string | null
-          raw_title?: string | null
-          source_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_ingestions_raw_payload_id_fkey"
-            columns: ["raw_payload_id"]
-            isOneToOne: false
-            referencedRelation: "event_raw_payloads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_ingestions_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "event_sources"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      event_raw_payloads: {
-        Row: {
-          external_id: string | null
-          id: string
-          payload: Json
-          payload_hash: string
-          received_at: string
-          source_id: string
-        }
-        Insert: {
-          external_id?: string | null
-          id?: string
-          payload: Json
-          payload_hash: string
-          received_at?: string
-          source_id: string
-        }
-        Update: {
-          external_id?: string | null
-          id?: string
-          payload?: Json
-          payload_hash?: string
-          received_at?: string
-          source_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_raw_payloads_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "event_sources"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      event_source_metrics: {
-        Row: {
-          average_quality_score: number | null
-          created_at: string
-          events_ingested: number
-          events_published: number
-          id: string
-          last_active_at: string | null
-          metadata: Json
-          rejection_rate: number
-          source_id: string
-          timeframe: string
-        }
-        Insert: {
-          average_quality_score?: number | null
-          created_at?: string
-          events_ingested?: number
-          events_published?: number
-          id?: string
-          last_active_at?: string | null
-          metadata?: Json
-          rejection_rate?: number
-          source_id: string
-          timeframe: string
-        }
-        Update: {
-          average_quality_score?: number | null
-          created_at?: string
-          events_ingested?: number
-          events_published?: number
-          id?: string
-          last_active_at?: string | null
-          metadata?: Json
-          rejection_rate?: number
-          source_id?: string
-          timeframe?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_source_metrics_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "event_sources"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      event_sources: {
-        Row: {
-          channel: string | null
-          contact_email: string | null
-          contact_notes: string | null
-          created_at: string
-          default_quality_score: number
-          id: string
-          is_active: boolean
-          name: string
-          notes: string | null
-          region: string | null
-          slug: string
-          source_type: Database["public"]["Enums"]["event_source_type_enum"]
-          tags: string[] | null
-          updated_at: string
-          website_url: string | null
-        }
-        Insert: {
-          channel?: string | null
-          contact_email?: string | null
-          contact_notes?: string | null
-          created_at?: string
-          default_quality_score?: number
-          id?: string
-          is_active?: boolean
-          name: string
-          notes?: string | null
-          region?: string | null
-          slug: string
-          source_type?: Database["public"]["Enums"]["event_source_type_enum"]
-          tags?: string[] | null
-          updated_at?: string
-          website_url?: string | null
-        }
-        Update: {
-          channel?: string | null
-          contact_email?: string | null
-          contact_notes?: string | null
-          created_at?: string
-          default_quality_score?: number
-          id?: string
-          is_active?: boolean
-          name?: string
-          notes?: string | null
-          region?: string | null
-          slug?: string
-          source_type?: Database["public"]["Enums"]["event_source_type_enum"]
-          tags?: string[] | null
-          updated_at?: string
-          website_url?: string | null
-        }
-        Relationships: []
-      }
       event_agenda: {
         Row: {
           agenda_type: string | null
@@ -791,6 +585,7 @@ export type Database = {
           duration_minutes: number | null
           end_time: string | null
           event_id: string
+          external_reference: string | null
           id: string
           is_required: boolean | null
           location: string | null
@@ -811,6 +606,7 @@ export type Database = {
           duration_minutes?: number | null
           end_time?: string | null
           event_id: string
+          external_reference?: string | null
           id?: string
           is_required?: boolean | null
           location?: string | null
@@ -831,6 +627,7 @@ export type Database = {
           duration_minutes?: number | null
           end_time?: string | null
           event_id?: string
+          external_reference?: string | null
           id?: string
           is_required?: boolean | null
           location?: string | null
@@ -854,6 +651,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_agenda_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
             referencedColumns: ["id"]
           },
         ]
@@ -917,6 +721,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "event_feedback_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "event_feedback_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -933,6 +744,137 @@ export type Database = {
           {
             foreignKeyName: "event_feedback_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      event_field_edits: {
+        Row: {
+          created_at: string
+          edit_source: string
+          edited_at: string
+          edited_by: string | null
+          event_id: string
+          field_name: string
+          id: string
+          new_value: Json | null
+          previous_value: Json | null
+        }
+        Insert: {
+          created_at?: string
+          edit_source: string
+          edited_at?: string
+          edited_by?: string | null
+          event_id: string
+          field_name: string
+          id?: string
+          new_value?: Json | null
+          previous_value?: Json | null
+        }
+        Update: {
+          created_at?: string
+          edit_source?: string
+          edited_at?: string
+          edited_by?: string | null
+          event_id?: string
+          field_name?: string
+          id?: string
+          new_value?: Json | null
+          previous_value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_field_edits_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_field_edits_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "event_field_edits_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "event_field_edits_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_field_edits_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_field_edits_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_field_protection_config: {
+        Row: {
+          created_at: string
+          default_mode: string | null
+          field_name: string
+          id: string
+          protection_mode: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          default_mode?: string | null
+          field_name: string
+          id?: string
+          protection_mode: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          default_mode?: string | null
+          field_name?: string
+          id?: string
+          protection_mode?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_field_protection_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_field_protection_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "event_field_protection_config_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "user_event_stats"
             referencedColumns: ["user_id"]
@@ -998,6 +940,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "event_moderation_queue_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "event_moderation_queue_source_event_id_fkey"
             columns: ["source_event_id"]
             isOneToOne: false
@@ -1032,6 +981,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_prerequisites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
             referencedColumns: ["id"]
           },
           {
@@ -1086,10 +1042,8 @@ export type Database = {
           changes_detected: Json | null
           error_message: string | null
           event_id: string
-          ingestion_id: string | null
           id: string
           processing_time_ms: number | null
-          source_id: string | null
           sync_result: string
           sync_type: string
           synced_at: string | null
@@ -1098,10 +1052,8 @@ export type Database = {
           changes_detected?: Json | null
           error_message?: string | null
           event_id: string
-          ingestion_id?: string | null
           id?: string
           processing_time_ms?: number | null
-          source_id?: string | null
           sync_result: string
           sync_type: string
           synced_at?: string | null
@@ -1110,10 +1062,8 @@ export type Database = {
           changes_detected?: Json | null
           error_message?: string | null
           event_id?: string
-          ingestion_id?: string | null
           id?: string
           processing_time_ms?: number | null
-          source_id?: string | null
           sync_result?: string
           sync_type?: string
           synced_at?: string | null
@@ -1134,17 +1084,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "event_sync_log_ingestion_id_fkey"
-            columns: ["ingestion_id"]
+            foreignKeyName: "event_sync_log_event_id_fkey"
+            columns: ["event_id"]
             isOneToOne: false
-            referencedRelation: "event_ingestions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_sync_log_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "event_sources"
+            referencedRelation: "events_with_location"
             referencedColumns: ["id"]
           },
         ]
@@ -1181,6 +1124,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "event_tag_relations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "event_tag_relations_tag_id_fkey"
             columns: ["tag_id"]
             isOneToOne: false
@@ -1192,21 +1142,18 @@ export type Database = {
       event_tags: {
         Row: {
           category: string | null
-          color: string | null
           created_at: string | null
           event_tag: string
           id: string
         }
         Insert: {
           category?: string | null
-          color?: string | null
           created_at?: string | null
           event_tag: string
           id?: string
         }
         Update: {
           category?: string | null
-          color?: string | null
           created_at?: string | null
           event_tag?: string
           id?: string
@@ -1248,6 +1195,13 @@ export type Database = {
             referencedRelation: "events_detailed"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "event_target_audiences_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
         ]
       }
       event_type: {
@@ -1283,6 +1237,206 @@ export type Database = {
         }
         Relationships: []
       }
+      event_update_log: {
+        Row: {
+          applied_at: string
+          created_at: string
+          event_id: string
+          id: string
+          source_event_id: string
+          updated_fields: Json
+        }
+        Insert: {
+          applied_at?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          source_event_id: string
+          updated_fields: Json
+        }
+        Update: {
+          applied_at?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          source_event_id?: string
+          updated_fields?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_update_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_log_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "source_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_update_queue: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          requires_review_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_event_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          requires_review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_event_id?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          requires_review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_event_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_update_queue_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_queue_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_queue_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_queue_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_queue_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "event_update_queue_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      event_update_queue_fields: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          field_name: string
+          field_status: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          queue_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          field_name: string
+          field_status?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          queue_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          field_name?: string
+          field_status?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          queue_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_update_queue_fields_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "event_update_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_queue_fields_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_update_queue_fields_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "event_update_queue_fields_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       events: {
         Row: {
           accessibility_features: Json | null
@@ -1296,14 +1450,16 @@ export type Database = {
           description: string | null
           difficulty_level: string | null
           end_time: string | null
+          enrichment_metadata: Json | null
+          enrichment_status: string | null
           event_format: Database["public"]["Enums"]["event_format_enum"] | null
           event_image_url: string | null
           event_pattern: string | null
-          enrichment_metadata: Json | null
-          enrichment_status: string | null
           event_type_id: string | null
           external_id: string | null
           external_status: string | null
+          firecrawl_enrichment_metadata: Json | null
+          firecrawl_enrichment_status: string | null
           fts: unknown
           id: string
           ingestion_confidence: number | null
@@ -1315,6 +1471,12 @@ export type Database = {
           last_synced_at: string | null
           livestream_url: string | null
           location: string | null
+          location_city: string | null
+          location_country: string | null
+          location_latitude: number | null
+          location_longitude: number | null
+          location_normalized: string | null
+          location_state: string | null
           organizer_id: string | null
           prerequisites: string | null
           price_max: number | null
@@ -1324,17 +1486,10 @@ export type Database = {
           registration_deadline: string | null
           registration_url: string | null
           series_id: string | null
+          slug: string
           social_media_hashtag: string | null
+          source_domain: string | null
           source_url: string | null
-          source_id: string | null
-          source_quality_score: number | null
-          source_last_verified: string | null
-          ingested_at: string | null
-          ingestion_method:
-            | Database["public"]["Enums"]["event_ingestion_method_enum"]
-            | null
-          ingestion_id: string | null
-          raw_data_hash: string | null
           speaker_lineup: Json | null
           start_time: string
           status: string | null
@@ -1359,14 +1514,16 @@ export type Database = {
           description?: string | null
           difficulty_level?: string | null
           end_time?: string | null
+          enrichment_metadata?: Json | null
+          enrichment_status?: string | null
           event_format?: Database["public"]["Enums"]["event_format_enum"] | null
           event_image_url?: string | null
           event_pattern?: string | null
-          enrichment_metadata?: Json | null
-          enrichment_status?: string | null
           event_type_id?: string | null
           external_id?: string | null
           external_status?: string | null
+          firecrawl_enrichment_metadata?: Json | null
+          firecrawl_enrichment_status?: string | null
           fts?: unknown
           id?: string
           ingestion_confidence?: number | null
@@ -1378,6 +1535,12 @@ export type Database = {
           last_synced_at?: string | null
           livestream_url?: string | null
           location?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_latitude?: number | null
+          location_longitude?: number | null
+          location_normalized?: string | null
+          location_state?: string | null
           organizer_id?: string | null
           prerequisites?: string | null
           price_max?: number | null
@@ -1387,17 +1550,10 @@ export type Database = {
           registration_deadline?: string | null
           registration_url?: string | null
           series_id?: string | null
+          slug: string
           social_media_hashtag?: string | null
+          source_domain?: string | null
           source_url?: string | null
-          source_id?: string | null
-          source_quality_score?: number | null
-          source_last_verified?: string | null
-          ingested_at?: string | null
-          ingestion_method?:
-            | Database["public"]["Enums"]["event_ingestion_method_enum"]
-            | null
-          ingestion_id?: string | null
-          raw_data_hash?: string | null
           speaker_lineup?: Json | null
           start_time: string
           status?: string | null
@@ -1422,14 +1578,16 @@ export type Database = {
           description?: string | null
           difficulty_level?: string | null
           end_time?: string | null
+          enrichment_metadata?: Json | null
+          enrichment_status?: string | null
           event_format?: Database["public"]["Enums"]["event_format_enum"] | null
           event_image_url?: string | null
           event_pattern?: string | null
-          enrichment_metadata?: Json | null
-          enrichment_status?: string | null
           event_type_id?: string | null
           external_id?: string | null
           external_status?: string | null
+          firecrawl_enrichment_metadata?: Json | null
+          firecrawl_enrichment_status?: string | null
           fts?: unknown
           id?: string
           ingestion_confidence?: number | null
@@ -1441,6 +1599,12 @@ export type Database = {
           last_synced_at?: string | null
           livestream_url?: string | null
           location?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_latitude?: number | null
+          location_longitude?: number | null
+          location_normalized?: string | null
+          location_state?: string | null
           organizer_id?: string | null
           prerequisites?: string | null
           price_max?: number | null
@@ -1450,17 +1614,10 @@ export type Database = {
           registration_deadline?: string | null
           registration_url?: string | null
           series_id?: string | null
+          slug?: string
           social_media_hashtag?: string | null
+          source_domain?: string | null
           source_url?: string | null
-          source_id?: string | null
-          source_quality_score?: number | null
-          source_last_verified?: string | null
-          ingested_at?: string | null
-          ingestion_method?:
-            | Database["public"]["Enums"]["event_ingestion_method_enum"]
-            | null
-          ingestion_id?: string | null
-          raw_data_hash?: string | null
           speaker_lineup?: Json | null
           start_time?: string
           status?: string | null
@@ -1516,20 +1673,6 @@ export type Database = {
             referencedRelation: "venues"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "events_ingestion_id_fkey"
-            columns: ["ingestion_id"]
-            isOneToOne: false
-            referencedRelation: "event_ingestions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "events_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "event_sources"
-            referencedColumns: ["id"]
-          },
         ]
       }
       extraction_job_log: {
@@ -1538,10 +1681,11 @@ export type Database = {
           cache_hit: boolean | null
           completed_at: string | null
           confidence: number | null
-          decision: string
+          decision: string | null
           duration_ms: number | null
           error: Json | null
           event_id: string | null
+          fetched_from_cache: boolean | null
           firecrawl_credits_spent: number | null
           firecrawl_used: boolean
           id: string
@@ -1558,12 +1702,13 @@ export type Database = {
           cache_hit?: boolean | null
           completed_at?: string | null
           confidence?: number | null
-          decision: string
+          decision?: string | null
           duration_ms?: number | null
           error?: Json | null
           event_id?: string | null
+          fetched_from_cache?: boolean | null
           firecrawl_credits_spent?: number | null
-          firecrawl_used: boolean
+          firecrawl_used?: boolean
           id?: string
           metadata?: Json | null
           normalized_url: string
@@ -1571,17 +1716,18 @@ export type Database = {
           source_domain?: string | null
           source_url: string
           started_at?: string
-          status: string
+          status?: string
         }
         Update: {
           adapter?: string | null
           cache_hit?: boolean | null
           completed_at?: string | null
           confidence?: number | null
-          decision?: string
+          decision?: string | null
           duration_ms?: number | null
           error?: Json | null
           event_id?: string | null
+          fetched_from_cache?: boolean | null
           firecrawl_credits_spent?: number | null
           firecrawl_used?: boolean
           id?: string
@@ -1600,56 +1746,22 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
-          }
+          },
+          {
+            foreignKeyName: "extraction_job_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extraction_job_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
         ]
-      }
-      page_cache: {
-        Row: {
-          content_hash: string
-          etag: string | null
-          expires_at: string | null
-          extracted: Json | null
-          fetch_metadata: Json | null
-          fetched_at: string
-          id: string
-          last_modified: string | null
-          last_seen_at: string
-          normalized_url: string
-          raw_html: string | null
-          source_domain: string | null
-          status_code: number | null
-        }
-        Insert: {
-          content_hash: string
-          etag?: string | null
-          expires_at?: string | null
-          extracted?: Json | null
-          fetch_metadata?: Json | null
-          fetched_at?: string
-          id?: string
-          last_modified?: string | null
-          last_seen_at?: string
-          normalized_url: string
-          raw_html?: string | null
-          source_domain?: string | null
-          status_code?: number | null
-        }
-        Update: {
-          content_hash?: string
-          etag?: string | null
-          expires_at?: string | null
-          extracted?: Json | null
-          fetch_metadata?: Json | null
-          fetched_at?: string
-          id?: string
-          last_modified?: string | null
-          last_seen_at?: string
-          normalized_url?: string
-          raw_html?: string | null
-          source_domain?: string | null
-          status_code?: number | null
-        }
-        Relationships: []
       }
       hackathon_participants: {
         Row: {
@@ -1890,6 +2002,54 @@ export type Database = {
           },
         ]
       }
+      ingestion_events_filters: {
+        Row: {
+          created_at: string
+          filter_category: string | null
+          filter_reason: string
+          filtered_at: string
+          id: string
+          matched_pattern: string | null
+          source_event_id: string
+          source_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          filter_category?: string | null
+          filter_reason: string
+          filtered_at?: string
+          id?: string
+          matched_pattern?: string | null
+          source_event_id: string
+          source_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          filter_category?: string | null
+          filter_reason?: string
+          filtered_at?: string
+          id?: string
+          matched_pattern?: string | null
+          source_event_id?: string
+          source_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingestion_events_filters_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "source_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_events_filters_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingestion_jobs: {
         Row: {
           completed_at: string | null
@@ -2018,6 +2178,54 @@ export type Database = {
           social_media?: Json | null
           trust_score?: number | null
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      page_cache: {
+        Row: {
+          content_hash: string
+          etag: string | null
+          expires_at: string | null
+          extracted: Json | null
+          fetch_metadata: Json | null
+          fetched_at: string
+          id: string
+          last_modified: string | null
+          last_seen_at: string
+          normalized_url: string
+          raw_html: string | null
+          source_domain: string
+          status_code: number | null
+        }
+        Insert: {
+          content_hash: string
+          etag?: string | null
+          expires_at?: string | null
+          extracted?: Json | null
+          fetch_metadata?: Json | null
+          fetched_at?: string
+          id?: string
+          last_modified?: string | null
+          last_seen_at?: string
+          normalized_url: string
+          raw_html?: string | null
+          source_domain: string
+          status_code?: number | null
+        }
+        Update: {
+          content_hash?: string
+          etag?: string | null
+          expires_at?: string | null
+          extracted?: Json | null
+          fetch_metadata?: Json | null
+          fetched_at?: string
+          id?: string
+          last_modified?: string | null
+          last_seen_at?: string
+          normalized_url?: string
+          raw_html?: string | null
+          source_domain?: string
+          status_code?: number | null
         }
         Relationships: []
       }
@@ -2203,145 +2411,6 @@ export type Database = {
         }
         Relationships: []
       }
-      subscriptions: {
-        Row: {
-          id: string
-          user_id: string
-          tier: Database["public"]["Enums"]["subscription_tier"]
-          status: Database["public"]["Enums"]["subscription_status"]
-          paddle_customer_id: string | null
-          paddle_subscription_id: string | null
-          paddle_price_id: string | null
-          trial_started_at: string | null
-          trial_ends_at: string | null
-          plan_type: Database["public"]["Enums"]["plan_type"] | null
-          seats_included: number
-          seats_used: number
-          entitlements: Json
-          created_at: string
-          updated_at: string
-          current_period_start: string | null
-          current_period_end: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          tier?: Database["public"]["Enums"]["subscription_tier"]
-          status?: Database["public"]["Enums"]["subscription_status"]
-          paddle_customer_id?: string | null
-          paddle_subscription_id?: string | null
-          paddle_price_id?: string | null
-          trial_started_at?: string | null
-          trial_ends_at?: string | null
-          plan_type?: Database["public"]["Enums"]["plan_type"] | null
-          seats_included?: number
-          seats_used?: number
-          entitlements?: Json
-          created_at?: string
-          updated_at?: string
-          current_period_start?: string | null
-          current_period_end?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          tier?: Database["public"]["Enums"]["subscription_tier"]
-          status?: Database["public"]["Enums"]["subscription_status"]
-          paddle_customer_id?: string | null
-          paddle_subscription_id?: string | null
-          paddle_price_id?: string | null
-          trial_started_at?: string | null
-          trial_ends_at?: string | null
-          plan_type?: Database["public"]["Enums"]["plan_type"] | null
-          seats_included?: number
-          seats_used?: number
-          entitlements?: Json
-          created_at?: string
-          updated_at?: string
-          current_period_start?: string | null
-          current_period_end?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      subscription_events: {
-        Row: {
-          id: string
-          paddle_event_id: string
-          event_type: string
-          payload: Json
-          processed_at: string
-          subscription_id: string | null
-        }
-        Insert: {
-          id?: string
-          paddle_event_id: string
-          event_type: string
-          payload: Json
-          processed_at?: string
-          subscription_id?: string | null
-        }
-        Update: {
-          id?: string
-          paddle_event_id?: string
-          event_type?: string
-          payload?: Json
-          processed_at?: string
-          subscription_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subscription_events_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscriptions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      subscription_events_dlq: {
-        Row: {
-          id: string
-          paddle_event_id: string
-          event_type: string
-          payload: Json
-          error_message: string | null
-          error_details: Json | null
-          failed_at: string
-          retry_count: number
-          last_retry_at: string | null
-        }
-        Insert: {
-          id?: string
-          paddle_event_id: string
-          event_type: string
-          payload: Json
-          error_message?: string | null
-          error_details?: Json | null
-          failed_at?: string
-          retry_count?: number
-          last_retry_at?: string | null
-        }
-        Update: {
-          id?: string
-          paddle_event_id?: string
-          event_type?: string
-          payload?: Json
-          error_message?: string | null
-          error_details?: Json | null
-          failed_at?: string
-          retry_count?: number
-          last_retry_at?: string | null
-        }
-        Relationships: []
-      }
       recommendation_batches: {
         Row: {
           algorithm_version: string
@@ -2523,6 +2592,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "source_events_normalized_event_id_fkey"
+            columns: ["normalized_event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "source_events_source_id_fkey"
             columns: ["source_id"]
             isOneToOne: false
@@ -2583,6 +2659,7 @@ export type Database = {
           bio: string | null
           company: string | null
           created_at: string | null
+          external_reference: string | null
           id: string
           linkedin_url: string | null
           name: string
@@ -2595,6 +2672,7 @@ export type Database = {
           bio?: string | null
           company?: string | null
           created_at?: string | null
+          external_reference?: string | null
           id?: string
           linkedin_url?: string | null
           name: string
@@ -2607,6 +2685,7 @@ export type Database = {
           bio?: string | null
           company?: string | null
           created_at?: string | null
+          external_reference?: string | null
           id?: string
           linkedin_url?: string | null
           name?: string
@@ -2617,23 +2696,161 @@ export type Database = {
         }
         Relationships: []
       }
-      subscribers: {
+      subscription_events: {
         Row: {
-          email: string
+          event_type: string
           id: string
-          subscribed_at: string
+          paddle_event_id: string
+          payload: Json
+          processed_at: string
+          subscription_id: string | null
         }
         Insert: {
-          email: string
+          event_type: string
           id?: string
-          subscribed_at?: string
+          paddle_event_id: string
+          payload: Json
+          processed_at?: string
+          subscription_id?: string | null
         }
         Update: {
-          email?: string
+          event_type?: string
           id?: string
-          subscribed_at?: string
+          paddle_event_id?: string
+          payload?: Json
+          processed_at?: string
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_events_dlq: {
+        Row: {
+          error_details: Json | null
+          error_message: string | null
+          event_type: string
+          failed_at: string
+          id: string
+          last_retry_at: string | null
+          paddle_event_id: string
+          payload: Json
+          retry_count: number
+        }
+        Insert: {
+          error_details?: Json | null
+          error_message?: string | null
+          event_type: string
+          failed_at?: string
+          id?: string
+          last_retry_at?: string | null
+          paddle_event_id: string
+          payload: Json
+          retry_count?: number
+        }
+        Update: {
+          error_details?: Json | null
+          error_message?: string | null
+          event_type?: string
+          failed_at?: string
+          id?: string
+          last_retry_at?: string | null
+          paddle_event_id?: string
+          payload?: Json
+          retry_count?: number
         }
         Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          entitlements: Json
+          id: string
+          paddle_customer_id: string | null
+          paddle_price_id: string | null
+          paddle_subscription_id: string | null
+          past_due_at: string | null
+          plan_type: Database["public"]["Enums"]["plan_type"] | null
+          seats_included: number
+          seats_used: number
+          status: Database["public"]["Enums"]["subscription_status"]
+          tier: Database["public"]["Enums"]["subscription_tier"]
+          trial_ends_at: string | null
+          trial_started_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          entitlements?: Json
+          id?: string
+          paddle_customer_id?: string | null
+          paddle_price_id?: string | null
+          paddle_subscription_id?: string | null
+          past_due_at?: string | null
+          plan_type?: Database["public"]["Enums"]["plan_type"] | null
+          seats_included?: number
+          seats_used?: number
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          entitlements?: Json
+          id?: string
+          paddle_customer_id?: string | null
+          paddle_price_id?: string | null
+          paddle_subscription_id?: string | null
+          past_due_at?: string | null
+          plan_type?: Database["public"]["Enums"]["plan_type"] | null
+          seats_included?: number
+          seats_used?: number
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_engagement_summary"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_event_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       target_audiences: {
         Row: {
@@ -2765,6 +2982,13 @@ export type Database = {
             referencedRelation: "events_detailed"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_experiments: {
@@ -2863,6 +3087,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "user_interactions_simple_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_interactions_simple_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -2929,6 +3160,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
             referencedColumns: ["id"]
           },
           {
@@ -3002,14 +3240,12 @@ export type Database = {
           error_message: string | null
           event_external_id: string | null
           event_id: string | null
-          ingestion_id: string | null
           id: string
           payload: Json | null
           processed_at: string | null
           processing_result: string | null
           signature_verified: boolean | null
           source: string
-          source_id: string | null
           webhook_id: string | null
         }
         Insert: {
@@ -3017,14 +3253,12 @@ export type Database = {
           error_message?: string | null
           event_external_id?: string | null
           event_id?: string | null
-          ingestion_id?: string | null
           id?: string
           payload?: Json | null
           processed_at?: string | null
           processing_result?: string | null
           signature_verified?: boolean | null
           source: string
-          source_id?: string | null
           webhook_id?: string | null
         }
         Update: {
@@ -3032,14 +3266,12 @@ export type Database = {
           error_message?: string | null
           event_external_id?: string | null
           event_id?: string | null
-          ingestion_id?: string | null
           id?: string
           payload?: Json | null
           processed_at?: string | null
           processing_result?: string | null
           signature_verified?: boolean | null
           source?: string
-          source_id?: string | null
           webhook_id?: string | null
         }
         Relationships: [
@@ -3058,23 +3290,137 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "webhook_events_ingestion_id_fkey"
-            columns: ["ingestion_id"]
+            foreignKeyName: "webhook_events_event_id_fkey"
+            columns: ["event_id"]
             isOneToOne: false
-            referencedRelation: "event_ingestions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "webhook_events_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "event_sources"
+            referencedRelation: "events_with_location"
             referencedColumns: ["id"]
           },
         ]
       }
     }
     Views: {
+      agenda_speakers_with_event: {
+        Row: {
+          agenda_id: string | null
+          created_at: string | null
+          event_id: string | null
+          event_title: string | null
+          speaker_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_speakers_agenda_id_fkey"
+            columns: ["agenda_id"]
+            isOneToOne: false
+            referencedRelation: "event_agenda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_speaker_id_fkey"
+            columns: ["speaker_id"]
+            isOneToOne: false
+            referencedRelation: "event_speakers_flat"
+            referencedColumns: ["speaker_id"]
+          },
+          {
+            foreignKeyName: "agenda_speakers_speaker_id_fkey"
+            columns: ["speaker_id"]
+            isOneToOne: false
+            referencedRelation: "speakers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cached_timezone_names: {
+        Row: {
+          abbrev: string | null
+          is_dst: boolean | null
+          name: string | null
+          utc_offset: unknown
+        }
+        Relationships: []
+      }
+      event_speaker_list: {
+        Row: {
+          event_id: string | null
+          speakers: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_agenda_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_agenda_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_agenda_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_speakers_flat: {
+        Row: {
+          event_id: string | null
+          speaker_id: string | null
+          speaker_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_agenda_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_agenda_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_agenda_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_with_location"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_type_analytics: {
         Row: {
           attended: number | null
@@ -3176,44 +3522,95 @@ export type Database = {
           },
         ]
       }
-      events_with_sources: {
+      events_with_location: {
         Row: {
-          dedupe_resolution:
-            | Database["public"]["Enums"]["event_dedupe_resolution_enum"]
-            | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          description: string | null
           end_time: string | null
-          id: string
-          ingested_at: string | null
-          ingestion_external_id: string | null
-          ingestion_id: string | null
-          ingestion_method:
-            | Database["public"]["Enums"]["event_ingestion_method_enum"]
-            | null
-          ingestion_normalized_hash: string | null
-          ingestion_state:
-            | Database["public"]["Enums"]["event_ingestion_state_enum"]
-            | null
-          location: string | null
-          processed_at: string | null
-          quality_score_snapshot: number | null
-          raw_data_hash: string | null
-          registration_url: string | null
-          source_channel: string | null
-          source_default_quality_score: number | null
-          source_id: string | null
-          source_is_active: boolean | null
-          source_last_verified: string | null
-          source_name: string | null
-          source_quality_score: number | null
-          source_region: string | null
-          source_slug: string | null
-          source_type:
-            | Database["public"]["Enums"]["event_source_type_enum"]
-            | null
-          source_url: string | null
+          event_format: Database["public"]["Enums"]["event_format_enum"] | null
+          event_type_id: string | null
+          id: string | null
+          latitude: number | null
+          location_normalized: string | null
+          location_text: string | null
+          longitude: number | null
+          organizer_id: string | null
           start_time: string | null
+          state: string | null
+          status: string | null
           timezone: string | null
           title: string | null
+          updated_at: string | null
+          venue_address: string | null
+          venue_capacity: number | null
+          venue_id: string | null
+          venue_name: string | null
+          venue_type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_event_type_id_fkey"
+            columns: ["event_type_id"]
+            isOneToOne: false
+            referencedRelation: "event_type"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_event_type_id_fkey"
+            columns: ["event_type_id"]
+            isOneToOne: false
+            referencedRelation: "event_type_analytics"
+            referencedColumns: ["event_type_id"]
+          },
+          {
+            foreignKeyName: "fk_events_organizer"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "organizers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_events_venue"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      firecrawl_enrichment_stats: {
+        Row: {
+          avg_credits_used: number | null
+          avg_pages_crawled: number | null
+          avg_quality_score: number | null
+          complexity: string | null
+          event_count: number | null
+          last_completed: string | null
+          status: string | null
+          strategy: string | null
+        }
+        Relationships: []
+      }
+      firecrawl_retry_stats: {
+        Row: {
+          avg_retries: number | null
+          max_retries: number | null
+          no_retries: number | null
+          total_events: number | null
+          with_retries: number | null
+        }
+        Relationships: []
+      }
+      firecrawl_strategy_comparison: {
+        Row: {
+          avg_credits: number | null
+          avg_quality: number | null
+          count: number | null
+          pct_of_strategy: number | null
+          status: string | null
+          strategy: string | null
         }
         Relationships: []
       }
@@ -3279,9 +3676,31 @@ export type Database = {
       }
     }
     Functions: {
+      backfill_location_normalization: {
+        Args: never
+        Returns: {
+          events_updated: number
+          events_with_city: number
+          events_with_country: number
+          events_with_state: number
+        }[]
+      }
       batch_insert_interactions: {
         Args: { interactions: Json[] }
         Returns: undefined
+      }
+      batch_link_events_to_venues: {
+        Args: { p_create_if_not_found?: boolean; p_limit?: number }
+        Returns: {
+          events_linked: number
+          events_processed: number
+          events_skipped: number
+          venues_created: number
+        }[]
+      }
+      calculate_distance: {
+        Args: { lat1: number; lat2: number; lon1: number; lon2: number }
+        Returns: number
       }
       claim_pending_source_events: {
         Args: { p_limit?: number; p_processing_status?: string }
@@ -3306,6 +3725,65 @@ export type Database = {
               p_budget?: string
               p_categories?: string[]
               p_cost?: string
+              p_duration?: string
+              p_end_date?: string
+              p_event_format?: string
+              p_my_network?: boolean
+              p_page_num?: number
+              p_page_size?: number
+              p_popularity?: string
+              p_recommended?: boolean
+              p_search_term?: string
+              p_sort_by?: string
+              p_start_date?: string
+            }
+            Returns: {
+              accessibility_features: Json
+              agenda_url: string
+              attendee_count: number
+              capacity: number
+              certificate_offered: boolean
+              created_at: string
+              currency: string
+              daily_schedule: Json
+              description: string
+              end_time: string
+              event_format: string
+              event_image_url: string
+              event_type_id: string
+              id: string
+              is_multi_day: boolean
+              language: string
+              livestream_url: string
+              location: string
+              organizer_id: string
+              prerequisites: string
+              price_max: number
+              price_min: number
+              pricing_type: string
+              recording_available: boolean
+              registration_deadline: string
+              registration_url: string
+              series_id: string
+              source_url: string
+              speaker_lineup: Json
+              start_time: string
+              status: string
+              status_enum: string
+              target_audience: string
+              timezone: string
+              title: string
+              total_count: number
+              updated_at: string
+              venue_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_budget?: string
+              p_categories?: string[]
+              p_cost?: string
+              p_currency?: string
               p_duration?: string
               p_end_date?: string
               p_event_format?: string
@@ -3400,68 +3878,35 @@ export type Database = {
               venue_name: string
             }[]
           }
-        | {
-            Args: {
-              p_budget?: string
-              p_categories?: string[]
-              p_cost?: string
-              p_currency?: string
-              p_duration?: string
-              p_end_date?: string
-              p_event_format?: string
-              p_my_network?: boolean
-              p_page_num?: number
-              p_page_size?: number
-              p_popularity?: string
-              p_recommended?: boolean
-              p_search_term?: string
-              p_sort_by?: string
-              p_start_date?: string
-            }
-            Returns: {
-              accessibility_features: Json
-              agenda_url: string
-              attendee_count: number
-              capacity: number
-              certificate_offered: boolean
-              created_at: string
-              currency: string
-              daily_schedule: Json
-              description: string
-              end_time: string
-              event_format: string
-              event_image_url: string
-              event_type_id: string
-              id: string
-              is_multi_day: boolean
-              language: string
-              livestream_url: string
-              location: string
-              organizer_id: string
-              prerequisites: string
-              price_max: number
-              price_min: number
-              pricing_type: string
-              recording_available: boolean
-              registration_deadline: string
-              registration_url: string
-              series_id: string
-              source_url: string
-              speaker_lineup: Json
-              start_time: string
-              status: string
-              status_enum: string
-              target_audience: string
-              timezone: string
-              title: string
-              total_count: number
-              updated_at: string
-              venue_id: string
-            }[]
-          }
+      filter_events_by_location: {
+        Args: {
+          p_latitude?: number
+          p_locations?: string[]
+          p_longitude?: number
+          p_radius_miles?: number
+        }
+        Returns: {
+          event_id: string
+        }[]
+      }
       find_event_by_external_id: {
         Args: { p_external_id: string; p_source?: string }
         Returns: string
+      }
+      find_events_near_location: {
+        Args: {
+          p_latitude: number
+          p_limit?: number
+          p_longitude: number
+          p_radius_km?: number
+        }
+        Returns: {
+          distance_km: number
+          event_id: string
+          location: string
+          start_time: string
+          title: string
+        }[]
       }
       find_similar_events: {
         Args: {
@@ -3486,6 +3931,10 @@ export type Database = {
           id: string
           name: string
         }[]
+      }
+      get_field_protection_mode: {
+        Args: { p_event_id: string; p_field_name: string }
+        Returns: string
       }
       get_impact_trend: { Args: { p_user_id: string }; Returns: Json }
       get_monthly_stats: {
@@ -3516,6 +3965,10 @@ export type Database = {
       is_service_role: { Args: never; Returns: boolean }
       is_valid_email: { Args: { email: string }; Returns: boolean }
       is_valid_url: { Args: { url: string }; Returns: boolean }
+      link_event_to_venue: {
+        Args: { p_create_if_not_found?: boolean; p_event_id: string }
+        Returns: string
+      }
       log_webhook_event: {
         Args: {
           p_action: string
@@ -3527,7 +3980,25 @@ export type Database = {
         Returns: string
       }
       make_user_admin: { Args: { user_email: string }; Returns: undefined }
+      normalize_location: {
+        Args: { location_text: string }
+        Returns: {
+          city: string
+          country: string
+          normalized: string
+          state: string
+        }[]
+      }
+      normalize_timezone_to_iana: { Args: { tz: string }; Returns: string }
+      re_normalize_all_locations: {
+        Args: never
+        Returns: {
+          events_fixed: number
+          events_updated: number
+        }[]
+      }
       refresh_analytics_data: { Args: never; Returns: undefined }
+      refresh_timezone_cache: { Args: never; Returns: undefined }
       set_attendance_status: {
         Args: {
           p_event_id: string
@@ -3537,8 +4008,12 @@ export type Database = {
         }
         Returns: Json
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
+      sync_event_coordinates_from_venue: {
+        Args: never
+        Returns: {
+          events_updated: number
+        }[]
+      }
       toggle_bookmark: {
         Args: {
           p_event_id: string
@@ -3598,31 +4073,6 @@ export type Database = {
         | "enterprise"
         | "freelance"
       event_format_enum: "Online" | "In-person" | "Hybrid"
-      event_dedupe_resolution_enum:
-        | "unique"
-        | "duplicate"
-        | "merged"
-        | "needs_review"
-      event_ingestion_method_enum:
-        | "pull"
-        | "push"
-        | "manual"
-        | "backfill"
-      event_ingestion_state_enum:
-        | "pending"
-        | "parsed"
-        | "normalized"
-        | "deduped"
-        | "completed"
-        | "failed"
-        | "skipped"
-      event_source_type_enum:
-        | "rss"
-        | "ics"
-        | "newsletter"
-        | "api"
-        | "partnership"
-        | "manual"
       event_status_enum: "Confirmed" | "Tentative" | "Cancelled" | "Postponed"
       learning_style_enum:
         | "hands-on"
@@ -3638,6 +4088,7 @@ export type Database = {
         | "find-employers"
         | "industry-insights"
         | "thought-leadership"
+      plan_type: "monthly" | "annual"
       pricing_type_enum: "Free" | "Paid" | "Varies"
       seniority_level:
         | "student"
@@ -3652,9 +4103,13 @@ export type Database = {
         | "director"
         | "vp"
         | "founder"
+      subscription_status:
+        | "active"
+        | "trialing"
+        | "past_due"
+        | "canceled"
+        | "expired"
       subscription_tier: "free" | "pro" | "team"
-      subscription_status: "active" | "trialing" | "past_due" | "canceled" | "expired"
-      plan_type: "monthly" | "annual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3823,30 +4278,6 @@ export const Constants = {
         "freelance",
       ],
       event_format_enum: ["Online", "In-person", "Hybrid"],
-      event_dedupe_resolution_enum: [
-        "unique",
-        "duplicate",
-        "merged",
-        "needs_review",
-      ],
-      event_ingestion_method_enum: ["pull", "push", "manual", "backfill"],
-      event_ingestion_state_enum: [
-        "pending",
-        "parsed",
-        "normalized",
-        "deduped",
-        "completed",
-        "failed",
-        "skipped",
-      ],
-      event_source_type_enum: [
-        "rss",
-        "ics",
-        "newsletter",
-        "api",
-        "partnership",
-        "manual",
-      ],
       event_status_enum: ["Confirmed", "Tentative", "Cancelled", "Postponed"],
       learning_style_enum: [
         "hands-on",
@@ -3864,6 +4295,7 @@ export const Constants = {
         "industry-insights",
         "thought-leadership",
       ],
+      plan_type: ["monthly", "annual"],
       pricing_type_enum: ["Free", "Paid", "Varies"],
       seniority_level: [
         "student",
@@ -3879,6 +4311,14 @@ export const Constants = {
         "vp",
         "founder",
       ],
+      subscription_status: [
+        "active",
+        "trialing",
+        "past_due",
+        "canceled",
+        "expired",
+      ],
+      subscription_tier: ["free", "pro", "team"],
     },
   },
 } as const

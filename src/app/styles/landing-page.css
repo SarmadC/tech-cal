@@ -5,23 +5,7 @@
 /* ==========================================================================
    Consistent Color Palette - Based on Hero Section Gradient
    ========================================================================== */
-:root {
-    /* Primary gradient colors from hero section */
-    --landing-primary: #060010;      /* Dark purple - start/end of gradient */
-    --landing-secondary: #0b1020;    /* Lighter purple - middle of gradient */
-    --landing-accent: #0f0f23;       /* Slightly lighter purple for accents */
-    
-    /* Derived colors for consistency */
-    --landing-surface: rgba(6, 0, 16, 0.8);        /* Primary with opacity */
-    --landing-surface-light: rgba(11, 16, 32, 0.6); /* Secondary with opacity */
-    --landing-border: rgba(11, 16, 32, 0.3);        /* Subtle borders */
-    --landing-border-light: rgba(11, 16, 32, 0.1);  /* Very subtle borders */
-    
-    /* Text colors that work with the gradient */
-    --landing-text-primary: #ffffff;
-    --landing-text-secondary: rgba(255, 255, 255, 0.8);
-    --landing-text-tertiary: rgba(255, 255, 255, 0.6);
-}
+/* :root definitions removed - using globals.css tokens */
 
 .landing-container * {
     box-sizing: border-box;
@@ -30,9 +14,10 @@
 
 .landing-container {
     font-family: var(--font-sans);
-    background: linear-gradient(180deg, var(--landing-primary) 0%, var(--landing-secondary) 50%, var(--landing-primary) 100%);
-    color: var(--landing-text-primary);
+    background: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card)) 50%, hsl(var(--background)) 100%);
+    color: hsl(var(--foreground));
     font-weight: 400;
+    overflow-x: hidden;
 }
 
 /* Dark mode landing page background - solid color override */
@@ -54,8 +39,8 @@ html.dark .landing-container {
 .light,
 html.light {
     --landing-text-primary: #1a1a1a;
-    --landing-text-secondary: rgba(0, 0, 0, 0.8);
-    --landing-text-tertiary: rgba(0, 0, 0, 0.6);
+    --foreground-secondary: rgba(0, 0, 0, 0.8);
+    --foreground-tertiary: rgba(0, 0, 0, 0.6);
 }
 
 /* Navigation styles handled by Aceternity UI component */
@@ -430,6 +415,53 @@ html.light .landing-container .hero-secondary-btn:hover {
     
     .landing-container .hero-subtitle {
         font-size: clamp(1.25rem, 1.5vw, 1.5rem);
+    }
+}
+
+@media (max-height: 820px) and (min-width: 768px) {
+    .landing-container .hero {
+        min-height: 92vh;
+    }
+
+    .landing-container .hero-content {
+        padding: 0 var(--space-6);
+    }
+
+    .landing-container .hero .hero-title {
+        margin-bottom: var(--space-4) !important;
+    }
+
+    .landing-container .hero-subtitle {
+        margin-bottom: var(--space-8);
+    }
+
+    .landing-container .hero-cta {
+        gap: var(--space-3);
+    }
+
+    .landing-container .hero .hero-orbit-layer {
+        --orbit-hole-radius: clamp(12rem, 22vh, 18rem);
+    }
+}
+
+@media (max-height: 720px) and (min-width: 768px) {
+    .landing-container .hero {
+        min-height: 86vh;
+    }
+
+    .landing-container .hero .hero-title {
+        font-size: clamp(2.2rem, 4vw, 3.2rem) !important;
+        margin-bottom: var(--space-3) !important;
+    }
+
+    .landing-container .hero-subtitle {
+        font-size: 1rem;
+        margin-bottom: var(--space-6);
+    }
+
+    .landing-container .hero-cta button,
+    .landing-container .hero-cta a {
+        height: 42px;
     }
 }
 
@@ -1485,6 +1517,101 @@ html.light .landing-container .hero-secondary-btn:hover {
 .landing-container .slide-in-right.visible {
     opacity: 1;
     transform: translateY(0) translateX(0);
+}
+
+/* Product Demo Section - Responsive tweaks */
+.landing-container .product-demo-section {
+    --product-demo-shell-padding: clamp(0.75rem, 2vw, 1.5rem);
+    --product-demo-radius: 32px;
+    --product-demo-content-padding: clamp(0.5rem, 1.2vw, 1.5rem);
+}
+
+.landing-container .product-demo-shell {
+    padding: 0 var(--product-demo-shell-padding);
+}
+
+.landing-container .product-demo-frame {
+    border-radius: var(--product-demo-radius);
+}
+
+.landing-container .product-demo-content {
+    padding: var(--product-demo-content-padding);
+}
+
+@media (max-width: 1200px) {
+    .landing-container .product-demo-section {
+        --product-demo-radius: 28px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .landing-container .product-demo-section {
+        --product-demo-radius: 24px;
+        --product-demo-content-padding: var(--space-3);
+    }
+
+    .landing-container .product-demo-shell {
+        padding: 0 var(--space-3);
+    }
+}
+
+@media (max-width: 900px) {
+    .landing-container .product-demo-section {
+        --product-demo-radius: 20px;
+        --product-demo-content-padding: var(--space-2);
+    }
+
+    .landing-container .product-demo-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (hover: none) {
+    .landing-container .product-demo-frame {
+        transform: none !important;
+    }
+}
+
+@media (max-height: 820px) {
+    .landing-container .product-demo-section {
+        padding-top: var(--space-16);
+        padding-bottom: var(--space-16);
+    }
+
+    .landing-container .product-demo-content {
+        padding: var(--space-3);
+    }
+
+    .landing-container .product-demo-grid {
+        gap: var(--space-3);
+    }
+}
+
+@media (max-height: 720px) {
+    .landing-container .product-demo-section {
+        padding-top: var(--space-12);
+        padding-bottom: var(--space-12);
+    }
+
+    .landing-container .product-demo-frame {
+        border-radius: 20px;
+    }
+
+    .landing-container .product-demo-content {
+        padding: var(--space-2);
+    }
+}
+
+@media (max-height: 820px) {
+    .landing-container .product-demo-card {
+        min-height: 300px;
+    }
+}
+
+@media (max-height: 720px) {
+    .landing-container .product-demo-card {
+        min-height: 280px;
+    }
 }
 
 /* Product Demo Section Dark Mode Background */

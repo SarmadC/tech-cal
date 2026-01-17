@@ -70,7 +70,10 @@
       "Bash(ANALYZE=true npx next build:*)",
       "Bash(du -sh:*)",
       "Bash(open:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql"
     ],
     "deny": [],
     "ask": []

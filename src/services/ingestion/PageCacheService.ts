@@ -93,7 +93,7 @@ export class PageCacheService {
     ): Promise<void> {
         const insert: PageCacheInsert = {
             normalized_url: params.normalizedUrl,
-            source_domain: params.sourceDomain ?? null,
+            source_domain: params.sourceDomain ?? '',
             status_code: params.statusCode ?? null,
             raw_html: params.rawHtml ?? null,
             extracted: params.extracted ? params.extracted as unknown as Database['public']['Tables']['page_cache']['Insert']['extracted'] : null,

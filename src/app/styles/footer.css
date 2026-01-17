@@ -48,6 +48,49 @@ html.light .footer-main {
     z-index: 2;
 }
 
+@media (max-width: 1200px) {
+    .footer-content {
+        grid-template-columns: 1.5fr 1fr 1fr;
+        gap: 48px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .footer-content {
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+    }
+
+    .footer-intro {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 700px) {
+    .footer-main {
+        padding: 64px 24px;
+    }
+
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .footer-intro-title {
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-main {
+        padding: 56px 20px;
+    }
+
+    .footer-intro-title {
+        font-size: clamp(1.75rem, 8vw, 2.25rem);
+    }
+}
+
 /* Enhanced Intro Section with Prominent CTA */
 .footer-intro {
     grid-column: 1;

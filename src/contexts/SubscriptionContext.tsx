@@ -15,6 +15,7 @@ import {
 } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import type { Subscription, SubscriptionEntitlements } from '@/types/subscription';
+import { TrialExpiredGuard } from '@/components/subscription/TrialExpiredGuard';
 
 interface SubscriptionContextType {
   // Subscription state
@@ -26,9 +27,16 @@ interface SubscriptionContextType {
   isPro: boolean;
   isTrialing: boolean;
   isFree: boolean;
+  isTrialExpired: boolean;
+  isCanceledButActive: boolean;
 
   // Trial info
   trialDaysLeft: number | null;
+
+  // Billing dates
+  accessEndsAt: Date | null;
+  daysUntilRenewal: number | null;
+  gracePeriodDaysLeft: number | null;
 
   // Feature access
   canAccessFeature: (feature: keyof SubscriptionEntitlements) => boolean;
@@ -65,6 +73,12 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     refreshSubscription,
     startTrial,
     openUpgrade,
+    // New computed values
+    accessEndsAt,
+    daysUntilRenewal,
+    gracePeriodDaysLeft,
+    isTrialExpired,
+    isCanceledButActive,
   } = useSubscription();
 
   const value = useMemo<SubscriptionContextType>(
@@ -75,7 +89,12 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       isPro,
       isTrialing,
       isFree: !isPro && !isTrialing,
+      isTrialExpired,
+      isCanceledButActive,
       trialDaysLeft,
+      accessEndsAt,
+      daysUntilRenewal,
+      gracePeriodDaysLeft,
       canAccessFeature,
       bookmarkLimit,
       historyDays,
@@ -90,7 +109,12 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       error,
       isPro,
       isTrialing,
+      isTrialExpired,
+      isCanceledButActive,
       trialDaysLeft,
+      accessEndsAt,
+      daysUntilRenewal,
+      gracePeriodDaysLeft,
       canAccessFeature,
       bookmarkLimit,
       historyDays,
@@ -103,7 +127,9 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
   return (
     <SubscriptionContext.Provider value={value}>
-      {children}
+      <TrialExpiredGuard>
+        {children}
+      </TrialExpiredGuard>
     </SubscriptionContext.Provider>
   );
 }

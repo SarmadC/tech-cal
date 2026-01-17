@@ -93,7 +93,7 @@ export default function LandingPage() {
                                 </NavbarButton>
                                 <NavbarButton
                                     variant="primary"
-                                    onClick={() => router.push("/signup")}
+                                    href="/pricing?checkout=monthly"
                                 >
                                     Start Free Trial
                                 </NavbarButton>
@@ -151,9 +151,9 @@ export default function LandingPage() {
                                 {/* Primary CTA Button */}
                                 <div>
                                     <NavbarButton
+                                        href="/pricing?checkout=monthly"
                                         onClick={() => {
                                             setIsMobileMenuOpen(false);
-                                            router.push("/signup");
                                         }}
                                         variant="primary"
                                         className="w-full py-4 text-lg font-semibold rounded-lg"

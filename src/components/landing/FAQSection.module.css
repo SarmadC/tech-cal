@@ -170,6 +170,34 @@
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+@media (max-width: 768px) {
+    .faqQuestion {
+        padding: var(--space-5);
+        font-size: 1rem;
+    }
+
+    .faqAnswer {
+        padding: 0 var(--space-5) var(--space-5) var(--space-5);
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .faqQuestion {
+        padding: var(--space-4);
+        font-size: 0.95rem;
+    }
+
+    .faqIcon {
+        font-size: 1.25rem;
+    }
+
+    .faqAnswer {
+        padding: 0 var(--space-4) var(--space-4) var(--space-4);
+        font-size: 0.9rem;
+    }
+}
+
 .faqItem[open] .faqAnswer {
     transform: translateY(0);
 }
@@ -240,6 +268,5 @@
 :global(html.dark) .sectionSubtitle {
     color: var(--foreground-secondary);
 }
-
 
 

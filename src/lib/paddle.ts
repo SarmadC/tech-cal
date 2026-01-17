@@ -387,6 +387,7 @@ export async function openInlineCheckout(options: {
   frameTarget: string; // ID of the container element
   frameStyle?: string;
   successUrl?: string;
+  theme?: 'light' | 'dark';
 }): Promise<void> {
   if (!paddleInitialized) {
     await initPaddle();
@@ -398,10 +399,10 @@ export async function openInlineCheckout(options: {
 
   const settings: PaddleCheckoutSettings = {
     displayMode: 'inline',
-    theme: 'light', // Force light theme: we use a CSS filter (invert) on the container to make it dark
+    theme: options.theme || 'dark', // Default to dark for our new design
     frameTarget: options.frameTarget,
     frameInitialHeight: 450, 
-    frameStyle: options.frameStyle || 'width: 100%; min-width: 312px; background-color: transparent; border: none;', // Transparent bg helper
+    frameStyle: options.frameStyle || 'width: 100%; min-width: 312px; background-color: transparent; border: none;',
   };
   
   if (options.successUrl) {

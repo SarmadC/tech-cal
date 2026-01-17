@@ -2304,6 +2304,10 @@ html.dark .mobile-chaos-to-order {
   position: relative;
 }
 
+.mobile-use-cases {
+  padding: clamp(2.5rem, 6vw, 3.5rem) clamp(1.25rem, 4vw, 1.5rem);
+}
+
 /* Dark mode background - match landing page */
 .dark .mobile-use-cases,
 html.dark .mobile-use-cases {
@@ -2373,6 +2377,18 @@ html.dark .mobile-use-cases {
 .mobile-use-case-graphic svg {
   width: 100%;
   height: 100%;
+  max-width: 280px;
+  max-height: 200px;
+}
+
+.mobile-use-case-graphic {
+  min-height: clamp(160px, 40vw, 220px);
+  padding: clamp(1rem, 4vw, 1.5rem);
+}
+
+.mobile-use-case-graphic svg {
+  width: 100%;
+  height: auto;
   max-width: 280px;
   max-height: 200px;
 }
@@ -2718,6 +2734,9 @@ html.light .mobile-use-case-popover-graphic {
   position: relative;
 }
 
+.mobile-faq {
+  padding: clamp(2.5rem, 6vw, 3.5rem) clamp(1.25rem, 4vw, 1.5rem);
+}
 /* Dark mode background - match landing page */
 .dark .mobile-faq,
 html.dark .mobile-faq {
@@ -2797,6 +2816,11 @@ html.dark .mobile-faq {
   -webkit-tap-highlight-color: transparent;
 }
 
+.mobile-faq-question {
+  padding: clamp(1rem, 4vw, 1.5rem);
+  font-size: clamp(0.95rem, 3.2vw, 1rem);
+}
+
 .mobile-faq-question::-webkit-details-marker {
   display: none;
 }
@@ -2873,6 +2897,9 @@ html.light .mobile-faq-item:hover {
   padding: 3rem 1.5rem 2rem;
 }
 
+.mobile-footer {
+  padding: clamp(2.5rem, 6vw, 3rem) clamp(1.25rem, 4vw, 1.5rem) 2rem;
+}
 /* Dark mode background - match landing page */
 .dark .mobile-footer,
 html.dark .mobile-footer {
@@ -2943,6 +2970,8 @@ html.dark .mobile-footer {
   gap: 2rem;
   justify-content: flex-start;
   padding-left: var(--footer-content-inset);
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
 }
 
 .grid-link {
@@ -3282,6 +3311,50 @@ html.dark .mobile-footer {
   }
 }
 
+@media (max-height: 700px) {
+  .hero-content-wrapper {
+    padding: var(--space-5) var(--space-4);
+    padding-bottom: 84px;
+    gap: var(--space-6);
+  }
+
+  .hero-text-block {
+    max-width: 100%;
+  }
+
+  .hero-headline {
+    font-size: 2.4rem;
+  }
+
+  .hero-subtext {
+    font-size: 0.95rem;
+  }
+
+  .hero-floating-card-wrapper {
+    margin-top: 6px;
+    margin-right: -12px;
+  }
+
+  .hero-floating-card {
+    width: 78%;
+    max-width: 280px;
+  }
+
+  .hero-event-card {
+    padding: var(--space-3);
+  }
+
+  .hero-sticky-cta-bar {
+    padding: var(--space-2) var(--space-3);
+    padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  }
+
+  .hero-cta-button {
+    padding: 12px 12px 12px 20px;
+    font-size: 0.95rem;
+  }
+}
+
 /* Larger mobile widths ≥421px (Plus/Max/some Androids) */
 @media (min-width: 421px) {
   .mobile-chaos-to-order {
@@ -3389,7 +3462,7 @@ html.dark .mobile-footer {
 /* ============================================== */
 
 .mobile-features-bento {
-  padding: 48px 16px 64px;
+  padding: clamp(2.75rem, 6vw, 3.5rem) clamp(1rem, 4vw, 1.5rem) clamp(3rem, 8vw, 4rem);
   background: #08090a;
 }
 
@@ -3429,7 +3502,7 @@ html.dark .mobile-footer {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
-  max-width: 400px;
+  max-width: 440px;
   margin: 0 auto;
 }
 

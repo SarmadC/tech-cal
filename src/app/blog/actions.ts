@@ -39,7 +39,7 @@ export async function subscribeToAction(
 
     // 3. Insert the email into the Supabase table
     try {
-        const { error } = await supabase.from('subscribers').insert({ email });
+        const { error } = await supabase.from('subscribers' as any).insert({ email });
 
         // Handle potential errors, like a duplicate email
         if (error) {

@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import { PADDLE_PRICES, openInlineCheckout } from '@/lib/paddle';
-import { Check, Shield } from '@phosphor-icons/react';
+import { Check, Cube, Command } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { X } from '@phosphor-icons/react';
 
@@ -15,20 +15,12 @@ export function CheckoutOverlay() {
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Prices
-    const monthlyPrice = '$12';
-    const annualPrice = '$99';
+    const monthlyPrice = '$12.00';
+    const annualPrice = '$99.00';
 
     const price = checkoutOptions?.plan === 'annual' ? annualPrice : monthlyPrice;
     const period = checkoutOptions?.plan === 'annual' ? '/year' : '/month';
-    const planName = checkoutOptions?.plan === 'annual' ? 'Pro Annual' : 'Pro Monthly';
-
-    // Features to highlight
-    const features = [
-        'Calendar sync',
-        'Full recommendations',
-        'Unlimited bookmarks',
-        'Priority support'
-    ];
+    const planName = checkoutOptions?.plan === 'annual' ? 'Pro Plan — Annual' : 'Pro Plan — Monthly';
 
     useEffect(() => {
         if (isOpen && checkoutOptions && !initialized.current && containerRef.current) {
@@ -55,8 +47,9 @@ export function CheckoutOverlay() {
                         priceId,
                         userId: checkoutOptions.userId,
                         userEmail: checkoutOptions.userEmail,
-                        frameTarget: 'paddle-checkout-container', // We still pass ID for now as per Paddle JS requirements, but we ensure DOM is ready via ref
+                        frameTarget: 'paddle-checkout-container',
                         successUrl: `${window.location.origin}/billing/success`,
+                        theme: 'light' // Use light theme + filter for better visual control
                     });
 
                     // Add a small delay for the iframe to actually render content
@@ -87,133 +80,158 @@ export function CheckoutOverlay() {
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300"
-            onClick={closeCheckout}
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0C0C0D]/95 backdrop-blur-sm animate-in fade-in duration-300"
             role="dialog"
             aria-modal="true"
+            onClick={closeCheckout}
         >
-            <div
-                className="w-full max-w-[900px] bg-[#141415] rounded-xl border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row relative animate-in zoom-in-95 duration-300 ring-1 ring-white/5"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Close Button - refined */}
+            {/* 1. The Header */}
+            <div className="absolute top-0 left-0 w-full px-6 py-6 flex items-center justify-between z-20">
+                {/* Top Left: Back */}
                 <button
                     onClick={closeCheckout}
-                    className="absolute top-4 right-4 z-30 p-1.5 text-zinc-500 hover:text-white transition-all bg-transparent hover:bg-white/5 rounded-md"
+                    className="text-sm font-medium text-white/50 hover:text-white transition-colors flex items-center gap-1"
                 >
-                    <X size={16} />
+                    ← Back
                 </button>
 
-                {/* Left Column: Order Summary - Notion/Linear minimalist style */}
-                <div className="w-full md:w-[40%] p-8 bg-[#0E0E10] border-b md:border-b-0 md:border-r border-white/5 relative z-10 flex flex-col justify-between">
-                    <div>
-                        <div className="flex items-center gap-2 mb-6">
-                            <span className="w-6 h-6 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-                                <Shield size={14} weight="fill" />
-                            </span>
-                            <span className="text-xs font-medium text-indigo-400 uppercase tracking-wide">Secure Checkout</span>
-                        </div>
+                {/* Center: Checkout */}
+                <h1 className="text-xl font-dm-sans text-white tracking-wide absolute left-1/2 -translate-x-1/2">
+                    Checkout
+                </h1>
 
-                        <h2 className="text-2xl font-semibold text-white tracking-tight mb-2">Upgrade to Pro</h2>
-                        <p className="text-zinc-500 text-sm leading-relaxed mb-8">
-                            Unlock the full power of your calendar with advanced insights and unlimited features.
-                        </p>
-
-                        <div className="space-y-4">
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-4xl font-bold text-white">{price}</span>
-                                <span className="text-zinc-500 font-medium">{period}</span>
-                            </div>
-
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                <span className="text-xs font-medium text-white">7-day free trial included</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-8 md:mt-12 space-y-3">
-                        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Everything in Pro</p>
-                        {features.map((feature) => (
-                            <div key={feature} className="flex items-center gap-3">
-                                <Check size={14} weight="bold" className="text-white" />
-                                <span className="text-sm text-zinc-300 font-medium">{feature}</span>
-                            </div>
-                        ))}
-                    </div>
+                {/* Top Right: Cmd+Enter hint */}
+                <div className="hidden md:flex items-center gap-1.5 text-xs font-medium text-white/30 border border-white/10 rounded px-2 py-1 bg-white/5">
+                    <Command size={10} weight="bold" />
+                    <span>Enter to pay</span>
                 </div>
+                {/* Mobile Close Button (replacing hint) */}
+                <button
+                    onClick={closeCheckout}
+                    className="md:hidden text-white/50 p-2"
+                >
+                    <X size={20} />
+                </button>
+            </div>
 
-                {/* Right Column: Paddle Inline Frame */}
-                <div className="w-full md:w-[60%] bg-[#141415] relative z-10 flex flex-col">
-                    {/* Header for the checkout side */}
-                    <div className="px-8 pt-8 pb-4 border-b border-white/5 flex justify-between items-center bg-[#141415]/50">
-                        <h3 className="text-sm font-medium text-zinc-300">Payment Details</h3>
-                        <div className="flex gap-2 opacity-50 grayscale hover:grayscale-0 transition-all duration-300">
-                            {/* Card Icons placeholder */}
-                            <div className="h-4 w-6 bg-white/10 rounded-sm"></div>
-                            <div className="h-4 w-6 bg-white/10 rounded-sm"></div>
-                        </div>
-                    </div>
 
-                    <div className="p-8 relative min-h-[500px] overflow-y-auto custom-scrollbar">
+            {/* 2. The Split View (Modal) */}
+            <div
+                className="w-full max-w-[1050px] h-[750px] max-h-[95vh] bg-[#141415] rounded-lg border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row relative animate-in zoom-in-95 duration-300"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Left Column: The Form */}
+                <div className="w-full md:w-[60%] h-full relative flex flex-col">
+                    <div className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative">
                         {loading && !error && (
                             <div className="absolute inset-0 flex items-center justify-center z-20 bg-[#141415]">
-                                <div className="w-full max-w-sm space-y-4 px-4">
-                                    <div className="h-8 w-3/4 bg-white/5 rounded animate-pulse mb-6"></div>
+                                <div className="w-full max-w-sm space-y-4">
+                                    <div className="h-8 w-1/3 bg-white/5 rounded animate-pulse mb-6"></div>
                                     <div className="space-y-3">
-                                        <div className="h-10 w-full bg-white/5 rounded animate-pulse"></div>
-                                        <div className="h-10 w-full bg-white/5 rounded animate-pulse"></div>
-                                    </div>
-                                    <div className="pt-4">
-                                        <div className="h-10 w-full bg-white/5 rounded animate-pulse"></div>
+                                        <div className="h-12 w-full bg-white/5 rounded animate-pulse"></div>
+                                        <div className="h-12 w-full bg-white/5 rounded animate-pulse"></div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {error && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center z-30 bg-[#141415] text-center p-6">
-                                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4 transition-transform hover:scale-110 duration-200">
-                                    <X size={24} className="text-red-500" />
+                            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                                <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                                    <X size={20} className="text-red-500" />
                                 </div>
-                                <h3 className="text-lg font-medium text-white mb-2">Something went wrong</h3>
-                                <p className="text-sm text-zinc-500 mb-6 max-w-xs">{error}</p>
+                                <p className="text-sm text-zinc-400 mb-4">{error}</p>
                                 <button
                                     onClick={() => {
                                         setError(null);
                                         setLoading(true);
                                         initialized.current = false;
-                                        // Trigger re-run of effect
+                                        // Trigger re-run
                                         const event = new Event('resize');
                                         window.dispatchEvent(event);
                                     }}
-                                    className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+                                    className="px-4 py-2 bg-white text-black text-sm font-medium rounded hover:bg-zinc-200 transition-colors"
                                 >
-                                    Try Again
+                                    Retry
                                 </button>
                             </div>
                         )}
 
-                        {/* Paddle Container - Applied CSS Filter bypass for dark mode. invert(0.922) turns White into #141415 */}
+                        {/* Paddle Container */}
                         <div
                             id="paddle-checkout-container"
                             ref={containerRef}
                             className={cn(
-                                "paddle-checkout-container w-full h-full transition-all duration-500 ease-out",
-                                (loading || error) ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
+                                "paddle-checkout-container w-full h-full transition-all duration-500",
+                                (loading || error) ? "opacity-0" : "opacity-100"
                             )}
                             style={{ filter: 'invert(0.922) hue-rotate(180deg)' }}
                         >
-                            {/* Paddle will inject iframe here */}
+                            {/* Paddle iframe injected here */}
                         </div>
                     </div>
+                </div>
 
-                    {/* Footer for trust */}
-                    <div className="px-8 py-4 bg-[#141415] border-t border-white/5 text-center">
-                        <p className="text-[11px] text-zinc-600">
-                            By continuing, you agree to our Terms of Service and Privacy Policy.
-                            <br />Billed {period === '/year' ? 'annually' : 'monthly'} after trial ends.
-                        </p>
+                {/* Right Column: The Receipt */}
+                {/* Right Column: The Value Context */}
+                <div className="w-full md:w-[40%] h-full bg-[#202020] border-t md:border-t-0 md:border-l border-white/5 p-8 flex flex-col relative overflow-hidden">
+                    {/* Ambient Glow (Top Right) */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2" />
+
+                    <div className="relative z-10 flex flex-col h-full">
+                        {/* Header */}
+                        <div className="mb-8">
+                            <h2 className="text-lg font-serif text-white mb-2">You're upgrading to Pro</h2>
+                            <p className="text-zinc-500 text-sm">Unlock the full potential of your calendar.</p>
+                        </div>
+
+                        {/* Feature List */}
+                        <ul className="space-y-5 mb-8">
+                            {[
+                                { title: "Unlimited History", desc: "Access your entire workspace archive." },
+                                { title: "Guest Access", desc: "Collaborate with up to 50 guests per project." },
+                                { title: "Priority Support", desc: "Direct line to our engineering team." }
+                            ].map((item, i) => (
+                                <li key={i} className="flex gap-3 items-start group">
+                                    <div className="mt-0.5 w-4 h-4 rounded-full bg-[#2C2E36] flex items-center justify-center border border-white/10 group-hover:border-indigo-500/50 transition-colors shrink-0">
+                                        <Check size={8} weight="bold" className="text-zinc-400 group-hover:text-white transition-colors" />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm text-zinc-200 font-medium leading-none mb-1">{item.title}</div>
+                                        <div className="text-xs text-zinc-500 leading-tight">{item.desc}</div>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+
+                        {/* Divider */}
+                        <div className="h-px w-full bg-white/5 mb-6" />
+
+                        {/* Order Summary (Compact) */}
+                        <div className="mt-auto">
+                            <div className="flex items-center gap-2 mb-4 text-white/40">
+                                <Cube size={14} weight="fill" />
+                                <span className="text-[10px] font-medium uppercase tracking-wider">Summary</span>
+                            </div>
+
+                            <div className="flex justify-between items-end mb-2">
+                                <div>
+                                    <p className="text-white font-medium text-sm">{planName}</p>
+                                    <p className="text-xs text-zinc-500 mt-1">7-day free trial</p>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xl font-serif text-white">{price}<span className="text-sm text-zinc-600 font-sans font-normal">{period}</span></div>
+                                    <div className="text-[10px] text-zinc-500 mt-1">Due today: $0.00</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Trust Badge - Removed */}
+                        <div className="mt-6 pt-6 border-t border-dashed border-white/10">
+                            <p className="text-[10px] text-zinc-600 leading-relaxed">
+                                Secure payment via Paddle. By confirming, you agree to our Terms.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

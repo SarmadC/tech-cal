@@ -118,6 +118,7 @@ export class EventNormalizer {
 
             const eventData: EventInsert = {
                 title: record.title,
+                slug: this.slugify(record.title),
                 description: normalizedDescription,
                 start_time: record.startTime,
                 end_time: record.endTime ?? null,
@@ -610,6 +611,19 @@ export class EventNormalizer {
             });
 
         return Array.from(new Set(trimmed));
+    }
+
+    /**
+     * Generate a URL-friendly slug from a string
+     */
+    private static slugify(text: string): string {
+        return text
+            .toString()
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, '-')     // Replace spaces with -
+            .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+            .replace(/\-\-+/g, '-');  // Replace multiple - with single -
     }
 }
 

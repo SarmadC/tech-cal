@@ -79,7 +79,7 @@ export default function DemoEventCard({
             tabIndex={0}
             role="button"
             aria-label={`Event: ${event.title}`}
-            className="group relative flex flex-col w-full min-h-[320px] sm:min-h-[360px] lg:min-h-[400px] rounded-2xl border border-border/70 dark:border-white/10 bg-card/95 dark:bg-[#161616] p-4 sm:p-5 shadow-xl transition-all duration-300 hover:border-border dark:hover:border-white/20 hover:bg-card dark:hover:bg-[#1A1A1A] cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background"
+            className="product-demo-card group relative flex flex-col w-full min-h-[320px] sm:min-h-[360px] lg:min-h-[400px] rounded-2xl border border-border/70 dark:border-white/10 bg-card/95 dark:bg-[#161616] p-4 sm:p-5 shadow-xl transition-all duration-300 hover:border-border dark:hover:border-white/20 hover:bg-card dark:hover:bg-[#1A1A1A] cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background"
         >
             {/* Header: Logo + Bookmark */}
             <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">

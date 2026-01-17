@@ -11,7 +11,27 @@ import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 import type { Subscription, SubscriptionEntitlements } from '@/types/subscription';
-import { FREE_TIER_LIMITS } from '@/types/subscription';
+import {
+  FREE_TIER_LIMITS,
+  GRACE_PERIOD_DAYS,
+  isInGracePeriod,
+  getGracePeriodEndsAt,
+  getGracePeriodDaysLeft,
+  getAccessEndsAt,
+  isTrialExpired,
+  getTrialDaysLeft,
+} from '@/types/subscription';
+
+// Re-export subscription helpers for server-side use
+export {
+  GRACE_PERIOD_DAYS,
+  isInGracePeriod,
+  getGracePeriodEndsAt,
+  getGracePeriodDaysLeft,
+  getAccessEndsAt,
+  isTrialExpired,
+  getTrialDaysLeft,
+};
 
 // Create service role client for admin operations
 function getServiceClient() {
@@ -69,6 +89,7 @@ export async function getSubscriptionByUserId(userId: string): Promise<Subscript
 
 /**
  * Check if user has Pro access (active or trialing).
+ * For past_due users, access is only granted during the 7-day grace period.
  */
 export async function isPro(userIdOrSubscription?: string | Subscription | null): Promise<boolean> {
   let subscription: Subscription | null;
@@ -83,14 +104,17 @@ export async function isPro(userIdOrSubscription?: string | Subscription | null)
 
   if (!subscription) return false;
 
-  const isCanceledButActive = !!(subscription.status === 'canceled' && 
-    subscription.current_period_end && 
+  const isCanceledButActive = !!(subscription.status === 'canceled' &&
+    subscription.current_period_end &&
     new Date(subscription.current_period_end).getTime() > Date.now());
 
+  // For past_due, only grant access if within grace period
+  const isPastDueWithGrace = subscription.status === 'past_due' && isInGracePeriod(subscription);
+
   return (
-    (subscription.status === 'active' && subscription.tier !== 'free') || 
+    (subscription.status === 'active' && subscription.tier !== 'free') ||
     subscription.status === 'trialing' ||
-    subscription.status === 'past_due' ||
+    isPastDueWithGrace ||
     (isCanceledButActive && subscription.tier !== 'free')
   );
 }

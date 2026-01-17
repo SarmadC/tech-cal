@@ -70,28 +70,56 @@ textarea:not([class*="fc-"]):focus {
 }
 
 :root {
-  /* --- Premium Dark Theme (#121212 based) --- */
-  --background-main: #121212;
-  --background-secondary: #1e1e1e;
-  --background-tertiary: #2a2a2a;
-  --background-elevated: #333333;
+  /* --- Premium Dark Theme (Onyx / True Neutral) --- */
+  /* Base HSL Values - Saturation 0% for pure neutrality */
+  --background: 0 0% 3.5%;          /* #090909 - Near Black */
+  --foreground: 0 0% 100%;          /* #ffffff */
+  
+  --card: 0 0% 9%;                  /* #171717 - Neutral Dark Gray */
+  --card-foreground: 0 0% 100%;     /* #ffffff */
+  
+  --popover: 0 0% 9%;               /* #171717 */
+  --popover-foreground: 0 0% 100%;  /* #ffffff */
+  
+  --primary: 0 0% 100%;             /* #ffffff */
+  --primary-foreground: 0 0% 0%;    /* #000000 */
+  
+  --secondary: 0 0% 12%;            /* #1f1f1f */
+  --secondary-foreground: 0 0% 100%;
+  
+  --muted: 0 0% 12%;                /* #1f1f1f */
+  --muted-foreground: 240 5% 64.9%; /* #a1a1aa (Zinc-400 slightly warm) */
+  
+  --accent: 0 0% 14.9%;             /* #262626 */
+  --accent-foreground: 0 0% 100%;
+  
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 0 0% 14.9%;             /* #262626 */
+  --input: 0 0% 14.9%;
+  --ring: 240 4.9% 83.9%;
+  
+  --radius: 0.5rem;
+
+  /* Legacy & Compatibility Aliases (Mapped to new Neutral Hex vars) */
+  --background-main: #090909;
+  --background-secondary: #171717;
+  --background-tertiary: #1f1f1f;
+  --background-elevated: #262626;
 
   --foreground-primary: #ffffff;
-  --foreground-secondary: #e0e0e0;
-  --foreground-tertiary: #b3b3b3;
-  --foreground-muted: #808080;
+  --foreground-secondary: rgba(255, 255, 255, 0.8);
+  --foreground-tertiary: rgba(255, 255, 255, 0.6);
+  --foreground-muted: rgba(255, 255, 255, 0.4);
 
   /* Monochrome Accents */
   --accent-primary: #ffffff;
-  /* white accent for dark surfaces */
   --accent-primary-hover: #e5e5e5;
-  /* slightly dimmed white */
   --accent-primary-light: rgba(255, 255, 255, 0.12);
   --accent-primary-foreground: #000000;
-  /* black text on white accent */
   --accent-border: rgba(255, 255, 255, 0.28);
 
-  /* Secondary/Tertiary accents map to neutral variants */
   --accent-secondary: #ffffff;
   --accent-secondary-hover: #e5e5e5;
   --accent-secondary-light: rgba(255, 255, 255, 0.12);
@@ -112,11 +140,11 @@ textarea:not([class*="fc-"]):focus {
   --error: #ef4444;
   --error-light: rgba(239, 68, 68, 0.15);
 
-  /* Special Colors */
+  /* Special Colors - Neutralized Gradients */
   --virtual-event: #cfcfcf;
-  /* neutral placeholder */
-  --gradient-primary: linear-gradient(135deg, #0F141C 0%, #0B0F14 100%);
-  --gradient-secondary: linear-gradient(135deg, #141C27 0%, #0F141C 100%);
+  /* Neutral Gradients instead of Blue/Purple */
+  --gradient-primary: linear-gradient(135deg, #171717 0%, #090909 100%);
+  --gradient-secondary: linear-gradient(135deg, #1f1f1f 0%, #090909 100%);
   --gradient-accent: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.06) 100%);
 
   --border-subtle: rgba(255, 255, 255, 0.06);
@@ -178,6 +206,36 @@ textarea:not([class*="fc-"]):focus {
 
 /* --- Light Theme Override --- */
 .light {
+  /* Shadcn/Tailwind HSL Overrides for Light Mode */
+  --background: 0 0% 100%;          /* #ffffff */
+  --foreground: 0 0% 3.9%;          /* #0a0a0a */
+  
+  --card: 0 0% 100%;                /* #ffffff */
+  --card-foreground: 0 0% 3.9%;     /* #0a0a0a */
+  
+  --popover: 0 0% 100%;             /* #ffffff */
+  --popover-foreground: 0 0% 3.9%;  /* #0a0a0a */
+  
+  --primary: 0 0% 9%;               /* #171717 */
+  --primary-foreground: 0 0% 98%;   /* #fafafa */
+  
+  --secondary: 0 0% 96.1%;          /* #f5f5f5 */
+  --secondary-foreground: 0 0% 9%;  /* #171717 */
+  
+  --muted: 0 0% 96.1%;              /* #f5f5f5 */
+  --muted-foreground: 0 0% 45.1%;   /* #737373 */
+  
+  --accent: 0 0% 96.1%;             /* #f5f5f5 */
+  --accent-foreground: 0 0% 9%;     /* #171717 */
+  
+  --destructive: 0 84.2% 60.2%;     /* #ef4444 */
+  --destructive-foreground: 0 0% 98%;/* #fafafa */
+  
+  --border: 0 0% 89.8%;             /* #e5e5e5 */
+  --input: 0 0% 89.8%;              /* #e5e5e5 */
+  --ring: 0 0% 3.9%;                /* #0a0a0a */
+  
+  /* Legacy/Custom Variables */
   --background-main: #F9FAFB;
   /* Cool Gray */
   --background-secondary: #ffffff;

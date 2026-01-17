@@ -28,7 +28,8 @@ export type PaddleEventType =
   | 'subscription.past_due'
   | 'subscription.activated'
   | 'subscription.paused'
-  | 'subscription.resumed';
+  | 'subscription.resumed'
+  | 'subscription.trialing';
 
 export interface PaddleWebhookEvent {
   event_id: string;
@@ -310,6 +311,7 @@ async function handleSubscriptionPastDue(
     .from('subscriptions')
     .update({
       status: 'past_due',
+      past_due_at: event.occurred_at,
     })
     .eq('paddle_subscription_id', data.id)
     .select('id')
@@ -380,6 +382,7 @@ export async function processPaddleEvent(event: PaddleWebhookEvent): Promise<{ s
       break;
     case 'subscription.paused':
     case 'subscription.resumed':
+    case 'subscription.trialing':
       result = await handleSubscriptionUpdated(supabase, event);
       break;
     default:

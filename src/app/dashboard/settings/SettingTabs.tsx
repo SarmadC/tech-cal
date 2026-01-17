@@ -10,11 +10,22 @@ import { MaterialIcon } from '@/components/ui/Icon';
 import { AppProfile } from '@/types';
 import { useSubscription } from '@/hooks/useSubscription';
 import { openCustomerPortal } from '@/lib/paddle';
-import { Spinner } from '@phosphor-icons/react';
+import { Spinner, Warning, CalendarX, Clock } from '@phosphor-icons/react';
 
 export default function SettingsTabs({ profile }: { profile: AppProfile | null }) {
     const searchParams = useSearchParams();
-    const { subscription, isLoading: subLoading, isPro, isTrialing, trialDaysLeft, openUpgrade } = useSubscription();
+    const {
+        subscription,
+        isLoading: subLoading,
+        isPro,
+        isTrialing,
+        trialDaysLeft,
+        openUpgrade,
+        accessEndsAt,
+        daysUntilRenewal,
+        gracePeriodDaysLeft,
+        isCanceledButActive,
+    } = useSubscription();
 
     // On desktop, we default to 'profile'.
     const tabParam = searchParams.get('tab');
@@ -23,25 +34,55 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
     // Determine plan display info
     const getPlanInfo = () => {
         if (!subscription || subscription.tier === 'free') {
-            return { name: 'Free Plan', status: 'Active', statusColor: 'success' };
+            return {
+                name: 'Free Plan',
+                status: 'Active',
+                statusColor: 'success' as const,
+                dateLabel: null
+            };
         }
         if (isTrialing) {
             return {
                 name: 'Pro Plan (Trial)',
-                status: trialDaysLeft ? `${trialDaysLeft} days left` : 'Trial',
-                statusColor: 'warning'
+                status: trialDaysLeft ? `${trialDaysLeft} days left` : 'Trial ending',
+                statusColor: 'warning' as const,
+                dateLabel: accessEndsAt ? `Trial ends ${accessEndsAt.toLocaleDateString()}` : null
             };
         }
         if (subscription.status === 'past_due') {
-            return { name: 'Pro Plan', status: 'Payment Due', statusColor: 'error' };
+            return {
+                name: `Pro Plan (${subscription.plan_type === 'annual' ? 'Annual' : 'Monthly'})`,
+                status: gracePeriodDaysLeft !== null ? `${gracePeriodDaysLeft} days to pay` : 'Payment required',
+                statusColor: 'error' as const,
+                dateLabel: 'Update payment to continue access'
+            };
         }
         if (subscription.status === 'canceled') {
-            return { name: 'Pro Plan', status: 'Canceled', statusColor: 'error' };
+            // Canceled but still has access
+            if (isCanceledButActive && accessEndsAt) {
+                return {
+                    name: `Pro Plan (${subscription.plan_type === 'annual' ? 'Annual' : 'Monthly'})`,
+                    status: 'Canceled',
+                    statusColor: 'warning' as const,
+                    dateLabel: `Access until ${accessEndsAt.toLocaleDateString()}`
+                };
+            }
+            // Canceled and no access
+            return {
+                name: 'Pro Plan',
+                status: 'Expired',
+                statusColor: 'error' as const,
+                dateLabel: 'Subscription ended'
+            };
         }
+        // Active subscription
         return {
             name: `Pro Plan (${subscription.plan_type === 'annual' ? 'Annual' : 'Monthly'})`,
             status: 'Active',
-            statusColor: 'success'
+            statusColor: 'success' as const,
+            dateLabel: daysUntilRenewal !== null && subscription.current_period_end
+                ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`
+                : null
         };
     };
 
@@ -103,10 +144,110 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                     'Detailed career insights & analytics'
                 ];
 
-                const currentFeatures = (isPro || isTrialing) ? proFeatures : freeFeatures;
+                const currentFeatures = (isPro || isTrialing || isCanceledButActive) ? proFeatures : freeFeatures;
+
+                // Features user will lose when downgraded
+                const featuresLosing = [
+                    'Google Calendar sync',
+                    'Unlimited saved events',
+                    'Full learning history'
+                ];
 
                 return (
                     <div className="space-y-6">
+                        {/* Trial countdown banner */}
+                        {isTrialing && trialDaysLeft !== null && (
+                            <div
+                                className="flex items-center gap-3 p-4 rounded-lg border"
+                                style={{
+                                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                    borderColor: 'rgba(245, 158, 11, 0.3)'
+                                }}
+                            >
+                                <Clock size={24} weight="fill" className="text-amber-500 flex-shrink-0" />
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                                        {trialDaysLeft === 0
+                                            ? 'Your trial ends today!'
+                                            : `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in your trial`}
+                                    </p>
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                                        Upgrade now to keep your Pro features
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => openUpgrade('monthly')}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                                >
+                                    Upgrade Now
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Past due warning banner */}
+                        {subscription?.status === 'past_due' && (
+                            <div
+                                className="flex items-center gap-3 p-4 rounded-lg border"
+                                style={{
+                                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                    borderColor: 'rgba(239, 68, 68, 0.3)'
+                                }}
+                            >
+                                <Warning size={24} weight="fill" className="text-red-500 flex-shrink-0" />
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                                        Payment failed - action required
+                                    </p>
+                                    <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                        {gracePeriodDaysLeft !== null && gracePeriodDaysLeft > 0
+                                            ? `Update your payment method within ${gracePeriodDaysLeft} day${gracePeriodDaysLeft === 1 ? '' : 's'} to keep your subscription`
+                                            : 'Your subscription will be canceled soon if payment is not updated'}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleManageBilling}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+                                >
+                                    Update Payment
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Canceled but active warning */}
+                        {isCanceledButActive && (
+                            <div
+                                className="flex items-start gap-3 p-4 rounded-lg border"
+                                style={{
+                                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                    borderColor: 'rgba(245, 158, 11, 0.3)'
+                                }}
+                            >
+                                <CalendarX size={24} weight="fill" className="text-amber-500 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                                        Your subscription has been canceled
+                                    </p>
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 mb-2">
+                                        You&apos;ll retain Pro access until {accessEndsAt?.toLocaleDateString()}. After that, you&apos;ll lose:
+                                    </p>
+                                    <ul className="text-xs text-amber-600 dark:text-amber-400 space-y-1">
+                                        {featuresLosing.map((f, i) => (
+                                            <li key={i} className="flex items-center gap-1">
+                                                <span className="w-1 h-1 rounded-full bg-amber-500" />
+                                                {f}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <button
+                                    onClick={handleManageBilling}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors flex-shrink-0"
+                                >
+                                    Reactivate
+                                </button>
+                            </div>
+                        )}
+
                         <div>
                             <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--foreground-primary)' }}>Subscription</h3>
                             <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)' }}>
@@ -124,10 +265,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                     <div>
                                         <h4 className="text-base font-medium" style={{ color: 'var(--foreground-primary)' }}>{planInfo.name}</h4>
                                         <p className="text-sm" style={{ color: 'var(--foreground-secondary)' }}>
-                                            {subscription?.current_period_end
-                                                ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`
-                                                : 'Current plan'
-                                            }
+                                            {planInfo.dateLabel || 'Current plan'}
                                         </p>
                                     </div>
                                     <span
@@ -158,7 +296,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                     className="mt-6 pt-4 border-t flex gap-3"
                                     style={{ borderColor: 'var(--border-default)' }}
                                 >
-                                    {(isPro || isTrialing) ? (
+                                    {(isPro || isTrialing || isCanceledButActive) ? (
                                         <>
                                             <button
                                                 onClick={handleManageBilling}
@@ -166,7 +304,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                             >
                                                 Manage Subscription
                                             </button>
-                                            {isTrialing && (
+                                            {(isTrialing || isCanceledButActive) && (
                                                 <Link
                                                     href="/pricing"
                                                     className="px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-border-default text-foreground-secondary hover:bg-background-secondary"
@@ -200,7 +338,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                     borderColor: 'var(--border-default)'
                                 }}
                             >
-                                {(isPro || isTrialing) && subscription?.paddle_subscription_id ? (
+                                {subscription?.paddle_subscription_id ? (
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
@@ -217,12 +355,20 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                                 </div>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={handleManageBilling}
-                                            className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-border-default text-foreground-secondary hover:bg-background-secondary"
-                                        >
-                                            Update Payment Method
-                                        </button>
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={handleManageBilling}
+                                                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-border-default text-foreground-secondary hover:bg-background-secondary"
+                                            >
+                                                Update Payment Method
+                                            </button>
+                                            <button
+                                                onClick={handleManageBilling}
+                                                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-border-default text-foreground-secondary hover:bg-background-secondary"
+                                            >
+                                                View Billing History
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="text-center py-8">

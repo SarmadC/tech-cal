@@ -15,6 +15,10 @@ import {
   getTrialDaysLeft,
   hasFeatureAccess,
   FREE_TIER_LIMITS,
+  isInGracePeriod,
+  getGracePeriodDaysLeft,
+  getAccessEndsAt,
+  isTrialExpired as checkTrialExpired,
 } from '@/types/subscription';
 
 // Cache TTL in milliseconds (5 minutes)
@@ -42,6 +46,12 @@ interface UseSubscriptionReturn {
   refreshSubscription: () => Promise<void>;
   startTrial: () => Promise<void>;
   openUpgrade: (plan?: 'monthly' | 'annual') => Promise<void>;
+  // New computed values for billing UI
+  accessEndsAt: Date | null;
+  daysUntilRenewal: number | null;
+  gracePeriodDaysLeft: number | null;
+  isTrialExpired: boolean;
+  isCanceledButActive: boolean;
 }
 
 import { useCheckout } from '@/contexts/CheckoutContext';
@@ -224,11 +234,13 @@ export function useSubscription(): UseSubscriptionReturn {
   }, [loadSubscription]);
 
   // Computed values
-  const isCanceledButActive = !!(subscription?.status === 'canceled' && 
-   subscription?.current_period_end && 
+  const isCanceledButActive = !!(subscription?.status === 'canceled' &&
+   subscription?.current_period_end &&
    new Date(subscription.current_period_end).getTime() > Date.now());
 
-  const isPro = !!((subscription?.status === 'active' || subscription?.status === 'past_due' || isCanceledButActive) && subscription?.tier !== 'free');
+  const isPastDueWithGrace = !!(subscription?.status === 'past_due' && isInGracePeriod(subscription));
+
+  const isPro = !!((subscription?.status === 'active' || isPastDueWithGrace || isCanceledButActive) && subscription?.tier !== 'free');
   const isTrialing = subscription?.status === 'trialing';
   const trialDaysLeft = getTrialDaysLeft(subscription);
 
@@ -240,17 +252,34 @@ export function useSubscription(): UseSubscriptionReturn {
   );
 
   // Feature limits based on tier
-  const bookmarkLimit = isPro || isTrialing || subscription?.status === 'past_due' || isCanceledButActive
+  const bookmarkLimit = isPro || isTrialing || isPastDueWithGrace || isCanceledButActive
     ? Infinity
     : FREE_TIER_LIMITS.maxBookmarks;
 
-  const historyDays = isPro || isTrialing || subscription?.status === 'past_due' || isCanceledButActive
+  const historyDays = isPro || isTrialing || isPastDueWithGrace || isCanceledButActive
     ? Infinity
     : FREE_TIER_LIMITS.historyDays;
 
-  const maxRecommendations = isPro || isTrialing || subscription?.status === 'past_due' || isCanceledButActive
+  const maxRecommendations = isPro || isTrialing || isPastDueWithGrace || isCanceledButActive
     ? Infinity
     : FREE_TIER_LIMITS.maxRecommendations;
+
+  // New computed values for billing UI
+  const accessEndsAt = getAccessEndsAt(subscription);
+  const gracePeriodDaysLeft = getGracePeriodDaysLeft(subscription);
+  const trialExpired = checkTrialExpired(subscription);
+
+  // Calculate days until renewal for active subscribers
+  const daysUntilRenewal = (() => {
+    if (!subscription || subscription.status !== 'active' || !subscription.current_period_end) {
+      return null;
+    }
+    const renewalDate = new Date(subscription.current_period_end);
+    const now = new Date();
+    const diffMs = renewalDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  })();
 
   return {
     subscription,
@@ -266,6 +295,12 @@ export function useSubscription(): UseSubscriptionReturn {
     refreshSubscription,
     startTrial,
     openUpgrade,
+    // New computed values
+    accessEndsAt,
+    daysUntilRenewal,
+    gracePeriodDaysLeft,
+    isTrialExpired: trialExpired,
+    isCanceledButActive,
   };
 }
 
@@ -291,9 +326,14 @@ export function clearAllSubscriptionCache(): void {
 export function isSubscriptionActive(subscription: Subscription | null): boolean {
   if (!subscription) return false;
   
-  const isCanceledButActive = subscription.status === 'canceled' && 
-    subscription.current_period_end && 
+  const isCanceledButActive = subscription.status === 'canceled' &&
+    subscription.current_period_end &&
     new Date(subscription.current_period_end).getTime() > Date.now();
 
-  return subscription.status === 'active' || subscription.status === 'trialing' || subscription.status === 'past_due' || !!isCanceledButActive;
+  const isPastDueWithGrace = subscription.status === 'past_due' && isInGracePeriod(subscription);
+
+  return subscription.status === 'active' ||
+    subscription.status === 'trialing' ||
+    isPastDueWithGrace ||
+    !!isCanceledButActive;
 }

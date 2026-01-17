@@ -4,6 +4,7 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { Suspense } from 'react';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthNotifications } from '@/hooks/useAuthNotifications';
@@ -11,6 +12,8 @@ import { BehavioralAnalyticsService } from '@/services/behavioralAnalyticsServic
 import Navbar from "@/components/common/Navbar";
 import UnifiedMobileNavbar from "@/components/common/UnifiedMobileNavbar";
 import AnalyticsConsentBanner from '@/components/common/AnalyticsConsentBanner';
+import MarketingNavbar from "@/components/common/MarketingNavbar";
+import { RouteTracker } from './RouteTracker';
 
 export default function ClientLayout({
     children,
@@ -20,13 +23,13 @@ export default function ClientLayout({
     const pathname = usePathname();
     const { isMobile } = useDeviceDetection();
     const { user, loading } = useAuth();
-    
+
     // Handle auth notifications using snackbar
     useAuthNotifications();
-    
+
     // Pages that should never show navbar (they have their own navigation)
     const excludedPaths = ['/calendar', '/', '/hackathons', '/dashboard', '/discover', '/events'];
-    
+
     // Marketing pages that should always show navbar (excluding landing page which has custom nav)
     const marketingPaths = ['/pricing', '/blog', '/contact', '/legal'];
 
@@ -42,12 +45,14 @@ export default function ClientLayout({
         };
     }, []);
 
+
+
     // Show navbar for:
     // 1. Marketing pages (always) - excluding landing page
     // 2. Unauthenticated users on non-excluded pages
     // 3. Note: Landing page uses its own custom resizable navbar
-    const shouldShowNavbar = 
-        marketingPaths.includes(pathname) || 
+    const shouldShowNavbar =
+        marketingPaths.includes(pathname) ||
         (!user && !loading && !excludedPaths.includes(pathname));
 
     if (!shouldShowNavbar) {
@@ -80,22 +85,31 @@ export default function ClientLayout({
         );
     }
 
+    const isMarketingPage = marketingPaths.includes(pathname);
+
     return (
         <>
-            {/* Use UnifiedMobileNavbar on mobile, desktop Navbar otherwise */}
-            {isMobile ? (
-                <UnifiedMobileNavbar 
-                    navItems={mobileNavItems}
-                    showThemeToggle={true}
-                    showLogo={true}
-                    ctaButton={!user ? {
-                        label: 'Sign Up',
-                        href: '/signup',
-                        variant: 'primary'
-                    } : undefined}
-                />
+            <Suspense fallback={null}>
+                <RouteTracker />
+            </Suspense>
+            {isMarketingPage ? (
+                <MarketingNavbar />
             ) : (
-                <Navbar />
+                /* Use UnifiedMobileNavbar on mobile, desktop Navbar otherwise for app pages */
+                isMobile ? (
+                    <UnifiedMobileNavbar
+                        navItems={mobileNavItems}
+                        showThemeToggle={true}
+                        showLogo={true}
+                        ctaButton={!user ? {
+                            label: 'Sign Up',
+                            href: '/signup',
+                            variant: 'primary'
+                        } : undefined}
+                    />
+                ) : (
+                    <Navbar />
+                )
             )}
             {/* ✅ Wrap children in a main tag with top padding to offset the navbar */}
             <main className="pt-16">

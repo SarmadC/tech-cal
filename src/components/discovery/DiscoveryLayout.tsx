@@ -12,6 +12,7 @@ interface DiscoveryLayoutProps {
     onSidebarClose?: () => void;
     className?: string; // Add className prop
     minHeightClassName?: string;
+    gridClassName?: string;
 }
 
 const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
@@ -23,7 +24,8 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
     isSidebarOpen,
     onSidebarClose,
     className = '', // swift-default
-    minHeightClassName = 'min-h-screen'
+    minHeightClassName = 'min-h-screen',
+    gridClassName = ''
 }) => {
     return (
         <div className={`${minHeightClassName} bg-transparent p-4 lg:p-6 transition-colors ${className}`}>
@@ -70,7 +72,7 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
                     )}
 
                     {/* Main Content */}
-                    <div className="flex-1 px-1 md:px-0 pb-6 lg:pb-7 pt-2 lg:pt-0 transition-colors">
+                    <div className="flex-1 min-w-0 px-1 md:px-0 pb-6 lg:pb-7 pt-2 lg:pt-0 transition-colors">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
                             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                 Events <span className="text-muted-foreground/60">({resultCount || 0})</span>
@@ -83,7 +85,7 @@ const DiscoveryLayout: React.FC<DiscoveryLayoutProps> = ({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 ${gridClassName}`}>
                             {children}
                         </div>
                     </div>
