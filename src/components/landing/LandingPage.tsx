@@ -46,7 +46,7 @@ export default function LandingPage() {
         },
         {
             name: "Pricing",
-            link: "#pricing",
+            link: "/pricing",
         },
         {
             name: "Contact",
