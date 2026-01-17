@@ -16,10 +16,10 @@ function SubmitButton() {
         <button
             type="submit"
             disabled={pending}
-            className="bg-accent-primary hover:bg-accent-primary-hover !text-accent-primary-foreground font-semibold py-3 px-6 rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+            className="bg-white/10 hover:bg-white/20 text-white border border-white/10 font-medium py-2.5 px-6 rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
         >
             {pending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
-            {pending ? 'Subscribing...' : 'Subscribe'}
+            {pending ? '...' : 'Subscribe'}
         </button>
     );
 }
@@ -47,19 +47,19 @@ export default function SubscribeForm() {
     }, [state, showSuccess, showError]);
 
     return (
-        <form ref={formRef} action={formAction} className="mt-8">
-            <h2 className="text-2xl font-bold mb-4">Stay Updated with Tech News</h2>
-            <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
-                Get weekly insights on the latest tech events, tutorials, and industry news delivered to your inbox.
+        <form ref={formRef} action={formAction} className="mt-0">
+            <h2 className="text-xl font-semibold mb-2 text-white">Subscribe to our newsletter</h2>
+            <p className="text-sm text-zinc-400 mb-6 max-w-lg mx-auto">
+                Get the latest articles and insights delivered to your inbox.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <div className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
                 <input
                     type="email"
                     name="email" // The name attribute is crucial for FormData
                     placeholder="Enter your email"
                     required
-                    // Theming consistency: Using theme variables
-                    className="flex-1 px-4 py-3 rounded-lg text-foreground-primary bg-background-main border border-border-default placeholder-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                    // Theming consistency: Glass style
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white bg-white/5 border border-white/10 placeholder-zinc-600 focus:outline-none focus:bg-white/10 focus:border-white/20 transition-all font-medium"
                 />
                 <SubmitButton />
             </div>

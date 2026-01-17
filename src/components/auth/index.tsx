@@ -34,6 +34,7 @@ export function SimpleForm({
 
 
 export { default as AuthProviders } from './AuthProviders';
+export { default as EmailConfirmationSent } from './EmailConfirmationSent';
 
 // ============================================
 // OPTIONAL: Shared Form Field Components

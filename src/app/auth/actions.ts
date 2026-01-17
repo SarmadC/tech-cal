@@ -280,6 +280,53 @@ export async function updatePasswordAction(
 
 
 
+export async function resendVerificationAction(email: string): Promise<AuthFormState> {
+    if (!email || !email.includes('@')) {
+        return {
+            success: false,
+            message: 'Please provide a valid email address.',
+            errors: { email: ['Invalid email address'] },
+        };
+    }
+
+    const supabase = await createClient();
+
+    try {
+        const { getEmailConfirmationUrl } = await import('@/utils/authUtils');
+        const emailRedirectTo = getEmailConfirmationUrl('/discover');
+
+        const { error } = await supabase.auth.resend({
+            type: 'signup',
+            email,
+            options: {
+                emailRedirectTo,
+            },
+        });
+
+        if (error) {
+            console.error('[Resend Verification] Error:', error);
+            // Don't reveal if email exists or not for security
+            return {
+                success: false,
+                message: 'Unable to send verification email. Please try again later.',
+                errors: { _form: [error.message] },
+            };
+        }
+
+        return {
+            success: true,
+            message: 'Verification email sent! Please check your inbox.',
+        };
+    } catch (error) {
+        console.error('[Resend Verification] Exception:', error);
+        return {
+            success: false,
+            message: 'An unexpected error occurred. Please try again.',
+            errors: { _form: [(error as Error).message] },
+        };
+    }
+}
+
 export async function oauthSignInAction(provider: OAuthProvider, nextPath: string = '/discover') {
     const { getOAuthRedirectUrl } = await import('@/utils/authUtils');
 

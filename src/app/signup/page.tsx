@@ -1,6 +1,7 @@
 // src/app/signup/page.tsx
 'use client';
 
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -8,8 +9,10 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import { signupAction } from '@/app/auth/actions';
 import { AuthForm, AuthProviders } from '@/components/auth';
+import EmailConfirmationSent from '@/components/auth/EmailConfirmationSent';
 import type { OAuthProvider } from '@/types';
 import type { AuthFormState } from '@/app/auth/actions';
+
 // The initial state for our form, matching the AuthFormState type
 const initialState: AuthFormState = {
     message: '',
@@ -19,13 +22,16 @@ const initialState: AuthFormState = {
 
 export default function SignupPage() {
     const router = useRouter();
+    const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
+    const [submittedEmail, setSubmittedEmail] = useState('');
+    const emailInputRef = useRef<HTMLInputElement>(null);
 
     const handleOAuthSignIn = async (provider: OAuthProvider) => {
         try {
             // Use route handler instead of server action for proper cookie handling
             const oauthUrl = new URL(`/api/auth/oauth/${provider}`, window.location.origin);
             oauthUrl.searchParams.set('next', '/discover');
-            
+
             // Navigate to route handler which will handle OAuth initiation and redirect
             window.location.href = oauthUrl.toString();
         } catch (error) {
@@ -34,13 +40,40 @@ export default function SignupPage() {
         }
     };
 
-    // Handle successful signup - redirect immediately when action indicates it
-    // If email confirmation is needed (no session), action sets shouldRedirect=false and we stay on page
+    // Handle successful signup
+    // If email confirmation is needed (no session), show the confirmation UI
+    // If already confirmed (rare), redirect to discover
     const handleSignupSuccess = (state: AuthFormState) => {
         if (state?.shouldRedirect) {
             router.push('/discover');
+        } else {
+            // Email confirmation required - capture email and show confirmation UI
+            const email = emailInputRef.current?.value || '';
+            setSubmittedEmail(email);
+            setEmailConfirmationSent(true);
         }
     };
+
+    // Show email confirmation sent state
+    if (emailConfirmationSent && submittedEmail) {
+        return (
+            <ProtectedRoute allowUnauthenticated>
+                <div className="min-h-screen bg-background-main flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-md w-full">
+                        <div className="text-center mb-8">
+                            <Link href="/" className="inline-flex items-center space-x-2">
+                                <Image src="/logo.svg" alt="KureCal" width={48} height={48} />
+                                <span className="text-2xl font-bold text-foreground-primary">KureCal</span>
+                            </Link>
+                        </div>
+                        <div className="bg-background-secondary rounded-2xl p-8 border border-border-default">
+                            <EmailConfirmationSent email={submittedEmail} />
+                        </div>
+                    </div>
+                </div>
+            </ProtectedRoute>
+        );
+    }
 
     return (
         <ProtectedRoute allowUnauthenticated>
@@ -88,7 +121,14 @@ export default function SignupPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <label htmlFor="email" className="text-sm font-medium text-foreground-secondary">Email address</label>
-                                        <input id="email" name="email" type="email" required className="mt-1 block w-full px-3 py-2 bg-background-tertiary border border-border-default rounded-lg focus:outline-none focus:ring-accent-primary focus:border-accent-primary" />
+                                        <input
+                                            ref={emailInputRef}
+                                            id="email"
+                                            name="email"
+                                            type="email"
+                                            required
+                                            className="mt-1 block w-full px-3 py-2 bg-background-tertiary border border-border-default rounded-lg focus:outline-none focus:ring-accent-primary focus:border-accent-primary"
+                                        />
                                         {state.errors?.email && <p className="text-sm text-red-500 mt-1">{state.errors.email[0]}</p>}
                                     </div>
                                     <div className="space-y-2">

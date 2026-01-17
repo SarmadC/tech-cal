@@ -1,3 +1,4 @@
+// src/app/blog/page.tsx
 // ISR for blog page - revalidate every hour for fresh content
 export const revalidate = 3600; // 1 hour
 
@@ -47,6 +48,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
     }
     const categories = ['All', ...(categoriesData?.map(c => c.name) || [])];
 
+    // Main Query
     const postQuery = supabase
         .from('posts')
         .select(`
@@ -81,6 +83,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
         console.error("Error fetching posts:", postsError.message);
     }
 
+    // Featured Post (only show if no filters/search active)
     const { data: featuredPostData, error: featuredError } = await supabase
         .from('posts')
         .select(`*, category:post_categories(name), author:profiles(full_name)`)
@@ -96,85 +99,121 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
     }
 
     return (
-        <div className="min-h-screen bg-background-main pt-20">
-            <section className="py-16 px-6 bg-background-secondary border-b border-border-color">
-                <div className="max-w-[1600px] mx-auto">
-                    <h1 className="text-4xl md:text-5xl font-bold text-foreground-primary mb-6">KureCal Blog</h1>
-                    <p className="text-xl text-foreground-secondary max-w-3xl">Stay informed with insights, tutorials, and news from the tech world.</p>
+        <div className="min-h-screen bg-[#090909] pt-24 pb-20">
+            {/* Header */}
+            <section className="px-6 mb-16">
+                <div className="max-w-[1200px] mx-auto text-center">
+                    <div className="inline-flex items-center justify-center px-3 py-1 mb-6 border border-white/10 rounded-full bg-white/5 backdrop-blur-sm">
+                        <span className="text-xs font-medium text-white/80 tracking-wide uppercase">KureCal Blog</span>
+                    </div>
+                    <h1 className="text-4xl md:text-6xl font-semibold text-white tracking-tight mb-6">
+                        Insights & Updates
+                    </h1>
+                    <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+                        Stay informed with the latest insights, tutorials, and news from the world of tech events.
+                    </p>
                 </div>
             </section>
 
-            <section className="py-8 px-6">
-                <div className="max-w-[1600px] mx-auto">
+            <section className="px-6">
+                <div className="max-w-[1200px] mx-auto">
+
                     <BlogFilters categories={categories} />
 
+                    {/* Featured Post */}
                     {featuredPost && selectedCategory === 'All' && !searchTerm && (
-                        <div className="mb-12">
-                            <div className="bg-gradient-to-r from-gray-900 to-gray-700 rounded-2xl p-8 text-white">
-                                <div className="flex items-center space-x-2 mb-4">
-                                    <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold">Featured</span>
-                                    <span className="text-sm opacity-80">{featuredPost.category?.name}</span>
-                                </div>
-                                <h2 className="text-3xl font-bold mb-4">{featuredPost.title}</h2>
-                                <p className="text-lg opacity-90 mb-6 line-clamp-2">{featuredPost.excerpt}</p>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-4 text-sm">
-                                        <span>{featuredPost.author?.full_name}</span>
-                                        <span className="opacity-60">•</span>
-                                        {/* 3. Use the imported function with options to match original format */}
-                                        <span>{featuredPost.published_at ? formatDate(featuredPost.published_at) : 'Date not available'}</span>
-                                        <span className="opacity-60">•</span>
-                                        <span>{featuredPost.read_time_minutes} min read</span>
+                        <div className="mb-16">
+                            <Link href={`/blog/${featuredPost.slug}`} className="group block">
+                                <article className="relative bg-white/[0.02] border border-white/5 rounded-2xl p-8 md:p-12 hover:bg-white/[0.04] hover:border-white/10 transition-all duration-300">
+                                    <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start">
+                                        <div className="flex-1 space-y-6">
+                                            <div className="flex items-center space-x-3 text-sm">
+                                                <span className="text-zinc-500">{featuredPost.category?.name}</span>
+                                                <span className="text-zinc-700">•</span>
+                                                <span className="text-zinc-500">{featuredPost.read_time_minutes} min read</span>
+                                            </div>
+
+                                            <h2 className="text-3xl md:text-4xl font-semibold text-white group-hover:text-white/90 transition-colors leading-tight">
+                                                {featuredPost.title}
+                                            </h2>
+
+                                            <p className="text-lg text-zinc-400 leading-relaxed line-clamp-3">
+                                                {featuredPost.excerpt}
+                                            </p>
+
+                                            <div className="flex items-center pt-2">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-xs font-medium text-white ring-2 ring-black">
+                                                    {getAuthorInitials(featuredPost.author)}
+                                                </div>
+                                                <div className="ml-3 text-sm">
+                                                    <span className="text-white block">{featuredPost.author?.full_name}</span>
+                                                    <span className="text-zinc-500">{featuredPost.published_at ? formatDate(featuredPost.published_at) : ''}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* Optional: Add an image placeholder or gradient generic here if desired, 
+                                            but for 'Linear' style, text-heavy or subtle visuals are preferred. 
+                                            Keeping it text-focused for now as per previous design but cleaner. 
+                                        */}
+                                        <div className="w-full md:w-1/3 aspect-video rounded-xl bg-gradient-to-br from-white/5 to-white/0 border border-white/5 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-500">
+                                            <div className="text-white/20 italic">Featured Image</div>
+                                        </div>
                                     </div>
-                                    <Link href={`/blog/${featuredPost.slug}`} className="bg-white text-accent-primary hover:bg-gray-100 font-semibold py-2 px-4 rounded-lg transition-all">
-                                        Read More
-                                    </Link>
-                                </div>
-                            </div>
+                                </article>
+                            </Link>
                         </div>
                     )}
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {/* Post Grid */}
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredPosts.length > 0 ? filteredPosts.map((post) => (
-                            <article key={post.id} className="bg-background-secondary rounded-xl border border-border-color overflow-hidden hover:border-accent-primary/30 transition-all group">
-                                <div className="aspect-video bg-gradient-to-br from-gray-800/30 to-gray-600/20 relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-background-tertiary" />
-                                </div>
-                                <div className="p-6">
-                                    <div className="flex items-center space-x-2 mb-3">
-                                        <span className="text-xs font-medium text-accent-primary">{post.category?.name}</span>
-                                        <span className="text-xs text-foreground-tertiary">•</span>
-                                        <span className="text-xs text-foreground-tertiary">{post.read_time_minutes} min read</span>
+                            <Link href={`/blog/${post.slug}`} key={post.id} className="group flex">
+                                <article className="flex-1 bg-white/[0.02] border border-white/5 rounded-xl p-6 hover:bg-white/[0.04] hover:border-white/10 transition-all duration-300 flex flex-col">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="text-xs font-medium text-zinc-500 px-2 py-1 rounded-md bg-white/5 border border-white/5">
+                                            {post.category?.name}
+                                        </span>
+                                        <span className="text-xs text-zinc-600">
+                                            {post.read_time_minutes} min
+                                        </span>
                                     </div>
-                                    <h3 className="text-xl font-semibold text-foreground-primary mb-3 group-hover:text-accent-primary transition-colors">
-                                        <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+
+                                    <h3 className="text-xl font-medium text-white mb-3 group-hover:text-zinc-200 transition-colors leading-snug">
+                                        {post.title}
                                     </h3>
-                                    <p className="text-foreground-secondary mb-4 line-clamp-3">{post.excerpt}</p>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="w-8 h-8 bg-accent-primary/10 rounded-full flex items-center justify-center">
-                                                <span className="text-xs font-semibold text-accent-primary">
-                                                    {getAuthorInitials(post.author)}
-                                                </span>
-                                            </div>
-                                            <div className="text-sm">
-                                                <p className="font-medium text-foreground-primary">{post.author?.full_name}</p>
-                                                {/* 3. Use the imported function with options to match original format */}
-                                                <p className="text-xs text-foreground-tertiary">{post.published_at ? formatDate(post.published_at) : 'Date not available'}</p>
-                                            </div>
+
+                                    <p className="text-sm text-zinc-400 mb-6 line-clamp-3 leading-relaxed flex-1">
+                                        {post.excerpt}
+                                    </p>
+
+                                    <div className="flex items-center justify-between text-xs pt-4 border-t border-white/5 mt-auto">
+                                        <div className="flex items-center space-x-2">
+                                            <span className="text-zinc-300">{post.author?.full_name}</span>
                                         </div>
-                                        <Link href={`/blog/${post.slug}`} className="text-accent-primary hover:text-accent-primary-hover transition-colors">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                                        </Link>
+                                        <span className="text-zinc-600">
+                                            {post.published_at ? formatDate(post.published_at) : ''}
+                                        </span>
                                     </div>
-                                </div>
-                            </article>
+                                </article>
+                            </Link>
                         )) : (
-                            <p className="col-span-full text-center text-foreground-secondary">No posts found matching your criteria.</p>
+                            <div className="col-span-full py-20 text-center">
+                                <p className="text-zinc-500 text-lg">No posts found matching your criteria.</p>
+                                <Link
+                                    href="/blog"
+                                    className="mt-4 inline-block text-sm text-white hover:underline"
+                                >
+                                    Clear filters
+                                </Link>
+                            </div>
                         )}
                     </div>
-                    <div className="mt-16 bg-gradient-to-r from-gray-900 to-gray-700 rounded-2xl p-8 text-center text-white">
-                        <SubscribeForm />
+
+                    {/* Subscribe Section */}
+                    <div className="mt-24 border-t border-white/10 pt-16 pb-8">
+                        <div className="max-w-xl mx-auto text-center">
+                            <SubscribeForm />
+                        </div>
                     </div>
                 </div>
             </section>

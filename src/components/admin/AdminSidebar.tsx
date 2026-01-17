@@ -102,6 +102,16 @@ export default function AdminSidebar() {
                 ],
             },
             {
+                label: 'Content',
+                items: [
+                    {
+                        title: 'Blog',
+                        href: `${BASE_PATH}/blog`,
+                        icon: <MaterialIcon name="edit" size={16} />,
+                    },
+                ],
+            },
+            {
                 label: 'System',
                 items: [
                     {
