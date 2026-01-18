@@ -350,21 +350,39 @@ export async function openProAnnualCheckout(
  * Open Paddle customer portal
  * Users can manage their subscription, update payment method, etc.
  *
- * @param subscription User's subscription with paddle_customer_id and paddle_subscription_id
+ * @param subscription User's subscription with paddle_customer_id
  */
-export function openCustomerPortal(subscription: Subscription): void {
-  if (!subscription.paddle_customer_id || !subscription.paddle_subscription_id) {
-    console.error('No Paddle customer ID or subscription ID found');
+export async function openCustomerPortal(subscription: Subscription): Promise<void> {
+  if (!subscription.paddle_customer_id) {
+    console.error('No Paddle customer ID found');
     return;
   }
 
-  // Paddle customer portal is hosted by Paddle
-  // The URL format depends on your Paddle configuration
-  const portalUrl = PADDLE_ENVIRONMENT === 'production'
-    ? `https://customer.paddle.com/subscriptions/${subscription.paddle_subscription_id}`
-    : `https://sandbox-customer.paddle.com/subscriptions/${subscription.paddle_subscription_id}`;
+  try {
+    const response = await fetch('/api/paddle/customer-portal', {
+      method: 'POST',
+    });
 
-  window.open(portalUrl, '_blank');
+    const data = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
+
+    if (!response.ok) {
+      throw new Error(data?.error || 'Unable to open billing portal');
+    }
+
+    if (!data.url) {
+      throw new Error('Billing portal URL missing from response');
+    }
+
+    const portalWindow = window.open(data.url, '_blank', 'noopener,noreferrer');
+    if (!portalWindow) {
+      window.location.href = data.url;
+    }
+  } catch (error) {
+    console.error('Failed to open Paddle billing portal', error);
+    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+      window.alert('Unable to open the billing portal. Please try again in a moment.');
+    }
+  }
 }
 
 /**
