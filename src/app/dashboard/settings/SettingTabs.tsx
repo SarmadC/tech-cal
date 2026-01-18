@@ -87,11 +87,21 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
     };
 
     const planInfo = getPlanInfo();
+    const hasPaddleCustomer = Boolean(subscription?.paddle_customer_id);
+    const canManageBilling = Boolean(subscription && subscription.tier !== 'free' && hasPaddleCustomer);
+    const awaitingBillingPortal = Boolean(subscription && subscription.tier !== 'free' && !hasPaddleCustomer);
 
     const handleManageBilling = () => {
-        if (subscription) {
-            openCustomerPortal(subscription);
+        if (!subscription) return;
+
+        if (!subscription.paddle_customer_id) {
+            if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+                window.alert('Your billing portal is still being prepared. Please try again shortly or reach out to support if you need immediate help.');
+            }
+            return;
         }
+
+        openCustomerPortal(subscription);
     };
 
     const tabs = [
@@ -273,10 +283,10 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                         style={{
                                             backgroundColor: planInfo.statusColor === 'success' ? 'var(--success-light)'
                                                 : planInfo.statusColor === 'warning' ? 'rgba(245, 158, 11, 0.1)'
-                                                : 'rgba(239, 68, 68, 0.1)',
+                                                    : 'rgba(239, 68, 68, 0.1)',
                                             color: planInfo.statusColor === 'success' ? 'var(--success)'
                                                 : planInfo.statusColor === 'warning' ? '#f59e0b'
-                                                : '#ef4444'
+                                                    : '#ef4444'
                                         }}
                                     >
                                         {planInfo.status}
@@ -296,7 +306,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                     className="mt-6 pt-4 border-t flex gap-3"
                                     style={{ borderColor: 'var(--border-default)' }}
                                 >
-                                    {(isPro || isTrialing || isCanceledButActive) ? (
+                                    {canManageBilling ? (
                                         <>
                                             <button
                                                 onClick={handleManageBilling}
@@ -313,6 +323,10 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                                 </Link>
                                             )}
                                         </>
+                                    ) : (isPro || isTrialing || isCanceledButActive) ? (
+                                        <div className="flex-1 px-4 py-2 rounded-lg text-sm text-foreground-secondary border border-border-default bg-background-secondary">
+                                            We're finalizing your billing portal. Please try again shortly or contact support if you need to make changes immediately.
+                                        </div>
                                     ) : (
                                         <button
                                             onClick={() => openUpgrade('monthly')}
@@ -338,7 +352,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                     borderColor: 'var(--border-default)'
                                 }}
                             >
-                                {subscription?.paddle_subscription_id ? (
+                                {canManageBilling ? (
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
@@ -370,6 +384,16 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                             </button>
                                         </div>
                                     </div>
+                                ) : awaitingBillingPortal ? (
+                                    <div className="text-center py-8">
+                                        <MaterialIcon name="hourglass_empty" size={48} className="mx-auto mb-4" color="var(--foreground-tertiary)" />
+                                        <p className="text-sm" style={{ color: 'var(--foreground-secondary)' }}>
+                                            Billing portal is almost ready
+                                        </p>
+                                        <p className="text-xs mt-1" style={{ color: 'var(--foreground-tertiary)' }}>
+                                            We'll surface your Paddle link as soon as Paddle confirms your subscription. Reach out if you need immediate help.
+                                        </p>
+                                    </div>
                                 ) : (
                                     <div className="text-center py-8">
                                         <MaterialIcon name="credit-card" size={48} className="mx-auto mb-4" color="var(--foreground-tertiary)" />
@@ -383,6 +407,17 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                 )}
                             </div>
                         </div>
+                        {canManageBilling && (
+                            <div className="flex justify-start mt-4">
+                                <button
+                                    onClick={handleManageBilling}
+                                    className="flex items-center gap-2 text-xs font-medium text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] transition-colors py-2 px-3 rounded-md hover:bg-[var(--background-secondary)]"
+                                >
+                                    <MaterialIcon name="receipt_long" size={18} color="var(--foreground-tertiary)" />
+                                    View invoices & billing history
+                                </button>
+                            </div>
+                        )}
                     </div>
                 );
             case 'profile':

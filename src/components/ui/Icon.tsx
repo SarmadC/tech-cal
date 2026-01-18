@@ -108,7 +108,8 @@ export type IconName =
     | 'work'
     | 'extension'
     | 'palette'
-    | 'my_location';
+    | 'my_location'
+    | 'hourglass_empty';
 
 interface IconProps {
     name: IconName;
@@ -171,6 +172,7 @@ const iconMap = {
     'extension': PuzzlePieceIcon,
     'palette': PaletteIcon,
     'my_location': CrosshairIcon,
+    'hourglass_empty': ClockIcon,
 } as const;
 
 export const MaterialIcon: React.FC<IconProps> = ({

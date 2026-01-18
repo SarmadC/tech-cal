@@ -36,11 +36,21 @@ export default function SettingsMobileBilling() {
     };
 
     const planInfo = getPlanInfo();
+    const hasPaddleCustomer = Boolean(subscription?.paddle_customer_id);
+    const canManageBilling = Boolean(subscription && subscription.tier !== 'free' && hasPaddleCustomer);
+    const awaitingBillingPortal = Boolean(subscription && subscription.tier !== 'free' && !hasPaddleCustomer);
 
     const handleManageBilling = () => {
-        if (subscription) {
-            openCustomerPortal(subscription);
+        if (!subscription) return;
+
+        if (!subscription.paddle_customer_id) {
+            if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+                window.alert('Your billing portal is still being prepared. Please try again shortly or reach out to support if you need immediate help.');
+            }
+            return;
         }
+
+        openCustomerPortal(subscription);
     };
 
     if (isLoading) {
@@ -119,7 +129,7 @@ export default function SettingsMobileBilling() {
                     </div>
 
                     {/* Actions */}
-                    {(isPro || isTrialing) ? (
+                    {canManageBilling ? (
                         <div className="grid grid-cols-2 gap-3">
                             <Button
                                 onClick={handleManageBilling}
@@ -137,6 +147,10 @@ export default function SettingsMobileBilling() {
                                     </Button>
                                 </Link>
                             )}
+                        </div>
+                    ) : (isPro || isTrialing) ? (
+                        <div className="rounded-lg border border-[var(--mono-border-default)] bg-[var(--mono-bg-hover)]/40 px-4 py-3 text-[12px] text-[var(--mono-text-secondary)]">
+                            We're finalizing your billing portal. Please try again shortly or contact support if you need to make changes immediately.
                         </div>
                     ) : (
                         <Button
@@ -158,7 +172,7 @@ export default function SettingsMobileBilling() {
                     Payment Method
                 </h3>
                 <div className="rounded-xl overflow-hidden bg-[var(--mono-bg-surface)] border border-[var(--mono-border-default)] shadow-sm">
-                    {(isPro || isTrialing) && subscription?.paddle_subscription_id ? (
+                    {canManageBilling ? (
                         <div className="flex items-center justify-between p-3 pl-4">
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-10 rounded border border-[var(--mono-border-default)] bg-[var(--mono-bg-subtle)] flex items-center justify-center text-[var(--mono-text-secondary)] shadow-sm">
@@ -181,9 +195,14 @@ export default function SettingsMobileBilling() {
                                 Update
                             </Button>
                         </div>
+                    ) : awaitingBillingPortal ? (
+                        <div className="p-3 text-[12px] text-[var(--mono-text-secondary)] flex items-center gap-2">
+                            <MaterialIcon name="hourglass_empty" size={18} color="var(--mono-text-tertiary)" />
+                            Billing portal link will appear once Paddle confirms your subscription.
+                        </div>
                     ) : (
                         <button
-                            onClick={() => openUpgrade('monthly')}
+                            onClick={handleManageBilling}
                             className="w-full flex items-center justify-between p-3 pl-4 hover:bg-[var(--mono-bg-hover)]/50 transition-colors group"
                         >
                             <div className="flex items-center gap-3">
@@ -203,7 +222,7 @@ export default function SettingsMobileBilling() {
             </div>
 
             {/* Invoices Link - More Subtle */}
-            {(isPro || isTrialing) && subscription?.paddle_subscription_id && (
+            {canManageBilling && (
                 <div className="flex justify-center">
                     <button
                         onClick={handleManageBilling}
