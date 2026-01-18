@@ -220,13 +220,14 @@ export function useUnifiedServerFiltering(
   // Final filters for API call
   const fetchFilters = useMemo(() => ({
     ...stableFilters,
+    tags: filters.tags, // Explicitly include tags to ensure they are passed correctly
     page: filters.page,
     pageSize: filters.pageSize,
     sessionId: sessionIdRef.current ?? 'filters_fallback',
     surface,
     // Fast search mode: skip enrichment when user is actively typing
     fastSearch: isTyping && Boolean(filters.searchTerm),
-  }), [stableFilters, filters.page, filters.pageSize, surface, isTyping, filters.searchTerm]);
+  }), [stableFilters, filters.tags, filters.page, filters.pageSize, surface, isTyping, filters.searchTerm]);
 
   // React Query: paged query for filtered events
   // In development, use shorter staleTime to see changes immediately
@@ -273,10 +274,15 @@ export function useUnifiedServerFiltering(
         : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const requestTimestamp = new Date().toISOString();
 
+      // Debug logging for tag filtering
+      if (process.env.NODE_ENV === 'development' && fetchFilters.tags && (fetchFilters.tags as string[]).length > 0) {
+        console.log('[useUnifiedServerFiltering] Fetching with tags:', fetchFilters.tags);
+      }
+
       const response = await fetch('/api/events/filtered', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
+        headers: {
+          'Content-Type': 'application/json',
           'X-Request-Id': requestId,
           'X-Request-Timestamp': requestTimestamp
         },
@@ -367,6 +373,10 @@ export function useUnifiedServerFiltering(
     : (infiniteFetching && !!infiniteData);
 
   const updateFilter: UpdateFilterHandler = useCallback((key, value) => {
+    // Debug logging for tag updates
+    if (key === 'tags' && process.env.NODE_ENV === 'development') {
+      console.log('[useUnifiedServerFiltering] updateFilter called:', { key, value });
+    }
     setFilters(prev => ({ ...prev, [key]: value }));
   }, []);
 
@@ -397,6 +407,7 @@ export function useUnifiedServerFiltering(
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.categories.length > 0) count++;
+    if (filters.tags.length > 0) count++;
     if (filters.locations.length > 0) count++;
     if (filters.searchTerm) count++;
     if (filters.dateRange.start || filters.dateRange.end) count++;
@@ -413,6 +424,7 @@ export function useUnifiedServerFiltering(
     return count;
   }, [
     filters.categories.length,
+    filters.tags.length,
     filters.locations.length,
     filters.searchTerm,
     filters.dateRange.start,

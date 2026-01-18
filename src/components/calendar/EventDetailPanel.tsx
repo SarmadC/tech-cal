@@ -3,6 +3,7 @@
 import { FC, useState, useEffect, useMemo } from 'react';
 import { XIcon, ArrowSquareOutIcon, Bookmark, Star, ChatText } from '@phosphor-icons/react';
 import { useTimelineTheme } from '@/hooks/useTimelineTheme';
+import '@/app/styles/event-card.css';
 
 // 1. UPDATE IMPORTS: Use the new, specific type names.
 import { Event, EventType, AgendaItem, MultiDayEventInstance } from '@/types';

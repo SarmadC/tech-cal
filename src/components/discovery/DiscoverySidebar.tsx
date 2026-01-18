@@ -20,8 +20,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({ title, children, defaultO
         <div className="filter-section filter-section-with-margin">
             {/* Divider removed for cleaner look */}
             <button
+                type="button"
                 className="flex items-center justify-between w-full mb-2 py-1 group text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsOpen(!isOpen);
+                }}
             >
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 group-hover:text-muted-foreground transition-colors">{title}</h3>
                 {isOpen ? (
@@ -143,6 +148,7 @@ export interface DiscoverySidebarProps {
         format?: Record<string, number>;
         cost?: Record<string, number>;
         categories?: Record<string, number>;
+        tags?: Record<string, number>;
     };
     mobileMode?: boolean;
 }
@@ -170,6 +176,12 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
         const updated = current.includes(tagName)
             ? current.filter(tag => tag !== tagName)
             : [...current, tagName];
+
+        // Debug logging
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[DiscoverySidebar] toggleTag:', { tagName, current, updated });
+        }
+
         onUpdateFilter('tags', updated);
     };
 
@@ -244,13 +256,14 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
                 </FilterSection>
 
                 {/* Tag Cloud Section */}
-                {events.length > 0 && (
+                {(events.length > 0 || (counts.tags && Object.keys(counts.tags).length > 0)) && (
                     <FilterSection title="Popular Tags" defaultOpen={true}>
                         <TagCloud
                             events={events}
                             onTagClick={toggleTag}
                             selectedTags={filters.tags || []}
                             maxTags={15}
+                            tagCounts={counts.tags}
                         />
                     </FilterSection>
                 )}
@@ -279,7 +292,8 @@ const DiscoverySidebar: React.FC<DiscoverySidebarProps> = React.memo(({
         eventsEqual &&
         prevProps.counts?.format === nextProps.counts?.format &&
         prevProps.counts?.cost === nextProps.counts?.cost &&
-        prevProps.counts?.categories === nextProps.counts?.categories
+        prevProps.counts?.categories === nextProps.counts?.categories &&
+        prevProps.counts?.tags === nextProps.counts?.tags
     );
 });
 

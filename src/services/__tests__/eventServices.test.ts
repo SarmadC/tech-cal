@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventService } from '../eventServices';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { EventFilters } from '@/types';
+import type { CareerProfile } from '@/types/career';
 
 // Mock Supabase client
 const createMockSupabaseClient = () => {
@@ -448,3 +449,5 @@ describe('EventService', () => {
     });
   });
 });
+
+

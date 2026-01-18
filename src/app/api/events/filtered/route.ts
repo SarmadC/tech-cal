@@ -100,6 +100,7 @@ interface FilteredEventsResponse {
 /**
  * POST /api/events/filtered
  * Server-side event filtering with pagination and statistics
+ * // Force Rebuild 1
  */
 export async function POST(request: NextRequest) {
   const requestTimestamp = request.headers.get('X-Request-Timestamp');

@@ -22,7 +22,7 @@ export function FeaturesGrid() {
                         <div
                             key={index}
                             className="feature-sticky-card"
-                            style={!isMobile ? { top: `${30 + index * 2}%` } : undefined}
+                            style={!isMobile ? { top: `${30 + index * 2}vh` } : undefined}
                         >
                             <div className="feature-sticky-icon">
                                 <div className="icon-wrapper">{feature.icon}</div>

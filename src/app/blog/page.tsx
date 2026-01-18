@@ -9,6 +9,7 @@ import { sanitizeFtsQuery } from '@/lib/securityUtils';
 import SubscribeForm from './SubscribeForm';
 // 1. Import the new date utility function
 import { formatDate } from '@/utils/dateUtils';
+import GeometricPattern from '@/components/blog/GeometricPattern';
 
 type PostWithDetails = {
     id: string;
@@ -21,15 +22,19 @@ type PostWithDetails = {
     author: { full_name: string | null } | null;
 };
 
-function getAuthorInitials(author: { full_name: string | null } | null): string {
-    const name = author?.full_name;
-    if (!name) return '??';
-    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
-}
-
 type BlogPageProps = {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
+
+// Helper to reliably get a variant based on string hash
+function getVariantForId(id: string): 'blue' | 'orange' | 'green' | 'purple' | 'mixed' {
+    const variants = ['blue', 'orange', 'green', 'purple', 'mixed'] as const;
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return variants[Math.abs(hash) % variants.length];
+}
 
 export default async function BlogPage({ searchParams }: BlogPageProps) {
     const resolvedSearchParams = await searchParams;
@@ -99,64 +104,48 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
     }
 
     return (
-        <div className="min-h-screen bg-[#090909] pt-24 pb-20">
-            {/* Header */}
-            <section className="px-6 mb-16">
-                <div className="max-w-[1200px] mx-auto text-center">
-                    <div className="inline-flex items-center justify-center px-3 py-1 mb-6 border border-white/10 rounded-full bg-white/5 backdrop-blur-sm">
-                        <span className="text-xs font-medium text-white/80 tracking-wide uppercase">KureCal Blog</span>
-                    </div>
-                    <h1 className="text-4xl md:text-6xl font-semibold text-white tracking-tight mb-6">
-                        Insights & Updates
-                    </h1>
-                    <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-                        Stay informed with the latest insights, tutorials, and news from the world of tech events.
-                    </p>
+        <div className="min-h-screen bg-black pt-24 pb-20">
+
+            {/* Header - Simpler and cleaner */}
+            <section className="px-6 mb-12 hidden"> {/* Hidden as per design ref which starts immediately with content often, but keeping context if needed. Actually let's hide to match the 'clean' look or keep very minimal. */}
+                <div className="max-w-[1240px] mx-auto">
+                    <h1 className="text-4xl font-semibold text-white mb-2">Blog</h1>
                 </div>
             </section>
 
             <section className="px-6">
-                <div className="max-w-[1200px] mx-auto">
-
-                    <BlogFilters categories={categories} />
+                <div className="max-w-[1240px] mx-auto">
 
                     {/* Featured Post */}
                     {featuredPost && selectedCategory === 'All' && !searchTerm && (
-                        <div className="mb-16">
+                        <div className="mb-20">
                             <Link href={`/blog/${featuredPost.slug}`} className="group block">
-                                <article className="relative bg-white/[0.02] border border-white/5 rounded-2xl p-8 md:p-12 hover:bg-white/[0.04] hover:border-white/10 transition-all duration-300">
-                                    <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start">
-                                        <div className="flex-1 space-y-6">
-                                            <div className="flex items-center space-x-3 text-sm">
-                                                <span className="text-zinc-500">{featuredPost.category?.name}</span>
-                                                <span className="text-zinc-700">•</span>
-                                                <span className="text-zinc-500">{featuredPost.read_time_minutes} min read</span>
+                                <article className="relative bg-zinc-900 border border-white/5 rounded-3xl overflow-hidden hover:border-white/10 transition-all duration-300">
+                                    <div className="grid md:grid-cols-12 min-h-[460px]">
+                                        {/* Content Side */}
+                                        <div className="md:col-span-5 p-8 md:p-14 flex flex-col justify-between relative z-10 bg-zinc-900">
+                                            <div className="space-y-6">
+                                                <span className="text-sm font-medium text-zinc-400 block">Insight</span>
+
+                                                <h2 className="text-3xl md:text-5xl font-medium text-white group-hover:text-zinc-200 transition-colors leading-[1.1] tracking-tight">
+                                                    {featuredPost.title}
+                                                </h2>
+
+                                                <p className="text-lg text-zinc-400 leading-relaxed line-clamp-3">
+                                                    {featuredPost.excerpt}
+                                                </p>
                                             </div>
 
-                                            <h2 className="text-3xl md:text-4xl font-semibold text-white group-hover:text-white/90 transition-colors leading-tight">
-                                                {featuredPost.title}
-                                            </h2>
-
-                                            <p className="text-lg text-zinc-400 leading-relaxed line-clamp-3">
-                                                {featuredPost.excerpt}
-                                            </p>
-
-                                            <div className="flex items-center pt-2">
-                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-xs font-medium text-white ring-2 ring-black">
-                                                    {getAuthorInitials(featuredPost.author)}
-                                                </div>
-                                                <div className="ml-3 text-sm">
-                                                    <span className="text-white block">{featuredPost.author?.full_name}</span>
-                                                    <span className="text-zinc-500">{featuredPost.published_at ? formatDate(featuredPost.published_at) : ''}</span>
-                                                </div>
+                                            <div className="pt-8 mt-auto">
+                                                <span className="text-zinc-500 text-sm">
+                                                    {featuredPost.published_at ? formatDate(featuredPost.published_at) : ''}
+                                                </span>
                                             </div>
                                         </div>
-                                        {/* Optional: Add an image placeholder or gradient generic here if desired, 
-                                            but for 'Linear' style, text-heavy or subtle visuals are preferred. 
-                                            Keeping it text-focused for now as per previous design but cleaner. 
-                                        */}
-                                        <div className="w-full md:w-1/3 aspect-video rounded-xl bg-gradient-to-br from-white/5 to-white/0 border border-white/5 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-500">
-                                            <div className="text-white/20 italic">Featured Image</div>
+
+                                        {/* Image/Pattern Side */}
+                                        <div className="md:col-span-7 h-full relative min-h-[300px] md:min-h-full bg-zinc-800">
+                                            <GeometricPattern variant="mixed" />
                                         </div>
                                     </div>
                                 </article>
@@ -164,35 +153,37 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                         </div>
                     )}
 
+                    {/* Subscribe Section - Now between Featured and Grid */}
+                    <div className="mb-24 pt-8 pb-12 border-b border-white/5">
+                        <SubscribeForm />
+                    </div>
+
+                    <BlogFilters categories={categories} />
+
                     {/* Post Grid */}
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
                         {filteredPosts.length > 0 ? filteredPosts.map((post) => (
-                            <Link href={`/blog/${post.slug}`} key={post.id} className="group flex">
-                                <article className="flex-1 bg-white/[0.02] border border-white/5 rounded-xl p-6 hover:bg-white/[0.04] hover:border-white/10 transition-all duration-300 flex flex-col">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className="text-xs font-medium text-zinc-500 px-2 py-1 rounded-md bg-white/5 border border-white/5">
-                                            {post.category?.name}
-                                        </span>
-                                        <span className="text-xs text-zinc-600">
-                                            {post.read_time_minutes} min
-                                        </span>
+                            <Link href={`/blog/${post.slug}`} key={post.id} className="group block">
+                                <article className="bg-zinc-900 border border-white/5 rounded-2xl overflow-hidden hover:bg-zinc-800/50 hover:border-white/10 transition-all duration-300 h-full flex flex-col">
+                                    {/* Image Area */}
+                                    <div className="aspect-[4/3] w-full relative bg-zinc-800 border-b border-white/5">
+                                        <GeometricPattern variant={getVariantForId(post.id)} />
                                     </div>
 
-                                    <h3 className="text-xl font-medium text-white mb-3 group-hover:text-zinc-200 transition-colors leading-snug">
-                                        {post.title}
-                                    </h3>
-
-                                    <p className="text-sm text-zinc-400 mb-6 line-clamp-3 leading-relaxed flex-1">
-                                        {post.excerpt}
-                                    </p>
-
-                                    <div className="flex items-center justify-between text-xs pt-4 border-t border-white/5 mt-auto">
-                                        <div className="flex items-center space-x-2">
-                                            <span className="text-zinc-300">{post.author?.full_name}</span>
+                                    <div className="p-8 flex flex-col flex-1">
+                                        <div className="flex items-center space-x-2 text-xs text-zinc-500 mb-4">
+                                            <span>Insight</span>
+                                            <span>•</span>
+                                            <span>{post.published_at ? formatDate(post.published_at) : ''}</span>
                                         </div>
-                                        <span className="text-zinc-600">
-                                            {post.published_at ? formatDate(post.published_at) : ''}
-                                        </span>
+
+                                        <h3 className="text-2xl font-medium text-white mb-4 group-hover:text-zinc-200 transition-colors leading-snug">
+                                            {post.title}
+                                        </h3>
+
+                                        <p className="text-sm text-zinc-400 line-clamp-3 leading-relaxed mb-6">
+                                            {post.excerpt}
+                                        </p>
                                     </div>
                                 </article>
                             </Link>
@@ -209,12 +200,6 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                         )}
                     </div>
 
-                    {/* Subscribe Section */}
-                    <div className="mt-24 border-t border-white/10 pt-16 pb-8">
-                        <div className="max-w-xl mx-auto text-center">
-                            <SubscribeForm />
-                        </div>
-                    </div>
                 </div>
             </section>
         </div>

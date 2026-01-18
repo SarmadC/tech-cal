@@ -82,6 +82,7 @@ export default function DiscoverClientView({
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [isClosing, setIsClosing] = useState(false);
+    const [showPersonalizedHint, setShowPersonalizedHint] = useState(true);
     const currentDate = new Date();
 
     // Navigation handlers
@@ -216,17 +217,30 @@ export default function DiscoverClientView({
                                                 )}
 
                                                 {/* Cold start indicator */}
-                                                {eventData.isColdStart && !eventData.isLoading && (
-                                                    <div className="mb-4 rounded-xl border border-border bg-card/80 dark:bg-card/30 p-3 text-sm text-foreground shadow-sm backdrop-blur">
-                                                        <div className="flex items-start">
-                                                            <div className="flex-shrink-0">
-                                                                <svg className="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                                                {eventData.isColdStart && !eventData.isLoading && showPersonalizedHint && (
+                                                    <div className="group relative mb-4 rounded-xl border border-border/50 bg-card/40 p-3 text-sm backdrop-blur-sm transition-all hover:bg-card/60">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setShowPersonalizedHint(false);
+                                                            }}
+                                                            className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground/50 transition-colors hover:bg-background/80 hover:text-foreground"
+                                                            aria-label="Dismiss"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                            </svg>
+                                                        </button>
+                                                        <div className="flex items-start pr-8">
+                                                            <div className="flex-shrink-0 pt-0.5">
+                                                                <svg className="h-4 w-4 text-primary/70" viewBox="0 0 20 20" fill="currentColor">
                                                                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                                                                 </svg>
                                                             </div>
                                                             <div className="ml-3">
-                                                                <h3 className="text-sm font-semibold text-foreground">Personalized for You</h3>
-                                                                <p className="mt-1 text-sm text-muted-foreground">
+                                                                <h3 className="font-medium text-foreground/90">Personalized for You</h3>
+                                                                <p className="mt-1 text-muted-foreground/90">
                                                                     We&apos;re showing you events that similar professionals found valuable.
                                                                     As you interact with events, we&apos;ll learn your preferences and improve recommendations.
                                                                 </p>

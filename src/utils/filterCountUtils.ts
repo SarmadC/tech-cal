@@ -5,6 +5,7 @@ export interface FilterCounts {
     format: Record<string, number>;
     cost: Record<string, number>;
     categories: Record<string, number>;
+    tags?: Record<string, number>;
 }
 
 /**
@@ -117,7 +118,8 @@ export function calculateFilterCounts(
             free: 0,
             paid: 0
         },
-        categories: {} as Record<string, number>
+        categories: {} as Record<string, number>,
+        tags: {} as Record<string, number>
     };
 
     // Seed category counts with zeros for all categories
@@ -143,6 +145,23 @@ export function calculateFilterCounts(
             counts.categories[event.eventTypeId]++;
         }
     });
+
+    // Calculate tag counts if events have tags
+    const tagCounts: Record<string, number> = {};
+    events.forEach(event => {
+        if (event.tags && Array.isArray(event.tags)) {
+            event.tags.forEach(tag => {
+                if (tag.name) {
+                    // Normalize tag name to lower case for counting, but we might want to preserve display case?
+                    // TagCloud usually handles normalization. Let's just count exact names or normalized keys.
+                    // Following TagCloud logic:
+                    const normalized = tag.name.trim().toLowerCase();
+                    tagCounts[normalized] = (tagCounts[normalized] || 0) + 1;
+                }
+            });
+        }
+    });
+    counts.tags = tagCounts;
 
     return counts;
 }

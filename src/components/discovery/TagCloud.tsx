@@ -16,6 +16,7 @@ interface TagCloudProps {
     selectedTags?: string[];
     maxTags?: number;
     className?: string;
+    tagCounts?: Record<string, number>;
 }
 
 interface TagWithCount {
@@ -31,7 +32,8 @@ const TagCloud: React.FC<TagCloudProps> = ({
     onTagClick,
     selectedTags = [],
     maxTags = 20,
-    className = ''
+    className = '',
+    tagCounts: providedTagCounts
 }) => {
     const formatTagName = (name: string): string => {
         const trimmed = name.trim();
@@ -59,8 +61,30 @@ const TagCloud: React.FC<TagCloudProps> = ({
         return !isJsonLike && !hasKeyValueDelimiter;
     };
 
-    // Calculate tag frequencies from current events
+    // Calculate tag frequencies
     const tagCounts = useMemo(() => {
+        if (providedTagCounts) {
+            // Use provided server-side counts
+            return Object.entries(providedTagCounts)
+                .map(([value, count]) => {
+                    // Try to find a display name from events if possible, or just capitalize
+                    // Since server only returns normalized keys usually (or we normalized them)
+                    // converting "ai" -> "AI" is hard without a map.
+                    // But we can format it nicely.
+                    return {
+                        value,
+                        displayName: formatTagName(value), // Simple formatting
+                        count
+                    };
+                })
+                .sort((a, b) => {
+                    if (b.count !== a.count) return b.count - a.count;
+                    return a.displayName.localeCompare(b.displayName);
+                })
+                .slice(0, maxTags);
+        }
+
+        // Fallback: Calculate from events locally
         const counts = new Map<string, TagWithCount>();
 
         events.forEach(event => {
@@ -89,10 +113,15 @@ const TagCloud: React.FC<TagCloudProps> = ({
                 return a.displayName.localeCompare(b.displayName);
             })
             .slice(0, maxTags);
-    }, [events, maxTags]);
+    }, [events, maxTags, providedTagCounts]);
 
     if (tagCounts.length === 0) {
         return null;
+    }
+
+    // Debug logging for selected tags
+    if (process.env.NODE_ENV === 'development' && selectedTags.length > 0) {
+        console.log('[TagCloud] selectedTags:', selectedTags);
     }
 
     return (
@@ -102,8 +131,14 @@ const TagCloud: React.FC<TagCloudProps> = ({
                     const isSelected = selectedTags.includes(tag.value);
                     return (
                         <button
+                            type="button"
                             key={tag.value}
-                            onClick={() => onTagClick(tag.value)}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('[TagCloud] Tag clicked:', tag.value);
+                                onTagClick(tag.value);
+                            }}
                             className={`
                                 px-2.5 py-1 text-[11px] font-medium rounded-md transition-all duration-200 border
                                 ${isSelected

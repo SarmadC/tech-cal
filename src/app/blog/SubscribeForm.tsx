@@ -1,25 +1,23 @@
 // src/app/blog/SubscribeForm.tsx
 'use client';
 
-// 1. CORRECTED IMPORTS
-import { useEffect, useRef, useActionState } from 'react'; // Core hooks from 'react'
-import { useFormStatus } from 'react-dom';              // DOM-specific hooks from 'react-dom'
-
+import { useEffect, useRef, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { subscribeToAction, type SubscribeFormState } from './actions';
-import { CircleNotchIcon } from '@phosphor-icons/react';
+import { CircleNotchIcon, TwitterLogo, LinkedinLogo } from '@phosphor-icons/react';
+import Link from 'next/link';
 
-// A separate button component to automatically handle the loading state
 function SubmitButton() {
     const { pending } = useFormStatus();
     return (
         <button
             type="submit"
             disabled={pending}
-            className="bg-white/10 hover:bg-white/20 text-white border border-white/10 font-medium py-2.5 px-6 rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
+            className="absolute right-1 top-1 bottom-1 bg-white hover:bg-zinc-200 text-black font-medium px-6 rounded-full transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center text-sm"
         >
             {pending && <CircleNotchIcon className="mr-2 h-4 w-4 animate-spin" />}
-            {pending ? '...' : 'Subscribe'}
+            {pending ? '...' : 'Start Free Trial'}
         </button>
     );
 }
@@ -33,36 +31,66 @@ export default function SubscribeForm() {
         status: 'idle',
     };
 
-    // 2. RENAME useFormState to useActionState
     const [state, formAction] = useActionState(subscribeToAction, initialState);
 
-    // Use useEffect to show snackbar notifications based on the form's state
     useEffect(() => {
         if (state.status === 'success') {
             showSuccess(state.message);
-            formRef.current?.reset(); // Clear the form on success
+            formRef.current?.reset();
         } else if (state.status === 'error') {
             showError(state.message);
         }
     }, [state, showSuccess, showError]);
 
     return (
-        <form ref={formRef} action={formAction} className="mt-0">
-            <h2 className="text-xl font-semibold mb-2 text-white">Subscribe to our newsletter</h2>
-            <p className="text-sm text-zinc-400 mb-6 max-w-lg mx-auto">
-                Get the latest articles and insights delivered to your inbox.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
-                <input
-                    type="email"
-                    name="email" // The name attribute is crucial for FormData
-                    placeholder="Enter your email"
-                    required
-                    // Theming consistency: Glass style
-                    className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white bg-white/5 border border-white/10 placeholder-zinc-600 focus:outline-none focus:bg-white/10 focus:border-white/20 transition-all font-medium"
-                />
-                <SubmitButton />
+        <div className="w-full grid md:grid-cols-2 gap-12 items-end">
+            {/* Left: Newsletter */}
+            <div className="w-full max-w-lg">
+                <h2 className="text-xl md:text-2xl font-semibold text-white mb-6">
+                    Subscribe to our newsletter for daily industry insights
+                </h2>
+
+                <form ref={formRef} action={formAction} className="relative">
+                    <div className="relative">
+                        <input
+                            type="email"
+                            name="email"
+                            placeholder="Enter Your Email"
+                            required
+                            className="w-full pl-6 pr-40 py-4 rounded-full bg-white/[0.03] border border-white/10 text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:bg-white/[0.05] transition-all"
+                        />
+                        <SubmitButton />
+                    </div>
+                </form>
             </div>
-        </form>
+
+            {/* Right: Socials */}
+            <div className="md:pl-12 border-l border-white/5 md:border-l-0 md:border-white/10 hidden md:block">
+                <h3 className="text-lg font-medium text-white mb-2">Follow us</h3>
+                <p className="text-sm text-zinc-500 mb-4 max-w-xs">
+                    Get the latest news and travel inspiration.
+                </p>
+                <div className="flex items-center space-x-4">
+                    <Link href="https://twitter.com/kurecal" className="text-zinc-400 hover:text-white transition-colors">
+                        <TwitterLogo size={20} weight="fill" />
+                    </Link>
+                    <Link href="https://linkedin.com/company/kurecal" className="text-zinc-400 hover:text-white transition-colors">
+                        <LinkedinLogo size={20} weight="fill" />
+                    </Link>
+                </div>
+            </div>
+            {/* Mobile Socials (visible only on mobile) */}
+            <div className="md:hidden mt-8">
+                <h3 className="text-lg font-medium text-white mb-2">Follow us</h3>
+                <div className="flex items-center space-x-4">
+                    <Link href="https://twitter.com/kurecal" className="text-zinc-400 hover:text-white transition-colors">
+                        <TwitterLogo size={20} weight="fill" />
+                    </Link>
+                    <Link href="https://linkedin.com/company/kurecal" className="text-zinc-400 hover:text-white transition-colors">
+                        <LinkedinLogo size={20} weight="fill" />
+                    </Link>
+                </div>
+            </div>
+        </div>
     );
 }

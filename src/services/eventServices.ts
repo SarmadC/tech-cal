@@ -136,11 +136,14 @@ export class EventService {
             };
 
             // Run count queries in parallel for better performance
-            const [formatResult, categoryResult] = await Promise.all([
+            const [formatResult, categoryResult, tagResult] = await Promise.all([
                 // Format and cost counts query - exclude format filter so users can see all format options
                 buildFilteredQuery('event_format, price_min', true).limit(10000),
                 // Category counts query - include format filter so counts reflect current selection
                 buildFilteredQuery('event_type_id', false).not('event_type_id', 'is', null).limit(10000),
+                // Tag counts query - sample significant number of events to build representative tag cloud
+                // Fetching deep relations can be expensive, so we limit to 1000 sample events which is statistically sufficient for a tag cloud
+                buildFilteredQuery('event_tag_relations(event_tags(event_tag))', false).limit(1000)
             ]);
 
             // Process format and cost counts
@@ -163,11 +166,32 @@ export class EventService {
                 });
             }
 
+            // Process tag counts
+            if (!tagResult.error && tagResult.data) {
+                const tagCounts: Record<string, number> = {};
+                
+                tagResult.data.forEach((row: any) => {
+                    if (row.event_tag_relations && Array.isArray(row.event_tag_relations)) {
+                        row.event_tag_relations.forEach((relation: any) => {
+                            if (relation.event_tags && relation.event_tags.event_tag) {
+                                const tagName = relation.event_tags.event_tag.trim().toLowerCase();
+                                tagCounts[tagName] = (tagCounts[tagName] || 0) + 1;
+                            }
+                        });
+                    }
+                });
+                
+                counts.tags = tagCounts;
+            }
+
             if (formatResult.error) {
                 console.error('Error computing format counts:', formatResult.error);
             }
             if (categoryResult.error) {
                 console.error('Error computing category counts:', categoryResult.error);
+            }
+            if (tagResult.error) {
+                console.error('Error computing tag counts:', tagResult.error);
             }
         } catch (error) {
             console.error('Error computing filter counts:', error);
@@ -580,71 +604,71 @@ export class EventService {
 
             console.log('[DEBUG TagFilter] Filtering by tags:', normalizedTags);
 
-            // Query event_tag_relations joined with event_tags to find matching events
-            // Use .in() for exact matches on normalized tags
-            let query = supabaseClient
-                .from('event_tag_relations')
-                .select(`
-                    event_id,
-                    event_tags!inner (
-                        event_tag
-                    )
-                `);
-
-            // Filter by exact tag matches (case-insensitive)
-            // We need to match any of the tags, so we'll query for each tag and combine results
-            const tagQueries = normalizedTags.map(tag => 
-                supabaseClient
-                    .from('event_tag_relations')
-                    .select(`
-                        event_id,
-                        event_tags!inner (
-                            event_tag
-                        )
-                    `)
-                    .ilike('event_tags.event_tag', tag) // Case-insensitive exact match
-            );
-
-            const results = await Promise.all(tagQueries);
-            const allEventIds = results.flatMap(result => {
-                if (result.error) {
-                    console.error('[DEBUG TagFilter] Query error:', result.error);
+            // 1. Find matched Tag IDs for each tag string independently
+            
+            // Map each normalized tag string to its possible tag IDs (handling duplicates/case)
+            const tagIdGroups: string[][] = [];
+            
+            for (const tag of normalizedTags) {
+                const { data: tagData } = await supabaseClient
+                    .from('event_tags')
+                    .select('id')
+                    .ilike('event_tag', tag);
+                
+                // If any requested tag doesn't exist in DB, intersection is empty -> return []
+                if (!tagData || tagData.length === 0) {
                     return [];
                 }
-                return (result.data || []).map((rel: { event_id: string }) => rel.event_id);
-            });
-
-            // Get unique event IDs
-            let eventIds = [...new Set(allEventIds)];
-            console.log('[DEBUG TagFilter] Found event IDs before date filter:', eventIds.length);
-
-            // If we have date filters, verify events match them
-            if (eventIds.length > 0 && (filters.startDate || filters.endDate)) {
-                let eventQuery = supabaseClient
-                    .from('events')
-                    .select('id')
-                    .in('id', eventIds);
-
-                if (filters.startDate) {
-                    eventQuery = eventQuery.gte('start_time', filters.startDate.toISOString());
-                }
-                if (filters.endDate) {
-                    eventQuery = eventQuery.lte('start_time', filters.endDate.toISOString());
-                }
-
-                const { data: validEvents, error: validError } = await eventQuery;
-
-                if (validError) {
-                    console.error('[DEBUG TagFilter] Date filter error:', validError);
-                    return eventIds; // Return all if filter fails
-                }
-
-                eventIds = (validEvents || []).map((e: { id: string }) => e.id);
-                console.log('[DEBUG TagFilter] Event IDs after date filter:', eventIds.length);
+                
+                tagIdGroups.push(tagData.map(t => t.id));
             }
 
-            console.log('[DEBUG TagFilter] Returning final event IDs:', eventIds.length);
-            return eventIds;
+            // Flatten all relevant tag IDs to fetch relations in one go
+            const uniqueRelevantTagIds = [...new Set(tagIdGroups.flat())];
+            
+            // 2. Fetch all event relations for these tags
+            const { data: relations, error: relationError } = await supabaseClient
+                .from('event_tag_relations')
+                .select('event_id, tag_id')
+                .in('tag_id', uniqueRelevantTagIds);
+
+            if (relationError) {
+                console.error('[DEBUG TagFilter] Relation query error:', relationError);
+                return [];
+            }
+
+            if (!relations || relations.length === 0) {
+                return [];
+            }
+
+            // 3. Perform Intersection (AND logic) in memory
+            // We need to find event_ids that cover ALL groups of tags.
+            // i.e., for event E, for every input tag T_i, E must have a relation to at least one tag ID in tagIdGroups[i].
+
+            const eventTagMap = new Map<string, Set<string>>();
+            
+            relations.forEach((rel: { event_id: string; tag_id: string }) => {
+                if (!eventTagMap.has(rel.event_id)) {
+                    eventTagMap.set(rel.event_id, new Set());
+                }
+                eventTagMap.get(rel.event_id)?.add(rel.tag_id);
+            });
+
+            const matchingEventIds: string[] = [];
+            
+            for (const [eventId, eventTagIds] of eventTagMap.entries()) {
+                // Check if this event has at least one tag ID from EACH input tag group
+                const matchesAllTags = tagIdGroups.every(group => 
+                    group.some(requiredTagId => eventTagIds.has(requiredTagId))
+                );
+
+                if (matchesAllTags) {
+                    matchingEventIds.push(eventId);
+                }
+            }
+
+            return matchingEventIds;
+
         } catch (error) {
             console.error('[DEBUG TagFilter] Exception:', error);
             Sentry.captureException(error, {
@@ -1863,7 +1887,9 @@ export class EventService {
                 ? await LookalikeUserService.isColdStartUser(userId, supabaseClient)
                 : false;
 
-            if (!skipColdStart && isColdStart && careerProfile && !filters.searchTerm && !filters.categories?.length) {
+            const hasUserAppliedFilters = this.hasActiveUserFilters(filters);
+
+            if (!skipColdStart && isColdStart && careerProfile && !hasUserAppliedFilters) {
                 // Use lookalike recommendations for cold start users
                 return await this.getColdStartRecommendations(
                     careerProfile,
@@ -1947,6 +1973,34 @@ export class EventService {
                 };
             }
         }
+    }
+
+    private static hasActiveUserFilters(filters: EventFilters = {}): boolean {
+        const hasArrayValues = (value?: string[]) => Array.isArray(value) && value.length > 0;
+        const hasNonDefault = (value?: string, defaultValue: string = 'all') =>
+            Boolean(value && value !== defaultValue);
+
+        return Boolean(
+            filters.searchTerm?.trim() ||
+            hasArrayValues(filters.categories) ||
+            hasArrayValues(filters.tags) ||
+            hasArrayValues(filters.locations) ||
+            hasArrayValues(filters.status) ||
+            hasArrayValues(filters.eventIds) ||
+            filters.startDate ||
+            filters.endDate ||
+            hasNonDefault(filters.budget) ||
+            hasNonDefault(filters.format) ||
+            hasNonDefault(filters.cost) ||
+            hasNonDefault(filters.difficulty) ||
+            hasNonDefault(filters.availability) ||
+            hasNonDefault(filters.popularity) ||
+            hasNonDefault(filters.duration) ||
+            filters.collection ||
+            filters.myTracked ||
+            filters.myNetwork ||
+            filters.recommended
+        );
     }
 
     /**

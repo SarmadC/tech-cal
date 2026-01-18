@@ -3,8 +3,9 @@
 :root {
     /* Dynamic category colors - set via JavaScript */
     --category-bg: #f1f5f9;
-    --category-title-color: #1e293b; /* Dynamic darker shade for titles */
-    
+    --category-title-color: #1e293b;
+    /* Dynamic darker shade for titles */
+
     /* Pastel category colors */
     --pastel-tech-summit: #bfdbfe;
     --pastel-workshop: #e9d7ff;
@@ -13,28 +14,36 @@
     --pastel-webinar: #fed8ae;
     --pastel-startup: #fecaca;
     --pastel-live: #f9c2d4;
-    
+
     /* Text colors */
     --text-on-pastel: #1e293b;
     --text-secondary-on-pastel: #475569;
     --text-tertiary-on-pastel: #64748b;
-    
+
     /* Spacing scale (8px base) */
-    --space-xs: 0.25rem;   /* 4px */
-    --space-sm: 0.5rem;    /* 8px */
-    --space-md: 0.75rem;   /* 12px */
-    --space-lg: 1rem;      /* 16px */
-    --space-xl: 1.5rem;    /* 24px */
-    
+    --space-xs: 0.25rem;
+    /* 4px */
+    --space-sm: 0.5rem;
+    /* 8px */
+    --space-md: 0.75rem;
+    /* 12px */
+    --space-lg: 1rem;
+    /* 16px */
+    --space-xl: 1.5rem;
+    /* 24px */
+
     /* Border radius scale */
-    --radius-sm: 0.375rem;  /* 6px */
-    --radius-md: 0.5rem;    /* 8px */
-    --radius-lg: 0.75rem;   /* 12px */
-    
+    --radius-sm: 0.375rem;
+    /* 6px */
+    --radius-md: 0.5rem;
+    /* 8px */
+    --radius-lg: 0.75rem;
+    /* 12px */
+
     /* Transitions */
     --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     /* Shadows */
     --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -48,8 +57,10 @@
     /* Default background will be adjusted per theme below */
     background: var(--category-bg, #f1f5f9);
     color: var(--text-on-pastel);
-    border-radius: 4px; /* Tighter radius for technical feel (Linear/Notion style) */
-    transition: all 0.15s ease-out; /* Snappy Linear-style transitions */
+    border-radius: 4px;
+    /* Tighter radius for technical feel (Linear/Notion style) */
+    transition: all 0.15s ease-out;
+    /* Snappy Linear-style transitions */
     padding: var(--card-pad);
     margin: 12px;
     display: flex;
@@ -232,7 +243,8 @@
 }
 
 .event-preview-description.collapsed {
-    max-height: 4.5rem; /* Approximately 3 lines */
+    max-height: 4.5rem;
+    /* Approximately 3 lines */
     overflow: hidden;
 }
 
@@ -269,7 +281,8 @@
 .event-preview-card {
     will-change: opacity, transform;
     backface-visibility: hidden;
-    transform: translateZ(0); /* Force hardware acceleration */
+    transform: translateZ(0);
+    /* Force hardware acceleration */
 }
 
 /* Smooth fade in/out */
@@ -286,6 +299,7 @@
         opacity: 0;
         transform: scale(0.95) translateY(-8px);
     }
+
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -297,6 +311,7 @@
         opacity: 1;
         transform: scale(1) translateY(0);
     }
+
     to {
         opacity: 0;
         transform: scale(0.95) translateY(-8px);
@@ -396,7 +411,8 @@
 .event-preview-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.375rem; /* 6px */
+    gap: 0.375rem;
+    /* 6px */
     align-items: center;
 }
 
@@ -404,10 +420,12 @@
 .event-preview-tag {
     display: inline-flex;
     align-items: center;
-    padding: 0.25rem 0.625rem; /* 4px 10px */
+    padding: 0.25rem 0.625rem;
+    /* 4px 10px */
     font-size: 0.75rem;
     font-weight: 500;
-    border-radius: 0.375rem; /* 6px */
+    border-radius: 0.375rem;
+    /* 6px */
     transition: all 0.2s ease;
     white-space: nowrap;
 }
@@ -416,7 +434,8 @@
 .event-preview-content {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem; /* 12px */
+    gap: 0.75rem;
+    /* 12px */
 }
 
 /* Icon alignment improvements */
@@ -429,7 +448,8 @@
 /* Action buttons improvements */
 .event-preview-actions {
     display: flex;
-    gap: 0.5rem; /* 8px */
+    gap: 0.5rem;
+    /* 8px */
     align-items: center;
 }
 
@@ -461,13 +481,13 @@
 }
 
 .dark .event-detail-glass-sidebar {
-    background: rgba(0, 0, 0, 0.2) !important;
+    background: rgba(0, 0, 0, 0.85) !important;
     backdrop-filter: blur(20px) saturate(120%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     /* Override CSS custom properties for dark mode */
-    --card: rgba(0, 0, 0, 0.2) !important;
-    --background: rgba(0, 0, 0, 0.2) !important;
+    --card: rgba(0, 0, 0, 0.85) !important;
+    --background: rgba(0, 0, 0, 0.85) !important;
 }
 
 /* Higher specificity override for any remaining theme conflicts */
@@ -478,7 +498,7 @@ div.event-detail-glass-sidebar {
 }
 
 .dark div.event-detail-glass-sidebar {
-    background: rgba(0, 0, 0, 0.2) !important;
+    background: rgba(0, 0, 0, 0.85) !important;
     backdrop-filter: blur(20px) saturate(120%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
 }
@@ -500,20 +520,23 @@ div.event-detail-glass-sidebar {
     .event-detail-glass-modal {
         background: rgba(255, 255, 255, 0.90) !important;
     }
+
     .dark .event-detail-glass-modal {
         background: rgba(30, 30, 30, 0.90) !important;
     }
-    
+
     /* Nested glass panel fix for Firefox */
     .timeline-detail-glass-panel {
-        background: rgba(24, 24, 27, 0.95) !important; /* zinc-900 almost opaque */
+        background: rgba(24, 24, 27, 0.95) !important;
+        /* zinc-900 almost opaque */
         backdrop-filter: none !important;
     }
 }
 
 /* Timeline Detail Panel Glass Style */
 .timeline-detail-glass-panel {
-    background: rgba(24, 24, 27, 0.5); /* zinc-900/50 */
+    background: rgba(24, 24, 27, 0.5);
+    /* zinc-900/50 */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }
@@ -552,58 +575,85 @@ div.event-detail-glass-sidebar {
 /* Medium cards get larger fonts with improved typography hierarchy */
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-title {
     font-size: 1.1rem !important;
-    font-weight: 800 !important; /* Increased from 700 to 800 for stronger hierarchy */
-    line-height: 1.25 !important; /* Tighter line height for better control */
-    letter-spacing: -0.01em !important; /* Slight negative letter spacing for modern look */
-    margin-bottom: 0.5rem !important; /* Better spacing below title */
+    font-weight: 800 !important;
+    /* Increased from 700 to 800 for stronger hierarchy */
+    line-height: 1.25 !important;
+    /* Tighter line height for better control */
+    letter-spacing: -0.01em !important;
+    /* Slight negative letter spacing for modern look */
+    margin-bottom: 0.5rem !important;
+    /* Better spacing below title */
 }
 
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-time-duration {
     font-size: 0.85rem !important;
-    line-height: 1.4 !important; /* Better line height for readability */
-    margin-bottom: 0.375rem !important; /* Consistent spacing */
-    min-height: 1.3em !important; /* Ensure consistent height for larger cards */
+    line-height: 1.4 !important;
+    /* Better line height for readability */
+    margin-bottom: 0.375rem !important;
+    /* Consistent spacing */
+    min-height: 1.3em !important;
+    /* Ensure consistent height for larger cards */
 }
 
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-time {
     font-size: 0.9rem !important;
-    font-weight: 700 !important; /* Strong weight for primary time info */
-    color: #1e293b !important; /* Maintain dark color for contrast */
-    letter-spacing: 0.01em !important; /* Slight positive spacing for time */
-    line-height: 1.3 !important; /* Optimal line height */
+    font-weight: 700 !important;
+    /* Strong weight for primary time info */
+    color: #1e293b !important;
+    /* Maintain dark color for contrast */
+    letter-spacing: 0.01em !important;
+    /* Slight positive spacing for time */
+    line-height: 1.3 !important;
+    /* Optimal line height */
 }
 
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-duration {
     font-size: 0.8rem !important;
-    font-weight: 600 !important; /* Medium weight for secondary info */
-    color: #475569 !important; /* Maintain medium color for contrast */
-    letter-spacing: 0.005em !important; /* Subtle spacing */
-    line-height: 1.3 !important; /* Match time line height */
+    font-weight: 600 !important;
+    /* Medium weight for secondary info */
+    color: #475569 !important;
+    /* Maintain medium color for contrast */
+    letter-spacing: 0.005em !important;
+    /* Subtle spacing */
+    line-height: 1.3 !important;
+    /* Match time line height */
 }
 
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-location-organizer {
     font-size: 0.8rem !important;
-    line-height: 1.4 !important; /* Better line height for metadata */
-    margin-top: 0.25rem !important; /* Consistent spacing from time */
+    line-height: 1.4 !important;
+    /* Better line height for metadata */
+    margin-top: 0.25rem !important;
+    /* Consistent spacing from time */
 }
 
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-location,
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-organizer {
     font-size: 0.8rem !important;
-    font-weight: 500 !important; /* Reduced from 600 to 500 for better hierarchy */
-    color: var(--text-on-pastel) !important; /* Dynamic color based on theme */
-    letter-spacing: 0.005em !important; /* Subtle spacing */
-    line-height: 1.35 !important; /* Optimal line height for metadata */
-    margin-bottom: 0.125rem !important; /* Small spacing between location and organizer */
+    font-weight: 500 !important;
+    /* Reduced from 600 to 500 for better hierarchy */
+    color: var(--text-on-pastel) !important;
+    /* Dynamic color based on theme */
+    letter-spacing: 0.005em !important;
+    /* Subtle spacing */
+    line-height: 1.35 !important;
+    /* Optimal line height for metadata */
+    margin-bottom: 0.125rem !important;
+    /* Small spacing between location and organizer */
 }
 
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-category-badge .event-category-pill {
     font-size: 0.75rem !important;
-    font-weight: 800 !important; /* Strong weight for category prominence */
-    padding: 4px 10px !important; /* Increased padding for better touch targets */
-    letter-spacing: 0.05em !important; /* Increased spacing for uppercase text */
-    line-height: 1.2 !important; /* Tight line height for compact badges */
-    margin-bottom: 0.5rem !important; /* Better spacing below category */
+    font-weight: 800 !important;
+    /* Strong weight for category prominence */
+    padding: 4px 10px !important;
+    /* Increased padding for better touch targets */
+    letter-spacing: 0.05em !important;
+    /* Increased spacing for uppercase text */
+    line-height: 1.2 !important;
+    /* Tight line height for compact badges */
+    margin-bottom: 0.5rem !important;
+    /* Better spacing below category */
 }
 
 /* Dynamic Font Sizing for Large Cards (span 7-8) */
@@ -616,21 +666,28 @@ div.event-detail-glass-sidebar {
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-time-duration {
     font-size: 0.9rem !important;
-    min-height: 1.4em !important; /* Ensure consistent height for large cards */
+    min-height: 1.4em !important;
+    /* Ensure consistent height for large cards */
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    gap: 0 !important; /* No gap needed since we're using transform for spacing */
-    flex-wrap: nowrap !important; /* Prevent wrapping but allow proper spacing */
-    min-width: 0 !important; /* Allow flex items to shrink if needed */
+    gap: 0 !important;
+    /* No gap needed since we're using transform for spacing */
+    flex-wrap: nowrap !important;
+    /* Prevent wrapping but allow proper spacing */
+    min-width: 0 !important;
+    /* Allow flex items to shrink if needed */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-time {
     font-size: 0.95rem !important;
     font-weight: 700 !important;
-    color: #1e293b !important; /* Maintain dark color for contrast */
-    flex-shrink: 0 !important; /* Prevent time from shrinking */
-    white-space: nowrap !important; /* Keep time on single line */
+    color: #1e293b !important;
+    /* Maintain dark color for contrast */
+    flex-shrink: 0 !important;
+    /* Prevent time from shrinking */
+    white-space: nowrap !important;
+    /* Keep time on single line */
 }
 
 .tech-calendar-week-view .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-duration,
@@ -638,10 +695,14 @@ div.event-detail-glass-sidebar {
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-duration {
     font-size: 0.85rem !important;
     font-weight: 600 !important;
-    color: var(--text-secondary-on-pastel) !important; /* Dynamic color based on theme */
-    flex-shrink: 0 !important; /* Prevent duration from shrinking */
-    white-space: nowrap !important; /* Keep duration on single line */
-    transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
+    color: var(--text-secondary-on-pastel) !important;
+    /* Dynamic color based on theme */
+    flex-shrink: 0 !important;
+    /* Prevent duration from shrinking */
+    white-space: nowrap !important;
+    /* Keep duration on single line */
+    transform: translate(79px, -3px) !important;
+    /* Move right 79px and up 3px to create proper spacing */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-location-organizer {
@@ -652,7 +713,8 @@ div.event-detail-glass-sidebar {
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-organizer {
     font-size: 0.85rem !important;
     font-weight: 600 !important;
-    color: var(--text-on-pastel) !important; /* Dynamic color based on theme */
+    color: var(--text-on-pastel) !important;
+    /* Dynamic color based on theme */
 }
 
 .event-card[data-span-gt-6]:not([data-span-gt-8]) .event-category-badge .event-category-pill {
@@ -672,20 +734,24 @@ div.event-detail-glass-sidebar {
 
 .event-card[data-span-gt-8] .event-time-duration {
     font-size: 0.95rem !important;
-    min-height: 1.5em !important; /* Ensure consistent height for extra large cards */
+    min-height: 1.5em !important;
+    /* Ensure consistent height for extra large cards */
 }
 
 .event-card[data-span-gt-8] .event-time {
     font-size: 1rem !important;
     font-weight: 700 !important;
-    color: #1e293b !important; /* Maintain dark color for contrast */
+    color: #1e293b !important;
+    /* Maintain dark color for contrast */
 }
 
 .event-card[data-span-gt-8] .event-duration {
     font-size: 0.9rem !important;
     font-weight: 600 !important;
-    color: var(--text-secondary-on-pastel) !important; /* Dynamic color based on theme */
-    transform: translate(79px, -3px) !important; /* Move right 79px and up 3px to create proper spacing */
+    color: var(--text-secondary-on-pastel) !important;
+    /* Dynamic color based on theme */
+    transform: translate(79px, -3px) !important;
+    /* Move right 79px and up 3px to create proper spacing */
 }
 
 .event-card[data-span-gt-8] .event-location-organizer {
@@ -696,7 +762,8 @@ div.event-detail-glass-sidebar {
 .event-card[data-span-gt-8] .event-organizer {
     font-size: 0.9rem !important;
     font-weight: 600 !important;
-    color: var(--text-on-pastel) !important; /* Dynamic color based on theme */
+    color: var(--text-on-pastel) !important;
+    /* Dynamic color based on theme */
 }
 
 .event-card[data-span-gt-8] .event-category-badge .event-category-pill {
@@ -722,42 +789,59 @@ div.event-detail-glass-sidebar {
 
 .event-card .event-time-duration {
     display: flex;
-    align-items: center; /* Center align for visual consistency */
+    align-items: center;
+    /* Center align for visual consistency */
     justify-content: flex-start;
     gap: var(--space-xs);
     font-size: 0.75rem;
     color: var(--text-secondary-on-pastel);
     font-weight: 500;
-    line-height: 1.4; /* Better line height for readability */
-    margin-bottom: 0.25rem; /* Consistent spacing */
-    min-height: 1.2em; /* Ensure consistent height for alignment */
+    line-height: 1.4;
+    /* Better line height for readability */
+    margin-bottom: 0.25rem;
+    /* Consistent spacing */
+    min-height: 1.2em;
+    /* Ensure consistent height for alignment */
 }
 
 .event-card .event-time {
-    color: #1e293b; /* Dark slate color for better contrast on pastel backgrounds */
+    color: #1e293b;
+    /* Dark slate color for better contrast on pastel backgrounds */
     font-weight: 600;
-    letter-spacing: 0.01em; /* Slight positive spacing for time */
-    line-height: 1.3; /* Optimal line height */
+    letter-spacing: 0.01em;
+    /* Slight positive spacing for time */
+    line-height: 1.3;
+    /* Optimal line height */
     display: flex;
-    align-items: center; /* Ensure proper vertical alignment */
+    align-items: center;
+    /* Ensure proper vertical alignment */
 }
 
 /* Monospace time styling for Linear/Notion aesthetic (week view) */
 .tech-calendar-week-view .event-card .event-time {
-    font-family: var(--font-mono) !important; /* Monospace font for data feel */
-    font-size: 10px !important; /* Smaller size for data */
-    opacity: 0.6 !important; /* Lower opacity to signal "data" vs "content" */
-    font-weight: 500 !important; /* Medium weight */
-    letter-spacing: 0.02em !important; /* Slightly more spacing for monospace */
+    font-family: var(--font-mono) !important;
+    /* Monospace font for data feel */
+    font-size: 10px !important;
+    /* Smaller size for data */
+    opacity: 0.6 !important;
+    /* Lower opacity to signal "data" vs "content" */
+    font-weight: 500 !important;
+    /* Medium weight */
+    letter-spacing: 0.02em !important;
+    /* Slightly more spacing for monospace */
 }
 
 .event-card .event-duration {
-    color: var(--text-secondary-on-pastel); /* Dynamic color based on theme */
+    color: var(--text-secondary-on-pastel);
+    /* Dynamic color based on theme */
     font-weight: 500;
-    letter-spacing: 0.005em; /* Subtle spacing */
-    line-height: 1.3; /* Match time line height */
+    letter-spacing: 0.005em;
+    /* Subtle spacing */
+    line-height: 1.3;
+    /* Match time line height */
     display: flex;
-    align-items: center; /* Ensure proper vertical alignment */
+    align-items: center;
+    /* Ensure proper vertical alignment */
 }
 
 .event-card .event-location-organizer {
@@ -765,9 +849,12 @@ div.event-detail-glass-sidebar {
     flex-direction: column;
     gap: 2px;
     font-size: 0.7rem;
-    color: var(--text-on-pastel); /* Dynamic color based on theme */
-    line-height: 1.4; /* Better line height for metadata */
-    margin-top: 0.125rem; /* Consistent spacing from time */
+    color: var(--text-on-pastel);
+    /* Dynamic color based on theme */
+    line-height: 1.4;
+    /* Better line height for metadata */
+    margin-top: 0.125rem;
+    /* Consistent spacing from time */
 }
 
 .event-card .event-location,
@@ -776,10 +863,14 @@ div.event-detail-glass-sidebar {
     align-items: center;
     gap: 4px;
     font-weight: 500;
-    color: var(--text-on-pastel); /* Dynamic color based on theme */
-    letter-spacing: 0.005em; /* Subtle spacing */
-    line-height: 1.35; /* Optimal line height for metadata */
-    margin-bottom: 0.125rem; /* Small spacing between elements */
+    color: var(--text-on-pastel);
+    /* Dynamic color based on theme */
+    letter-spacing: 0.005em;
+    /* Subtle spacing */
+    line-height: 1.35;
+    /* Optimal line height for metadata */
+    margin-bottom: 0.125rem;
+    /* Small spacing between elements */
 }
 
 .event-card .event-location svg,
@@ -918,7 +1009,8 @@ div.event-detail-glass-sidebar {
 
 /* Organizer logo hover effects */
 .event-card:hover .event-organizer-logo-corner {
-    background: transparent; /* Keep transparent on hover */
+    background: transparent;
+    /* Keep transparent on hover */
     transform: scale(1.05);
     transition: all var(--transition-fast);
 }
@@ -949,19 +1041,31 @@ div.event-detail-glass-sidebar {
 }
 
 @keyframes live-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
 }
 
 /* Enhanced Event Title Typography */
 .event-card .event-title {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--category-title-color, var(--text-on-pastel)); /* Use darker shade of category color */
-    line-height: 1.25; /* Tighter line height for better control */
-    letter-spacing: -0.01em; /* Slight negative spacing for modern look */
-    margin-bottom: 0.375rem; /* Better spacing below title */
-    margin-top: 0; /* Remove any default margin */
+    color: var(--category-title-color, var(--text-on-pastel));
+    /* Use darker shade of category color */
+    line-height: 1.25;
+    /* Tighter line height for better control */
+    letter-spacing: -0.01em;
+    /* Slight negative spacing for modern look */
+    margin-bottom: 0.375rem;
+    /* Better spacing below title */
+    margin-top: 0;
+    /* Remove any default margin */
     /* Allow title to wrap naturally to multiple lines */
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -972,7 +1076,8 @@ div.event-detail-glass-sidebar {
     /* Prevent text overflow */
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 3; /* Allow up to 3 lines */
+    -webkit-line-clamp: 3;
+    /* Allow up to 3 lines */
     line-clamp: 3;
     -webkit-box-orient: vertical;
 }
@@ -985,10 +1090,13 @@ div.event-detail-glass-sidebar {
 
 .event-card .event-tags-row {
     display: flex;
-    flex-wrap: wrap; /* Allow wrapping to new line */
+    flex-wrap: wrap;
+    /* Allow wrapping to new line */
     gap: var(--space-xs);
-    align-items: flex-start; /* Align to top for better multi-line appearance */
-    align-content: flex-start; /* Pack items to the start */
+    align-items: flex-start;
+    /* Align to top for better multi-line appearance */
+    align-content: flex-start;
+    /* Pack items to the start */
     /* Ensure proper spacing when items wrap */
     row-gap: var(--space-xs);
 }
@@ -1007,23 +1115,28 @@ div.event-detail-glass-sidebar {
     overflow: hidden;
     text-overflow: ellipsis;
     flex-shrink: 1;
-    flex-basis: auto; /* Allow natural sizing */
-    min-width: 0; /* Allow shrinking if needed */
+    flex-basis: auto;
+    /* Allow natural sizing */
+    min-width: 0;
+    /* Allow shrinking if needed */
 }
 
 /* For smaller cards, constrain pill width and allow wrapping */
 .event-card:not([data-span-gt-4]) .event-session-type,
 .event-card:not([data-span-gt-4]) .event-category-pill {
-    max-width: calc(50% - var(--space-xs)); /* Allow two pills per row with gap for small cards */
+    max-width: calc(50% - var(--space-xs));
+    /* Allow two pills per row with gap for small cards */
     flex-shrink: 1;
 }
 
 /* For medium cards, allow more flexible sizing and better wrapping */
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-session-type,
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-category-pill {
-    max-width: calc(65% - var(--space-xs)); /* Allow both pills to fit on same line when possible */
+    max-width: calc(65% - var(--space-xs));
+    /* Allow both pills to fit on same line when possible */
     flex-shrink: 1;
-    flex-basis: auto; /* Allow natural sizing */
+    flex-basis: auto;
+    /* Allow natural sizing */
 }
 
 /* For larger event cards, allow full text display */
@@ -1038,17 +1151,20 @@ div.event-detail-glass-sidebar {
 
 /* Enhanced title wrapping for different card sizes */
 .event-card[data-span-gt-4] .event-title {
-    -webkit-line-clamp: 4; /* Allow more lines for larger cards */
+    -webkit-line-clamp: 4;
+    /* Allow more lines for larger cards */
     line-clamp: 4;
 }
 
 .event-card[data-span-gt-6] .event-title {
-    -webkit-line-clamp: 5; /* Even more lines for very large cards */
+    -webkit-line-clamp: 5;
+    /* Even more lines for very large cards */
     line-clamp: 5;
 }
 
 .event-card[data-span-gt-8] .event-title {
-    -webkit-line-clamp: 6; /* Maximum lines for extra large cards */
+    -webkit-line-clamp: 6;
+    /* Maximum lines for extra large cards */
     line-clamp: 6;
 }
 
@@ -1081,8 +1197,10 @@ div.event-detail-glass-sidebar {
 .event-card[data-span-gt-4]:not([data-span-gt-6]) .event-category-pill {
     /* Allow natural wrapping - only wrap when content is too long */
     flex-basis: auto;
-    max-width: calc(65% - var(--space-xs)); /* Same as above, but allow wrapping when needed */
-    margin-top: 0; /* No forced margin */
+    max-width: calc(65% - var(--space-xs));
+    /* Same as above, but allow wrapping when needed */
+    margin-top: 0;
+    /* No forced margin */
 }
 
 /* When category pill wraps to new line, give it full width */
@@ -1160,11 +1278,8 @@ div.event-detail-glass-sidebar {
 .event-card .organizer-logo-corner-image[src$=".png"] {
     background: transparent;
     mix-blend-mode: multiply;
-    filter: 
-        contrast(1.3) 
-        brightness(0.8) 
-        saturate(1.2)
-        drop-shadow(0 0 1px rgba(0,0,0,0.1));
+    filter:
+        contrast(1.3) brightness(0.8) saturate(1.2) drop-shadow(0 0 1px rgba(0, 0, 0, 0.1));
 }
 
 /* SVG logos should be naturally transparent */
@@ -1176,14 +1291,17 @@ div.event-detail-glass-sidebar {
 /* Event title section - top left */
 .event-card .event-title-section {
     position: relative;
-    padding-right: 50px; /* Leave space for arrow */
+    padding-right: 50px;
+    /* Leave space for arrow */
     margin-bottom: var(--space-xs);
 }
 
 .event-card .event-title-section .event-title {
     margin-bottom: 0;
-    padding-right: 0; /* Remove padding from title itself */
-    padding-left: 0; /* Ensure left alignment */
+    padding-right: 0;
+    /* Remove padding from title itself */
+    padding-left: 0;
+    /* Ensure left alignment */
     /* Ensure natural wrapping is maintained */
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -1191,7 +1309,8 @@ div.event-detail-glass-sidebar {
     word-break: break-word;
     /* Allow more lines for larger cards */
     display: -webkit-box;
-    -webkit-line-clamp: 4; /* Allow up to 4 lines for title section */
+    -webkit-line-clamp: 4;
+    /* Allow up to 4 lines for title section */
     line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
@@ -1248,8 +1367,15 @@ div.event-detail-glass-sidebar {
 }
 
 @keyframes live-border {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.6; }
+
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
 }
 
 /* Past/Completed Event Styling */
@@ -1464,6 +1590,7 @@ div.event-detail-glass-sidebar {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1518,10 +1645,13 @@ div.event-detail-glass-sidebar {
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
         transform: translateX(-50%) scale(1);
     }
+
     50% {
         opacity: 0.7;
         transform: translateX(-50%) scale(1.1);

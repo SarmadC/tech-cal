@@ -78,8 +78,8 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                 fixed={false}
                 className="sticky top-0 z-40 bg-[var(--background-main)]/95 backdrop-blur-md border-b border-[var(--border-subtle)]"
             />
-            {/* Search & Filter Header (Sticky at top) */}
-            <div className="sticky top-[57px] z-30 bg-[var(--background-main)]/95 backdrop-blur-md border-b border-[var(--border-subtle)] pt-4 pb-3 px-4">
+            {/* Search & Filter Header */}
+            <div className="bg-[var(--background-main)] border-b border-[var(--border-subtle)] pt-4 pb-3 px-4">
                 <div className="flex items-center gap-3">
                     {/* Search Bar - Full Width with Integrated Filter */}
                     <div className="relative flex-1 group">
@@ -148,8 +148,8 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                 filters={{
                                     format: filters.format,
                                     cost: filters.cost,
-                                    categories: filters.categories,
-                                    tags: filters.tags
+                                    categories: filters.categories || [],
+                                    tags: filters.tags || []
                                 }}
                                 onUpdateFilter={onUpdateFilter}
                                 categories={categories}
@@ -161,7 +161,10 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
 
                         <div className="p-4 border-t border-border bg-card pb-8 flex gap-3">
                             <button
-                                onClick={() => {
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     onResetFilters();
                                 }}
                                 className="flex-1 py-3 rounded-xl border border-border text-foreground font-medium hover:bg-muted transition-colors"
@@ -169,7 +172,12 @@ const MobileDiscoveryView: React.FC<MobileDiscoveryViewProps> = ({
                                 Reset
                             </button>
                             <button
-                                onClick={() => setIsFilterOpen(false)}
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsFilterOpen(false);
+                                }}
                                 className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 dark:bg-[#fdfdfd] dark:text-gray-900 dark:hover:bg-[#fdfdfd]/90 shadow-lg shadow-green-900/20 dark:shadow-[#fdfdfd]/20 transition-colors"
                             >
                                 Show Results
