@@ -39,13 +39,9 @@ const OPTIONAL_SECTION_COPY: Record<keyof CareerOptionalSectionStatus, { label: 
   }
 };
 
-const OPTIONAL_PROMPT_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+import { calculateCareerProfileCompletion, DEFAULT_OPTIONAL_STATUS } from '@/utils/careerProfileUtils';
 
-const DEFAULT_OPTIONAL_STATUS: CareerOptionalSectionStatus = {
-  learningPreferences: false,
-  networkingPreferences: false,
-  teamPreferences: false
-};
+const OPTIONAL_PROMPT_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 
 const OPTIONAL_QUICK_EDIT_MAP: Record<keyof CareerOptionalSectionStatus, QuickEditSection> = {
   learningPreferences: 'learning',
@@ -159,10 +155,10 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   const completedSectionsRef = useRef<Set<string>>(new Set());
   const [saveFeedback, setSaveFeedback] = useState<{ section: string; timestamp: Date } | null>(null);
   const [inlineEditing, setInlineEditing] = useState<{ field: string; value: string; element?: HTMLElement } | null>(null);
-  
+
   // Derive disabled state from modal state
   const isQuickEditDisabled = quickEditModalState.isSaving || quickEditSection !== null;
-  
+
   const {
     careerProfile: currentCareerProfile,
     hasCompletedOnboarding,
@@ -261,48 +257,11 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
 
   const optionalStatus: CareerOptionalSectionStatus = optionalSections ?? DEFAULT_OPTIONAL_STATUS;
   const optionalSectionEntries = Object.entries(optionalStatus) as Array<[keyof CareerOptionalSectionStatus, boolean]>;
-  
+
   // Calculate comprehensive profile completion including core sections
   const optionalCompletionPercent = React.useMemo(() => {
-    if (!currentCareerProfile) return 0;
-    
-    // Core sections
-    const coreSections = [
-      { name: 'role', completed: !!(currentCareerProfile?.currentRole && currentCareerProfile?.seniority && currentCareerProfile?.industry && currentCareerProfile?.companySize) },
-      { name: 'skills', completed: !!(currentCareerProfile?.primarySkills && currentCareerProfile.primarySkills.length > 0) },
-      { name: 'goals', completed: !!(currentCareerProfile?.careerGoals && currentCareerProfile.careerGoals.length > 0 && currentCareerProfile?.timeframe) }
-    ];
-    
-    // Optional sections
-    const optionalSectionsData = optionalSectionEntries.map(([key, completed]) => ({ name: key, completed }));
-    const allSections = [...coreSections, ...optionalSectionsData];
-    const completedSections = allSections.filter(section => section.completed).length;
-    const totalSections = allSections.length;
-    
-    const percentage = totalSections > 0
-      ? Math.round((completedSections / totalSections) * 100)
-      : 0;
-
-    console.log('Profile completion calculation:', {
-      coreSections,
-      optionalSectionsData,
-      allSections,
-      completedSections,
-      totalSections,
-      percentage,
-      currentCareerProfile: {
-        currentRole: currentCareerProfile?.currentRole,
-        seniority: currentCareerProfile?.seniority,
-        industry: currentCareerProfile?.industry,
-        companySize: currentCareerProfile?.companySize,
-        primarySkills: currentCareerProfile?.primarySkills?.length,
-        careerGoals: currentCareerProfile?.careerGoals?.length,
-        timeframe: currentCareerProfile?.timeframe
-      }
-    });
-    
-    return percentage;
-  }, [currentCareerProfile, optionalSectionEntries]);
+    return calculateCareerProfileCompletion(currentCareerProfile, optionalSections);
+  }, [currentCareerProfile, optionalSections]);
 
   const handlePromptComplete = (quickEditKey: QuickEditSection) => {
     const prompt = promptDefinitions.find(p => p.quickEdit === quickEditKey);
@@ -335,10 +294,10 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   // Update saveFeedback when quick edit closes after saving
   const handleQuickEditClose = () => {
     if (quickEditModalState.isDirty) {
-      const sectionTitle = quickEditSection ? 
+      const sectionTitle = quickEditSection ?
         (quickEditSection === 'role' ? 'Role' :
-         quickEditSection === 'skills' ? 'Skills' :
-         quickEditSection === 'goals' ? 'Goals' : 'Profile') : 'Profile';
+          quickEditSection === 'skills' ? 'Skills' :
+            quickEditSection === 'goals' ? 'Goals' : 'Profile') : 'Profile';
       setSaveFeedback({ section: sectionTitle, timestamp: new Date() });
       setTimeout(() => setSaveFeedback(null), 3000);
     }
@@ -353,28 +312,28 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
   const handleInlineSave = async (field: string, newValue: string) => {
     try {
       if (!currentCareerProfile) return;
-      
+
       // Create updated profile with the new field value
       const updatedProfile = {
         ...currentCareerProfile,
         [field]: newValue
       };
-      
+
       // Save the updated profile
       await _saveCareerProfile(updatedProfile);
-      
+
       // Refresh profile to ensure UI updates with latest data
       await refreshProfile();
-      
+
       // Show feedback
       setSaveFeedback({ section: field, timestamp: new Date() });
       setTimeout(() => setSaveFeedback(null), 3000);
-      
+
       // Return focus to the original element
       if (inlineEditing?.element) {
         inlineEditing.element.focus();
       }
-      
+
       setInlineEditing(null);
     } catch (error) {
       console.error('Error saving inline edit:', error);
@@ -389,15 +348,15 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     }
     setInlineEditing(null);
   };
-  
+
   // Debug: Log when career profile changes
   React.useEffect(() => {
     console.log('CareerProfileManager - currentCareerProfile updated:', currentCareerProfile);
   }, [currentCareerProfile]);
-  
+
   // Force re-render when profile changes by using a timestamp
   const [lastUpdate, setLastUpdate] = useState(Date.now());
-  
+
   React.useEffect(() => {
     if (currentCareerProfile) {
       setLastUpdate(Date.now());
@@ -427,7 +386,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="text-center">
           <p className="text-red-600 text-sm mb-2">Error loading profile</p>
-          <button 
+          <button
             onClick={refreshProfile}
             className="text-sm underline transition"
             style={{ color: 'var(--accent-primary)' }}
@@ -444,20 +403,20 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
     options?: { optionalSectionsCompleted: CareerOptionalSectionStatus }
   ) => {
     setIsSubmitting(true);
-    
+
     try {
       await completeOnboarding(data, options?.optionalSectionsCompleted);
-      
+
       setIsEditing(false);
       if (onProfileUpdate && currentCareerProfile) {
         onProfileUpdate(currentCareerProfile);
       }
-      
+
       // Invalidate profile queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
       await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
       await queryClient.invalidateQueries({ queryKey: ['filtered-events'] });
-      
+
       // Trigger auth context refresh
       window.dispatchEvent(new CustomEvent('profile-updated'));
     } catch (error) {
@@ -490,16 +449,16 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
 
   if (isEditing) {
     return (
-      <div 
+      <div
         className={`career-profile-manager editing ${className}`}
         style={{ backgroundColor: 'var(--background-main)' }}
       >
         <div className="relative">
           {isSubmitting && (
             <div className="absolute inset-0 z-10 rounded-xl">
-              <div 
+              <div
                 className="absolute inset-0 backdrop-blur-sm"
-                style={{ 
+                style={{
                   backgroundColor: 'var(--background-main)',
                   opacity: 0.9
                 }}
@@ -517,7 +476,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
               </div>
             </div>
           )}
-          
+
           <CareerOnboarding
             onComplete={handleComplete}
             onSkip={handleCancel}
@@ -625,35 +584,35 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
           {/* Page Header - Clean Linear Style */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <div>
+              <div>
                 <h1 className="text-2xl font-medium text-zinc-100">
-                    {currentCareerProfile.currentRole}
-                  </h1>
+                  {currentCareerProfile.currentRole}
+                </h1>
                 <p className="text-sm text-zinc-500 mt-1">
                   Manage your role, skills, and goals.
                 </p>
-                </div>
-                <button
-                  onClick={handleEdit}
+              </div>
+              <button
+                onClick={handleEdit}
                 className="border border-white/10 hover:bg-white/5 px-3 py-1.5 rounded-md text-sm text-zinc-300 hover:text-zinc-200 transition-colors"
                 aria-label="Edit profile"
-                >
-                  Edit profile
-                </button>
-              </div>
+              >
+                Edit profile
+              </button>
+            </div>
 
-              {/* Inline Save Feedback */}
-              {saveFeedback && (
-                <div className="animate-in fade-in slide-in-from-top-2">
+            {/* Inline Save Feedback */}
+            {saveFeedback && (
+              <div className="animate-in fade-in slide-in-from-top-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 text-xs">
                   <CheckCircle size={14} weight="fill" />
                   <span>
-                      {saveFeedback.section} saved • {saveFeedback.timestamp.toLocaleTimeString()}
-                    </span>
-                  </div>
+                    {saveFeedback.section} saved • {saveFeedback.timestamp.toLocaleTimeString()}
+                  </span>
                 </div>
-              )}
-                </div>
+              </div>
+            )}
+          </div>
 
           {/* Bento Grid Layout - 3 Columns on Desktop */}
           <div className="grid gap-4 lg:grid-cols-3">
@@ -669,47 +628,47 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                   <PencilSimple size={14} className="text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
                 <div className="space-y-4">
-                <div>
-                      {inlineEditing?.field === 'currentRole' ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={inlineEditing.value}
-                            onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
+                  <div>
+                    {inlineEditing?.field === 'currentRole' ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={inlineEditing.value}
+                          onChange={(e) => setInlineEditing({ ...inlineEditing, value: e.target.value })}
                           className="flex-1 px-2 py-1 text-base font-medium text-zinc-100 bg-zinc-800 border border-white/5 rounded focus:outline-none focus:ring-1 focus:ring-white/20"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleInlineSave('currentRole', inlineEditing.value);
-                              } else if (e.key === 'Escape') {
-                                handleInlineCancel();
-                              }
-                            }}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleInlineSave('currentRole', inlineEditing.value);
+                            } else if (e.key === 'Escape') {
+                              handleInlineCancel();
+                            }
+                          }}
                           onClick={(e) => e.stopPropagation()}
-                          />
-                          <button
+                        />
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleInlineSave('currentRole', inlineEditing.value); }}
                           className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors"
-                            aria-label="Save"
-                          >
-                            <CheckCircle size={16} weight="fill" />
-                          </button>
-                          <button
+                          aria-label="Save"
+                        >
+                          <CheckCircle size={16} weight="fill" />
+                        </button>
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleInlineCancel(); }}
                           className="p-1 text-zinc-500 hover:text-zinc-400 transition-colors"
-                            aria-label="Cancel"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ) : (
+                          aria-label="Cancel"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
                       <p className="text-base font-medium text-zinc-100">
-                          {currentCareerProfile.currentRole}
+                        {currentCareerProfile.currentRole}
                       </p>
-                      )}
+                    )}
                     <p className="text-xs text-zinc-500 mt-1 capitalize">{currentCareerProfile.seniority.replace('-', ' ')}</p>
-                    </div>
-                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Stats Card */}
@@ -759,8 +718,8 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                           {currentCareerProfile.industry}
                         </button>
                       )}
-                      </dd>
-                    </div>
+                    </dd>
+                  </div>
                   <div>
                     <dt className="text-xs text-zinc-500 uppercase font-semibold mb-1">Company Size</dt>
                     <dd className="text-sm text-zinc-200">
@@ -804,8 +763,8 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                           {formatCompanySize(currentCareerProfile.companySize)}
                         </button>
                       )}
-                      </dd>
-                    </div>
+                    </dd>
+                  </div>
                 </div>
               </div>
             </div>
@@ -820,7 +779,7 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-sm font-medium text-zinc-400">Skills & Interests</h3>
                   <PencilSimple size={14} className="text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
+                </div>
                 <div className="space-y-4">
                   {currentCareerProfile.primarySkills.length > 0 && (
                     <div>
@@ -835,18 +794,18 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                           </span>
                         ))}
                         {currentCareerProfile.primarySkills.length > 8 && !showAllCurrentSkills && (
-                            <button
+                          <button
                             onClick={(e) => { e.stopPropagation(); setShowAllCurrentSkills(true); }}
                             className="text-xs text-zinc-500 hover:text-zinc-400 px-2 py-1"
-                            >
+                          >
                             +{currentCareerProfile.primarySkills.length - 8}
-                            </button>
+                          </button>
                         )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                   {currentCareerProfile.skillsToLearn.length > 0 && (
-                          <div>
+                    <div>
                       <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">Learning goals</span>
                       <div className="flex flex-wrap gap-1.5">
                         {(showAllLearningGoals ? currentCareerProfile.skillsToLearn : currentCareerProfile.skillsToLearn.slice(0, 8)).map((skill, index) => (
@@ -866,10 +825,10 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                           </button>
                         )}
                       </div>
+                    </div>
+                  )}
                 </div>
-                )}
-                </div>
-          </div>
+              </div>
 
               {/* Preferences Card */}
               <div className="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
@@ -877,11 +836,11 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                 <div className="space-y-5">
                   {/* Learning Preferences */}
                   {optionalStatus.learningPreferences && currentCareerProfile.learningStyle && currentCareerProfile.learningStyle.length > 0 && (
-                <div>
+                    <div>
                       <div className="flex items-center gap-2 mb-2">
                         <MaterialIcon name="code" size={14} className="text-zinc-500 flex-shrink-0" />
                         <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Learning</span>
-                </div>
+                      </div>
                       <ul className="space-y-1.5">
                         {currentCareerProfile.learningStyle.slice(0, 4).map((style, index) => (
                           <li key={`${style}-${index}`} className="flex items-center gap-2 text-sm text-zinc-300">
@@ -965,39 +924,39 @@ const CareerProfileManager: React.FC<CareerProfileManagerProps> = ({
                   <PencilSimple size={14} className="text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
                 <div className="space-y-4">
-                <div>
+                  <div>
                     <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">Focus areas</span>
                     <div className="flex flex-wrap gap-1.5">
-                    {currentCareerProfile.careerGoals.length > 0 ? (
+                      {currentCareerProfile.careerGoals.length > 0 ? (
                         currentCareerProfile.careerGoals.slice(0, 6).map((goal, index) => (
-                        <span
-                          key={`${goal}-${index}`}
+                          <span
+                            key={`${goal}-${index}`}
                             className="bg-blue-500/10 text-blue-400 text-xs px-2 py-1 rounded-md"
-                        >
-                          {formatGoalLabel(goal)}
-                        </span>
-                      ))
-                    ) : (
+                          >
+                            {formatGoalLabel(goal)}
+                          </span>
+                        ))
+                      ) : (
                         <p className="text-xs text-zinc-500">
-                        Add the outcomes you are aiming for next.
-                      </p>
-                    )}
+                          Add the outcomes you are aiming for next.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div>
+                  <div>
                     <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">Timeline</span>
                     <div className="flex items-center gap-2">
                       <MaterialIcon name="time" size={14} className="text-zinc-500 flex-shrink-0" />
-                    <div>
+                      <div>
                         <p className="text-sm font-medium text-zinc-100">
-                        {timeframeDetails.label}
-                      </p>
+                          {timeframeDetails.label}
+                        </p>
                         <p className="text-xs text-zinc-500">
-                        {timeframeDetails.window}
-                      </p>
+                          {timeframeDetails.window}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
                 </div>
               </div>
 

@@ -14,29 +14,32 @@ import type { Subscription } from '@/types/subscription';
 
 // Paddle environment configuration
 // Paddle environment configuration
-const PADDLE_ENVIRONMENT = (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT || 'production') as
+// Paddle environment configuration
+const PADDLE_ENVIRONMENT = (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT || 
+  (process.env.NODE_ENV === 'development' ? 'sandbox' : 'production')) as
   | 'sandbox'
   | 'production';
 
 // Select keys based on environment
 const PADDLE_CLIENT_TOKEN = PADDLE_ENVIRONMENT === 'sandbox'
-  ? process.env.NEXT_PUBLIC_PADDLE_SANDBOX_CLIENT_TOKEN
+  ? (process.env.NEXT_PUBLIC_PADDLE_SANDBOX_CLIENT_TOKEN || 'test_sandbox_client_token_fallback')
   : process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
 
 // Price IDs (configured in Paddle dashboard)
+// Price IDs (configured in Paddle dashboard)
 export const PADDLE_PRICES = {
   pro_monthly: PADDLE_ENVIRONMENT === 'sandbox'
-    ? process.env.NEXT_PUBLIC_PADDLE_PRO_MONTHLY_PRICE_ID_SANDBOX
-    : process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || '',
+    ? (process.env.NEXT_PUBLIC_PADDLE_PRO_MONTHLY_PRICE_ID_SANDBOX || 'pri_sub_pro_monthly_sandbox_fallback')
+    : (process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || ''),
   pro_annual: PADDLE_ENVIRONMENT === 'sandbox'
-    ? process.env.NEXT_PUBLIC_PADDLE_PRO_ANNUAL_PRICE_ID_SANDBOX
-    : process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_ANNUAL || '',
+    ? (process.env.NEXT_PUBLIC_PADDLE_PRO_ANNUAL_PRICE_ID_SANDBOX || 'pri_sub_pro_annual_sandbox_fallback')
+    : (process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_ANNUAL || ''),
   team_monthly: PADDLE_ENVIRONMENT === 'sandbox'
-    ? process.env.NEXT_PUBLIC_PADDLE_TEAM_MONTHLY_PRICE_ID_SANDBOX
-    : process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_MONTHLY || '',
+    ? (process.env.NEXT_PUBLIC_PADDLE_TEAM_MONTHLY_PRICE_ID_SANDBOX || 'pri_sub_team_monthly_sandbox_fallback')
+    : (process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_MONTHLY || ''),
   team_annual: PADDLE_ENVIRONMENT === 'sandbox'
-    ? process.env.NEXT_PUBLIC_PADDLE_TEAM_ANNUAL_PRICE_ID_SANDBOX
-    : process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_ANNUAL || '',
+    ? (process.env.NEXT_PUBLIC_PADDLE_TEAM_ANNUAL_PRICE_ID_SANDBOX || 'pri_sub_team_annual_sandbox_fallback')
+    : (process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_ANNUAL || ''),
 } as const;
 
 // Paddle.js types (simplified)

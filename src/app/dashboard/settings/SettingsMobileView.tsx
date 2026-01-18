@@ -12,6 +12,8 @@ import SettingsMobileBilling from './SettingsMobileBilling';
 import SettingsMobileCareer from './SettingsMobileCareer';
 import UnifiedMobileNavbar from '@/components/common/UnifiedMobileNavbar';
 import { APP_MOBILE_NAV_ITEMS } from '@/constants/navigation';
+import { useCareerProfile } from '@/hooks/useCareerProfile';
+import { calculateCareerProfileCompletion } from '@/utils/careerProfileUtils';
 
 interface SettingItem {
     id: string;
@@ -37,6 +39,10 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
 
     const activeTab = searchParams.get('tab');
 
+    // Fetch career profile data
+    const { careerProfile, optionalSections } = useCareerProfile();
+    const completionPercentage = calculateCareerProfileCompletion(careerProfile, optionalSections);
+
     // Grouped Settings Data
     const settingGroups: SettingGroup[] = [
         {
@@ -44,7 +50,7 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
             label: 'ACCOUNT',
             items: [
                 { id: 'profile', label: 'Profile', icon: 'person', value: 'Managed' },
-                { id: 'career', label: 'Career Profile', icon: 'work', value: '85% Complete' },
+                { id: 'career', label: 'Career Profile', icon: 'work', value: `${completionPercentage}% Complete` },
                 { id: 'billing', label: 'Billing', icon: 'credit-card', value: 'Free Plan' },
             ]
         },
@@ -183,7 +189,7 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
                                             <div className="flex items-center gap-2">
                                                 {/* Specialized Value Visualization */}
                                                 {item.id === 'career' ? (
-                                                    <CircularProgress percentage={85} />
+                                                    <CircularProgress percentage={completionPercentage} />
                                                 ) : (
                                                     <span className={`text-[13px] ${item.value === 'Free Plan' ? 'text-amber-500/90' :
                                                         item.value === 'Managed' ? 'text-blue-400/90' : 'text-[var(--mono-text-tertiary)]'

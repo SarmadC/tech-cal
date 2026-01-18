@@ -5,7 +5,7 @@ import { MaterialIcon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { openCustomerPortal } from '@/lib/paddle';
-import { Spinner } from '@phosphor-icons/react';
+import { CircleNotch, Lightning, ShieldCheck, Ticket, Receipt, CreditCard } from '@phosphor-icons/react';
 
 export default function SettingsMobileBilling() {
     const { subscription, isLoading, isPro, isTrialing, trialDaysLeft, openUpgrade } = useSubscription();
@@ -29,7 +29,7 @@ export default function SettingsMobileBilling() {
             return { name: 'Pro Plan', status: 'Canceled', statusColor: 'error' };
         }
         return {
-            name: `Pro Plan (${subscription.plan_type === 'annual' ? 'Annual' : 'Monthly'})`,
+            name: `Pro Plan ${subscription.plan_type === 'annual' ? 'Annual' : 'Monthly'}`,
             status: 'Active',
             statusColor: 'success'
         };
@@ -46,7 +46,7 @@ export default function SettingsMobileBilling() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <Spinner className="h-8 w-8 animate-spin text-[var(--mono-text-tertiary)]" />
+                <CircleNotch weight="bold" className="h-5 w-5 animate-spin text-[var(--mono-text-tertiary)]" />
             </div>
         );
     }
@@ -61,66 +61,79 @@ export default function SettingsMobileBilling() {
         'Google Calendar sync',
         'Unlimited saved events',
         'Full learning history',
-        'All personalized recommendations'
+        'Personalized recommendations'
     ];
 
     const currentFeatures = (isPro || isTrialing) ? proFeatures : freeFeatures;
 
     return (
-        <div className="space-y-6">
-            {/* Current Plan Section */}
-            <div>
-                <h3 className="text-[11px] font-semibold text-[var(--mono-text-secondary)] mb-3 px-1 uppercase tracking-[0.05em]">
-                    Current Plan
-                </h3>
-                <div className="rounded-lg overflow-hidden bg-[var(--mono-bg-surface)] border border-[var(--mono-border-default)] p-5">
-                    <div className="flex items-start justify-between mb-4">
-                        <div>
-                            <h4 className="text-[17px] font-semibold text-[var(--mono-text-primary)] mb-1">{planInfo.name}</h4>
-                            <p className="text-[13px] text-[var(--mono-text-secondary)]">
-                                {subscription?.current_period_end
-                                    ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`
-                                    : 'Current plan'
-                                }
-                            </p>
+        <div className="space-y-6 animate-in fade-in duration-500">
+
+            {/* Plan Card - Linear Style "Ticket" */}
+            <div className="group relative overflow-hidden rounded-xl border border-[var(--mono-border-default)] bg-[var(--mono-bg-surface)] shadow-sm transition-all hover:shadow-md">
+
+                {(isPro || isTrialing) && (
+                    <div className="absolute top-0 right-0 -mr-16 -mt-16 h-32 w-32 rounded-full bg-violet-500/10 blur-3xl dark:bg-violet-500/5 pointer-events-none" />
+                )}
+
+                <div className="p-5">
+                    <div className="flex items-start justify-between mb-6">
+                        <div className="flex gap-3">
+                            <div className={`h-10 w-10 flex items-center justify-center rounded-lg border shadow-sm ${isPro || isTrialing
+                                ? 'bg-gradient-to-br from-violet-500/20 to-indigo-600/5 border-violet-500/20 text-violet-600 dark:text-violet-400'
+                                : 'bg-[var(--mono-bg-hover)] border-[var(--mono-border-default)] text-[var(--mono-text-secondary)]'
+                                }`}>
+                                {(isPro || isTrialing) ? <Lightning size={20} weight="fill" /> : <Ticket size={20} weight="duotone" />}
+                            </div>
+                            <div>
+                                <h4 className="text-[15px] font-semibold text-[var(--mono-text-primary)] leading-tight">{planInfo.name}</h4>
+                                <div className="mt-1 flex items-center gap-2">
+                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${planInfo.statusColor === 'success'
+                                        ? 'bg-green-500/5 text-green-600 border-green-500/20'
+                                        : planInfo.statusColor === 'warning'
+                                            ? 'bg-amber-500/5 text-amber-600 border-amber-500/20'
+                                            : planInfo.statusColor === 'error'
+                                                ? 'bg-red-500/5 text-red-600 border-red-500/20'
+                                                : 'bg-[var(--mono-bg-subtle)] text-[var(--mono-text-secondary)] border-[var(--mono-border-default)]'
+                                        }`}>
+                                        {planInfo.status}
+                                    </span>
+                                    <span className="text-[12px] text-[var(--mono-text-tertiary)]">
+                                        {subscription?.current_period_end
+                                            ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                                            : 'Free tier'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <span className={`px-2.5 py-1 rounded text-[11px] font-medium border ${
-                            planInfo.statusColor === 'success'
-                                ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                : planInfo.statusColor === 'warning'
-                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                : planInfo.statusColor === 'error'
-                                ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                                : 'bg-[var(--mono-bg-hover)] text-[var(--mono-text-primary)] border-[var(--mono-border-strong)]'
-                        }`}>
-                            {planInfo.status.toUpperCase()}
-                        </span>
                     </div>
 
-                    <div className="space-y-3 mb-6">
+                    {/* Feature List as Compact Grid */}
+                    <div className="space-y-2 mb-6">
                         {currentFeatures.map((feature, i) => (
-                            <div key={i} className="flex items-center gap-3 text-[13px] text-[var(--mono-text-secondary)]">
-                                <MaterialIcon name="check-circle" size={16} className="text-green-500" />
-                                {feature}
+                            <div key={i} className="flex items-start gap-2.5">
+                                <ShieldCheck size={14} weight="fill" className={`mt-0.5 shrink-0 ${isPro || isTrialing ? 'text-violet-500/80' : 'text-[var(--mono-text-tertiary)]'}`} />
+                                <span className="text-[13px] text-[var(--mono-text-secondary)] leading-tight">{feature}</span>
                             </div>
                         ))}
                     </div>
 
+                    {/* Actions */}
                     {(isPro || isTrialing) ? (
-                        <div className="flex gap-3">
+                        <div className="grid grid-cols-2 gap-3">
                             <Button
                                 onClick={handleManageBilling}
-                                className="flex-1 bg-[var(--mono-text-primary)] text-[var(--mono-bg-main)] hover:bg-[var(--mono-text-secondary)] h-10 text-sm font-medium rounded-md transition-colors"
+                                className="w-full bg-[var(--mono-text-primary)] text-[var(--mono-bg-main)] hover:bg-[var(--mono-text-secondary)] hover:opacity-95 h-9 text-[13px] font-medium rounded-lg shadow-sm transition-all"
                             >
-                                Manage Subscription
+                                Manage
                             </Button>
                             {isTrialing && (
-                                <Link href="/pricing">
+                                <Link href="/pricing" className="w-full">
                                     <Button
                                         variant="outline"
-                                        className="h-10 text-sm font-medium rounded-md"
+                                        className="w-full h-9 text-[13px] font-medium rounded-lg border-[var(--mono-border-strong)] bg-transparent hover:bg-[var(--mono-bg-hover)] transition-all"
                                     >
-                                        Plans
+                                        Compare Plans
                                     </Button>
                                 </Link>
                             )}
@@ -128,75 +141,76 @@ export default function SettingsMobileBilling() {
                     ) : (
                         <Button
                             onClick={() => openUpgrade('monthly')}
-                            className="w-full bg-[var(--mono-text-primary)] text-[var(--mono-bg-main)] hover:bg-[var(--mono-text-secondary)] h-10 text-sm font-medium rounded-md transition-colors"
+                            className="w-full bg-[var(--mono-text-primary)] text-[var(--mono-bg-main)] hover:bg-[var(--mono-text-secondary)] hover:opacity-95 h-10 text-[13px] font-medium rounded-lg shadow-sm transition-all relative overflow-hidden group"
                         >
-                            Upgrade to Pro
+                            <span className="relative z-10 flex items-center justify-center gap-2">
+                                Upgrade to Pro
+                            </span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                         </Button>
                     )}
                 </div>
             </div>
 
-            {/* Payment Method Section */}
+            {/* Payment Method - Compact Row Design */}
             <div>
-                <h3 className="text-[11px] font-semibold text-[var(--mono-text-secondary)] mb-3 px-1 uppercase tracking-[0.05em]">
+                <h3 className="text-[11px] font-semibold text-[var(--mono-text-secondary)] mb-2 px-1 uppercase tracking-wider">
                     Payment Method
                 </h3>
-                <div className="rounded-lg overflow-hidden bg-[var(--mono-bg-surface)] border border-[var(--mono-border-default)]">
+                <div className="rounded-xl overflow-hidden bg-[var(--mono-bg-surface)] border border-[var(--mono-border-default)] shadow-sm">
                     {(isPro || isTrialing) && subscription?.paddle_subscription_id ? (
-                        <>
-                            <div className="p-5 flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-[var(--mono-bg-hover)] flex items-center justify-center">
-                                    <MaterialIcon name="credit-card" size={20} className="text-[var(--mono-text-primary)]" />
+                        <div className="flex items-center justify-between p-3 pl-4">
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-10 rounded border border-[var(--mono-border-default)] bg-[var(--mono-bg-subtle)] flex items-center justify-center text-[var(--mono-text-secondary)] shadow-sm">
+                                    <CreditCard size={18} weight="duotone" />
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                     <p className="text-[13px] font-medium text-[var(--mono-text-primary)]">
-                                        Payment method on file
+                                        Card on file
                                     </p>
-                                    <p className="text-[11px] text-[var(--mono-text-tertiary)]">
-                                        Managed by Paddle
+                                    <p className="text-[11px] text-[var(--mono-text-tertiary)] flex items-center gap-1">
+                                        Secure via Paddle
                                     </p>
                                 </div>
                             </div>
-                            <div className="border-t border-[var(--mono-border-default)]">
-                                <button
-                                    onClick={handleManageBilling}
-                                    className="w-full h-[48px] flex items-center justify-center text-[13px] font-medium text-[var(--mono-text-primary)] hover:bg-[var(--mono-bg-hover)] transition-colors"
-                                >
-                                    Update Payment Method
-                                </button>
-                            </div>
-                        </>
+                            <Button
+                                variant="ghost"
+                                onClick={handleManageBilling}
+                                className="h-8 text-[12px] font-medium text-[var(--mono-text-secondary)] hover:text-[var(--mono-text-primary)] hover:bg-[var(--mono-bg-hover)] px-3 rounded-lg"
+                            >
+                                Update
+                            </Button>
+                        </div>
                     ) : (
-                        <>
-                            <div className="flex flex-col items-center justify-center py-8 text-center px-4">
-                                <div className="w-10 h-10 rounded-full bg-[var(--mono-bg-hover)] flex items-center justify-center mb-3">
-                                    <MaterialIcon name="credit-card" size={20} className="text-[var(--mono-text-tertiary)]" />
+                        <button
+                            onClick={() => openUpgrade('monthly')}
+                            className="w-full flex items-center justify-between p-3 pl-4 hover:bg-[var(--mono-bg-hover)]/50 transition-colors group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-10 rounded border border-dashed border-[var(--mono-border-strong)] bg-transparent flex items-center justify-center text-[var(--mono-text-tertiary)] group-hover:border-[var(--mono-text-secondary)] transition-colors">
+                                    <CreditCard size={18} />
                                 </div>
-                                <p className="text-[13px] text-[var(--mono-text-secondary)] mb-1">No payment method added</p>
-                                <p className="text-[11px] text-[var(--mono-text-tertiary)]">Add a card to upgrade your plan</p>
+                                <div className="text-left">
+                                    <span className="text-[13px] font-medium text-[var(--mono-text-secondary)] group-hover:text-[var(--mono-text-primary)] transition-colors">Add Payment Method</span>
+                                </div>
                             </div>
-                            <div className="border-t border-[var(--mono-border-default)]">
-                                <button
-                                    onClick={() => openUpgrade('monthly')}
-                                    className="w-full h-[48px] flex items-center justify-center text-[13px] font-medium text-[var(--mono-text-primary)] hover:bg-[var(--mono-bg-hover)] transition-colors"
-                                >
-                                    Add Payment Method
-                                </button>
+                            <div className="h-8 w-8 flex items-center justify-center text-[var(--mono-text-tertiary)]">
+                                <MaterialIcon name="chevron_right" size={18} />
                             </div>
-                        </>
+                        </button>
                     )}
                 </div>
             </div>
 
-            {/* Billing History Link */}
+            {/* Invoices Link - More Subtle */}
             {(isPro || isTrialing) && subscription?.paddle_subscription_id && (
-                <div className="px-1">
+                <div className="flex justify-center">
                     <button
                         onClick={handleManageBilling}
-                        className="flex items-center gap-2 text-[13px] text-[var(--mono-text-secondary)] hover:text-[var(--mono-text-primary)] transition-colors"
+                        className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--mono-text-tertiary)] hover:text-[var(--mono-text-primary)] transition-colors py-2 px-3 rounded-md hover:bg-[var(--mono-bg-surface)]"
                     >
-                        <MaterialIcon name="time" size={16} />
-                        View Billing History
+                        <Receipt size={14} weight="duotone" />
+                        View Invoices & Billing History
                     </button>
                 </div>
             )}

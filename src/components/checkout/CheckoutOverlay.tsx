@@ -11,6 +11,7 @@ export function CheckoutOverlay() {
     const { isOpen, closeCheckout, checkoutOptions } = useCheckout();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showMobileSummary, setShowMobileSummary] = useState(false);
     const initialized = useRef(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -29,6 +30,7 @@ export function CheckoutOverlay() {
                     setError(null);
                     setLoading(true);
 
+                    // Fallback handled in paddle.ts now
                     const priceId = checkoutOptions.plan === 'annual'
                         ? PADDLE_PRICES.pro_annual
                         : PADDLE_PRICES.pro_monthly;
@@ -49,10 +51,9 @@ export function CheckoutOverlay() {
                         userEmail: checkoutOptions.userEmail,
                         frameTarget: 'paddle-checkout-container',
                         successUrl: `${window.location.origin}/billing/success`,
-                        theme: 'light' // Use light theme + filter for better visual control
+                        theme: 'light'
                     });
 
-                    // Add a small delay for the iframe to actually render content
                     setTimeout(() => {
                         setLoading(false);
                         initialized.current = true;
@@ -67,11 +68,11 @@ export function CheckoutOverlay() {
             initCheckout();
         }
 
-        // Reset initialization on close
         if (!isOpen) {
             initialized.current = false;
-            setLoading(true); // Reset loading state
+            setLoading(true);
             setError(null);
+            setShowMobileSummary(false);
         }
 
     }, [isOpen, checkoutOptions]);
@@ -80,56 +81,79 @@ export function CheckoutOverlay() {
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0C0C0D]/95 backdrop-blur-sm animate-in fade-in duration-300"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0C0C0D] md:bg-[#0C0C0D]/95 md:backdrop-blur-sm animate-in fade-in duration-300"
             role="dialog"
             aria-modal="true"
-            onClick={closeCheckout}
         >
-            {/* 1. The Header */}
-            <div className="absolute top-0 left-0 w-full px-6 py-6 flex items-center justify-between z-20">
-                {/* Top Left: Back */}
+            {/* Desktop Header / Mobile Navbar */}
+            <div className="md:absolute md:top-0 md:left-0 w-full px-4 py-4 md:px-6 md:py-6 flex items-center justify-between z-20 shrink-0 border-b border-white/5 md:border-none bg-[#0C0C0D] md:bg-transparent">
                 <button
                     onClick={closeCheckout}
-                    className="text-sm font-medium text-white/50 hover:text-white transition-colors flex items-center gap-1"
+                    className="text-sm font-medium text-white/70 hover:text-white transition-colors flex items-center gap-1"
                 >
-                    ← Back
+                    <span className="hidden md:inline">← Back</span>
+                    <span className="md:hidden">Cancel</span>
                 </button>
 
-                {/* Center: Checkout */}
-                <h1 className="text-xl font-dm-sans text-white tracking-wide absolute left-1/2 -translate-x-1/2">
+                <h1 className="text-base md:text-xl font-dm-sans text-white tracking-wide absolute left-1/2 -translate-x-1/2">
                     Checkout
                 </h1>
 
-                {/* Top Right: Cmd+Enter hint */}
                 <div className="hidden md:flex items-center gap-1.5 text-xs font-medium text-white/30 border border-white/10 rounded px-2 py-1 bg-white/5">
                     <Command size={10} weight="bold" />
                     <span>Enter to pay</span>
                 </div>
-                {/* Mobile Close Button (replacing hint) */}
+                {/* Mobile Show Summary Toggle */}
                 <button
-                    onClick={closeCheckout}
-                    className="md:hidden text-white/50 p-2"
+                    onClick={() => setShowMobileSummary(!showMobileSummary)}
+                    className="md:hidden text-xs font-medium text-indigo-400"
                 >
-                    <X size={20} />
+                    {showMobileSummary ? 'Hide' : 'Show'} Order
                 </button>
             </div>
 
-
-            {/* 2. The Split View (Modal) */}
+            {/* Main Container */}
             <div
-                className="w-full max-w-[1050px] h-[750px] max-h-[95vh] bg-[#141415] rounded-lg border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row relative animate-in zoom-in-95 duration-300"
-                onClick={(e) => e.stopPropagation()}
+                className="w-full md:max-w-[1050px] h-full md:h-[750px] md:max-h-[95vh] bg-[#141415] md:rounded-lg border-none md:border border-white/10 md:shadow-2xl overflow-hidden flex flex-col md:flex-row relative animate-in zoom-in-95 duration-300"
             >
+                {/* Mobile Summary Accordion (Visible only on mobile when toggled) */}
+                {showMobileSummary && (
+                    <div className="md:hidden w-full bg-[#202020] border-b border-white/5 p-6 animate-in slide-in-from-top-4">
+                        <div className="flex justify-between items-end mb-4">
+                            <div>
+                                <p className="text-white font-medium text-sm">{planName}</p>
+                                <p className="text-xs text-zinc-500 mt-1">7-day free trial</p>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-xl font-serif text-white">{price}<span className="text-sm text-zinc-600 font-sans font-normal">{period}</span></div>
+                            </div>
+                        </div>
+                        <ul className="space-y-3">
+                            {[
+                                { title: "Unlimited History", desc: "Access your archive." },
+                                { title: "Guest Access", desc: "Collaborate with guests." },
+                                { title: "Priority Support", desc: "Direct engineering line." }
+                            ].map((item, i) => (
+                                <li key={i} className="flex gap-2 items-start">
+                                    <Check size={12} weight="bold" className="mt-0.5 text-indigo-400 shrink-0" />
+                                    <div className="text-xs text-zinc-400">{item.title}</div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
                 {/* Left Column: The Form */}
-                <div className="w-full md:w-[60%] h-full relative flex flex-col">
-                    <div className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative">
+                <div className="w-full md:w-[60%] h-full relative flex flex-col bg-[#141415]">
+                    <div className="flex-1 p-4 md:p-10 overflow-y-auto custom-scrollbar relative">
                         {loading && !error && (
                             <div className="absolute inset-0 flex items-center justify-center z-20 bg-[#141415]">
-                                <div className="w-full max-w-sm space-y-4">
+                                <div className="w-full max-w-sm space-y-4 px-8">
                                     <div className="h-8 w-1/3 bg-white/5 rounded animate-pulse mb-6"></div>
                                     <div className="space-y-3">
-                                        <div className="h-12 w-full bg-white/5 rounded animate-pulse"></div>
-                                        <div className="h-12 w-full bg-white/5 rounded animate-pulse"></div>
+                                        <div className="h-10 w-full bg-white/5 rounded animate-pulse"></div>
+                                        <div className="h-10 w-full bg-white/5 rounded animate-pulse"></div>
+                                        <div className="h-32 w-full bg-white/5 rounded animate-pulse"></div>
                                     </div>
                                 </div>
                             </div>
@@ -146,7 +170,6 @@ export function CheckoutOverlay() {
                                         setError(null);
                                         setLoading(true);
                                         initialized.current = false;
-                                        // Trigger re-run
                                         const event = new Event('resize');
                                         window.dispatchEvent(event);
                                     }}
@@ -167,25 +190,21 @@ export function CheckoutOverlay() {
                             )}
                             style={{ filter: 'invert(0.922) hue-rotate(180deg)' }}
                         >
-                            {/* Paddle iframe injected here */}
                         </div>
                     </div>
                 </div>
 
-                {/* Right Column: The Receipt */}
-                {/* Right Column: The Value Context */}
-                <div className="w-full md:w-[40%] h-full bg-[#202020] border-t md:border-t-0 md:border-l border-white/5 p-8 flex flex-col relative overflow-hidden">
-                    {/* Ambient Glow (Top Right) */}
+                {/* Right Column: The Value Context (Desktop Only) */}
+                <div className="hidden md:flex w-full md:w-[40%] h-full bg-[#202020] border-l border-white/5 p-8 flex-col relative overflow-hidden">
+                    {/* Ambient Glow */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2" />
 
                     <div className="relative z-10 flex flex-col h-full">
-                        {/* Header */}
                         <div className="mb-8">
                             <h2 className="text-lg font-serif text-white mb-2">You're upgrading to Pro</h2>
                             <p className="text-zinc-500 text-sm">Unlock the full potential of your calendar.</p>
                         </div>
 
-                        {/* Feature List */}
                         <ul className="space-y-5 mb-8">
                             {[
                                 { title: "Unlimited History", desc: "Access your entire workspace archive." },
@@ -204,10 +223,8 @@ export function CheckoutOverlay() {
                             ))}
                         </ul>
 
-                        {/* Divider */}
                         <div className="h-px w-full bg-white/5 mb-6" />
 
-                        {/* Order Summary (Compact) */}
                         <div className="mt-auto">
                             <div className="flex items-center gap-2 mb-4 text-white/40">
                                 <Cube size={14} weight="fill" />
@@ -226,7 +243,6 @@ export function CheckoutOverlay() {
                             </div>
                         </div>
 
-                        {/* Trust Badge - Removed */}
                         <div className="mt-6 pt-6 border-t border-dashed border-white/10">
                             <p className="text-[10px] text-zinc-600 leading-relaxed">
                                 Secure payment via Paddle. By confirming, you agree to our Terms.
