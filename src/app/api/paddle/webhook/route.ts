@@ -91,9 +91,11 @@ function verifySignature(
     }
 
     // Paddle uses HMAC-SHA256 for webhook signatures
+    // The signed payload format is: timestamp:rawBody
+    const signedPayload = `${timestamp}:${payload}`;
     const expectedSignature = crypto
       .createHmac('sha256', PADDLE_WEBHOOK_SECRET)
-      .update(payload)
+      .update(signedPayload)
       .digest('hex');
 
     return crypto.timingSafeEqual(
