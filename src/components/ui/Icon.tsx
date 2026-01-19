@@ -53,6 +53,7 @@ import {
     PuzzlePieceIcon,
     PaletteIcon,
     CrosshairIcon,
+    ReceiptIcon,
 } from '@phosphor-icons/react';
 
 export type IconName =
@@ -109,7 +110,8 @@ export type IconName =
     | 'extension'
     | 'palette'
     | 'my_location'
-    | 'hourglass_empty';
+    | 'hourglass_empty'
+    | 'receipt_long';
 
 interface IconProps {
     name: IconName;
@@ -173,6 +175,7 @@ const iconMap = {
     'palette': PaletteIcon,
     'my_location': CrosshairIcon,
     'hourglass_empty': ClockIcon,
+    'receipt_long': ReceiptIcon,
 } as const;
 
 export const MaterialIcon: React.FC<IconProps> = ({
