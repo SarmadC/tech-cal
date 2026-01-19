@@ -1,4 +1,4 @@
-﻿/**
+/**
  * POST /api/paddle/customer-portal
  *
  * Creates a Paddle billing portal session for the authenticated user.
@@ -11,6 +11,8 @@
 import { NextResponse } from 'next/server';
 import { withSubscription } from '@/lib/subscription';
 import { logger } from '@/utils/logger';
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 const PADDLE_ENVIRONMENT = (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT || 'production') as 'sandbox' | 'production';
 const PADDLE_API_KEY = PADDLE_ENVIRONMENT === 'sandbox'
@@ -20,6 +22,15 @@ const PADDLE_API_KEY = PADDLE_ENVIRONMENT === 'sandbox'
 const PADDLE_API_BASE = PADDLE_ENVIRONMENT === 'sandbox'
   ? 'https://sandbox-api.paddle.com'
   : 'https://api.paddle.com';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+function createServiceClient() {
+  return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+}
 
 interface PaddleSessionResponse {
   data?: {
@@ -35,25 +46,55 @@ interface PaddleSessionResponse {
 
 export const POST = withSubscription(
   async (_request, subscription) => {
+    const payload: Record<string, string> = {
+      type: 'billing_portal',
+    };
+
+    // Self-healing: If customer_id is missing, try to fetch it from Paddle using subscription_id
+    if (!subscription.paddle_customer_id) {
+      if (subscription.paddle_subscription_id) {
+        try {
+          logger.info('Self-healing: Fetching missing customer_id for subscription', {
+            subscriptionId: subscription.paddle_subscription_id
+          });
+
+          const subResponse = await fetch(`${PADDLE_API_BASE}/subscriptions/${subscription.paddle_subscription_id}`, {
+            headers: {
+              Authorization: `Bearer ${PADDLE_API_KEY}`,
+            },
+          });
+
+          if (subResponse.ok) {
+            const subData = await subResponse.json();
+            const customerId = subData.data?.customer_id;
+
+            if (customerId) {
+              // Update local DB
+              const supabase = createServiceClient();
+              await supabase
+                .from('subscriptions')
+                .update({ paddle_customer_id: customerId })
+                .eq('id', subscription.id);
+              
+              subscription.paddle_customer_id = customerId;
+              logger.info('Self-healing: Successfully updated customer_id', { customerId });
+            }
+          }
+        } catch (error) {
+           logger.error('Self-healing failed:', error);
+           // Continue - will fail below with original error if still missing
+        }
+      }
+    }
+
     if (!subscription.paddle_customer_id) {
       return NextResponse.json(
         { error: 'No Paddle customer linked to this account' },
         { status: 400 }
       );
     }
-
-    if (!PADDLE_API_KEY) {
-      logger.error('Paddle API key not configured');
-      return NextResponse.json(
-        { error: 'Billing portal unavailable. Please contact support.' },
-        { status: 500 }
-      );
-    }
-
-    const payload: Record<string, string> = {
-      customer_id: subscription.paddle_customer_id,
-      type: 'billing_portal',
-    };
+    
+    payload.customer_id = subscription.paddle_customer_id;
 
     const returnUrl = process.env.NEXT_PUBLIC_SITE_URL
       ? `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/settings?tab=billing`

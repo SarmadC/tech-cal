@@ -29,16 +29,16 @@ const PADDLE_CLIENT_TOKEN = PADDLE_ENVIRONMENT === 'sandbox'
 // Price IDs (configured in Paddle dashboard)
 export const PADDLE_PRICES = {
   pro_monthly: PADDLE_ENVIRONMENT === 'sandbox'
-    ? (process.env.NEXT_PUBLIC_PADDLE_PRO_MONTHLY_PRICE_ID_SANDBOX || 'pri_sub_pro_monthly_sandbox_fallback')
+    ? (process.env.NEXT_PUBLIC_PADDLE_PRO_MONTHLY_PRICE_ID_SANDBOX || process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || 'pri_sub_pro_monthly_sandbox_fallback')
     : (process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || ''),
   pro_annual: PADDLE_ENVIRONMENT === 'sandbox'
-    ? (process.env.NEXT_PUBLIC_PADDLE_PRO_ANNUAL_PRICE_ID_SANDBOX || 'pri_sub_pro_annual_sandbox_fallback')
+    ? (process.env.NEXT_PUBLIC_PADDLE_PRO_ANNUAL_PRICE_ID_SANDBOX || process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_ANNUAL || 'pri_sub_pro_annual_sandbox_fallback')
     : (process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_ANNUAL || ''),
   team_monthly: PADDLE_ENVIRONMENT === 'sandbox'
-    ? (process.env.NEXT_PUBLIC_PADDLE_TEAM_MONTHLY_PRICE_ID_SANDBOX || 'pri_sub_team_monthly_sandbox_fallback')
+    ? (process.env.NEXT_PUBLIC_PADDLE_TEAM_MONTHLY_PRICE_ID_SANDBOX || process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_MONTHLY || 'pri_sub_team_monthly_sandbox_fallback')
     : (process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_MONTHLY || ''),
   team_annual: PADDLE_ENVIRONMENT === 'sandbox'
-    ? (process.env.NEXT_PUBLIC_PADDLE_TEAM_ANNUAL_PRICE_ID_SANDBOX || 'pri_sub_team_annual_sandbox_fallback')
+    ? (process.env.NEXT_PUBLIC_PADDLE_TEAM_ANNUAL_PRICE_ID_SANDBOX || process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_ANNUAL || 'pri_sub_team_annual_sandbox_fallback')
     : (process.env.NEXT_PUBLIC_PADDLE_PRICE_TEAM_ANNUAL || ''),
 } as const;
 
@@ -142,9 +142,9 @@ export async function initPaddle(
   if (paddleInitialized) return;
   if (typeof window === 'undefined') return;
 
-  if (!PADDLE_CLIENT_TOKEN) {
-    console.warn('Paddle client token not configured');
-    return;
+  if (!PADDLE_CLIENT_TOKEN || PADDLE_CLIENT_TOKEN.includes('fallback')) {
+    console.warn('Paddle client token not configured or using fallback');
+    throw new Error('Payment system configuration missing. Please report this to support.');
   }
 
   try {
@@ -353,8 +353,8 @@ export async function openProAnnualCheckout(
  * @param subscription User's subscription with paddle_customer_id
  */
 export async function openCustomerPortal(subscription: Subscription): Promise<void> {
-  if (!subscription.paddle_customer_id) {
-    console.error('No Paddle customer ID found');
+  if (!subscription.paddle_customer_id && !subscription.paddle_subscription_id) {
+    console.error('No Paddle customer ID or subscription ID found');
     return;
   }
 

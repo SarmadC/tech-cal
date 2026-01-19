@@ -37,13 +37,20 @@ export default function SettingsMobileBilling() {
 
     const planInfo = getPlanInfo();
     const hasPaddleCustomer = Boolean(subscription?.paddle_customer_id);
-    const canManageBilling = Boolean(subscription && subscription.tier !== 'free' && hasPaddleCustomer);
-    const awaitingBillingPortal = Boolean(subscription && subscription.tier !== 'free' && !hasPaddleCustomer);
+    // Allow if we have customer ID OR subscription ID (for self-healing)
+    const canManageBilling = Boolean(subscription && subscription.tier !== 'free' && (hasPaddleCustomer || subscription.paddle_subscription_id));
+    const awaitingBillingPortal = Boolean(subscription && subscription.tier !== 'free' && !canManageBilling);
 
     const handleManageBilling = () => {
         if (!subscription) return;
 
-        if (!subscription.paddle_customer_id) {
+        // If free tier, redirect to upgrade instead of trying to open portal
+        if (subscription.tier === 'free') {
+            openUpgrade('monthly');
+            return;
+        }
+
+        if (!subscription.paddle_customer_id && !subscription.paddle_subscription_id) {
             if (typeof window !== 'undefined' && typeof window.alert === 'function') {
                 window.alert('Your billing portal is still being prepared. Please try again shortly or reach out to support if you need immediate help.');
             }
