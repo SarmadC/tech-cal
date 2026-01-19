@@ -1,10 +1,13 @@
 /**
  * POST /api/paddle/customer-portal
  *
- * Creates a Paddle billing portal session for the authenticated user.
- * Returns the hosted portal URL where customers can manage payment methods,
- * download invoices, or cancel their plan.
+ * Creates a Paddle Customer Portal Session for the authenticated user.
+ * Uses the new Customer Portal Sessions API which provides:
+ * - Authenticated deep links (auto-sign-in, no magic link needed)
+ * - Direct links to specific actions (cancel, update payment method)
+ * - Better UX for in-app billing management
  *
+ * @see https://developer.paddle.com/build/customers/integrate-customer-portal
  * @server-only
  */
 
@@ -32,23 +35,54 @@ function createServiceClient() {
   });
 }
 
-interface PaddleSessionResponse {
+// Customer Portal Sessions API response types
+interface PortalSubscriptionUrls {
+  id: string;
+  cancel_subscription: string;
+  update_subscription_payment_method: string;
+}
+
+interface CustomerPortalSessionResponse {
   data?: {
     id: string;
-    url: string;
-    status?: string;
+    customer_id: string;
+    urls: {
+      general: {
+        overview: string;
+      };
+      subscriptions: PortalSubscriptionUrls[];
+    };
+    created_at: string;
   };
   error?: {
-    message: string;
-    type?: string;
+    type: string;
+    code: string;
+    detail: string;
+    documentation_url?: string;
   };
+}
+
+// Response type for the frontend
+export interface CustomerPortalLinks {
+  overview: string;
+  subscriptions?: Array<{
+    id: string;
+    cancel: string;
+    updatePayment: string;
+  }>;
 }
 
 export const POST = withSubscription(
   async (_request, subscription) => {
-    const payload: Record<string, string> = {
-      type: 'billing_portal',
-    };
+    // Validate API key is configured
+    if (!PADDLE_API_KEY) {
+      const envVar = PADDLE_ENVIRONMENT === 'sandbox' ? 'PADDLE_SANDBOX_API_KEY' : 'PADDLE_API_KEY';
+      logger.error(`Missing Paddle API key: ${envVar} is not set`);
+      return NextResponse.json(
+        { error: `Billing portal unavailable. Server configuration error: missing ${envVar}` },
+        { status: 500 }
+      );
+    }
 
     // Self-healing: If customer_id is missing, try to fetch it from Paddle using subscription_id
     if (!subscription.paddle_customer_id) {
@@ -93,52 +127,78 @@ export const POST = withSubscription(
         { status: 400 }
       );
     }
+
+    // Build request payload for Customer Portal Sessions API
+    // Include subscription_ids to get deep links for subscription management
+    const payload: { subscription_ids?: string[] } = {};
     
-    payload.customer_id = subscription.paddle_customer_id;
-
-    const returnUrl = process.env.NEXT_PUBLIC_SITE_URL
-      ? `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/settings?tab=billing`
-      : undefined;
-
-    if (returnUrl) {
-      payload.return_url = returnUrl;
+    if (subscription.paddle_subscription_id) {
+      payload.subscription_ids = [subscription.paddle_subscription_id];
     }
 
     try {
-      const response = await fetch(`${PADDLE_API_BASE}/billing/sessions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${PADDLE_API_KEY}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      // Use Customer Portal Sessions API endpoint
+      const response = await fetch(
+        `${PADDLE_API_BASE}/customers/${subscription.paddle_customer_id}/portal-sessions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${PADDLE_API_KEY}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-      const data: PaddleSessionResponse = await response.json();
+      const data: CustomerPortalSessionResponse = await response.json();
 
       if (!response.ok) {
-        logger.error('Failed to create Paddle billing portal session', {
+        logger.error('Failed to create Customer Portal Session', {
           status: response.status,
-          body: data,
+          error: data.error,
+          customerId: subscription.paddle_customer_id,
         });
         return NextResponse.json(
-          { error: data.error?.message || 'Unable to open billing portal' },
+          { error: data.error?.detail || 'Unable to open billing portal' },
           { status: response.status }
         );
       }
 
-      const portalUrl = data.data?.url;
-      if (!portalUrl) {
-        logger.error('Paddle response missing billing portal URL', data);
+      if (!data.data?.urls?.general?.overview) {
+        logger.error('Customer Portal Session response missing URLs', data);
         return NextResponse.json(
           { error: 'Billing portal unavailable. Please contact support.' },
           { status: 502 }
         );
       }
 
-      return NextResponse.json({ url: portalUrl });
+      // Build response with all available portal links
+      const portalLinks: CustomerPortalLinks = {
+        overview: data.data.urls.general.overview,
+      };
+
+      // Add subscription-specific deep links if available
+      if (data.data.urls.subscriptions && data.data.urls.subscriptions.length > 0) {
+        portalLinks.subscriptions = data.data.urls.subscriptions.map((sub) => ({
+          id: sub.id,
+          cancel: sub.cancel_subscription,
+          updatePayment: sub.update_subscription_payment_method,
+        }));
+      }
+
+      logger.info('Customer Portal Session created', {
+        sessionId: data.data.id,
+        customerId: subscription.paddle_customer_id,
+        hasSubscriptionLinks: !!portalLinks.subscriptions?.length,
+      });
+
+      // Return both the overview URL (for backward compatibility) and all links
+      return NextResponse.json({
+        url: portalLinks.overview,
+        links: portalLinks,
+      });
     } catch (error) {
-      logger.error('Error creating Paddle billing portal session', error);
+      logger.error('Error creating Customer Portal Session', error);
       return NextResponse.json(
         { error: 'Unable to reach Paddle. Please try again.' },
         { status: 502 }

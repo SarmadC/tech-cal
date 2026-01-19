@@ -41,7 +41,7 @@ export default function SettingsMobileBilling() {
     const canManageBilling = Boolean(subscription && subscription.tier !== 'free' && (hasPaddleCustomer || subscription.paddle_subscription_id));
     const awaitingBillingPortal = Boolean(subscription && subscription.tier !== 'free' && !canManageBilling);
 
-    const handleManageBilling = () => {
+    const handleManageBilling = (action: 'overview' | 'cancel' | 'update_payment' = 'overview') => {
         if (!subscription) return;
 
         // If free tier, redirect to upgrade instead of trying to open portal
@@ -57,7 +57,7 @@ export default function SettingsMobileBilling() {
             return;
         }
 
-        openCustomerPortal(subscription);
+        openCustomerPortal(subscription, action);
     };
 
     if (isLoading) {
@@ -139,7 +139,7 @@ export default function SettingsMobileBilling() {
                     {canManageBilling ? (
                         <div className="grid grid-cols-2 gap-3">
                             <Button
-                                onClick={handleManageBilling}
+                                onClick={() => handleManageBilling('overview')}
                                 className="w-full bg-[var(--mono-text-primary)] text-[var(--mono-bg-main)] hover:bg-[var(--mono-text-secondary)] hover:opacity-95 h-9 text-[13px] font-medium rounded-lg shadow-sm transition-all"
                             >
                                 Manage
@@ -196,7 +196,7 @@ export default function SettingsMobileBilling() {
                             </div>
                             <Button
                                 variant="ghost"
-                                onClick={handleManageBilling}
+                                onClick={() => handleManageBilling('update_payment')}
                                 className="h-8 text-[12px] font-medium text-[var(--mono-text-secondary)] hover:text-[var(--mono-text-primary)] hover:bg-[var(--mono-bg-hover)] px-3 rounded-lg"
                             >
                                 Update
@@ -209,7 +209,7 @@ export default function SettingsMobileBilling() {
                         </div>
                     ) : (
                         <button
-                            onClick={handleManageBilling}
+                            onClick={() => handleManageBilling('overview')}
                             className="w-full flex items-center justify-between p-3 pl-4 hover:bg-[var(--mono-bg-hover)]/50 transition-colors group"
                         >
                             <div className="flex items-center gap-3">
@@ -232,7 +232,7 @@ export default function SettingsMobileBilling() {
             {canManageBilling && (
                 <div className="flex justify-center">
                     <button
-                        onClick={handleManageBilling}
+                        onClick={() => handleManageBilling('overview')}
                         className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--mono-text-tertiary)] hover:text-[var(--mono-text-primary)] transition-colors py-2 px-3 rounded-md hover:bg-[var(--mono-bg-surface)]"
                     >
                         <Receipt size={14} weight="duotone" />

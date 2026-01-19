@@ -351,8 +351,12 @@ export async function openProAnnualCheckout(
  * Users can manage their subscription, update payment method, etc.
  *
  * @param subscription User's subscription with paddle_customer_id
+ * @param action Optional action to deep link to: 'overview' (default), 'cancel', or 'update_payment'
  */
-export async function openCustomerPortal(subscription: Subscription): Promise<void> {
+export async function openCustomerPortal(
+  subscription: Subscription,
+  action: 'overview' | 'cancel' | 'update_payment' = 'overview'
+): Promise<void> {
   if (!subscription.paddle_customer_id && !subscription.paddle_subscription_id) {
     console.error('No Paddle customer ID or subscription ID found');
     return;
@@ -363,19 +367,50 @@ export async function openCustomerPortal(subscription: Subscription): Promise<vo
       method: 'POST',
     });
 
-    const data = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
+    const data = (await response.json().catch(() => ({}))) as {
+      url?: string;
+      links?: {
+        overview: string;
+        subscriptions?: Array<{
+          id: string;
+          cancel: string;
+          updatePayment: string;
+        }>;
+      };
+      error?: string;
+    };
 
     if (!response.ok) {
       throw new Error(data?.error || 'Unable to open billing portal');
     }
 
-    if (!data.url) {
+    // Determine which URL to open based on the action
+    let targetUrl: string | undefined;
+
+    if (action === 'overview') {
+      targetUrl = data.links?.overview || data.url;
+    } else if (data.links?.subscriptions?.[0]) {
+      // Use the first subscription's deep link for the requested action
+      const sub = data.links.subscriptions[0];
+      if (action === 'cancel') {
+        targetUrl = sub.cancel;
+      } else if (action === 'update_payment') {
+        targetUrl = sub.updatePayment;
+      }
+    }
+
+    // Fallback to overview if specific action URL not available
+    if (!targetUrl) {
+      targetUrl = data.links?.overview || data.url;
+    }
+
+    if (!targetUrl) {
       throw new Error('Billing portal URL missing from response');
     }
 
-    const portalWindow = window.open(data.url, '_blank', 'noopener,noreferrer');
+    const portalWindow = window.open(targetUrl, '_blank', 'noopener,noreferrer');
     if (!portalWindow) {
-      window.location.href = data.url;
+      window.location.href = targetUrl;
     }
   } catch (error) {
     console.error('Failed to open Paddle billing portal', error);

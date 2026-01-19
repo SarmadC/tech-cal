@@ -92,7 +92,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
     const canManageBilling = Boolean(subscription && subscription.tier !== 'free' && (hasPaddleCustomer || subscription.paddle_subscription_id));
     const awaitingBillingPortal = Boolean(subscription && subscription.tier !== 'free' && !canManageBilling);
 
-    const handleManageBilling = () => {
+    const handleManageBilling = (action: 'overview' | 'cancel' | 'update_payment' = 'overview') => {
         if (!subscription) return;
 
         if (!subscription.paddle_customer_id && !subscription.paddle_subscription_id) {
@@ -102,7 +102,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
             return;
         }
 
-        openCustomerPortal(subscription);
+        openCustomerPortal(subscription, action);
     };
 
     const tabs = [
@@ -216,7 +216,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                     </p>
                                 </div>
                                 <button
-                                    onClick={handleManageBilling}
+                                    onClick={() => handleManageBilling('update_payment')}
                                     className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
                                 >
                                     Update Payment
@@ -251,7 +251,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                     </ul>
                                 </div>
                                 <button
-                                    onClick={handleManageBilling}
+                                    onClick={() => handleManageBilling('overview')}
                                     className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors flex-shrink-0"
                                 >
                                     Reactivate
@@ -310,7 +310,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                     {canManageBilling ? (
                                         <>
                                             <button
-                                                onClick={handleManageBilling}
+                                                onClick={() => handleManageBilling('overview')}
                                                 className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-accent-primary text-accent-primary-foreground hover:bg-accent-primary-hover"
                                             >
                                                 Manage Subscription
@@ -372,13 +372,13 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                                         </div>
                                         <div className="flex gap-3">
                                             <button
-                                                onClick={handleManageBilling}
+                                                onClick={() => handleManageBilling('update_payment')}
                                                 className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-border-default text-foreground-secondary hover:bg-background-secondary"
                                             >
                                                 Update Payment Method
                                             </button>
                                             <button
-                                                onClick={handleManageBilling}
+                                                onClick={() => handleManageBilling('overview')}
                                                 className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-border-default text-foreground-secondary hover:bg-background-secondary"
                                             >
                                                 View Billing History
@@ -411,7 +411,7 @@ export default function SettingsTabs({ profile }: { profile: AppProfile | null }
                         {canManageBilling && (
                             <div className="flex justify-start mt-4">
                                 <button
-                                    onClick={handleManageBilling}
+                                    onClick={() => handleManageBilling('overview')}
                                     className="flex items-center gap-2 text-xs font-medium text-[var(--foreground-tertiary)] hover:text-[var(--foreground-primary)] transition-colors py-2 px-3 rounded-md hover:bg-[var(--background-secondary)]"
                                 >
                                     <MaterialIcon name="receipt_long" size={18} color="var(--foreground-tertiary)" />
