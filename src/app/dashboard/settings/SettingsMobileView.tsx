@@ -58,7 +58,7 @@ export default function SettingsMobileView({ profile }: SettingsMobileViewProps)
             id: 'preferences',
             label: 'PREFERENCES',
             items: [
-                { id: 'integrations', label: 'Integrations', icon: 'extension', value: '2 Connected' },
+                { id: 'integrations', label: 'Integrations', icon: 'extension', value: '1 Connected' },
                 { id: 'appearance', label: 'Appearance', icon: 'palette', value: 'Dark System' },
             ]
         }

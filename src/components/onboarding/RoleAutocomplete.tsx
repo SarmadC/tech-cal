@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { CaretDown, MagnifyingGlass, X, Check } from '@phosphor-icons/react';
+import React, { useState, useRef, useEffect } from 'react';
+import { CaretDown, X, Check } from '@phosphor-icons/react';
 import { ALL_PREDEFINED_ROLES, ROLE_TAXONOMY } from '@/types/career';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -29,7 +29,7 @@ export function RoleAutocomplete({
     hint,
     error,
     required = false,
-    ariaDescribedBy,
+    ariaDescribedBy: _ariaDescribedBy,
     className,
     placeholder = "Search for your role...",
     showSuccess = false
@@ -120,38 +120,40 @@ export function RoleAutocomplete({
 
     return (
         <div className={twMerge("space-y-1.5", className)} ref={containerRef}>
-            <label htmlFor={id} className="block text-sm font-medium text-foreground/80">
-                {label}
-                {required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
-            </label>
+            <div className="flex items-center justify-between">
+                <label htmlFor={id} className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
+                    {label}
+                    {required && <span className="text-red-500/80 ml-0.5">*</span>}
+                </label>
+            </div>
 
             {hint && (
-                <p id={hintId} className="text-sm text-muted-foreground">
+                <p id={hintId} className="text-[12px] text-zinc-500 dark:text-zinc-500">
                     {hint}
                 </p>
             )}
 
             <div className="relative">
-                {/* Main Combobox Input - direct filtering, no nested search */}
+                {/* Main Combobox Input */}
                 <div
                     className={clsx(
-                        "relative w-full transition-all duration-200 border rounded-xl",
-                        "bg-secondary/30 hover:bg-secondary/50",
-                        isOpen
-                            ? "border-border ring-1 ring-border/50 shadow-lg"
-                            : "border-border/50 hover:border-border",
-                        error ? "border-red-500/50 hover:border-red-500" : "",
-                        showSuccess && !error ? "border-emerald-500/50 ring-2 ring-emerald-500/20" : ""
+                        "relative w-full transition-all duration-150 rounded-md outline-none",
+                        "shadow-sm",
+                        // Base State (Closed)
+                        !isOpen && "bg-zinc-50 dark:bg-white/[0.06] border border-zinc-200 dark:border-white/[0.08] hover:border-zinc-300 dark:hover:border-white/[0.15] hover:bg-zinc-100 dark:hover:bg-white/[0.08]",
+                        // Active State (Open) - Background change
+                        isOpen && "bg-white dark:bg-[#2C2D30] border border-zinc-200 dark:border-white/[0.08]",
+                        // Focus Visible - Strong Indication (Keyboard)
+                        "has-[:focus-visible]:border-zinc-500 dark:has-[:focus-visible]:border-zinc-500 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-zinc-500",
+                        error ? "bg-red-50 dark:bg-red-900/10 border-red-500/50 has-[:focus-visible]:border-red-500 has-[:focus-visible]:ring-red-500" : "",
+                        showSuccess && !error ? "border-emerald-500/50 bg-emerald-500/5" : ""
                     )}
+                    onClick={() => {
+                        if (!isOpen) setIsOpen(true);
+                        inputRef.current?.focus();
+                    }}
                 >
-                    <div className="flex items-center">
-                        <MagnifyingGlass
-                            size={18}
-                            className={clsx(
-                                "ml-3.5 transition-colors",
-                                isOpen ? "text-foreground/60" : "text-muted-foreground"
-                            )}
-                        />
+                    <div className="flex items-center px-3 py-2 min-h-[38px]">
                         <input
                             ref={inputRef}
                             type="text"
@@ -162,28 +164,28 @@ export function RoleAutocomplete({
                             }}
                             onFocus={() => {
                                 setIsOpen(true);
-                                // Clear search when opening to allow fresh search
                                 if (displayedRole) setSearchQuery('');
                             }}
                             onKeyDown={handleKeyDown}
                             placeholder={placeholder}
-                            className="flex-1 px-3.5 py-3 bg-transparent border-none text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:bg-transparent focus:border-none focus:shadow-none"
+                            className="w-full bg-transparent border-none p-0 text-[13px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-0"
                         />
+
                         {displayedRole && !isOpen ? (
                             <button
                                 type="button"
                                 onClick={handleClear}
-                                className="p-2 mr-1.5 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                className="p-1 -mr-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                                 aria-label="Clear selection"
                             >
-                                <X size={16} />
+                                <X size={14} />
                             </button>
                         ) : (
                             <CaretDown
-                                size={16}
+                                size={14}
                                 className={clsx(
-                                    "mr-3.5 transition-transform",
-                                    isOpen ? "rotate-180 text-foreground/60" : "text-muted-foreground"
+                                    "ml-2 transition-transform opacity-50 flex-shrink-0 text-zinc-500",
+                                    isOpen ? "rotate-180" : ""
                                 )}
                             />
                         )}

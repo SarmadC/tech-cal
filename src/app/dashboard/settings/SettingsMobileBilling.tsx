@@ -1,14 +1,23 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { MaterialIcon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { openCustomerPortal } from '@/lib/paddle';
-import { CircleNotch, Lightning, ShieldCheck, Ticket, Receipt, CreditCard } from '@phosphor-icons/react';
+import { CircleNotch, ShieldCheck, Receipt, CreditCard } from '@phosphor-icons/react';
 
 export default function SettingsMobileBilling() {
-    const { subscription, isLoading, isPro, isTrialing, trialDaysLeft, openUpgrade } = useSubscription();
+    const {
+        subscription,
+        isLoading,
+        isPro,
+        isTrialing,
+        trialDaysLeft,
+        openUpgrade,
+        isCanceledButActive
+    } = useSubscription();
 
     // Determine plan display info
     const getPlanInfo = () => {
@@ -26,6 +35,9 @@ export default function SettingsMobileBilling() {
             return { name: 'Pro Plan', status: 'Payment Due', statusColor: 'error' };
         }
         if (subscription.status === 'canceled') {
+            if (isCanceledButActive) {
+                return { name: 'Pro Plan', status: 'Canceled', statusColor: 'warning' };
+            }
             return { name: 'Pro Plan', status: 'Canceled', statusColor: 'error' };
         }
         return {
@@ -81,165 +93,147 @@ export default function SettingsMobileBilling() {
         'Personalized recommendations'
     ];
 
-    const currentFeatures = (isPro || isTrialing) ? proFeatures : freeFeatures;
+    const showProFeatures = isPro || isTrialing || isCanceledButActive;
+    const currentFeatures = showProFeatures ? proFeatures : freeFeatures;
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
 
-            {/* Plan Card - Linear Style "Ticket" */}
-            <div className="group relative overflow-hidden rounded-xl border border-[var(--mono-border-default)] bg-[var(--mono-bg-surface)] shadow-sm transition-all hover:shadow-md">
+        <div className="space-y-8 animate-in fade-in duration-500">
 
-                {(isPro || isTrialing) && (
-                    <div className="absolute top-0 right-0 -mr-16 -mt-16 h-32 w-32 rounded-full bg-violet-500/10 blur-3xl dark:bg-violet-500/5 pointer-events-none" />
-                )}
-
-                <div className="p-5">
-                    <div className="flex items-start justify-between mb-6">
-                        <div className="flex gap-3">
-                            <div className={`h-10 w-10 flex items-center justify-center rounded-lg border shadow-sm ${isPro || isTrialing
-                                ? 'bg-gradient-to-br from-violet-500/20 to-indigo-600/5 border-violet-500/20 text-violet-600 dark:text-violet-400'
-                                : 'bg-[var(--mono-bg-hover)] border-[var(--mono-border-default)] text-[var(--mono-text-secondary)]'
-                                }`}>
-                                {(isPro || isTrialing) ? <Lightning size={20} weight="fill" /> : <Ticket size={20} weight="duotone" />}
-                            </div>
-                            <div>
-                                <h4 className="text-[15px] font-semibold text-[var(--mono-text-primary)] leading-tight">{planInfo.name}</h4>
-                                <div className="mt-1 flex items-center gap-2">
-                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${planInfo.statusColor === 'success'
-                                        ? 'bg-green-500/5 text-green-600 border-green-500/20'
-                                        : planInfo.statusColor === 'warning'
-                                            ? 'bg-amber-500/5 text-amber-600 border-amber-500/20'
-                                            : planInfo.statusColor === 'error'
-                                                ? 'bg-red-500/5 text-red-600 border-red-500/20'
-                                                : 'bg-[var(--mono-bg-subtle)] text-[var(--mono-text-secondary)] border-[var(--mono-border-default)]'
-                                        }`}>
-                                        {planInfo.status}
-                                    </span>
-                                    <span className="text-[12px] text-[var(--mono-text-tertiary)]">
-                                        {subscription?.current_period_end
-                                            ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-                                            : 'Free tier'}
-                                    </span>
-                                </div>
-                            </div>
+            {/* Section: Current Plan */}
+            <div className="space-y-3">
+                <h3 className="text-[13px] font-medium text-[var(--mono-text-secondary)]">Current Plan</h3>
+                <div className="flex items-start justify-between group">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h4 className="text-[15px] font-medium text-[var(--mono-text-primary)]">{planInfo.name}</h4>
+                            {/* Linear-style Status Dot */}
+                            <div className={`w-1.5 h-1.5 rounded-full ${planInfo.statusColor === 'success' ? 'bg-green-500' :
+                                planInfo.statusColor === 'warning' ? 'bg-violet-500' :
+                                    planInfo.statusColor === 'error' ? 'bg-red-500' :
+                                        'bg-zinc-400'
+                                }`} />
+                        </div>
+                        {/* Status / Trial Info - Subtle */}
+                        <div className={`text-[13px] mt-0.5 ${planInfo.statusColor === 'warning' ? 'text-violet-500' :
+                            planInfo.statusColor === 'error' ? 'text-red-500' :
+                                'text-[var(--mono-text-tertiary)]'
+                            }`}>
+                            {planInfo.status === 'Active' && subscription?.current_period_end ?
+                                `Renews ${new Date(subscription.current_period_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` :
+                                planInfo.status
+                            }
                         </div>
                     </div>
 
-                    {/* Feature List as Compact Grid */}
-                    <div className="space-y-2 mb-6">
-                        {currentFeatures.map((feature, i) => (
-                            <div key={i} className="flex items-start gap-2.5">
-                                <ShieldCheck size={14} weight="fill" className={`mt-0.5 shrink-0 ${isPro || isTrialing ? 'text-violet-500/80' : 'text-[var(--mono-text-tertiary)]'}`} />
-                                <span className="text-[13px] text-[var(--mono-text-secondary)] leading-tight">{feature}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Actions */}
-                    {canManageBilling ? (
-                        <div className="grid grid-cols-2 gap-3">
+                    {/* Actions - Right Aligned Ghost Buttons */}
+                    <div className="flex items-center gap-2">
+                        {!canManageBilling && !showProFeatures ? (
                             <Button
+                                onClick={() => openUpgrade('monthly')}
+                                className="h-8 bg-[var(--mono-text-primary)] text-[var(--mono-bg-main)] hover:opacity-90 px-3 text-[13px] font-medium rounded-md transition-all shadow-sm"
+                            >
+                                Upgrade
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="ghost"
                                 onClick={() => handleManageBilling('overview')}
-                                className="w-full bg-[var(--mono-text-primary)] text-[var(--mono-bg-main)] hover:bg-[var(--mono-text-secondary)] hover:opacity-95 h-9 text-[13px] font-medium rounded-lg shadow-sm transition-all"
+                                className="h-8 text-[13px] font-medium text-[var(--mono-text-secondary)] hover:text-[var(--mono-text-primary)] hover:bg-[var(--mono-bg-hover)] px-3 rounded-md -mr-2"
                             >
                                 Manage
                             </Button>
-                            {isTrialing && (
-                                <Link href="/pricing" className="w-full">
-                                    <Button
-                                        variant="outline"
-                                        className="w-full h-9 text-[13px] font-medium rounded-lg border-[var(--mono-border-strong)] bg-transparent hover:bg-[var(--mono-bg-hover)] transition-all"
-                                    >
-                                        Compare Plans
-                                    </Button>
-                                </Link>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="h-[1px] w-full bg-[var(--mono-border-default)] opacity-40" />
+
+            {/* Section: Payment Method */}
+            <div className="space-y-3">
+                <h3 className="text-[13px] font-medium text-[var(--mono-text-secondary)]">Payment Method</h3>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="text-[var(--mono-text-tertiary)]">
+                            <CreditCard size={20} weight="duotone" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[14px] text-[var(--mono-text-primary)]">
+                                {canManageBilling ? 'Card on file' : 'No payment method'}
+                            </span>
+                            {canManageBilling && (
+                                <span className="text-[12px] text-[var(--mono-text-tertiary)]">Secure via Paddle</span>
                             )}
                         </div>
-                    ) : (isPro || isTrialing) ? (
-                        <div className="rounded-lg border border-[var(--mono-border-default)] bg-[var(--mono-bg-hover)]/40 px-4 py-3 text-[12px] text-[var(--mono-text-secondary)]">
-                            We're finalizing your billing portal. Please try again shortly or contact support if you need to make changes immediately.
-                        </div>
-                    ) : (
+                    </div>
+
+                    {canManageBilling && (
                         <Button
-                            onClick={() => openUpgrade('monthly')}
-                            className="w-full bg-[var(--mono-text-primary)] text-[var(--mono-bg-main)] hover:bg-[var(--mono-text-secondary)] hover:opacity-95 h-10 text-[13px] font-medium rounded-lg shadow-sm transition-all relative overflow-hidden group"
+                            variant="ghost"
+                            onClick={() => handleManageBilling('update_payment')}
+                            className="h-8 text-[13px] font-medium text-[var(--mono-text-secondary)] hover:text-[var(--mono-text-primary)] hover:bg-[var(--mono-bg-hover)] px-3 rounded-md -mr-2"
                         >
-                            <span className="relative z-10 flex items-center justify-center gap-2">
-                                Upgrade to Pro
-                            </span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                            Update
                         </Button>
                     )}
                 </div>
             </div>
 
-            {/* Payment Method - Compact Row Design */}
-            <div>
-                <h3 className="text-[11px] font-semibold text-[var(--mono-text-secondary)] mb-2 px-1 uppercase tracking-wider">
-                    Payment Method
-                </h3>
-                <div className="rounded-xl overflow-hidden bg-[var(--mono-bg-surface)] border border-[var(--mono-border-default)] shadow-sm">
-                    {canManageBilling ? (
-                        <div className="flex items-center justify-between p-3 pl-4">
+            <div className="h-[1px] w-full bg-[var(--mono-border-default)] opacity-40" />
+
+            {/* Section: Invoices */}
+            {canManageBilling && (
+                <>
+                    <div className="space-y-3">
+                        <h3 className="text-[13px] font-medium text-[var(--mono-text-secondary)]">Invoices</h3>
+                        <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="h-8 w-10 rounded border border-[var(--mono-border-default)] bg-[var(--mono-bg-subtle)] flex items-center justify-center text-[var(--mono-text-secondary)] shadow-sm">
-                                    <CreditCard size={18} weight="duotone" />
+                                <div className="text-[var(--mono-text-tertiary)]">
+                                    <Receipt size={20} weight="duotone" />
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-[13px] font-medium text-[var(--mono-text-primary)]">
-                                        Card on file
-                                    </p>
-                                    <p className="text-[11px] text-[var(--mono-text-tertiary)] flex items-center gap-1">
-                                        Secure via Paddle
-                                    </p>
-                                </div>
+                                <span className="text-[14px] text-[var(--mono-text-primary)]">Billing History</span>
                             </div>
+
                             <Button
                                 variant="ghost"
-                                onClick={() => handleManageBilling('update_payment')}
-                                className="h-8 text-[12px] font-medium text-[var(--mono-text-secondary)] hover:text-[var(--mono-text-primary)] hover:bg-[var(--mono-bg-hover)] px-3 rounded-lg"
+                                onClick={() => handleManageBilling('overview')}
+                                className="h-8 text-[13px] font-medium text-[var(--mono-text-secondary)] hover:text-[var(--mono-text-primary)] hover:bg-[var(--mono-bg-hover)] px-3 rounded-md -mr-2 group"
                             >
-                                Update
+                                View <span className="ml-1 opacity-50 group-hover:opacity-100 transition-opacity">↗</span>
                             </Button>
                         </div>
-                    ) : awaitingBillingPortal ? (
-                        <div className="p-3 text-[12px] text-[var(--mono-text-secondary)] flex items-center gap-2">
-                            <MaterialIcon name="hourglass_empty" size={18} color="var(--mono-text-tertiary)" />
-                            Billing portal link will appear once Paddle confirms your subscription.
+                    </div>
+                    <div className="h-[1px] w-full bg-[var(--mono-border-default)] opacity-40" />
+                </>
+            )}
+
+
+            {/* Section: Usage */}
+            <div className="space-y-3">
+                <h3 className="text-[13px] font-medium text-[var(--mono-text-secondary)]">Usage</h3>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[14px] text-[var(--mono-text-primary)]">Saved Events</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[13px] text-[var(--mono-text-secondary)]">
+                                {showProFeatures ? 'Unlimited' : '5 / 5'}
+                            </span>
+                            {showProFeatures && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
                         </div>
-                    ) : (
-                        <button
-                            onClick={() => handleManageBilling('overview')}
-                            className="w-full flex items-center justify-between p-3 pl-4 hover:bg-[var(--mono-bg-hover)]/50 transition-colors group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="h-8 w-10 rounded border border-dashed border-[var(--mono-border-strong)] bg-transparent flex items-center justify-center text-[var(--mono-text-tertiary)] group-hover:border-[var(--mono-text-secondary)] transition-colors">
-                                    <CreditCard size={18} />
-                                </div>
-                                <div className="text-left">
-                                    <span className="text-[13px] font-medium text-[var(--mono-text-secondary)] group-hover:text-[var(--mono-text-primary)] transition-colors">Add Payment Method</span>
-                                </div>
-                            </div>
-                            <div className="h-8 w-8 flex items-center justify-center text-[var(--mono-text-tertiary)]">
-                                <MaterialIcon name="chevron_right" size={18} />
-                            </div>
-                        </button>
-                    )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-[14px] text-[var(--mono-text-primary)]">Calendar Sync</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[13px] text-[var(--mono-text-secondary)]">
+                                {showProFeatures ? 'Active' : 'Disabled'}
+                            </span>
+                            {showProFeatures && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Invoices Link - More Subtle */}
-            {canManageBilling && (
-                <div className="flex justify-center">
-                    <button
-                        onClick={() => handleManageBilling('overview')}
-                        className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--mono-text-tertiary)] hover:text-[var(--mono-text-primary)] transition-colors py-2 px-3 rounded-md hover:bg-[var(--mono-bg-surface)]"
-                    >
-                        <Receipt size={14} weight="duotone" />
-                        View Invoices & Billing History
-                    </button>
-                </div>
-            )}
         </div>
     );
 }

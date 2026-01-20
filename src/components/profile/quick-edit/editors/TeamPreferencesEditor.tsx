@@ -3,36 +3,37 @@
 import React, { useMemo } from 'react';
 import { CareerProfile, CareerEventType } from '@/types/career';
 import { EVENT_TYPE_OPTIONS } from '../config';
-import { CheckboxGroup } from '@/components/onboarding/shared/FormField';
+import { LinearCheckboxGroup } from '../components/LinearInputs';
 
 // Editor prop interface
 export interface TeamPreferencesEditorProps {
-  profile: Partial<CareerProfile>;
-  onUpdate: (updates: Partial<CareerProfile>) => void;
+    profile: Partial<CareerProfile>;
+    onUpdate: (updates: Partial<CareerProfile>) => void;
 }
 
 // Memoized TeamPreferencesEditor component
 const TeamPreferencesEditor: React.FC<TeamPreferencesEditorProps> = React.memo(({ profile, onUpdate }) => {
-  // Memoized form data to prevent unnecessary re-renders
-  const formData = useMemo(() => ({
-    preferredEventTypes: profile.preferredEventTypes || []
-  }), [profile]);
+    // Memoized form data to prevent unnecessary re-renders
+    const formData = useMemo(() => ({
+        preferredEventTypes: profile.preferredEventTypes || []
+    }), [profile]);
 
-  return (
-    <div className="space-y-6">
-      {/* Preferred Event Types */}
-      <CheckboxGroup
-        label="Preferred Event Types"
-        options={EVENT_TYPE_OPTIONS}
-        selectedValues={formData.preferredEventTypes}
-        onChange={(values) => {
-          const preferredEventTypes = values as CareerEventType[];
-          onUpdate({ preferredEventTypes });
-        }}
-        columns={2}
-      />
-    </div>
-  );
+    return (
+        <div className="space-y-6">
+            {/* Preferred Event Types */}
+            <LinearCheckboxGroup
+                label="Preferred Event Types"
+                description="Formats you are interested in"
+                options={EVENT_TYPE_OPTIONS}
+                selectedValues={formData.preferredEventTypes}
+                onChange={(values) => {
+                    const preferredEventTypes = values as CareerEventType[];
+                    onUpdate({ preferredEventTypes });
+                }}
+                columns={2}
+            />
+        </div>
+    );
 });
 
 TeamPreferencesEditor.displayName = 'TeamPreferencesEditor';
