@@ -9,6 +9,7 @@ export * from './Footer';
 export * from './UseCasesSection';
 export * from './FAQSection';
 export * from './CoverageSection';
+export * from './FeatureShowcaseSection';
 export { default as LightRays } from './LightRays';
 
 // Export adaptive renderer and mobile components

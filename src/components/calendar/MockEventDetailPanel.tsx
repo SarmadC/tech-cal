@@ -185,7 +185,7 @@ const MockEventDetailPanel: FC<MockEventDetailPanelProps> = ({
     };
 
     const containerClasses =
-        'h-full max-h-[90vh] event-detail-glass-sidebar border-l border-white/20 dark:border-white/10 shadow-2xl p-6 flex flex-col relative';
+        'h-full event-detail-glass-sidebar border-l border-white/20 dark:border-white/10 shadow-2xl p-6 flex flex-col relative';
 
     if (!isOpen) {
         return null;
@@ -199,7 +199,7 @@ const MockEventDetailPanel: FC<MockEventDetailPanelProps> = ({
                 onClick={onClose}
             />
 
-            <div className="relative h-full w-full max-w-xl overflow-hidden">
+            <div className="relative h-full w-full sm:w-[28rem] md:w-[40rem] lg:w-[48rem] xl:w-[56rem] max-w-[95vw] overflow-hidden">
                 <div
                     className={containerClasses}
                     style={{
@@ -242,11 +242,10 @@ const MockEventDetailPanel: FC<MockEventDetailPanelProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => setAgendaView('timeline')}
-                                            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-                                                agendaView === 'timeline'
-                                                    ? 'bg-white text-gray-900 shadow-sm'
-                                                    : 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
-                                            }`}
+                                            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${agendaView === 'timeline'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+                                                }`}
                                             aria-pressed={agendaView === 'timeline'}
                                         >
                                             Timeline
@@ -254,11 +253,10 @@ const MockEventDetailPanel: FC<MockEventDetailPanelProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => setAgendaView('tracks')}
-                                            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-                                                agendaView === 'tracks'
-                                                    ? 'bg-white text-gray-900 shadow-sm'
-                                                    : 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
-                                            }`}
+                                            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${agendaView === 'tracks'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+                                                }`}
                                             aria-pressed={agendaView === 'tracks'}
                                         >
                                             Tracks
@@ -293,11 +291,10 @@ const MockEventDetailPanel: FC<MockEventDetailPanelProps> = ({
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={toggleBookmark}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 backdrop-blur-sm ${
-                                        isBookmarked
-                                            ? 'bg-yellow-500/20 dark:bg-yellow-500/20 light:bg-yellow-500/15 hover:bg-yellow-500/30 dark:hover:bg-yellow-500/30 light:hover:bg-yellow-500/20 border border-yellow-500/40 dark:border-yellow-500/40 light:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 light:text-yellow-700'
-                                            : 'bg-gray-900/90 hover:bg-gray-800/90 text-white dark:bg-white/90 dark:hover:bg-white/100 dark:text-gray-900 border border-white/20 dark:border-white/10'
-                                    } shadow-sm hover:shadow-md`}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 backdrop-blur-sm ${isBookmarked
+                                        ? 'bg-yellow-500/20 dark:bg-yellow-500/20 light:bg-yellow-500/15 hover:bg-yellow-500/30 dark:hover:bg-yellow-500/30 light:hover:bg-yellow-500/20 border border-yellow-500/40 dark:border-yellow-500/40 light:border-yellow-500/30 text-yellow-600 dark:text-yellow-400 light:text-yellow-700'
+                                        : 'bg-gray-900/90 hover:bg-gray-800/90 text-white dark:bg-white/90 dark:hover:bg-white/100 dark:text-gray-900 border border-white/20 dark:border-white/10'
+                                        } shadow-sm hover:shadow-md`}
                                 >
                                     <BookmarkSimple className="w-4 h-4" weight={isBookmarked ? 'fill' : 'regular'} />
                                     <span>{isBookmarked ? 'Unbookmark Event' : 'Bookmark Event'}</span>
@@ -305,21 +302,20 @@ const MockEventDetailPanel: FC<MockEventDetailPanelProps> = ({
 
                                 <button
                                     onClick={cycleAttendance}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 border ${
-                                        attendance === 'attending'
-                                            ? theme.btnPrimary
-                                            : attendance === 'attended'
-                                              ? theme.btnSuccess
-                                              : theme.btnSecondary
-                                    }`}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 border ${attendance === 'attending'
+                                        ? theme.btnPrimary
+                                        : attendance === 'attended'
+                                            ? theme.btnSuccess
+                                            : theme.btnSecondary
+                                        }`}
                                 >
                                     {attendance === 'attended' ? <CheckIcon className="w-4 h-4" /> : <UserCheckIcon className="w-4 h-4" />}
                                     <span>
                                         {attendance === 'none'
                                             ? 'Not attending'
                                             : attendance === 'attending'
-                                              ? 'Attending'
-                                              : 'Attended'}
+                                                ? 'Attending'
+                                                : 'Attended'}
                                     </span>
                                 </button>
 

@@ -1,0 +1,1055 @@
+/* Feature Showcase Section - Stricter Linear Design */
+
+.section {
+    position: relative;
+    padding: 96px 0;
+    background: #08090a;
+    overflow: hidden;
+    /* Subtle radial gradient */
+    background-image: radial-gradient(circle at 50% 0%, rgba(62, 207, 142, 0.05), transparent 60%);
+}
+
+/* Light mode */
+:global(:root:not(.dark)) .section,
+:global(.light) .section,
+:global(html.light) .section {
+    background: #ffffff;
+    background-image: radial-gradient(circle at 50% 0%, rgba(0, 0, 0, 0.03), transparent 60%);
+}
+
+.container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 48px;
+}
+
+/* Bento Grid - Strict 2x2 */
+.bentoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    --border-color: rgba(255, 255, 255, 0.08); /* Unified divider token */
+}
+
+:global(:root:not(.dark)) .bentoGrid,
+:global(.light) .bentoGrid {
+    --border-color: rgba(0, 0, 0, 0.08);
+}
+
+
+@media (max-width: 960px) {
+    .section {
+        padding: 64px 0;
+    }
+
+    .container {
+        padding: 0 24px;
+    }
+
+    .bentoGrid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Reset borders for single column */
+    .staticBlock:nth-child(1) {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 0 0 32px 0;
+    }
+
+    .staticBlock:nth-child(2) {
+        border-bottom: 1px solid var(--border-color);
+        padding: 32px 0 32px 0;
+    }
+    
+    .staticBlock {
+        min-height: auto;
+        padding: 24px 0;
+    }
+
+    .interactiveBlock {
+        grid-column: span 1;
+        grid-template-columns: 1fr;
+        align-items: stretch;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .interactiveContent {
+        padding: 32px 0;
+        /* Ensure content comes first */
+        order: 1; 
+    }
+
+    .interactiveMockup {
+        padding: 0 0 32px 0;
+        /* Ensure mockup comes second */
+        order: 2;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .mockupCard {
+        max-width: 100%;
+    }
+    
+    /* Interactive Mockup adjustments for mobile */
+    .interactiveMockup .mockupCard {
+        box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+}
+
+@media (max-width: 600px) {
+    .section {
+        padding: 48px 0;
+    }
+    
+    .container {
+        padding: 0 16px;
+    }
+
+    .featureTitle {
+        font-size: 17px;
+    }
+    
+    .featureDescription {
+        font-size: 14px;
+        max-width: 100%;
+    }
+    
+    /* Agenda Mockup Mobile Tweaks */
+    .agendaHeader {
+        padding: 16px 16px 12px;
+    }
+    
+    .agendaTitle {
+        font-size: 16px;
+    }
+    
+    .agendaMeta {
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
+    }
+    
+    .filterBar {
+        padding: 10px 16px;
+    }
+    
+    .sessionRow {
+        padding: 16px;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .sessionMain {
+        gap: 6px;
+    }
+    
+    .sessionMeta {
+        flex-direction: row;
+        width: 100%;
+        padding-left: 0;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 4px;
+    }
+    
+    /* Timeline Mobile Tweaks */
+    .trackTimeColumn, .trackTimeCell {
+        width: 44px;
+    }
+    
+    .trackTimeCell {
+        padding: 0 0 0 8px;
+    }
+    
+    .yellowTimeBadge {
+        font-size: 10px;
+    }
+    
+    /* Speakers Mobile Tweaks */
+    .stackContainer {
+        min-height: 320px;
+        padding: 16px 0;
+        perspective: 1200px;
+        overflow: hidden; /* Prevent overflow on small screens */
+    }
+    
+    .stackCard {
+        width: 240px;
+        padding: 12px;
+    }
+    
+    .stackCardBack.stackCardActive {
+        transform: translate(-50%, -50%) 
+                   rotateX(13deg) rotateY(20deg) rotateZ(-12deg) 
+                   translate3d(-16px, -60px, 120px);
+    }
+
+    .stackCardMiddle.stackCardActive {
+        transform: translate(-50%, -50%) 
+                   rotateX(13deg) rotateY(20deg) rotateZ(-12deg) 
+                   translate3d(-8px, -25px, 120px);
+    }
+
+    .stackCardFront.stackCardActive {
+        transform: translate(-50%, -50%) 
+                   rotateX(13deg) rotateY(20deg) rotateZ(-12deg) 
+                   translate3d(0px, 10px, 120px);
+    }
+    
+    /* Font adjustments for speakers */
+    .stackText {
+        font-size: 12px;
+        line-height: 1.4;
+    }
+    
+    .stackFooter {
+        font-size: 10px;
+    }
+}
+
+
+/* =========================================
+   GRID CELL STRUCTURE
+   ========================================= */
+
+/* Top Static Blocks - Reduced Padding */
+.staticBlock:nth-child(1) {
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 24px 24px 0; /* Compact spacing */
+}
+
+.staticBlock:nth-child(2) {
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 0 24px 24px;
+}
+
+.staticBlock {
+    min-height: 320px; /* Reduced from 400px */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+}
+
+/* Bottom Interactive Block */
+.interactiveBlock {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 360px; /* Reduced from 440px */
+    /* Ensure borders connect */
+    border-top: 1px solid var(--border-color); 
+    /* Strictly top-aligned content */
+    align-items: start; 
+}
+
+@media (max-width: 960px) {
+    .interactiveBlock {
+        grid-column: span 1;
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+}
+
+/* Interactive Content (Left Column) */
+.interactiveContent {
+    /* border-right removed */
+    /* Strict padding consistency - Compact */
+    padding: 32px 32px 32px 0; 
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    height: 100%;
+    /* Lock width effectively via grid, but ensure internal content doesn't stretch weirdly */
+}
+
+/* Interactive Mockup (Right Column) */
+.interactiveMockup {
+    /* Strict anchoring - Compact */
+    padding: 32px 0 32px 32px;
+    display: flex;
+    align-items: flex-start; /* Top align */
+    justify-content: flex-start; /* Left align */
+    height: 100%;
+}
+
+/* Typography & Content */
+.featureTitle {
+    font-size: 18px; /* Slightly tighter */
+    font-weight: 500;
+    line-height: 1.4;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+    margin: 0 0 12px 0;
+}
+
+:global(:root:not(.dark)) .featureTitle,
+:global(.light) .featureTitle {
+    color: #1a1a1a;
+}
+
+.featureDescription {
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.5); /* Lower contrast for hierarchy */
+    margin: 0;
+    max-width: 380px; /* Tighter block for better rhythm */
+}
+
+:global(:root:not(.dark)) .featureDescription,
+:global(.light) .featureDescription {
+    color: rgba(0, 0, 0, 0.55);
+}
+
+/* Accordion List - Single Container Look */
+.featureList {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 32px; /* Breathing room */
+    /* border-top removed */
+}
+
+.featureItem {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    padding: 16px 0; /* Consistent vertical padding */
+    cursor: pointer;
+    border-bottom: none; /* Removed underlines */
+    transition: opacity 0.2s;
+}
+
+.featureItem:hover {
+    opacity: 0.8;
+}
+
+.featureItemActive {
+    opacity: 1;
+    /* No scale transform on active, purely state change */
+}
+
+/* Absolute Active Indicator - Never shifts layout */
+.accentBar {
+    position: absolute;
+    left: -16px; /* Positioned in the gutter/padding zone */
+    top: 16px; /* Align with text top */
+    width: 2px;
+    height: 20px; /* Fixed height marker */
+    background: #3ecf8e;
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.featureItemActive .accentBar {
+    opacity: 1;
+}
+
+.accentBarSecondary {
+    display: none; 
+}
+
+.featureItemContent {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.featureItemLabel {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+:global(:root:not(.dark)) .featureItemLabel,
+:global(.light) .featureItemLabel {
+    color: #1a1a1a;
+}
+
+.featureItemDetail {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.5;
+    max-width: 380px;
+    display: none;
+    /* Smooth expand? For now just block switch to match React logic */
+}
+
+.featureItemActive .featureItemDetail {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   CARD TREATMENT ("Crisp" Linear Style)
+   ========================================= */
+
+.staticMockup {
+    flex: 1;
+    display: flex;
+    align-items: center; /* Center alignment to balance with speakers */
+    justify-content: flex-start; /* Strict left */
+    width: 100%;
+    /* Ensure it hits the edges of the padding defined in the block */
+}
+
+.mockupCard {
+    width: 100%;
+    max-width: 600px; /* Wider for 4-column density */
+    border-radius: 12px;
+    overflow: hidden;
+    
+    /* 1. Elevation Surface: Panel color, distinct from section bg */
+    background: #141416; 
+    
+    /* 2. Crisp Border: 1px low opacity */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    /* 3. Inner Highlight + Subtle Depth (Refined for crispness) */
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.08), /* Brighter top edge */
+        0 2px 8px rgba(0, 0, 0, 0.4); /* Tighter, less blurry shadow */
+    
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 0.3s ease;
+}
+
+:global(:root:not(.dark)) .mockupCard,
+:global(.light) .mockupCard {
+    background: #ffffff;
+    border-color: rgba(0,0,0,0.08);
+    box-shadow: 
+        inset 0 0 0 1px rgba(0,0,0,0.02),
+        0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Stronger elevation for Interactive Mockup (Large Card) */
+.interactiveMockup .mockupCard {
+    /* Slightly 'closer' to viewer */
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 12px 32px rgba(0, 0, 0, 0.5); /* Deeper shadow */
+    background: #161618; /* Slightly lighter surface step */
+}
+
+/* Internal Elements - Utility cleanup */
+.panelHeader { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 0; margin-bottom: 12px; }
+.eventTitle { font-size: 15px; font-weight: 500; color: #fff; margin: 0 20px 12px; }
+:global(.light) .eventTitle { color: #1a1a1a; }
+.eventMeta { display: flex; align-items: center; gap: 16px; padding: 0 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 16px; }
+
+/* Restored Internal Classes (Compact) */
+.panelHeaderLeft { display: flex; align-items: center; gap: 6px; }
+.panelBreadcrumb { font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 500; letter-spacing: 0.02em; }
+.breadcrumbIcon { width: 10px; height: 10px; color: rgba(255,255,255,0.3); }
+.panelHeaderActions { display: flex; gap: 8px; }
+.iconButton {
+    display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+    border-radius: 6px; 
+    background: transparent; border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Agenda Mockup (Linear Redesign - Polished) */
+
+.agendaHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06); /* Subtler border */
+}
+
+.agendaInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.agendaBreadcrumb {
+    font-size: 13px;
+    color: #8A8F98;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.breadcrumbArrow {
+    color: #5F6166;
+    font-size: 11px;
+}
+
+.agendaTitle {
+    font-size: 18px; /* Slightly larger */
+    font-weight: 500;
+    color: #fff;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.agendaMeta {
+    display: flex;
+    gap: 20px;
+    margin-top: 4px;
+}
+
+.metaItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #9EA2B0;
+}
+
+.metaItem svg {
+    opacity: 0.8;
+    color: #8A8F98;
+}
+
+.agendaActions {
+    display: flex;
+    gap: 8px;
+}
+
+.iconButton {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08); /* Darker border */
+    background: transparent;
+    color: #8A8F98;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.iconButton:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: #E0E0E0;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Filter Bar */
+.filterBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sessionCount {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #8A8F98;
+}
+
+.sessionCount svg {
+    color: #6D717A;
+}
+
+/* Segmented Control - Refined */
+.viewToggle {
+    display: flex;
+    padding: 2px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+}
+
+.toggleButton {
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #8A8F98;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggleButton.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: #E0E0E0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    border: 1px solid rgba(0, 0, 0, 0.2); /* Inset-like border */
+}
+
+/* Session List (Linear Rows) */
+.sessionsList {
+    padding: 0;
+}
+
+.sessionRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch; /* Stretch to fill height */
+    padding: 20px 24px; /* More breathing room */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s ease;
+}
+
+.sessionRow:last-child {
+    border-bottom: none;
+}
+
+.sessionRow:hover {
+    background: rgba(255, 255, 255, 0.015);
+}
+
+/* Hover Highland: Left accent indicator line (optional Linear detail) */
+.sessionRow::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) scaleY(0);
+    width: 2px;
+    height: 60%;
+    background: #5E6AD2; /* Primary accent */
+    transition: transform 0.2s ease;
+    border-radius: 0 2px 2px 0;
+}
+/*.sessionRow:hover::before { transform: translateY(-50%) scaleY(1); } Optional */
+
+
+.sessionMain {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.sessionTag {
+    font-size: 10px;
+    font-weight: 600;
+    /* text-transform: uppercase; Removed */
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+    display: inline-block;
+}
+
+.sessionTitle {
+    font-size: 15px;
+    font-weight: 500;
+    color: #F0F0F0;
+    line-height: 1.4;
+    transition: color 0.15s ease;
+}
+
+.sessionRow:hover .sessionTitle {
+    color: #fff;
+}
+
+.sessionDetails {
+    display: flex;
+    gap: 16px;
+    margin-top: 0px;
+}
+
+.detailItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #717684; /* Muted */
+}
+
+.detailItem svg {
+    opacity: 0.7;
+}
+
+.sessionMeta {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-left: 20px;
+}
+
+.sessionTimeBadge {
+    /* font-family: 'Inter', sans-serif; Reverted to default */
+    font-size: 12px;
+    color: #8A8F98;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.addButton {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Centered icon */
+    width: 28px; /* Fixed square size for icon */
+    height: 28px;
+    font-size: 12px;
+    color: #C0C0C0;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+    padding: 0; /* No padding needed for icon only */
+}
+
+.addButton:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #FFD700; /* Gold star on hover */
+}
+
+/* Timeline */
+/* Timeline Header - Integrated */
+/* Timeline Header - Integrated Table Heading */
+.trackHeader { 
+    display: flex; 
+    /* Remove padding to let dividers hit edges, handle spacing in cells */
+    padding: 0; 
+    border-bottom: 1px solid rgba(255,255,255,0.04); 
+    margin-bottom: 0; 
+    background: rgba(255, 255, 255, 0.03); /* Slightly more visible tint */
+}
+.trackTimeColumn { 
+    width: 60px; 
+    flex-shrink: 0;
+}
+.trackColumn { 
+    flex: 1; 
+    padding: 16px; 
+    border-left: 1px solid rgba(255,255,255,0.02); /* Ultra subtle vertical */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+/* First track column separator specifically if needed, but border-left on all trackColumns works if time column is first */
+
+
+/* Remove card styling from header names */
+.trackCard { 
+    padding: 0; 
+    background: transparent; 
+    border: none; 
+    border-radius: 0; 
+    cursor: default; 
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.trackName { 
+    font-size: 11px; 
+    font-weight: 600; 
+    color: rgba(255,255,255,0.7); 
+    text-transform: none; /* User request: Standard case */
+    letter-spacing: 0;
+}
+.trackSubtext {
+    display: none; /* User request: Remove redundant text */ 
+    font-size: 10px; 
+    color: rgba(255,255,255,0.4); 
+}
+/* Track Grid - Table Body */
+.trackGrid { 
+    padding: 0; /* Full width for dividers */
+    display: flex; 
+    flex-direction: column; 
+    gap: 0; 
+}
+
+.trackRow { 
+    display: flex; 
+    align-items: stretch; 
+    min-height: 56px; /* Slightly taller for table feel */
+    border-bottom: 1px solid rgba(255,255,255,0.04); /* Softer horizontal */
+    padding: 0; /* Padding handled by cells */
+}
+.trackRow:last-child {
+    border-bottom: none;
+}
+
+.trackTimeCell { 
+    width: 60px; 
+    flex-shrink: 0;
+    /* Center vertically with content */
+    display: flex;
+    align-items: center;
+    padding: 0 0 0 16px; 
+}
+
+.yellowTimeBadge { 
+    font-size: 11px; 
+    color: rgba(255, 255, 255, 0.4); /* De-emphasized from yellow to muted mono */
+    font-weight: 500; 
+    font-family: monospace; 
+}
+
+.trackEventCell { 
+    flex: 1; 
+    padding: 14px 16px; 
+    display: flex; 
+    align-items: center; /* Center vertically for cleaner grid */
+    border-left: 1px solid rgba(255,255,255,0.02); /* Ultra subtle vertical */
+}
+
+/* Event Chips - Pure Text/Accent (No Box) */
+.trackEvent { 
+    /* Zero boxiness */
+    background: transparent;
+    border: none;
+    border-radius: 0; 
+    padding: 2px 0 2px 10px; 
+    /* Accent fixed consistency */
+    border-left: 2px solid rgba(62, 207, 142, 0.6); 
+    
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center content vertically too */
+    gap: 2px;
+    height: 100%; /* Ensure full height alignment */
+}
+
+.trackEventType { 
+    font-size: 9px; 
+    color: #3ecf8e; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.trackEventTitle { 
+    font-size: 11px; 
+    color: #fff; 
+    font-weight: 500; 
+    line-height: 1.3; 
+}
+
+/* Speakers */
+/* Stacked Cards for Speakers */
+.stackContainer {
+    position: relative;
+    width: 100%;
+    min-height: 380px; /* Reduced from 420px to match compact block */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    /* background: #141416; Removed for floating look */
+    perspective: 2000px; /* Linear exact perspective */
+}
+
+.stackCard {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 280px;
+    border-radius: 12px;
+    padding: 16px;
+    
+    /* Glass/Dark Theme */
+    background: rgba(30, 30, 32, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 
+        0 4px 24px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+
+    /* Transition */
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
+    transform-style: preserve-3d;
+}
+
+/* Stack Layers - Linear Exact 3D Transforms */
+/* Base Rotation: rotateX(13deg) rotateY(20deg) rotateZ(-12deg) */
+
+/* Stack Layers - Linear Exact 3D Transforms */
+/* Base Rotation: rotateX(13deg) rotateY(20deg) rotateZ(-12deg) */
+
+/* Stack Layers - Linear Exact 3D Transforms */
+/* Base Rotation: rotateX(13deg) rotateY(20deg) rotateZ(-12deg) */
+
+.stackCardBack {
+    /* Center -> Rotation -> Translation (Linear values extrapolated relative to center) */
+    transform: translate(-50%, -50%) 
+               rotateX(13deg) rotateY(20deg) rotateZ(-12deg) 
+               translate3d(-24px, -85px, -120px); /* Lifted higher */
+    opacity: 0.5; /* Increased from 0.3 */
+    z-index: 1;
+    filter: blur(0.5px) brightness(0.8); /* Reduced blur */
+    border-color: rgba(255, 255, 255, 0.15); /* More visible border */
+    transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.stackCardMiddle {
+    transform: translate(-50%, -50%) 
+               rotateX(13deg) rotateY(20deg) rotateZ(-12deg) 
+               translate3d(-12px, -35px, -20px); /* Lifted higher */
+    opacity: 0.8; /* Increased from 0.6 */
+    z-index: 2;
+    filter: blur(0px) brightness(0.95); /* Removed blur */
+    border-color: rgba(255, 255, 255, 0.2); /* More visible border */
+    transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.stackCardFront {
+    transform: translate(-50%, -50%) 
+               rotateX(13deg) rotateY(20deg) rotateZ(-12deg) 
+               translate3d(0px, 15px, 80px); /* Kept prominent */
+    opacity: 1;
+    z-index: 3;
+    /* Stronger shadow for front card following tilt */
+    box-shadow: 
+        16px 32px 64px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    background: linear-gradient(180deg, rgba(35, 35, 38, 1) 0%, rgba(30, 30, 32, 1) 100%);
+    border-color: rgba(255, 255, 255, 0.1);
+    transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Internal Card Layout */
+.stackHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.stackIcon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px; /* Soft square icon bg like Linear */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stackLabel {
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.stackContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.stackText {
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 12px;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.stackFooter {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 500;
+}
+
+/* Reusing generic speaker photo styles if needed, or defining new ones */
+.speakerPhoto { 
+    width: 20px; height: 20px; 
+    border-radius: 50%;
+    background: #3ecf8e; 
+    color: #000;
+    display: flex;
+    align-items: center; 
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+/* Interactive Hover Effect - Individual Card Pop */
+.stackContainer .stackCard:hover {
+    z-index: 100;
+    opacity: 1;
+    filter: none;
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 
+        0 24px 48px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    
+    /* Generic transition props */
+    transition: 
+        transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        opacity 0.4s ease,
+        filter 0.4s ease,
+        border-color 0.4s ease,
+        box-shadow 0.4s ease,
+        z-index 0s linear 0s;
+}
+
+/* Specific Hover Transforms - Pop forward IN PLACE to avoid losing mouse focus */
+
+/* Back Card: Maintain -85px height so we don't drop out from under cursor */
+.stackCardBack.stackCardActive {
+    transform: translate(-50%, -50%) 
+               rotateX(13deg) rotateY(20deg) rotateZ(-12deg) 
+               translate3d(-24px, -85px, 240px);
+}
+
+/* Middle Card: Maintain -35px height */
+.stackCardMiddle.stackCardActive {
+    transform: translate(-50%, -50%) 
+               rotateX(13deg) rotateY(20deg) rotateZ(-12deg) 
+               translate3d(-12px, -35px, 240px);
+}
+
+/* Front Card: Maintain normal position */
+.stackCardFront.stackCardActive {
+    transform: translate(-50%, -50%) 
+               rotateX(13deg) rotateY(20deg) rotateZ(-12deg) 
+               translate3d(0px, 15px, 240px);
+}
+
+/* Add delay to z-index reset to prevent fighting */
+.stackContainer .stackCard {
+    /* Explicit transition for hover LEAVE */
+    transition: 
+        transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), 
+        opacity 0.4s ease,
+        filter 0.4s ease,
+        border-color 0.4s ease,
+        box-shadow 0.4s ease,
+        z-index 0s linear 0s; /* Instant drop to prevent blocking */
+}
+
+@media (max-width: 600px) {
+    .stackContainer {
+        min-height: 380px;
+        padding: 16px;
+        perspective: 1500px;
+    }
+    
+    .stackCard {
+        width: 240px;
+    }
+}

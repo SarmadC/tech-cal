@@ -31,7 +31,8 @@ import {
     Footer,
     UseCasesSection,
     FAQSection,
-    CoverageSection
+    CoverageSection,
+    FeatureShowcaseSection
 } from './';
 
 export default function LandingPage() {
@@ -171,6 +172,7 @@ export default function LandingPage() {
                 <HeroSection />
                 {/* This now renders the dynamically loaded component */}
                 <ProductDemoSection />
+                <FeatureShowcaseSection />
                 <FeaturesGrid />
                 <UseCasesSection />
                 <CoverageSection />
