@@ -120,81 +120,72 @@
     opacity: 0.7;
 }
 
-/* Cards Grid - 3 columns */
-.useCasesGrid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+/* Carousel Layout */
+.useCasesCarousel {
+    display: flex;
     gap: var(--space-6);
+    overflow-x: auto;
+    padding-bottom: var(--space-8);
+    margin: 0 calc(var(--space-6) * -1);
+    padding-left: var(--space-6);
+    padding-right: var(--space-6);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
 }
 
-@media (max-width: 1200px) {
-    .useCasesGrid {
-        gap: var(--space-5);
-    }
+.useCasesCarousel::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
 }
 
-@media (max-width: 900px) {
-    .useCasesGrid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 600px) {
-    .useCasesGrid {
-        grid-template-columns: 1fr;
+@media (max-width: 768px) {
+    .useCasesCarousel {
+        gap: var(--space-4);
+        margin: 0 calc(var(--space-5) * -1);
+        padding-left: var(--space-5);
+        padding-right: var(--space-5);
     }
 }
 
 /* Card Styling */
 .useCaseCard {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    background: rgba(15, 15, 15, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 20px;
+    flex: 0 0 400px;
+    height: 400px; /* Fixed square-ish aspect ratio */
+    background: #0F0F10; /* Darker background */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    /* Remove fixed aspect ratio so content fits */
-    min-height: 100%;
-    /* aspect-ratio: 4 / 3; */
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    .useCaseCard {
+        flex: 0 0 300px;
+        height: 380px;
+    }
 }
 
 .useCaseCard:hover {
-    border-color: rgba(255, 255, 255, 0.12);
-    transform: translateY(-6px);
-    background: rgba(15, 15, 15, 0.65);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.15);
+    background: #131314;
+    transform: translateY(-4px);
 }
 
 .useCaseCard:active {
-    transform: translateY(-2px);
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: scale(0.98);
 }
 
-.useCaseCard:focus {
+.useCaseCard:focus-visible {
     outline: 2px solid var(--foreground-primary);
     outline-offset: 2px;
 }
 
-.useCaseCard:focus:not(:focus-visible) {
-    outline: none;
-}
-
-/* Light mode card */
-:global(:root:not(.dark)) .useCaseCard,
-:global(.light) .useCaseCard,
-:global(html.light) .useCaseCard {
-    background: rgba(245, 245, 245, 0.8);
-    border-color: transparent;
-}
-
-:global(:root:not(.dark)) .useCaseCard:hover,
-:global(.light) .useCaseCard:hover,
-:global(html.light) .useCaseCard:hover {
-    border-color: transparent;
+/* Card Content Layout */
+.cardContent {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 /* Graphic Container */
@@ -203,100 +194,43 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Reduce padding so the footer has a bit more room for text */
-    padding: var(--space-6) var(--space-5);
-    color: var(--foreground-primary);
-    opacity: 0.85;
-    background-color: #141516;
+    padding: var(--space-8);
+    opacity: 1;
+    position: relative;
+    color: rgba(255, 255, 255, 0.8); /* Ensure currentColor mapping */
 }
 
 .useCaseGraphic svg {
-    /* Scale graphics down slightly so more card content fits without feeling cramped */
     width: 100% !important;
     height: auto !important;
-    max-width: 360px !important;
-    max-height: 260px !important;
-    /* min-width: 360px !important; */
-    /* min-height: 260px !important; */
-    flex-shrink: 0;
+    max-width: 320px !important;
+    max-height: 240px !important;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
+    transition: transform 0.4s ease;
 }
 
-@media (max-width: 480px) {
-    .useCaseGraphic svg {
-        width: 100% !important;
-        height: auto !important;
-        max-width: 320px !important;
-        max-height: 240px !important;
-    }
-}
-
-@media (max-width: 360px) {
-    .useCaseGraphic svg {
-        width: 100% !important;
-        height: auto !important;
-        max-width: 280px !important;
-        max-height: 210px !important;
-    }
-}
-
-/* Light mode graphic container */
-:global(:root:not(.dark)) .useCaseGraphic,
-:global(.light) .useCaseGraphic,
-:global(html.light) .useCaseGraphic {
-    background-color: #f5f5f5;
+.useCaseCard:hover .useCaseGraphic svg {
+    transform: scale(1.05);
 }
 
 /* Card Footer */
 .useCaseFooter {
     display: flex;
-    align-items: center;
-    padding: var(--space-8) var(--space-12);
-    min-height: 104px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    background: rgba(0, 0, 0, 0.2);
-    transition: background 0.3s ease;
-}
-
-@media (max-width: 900px) {
-    .useCaseFooter {
-        padding: var(--space-6) var(--space-6);
-        min-height: 96px;
-    }
-}
-
-@media (max-width: 600px) {
-    .useCaseFooter {
-        padding: var(--space-5) var(--space-5);
-    }
-}
-
-.useCaseCard:hover .useCaseFooter {
-    background: rgba(0, 0, 0, 0.3);
-    border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-:global(:root:not(.dark)) .useCaseFooter,
-:global(.light) .useCaseFooter,
-:global(html.light) .useCaseFooter {
-    border-top-color: rgba(0, 0, 0, 0.06);
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: var(--space-6) var(--space-8) var(--space-8);
+    margin-top: auto;
+    z-index: 2;
 }
 
 .useCaseTitle {
     font-family: var(--font-dm-sans);
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     font-weight: 500;
-    color: var(--foreground-primary);
-    letter-spacing: -0.018em;
-    line-height: 1.5; /* Increased from 1.45 for better readability */
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.3;
     margin: 0;
-    /* Allow title to take available space and wrap properly */
-    flex: 1;
-    min-width: 0; /* Allow flex item to shrink below content size */
-    padding-right: var(--space-4); /* Add spacing between title and icon */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: 'liga' 1, 'kern' 1;
-    text-rendering: optimizeLegibility;
+    max-width: 80%;
 }
 
 /* Plus Icon Button */
@@ -304,54 +238,56 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.02);
-    color: var(--foreground-secondary);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.4);
+    transition: all 0.3s ease;
 }
 
 .useCaseCard:hover .useCasePlusIcon {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 1);
     border-color: rgba(255, 255, 255, 0.2);
-    color: var(--foreground-primary);
-    background: rgba(255, 255, 255, 0.06);
-    transform: rotate(90deg) scale(1.1);
+}
+
+/* Light mode overrides if needed, mainly primarily dark UI requested */
+:global(:root:not(.dark)) .useCaseCard,
+:global(.light) .useCaseCard,
+:global(html.light) .useCaseCard {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+:global(:root:not(.dark)) .useCaseCard:hover,
+:global(.light) .useCaseCard:hover,
+:global(html.light) .useCaseCard:hover {
+     background: #fafafa;
+     border-color: rgba(0, 0, 0, 0.15);
+}
+
+:global(:root:not(.dark)) .useCaseTitle,
+:global(.light) .useCaseTitle,
+:global(html.light) .useCaseTitle {
+    color: #111;
 }
 
 :global(:root:not(.dark)) .useCasePlusIcon,
 :global(.light) .useCasePlusIcon,
 :global(html.light) .useCasePlusIcon {
-    border-color: rgba(0, 0, 0, 0.15);
+    border-color: rgba(0,0,0,0.1);
+    color: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.02);
 }
 
-:global(:root:not(.dark)) .useCasePlusIcon:hover,
-:global(.light) .useCasePlusIcon:hover,
-:global(html.light) .useCasePlusIcon:hover {
-    border-color: rgba(0, 0, 0, 0.3);
-}
-
-/* Dark mode explicit rules */
-:global(.dark) .sectionTitle,
-:global(html.dark) .sectionTitle {
-    color: var(--foreground-primary);
-}
-
-:global(.dark) .sectionSubtitle,
-:global(html.dark) .sectionSubtitle {
-    color: var(--foreground-secondary);
-}
-
-:global(.dark) .useCaseTitle,
-:global(html.dark) .useCaseTitle {
-    color: var(--foreground-primary);
-}
-
-:global(.dark) .useCasePlusIcon,
-:global(html.dark) .useCasePlusIcon {
-    color: var(--foreground-secondary);
+:global(:root:not(.dark)) .useCaseCard:hover .useCasePlusIcon,
+:global(.light) .useCaseCard:hover .useCasePlusIcon,
+:global(html.light) .useCaseCard:hover .useCasePlusIcon {
+    color: #111;
+    border-color: rgba(0,0,0,0.2);
+    background: rgba(0,0,0,0.05);
 }
 
 /* ========================================

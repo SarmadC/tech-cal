@@ -105,15 +105,15 @@ export function UseCasesSection() {
                         Made for serious<br />engineering careers
                     </h2>
                     <p className={styles.sectionSubtitle}>
-                        Kure Cal is shaped by the practices that distinguish focused professionals from the rest: 
+                        Kure Cal is shaped by the practices that distinguish focused professionals from the rest:
                         personalized discovery, effortless planning, and a commitment to career growth.
                     </p>
                 </div>
 
-                <div className={styles.useCasesGrid}>
+                <div className={styles.useCasesCarousel}>
                     {useCases.map((useCase) => (
-                        <article 
-                            className={styles.useCaseCard} 
+                        <article
+                            className={styles.useCaseCard}
                             key={useCase.id}
                             onClick={() => openCard(useCase.id)}
                             role="button"
@@ -125,17 +125,19 @@ export function UseCasesSection() {
                                 }
                             }}
                         >
-                            <div className={styles.useCaseGraphic}>
-                                {useCase.graphic}
-                            </div>
-                            <div className={styles.useCaseFooter}>
-                                <h3 className={styles.useCaseTitle}>{useCase.title}</h3>
-                                <span 
-                                    className={styles.useCasePlusIcon}
-                                    aria-hidden="true"
-                                >
-                                    <Plus size={20} weight="light" />
-                                </span>
+                            <div className={styles.cardContent}>
+                                <div className={styles.useCaseGraphic}>
+                                    {useCase.graphic}
+                                </div>
+                                <div className={styles.useCaseFooter}>
+                                    <h3 className={styles.useCaseTitle}>{useCase.title}</h3>
+                                    <span
+                                        className={styles.useCasePlusIcon}
+                                        aria-hidden="true"
+                                    >
+                                        <Plus size={16} weight="regular" />
+                                    </span>
+                                </div>
                             </div>
                         </article>
                     ))}
@@ -143,18 +145,18 @@ export function UseCasesSection() {
 
                 {/* Popover Modal */}
                 {expandedCardId && expandedCard && (
-                    <div 
+                    <div
                         className={`${styles.popoverBackdrop} ${isClosing ? styles.popoverClosing : ''}`}
                         onClick={closeCard}
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="popover-title"
                     >
-                        <div 
+                        <div
                             className={`${styles.popoverModal} ${isClosing ? styles.popoverClosing : ''}`}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <button 
+                            <button
                                 className={styles.popoverCloseButton}
                                 onClick={closeCard}
                                 aria-label="Close details"
@@ -166,7 +168,7 @@ export function UseCasesSection() {
                                 <div className={styles.popoverGraphic}>
                                     {expandedCard.graphic}
                                 </div>
-                                
+
                                 <div className={styles.popoverDetails}>
                                     <h3 id="popover-title" className={styles.popoverTitle}>
                                         {expandedCard.title}
