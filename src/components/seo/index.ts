@@ -5,4 +5,5 @@ export {
     FAQPageJsonLd,
     ArticleJsonLd,
     EventJsonLd,
+    BreadcrumbJsonLd,
 } from './JsonLd';

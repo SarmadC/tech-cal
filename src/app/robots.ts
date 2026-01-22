@@ -2,6 +2,13 @@
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
+    // Block all crawling on non-production environments (staging/preview)
+    if (process.env.VERCEL_ENV !== 'production') {
+        return {
+            rules: [{ userAgent: '*', disallow: ['/'] }],
+        }
+    }
+
     return {
         rules: [
             {
@@ -9,7 +16,6 @@ export default function robots(): MetadataRoute.Robots {
                 allow: '/',
                 disallow: [
                     '/api/',
-                    '/(protected)/',
                     '/onboarding/',
                     '/dashboard/',
                     '/calendar/',

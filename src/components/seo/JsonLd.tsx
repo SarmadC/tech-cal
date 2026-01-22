@@ -171,6 +171,15 @@ interface EventJsonLdProps {
     url: string;
     imageUrl?: string;
     isOnline?: boolean;
+    organizer?: {
+        name: string;
+        logo_url?: string;
+    };
+    offers?: {
+        priceMin?: number | null;
+        priceMax?: number | null;
+        currency?: string | null;
+    };
 }
 
 export function EventJsonLd({
@@ -182,7 +191,21 @@ export function EventJsonLd({
     url,
     imageUrl,
     isOnline,
+    organizer,
+    offers,
 }: EventJsonLdProps) {
+    // Build offers schema only if we have pricing data
+    const offersSchema =
+        offers && (offers.priceMin !== null || offers.priceMax !== null)
+            ? {
+                  '@type': 'AggregateOffer',
+                  ...(offers.priceMin !== null && { lowPrice: offers.priceMin }),
+                  ...(offers.priceMax !== null && { highPrice: offers.priceMax }),
+                  priceCurrency: offers.currency || 'USD',
+                  url: url,
+              }
+            : undefined;
+
     const data = {
         '@context': 'https://schema.org',
         '@type': 'Event',
@@ -196,11 +219,11 @@ export function EventJsonLd({
             : 'https://schema.org/OfflineEventAttendanceMode',
         location: isOnline
             ? {
-                '@type': 'VirtualLocation',
-                url: url,
-            }
+                  '@type': 'VirtualLocation',
+                  url: url,
+              }
             : location
-                ? {
+              ? {
                     '@type': 'Place',
                     name: location.name,
                     ...(location.address && {
@@ -210,16 +233,47 @@ export function EventJsonLd({
                         },
                     }),
                 }
-                : undefined,
+              : undefined,
         url: url,
         ...(imageUrl && {
             image: imageUrl,
         }),
-        organizer: {
-            '@type': 'Organization',
-            name: 'Kure-Cal',
-            url: 'https://kure-cal.com',
-        },
+        // Only include organizer if provided, otherwise omit entirely (valid per Schema.org)
+        ...(organizer && {
+            organizer: {
+                '@type': 'Organization',
+                name: organizer.name,
+                ...(organizer.logo_url && { logo: organizer.logo_url }),
+            },
+        }),
+        ...(offersSchema && { offers: offersSchema }),
+    };
+
+    return <JsonLd data={data} />;
+}
+
+/**
+ * BreadcrumbList schema - Use on event pages for navigation context
+ */
+interface BreadcrumbItem {
+    name: string;
+    url?: string;
+}
+
+interface BreadcrumbJsonLdProps {
+    items: BreadcrumbItem[];
+}
+
+export function BreadcrumbJsonLd({ items }: BreadcrumbJsonLdProps) {
+    const data = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: items.map((item, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: item.name,
+            ...(item.url && { item: item.url }),
+        })),
     };
 
     return <JsonLd data={data} />;

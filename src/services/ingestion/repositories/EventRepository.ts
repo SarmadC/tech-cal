@@ -24,6 +24,39 @@ export interface SpeakerUpsertInput {
 }
 
 export class EventRepository {
+    private static async ensureUniqueSlug(
+        supabaseClient: SupabaseClientType,
+        baseSlug: string,
+        excludeId?: string | null
+    ): Promise<string> {
+        if (!baseSlug) {
+            return baseSlug;
+        }
+
+        let candidate = baseSlug;
+        let counter = 1;
+
+        while (true) {
+            let query = supabaseClient
+                .from('events')
+                .select('id')
+                .eq('slug', candidate)
+                .limit(1);
+
+            if (excludeId) {
+                query = query.neq('id', excludeId);
+            }
+
+            const { data: existing } = await query.maybeSingle();
+            if (!existing) {
+                return candidate;
+            }
+
+            candidate = `${baseSlug}-${counter}`;
+            counter += 1;
+        }
+    }
+
     static async upsertEvent(
         supabaseClient: SupabaseClientType,
         payload: EventInsert,
@@ -55,6 +88,13 @@ export class EventRepository {
         if (targetEventId) {
             const updatePayload: EventUpdate = { ...payload };
             delete (updatePayload as { id?: string }).id;
+            if (updatePayload.slug) {
+                updatePayload.slug = await this.ensureUniqueSlug(
+                    supabaseClient,
+                    updatePayload.slug,
+                    targetEventId
+                );
+            }
             const { error } = await supabaseClient
                 .from('events')
                 .update(updatePayload)
@@ -65,17 +105,40 @@ export class EventRepository {
             return { eventId: targetEventId, created: false };
         }
 
-        const { data: inserted, error: insertError } = await supabaseClient
-            .from('events')
-            .insert(payload)
-            .select('id')
-            .single();
+        const baseSlug = payload.slug ?? '';
+        let attempt = 0;
+        let insertPayload: EventInsert = { ...payload };
 
-        if (insertError || !inserted) {
+        while (attempt < 5) {
+            if (insertPayload.slug) {
+                insertPayload.slug = await this.ensureUniqueSlug(supabaseClient, baseSlug);
+            }
+
+            const { data: inserted, error: insertError } = await supabaseClient
+                .from('events')
+                .insert(insertPayload)
+                .select('id')
+                .single();
+
+            if (!insertError && inserted) {
+                return { eventId: inserted.id, created: true };
+            }
+
+            const isSlugConflict =
+                insertError?.code === '23505' &&
+                (insertError.message?.includes('events_slug_unique_idx') ||
+                    insertError.details?.includes('slug'));
+
+            if (isSlugConflict) {
+                attempt += 1;
+                insertPayload = { ...insertPayload, slug: `${baseSlug}-${attempt}` };
+                continue;
+            }
+
             throw insertError || new Error('Failed to insert event');
         }
 
-        return { eventId: inserted.id, created: true };
+        throw new Error('Failed to insert event after resolving slug conflicts');
     }
 
     static async replaceAgendaItems(
@@ -223,4 +286,3 @@ export class EventRepository {
         });
     }
 }
-

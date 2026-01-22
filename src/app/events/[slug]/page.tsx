@@ -2,11 +2,11 @@
 // Public SEO-optimized event page with dynamic metadata and JSON-LD
 
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
-import { EventJsonLd } from '@/components/seo';
-import { formatDate } from '@/utils/dateUtils';
+import { EventJsonLd, BreadcrumbJsonLd } from '@/components/seo';
+import { formatDate, formatMonthYear } from '@/utils/dateUtils';
 
 // ISR: Revalidate every hour for fresh event data
 export const revalidate = 3600;
@@ -29,6 +29,9 @@ interface PublicEvent {
     livestream_url: string | null;
     event_image_url: string | null;
     price_range: string | null;
+    price_min: number | null;
+    price_max: number | null;
+    currency: string | null;
     event_format: string | null;
     difficulty: string | null;
     target_audience: string | null;
@@ -37,75 +40,102 @@ interface PublicEvent {
     organizer: { id: string; name: string; logo_url?: string } | null;
 }
 
-// Fetch event by slug
-async function getEventBySlug(slug: string): Promise<PublicEvent | null> {
+// UUID v4 regex pattern for legacy link detection
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Base select query for public event data
+const EVENT_SELECT_QUERY = `
+    id,
+    slug,
+    title,
+    description,
+    start_time,
+    end_time,
+    location,
+    source_url,
+    registration_url,
+    livestream_url,
+    event_image_url,
+    price_range,
+    price_min,
+    price_max,
+    currency,
+    event_format,
+    difficulty,
+    target_audience,
+    status,
+    event_type:event_type_id(id, name, color),
+    organizer:organizer_id(id, name, logo_url)
+`;
+
+// Fetch event by slug with fallback to UUID lookup for legacy links
+async function getEventBySlug(slug: string): Promise<{ event: PublicEvent; shouldRedirect: boolean } | null> {
     const supabase = await createClient();
 
-    // Use type assertion since slug column was just added via migration
-    // and TypeScript types haven't been regenerated yet
+    // First, try to find by slug
     const { data: event, error } = await supabase
         .from('events')
-        .select(`
-            id,
-            slug,
-            title,
-            description,
-            start_time,
-            end_time,
-            location,
-            source_url,
-            registration_url,
-            livestream_url,
-            event_image_url,
-            price_range,
-            event_format,
-            difficulty,
-            target_audience,
-            status,
-            event_type:event_type_id(id, name, color),
-            organizer:organizer_id(id, name, logo_url)
-        `)
-        .eq('slug' as never, slug)  // Type assertion for new column
+        .select(EVENT_SELECT_QUERY)
+        .eq('slug' as never, slug)
         .eq('status', 'confirmed')
         .single();
 
-    if (error || !event) {
-        return null;
+    if (!error && event) {
+        return { event: event as unknown as PublicEvent, shouldRedirect: false };
     }
 
-    return event as unknown as PublicEvent;
+    // If slug lookup failed, check if the param is a UUID (legacy link)
+    if (UUID_REGEX.test(slug)) {
+        const { data: eventById, error: idError } = await supabase
+            .from('events')
+            .select(EVENT_SELECT_QUERY)
+            .eq('id', slug)
+            .eq('status', 'confirmed')
+            .single();
+
+        if (!idError && eventById) {
+            // Found by UUID - return with redirect flag for 301 to canonical slug URL
+            return { event: eventById as unknown as PublicEvent, shouldRedirect: true };
+        }
+    }
+
+    return null;
 }
 
 // Generate metadata dynamically for SEO
 export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
     const { slug } = await params;
-    const event = await getEventBySlug(slug);
+    const result = await getEventBySlug(slug);
 
-    if (!event) {
+    if (!result) {
         return {
             title: 'Event Not Found',
         };
     }
 
+    const { event } = result;
+    const eventDate = formatMonthYear(new Date(event.start_time));
     const description = event.description
         ? event.description.slice(0, 160) + (event.description.length > 160 ? '...' : '')
         : `Join ${event.title} - a tech event happening ${event.start_time ? 'on ' + formatDate(event.start_time) : 'soon'}.`;
 
+    const ogImage = event.event_image_url || 'https://kure-cal.com/og-default.png';
+
     return {
-        title: event.title,
+        title: `${event.title} - ${eventDate} | Kure-Cal`,
         description,
         openGraph: {
-            title: event.title,
+            title: `${event.title} - ${eventDate}`,
             description,
             type: 'website',
             url: `https://kure-cal.com/events/${event.slug}`,
-            images: event.event_image_url ? [{ url: event.event_image_url }] : [],
+            images: [{ url: ogImage }],
         },
         twitter: {
             card: 'summary_large_image',
-            title: event.title,
+            title: `${event.title} - ${eventDate}`,
             description,
-            images: event.event_image_url ? [event.event_image_url] : [],
+            images: [ogImage],
         },
         alternates: {
             canonical: `https://kure-cal.com/events/${event.slug}`,
@@ -117,17 +147,42 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
 // This is more efficient than pre-rendering 300+ event pages at build time
 export const dynamicParams = true;
 
+// Pre-render top 50 most recent confirmed events at build time for faster TTFB
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+    const supabase = await createClient();
+
+    const { data: events } = await supabase
+        .from('events')
+        .select('slug')
+        .eq('status', 'confirmed')
+        .not('slug', 'is', null)
+        .order('start_time', { ascending: false })
+        .limit(50);
+
+    return (events || [])
+        .filter((e): e is { slug: string } => e.slug !== null)
+        .map((e) => ({ slug: e.slug }));
+}
 
 export default async function PublicEventPage({ params }: EventPageProps) {
     const { slug } = await params;
-    const event = await getEventBySlug(slug);
+    const result = await getEventBySlug(slug);
 
-    if (!event) {
+    if (!result) {
         notFound();
+    }
+
+    const { event, shouldRedirect } = result;
+
+    // 301 redirect legacy UUID links to canonical slug URL
+    if (shouldRedirect && event.slug) {
+        redirect(`/events/${event.slug}`);
     }
 
     const eventType = event.event_type as { id: string; name: string; color: string } | null;
     const organizer = event.organizer as { id: string; name: string; logo_url?: string } | null;
+
+    const eventUrl = `https://kure-cal.com/events/${event.slug}`;
 
     return (
         <>
@@ -138,9 +193,22 @@ export default async function PublicEventPage({ params }: EventPageProps) {
                 startDate={event.start_time}
                 endDate={event.end_time || undefined}
                 location={event.location ? { name: event.location } : undefined}
-                url={`https://kure-cal.com/events/${event.slug}`}
+                url={eventUrl}
                 imageUrl={event.event_image_url || undefined}
                 isOnline={event.event_format === 'Online'}
+                organizer={organizer ? { name: organizer.name, logo_url: organizer.logo_url } : undefined}
+                offers={{
+                    priceMin: event.price_min,
+                    priceMax: event.price_max,
+                    currency: event.currency,
+                }}
+            />
+            <BreadcrumbJsonLd
+                items={[
+                    { name: 'Home', url: 'https://kure-cal.com' },
+                    { name: 'Events', url: 'https://kure-cal.com/discover' },
+                    { name: event.title },
+                ]}
             />
 
             <div className="min-h-screen bg-background-main pt-20">
