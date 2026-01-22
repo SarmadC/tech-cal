@@ -5,6 +5,7 @@ import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/service';
 import { EventJsonLd, BreadcrumbJsonLd } from '@/components/seo';
 import { formatDate, formatMonthYear } from '@/utils/dateUtils';
 
@@ -68,9 +69,20 @@ const EVENT_SELECT_QUERY = `
     organizer:organizer_id(id, name, logo_url)
 `;
 
+async function getPublicReadClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseUrl && serviceKey) {
+        return createServiceClient(supabaseUrl, serviceKey);
+    }
+
+    return await createClient();
+}
+
 // Fetch event by slug with fallback to UUID lookup for legacy links
 async function getEventBySlug(slug: string): Promise<{ event: PublicEvent; shouldRedirect: boolean } | null> {
-    const supabase = await createClient();
+    const supabase = await getPublicReadClient();
 
     // First, try to find by slug
     const { data: event, error } = await supabase
@@ -149,7 +161,14 @@ export const dynamicParams = true;
 
 // Pre-render top 50 most recent confirmed events at build time for faster TTFB
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
-    const supabase = await createClient();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+        return [];
+    }
+
+    const supabase = createServiceClient(supabaseUrl, serviceKey);
 
     const { data: events } = await supabase
         .from('events')
